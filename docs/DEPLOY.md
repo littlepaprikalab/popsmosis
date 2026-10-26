@@ -58,7 +58,7 @@ only the Postgres.
 
 ## 1. Create the Blueprint
 
-1. Render dashboard > **New** > **Blueprint** > connect `Iztera/popsmosis`.
+1. Render dashboard > **New** > **Blueprint** > connect `littlepaprikalab/popsmosis`.
 2. Render reads `render.yaml` and shows the two services. Every env var marked
    `sync: false` is prompted for; fill them from the table above. The hostnames are
    what Render will assign; if you want different ones, change the `name` fields in
