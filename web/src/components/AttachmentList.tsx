@@ -7,7 +7,7 @@ function sizeLabel(bytes: number): string {
 }
 
 /**
- * The files a person sent with a question or reply (a screenshot pasted into Zed's Zoey panel, a log): an image as a
+ * The files a person sent with a question or reply (a photo of notes, a screenshot, a text file): an image as a
  * thumbnail opening it whole, anything else as a link. One past the retention is named, greyed, with nothing to open.
  */
 export default function AttachmentList({ attachments }: { attachments: Attachment[] }) {

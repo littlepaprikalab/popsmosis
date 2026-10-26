@@ -1,17 +1,18 @@
-# Running the zoey agent
+# Running the popsmosis agent
 
-zoey ships no runner. The agent is an LLM harness that you point at
-`docs/zoey-agent-skill.md` (the **skill file**) with an API key in its environment.
-Each run is one **heartbeat**: answer unanswered questions, respond to humans who
-replied to earlier answers, stop.
+popsmosis ships no runner. The agent is an LLM harness that you point at
+`docs/popsmosis-agent-skill.md` (the **skill file**) with an API key in its environment.
+Each run is one **heartbeat**: write a lesson for every topic still waiting, answer
+follow-ups under earlier lessons, stop. (The API calls a topic request a *question*,
+its lesson an *answer*, and follow-ups *replies*; this guide uses the API's words.)
 
-This guide is the sparks sponsor quick-start cut down to zoey.
+This guide is the sparks sponsor quick-start cut down to popsmosis.
 
 ---
 
 ## 1. Get credentials
 
-1. Sign in to zoey with an email listed in the API's `ADMIN_EMAILS`.
+1. Sign in to popsmosis with an email listed in the API's `ADMIN_EMAILS`.
 2. Open **AGENTS** in the nav (`/admin/agents`), create an agent, and copy the key.
    It is shown once. If you lose it, rotate it.
 3. Click **Skill file** on the agent to download `<name>-skill.md` with the real API
@@ -20,18 +21,18 @@ This guide is the sparks sponsor quick-start cut down to zoey.
 Without the web UI you can do the same from the API host:
 
 ```
-npm --workspace api run agent:create -- --name zoey-helper
+npm --workspace api run agent:create -- --name popsmosis-teacher
 ```
 
-and copy `docs/zoey-agent-skill.md`, replacing `https://api.zoey.example` with your
+and copy `docs/popsmosis-agent-skill.md`, replacing `https://api.popsmosis.example` with your
 API URL.
 
 The runner needs these in its environment:
 
 | Variable | Value |
 |---|---|
-| `ZOEY_API_KEY` | the `sk_zoey_…` key |
-| `ZOEY_API_URL` | your API base URL, e.g. `https://api.zoey.example`. The skill file's shell commands read it. |
+| `POPSMOSIS_API_KEY` | the `sk_pop_…` key |
+| `POPSMOSIS_API_URL` | your API base URL, e.g. `https://api.popsmosis.example`. The skill file's shell commands read it. |
 
 There is nothing else to set. A run no longer holds a window open: it reads both
 queues, answers what is there, looks again, and exits when they are empty.
@@ -86,12 +87,12 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 ### Option A: Claude Code routine (simplest)
 
 1. In Claude Code on the web, create an environment whose network policy allows
-   egress to your API host, and set `ZOEY_API_KEY` and `ZOEY_API_URL` in its
+   egress to your API host, and set `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` in its
    environment variables.
-2. Create a routine on the zoey repo with a cron of your choice (hourly is the
+2. Create a routine on the popsmosis repo with a cron of your choice (hourly is the
    normal minimum) and the prompt:
    ```
-   Run one zoey heartbeat following docs/zoey-agent-skill.md. The API base URL is https://<your-api-host>.
+   Run one popsmosis heartbeat following docs/popsmosis-agent-skill.md. The API base URL is https://<your-api-host>.
    ```
 3. Give the routine an **API trigger** as well, so the cron is the sweep rather than
    the latency budget — see [Wake the routine on write](#wake-the-routine-on-write).
@@ -108,21 +109,21 @@ the cron becomes the sweep rather than the latency budget.
 1. On [claude.ai/code/routines](https://claude.ai/code/routines), edit the routine,
    add an **API** trigger, and copy its URL. Click **Generate token** and copy the
    token — it is shown once.
-2. Set both on the API service (Render: bong-api > Environment), beside the ones in
+2. Set both on the API service (Render: popsmosis-api > Environment), beside the ones in
    `.env.example`:
 
    | Variable | Value |
    |---|---|
-   | `ZOEY_ROUTINE_FIRE_URL` | `https://api.anthropic.com/v1/claude_code/routines/<routine-id>/fire` |
-   | `ZOEY_ROUTINE_FIRE_TOKEN` | the token from step 1 |
-   | `ZOEY_ROUTINE_DEBOUNCE_SECONDS` | optional cooldown, default `300`, max `3600`; `0` fires on every write |
+   | `POPSMOSIS_ROUTINE_FIRE_URL` | `https://api.anthropic.com/v1/claude_code/routines/<routine-id>/fire` |
+   | `POPSMOSIS_ROUTINE_FIRE_TOKEN` | the token from step 1 |
+   | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS` | optional cooldown, default `300`, max `3600`; `0` fires on every write |
 
 With both set, `POST /api/questions` and a human `POST /api/answers/:id/replies` fire
 the trigger. An agent reply never does: it takes the thread back off the reply queue,
-and firing there would have the advisor wake itself in a loop.
+and firing there would have the teacher wake itself in a loop.
 
 The POST is fire-and-forget — the write's `201` never waits on it, and a trigger
-endpoint that is down, slow, or holding a revoked token costs the advisor its latency,
+endpoint that is down, slow, or holding a revoked token costs the teacher its latency,
 not the user their question. It lands in the API log as `routine fired`,
 `routine fire rejected` (with the status) or `routine fire failed`.
 
@@ -184,37 +185,37 @@ off — a run reads the queues, drains them, and exits.
 ### Option B: Managed Agents scheduled deployment (near-continuous, hosted)
 
 Create a Managed Agent with the skill file uploaded as a Skill, a vault credential
-for `ZOEY_API_KEY`, and a scheduled deployment with a cron such as `*/5 * * * *`.
+for `POPSMOSIS_API_KEY`, and a scheduled deployment with a cron such as `*/5 * * * *`.
 Each firing runs one heartbeat. Idle firings cost two GET requests. This is the
 closest thing to always-on that Anthropic runs for you.
 
 ### Option C: Cowork scheduled task (your machine)
 
 1. Allow network egress to your API host in Claude's capability settings.
-2. Put the skill file in a project folder, set `ZOEY_API_KEY`, and schedule
-   "Run one zoey heartbeat following zoey-agent-skill.md" at the cadence you want.
+2. Put the skill file in a project folder, set `POPSMOSIS_API_KEY`, and schedule
+   "Run one popsmosis heartbeat following popsmosis-agent-skill.md" at the cadence you want.
    Runs only while the machine is awake.
 
 ### Option D: Claude Code CLI on a cron (your machine; also how to test locally)
 
 ```
-mkdir zoey-agent && cd zoey-agent
-cp /path/to/zoey/docs/zoey-agent-skill.md .
-sed -i 's#https://api.zoey.example#http://localhost:3001#' zoey-agent-skill.md
+mkdir popsmosis-agent && cd popsmosis-agent
+cp /path/to/popsmosis/docs/popsmosis-agent-skill.md .
+sed -i 's#https://api.popsmosis.example#http://localhost:3001#' popsmosis-agent-skill.md
 cat > CLAUDE.md <<'EOM'
-When asked to run a heartbeat, follow zoey-agent-skill.md. You are authorized to
-make HTTP requests to the zoey API using the ZOEY_API_KEY environment variable.
+When asked to run a heartbeat, follow popsmosis-agent-skill.md. You are authorized to
+make HTTP requests to the popsmosis API using the POPSMOSIS_API_KEY environment variable.
 Execute all API calls autonomously without asking for confirmation.
 EOM
-export ZOEY_API_KEY=sk_zoey_...
-export ZOEY_API_URL=http://localhost:3001
-claude -p "Run one zoey heartbeat following zoey-agent-skill.md"
+export POPSMOSIS_API_KEY=sk_pop_...
+export POPSMOSIS_API_URL=http://localhost:3001
+claude -p "Run one popsmosis heartbeat following popsmosis-agent-skill.md"
 ```
 
 Then schedule it:
 
 ```
-*/5 * * * * cd /path/to/zoey-agent && ZOEY_API_KEY=sk_zoey_... ZOEY_API_URL=http://localhost:3001 claude -p "Run one zoey heartbeat following zoey-agent-skill.md" >> heartbeat.log 2>&1
+*/5 * * * * cd /path/to/popsmosis-agent && POPSMOSIS_API_KEY=sk_pop_... POPSMOSIS_API_URL=http://localhost:3001 claude -p "Run one popsmosis heartbeat following popsmosis-agent-skill.md" >> heartbeat.log 2>&1
 ```
 
 ### Option E: Anything else
@@ -227,12 +228,12 @@ runs the heartbeat forever and host it; nothing in the API changes.
 
 ## 3. Verify
 
-1. Ask a question on `/advice`.
-2. Run a heartbeat. The question card flips from **WAITING** to **ANSWERED** within
-   the page's 10-second poll. With an API trigger wired up, asking the question is
+1. Ask for a topic on `/learn`.
+2. Run a heartbeat. The topic's card flips from **BREWING** to **READY** within
+   the page's 10-second poll. With an API trigger wired up, asking for the topic is
    itself the heartbeat: the API log shows `routine fired` and a new run appears on
    the routine's detail page.
-3. Reply under the answer. On the next heartbeat the advisor responds.
+3. Ask a follow-up under the lesson. On the next heartbeat the teacher responds.
 4. On `/admin/agents`, **last seen** updates after each heartbeat.
 
 If nothing happens:
@@ -240,13 +241,13 @@ If nothing happens:
 - `GET /api/agents/me` with the key returns 401 → wrong key; 403 → agent disabled.
 - The runner cannot reach the API → check the environment's network allowlist.
 - The queue is empty → every question already has an answer.
-- `ZOEY_API_URL` is unset → the skill file's wait loop exits immediately with an
+- `POPSMOSIS_API_URL` is unset → the skill file's wait loop exits immediately with an
   unbound-variable error instead of polling.
 - A write logs `routine fire rejected` with `401` → the trigger token is wrong or was
-  revoked; regenerate it on the routine and update `ZOEY_ROUTINE_FIRE_TOKEN`. `404` →
-  the routine ID in `ZOEY_ROUTINE_FIRE_URL` is wrong, or the API trigger was removed.
-- A write logs nothing at all → one of `ZOEY_ROUTINE_FIRE_URL` /
-  `ZOEY_ROUTINE_FIRE_TOKEN` is unset, or the write landed inside the debounce window.
+  revoked; regenerate it on the routine and update `POPSMOSIS_ROUTINE_FIRE_TOKEN`. `404` →
+  the routine ID in `POPSMOSIS_ROUTINE_FIRE_URL` is wrong, or the API trigger was removed.
+- A write logs nothing at all → one of `POPSMOSIS_ROUTINE_FIRE_URL` /
+  `POPSMOSIS_ROUTINE_FIRE_TOKEN` is unset, or the write landed inside the debounce window.
 
 ---
 

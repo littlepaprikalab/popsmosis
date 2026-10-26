@@ -3,11 +3,9 @@ import prisma, { runTransaction } from '../lib/prisma.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
 import { requireUser, requireAgent, requireUserOrAgent } from '../middleware/auth.js';
 import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
-import { replyInclude, serializeReply, serializeQueuedReply, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
+import { replyInclude, serializeReply, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
-import { validateClient, parseContext, parseCommands, commandsRefusedFor } from '../lib/commands.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
-import { Prisma } from '../generated/prisma/client.js';
 
 export const REPLY_MAX_LENGTH = 2000;
 const REPLIES_PER_USER_PER_HOUR = parseInt(process.env.REPLIES_PER_USER_PER_HOUR || '30', 10);
@@ -55,13 +53,13 @@ export default async function replyRoutes(app: FastifyInstance) {
         const last = a.replies[a.replies.length - 1];
         return {
           question: {
-            id: a.question.id, content: a.question.content, client: a.question.client, context: a.question.context,
+            id: a.question.id, content: a.question.content,
             attachments: a.question.attachments.map(serializeAttachment), createdAt: a.question.createdAt.toISOString(), user: a.question.user,
           },
-          answer: { id: serialized.id, content: serialized.content, commands: serialized.commands, createdAt: serialized.createdAt },
-          thread: a.replies.map((r) => serializeQueuedReply(r)),
+          answer: { id: serialized.id, content: serialized.content, createdAt: serialized.createdAt },
+          thread: a.replies.map((r) => serializeReply(r)),
           // The reply the agent must respond to: the newest human reply.
-          replyTo: last && !last.agentId ? serializeQueuedReply(last) : null,
+          replyTo: last && !last.agentId ? serializeReply(last) : null,
         };
       })
       .filter((t) => t.replyTo !== null);
@@ -70,14 +68,12 @@ export default async function replyRoutes(app: FastifyInstance) {
     return { data };
   });
 
-  // POST /api/answers/:id/replies — human (any signed-in user) or agent (author of the answer). A human's may name
-  // its `client` and that client's `context`, and carry `attachments` (lib/attachments.ts) - checked for before the
-  // body is read, since that makes it large; an agent's may carry `commands` when the reply it answers came from a
-  // client that runs them.
+  // POST /api/answers/:id/replies — human (any signed-in user) or agent (author of the answer). A human's may carry
+  // `attachments` (lib/attachments.ts) - checked for before the body is read, since that makes it large.
   app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
     const { id: answerId } = request.params as { id: string };
-    const { content, replyToId, client, context: rawContext, commands: rawCommands, attachments: rawAttachments } = (request.body ?? {}) as {
-      content?: unknown; replyToId?: unknown; client?: unknown; context?: unknown; commands?: unknown; attachments?: unknown;
+    const { content, replyToId, attachments: rawAttachments } = (request.body ?? {}) as {
+      content?: unknown; replyToId?: unknown; attachments?: unknown;
     };
 
     const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: REPLY_MAX_LENGTH });
@@ -95,26 +91,16 @@ export default async function replyRoutes(app: FastifyInstance) {
       if (typeof replyToId !== 'string' || !replyToId) {
         return sendError(reply, 'VALIDATION_ERROR', 'replyToId is required for agent replies');
       }
-      if (rawContext !== undefined && rawContext !== null) {
-        return sendError(reply, 'VALIDATION_ERROR', 'context is for human replies only: it is what their client reported about itself');
-      }
       if (rawAttachments !== undefined && rawAttachments !== null) {
         return sendError(reply, 'VALIDATION_ERROR', 'attachments are for human replies only');
       }
-      const { commands, error: commandsError } = parseCommands(rawCommands);
-      if (commandsError) return sendError(reply, 'VALIDATION_ERROR', commandsError);
       try {
         const created = await runTransaction(async (tx) => {
-          const target = await tx.reply.findUnique({ where: { id: replyToId }, select: { id: true, answerId: true, userId: true, client: true } });
+          const target = await tx.reply.findUnique({ where: { id: replyToId }, select: { id: true, answerId: true, userId: true } });
           if (!target || target.answerId !== answerId) throw new AppError('NOT_FOUND', 'replyToId does not belong to this answer');
           if (!target.userId) throw new AppError('VALIDATION_ERROR', 'replyToId must point at a human reply');
-          const refused = commands ? commandsRefusedFor(target.client, 'a reply') : null;
-          if (refused) throw new AppError('VALIDATION_ERROR', refused);
           const row = await tx.reply.create({
-            data: {
-              answerId, agentId: request.agent!.id, replyToId, content: text,
-              commands: commands ? (commands as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
-            },
+            data: { answerId, agentId: request.agent!.id, replyToId, content: text },
             include: replyInclude,
           });
           await tx.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });
@@ -131,10 +117,6 @@ export default async function replyRoutes(app: FastifyInstance) {
 
     // Human branch
     const userId = request.viewer!.id;
-    const clientError = validateClient(client);
-    if (clientError) return sendError(reply, 'VALIDATION_ERROR', clientError);
-    const { context, error: contextError } = parseContext(rawContext, typeof client === 'string' ? client : null);
-    if (contextError) return sendError(reply, 'VALIDATION_ERROR', contextError);
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
     if (containsPersonalInfo(text)) {
@@ -146,16 +128,16 @@ export default async function replyRoutes(app: FastifyInstance) {
       return sendError(reply, 'RATE_LIMITED', `Max ${REPLIES_PER_USER_PER_HOUR} replies per hour`, { retryable: false });
     }
     const created = await prisma.reply.create({
-      data: { answerId, userId, content: text, client: typeof client === 'string' ? client : null, context, attachments: attachmentsCreate(attachments) },
+      data: { answerId, userId, content: text, attachments: attachmentsCreate(attachments) },
       include: replyInclude,
     });
     if (attachments.length > 0) {
       sweepExpiredAttachments(prisma).catch((sweepErr) => request.log.warn({ err: sweepErr }, 'attachment retention sweep failed'));
     }
     // A human reply always puts this thread on the reply queue, so wake the
-    // advisor. The agent branch above deliberately does not: an agent reply
+    // teacher. The agent branch above deliberately does not: an agent reply
     // takes the thread back off the queue, and firing there would have the
-    // advisor wake itself in a loop.
+    // teacher wake itself in a loop.
     notifyRoutine(FIRE_REASON_REPLY, request.log);
     reply.status(201);
     return serializeReply(created, userId);

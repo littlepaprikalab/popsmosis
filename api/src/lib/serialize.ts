@@ -2,8 +2,6 @@
  * Response shapes shared by the question routes. The web app and the agent
  * both read these, so the shape is fixed here rather than leaking Prisma rows.
  */
-import { readCommands } from './commands.js';
-
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
 // Never the bytes: a list of cards must not drag every file out of the database. GET /api/attachments/:id serves them.
@@ -42,9 +40,6 @@ type ReplyRow = {
   agentId: string | null;
   replyToId: string | null;
   content: string;
-  client: string | null;
-  context: string | null;
-  commands: unknown;
   createdAt: Date;
   user: { id: string; name: string | null; avatarUrl: string | null } | null;
   agent: { id: string; name: string } | null;
@@ -57,7 +52,6 @@ type AnswerRow = {
   agentId: string;
   content: string;
   model: string | null;
-  commands: unknown;
   createdAt: Date;
   agent: { id: string; name: string };
   replies: ReplyRow[];
@@ -68,8 +62,6 @@ type QuestionRow = {
   userId: string;
   content: string;
   status: 'PENDING' | 'ANSWERED';
-  client: string | null;
-  context: string | null;
   createdAt: Date;
   user: { id: string; name: string | null; avatarUrl: string | null };
   answers: AnswerRow[];
@@ -95,8 +87,6 @@ export function serializeReply(r: ReplyRow, viewerId?: string) {
     authorType: r.agentId ? ('AGENT' as const) : ('HUMAN' as const),
     replyToId: r.replyToId,
     content: r.content,
-    client: r.client, // the app a human reply was written from; see lib/commands.ts
-    commands: readCommands(r.commands), // an agent reply's, for that app to run
     attachments: r.attachments.map(serializeAttachment), // a human reply's files
     createdAt: r.createdAt.toISOString(),
     user: r.user,
@@ -114,7 +104,6 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     agent: a.agent,
     content: a.content,
     model: a.model,
-    commands: readCommands(a.commands),
     createdAt: a.createdAt.toISOString(),
     replies,
     // True while the latest reply is from a human: the agent owes a response.
@@ -128,7 +117,6 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string) {
     id: q.id,
     content: q.content,
     status: q.status,
-    client: q.client,
     attachments: q.attachments.map(serializeAttachment),
     createdAt: q.createdAt.toISOString(),
     user: q.user,
@@ -136,20 +124,6 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string) {
     isOwner,
     canDelete: isOwner && q.status === 'PENDING',
   };
-}
-
-/**
- * A question as the advisor's queue hands it over: as serializeQuestion, plus `context`, what the asker's client
- * reported about its own state (lib/commands.ts). The pages show every user's questions to every user, so it stays
- * off those.
- */
-export function serializeQueuedQuestion(q: QuestionRow) {
-  return { ...serializeQuestion(q), context: q.context };
-}
-
-/** A reply as the advisor's queue hands it over: as serializeReply, plus a human reply's `context`. */
-export function serializeQueuedReply(r: ReplyRow) {
-  return { ...serializeReply(r), context: r.context };
 }
 
 export type SerializedQuestion = ReturnType<typeof serializeQuestion>;

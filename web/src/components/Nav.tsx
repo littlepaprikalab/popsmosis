@@ -83,13 +83,13 @@ export function Nav() {
     <nav ref={navRef} className="sticky top-0 z-50 relative"
       style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
       <div className="flex items-center gap-6 px-6 py-3 max-w-full overflow-hidden">
-        <Link href="/" aria-label="ZOEY home" className="text-lg font-bold tracking-wider whitespace-nowrap shrink-0" style={{ color: 'var(--accent-red)' }}>
-          ZOEY
+        <Link href="/" aria-label="POPSMOSIS home" className="text-lg font-bold tracking-wider whitespace-nowrap shrink-0" style={{ color: 'var(--accent-red)' }}>
+          POPSMOSIS
         </Link>
 
         {/* Desktop */}
         <div className="hidden lg:flex flex-wrap items-center gap-x-4 gap-y-1 text-sm flex-1">
-          <Link href="/advice" className="hover-text transition-colors" style={isActive('/advice') ? activeStyle : idleStyle}>ADVICE</Link>
+          <Link href="/learn" className="hover-text transition-colors" style={isActive('/learn') ? activeStyle : idleStyle}>LEARN</Link>
           <span style={{ color: 'var(--border)' }}>|</span>
           {authLinks()}
         </div>
@@ -111,7 +111,7 @@ export function Nav() {
         <div className="lg:hidden absolute top-full left-0 right-0 z-50 flex flex-col text-sm py-3 px-6 gap-3 animate-fade-in"
           style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
           <div className="flex flex-col gap-3" style={{ color: 'var(--text-secondary)' }}>
-            <Link href="/advice" className="hover-text transition-colors" onClick={closeMenu}>ADVICE</Link>
+            <Link href="/learn" className="hover-text transition-colors" onClick={closeMenu}>LEARN</Link>
           </div>
           <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
           <div className="flex flex-col gap-3">{authLinks(closeMenu)}</div>

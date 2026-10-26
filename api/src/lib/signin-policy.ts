@@ -1,5 +1,5 @@
 /**
- * Who gets in without waiting. zoey is an internal tool: any Google account can
+ * Who gets in without waiting. popsmosis is an internal tool: any Google account can
  * sign in, but a new account starts PENDING and sees only a waiting page until
  * an admin approves it on /admin/users. These lists skip the queue:
  *

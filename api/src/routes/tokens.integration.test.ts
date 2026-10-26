@@ -45,7 +45,7 @@ d('personal access tokens', () => {
     userA = await prisma.user.create({ data: { email: `${tag}-a@example.com`, googleId: `${tag}-a`, name: 'Ada', ...approved } });
     pending = await prisma.user.create({ data: { email: `${tag}-p@example.com`, googleId: `${tag}-p`, name: 'Pat' } });
     const { SESSION_EXPIRES_IN } = await import('./../lib/session.js');
-    const mk = (id: string) => `zoey_session=${app.jwt.sign({ sub: id }, { expiresIn: SESSION_EXPIRES_IN })}`;
+    const mk = (id: string) => `popsmosis_session=${app.jwt.sign({ sub: id }, { expiresIn: SESSION_EXPIRES_IN })}`;
     cookieA = mk(userA.id);
     cookiePending = mk(pending.id);
 
@@ -62,15 +62,15 @@ d('personal access tokens', () => {
   });
 
   it('mints a token, shows the raw value exactly once, and stores only its hash', async () => {
-    const r = await app.inject({ method: 'POST', url: '/api/tokens', headers: asUser(cookieA), payload: { name: 'zed panel' } });
+    const r = await app.inject({ method: 'POST', url: '/api/tokens', headers: asUser(cookieA), payload: { name: 'my script' } });
     expect(r.statusCode).toBe(201);
     const raw = r.json().token as string;
-    expect(raw).toMatch(/^pk_zoey_[0-9a-f]{64}$/);
+    expect(raw).toMatch(/^pk_pop_[0-9a-f]{64}$/);
 
     const listed = await app.inject({ method: 'GET', url: '/api/tokens', headers: asUser(cookieA) });
     expect(listed.statusCode).toBe(200);
     const row = listed.json().data.find((t: { id: string }) => t.id === r.json().id);
-    expect(row.name).toBe('zed panel');
+    expect(row.name).toBe('my script');
     expect(row.revokedAt).toBeNull();
     // The raw token is never served again, under any key.
     expect(JSON.stringify(listed.json())).not.toContain(raw);
@@ -132,7 +132,7 @@ d('personal access tokens', () => {
       data: { email: `${tag}-adm@example.com`, googleId: `${tag}-adm`, name: 'Ada', role: 'ADMIN', status: 'APPROVED', reviewedAt: new Date() },
     });
     const { SESSION_EXPIRES_IN } = await import('./../lib/session.js');
-    const adminCookie = `zoey_session=${app.jwt.sign({ sub: admin.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
+    const adminCookie = `popsmosis_session=${app.jwt.sign({ sub: admin.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
     const adminToken = await mintToken(adminCookie, 'admin token');
 
     // The token is genuinely that admin — it just may not act as one.
@@ -165,8 +165,8 @@ d('personal access tokens', () => {
   });
 
   it('rejects malformed and unknown tokens', async () => {
-    expect((await app.inject({ method: 'GET', url: '/api/tokens/me', headers: asToken('pk_zoey_nope') })).statusCode).toBe(401);
-    expect((await app.inject({ method: 'GET', url: '/api/tokens/me', headers: asToken(`pk_zoey_${'f'.repeat(64)}`) })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'GET', url: '/api/tokens/me', headers: asToken('pk_pop_nope') })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'GET', url: '/api/tokens/me', headers: asToken(`pk_pop_${'f'.repeat(64)}`) })).statusCode).toBe(401);
   });
 
   it('gets an unapproved owner nowhere', async () => {
@@ -208,7 +208,7 @@ d('personal access tokens', () => {
   it("will not let one user see or revoke another's token", async () => {
     const other = await prisma.user.create({ data: { email: `${tag}-o@example.com`, googleId: `${tag}-o`, name: 'Otto', status: 'APPROVED', reviewedAt: new Date() } });
     const { SESSION_EXPIRES_IN } = await import('./../lib/session.js');
-    const cookieOther = `zoey_session=${app.jwt.sign({ sub: other.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
+    const cookieOther = `popsmosis_session=${app.jwt.sign({ sub: other.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
 
     const mineList = await app.inject({ method: 'GET', url: '/api/tokens', headers: asUser(cookieA) });
     const someoneElsesId = mineList.json().data[0].id;

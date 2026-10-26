@@ -1,8 +1,9 @@
-// zoey — Q&A support with an agent-answered advice column.
+// popsmosis — droplets for learning.
 //
-// Humans sign in with Google and get a session cookie. Agents authenticate with
-// a bearer API key that is stored only as a sha256 hash. Questions get exactly
-// one answer; replies under an answer form a linear human <-> agent thread.
+// Humans sign in with Google and get a session cookie, then ask for a topic to
+// learn. Agents authenticate with a bearer API key that is stored only as a
+// sha256 hash. Each request (a Question) gets exactly one lesson (its Answer);
+// follow-ups under a lesson form a linear human <-> agent thread.
 
 generator client {
   provider = "prisma-client"
@@ -59,7 +60,7 @@ model User {
 model Agent {
   id         String    @id @default(cuid())
   name       String    @unique
-  apiKeyHash String?   @unique // sha256 of the raw sk_zoey_ key; the raw key is never stored. NULL = revoked, no key works until an admin mints one
+  apiKeyHash String?   @unique // sha256 of the raw sk_pop_ key; the raw key is never stored. NULL = revoked, no key works until an admin mints one
   enabled    Boolean   @default(true)
   createdAt  DateTime  @default(now())
   lastSeenAt DateTime?
@@ -71,8 +72,7 @@ model Agent {
 }
 
 // A personal access token: the same human, authenticating from something that
-// is not a browser and so has no session cookie (the Zed panel in Abyss, curl,
-// a script). Only the sha256 of the raw pk_zoey_ token is stored, exactly as
+// is not a browser and so has no session cookie (curl, a script, another app). Only the sha256 of the raw pk_pop_ token is stored, exactly as
 // for an agent key. A token acts as its owner and is bound by everything the
 // owner is: an unapproved or denied account gets nowhere with one, and the
 // access rules are re-applied on every request just as they are for a cookie.
@@ -97,10 +97,8 @@ model UserToken {
 model Question {
   id        String         @id @default(cuid())
   userId    String
-  content   String // 10..2000 chars
+  content   String // 3..2000 chars: a topic to learn ("ATP synthesis"), or a fuller request
   status    QuestionStatus @default(PENDING)
-  client    String? // the app it was asked from, when that app can act on an answer (lib/commands.ts); null = the web page
-  context   String? // that app's own account of its state when this was asked (Zed: camera, selection...), for the advisor to aim commands with
   createdAt DateTime       @default(now())
 
   // A short lease taken by the queue endpoint so two overlapping runs cannot be
@@ -125,7 +123,6 @@ model Answer {
   agentId    String
   content    String // <= 5000 chars, markdown
   model      String? // which LLM produced it, free text
-  commands   Json? // [{ command, description }] for the asker's client to run; only when the question's client runs them
   createdAt  DateTime @default(now())
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
@@ -145,9 +142,6 @@ model Reply {
   agentId   String? // set when the agent wrote it
   replyToId String?  @unique // agent replies only: the human reply being answered (one agent reply per human reply)
   content   String // 1..2000 chars
-  client    String? // human replies only: as Question.client
-  context   String? // human replies only: as Question.context
-  commands  Json? // agent replies only: as Answer.commands, when the reply it answers came from a client that runs them
   createdAt DateTime @default(now())
 
   answer      Answer       @relation(fields: [answerId], references: [id], onDelete: Cascade)
@@ -162,7 +156,7 @@ model Reply {
   @@map("replies")
 }
 
-// A file a human sent with a question or a human reply (lib/attachments.ts): a screenshot, a log, a data file. Exactly
+// A file a human sent with a question or a human reply (lib/attachments.ts): notes, a screenshot, a data file. Exactly
 // one of questionId / replyId is set. The bytes live in the row rather than in a bucket: there are few, each is small,
 // and they go with their message. Past ATTACHMENT_RETENTION_DAYS the bytes are let go (data NULL) and the row stays, so
 // an old thread still says what was sent.

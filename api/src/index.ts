@@ -57,7 +57,7 @@ export async function buildApp() {
     // Same rule as sparks: in production only the web app (which attaches the
     // secret) and agents (with their key) may reach the API. Refuse to start
     // half-configured rather than run open.
-    throw new Error('PROXY_SECRET environment variable is required in production. Set the same value on bong-api and bong-web.');
+    throw new Error('PROXY_SECRET environment variable is required in production. Set the same value on popsmosis-api and popsmosis-web.');
   }
 
   if (!process.env.JWT_SECRET) {

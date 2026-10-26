@@ -1,6 +1,6 @@
 /**
- * Attachments: files a human sends with a question or a reply — a screenshot pasted into Zed's Zoey panel, a log, a
- * data table — for the advisor to read (GET /api/attachments/:id) and the pages to list.
+ * Attachments: files a human sends with a question or a reply — a photo of lecture notes, a screenshot, a data table —
+ * for the teacher to read (GET /api/attachments/:id) and the pages to list.
  *
  * They travel inside the message's own JSON body as base64, so a message and its files are written together or not at
  * all, and live in Postgres beside it (Attachment in prisma/schema.prisma). What a file is served as is decided from
@@ -15,7 +15,7 @@ export const ATTACHMENTS_MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 export const ATTACHMENT_NAME_MAX_LENGTH = 200;
 const MIME_TYPE_MAX_LENGTH = 100;
 
-/** A message's body limit: its files as base64 (four bytes for every three) and room for its text and context. */
+/** A message's body limit: its files as base64 (four bytes for every three) and room for its text. */
 export const MESSAGE_BODY_LIMIT = Math.ceil((ATTACHMENTS_MAX_TOTAL_BYTES * 4) / 3) + 256 * 1024;
 
 /** Days a file's bytes are kept; 0 keeps them for good. Past it the row stays, so a thread still lists what was sent. */

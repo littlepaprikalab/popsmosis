@@ -42,7 +42,7 @@ d('question / answer / reply flow', () => {
     const admin = await prisma.user.create({ data: { email: `${tag}-admin@example.com`, googleId: `${tag}-admin`, name: 'Root', role: 'ADMIN', ...approved } });
     const { SESSION_EXPIRES_IN } = await import('./lib/session.js');
     // Full-lifetime tokens, like a real sign-in issues, so ordinary requests are not renewed mid-test.
-    const mk = (id: string) => `zoey_session=${app.jwt.sign({ sub: id }, { expiresIn: SESSION_EXPIRES_IN })}`;
+    const mk = (id: string) => `popsmosis_session=${app.jwt.sign({ sub: id }, { expiresIn: SESSION_EXPIRES_IN })}`;
     cookieA = mk(userA.id);
     cookieB = mk(userB.id);
     adminCookie = mk(admin.id);
@@ -77,8 +77,8 @@ d('question / answer / reply flow', () => {
   });
 
   it('rejects bad, malformed and disabled agent keys', async () => {
-    expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_zoey_' + 'f'.repeat(64)) })).statusCode).toBe(401);
-    expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_zoey_nope') })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_pop_' + 'f'.repeat(64)) })).statusCode).toBe(401);
+    expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_pop_nope') })).statusCode).toBe(401);
     expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(disabledKey) })).statusCode).toBe(403);
     const ok = await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(agentKey) });
     expect(ok.statusCode).toBe(200);
@@ -125,7 +125,7 @@ d('question / answer / reply flow', () => {
     const mineStatus = await app.inject({ method: 'GET', url: '/api/questions/status?mine=true', headers: asUser(cookieB) });
     expect(mineStatus.statusCode).toBe(200);
     expect(mineStatus.json().latestAt === null || mineStatus.json().latestAt < q.createdAt).toBe(true);
-    // The advisor heartbeat is never scoped — a stalled runner is everyone's problem.
+    // The teacher heartbeat is never scoped — a stalled runner is everyone's problem.
     expect(mineStatus.json().agentLastSeenAt).toBe(status.json().agentLastSeenAt);
 
     // B's own question does move B's scoped watermark.
@@ -294,7 +294,7 @@ d('question / answer / reply flow', () => {
     const cookieOf = (res: { headers: Record<string, unknown> }) => {
       const raw = res.headers['set-cookie'];
       const list = Array.isArray(raw) ? raw : raw ? [String(raw)] : [];
-      return list.find((c) => c.startsWith('zoey_session=')) ?? null;
+      return list.find((c) => c.startsWith('popsmosis_session=')) ?? null;
     };
 
     // A fresh token is left alone: no Set-Cookie on an ordinary request.
@@ -305,19 +305,19 @@ d('question / answer / reply flow', () => {
     // A token past the halfway point is re-issued for the full lifetime.
     // fast-jwt reads numeric expiresIn as milliseconds; use an explicit seconds string.
     const aging = app.jwt.sign({ sub: userA.id }, { expiresIn: `${Math.floor(RENEW_THRESHOLD_S / 2)}s` });
-    const renewed = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`zoey_session=${aging}`) });
+    const renewed = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`popsmosis_session=${aging}`) });
     expect(renewed.statusCode).toBe(200);
     const setCookie = cookieOf(renewed)!;
     expect(setCookie).toBeTruthy();
     expect(setCookie).toContain(`Max-Age=${SESSION_TTL_S}`);
     expect(setCookie).toContain('HttpOnly');
     expect(setCookie).toContain('Path=/api');
-    const newToken = setCookie.split(';')[0].replace('zoey_session=', '');
+    const newToken = setCookie.split(';')[0].replace('popsmosis_session=', '');
     expect(newToken).not.toBe(aging);
     const decoded = app.jwt.decode<{ exp: number }>(newToken)!;
     expect(decoded.exp - Math.floor(Date.now() / 1000)).toBeGreaterThan(SESSION_TTL_S - 60);
     // The renewed token works and, being fresh, is not renewed again.
-    const again = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`zoey_session=${newToken}`) });
+    const again = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`popsmosis_session=${newToken}`) });
     expect(again.statusCode).toBe(200);
     expect(cookieOf(again)).toBeNull();
     // A renewed response is never publicly cacheable.
@@ -329,7 +329,7 @@ d('question / answer / reply flow', () => {
     const hdr = b64({ alg: 'HS256', typ: 'JWT' });
     const body = b64({ sub: userA.id, iat: Math.floor(Date.now() / 1000) - 100, exp: Math.floor(Date.now() / 1000) - 10 });
     const expired = `${hdr}.${body}.${createHmac('sha256', process.env.JWT_SECRET!).update(`${hdr}.${body}`).digest('base64url')}`;
-    const dead = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`zoey_session=${expired}`) });
+    const dead = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`popsmosis_session=${expired}`) });
     expect(dead.statusCode).toBe(401);
     expect(dead.json().error.message).toBe('Invalid token');
 
@@ -337,7 +337,7 @@ d('question / answer / reply flow', () => {
     const out = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: asUser(cookieA) });
     expect(out.statusCode).toBe(200);
     const cleared = cookieOf(out)!;
-    expect(cleared).toMatch(/^zoey_session=;/);
+    expect(cleared).toMatch(/^popsmosis_session=;/);
     expect(cleared).toContain('Path=/api');
     expect(cleared).toMatch(/Expires=Thu, 01 Jan 1970|Max-Age=0/);
     // Without the cookie the next request is anonymous.
@@ -405,7 +405,7 @@ d('question / answer / reply flow', () => {
   it('pending users can only see that they are pending until an admin approves them', async () => {
     // Cal signed in with a Google account outside the auto-approve list: the row exists, status PENDING.
     const cal = await prisma.user.create({ data: { email: `${tag}-cal@example.com`, googleId: `${tag}-cal`, name: 'Cal' } });
-    const cookieCal = `zoey_session=${app.jwt.sign({ sub: cal.id }, { expiresIn: '30d' })}`;
+    const cookieCal = `popsmosis_session=${app.jwt.sign({ sub: cal.id }, { expiresIn: '30d' })}`;
     expect(cal.status).toBe('PENDING');
 
     // /me works (that is how the waiting page polls); everything else is 403 PENDING_APPROVAL.
@@ -440,7 +440,7 @@ d('question / answer / reply flow', () => {
     const approve = await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { status: 'APPROVED' } });
     expect(approve.json().status).toBe('APPROVED');
     expect((await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(cookieCal) })).statusCode).toBe(200);
-    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('zoey_session=', ''))!.sub;
+    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('popsmosis_session=', ''))!.sub;
     expect((await prisma.user.findUnique({ where: { id: cal.id } }))!.reviewedById).toBe(adminId);
 
     // Validation: bad status, no fields, own access, denying an admin.
@@ -471,7 +471,7 @@ d('question / answer / reply flow', () => {
     const { invalidateUserCache } = await import('./middleware/auth.js');
     const dee = await prisma.user.create({ data: { email: `${tag}-dee@example.com`, googleId: `${tag}-dee`, name: 'Dee', role: 'ADMIN' } });
     expect(dee.status).toBe('PENDING');
-    const cookieDee = `zoey_session=${app.jwt.sign({ sub: dee.id }, { expiresIn: '30d' })}`;
+    const cookieDee = `popsmosis_session=${app.jwt.sign({ sub: dee.id }, { expiresIn: '30d' })}`;
 
     // The waiting page's own poll is what unsticks it.
     const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieDee) });
@@ -485,7 +485,7 @@ d('question / answer / reply flow', () => {
 
     // Same again on a row an admin had denied: the approval must not read as
     // that admin's doing, with a reviewedAt saying it happened just now.
-    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('zoey_session=', ''))!.sub;
+    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('popsmosis_session=', ''))!.sub;
     await prisma.user.update({ where: { id: dee.id }, data: { status: 'DENIED', reviewedAt: new Date(), reviewedById: adminId } });
     invalidateUserCache(dee.id);
     expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieDee) })).json().status).toBe('APPROVED');
@@ -497,7 +497,7 @@ d('question / answer / reply flow', () => {
   it('ADMIN_EMAILS reaches a session that is already open, without signing in again', async () => {
     const { invalidateUserCache } = await import('./middleware/auth.js');
     const eve = await prisma.user.create({ data: { email: `${tag}-eve@example.com`, googleId: `${tag}-eve`, name: 'Eve' } });
-    const cookieEve = `zoey_session=${app.jwt.sign({ sub: eve.id }, { expiresIn: '30d' })}`;
+    const cookieEve = `popsmosis_session=${app.jwt.sign({ sub: eve.id }, { expiresIn: '30d' })}`;
     expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieEve) })).json().status).toBe('PENDING');
 
     // The documented way out of "nobody can approve anyone": add the address and
@@ -547,7 +547,7 @@ d('question / answer / reply flow', () => {
     const fay = await prisma.user.create({
       data: { email: `${tag}-fay@example.com`, googleId: `${tag}-fay`, name: 'Fay', status: 'DENIED', reviewedAt: new Date() },
     });
-    const cookieFay = `zoey_session=${app.jwt.sign({ sub: fay.id }, { expiresIn: '30d' })}`;
+    const cookieFay = `popsmosis_session=${app.jwt.sign({ sub: fay.id }, { expiresIn: '30d' })}`;
     const before = process.env.ALLOWED_EMAIL_DOMAINS;
     process.env.ALLOWED_EMAIL_DOMAINS = 'example.com';
     invalidateUserCache(fay.id);
@@ -565,7 +565,7 @@ d('question / answer / reply flow', () => {
   it('refuses to demote the last admin', async () => {
     // Make the seeded admin the only admin in the test's world by trying to demote via a second admin:
     // promote Ben, then have Ben demote the original admin (allowed: two admins), then Ben demote himself (refused: last admin).
-    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('zoey_session=', ''))!.sub;
+    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('popsmosis_session=', ''))!.sub;
     expect((await app.inject({ method: 'PATCH', url: `/api/users/${userB.id}`, headers: asUser(adminCookie), payload: { role: 'ADMIN' } })).statusCode).toBe(200);
     // Other admins may exist in the shared DB (seed data); count them to know what to expect.
     const admins = await prisma.user.count({ where: { role: 'ADMIN' } });
@@ -598,9 +598,9 @@ d('question / answer / reply flow', () => {
       expect((await gated.inject({ method: 'GET', url: '/api/questions', headers: { ...asUser(cookieA), 'x-proxy-token': 'nope' } })).statusCode).toBe(403);
       // Agents bypass the gate with a well-formed key and are then authenticated normally.
       expect((await gated.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(agentKey) })).statusCode).toBe(200);
-      expect((await gated.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_zoey_' + 'f'.repeat(64)) })).statusCode).toBe(401);
+      expect((await gated.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_pop_' + 'f'.repeat(64)) })).statusCode).toBe(401);
       // A malformed key does not count as an agent and hits the gate.
-      expect((await gated.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_zoey_short') })).statusCode).toBe(403);
+      expect((await gated.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent('sk_pop_short') })).statusCode).toBe(403);
       // Health stays open for Render's health check.
       expect((await gated.inject({ method: 'GET', url: '/api/health' })).statusCode).toBe(200);
     } finally {
@@ -614,7 +614,7 @@ d('question / answer / reply flow', () => {
     expect(denied.statusCode).toBe(403);
     const created = await app.inject({ method: 'POST', url: '/api/agents', headers: asUser(adminCookie), payload: { name: `${tag}-admin-made` } });
     expect(created.statusCode).toBe(201);
-    expect(created.json().apiKey).toMatch(/^sk_zoey_[0-9a-f]{64}$/);
+    expect(created.json().apiKey).toMatch(/^sk_pop_[0-9a-f]{64}$/);
     const me = await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(created.json().apiKey) });
     expect(me.statusCode).toBe(200);
 
@@ -634,7 +634,7 @@ d('question / answer / reply flow', () => {
     const minted = await app.inject({ method: 'POST', url: `/api/agents/${created.json().id}/rotate-key`, headers: asUser(adminCookie) });
     expect(minted.statusCode).toBe(200);
     expect(minted.json().hasKey).toBe(true);
-    expect(minted.json().apiKey).toMatch(/^sk_zoey_[0-9a-f]{64}$/);
+    expect(minted.json().apiKey).toMatch(/^sk_pop_[0-9a-f]{64}$/);
     expect(minted.json().apiKey).not.toBe(created.json().apiKey);
     expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(minted.json().apiKey) })).statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(created.json().apiKey) })).statusCode).toBe(401);
@@ -643,65 +643,6 @@ d('question / answer / reply flow', () => {
     expect(skill.statusCode).toBe(200);
     expect(skill.headers['content-type']).toContain('text/markdown');
     expect(skill.body).toContain('http://localhost:3001/api/agents/me');
-    expect(skill.body).not.toContain('api.zoey.example');
-  });
-
-  it('keeps credentials issued before the rename working', async () => {
-    const { hashApiKey, LEGACY_API_KEY_PREFIX } = await import('./lib/apikey.js');
-    const { SESSION_EXPIRES_IN, SESSION_COOKIE, LEGACY_SESSION_COOKIE } = await import('./lib/session.js');
-    const setCookies = (res: { headers: Record<string, unknown> }) => {
-      const raw = res.headers['set-cookie'];
-      return (Array.isArray(raw) ? raw : raw ? [raw] : []).map(String);
-    };
-    const named = (res: { headers: Record<string, unknown> }, name: string) =>
-      setCookies(res).filter((c) => c.startsWith(`${name}=`));
-
-    // --- A key minted under the old prefix still authenticates. ---
-    // Only the raw key's sha256 is stored and that hash covers the prefix, so
-    // the key in the database is untouched by the rename; the format check was
-    // the only thing that had to learn the old name.
-    const legacyRaw = `${LEGACY_API_KEY_PREFIX}${'abcdef01'.repeat(8)}`;
-    await prisma.agent.create({ data: { name: `${tag}-legacy-agent`, apiKeyHash: hashApiKey(legacyRaw) } });
-    const legacyAgent = await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(legacyRaw) });
-    expect(legacyAgent.statusCode).toBe(200);
-    expect(legacyAgent.json().name).toBe(`${tag}-legacy-agent`);
-    // Accepting the prefix is not accepting the key: an unissued one still fails.
-    const unissued = `${LEGACY_API_KEY_PREFIX}${'f'.repeat(64)}`;
-    expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: asAgent(unissued) })).statusCode).toBe(401);
-
-    // --- A session cookie set under the old name still signs you in, once. ---
-    const legacyCookie = `${LEGACY_SESSION_COOKIE}=${app.jwt.sign({ sub: userB.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
-    const viaLegacy = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(legacyCookie) });
-    expect(viaLegacy.statusCode).toBe(200);
-    expect(viaLegacy.json().id).toBe(userB.id);
-    // That response moves the session onto the current name and drops the old
-    // one, so it is the last request that ever carries it.
-    const [moved] = named(viaLegacy, SESSION_COOKIE);
-    expect(moved).toBeTruthy();
-    expect(moved).toContain('HttpOnly');
-    expect(moved).toContain('Path=/api');
-    expect(named(viaLegacy, LEGACY_SESSION_COOKIE)[0]).toMatch(new RegExp(`^${LEGACY_SESSION_COOKIE}=;`));
-    // The token it hands back is an ordinary session under the current name.
-    const movedToken = moved.split(';')[0].replace(`${SESSION_COOKIE}=`, '');
-    const after = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(`${SESSION_COOKIE}=${movedToken}`) });
-    expect(after.statusCode).toBe(200);
-    expect(after.json().id).toBe(userB.id);
-    expect(named(after, SESSION_COOKIE)).toHaveLength(0); // fresh, so not renewed again
-
-    // --- The old name is still a session cookie, so CSRF still covers it. ---
-    const noXhr = await app.inject({ method: 'POST', url: '/api/questions', headers: { cookie: legacyCookie }, payload: { content: `${tag} csrf probe, long enough to pass validation` } });
-    expect(noXhr.statusCode).toBe(403);
-    expect(noXhr.json().error.message).toBe('Missing CSRF header');
-
-    // --- Logout ends a session started under either name, unambiguously: the
-    // migration cookie must not be left sitting beside the clear. ---
-    const out = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: asUser(legacyCookie) });
-    expect(out.statusCode).toBe(200);
-    for (const name of [SESSION_COOKIE, LEGACY_SESSION_COOKIE]) {
-      const cleared = named(out, name);
-      expect(cleared).toHaveLength(1);
-      expect(cleared[0]).toMatch(new RegExp(`^${name}=;`));
-      expect(cleared[0]).toContain('Path=/api');
-    }
+    expect(skill.body).not.toContain('api.popsmosis.example');
   });
 });

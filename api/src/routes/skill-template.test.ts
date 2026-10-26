@@ -10,8 +10,8 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const TEMPLATE = resolve(__dirname, '../../../docs/zoey-agent-skill.md');
-const PLACEHOLDER = 'https://api.zoey.example';
+const TEMPLATE = resolve(__dirname, '../../../docs/popsmosis-agent-skill.md');
+const PLACEHOLDER = 'https://api.popsmosis.example';
 
 describe('skill file template', () => {
   const body = readFileSync(TEMPLATE, 'utf8');
@@ -24,12 +24,12 @@ describe('skill file template', () => {
 
   it('substitution leaves nothing behind', () => {
     const substituted = body.split(PLACEHOLDER).join('https://api.example.test');
-    expect(substituted).not.toContain('zoey.example');
+    expect(substituted).not.toContain('popsmosis.example');
     expect(substituted).toContain('https://api.example.test/api/agents/me');
   });
 
   it('describes no polling window — the API fires the routine on write', () => {
-    expect(body).not.toContain('ZOEY_POLL_MINUTES');
-    expect(body).not.toContain('ZOEY_QUIET');
+    expect(body).not.toContain('POPSMOSIS_POLL_MINUTES');
+    expect(body).not.toContain('POPSMOSIS_QUIET');
   });
 });

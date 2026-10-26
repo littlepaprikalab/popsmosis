@@ -2,7 +2,7 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { generateApiKey } from '../lib/apikey.js';
 
-// Usage: npm --workspace api run agent:create -- --name "zoey-helper"
+// Usage: npm --workspace api run agent:create -- --name "popsmosis-teacher"
 // Prints the raw key exactly once. Only its sha256 hash is stored.
 
 const args = process.argv.slice(2);
@@ -21,7 +21,7 @@ try {
   console.log('');
   console.log('API key (shown once, store it now):');
   console.log('');
-  console.log(`  ZOEY_API_KEY=${raw}`);
+  console.log(`  POPSMOSIS_API_KEY=${raw}`);
   console.log('');
 } catch (err: unknown) {
   if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'P2002') {

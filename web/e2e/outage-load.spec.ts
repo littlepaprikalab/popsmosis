@@ -17,7 +17,7 @@ test.describe('outage load', () => {
 
   test('an outage that starts mid-session does not multiply the polling', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible();
 
     let count = 0;
@@ -31,7 +31,7 @@ test.describe('outage load', () => {
 
   test('a hanging API does not pile up in-flight requests', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible();
 
     // Never answering is the worst case: every attempt costs the full client

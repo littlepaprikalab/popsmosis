@@ -12,7 +12,7 @@ import { timeAgo } from '@/lib/time';
 
 /**
  * The caller's own personal access tokens: what lets a client with no cookie
- * jar — the Zed panel in Abyss, curl, a script — act as them. The raw token is
+ * jar — curl, a script, another app — act as them. The raw token is
  * shown once, right after minting, and never again.
  */
 export default function TokensPage() {
@@ -96,7 +96,7 @@ export default function TokensPage() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">ACCESS TOKENS</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          A token signs in as you from somewhere with no browser — the Zoey panel in Zed, curl, a script.
+          A token signs in as you from somewhere with no browser — curl, a script, another app.
           <span className="block text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
             It can ask, read and reply exactly as you can. It cannot manage tokens, so a leaked one cannot replace itself
             or revoke the token you would kill it with.
@@ -111,7 +111,7 @@ export default function TokensPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') create(); }}
-            placeholder="what it is for, e.g. zed panel"
+            placeholder="what it is for, e.g. my script"
             maxLength={60}
             className="flex-1 text-sm outline-none px-3 py-2 rounded"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)' }}
@@ -132,7 +132,7 @@ export default function TokensPage() {
           </div>
           <code className="block text-xs break-all p-2 rounded select-all" style={{ background: 'var(--code-block-bg)', color: 'var(--text-primary)' }}>{revealed.token}</code>
           <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>
-            Store it as <code>ZOEY_API_TOKEN</code> in the environment of whatever uses it. Only a hash is kept on the server.
+            Store it as <code>POPSMOSIS_API_TOKEN</code> in the environment of whatever uses it. Only a hash is kept on the server.
           </p>
         </div>
       )}

@@ -20,7 +20,7 @@ export function ServerUnavailable({ onRetry }: { onRetry: () => Promise<void> })
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
         <h1 className="text-xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-orange)' }}>SERVER UNAVAILABLE</h1>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          ZOEY cannot reach its API right now. It may be starting back up after being idle, or a deploy may be
+          POPSMOSIS cannot reach its API right now. It may be starting back up after being idle, or a deploy may be
           in progress. Your sign-in is fine — this usually clears in under a minute.
         </p>
         <button onClick={retry} disabled={retrying}

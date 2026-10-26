@@ -5,13 +5,12 @@ import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/error
 import { requireUser, requireAgent } from '../middleware/auth.js';
 import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
 import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
-import { questionInclude, serializeQuestion, serializeQueuedQuestion } from '../lib/serialize.js';
+import { questionInclude, serializeQuestion } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes } from '../lib/claim.js';
-import { validateClient, parseContext, parseCommands, commandsRefusedFor, readCommands } from '../lib/commands.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 
-export const QUESTION_MIN_LENGTH = 10;
+export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
 export const ANSWER_MAX_LENGTH = 5000;
 const QUESTIONS_PER_USER_PER_DAY = parseInt(process.env.QUESTIONS_PER_USER_PER_DAY || '10', 10);
@@ -71,7 +70,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       // Null when nothing is newer than ?since, which is the answer the poller
       // wants: no banner.
       latestAt: row?.latestAt?.toISOString() ?? null,
-      // When the advisor last called the API; the page shows it so a stalled
+      // When the teacher last called the API; the page shows it so a stalled
       // runner is visible to users, not just on the admin page. Never scoped
       // or bounded: a stalled runner is everyone's problem.
       agentLastSeenAt: row?.agentLastSeenAt?.toISOString() ?? null,
@@ -111,24 +110,16 @@ export default async function questionRoutes(app: FastifyInstance) {
       include: questionInclude,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    return { data: questions.map((q) => serializeQueuedQuestion(q)) };
+    return { data: questions.map((q) => serializeQuestion(q)) };
   });
 
-  // POST /api/questions — signed-in user asks a question. `client` names the
-  // app it was asked from when that app can act on the answer, and `context` is
-  // that app's account of its own state as it was asked (lib/commands.ts).
-  // `attachments` are files sent with it (lib/attachments.ts), which is why the
-  // body may be large — and why the caller is checked before it is read.
+  // POST /api/questions — signed-in user asks a question. `attachments` are
+  // files sent with it (lib/attachments.ts), which is why the body may be
+  // large — and why the caller is checked before it is read.
   app.post('/api/questions', { onRequest: [requireUser], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
-    const { content, client, context: rawContext, attachments: rawAttachments } = (request.body ?? {}) as {
-      content?: unknown; client?: unknown; context?: unknown; attachments?: unknown;
-    };
+    const { content, attachments: rawAttachments } = (request.body ?? {}) as { content?: unknown; attachments?: unknown };
     const err = validateString(content, 'content', { required: true, minLength: QUESTION_MIN_LENGTH, maxLength: QUESTION_MAX_LENGTH });
     if (err) return sendError(reply, 'VALIDATION_ERROR', err);
-    const clientError = validateClient(client);
-    if (clientError) return sendError(reply, 'VALIDATION_ERROR', clientError);
-    const { context, error: contextError } = parseContext(rawContext, typeof client === 'string' ? client : null);
-    if (contextError) return sendError(reply, 'VALIDATION_ERROR', contextError);
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
     const text = (content as string).trim();
@@ -144,13 +135,10 @@ export default async function questionRoutes(app: FastifyInstance) {
     }
 
     const question = await prisma.question.create({
-      data: {
-        userId: request.viewer!.id, content: text, client: typeof client === 'string' ? client : null, context,
-        attachments: attachmentsCreate(attachments),
-      },
+      data: { userId: request.viewer!.id, content: text, attachments: attachmentsCreate(attachments) },
       include: questionInclude,
     });
-    // Wake the advisor now rather than at its next scheduled firing. Not
+    // Wake the teacher now rather than at its next scheduled firing. Not
     // awaited: the asker's 201 does not wait on Anthropic's API.
     notifyRoutine(FIRE_REASON_QUESTION, request.log);
     if (attachments.length > 0) {
@@ -166,7 +154,7 @@ export default async function questionRoutes(app: FastifyInstance) {
     const take = parseLimit(limit, 20, 50);
 
     // ?ids=a,b,c — the page re-fetches just the cards that are waiting on the
-    // advisor, in one request. Capped so it cannot become a full-table pull.
+    // teacher, in one request. Capped so it cannot become a full-table pull.
     if (ids !== undefined) {
       const list = [...new Set(ids.split(',').map((s) => s.trim()).filter(Boolean))].slice(0, 50);
       if (list.length === 0) return { data: [], nextCursor: null };
@@ -225,12 +213,11 @@ export default async function questionRoutes(app: FastifyInstance) {
     return reply.status(204).send();
   });
 
-  // POST /api/questions/:id/answer — agent answers; exactly one answer per
-  // question. `commands` only for a question whose client runs them.
+  // POST /api/questions/:id/answer — agent answers; exactly one answer per question.
   app.post('/api/questions/:id/answer', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
-    const { content, model, commands: rawCommands } = (request.body ?? {}) as { content?: unknown; model?: unknown; commands?: unknown };
+    const { content, model } = (request.body ?? {}) as { content?: unknown; model?: unknown };
 
     const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: ANSWER_MAX_LENGTH });
     if (contentError) return sendError(reply, 'VALIDATION_ERROR', contentError);
@@ -238,26 +225,19 @@ export default async function questionRoutes(app: FastifyInstance) {
       const modelError = validateString(model, 'model', { maxLength: 100 });
       if (modelError) return sendError(reply, 'VALIDATION_ERROR', modelError);
     }
-    const { commands, error: commandsError } = parseCommands(rawCommands);
-    if (commandsError) return sendError(reply, 'VALIDATION_ERROR', commandsError);
 
     try {
       const answer = await runTransaction(async (tx) => {
         // Row lock so two concurrent answers to the same question serialize here.
-        const rows = await tx.$queryRaw<{ id: string; status: string; client: string | null }[]>`
-          SELECT id, status, client FROM questions WHERE id = ${id} FOR UPDATE
+        const rows = await tx.$queryRaw<{ id: string; status: string }[]>`
+          SELECT id, status FROM questions WHERE id = ${id} FOR UPDATE
         `;
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
         if (question.status === 'ANSWERED') throw new AppError('CONFLICT', 'Question already has an answer');
-        const refused = commands ? commandsRefusedFor(question.client, 'a question') : null;
-        if (refused) throw new AppError('VALIDATION_ERROR', refused);
 
         const created = await tx.answer.create({
-          data: {
-            questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null,
-            commands: commands ? (commands as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
-          },
+          data: { questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null },
           include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },
         });
         await tx.question.update({ where: { id }, data: { status: 'ANSWERED' } });
@@ -271,7 +251,6 @@ export default async function questionRoutes(app: FastifyInstance) {
         agent: answer.agent,
         content: answer.content,
         model: answer.model,
-        commands: readCommands(answer.commands),
         createdAt: answer.createdAt.toISOString(),
       };
     } catch (err) {

@@ -1,15 +1,15 @@
 services:
   db:
     image: postgres:16
-    container_name: zoey-db
+    container_name: popsmosis-db
     environment:
-      POSTGRES_DB: zoey
+      POSTGRES_DB: popsmosis
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
-      - zoey-db:/var/lib/postgresql/data
+      - popsmosis-db:/var/lib/postgresql/data
 
 volumes:
-  zoey-db:
+  popsmosis-db:

@@ -31,7 +31,7 @@ d('queuesHaveWork', () => {
     data: { email: `u${Date.now()}${Math.random()}@example.com`, googleId: `g${Date.now()}${Math.random()}`, name: 'Ada', status: 'APPROVED' },
   });
   const makeAgent = () => prisma.agent.create({
-    data: { name: `zoey${Date.now()}${Math.random()}`, apiKeyHash: `h${Date.now()}${Math.random()}` },
+    data: { name: `popsmosis${Date.now()}${Math.random()}`, apiKeyHash: `h${Date.now()}${Math.random()}` },
   });
 
   it('is false on an empty database', async () => {

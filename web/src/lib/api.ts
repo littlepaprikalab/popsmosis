@@ -169,12 +169,6 @@ export interface AgentRef {
   name: string;
 }
 
-/** A line the advisor attached for the asker's client to run (Zed's Zoey panel runs them; this page only lists them). */
-export interface Command {
-  command: string;
-  description: string | null;
-}
-
 /** A file a person sent with a question or reply. `url` serves it while it is kept; `expired` once it is not. */
 export interface Attachment {
   id: string;
@@ -191,8 +185,6 @@ export interface Reply {
   authorType: 'HUMAN' | 'AGENT';
   replyToId: string | null;
   content: string;
-  client: string | null; // a human reply's app, when it was not this page
-  commands: Command[];   // an agent reply's
   attachments: Attachment[]; // a human reply's
   createdAt: string;
   user: PublicUser | null;
@@ -206,7 +198,6 @@ export interface Answer {
   agent: AgentRef;
   content: string;
   model: string | null;
-  commands: Command[];
   createdAt: string;
   replies: Reply[];
   awaitingAgent: boolean;
@@ -216,7 +207,6 @@ export interface Question {
   id: string;
   content: string;
   status: 'PENDING' | 'ANSWERED';
-  client: string | null; // the app it was asked from, when it was not this page
   attachments: Attachment[];
   createdAt: string;
   user: PublicUser;

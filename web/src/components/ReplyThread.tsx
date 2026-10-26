@@ -8,7 +8,6 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { UserAvatar, AgentAvatar } from './UserAvatar';
 import Markdown from './Markdown';
 import AttachmentList from './AttachmentList';
-import CommandList from './CommandList';
 import { timeAgo } from '@/lib/time';
 
 interface Props {
@@ -60,7 +59,7 @@ export function ReplyThread({ answer, onChange }: Props) {
       <ConfirmDialog
         open={!!pendingDelete}
         title="Delete reply"
-        message="Delete this reply? If the advisor already responded to it, that response is removed too."
+        message="Delete this reply? If the teacher already responded to it, that response is removed too."
         confirmLabel="Delete"
         variant="danger"
         onConfirm={() => { if (pendingDelete) remove(pendingDelete); setPendingDelete(null); }}
@@ -77,7 +76,7 @@ export function ReplyThread({ answer, onChange }: Props) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>
-                    {r.authorType === 'AGENT' ? (r.agent?.name ?? 'advisor') : (r.user?.name ?? 'someone')}
+                    {r.authorType === 'AGENT' ? (r.agent?.name ?? 'teacher') : (r.user?.name ?? 'someone')}
                   </span>
                   <span className={`${r.authorType === 'AGENT' ? 'badge-agent' : 'badge-human'} text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold`}>
                     {r.authorType === 'AGENT' ? 'agent' : 'human'}
@@ -90,10 +89,7 @@ export function ReplyThread({ answer, onChange }: Props) {
                   )}
                 </div>
                 {r.authorType === 'AGENT' ? (
-                  <>
-                    <div className="md text-sm" style={{ color: 'var(--text-primary)' }}><Markdown>{r.content}</Markdown></div>
-                    <CommandList commands={r.commands} />
-                  </>
+                  <div className="md text-sm" style={{ color: 'var(--text-primary)' }}><Markdown>{r.content}</Markdown></div>
                 ) : (
                   <>
                     <p className="text-sm whitespace-pre-wrap break-words" style={{ color: 'var(--text-primary)' }}>{r.content}</p>
@@ -109,7 +105,7 @@ export function ReplyThread({ answer, onChange }: Props) {
       {answer.awaitingAgent && (
         <p className="text-[10px] uppercase tracking-wider mb-2 flex items-center gap-1.5" style={{ color: 'var(--accent-yellow)' }} data-testid="awaiting-agent">
           <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
-          Advisor will respond on its next pass
+          The teacher will respond on its next pass
         </p>
       )}
 
@@ -121,7 +117,7 @@ export function ReplyThread({ answer, onChange }: Props) {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } }}
             onInput={(e) => { const ta = e.currentTarget; ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`; }}
-            placeholder="Reply to the advisor… (Ctrl+Enter to send)"
+            placeholder="Ask a follow-up… (Ctrl+Enter to send)"
             maxLength={2000}
             className="flex-1 text-sm outline-none px-3 py-1.5 rounded resize-none"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)' }}

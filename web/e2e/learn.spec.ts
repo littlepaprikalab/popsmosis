@@ -4,16 +4,16 @@ import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 const S = seed();
 
 test.describe('signed out', () => {
-  test('shows the sign-in card and no questions', async ({ page }) => {
-    await page.goto('/advice');
+  test('shows the sign-in card and no topics', async ({ page }) => {
+    await page.goto('/learn');
     await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
-    await expect(page.getByText('ASK A QUESTION', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('WHAT DO YOU WANT TO LEARN?', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
   });
 
-  test('/ redirects to /advice', async ({ page }) => {
+  test('/ redirects to /learn', async ({ page }) => {
     await page.goto('/');
-    await expect(page).toHaveURL(/\/advice$/);
+    await expect(page).toHaveURL(/\/learn$/);
   });
 
   test('admin page refuses anonymous visitors', async ({ page }) => {
@@ -23,29 +23,29 @@ test.describe('signed out', () => {
 });
 
 test.describe('signed in', () => {
-  test('sees everyone\'s questions with the sparks look', async ({ page, context }) => {
+  test('sees everyone\'s topics with the sparks look', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible();
-    // Seeded: Ada's pending question and Ben's answered one, both visible to Ben.
-    await expect(page.getByText('Is there a way to get notified')).toBeVisible();
-    await expect(page.getByText('My export to CSV')).toBeVisible();
-    await expect(page.getByText('WAITING', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('ANSWERED', { exact: true }).first()).toBeVisible();
-    // Badges and the agent's markdown answer.
+    // Seeded: Ada's waiting topic and Ben's finished one, both visible to Ben.
+    await expect(page.getByText('Photosynthesis: how do the light')).toBeVisible();
+    await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
+    await expect(page.getByText('BREWING', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('READY', { exact: true }).first()).toBeVisible();
+    // Badges and the agent's markdown lesson.
     await expect(page.locator('.badge-agent').first()).toBeVisible();
-    await expect(page.locator('.md strong', { hasText: 'before' })).toBeVisible();
+    await expect(page.locator('.md strong', { hasText: 'gradient' })).toBeVisible();
     // GitHub-flavored markdown: a table renders as a table, not a line of pipes.
-    await expect(page.locator('.md table th', { hasText: 'Footer shows' })).toBeVisible();
-    // Advisor liveness line comes from the status endpoint.
-    await expect(page.getByText(/Advisor (last active|has not connected)/)).toBeVisible();
+    await expect(page.locator('.md table th', { hasText: 'Stage' })).toBeVisible();
+    // Teacher liveness line comes from the status endpoint.
+    await expect(page.getByText(/Teacher (last active|has not connected)/)).toBeVisible();
   });
 
   test('a card folds down to a preview and opens again', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
-    const card = page.getByTestId('question-card').filter({ hasText: 'My export to CSV' }).first();
-    const answer = card.locator('.md strong', { hasText: 'before' });
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: 'ATP synthesis: how do cells' }).first();
+    const answer = card.locator('.md strong', { hasText: 'gradient' });
 
     // Cards start open: the answer is on screen and the collapsed preview is not.
     await expect(answer).toBeVisible();
@@ -56,7 +56,7 @@ test.describe('signed in', () => {
     await expect(card.getByTestId('answer-preview')).toBeVisible();
     await expect(answer).toBeHidden();
     // The question stays readable while collapsed; only the body folds.
-    await expect(card.getByText('My export to CSV')).toBeVisible();
+    await expect(card.getByText('ATP synthesis: how do cells')).toBeVisible();
 
     // The header opens it again...
     await card.getByRole('button', { name: 'Expand card' }).click();
@@ -71,9 +71,9 @@ test.describe('signed in', () => {
 
   test('folding a card keeps an unsent reply, and selecting the question does not fold it', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
-    const card = page.getByTestId('question-card').filter({ hasText: 'My export to CSV' }).first();
-    const replyBox = card.getByPlaceholder(/Reply to the advisor/);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: 'ATP synthesis: how do cells' }).first();
+    const replyBox = card.getByPlaceholder(/Ask a follow-up/);
 
     // A draft survives the fold: the body stays mounted, it is only hidden.
     await replyBox.fill('half-written thought');
@@ -84,7 +84,7 @@ test.describe('signed in', () => {
 
     // Dragging across the header to copy the question is not a request to fold
     // it. (A double-click's first click still folds, as accordions generally do.)
-    const box = (await card.getByText('My export to CSV').boundingBox())!;
+    const box = (await card.getByText('ATP synthesis: how do cells').boundingBox())!;
     await page.mouse.move(box.x + 4, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width * 0.6, box.y + box.height / 2, { steps: 12 });
@@ -93,26 +93,26 @@ test.describe('signed in', () => {
     await expect(card.getByTestId('answer-preview')).toBeHidden();
 
     // A selection made elsewhere on the page must not swallow the next fold.
-    await page.getByRole('heading', { name: 'ADVICE' }).dblclick();
+    await page.getByRole('heading', { name: 'LEARN', exact: true }).dblclick();
     await card.getByRole('button', { name: 'Collapse card' }).click();
     await expect(card.getByTestId('answer-preview')).toBeVisible();
   });
 
-  test('My Questions filter narrows to the caller', async ({ page, context }) => {
+  test('My Topics filter narrows to the caller', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
-    await page.getByRole('button', { name: 'My Questions' }).click();
+    await page.goto('/learn');
+    await page.getByRole('button', { name: 'My Topics' }).click();
     await expect(page).toHaveURL(/mine=1/);
-    await expect(page.getByText('My export to CSV')).toBeVisible();
-    await expect(page.getByText('Is there a way to get notified')).toHaveCount(0);
+    await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
+    await expect(page.getByText('Photosynthesis: how do the light')).toHaveCount(0);
   });
 
-  test('ask, get answered by the advisor, reply, get a reply back; all without reloading', async ({ page, context, request }) => {
+  test('ask for a topic, get a lesson from the teacher, follow up, get a reply back; all without reloading', async ({ page, context, request }) => {
     await signIn(context, S.users.ada);
-    await page.goto('/advice');
+    await page.goto('/learn');
 
-    const text = `E2E ${Date.now()}: how do I export only the filtered rows?`;
-    const askBox = page.getByPlaceholder('What do you need help with?');
+    const text = `E2E ${Date.now()}: the Krebs cycle, step by step`;
+    const askBox = page.getByPlaceholder('A topic, e.g. ATP synthesis');
     await askBox.fill(text);
     await askBox.press('Enter'); // newline, does not submit
     await expect(askBox).toHaveValue(`${text}\n`);
@@ -121,72 +121,72 @@ test.describe('signed in', () => {
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
     await expect(card).toBeVisible();
     await expect(card.getByTestId('waiting')).toBeVisible();
-    await expect(card.getByText('WAITING', { exact: true })).toBeVisible();
+    await expect(card.getByText('BREWING', { exact: true })).toBeVisible();
 
-    // The advisor answers through the agent API, as a runner would.
-    const bot = agent(request, S.ZOEY_API_KEY);
+    // The teacher answers through the agent API, as a runner would.
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
     expect((await bot.me()).status()).toBe(200);
     const queue = await (await bot.queue()).json();
     const mine = queue.data.find((q: { content: string }) => q.content === text);
     expect(mine).toBeTruthy();
-    expect((await bot.answer(mine.id, 'Apply the filter, then use **Export > Filtered rows**.')).status()).toBe(201);
+    expect((await bot.answer(mine.id, 'The Krebs cycle turns acetyl-CoA into **CO2 and energy carriers**.')).status()).toBe(201);
 
     // Localized refresh: the waiting card updates itself within its 15s poll, no reload.
-    await expect(card.getByText('ANSWERED', { exact: true })).toBeVisible({ timeout: 25_000 });
-    await expect(card.locator('.md strong', { hasText: 'Export > Filtered rows' })).toBeVisible();
+    await expect(card.getByText('READY', { exact: true })).toBeVisible({ timeout: 25_000 });
+    await expect(card.locator('.md strong', { hasText: 'CO2 and energy carriers' })).toBeVisible();
     await expect(card.getByTestId('waiting')).toHaveCount(0);
 
-    // Human replies under the answer.
-    const replyBox = card.getByPlaceholder(/Reply to the advisor/);
-    await replyBox.fill('There is no Filtered rows option in my menu.');
+    // Human follows up under the lesson.
+    const replyBox = card.getByPlaceholder(/Ask a follow-up/);
+    await replyBox.fill('Where does the acetyl-CoA come from?');
     await replyBox.press('Enter'); // Enter is a newline, not send
     await expect(replyBox).toHaveValue(/\n$/);
     // Not posted yet: no rendered reply paragraph (getByText would also match the textarea's value).
-    await expect(card.locator('p', { hasText: 'There is no Filtered rows option' })).toHaveCount(0);
+    await expect(card.locator('p', { hasText: 'Where does the acetyl-CoA come from' })).toHaveCount(0);
     await replyBox.press('Control+Enter');
-    await expect(card.locator('p', { hasText: 'There is no Filtered rows option' })).toBeVisible();
+    await expect(card.locator('p', { hasText: 'Where does the acetyl-CoA come from' })).toBeVisible();
     await expect(card.getByTestId('awaiting-agent')).toBeVisible();
 
-    // The advisor sees the whole thread and responds.
+    // The teacher sees the whole thread and responds.
     const threads = await (await bot.replyQueue()).json();
     const thread = threads.data.find((t: { question: { content: string } }) => t.question.content === text);
     expect(thread).toBeTruthy();
-    expect(thread.answer.content).toContain('Filtered rows');
+    expect(thread.answer.content).toContain('energy carriers');
     expect(thread.thread.map((r: { authorType: string }) => r.authorType)).toEqual(['HUMAN']);
-    expect((await bot.reply(thread.answer.id, thread.replyTo.id, 'Then your plan lacks the export add-on. Ask an admin to enable it.')).status()).toBe(201);
+    expect((await bot.reply(thread.answer.id, thread.replyTo.id, 'From pyruvate, made by glycolysis, once it enters the mitochondrion.')).status()).toBe(201);
 
     // ...and the reply shows up in place.
-    await expect(card.getByText('Then your plan lacks the export add-on')).toBeVisible({ timeout: 25_000 });
+    await expect(card.getByText('From pyruvate, made by glycolysis')).toBeVisible({ timeout: 25_000 });
     await expect(card.getByTestId('awaiting-agent')).toHaveCount(0);
     await expect(card.locator('.badge-agent')).toHaveCount(2);
   });
 
-  test('a question asked with files shows them: a picture as its thumbnail, a log as a link', async ({ page, context, request }) => {
-    // Asked as Zed's Zoey panel asks, the files in the body; Ben, whose day of questions the other tests leave room in.
-    const text = `E2E ${Date.now()}: why does this wall flicker?`;
+  test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {
+    // Asked straight to the API with the files in the body; Ben, whose day of questions the other tests leave room in.
+    const text = `E2E ${Date.now()}: explain this diagram of a neuron`;
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'); // 1x1
     const asked = await request.post(apiUrl('/api/questions'), {
-      headers: { cookie: `zoey_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' },
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' },
       data: {
         content: text,
-        attachments: [{ name: 'wall.png', data: png.toString('base64') }, { name: 'zed.log', data: Buffer.from('Zed: the wall flickers\n').toString('base64') }],
+        attachments: [{ name: 'neuron.png', data: png.toString('base64') }, { name: 'notes.txt', data: Buffer.from('Dendrites in, axon out.\n').toString('base64') }],
       },
     });
     expect(asked.status()).toBe(201);
 
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
+    await page.goto('/learn');
     const files = page.getByTestId('question-card').filter({ hasText: text }).first().getByTestId('attachments');
-    const picture = files.getByRole('img', { name: 'wall.png' });
+    const picture = files.getByRole('img', { name: 'neuron.png' });
     await expect(picture).toBeVisible();
     await expect.poll(() => picture.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1); // its bytes came through the proxy
-    await expect(files.getByRole('link', { name: /zed\.log/ })).toHaveAttribute('href', /^\/api\/attachments\/\w+$/);
+    await expect(files.getByRole('link', { name: /notes\.txt/ })).toHaveAttribute('href', /^\/api\/attachments\/\w+$/);
   });
 
-  test('pages through many questions by cursor as the user scrolls', async ({ page, context }) => {
-    // seed:dev creates 26 questions (2 recent + 24 older), more than one 20-item page.
+  test('pages through many topics by cursor as the user scrolls', async ({ page, context }) => {
+    // seed:dev creates 26 topics (2 recent + 24 older), more than one 20-item page.
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
+    await page.goto('/learn');
     const cards = page.getByTestId('question-card');
     await expect(cards).toHaveCount(20);
     await expect(page.getByTestId('load-more')).toBeVisible();
@@ -197,11 +197,11 @@ test.describe('signed in', () => {
 
   test('logout clears the session', async ({ page, context }) => {
     await signIn(context, S.users.ben);
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible();
     await page.getByRole('button', { name: 'LOGOUT' }).click();
     await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
-    expect((await context.cookies()).some((c) => c.name === 'zoey_session')).toBe(false);
+    expect((await context.cookies()).some((c) => c.name === 'popsmosis_session')).toBe(false);
     await page.reload();
     await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
   });
@@ -214,11 +214,11 @@ test.describe('admin', () => {
     await expect(page.getByText(S.agent.name, { exact: true })).toBeVisible();
 
     const name = `e2e-agent-${Date.now()}`;
-    await page.getByPlaceholder('agent name, e.g. zoey-helper').fill(name);
+    await page.getByPlaceholder('agent name, e.g. popsmosis-teacher').fill(name);
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('API KEY — SHOWN ONCE')).toBeVisible();
     const key = (await page.locator('code.select-all').textContent())!.trim();
-    expect(key).toMatch(/^sk_zoey_[0-9a-f]{64}$/);
+    expect(key).toMatch(/^sk_pop_[0-9a-f]{64}$/);
 
     const bot = agent(request, key);
     expect((await bot.me()).status()).toBe(200);
@@ -272,10 +272,10 @@ test.describe('approval', () => {
   test('a pending user waits; the admin approves; the waiting page lets them through', async ({ browser, page, context }) => {
     // Cal signed in but is not on the auto-approve list: every page is the waiting room.
     await signIn(context, S.users.cal);
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('WAITING FOR APPROVAL')).toBeVisible();
     await expect(page.getByText('cal@example.com')).toBeVisible();
-    await expect(page.getByText('ASK A QUESTION', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('WHAT DO YOU WANT TO LEARN?', { exact: true })).toHaveCount(0);
     await page.goto('/admin/users');
     await expect(page.getByText('WAITING FOR APPROVAL')).toBeVisible();
 
@@ -296,9 +296,9 @@ test.describe('approval', () => {
     // Cal's page polls /auth/me and lets him in without a reload.
     await expect(page.getByText('WAITING FOR APPROVAL')).toHaveCount(0, { timeout: 30_000 });
     await expect(page.getByText('USERS', { exact: true })).toHaveCount(0); // approved, not admin
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('@Cal')).toBeVisible();
-    await expect(page.getByText('My export to CSV')).toBeVisible();
+    await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
 
     // Revoke: Cal's next request 403s, the client re-reads /me, the gate closes.
     await approvedRow.getByRole('button', { name: 'Revoke' }).click();
@@ -320,7 +320,7 @@ test.describe('API unavailable', () => {
     await signIn(context, S.users.ben);
     await page.route('**/api/auth/me', (route) => route.fulfill(renderErrorPage));
 
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByTestId('server-unavailable')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole('link', { name: 'Sign in with Google' })).toHaveCount(0);
 
@@ -339,7 +339,7 @@ test.describe('API unavailable', () => {
       return route.fulfill(renderErrorPage);
     });
 
-    await page.goto('/advice');
+    await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId('server-unavailable')).toHaveCount(0);
   });

@@ -137,7 +137,7 @@ export default function AdminAgentsPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') create(); }}
-            placeholder="agent name, e.g. zoey-helper"
+            placeholder="agent name, e.g. popsmosis-teacher"
             maxLength={60}
             className="flex-1 text-sm outline-none px-3 py-2 rounded"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)' }}
@@ -158,7 +158,7 @@ export default function AdminAgentsPage() {
           </div>
           <code className="block text-xs break-all p-2 rounded select-all" style={{ background: 'var(--code-block-bg)', color: 'var(--text-primary)' }}>{revealed.key}</code>
           <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>
-            Store it as <code>ZOEY_API_KEY</code> in the runner&apos;s environment. Only a hash is kept on the server.
+            Store it as <code>POPSMOSIS_API_KEY</code> in the runner&apos;s environment. Only a hash is kept on the server.
           </p>
         </div>
       )}

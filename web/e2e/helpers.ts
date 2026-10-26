@@ -6,7 +6,7 @@ import type { BrowserContext, APIRequestContext } from '@playwright/test';
 export interface Seed {
   users: { ada: string; ben: string; cal: string }; // cal is seeded PENDING
   agent: { id: string; name: string };
-  ZOEY_API_KEY: string;
+  POPSMOSIS_API_KEY: string;
 }
 
 export function seed(): Seed {
@@ -29,7 +29,7 @@ export function sessionToken(userId: string, ttlSeconds = 3600): string {
 export async function signIn(context: BrowserContext, userId: string) {
   const base = new URL(process.env.E2E_BASE_URL || 'http://localhost:3000');
   await context.addCookies([{
-    name: 'zoey_session',
+    name: 'popsmosis_session',
     value: sessionToken(userId),
     domain: base.hostname,
     path: '/api',
@@ -37,7 +37,7 @@ export async function signIn(context: BrowserContext, userId: string) {
   }]);
 }
 
-/** Drive the advisor through the agent API, the way a runner would. */
+/** Drive the teacher through the agent API, the way a runner would. */
 export function agent(request: APIRequestContext, key: string) {
   const headers = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
   return {

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { generateUserToken } from '../lib/apikey.js';
 
-// Usage: npm --workspace api run token:create -- --email them@example.com --name "zed panel"
+// Usage: npm --workspace api run token:create -- --email them@example.com --name "my script"
 // Prints the raw token exactly once. Only its sha256 hash is stored.
 
 const args = process.argv.slice(2);
@@ -38,7 +38,7 @@ try {
   console.log('');
   console.log('Access token (shown once, store it now):');
   console.log('');
-  console.log(`  ZOEY_API_TOKEN=${raw}`);
+  console.log(`  POPSMOSIS_API_TOKEN=${raw}`);
   console.log('');
 } finally {
   await prisma.$disconnect();

@@ -1,11 +1,11 @@
 /**
- * Wakes the advisor by firing its Claude Code routine's API trigger, so a new
+ * Wakes the teacher by firing its Claude Code routine's API trigger, so a new
  * question or a human reply is served within seconds instead of waiting for the
  * next scheduled firing.
  *
  * Fire-and-forget: the write that triggered it never waits on the POST and
  * never fails because of it. A trigger endpoint that is down, slow, or
- * misconfigured costs the advisor its latency, not the user their question.
+ * misconfigured costs the teacher its latency, not the user their question.
  *
  * Debounced per process. The first event fires immediately and opens a
  * cooldown; an event arriving inside that cooldown schedules one trailing fire
@@ -24,7 +24,7 @@
 
 // The /fire endpoint ships behind a dated beta header. Overridable so a header
 // version can be rolled forward without a code change.
-const FIRE_BETA_HEADER = process.env.ZOEY_ROUTINE_BETA || 'experimental-cc-routine-2026-04-01';
+const FIRE_BETA_HEADER = process.env.POPSMOSIS_ROUTINE_BETA || 'experimental-cc-routine-2026-04-01';
 const FIRE_TIMEOUT_MS = 10_000;
 // At least as long as a run takes end to end, or the trailing fire is guaranteed
 // to wake a second session while the first is still working — which then mostly
@@ -36,8 +36,8 @@ const DEFAULT_DEBOUNCE_SECONDS = 300;
 // would fire on every write — the exact opposite of what it was set to do.
 const MAX_DEBOUNCE_SECONDS = 3600;
 
-export const FIRE_REASON_QUESTION = 'A new question is waiting in the zoey question queue.';
-export const FIRE_REASON_REPLY = 'A human reply is waiting in the zoey reply queue.';
+export const FIRE_REASON_QUESTION = 'A new question is waiting in the popsmosis question queue.';
+export const FIRE_REASON_REPLY = 'A human reply is waiting in the popsmosis reply queue.';
 
 // The shape of the Fastify request logger, which is what every caller passes.
 export interface FireLogger {
@@ -108,7 +108,7 @@ export class RoutineTrigger {
   private start(reason: string, log: FireLogger): void {
     // Nothing awaits this promise, so a rejection escaping it is an unhandled
     // rejection, which Node answers by killing the API process. Waking the
-    // advisor must never be able to do that — not even if the logger throws.
+    // teacher must never be able to do that — not even if the logger throws.
     this.inFlight = this.fire(reason, log).catch(() => {});
   }
 
@@ -145,7 +145,7 @@ export class RoutineTrigger {
           'content-type': 'application/json',
         },
         // Freeform text the routine receives as untrusted data. Never put a
-        // question or a reply in it: the advisor reads those from the queues,
+        // question or a reply in it: the teacher reads those from the queues,
         // which keeps both personal data and anything a user typed out of the
         // fire payload entirely.
         body: JSON.stringify({ text: reason }),
@@ -168,7 +168,7 @@ export class RoutineTrigger {
 // dotenv/config has run under some entry points.
 let cached: RoutineTrigger | null | undefined;
 
-// Does either queue hold anything the advisor owes a response to? Mirrors what
+// Does either queue hold anything the teacher owes a response to? Mirrors what
 // GET /api/questions/queue and GET /api/replies/queue select, as existence
 // checks: the first rides @@index([status, createdAt]), the second the same
 // LATERAL walk the reply queue uses, over @@index([answerId, createdAt]).
@@ -206,12 +206,12 @@ export async function queuesHaveWork(): Promise<boolean> {
 
 export function routineTrigger(): RoutineTrigger | null {
   if (cached === undefined) {
-    const url = (process.env.ZOEY_ROUTINE_FIRE_URL ?? '').trim();
-    const token = (process.env.ZOEY_ROUTINE_FIRE_TOKEN ?? '').trim();
+    const url = (process.env.POPSMOSIS_ROUTINE_FIRE_URL ?? '').trim();
+    const token = (process.env.POPSMOSIS_ROUTINE_FIRE_TOKEN ?? '').trim();
     // Both unset is the normal deployment without an API-triggered routine:
     // whatever schedule the runner has is then the only thing that wakes it.
     cached = url !== '' && token !== ''
-      ? new RoutineTrigger(url, token, parseDebounceMs(process.env.ZOEY_ROUTINE_DEBOUNCE_SECONDS), queuesHaveWork)
+      ? new RoutineTrigger(url, token, parseDebounceMs(process.env.POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS), queuesHaveWork)
       : null;
   }
   return cached;

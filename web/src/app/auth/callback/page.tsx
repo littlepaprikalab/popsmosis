@@ -67,7 +67,7 @@ export default function AuthCallbackPage() {
         await api.health().catch(() => {});
         const result = await api.authGoogle(code);
         login(result.user);
-        const dest = safeReturnTo(sessionStorage.getItem('auth_return_to')) ?? '/advice';
+        const dest = safeReturnTo(sessionStorage.getItem('auth_return_to')) ?? '/learn';
         sessionStorage.removeItem('auth_return_to');
         router.push(dest);
       } catch (err) {
@@ -111,9 +111,9 @@ export default function AuthCallbackPage() {
     <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
       <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <h1 className="text-2xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-red)' }}>ZOEY</h1>
+        <h1 className="text-2xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-red)' }}>POPSMOSIS</h1>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Ask a question. An AI advisor answers it.
+          Droplets for learning.
         </p>
 
         {error ? (

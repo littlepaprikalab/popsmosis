@@ -2,12 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import prisma from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { hashApiKey, isAgentToken, isWellFormedAgentToken, isUserToken, isWellFormedUserToken, bearerToken } from '../lib/apikey.js';
-import {
-  sessionCookieToken,
-  usesLegacySessionCookie,
-  migrateLegacySessionCookie,
-  renewSessionIfNeeded,
-} from '../lib/session.js';
+import { sessionCookieToken, renewSessionIfNeeded } from '../lib/session.js';
 import { TtlCache } from '../lib/ttl-cache.js';
 import { accessFix, accessFixData } from '../lib/access.js';
 
@@ -130,7 +125,7 @@ async function healAccess(user: UserAuth, request: FastifyRequest): Promise<User
 }
 
 /**
- * Resolve a pk_zoey_ bearer token to the human who owns it. The token proves
+ * Resolve a pk_pop_ bearer token to the human who owns it. The token proves
  * only which account is calling: whether that account may do anything is
  * requireUser's question, asked of the same row a cookie would have loaded, so
  * a token cannot outrun an approval that was revoked.
@@ -186,10 +181,7 @@ async function resolveSessionCookie(request: FastifyRequest, reply: FastifyReply
     userCache.set(decoded.sub, user, USER_TTL_MS);
   }
   if (!user) return 'unknown-user';
-  // A session on the old cookie name moves across on its first authenticated
-  // request; renewal then governs it like any other from the next one on.
-  if (usesLegacySessionCookie(request.cookies)) migrateLegacySessionCookie(request, reply, decoded);
-  else renewSessionIfNeeded(request, reply, decoded);
+  renewSessionIfNeeded(request, reply, decoded);
   return user;
 }
 
@@ -253,7 +245,7 @@ export async function requireCookieUser(request: FastifyRequest, reply: FastifyR
   }
 }
 
-/** Agent endpoints: valid sk_zoey_ bearer key required; cookies are ignored. */
+/** Agent endpoints: valid sk_pop_ bearer key required; cookies are ignored. */
 export async function requireAgent(request: FastifyRequest, reply: FastifyReply) {
   if (request.agent) return;
   const token = bearerToken(request.headers.authorization);
@@ -302,7 +294,7 @@ export async function optionalUser(request: FastifyRequest, reply: FastifyReply)
  * Admin endpoints: an approved ADMIN on a session cookie, never on a token.
  *
  * Cookie-only for the same reason token management is. An admin's routes mint
- * credentials that outlive the caller: POST /api/agents issues an sk_zoey_ key,
+ * credentials that outlive the caller: POST /api/agents issues an sk_pop_ key,
  * and PATCH /api/users/:id can promote an account to ADMIN. Either one survives
  * revoking the token that created it, so letting a token reach them would leave
  * a stolen token able to entrench itself after all — exactly what

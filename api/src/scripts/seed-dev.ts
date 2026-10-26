@@ -2,8 +2,8 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { generateApiKey } from '../lib/apikey.js';
 
-// Local-development seed: two users (Ada is an admin), one agent, one answered
-// question with a reply thread, one pending question. Idempotent per run: the
+// Local-development seed: two users (Ada is an admin), one agent, one topic with
+// its lesson and a follow-up thread, one topic still waiting. Idempotent per run: the
 // seed users' questions are recreated, the agent's key is rotated and printed.
 // Usage: npm --workspace api run seed:dev
 
@@ -16,44 +16,42 @@ const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: 
 const pending = { status: 'PENDING' as const, reviewedAt: null, reviewedById: null };
 const cal = await prisma.user.upsert({ where: { googleId: 'seed-cal' }, update: pending, create: { email: 'cal@example.com', googleId: 'seed-cal', name: 'Cal', ...pending } });
 const key = generateApiKey();
-const agent = await prisma.agent.upsert({ where: { name: 'zoey-helper' }, update: { apiKeyHash: key.hashed, enabled: true }, create: { name: 'zoey-helper', apiKeyHash: key.hashed } });
+const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, update: { apiKeyHash: key.hashed, enabled: true }, create: { name: 'popsmosis-teacher', apiKeyHash: key.hashed } });
 
 await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id] } } });
 
-const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'My export to CSV keeps producing a file with only the header row. What am I missing?' } });
-const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude-opus-5', createdAt: hoursAgo(2.5), content: `Most likely the export runs **before** the filter is applied, so the query matches zero rows.
+const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'ATP synthesis: how do cells actually make ATP?' } });
+const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
 
-Check these in order:
+1. The electron transport chain pumps protons (H+) out of the matrix, building up a **gradient** across the membrane.
+2. The protons can only flow back in through ATP synthase, and that flow spins its rotor.
+3. Each full turn presses ADP and phosphate together into about three ATP.
 
-1. Apply your filters, then look at the row count in the footer. If it says 0, the export is doing the right thing.
-2. If rows are visible but the file is still empty, the export may be using a *saved* view rather than the current one. Save the view first.
-3. Date filters default to UTC. A range that ends "today" can exclude everything after midnight UTC.
-
-| Footer shows | Likely cause |
+| Stage | What it does |
 |---|---|
-| 0 rows | The filter: the export is right |
-| Some rows | A saved view, or the UTC date range |
+| Electron transport chain | Pumps protons out, building the gradient |
+| ATP synthase | Lets the protons back in, making ATP |
 
-If none of that helps, tell me which view you are exporting from and I will dig further.` } });
-const r1 = await prisma.reply.create({ data: { answerId: a1.id, userId: ben.id, createdAt: hoursAgo(2), content: 'The footer says 42 rows, so it is not the filter. I am exporting from the default view.' } });
-await prisma.reply.create({ data: { answerId: a1.id, agentId: agent.id, replyToId: r1.id, createdAt: hoursAgo(1.5), content: 'Then it is the date range. The default view ends at "today", which the exporter reads as **00:00 UTC**. Set the end date to tomorrow and the 42 rows will come through.' } });
-await prisma.reply.create({ data: { answerId: a1.id, userId: ben.id, createdAt: hoursAgo(1), content: 'That was it. Thanks!' } });
-await prisma.question.create({ data: { userId: ada.id, createdAt: hoursAgo(0.3), content: 'Is there a way to get notified when the advisor answers, instead of refreshing the page?' } });
+Ask a follow-up if you want any step slowed down.` } });
+const r1 = await prisma.reply.create({ data: { answerId: a1.id, userId: ben.id, createdAt: hoursAgo(2), content: 'Why does the protons flowing back in make the rotor spin?' } });
+await prisma.reply.create({ data: { answerId: a1.id, agentId: agent.id, replyToId: r1.id, createdAt: hoursAgo(1.5), content: 'Think of a water wheel. Each proton can only cross through a channel between the rotor and the fixed part, and every one that passes pushes the rotor **one notch** round. Thousands of protons a second keep it turning.' } });
+await prisma.reply.create({ data: { answerId: a1.id, userId: ben.id, createdAt: hoursAgo(1), content: 'The water wheel picture did it. Thanks!' } });
+await prisma.question.create({ data: { userId: ada.id, createdAt: hoursAgo(0.3), content: 'Photosynthesis: how do the light reactions and the Calvin cycle fit together?' } });
 
 // Filler history from earlier days (outside the 24h ask quota) so the list has
 // more than one page to scroll through.
-const topics = ['export', 'invoices', 'SSO', 'webhooks', 'rate limits', 'timezones', 'CSV import', 'permissions', 'audit log', 'API keys', 'dark mode', 'notifications'];
+const topics = ['mitosis', 'the French Revolution', "Bayes' theorem", 'plate tectonics', 'supply and demand', 'the Krebs cycle', "Newton's laws", 'DNA replication', 'the water cycle', 'black holes', 'the immune system', 'compound interest'];
 for (let i = 0; i < 24; i++) {
   const q = await prisma.question.create({ data: {
     userId: i % 2 ? ada.id : ben.id,
     status: i % 3 === 0 ? 'PENDING' : 'ANSWERED',
     createdAt: hoursAgo(30 + i * 7),
-    content: `Earlier question ${i + 1} about ${topics[i % topics.length]}: what is the recommended way to set this up for a small team?`,
+    content: `Earlier topic ${i + 1}: ${topics[i % topics.length]}`,
   } });
   if (i % 3 !== 0) {
-    await prisma.answer.create({ data: { questionId: q.id, agentId: agent.id, model: 'claude-opus-5', createdAt: hoursAgo(29 + i * 7), content: `For ${topics[i % topics.length]}, start with the defaults, then adjust one setting at a time. If something specific is failing, reply with the exact error and I will narrow it down.` } });
+    await prisma.answer.create({ data: { questionId: q.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(29 + i * 7), content: `**${topics[i % topics.length]}**, the big picture first, then the parts. Ask a follow-up for any step you want slowed down.` } });
   }
 }
 
-console.log(JSON.stringify({ users: { ada: ada.id, ben: ben.id, cal: cal.id }, agent: { id: agent.id, name: agent.name }, ZOEY_API_KEY: key.raw }));
+console.log(JSON.stringify({ users: { ada: ada.id, ben: ben.id, cal: cal.id }, agent: { id: agent.id, name: agent.name }, POPSMOSIS_API_KEY: key.raw }));
 await prisma.$disconnect();

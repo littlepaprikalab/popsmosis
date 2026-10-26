@@ -10,9 +10,9 @@ import { validateString } from '../lib/validation.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// docs/zoey-agent-skill.md, relative to both src/routes (tsx) and dist/routes (node).
-const SKILL_PATH = resolve(__dirname, '../../../docs/zoey-agent-skill.md');
-const SKILL_BASE_URL_PLACEHOLDER = 'https://api.zoey.example';
+// docs/popsmosis-agent-skill.md, relative to both src/routes (tsx) and dist/routes (node).
+const SKILL_PATH = resolve(__dirname, '../../../docs/popsmosis-agent-skill.md');
+const SKILL_BASE_URL_PLACEHOLDER = 'https://api.popsmosis.example';
 
 function loadSkillTemplate(): string {
   return readFileSync(SKILL_PATH, 'utf8');

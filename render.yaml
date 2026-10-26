@@ -4,17 +4,11 @@
 # `sync: false` is prompted for on first deploy; see docs/DEPLOY.md.
 #
 # The web app proxies /api/* to the API server-side, so browsers only ever talk
-# to bong-web. Agents talk to bong-api directly with their key.
-#
-# The services keep their original `bong-*` names even though the project is now
-# zoey: Render matches a Blueprint entry to a live resource by `name`, so renaming
-# them here would orphan the running services and create a second, empty pair.
-# The npm workspaces and everything else are named zoey; only these two Render
-# resources and their *.onrender.com hostnames still carry the old name.
+# to popsmosis-web. Agents talk to popsmosis-api directly with their key.
 
 services:
   - type: web
-    name: bong-api
+    name: popsmosis-api
     runtime: node
     region: oregon
     # No `plan:` on purpose. Render retains the current compute plan for an
@@ -45,11 +39,11 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: GOOGLE_REDIRECT_URI     # https://<bong-web host>/auth/callback
+      - key: GOOGLE_REDIRECT_URI     # https://<popsmosis-web host>/auth/callback
         sync: false
-      - key: ALLOWED_ORIGINS         # https://<bong-web host>
+      - key: ALLOWED_ORIGINS         # https://<popsmosis-web host>
         sync: false
-      - key: API_BASE_URL            # https://<bong-api host>, substituted into the skill file
+      - key: API_BASE_URL            # https://<popsmosis-api host>, substituted into the skill file
         sync: false
       - key: ALLOWED_EMAIL_DOMAINS   # optional, e.g. yourcompany.com — approved on sign-in without waiting for an admin
         sync: false
@@ -59,33 +53,33 @@ services:
         sync: false
       - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 10)
         sync: false
-      - key: ZOEY_ROUTINE_FIRE_URL   # optional: the advisor routine's API-trigger URL, so a question wakes it at once
+      - key: POPSMOSIS_ROUTINE_FIRE_URL   # optional: the teacher routine's API-trigger URL, so a topic wakes it at once
         sync: false
-      - key: ZOEY_ROUTINE_FIRE_TOKEN # optional: that trigger's bearer token, shown once when you generate it
+      - key: POPSMOSIS_ROUTINE_FIRE_TOKEN # optional: that trigger's bearer token, shown once when you generate it
         sync: false
 
   - type: web
-    name: bong-web
+    name: popsmosis-web
     runtime: node
     region: oregon
-    # No `plan:` — see the note on bong-api above.
-    # `--include=dev` for the same reason as bong-api: `next build` reads
+    # No `plan:` — see the note on popsmosis-api above.
+    # `--include=dev` for the same reason as popsmosis-api: `next build` reads
     # next.config.ts, which needs `typescript` from devDependencies.
     buildCommand: npm ci --include=dev && npm --workspace web run build
     startCommand: npm --workspace web run start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: NEXT_PUBLIC_API_URL      # http://bong-api:3001 (Render private network) or the public API URL
+      - key: NEXT_PUBLIC_API_URL      # http://popsmosis-api:3001 (Render private network) or the public API URL
         sync: false
-      - key: NEXT_PUBLIC_SITE_URL     # https://<bong-web host>
+      - key: NEXT_PUBLIC_SITE_URL     # https://<popsmosis-web host>
         sync: false
       - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
         sync: false
-      - key: NEXT_PUBLIC_GOOGLE_REDIRECT_URI  # https://<bong-web host>/auth/callback
+      - key: NEXT_PUBLIC_GOOGLE_REDIRECT_URI  # https://<popsmosis-web host>/auth/callback
         sync: false
       - key: PROXY_SECRET
         fromService:
-          name: bong-api
+          name: popsmosis-api
           type: web
           envVarKey: PROXY_SECRET

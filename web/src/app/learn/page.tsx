@@ -13,7 +13,6 @@ import { LoadingMessage } from '@/components/LoadingMessage';
 import PageContainer from '@/components/PageContainer';
 import Markdown from '@/components/Markdown';
 import AttachmentList from '@/components/AttachmentList';
-import CommandList from '@/components/CommandList';
 import { useToast } from '@/components/Toast';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { UserAvatar, AgentAvatar } from '@/components/UserAvatar';
@@ -23,17 +22,17 @@ import { ServerUnavailable } from '@/components/ServerUnavailable';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
-// Cards that are waiting on the advisor (unanswered question, or a thread where
-// a human spoke last) re-fetch themselves on this interval and update in place,
+// Cards that are waiting on the teacher (a topic with no lesson yet, or a thread
+// where a human spoke last) re-fetch themselves on this interval and update in place,
 // so the answer or reply appears without the global refresh banner.
 const ARMED_POLL_MS = 15_000;
-const QUESTION_MIN = 10;
+const QUESTION_MIN = 3; // a topic can be one short word: "DNA"
 const QUESTION_MAX = 2000;
 
-export default function AdvicePage() {
+export default function LearnPage() {
   return (
     <Suspense fallback={<LoadingMessage />}>
-      <AdviceContent />
+      <LearnContent />
     </Suspense>
   );
 }
@@ -74,7 +73,7 @@ function plainTables(text: string): string {
 /** A markdown-free, single-line lead-in for a collapsed card. */
 function snippetOf(markdown: string, max = 240): string {
   const blocks = markdown
-    // Strip from a bounded slice. An answer runs to 5000 characters and the
+    // Strip from a bounded slice. A lesson runs to 5000 characters and the
     // link pattern below is quadratic in unmatched brackets — a lot of work for
     // a 240-character teaser. Markdown only ever shrinks the text, so a slice
     // this size fills the budget for anything short of wall-to-wall link syntax.
@@ -94,7 +93,7 @@ function snippetOf(markdown: string, max = 240): string {
 }
 
 /**
- * One question and its conversation. Memoized on purpose: the armed poll hands
+ * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
  * back a fresh questions array every 15s, so without this every card on the
  * page — markdown, thread and all — re-renders on a tick that changed one of
  * them. Callers must pass stable callbacks for that to hold.
@@ -129,7 +128,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[10px] uppercase font-bold" style={{ color: q.status === 'PENDING' ? 'var(--accent-yellow)' : 'var(--accent-green)' }}>
-                {q.status === 'PENDING' ? 'WAITING' : 'ANSWERED'}
+                {q.status === 'PENDING' ? 'BREWING' : 'READY'}
               </span>
               <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{timeAgo(q.createdAt)}</span>
               {q.canDelete && (
@@ -140,7 +139,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
             </div>
           </div>
 
-          {/* Question — clamped while collapsed so a folded card stays one glance */}
+          {/* The request — clamped while collapsed so a folded card stays one glance */}
           <p className={`text-sm whitespace-pre-wrap break-words ${collapsed ? 'line-clamp-3' : ''}`} style={{ color: 'var(--text-primary)' }}>{q.content}</p>
           {!collapsed && <AttachmentList attachments={q.attachments} />}
         </>
@@ -153,15 +152,15 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
           </p>
           <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }}>
             {answer.replies.length === 0
-              ? 'Tap to read the answer'
-              : `${answer.replies.length === 1 ? '1 reply' : `${answer.replies.length} replies`} — tap to read the thread`}
+              ? 'Tap to read the lesson'
+              : `${answer.replies.length === 1 ? '1 follow-up' : `${answer.replies.length} follow-ups`} — tap to read the thread`}
           </p>
         </>
       ) : undefined}
     >
       {(collapse) => (
         <>
-          {/* Answer */}
+          {/* Lesson */}
           {answer ? (
             <>
               <div className="rounded-md p-3" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}>
@@ -175,7 +174,6 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
                 <div className="md text-sm" style={{ color: 'var(--text-primary)' }}>
                   <Markdown>{answer.content}</Markdown>
                 </div>
-                <CommandList commands={answer.commands} />
                 <ReplyThread answer={answer} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">
@@ -185,7 +183,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
           ) : (
             <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
               <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
-              Waiting for an answer… this card refreshes itself.
+              The teacher is preparing this droplet… this card refreshes itself.
             </p>
           )}
         </>
@@ -194,7 +192,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
   );
 });
 
-function AdviceContent() {
+function LearnContent() {
   const { user, loading: authLoading, unreachable, retry } = useAuth();
   const { showToast } = useToast();
   const searchParams = useSearchParams();
@@ -215,7 +213,7 @@ function AdviceContent() {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const setMine = useCallback((v: boolean) => {
-    router.replace(v ? '/advice?mine=1' : '/advice', { scroll: false });
+    router.replace(v ? '/learn?mine=1' : '/learn', { scroll: false });
   }, [router]);
 
   const load = useCallback(async () => {
@@ -231,7 +229,7 @@ function AdviceContent() {
       latestSeenRef.current = latestTimestamp(res.data);
       if (status) setAgentLastSeenAt(status.agentLastSeenAt);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to load questions', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to load topics', 'error');
     } finally {
       setLoading(false);
     }
@@ -244,7 +242,7 @@ function AdviceContent() {
   }, [authLoading, user, load]);
 
   // Ask the cheap status endpoint; when something newer exists, show the banner.
-  // Localized refresh: only the questions that are waiting on the advisor.
+  // Localized refresh: only the topics that are waiting on the teacher.
   const armedIds = questions
     .filter((q) => q.status === 'PENDING' || q.answer?.awaitingAgent)
     .map((q) => q.id);
@@ -287,9 +285,9 @@ function AdviceContent() {
     setAgentLastSeenAt(res.agentLastSeenAt);
   }).catch(() => {}), POLL_MS, !!user);
 
-  // How long since the advisor last called the API. Past two hours we say so,
+  // How long since the teacher last called the API. Past two hours we say so,
   // so a stalled runner is visible to everyone, not just on the admin page.
-  const advisorStale = agentLastSeenAt !== undefined && (!agentLastSeenAt || Date.now() - new Date(agentLastSeenAt).getTime() > 2 * 60 * 60 * 1000);
+  const teacherStale = agentLastSeenAt !== undefined && (!agentLastSeenAt || Date.now() - new Date(agentLastSeenAt).getTime() > 2 * 60 * 60 * 1000);
 
   const loadMore = useCallback(async () => {
     if (!cursor || loadingMore) return;
@@ -336,10 +334,10 @@ function AdviceContent() {
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
         setNewQuestion('');
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
-        showToast('Question posted. The advisor answers on its next pass.', 'success');
+        showToast('Topic sent. The teacher picks it up on its next pass.', 'success');
       });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to post question', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error');
     }
   };
 
@@ -348,7 +346,7 @@ function AdviceContent() {
       await api.deleteQuestion(id);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Failed to delete question', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to delete topic', 'error');
     }
   };
 
@@ -369,17 +367,20 @@ function AdviceContent() {
       <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
         <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
           style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-          <h1 className="text-2xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-red)' }}>ZOEY</h1>
-          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-            Ask a question. An AI advisor answers it, and you can talk it through.
+          <h1 className="text-2xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-red)' }}>POPSMOSIS</h1>
+          <p className="text-sm mb-1 font-bold" style={{ color: 'var(--text-primary)' }}>
+            Droplets for learning
           </p>
-          <Link href="/auth/callback?returnTo=%2Fadvice"
+          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
+            Ask for any topic. An AI teacher makes you a short lesson, and you can ask follow-ups under it.
+          </p>
+          <Link href="/auth/callback?returnTo=%2Flearn"
             className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"
             style={{ background: 'var(--accent-green)', color: 'var(--btn-filled-text)' }}>
             Sign in with Google
           </Link>
           <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-            Questions and answers are visible to signed-in members.
+            Topics and lessons are visible to signed-in members.
           </p>
         </div>
       </div>
@@ -392,8 +393,8 @@ function AdviceContent() {
     <PageContainer className="py-6">
       <ConfirmDialog
         open={!!pendingDelete}
-        title="Delete question"
-        message="Delete this question? This cannot be undone."
+        title="Delete topic"
+        message="Delete this topic request? This cannot be undone."
         confirmLabel="Delete"
         variant="danger"
         onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete); setPendingDelete(null); }}
@@ -401,16 +402,16 @@ function AdviceContent() {
       />
 
       <div className="mb-6">
-        <h2 className="text-2xl font-bold tracking-wider mb-1">ADVICE</h2>
+        <h2 className="text-2xl font-bold tracking-wider mb-1">LEARN</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Ask anything. The advisor answers each question once; reply under the answer to keep talking.
+          Ask for any topic. The teacher makes each one a droplet, a short lesson; ask follow-ups under it to go deeper.
         </p>
         {agentLastSeenAt !== undefined && (
-          <p className="text-[10px] uppercase tracking-wider mt-2 flex items-center gap-1.5" style={{ color: advisorStale ? 'var(--accent-orange)' : 'var(--text-muted)' }}>
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${advisorStale ? '' : 'animate-liveness-pulse'}`}
-              style={{ background: advisorStale ? 'var(--accent-orange)' : 'var(--accent-green)' }} />
-            {agentLastSeenAt ? `Advisor last active ${timeAgo(agentLastSeenAt)}` : 'Advisor has not connected yet'}
-            {advisorStale && ' — answers may be delayed'}
+          <p className="text-[10px] uppercase tracking-wider mt-2 flex items-center gap-1.5" style={{ color: teacherStale ? 'var(--accent-orange)' : 'var(--text-muted)' }}>
+            <span className={`inline-block w-1.5 h-1.5 rounded-full ${teacherStale ? '' : 'animate-liveness-pulse'}`}
+              style={{ background: teacherStale ? 'var(--accent-orange)' : 'var(--accent-green)' }} />
+            {agentLastSeenAt ? `Teacher last active ${timeAgo(agentLastSeenAt)}` : 'Teacher has not connected yet'}
+            {teacherStale && ' — lessons may be delayed'}
           </p>
         )}
       </div>
@@ -420,7 +421,7 @@ function AdviceContent() {
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--accent-yellow)', boxShadow: 'var(--question-box-glow)' }}>
         <h3 className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5" style={{ color: 'var(--accent-yellow)' }}>
           <LightBulbIcon className="w-4 h-4" />
-          ASK A QUESTION
+          WHAT DO YOU WANT TO LEARN?
         </h3>
         <div className="flex gap-3 items-start">
           <textarea
@@ -430,7 +431,7 @@ function AdviceContent() {
             maxLength={QUESTION_MAX}
             onChange={(e) => { setNewQuestion(e.target.value); autoResize(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAsk(); } }}
-            placeholder="What do you need help with?"
+            placeholder="A topic, e.g. ATP synthesis"
             className="flex-1 text-sm outline-none px-3 py-2 rounded resize-none"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)', background: 'var(--bg-tertiary)', maxHeight: '40vh', overflowY: 'auto' }}
           />
@@ -462,7 +463,7 @@ function AdviceContent() {
           }`}
           style={mine ? { background: 'var(--accent-purple)' } : {}}
         >
-          My Questions
+          My Topics
         </button>
       </div>
 
@@ -480,8 +481,8 @@ function AdviceContent() {
         <LoadingMessage />
       ) : questions.length === 0 ? (
         <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>
-          <p>{mine ? 'You have not asked anything yet.' : 'No questions yet. Be the first to ask!'}</p>
-          <p className="text-xs mt-2">Use the form above. The advisor picks up new questions on its next pass.</p>
+          <p>{mine ? 'You have not asked for a topic yet.' : 'No topics yet. Ask for the first one!'}</p>
+          <p className="text-xs mt-2">Use the form above. The teacher picks up new topics on its next pass.</p>
         </div>
       ) : (
         <div className="space-y-3">
