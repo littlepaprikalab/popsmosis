@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import Fastify, { FastifyError, FastifyRequest, FastifyReply } from 'fastify';
+import Fastify, { FastifyError, FastifyRequest, FastifyReply, LogController } from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
@@ -22,7 +22,7 @@ export async function buildApp() {
     logger: process.env.NODE_ENV !== 'test',
     // We log responses ourselves below so the two polling endpoints do not
     // flood the logs at one line per user per 10 seconds.
-    disableRequestLogging: true,
+    logController: new LogController({ disableRequestLogging: true }),
   });
 
   // ---- CORS: browser origins that may call the API with cookies ----
