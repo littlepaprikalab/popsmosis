@@ -1,0 +1,262 @@
+import { FastifyInstance } from 'fastify';
+import prisma, { runTransaction } from '../lib/prisma.js';
+import { Prisma } from '../generated/prisma/client.js';
+import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
+import { requireUser, requireAgent } from '../middleware/auth.js';
+import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
+import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
+import { questionInclude, serializeQuestion } from '../lib/serialize.js';
+import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
+import { claimMinutes } from '../lib/claim.js';
+import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
+
+export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
+export const QUESTION_MAX_LENGTH = 2000;
+export const ANSWER_MAX_LENGTH = 5000;
+const QUESTIONS_PER_USER_PER_DAY = parseInt(process.env.QUESTIONS_PER_USER_PER_DAY || '10', 10);
+
+export default async function questionRoutes(app: FastifyInstance) {
+  // GET /api/questions/status — cheap "anything new?" probe for polling.
+  // Considers questions, answers, and replies so a page refreshes for any of them.
+  // ?mine=true scopes latestAt the same way GET /api/questions does, so the
+  // banner on the "my questions" tab does not fire for a stranger's activity
+  // that a refresh would not show.
+  app.get('/api/questions/status', { preHandler: [requireUser] }, async (request, reply) => {
+    const { mine, since } = request.query as Record<string, string | undefined>;
+    const viewerId = request.viewer!.id;
+
+    // ?since=<ISO> — the caller's own watermark. A poller only needs to know
+    // whether anything newer than that exists, and saying so costs an index
+    // range over the rows written since its last tick. Without it every
+    // subquery aggregates the whole history: cheap unscoped (MAX off the
+    // descending createdAt indexes) but a full scan of answers and replies
+    // once ?mine=true forces the join. The page omits it only on the initial
+    // load, which reads agentLastSeenAt and discards latestAt.
+    let after: Date | null = null;
+    if (since !== undefined) {
+      after = new Date(since);
+      if (Number.isNaN(after.getTime())) return sendError(reply, 'VALIDATION_ERROR', 'since must be an ISO timestamp');
+    }
+    const newerQ = after ? Prisma.sql`AND q."createdAt" > ${after}` : Prisma.empty;
+    const newerA = after ? Prisma.sql`AND a."createdAt" > ${after}` : Prisma.empty;
+    const newerR = after ? Prisma.sql`AND r."createdAt" > ${after}` : Prisma.empty;
+
+    // Every row a scoped viewer can see hangs off one of their questions, so
+    // each subquery walks back to questions."userId". Both hops are indexed:
+    // answers by questionId, replies by answerId.
+    const latest = mine === 'true'
+      ? Prisma.sql`GREATEST(
+          (SELECT MAX(q."createdAt") FROM questions q
+             WHERE q."userId" = ${viewerId} ${newerQ}),
+          (SELECT MAX(a."createdAt") FROM answers a
+             JOIN questions q ON q.id = a."questionId"
+             WHERE q."userId" = ${viewerId} ${newerA}),
+          (SELECT MAX(r."createdAt") FROM replies r
+             JOIN answers a ON a.id = r."answerId"
+             JOIN questions q ON q.id = a."questionId"
+             WHERE q."userId" = ${viewerId} ${newerR})
+        )`
+      : Prisma.sql`GREATEST(
+          (SELECT MAX(q."createdAt") FROM questions q WHERE TRUE ${newerQ}),
+          (SELECT MAX(a."createdAt") FROM answers a WHERE TRUE ${newerA}),
+          (SELECT MAX(r."createdAt") FROM replies r WHERE TRUE ${newerR})
+        )`;
+    const [row] = await prisma.$queryRaw<{ latestAt: Date | null; agentLastSeenAt: Date | null }[]>`
+      SELECT
+        ${latest} AS "latestAt",
+        (SELECT MAX("lastSeenAt") FROM agents WHERE enabled) AS "agentLastSeenAt"
+    `;
+    return {
+      // Null when nothing is newer than ?since, which is the answer the poller
+      // wants: no banner.
+      latestAt: row?.latestAt?.toISOString() ?? null,
+      // When the teacher last called the API; the page shows it so a stalled
+      // runner is visible to users, not just on the admin page. Never scoped
+      // or bounded: a stalled runner is everyone's problem.
+      agentLastSeenAt: row?.agentLastSeenAt?.toISOString() ?? null,
+    };
+  });
+
+  // GET /api/questions/queue — agent: PENDING questions, oldest first, claimed
+  // for this caller so an overlapping run is handed different ones.
+  app.get('/api/questions/queue', { preHandler: [requireAgent] }, async (request) => {
+    const { limit } = request.query as Record<string, string | undefined>;
+    const take = parseLimit(limit, 5, 20);
+    const agentId = request.agent!.id;
+
+    // Select and claim in one statement. FOR UPDATE SKIP LOCKED is the whole
+    // trick: a concurrent caller steps over rows this one has locked instead of
+    // blocking on them or reading them anyway, so the two get disjoint sets.
+    // A claim past its lease is treated as absent — see lib/claim.ts.
+    const claimed = await prisma.$queryRaw<{ id: string }[]>`
+      UPDATE questions
+      SET "claimedAt" = now(), "claimedById" = ${agentId}
+      WHERE id IN (
+        SELECT id FROM questions
+        WHERE status = 'PENDING'
+          AND ("claimedAt" IS NULL OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
+        ORDER BY "createdAt" ASC, id ASC
+        LIMIT ${take}
+        FOR UPDATE SKIP LOCKED
+      )
+      RETURNING id
+    `;
+
+    await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+    if (claimed.length === 0) return { data: [] };
+
+    const questions = await prisma.question.findMany({
+      where: { id: { in: claimed.map((r) => r.id) } },
+      include: questionInclude,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    return { data: questions.map((q) => serializeQuestion(q)) };
+  });
+
+  // POST /api/questions — signed-in user asks a question. `attachments` are
+  // files sent with it (lib/attachments.ts), which is why the body may be
+  // large — and why the caller is checked before it is read.
+  app.post('/api/questions', { onRequest: [requireUser], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
+    const { content, attachments: rawAttachments } = (request.body ?? {}) as { content?: unknown; attachments?: unknown };
+    const err = validateString(content, 'content', { required: true, minLength: QUESTION_MIN_LENGTH, maxLength: QUESTION_MAX_LENGTH });
+    if (err) return sendError(reply, 'VALIDATION_ERROR', err);
+    const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
+    if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
+    const text = (content as string).trim();
+    if (containsPersonalInfo(text)) {
+      return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a question');
+    }
+
+    // Rolling 24h window per user, same shape as sparks.
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recent = await prisma.question.count({ where: { userId: request.viewer!.id, createdAt: { gte: since } } });
+    if (recent >= QUESTIONS_PER_USER_PER_DAY) {
+      return sendError(reply, 'RATE_LIMITED', `Max ${QUESTIONS_PER_USER_PER_DAY} questions per 24 hours`, { retryable: false });
+    }
+
+    const question = await prisma.question.create({
+      data: { userId: request.viewer!.id, content: text, attachments: attachmentsCreate(attachments) },
+      include: questionInclude,
+    });
+    // Wake the teacher now rather than at its next scheduled firing. Not
+    // awaited: the asker's 201 does not wait on Anthropic's API.
+    notifyRoutine(FIRE_REASON_QUESTION, request.log);
+    if (attachments.length > 0) {
+      sweepExpiredAttachments(prisma).catch((sweepErr) => request.log.warn({ err: sweepErr }, 'attachment retention sweep failed'));
+    }
+    reply.status(201);
+    return serializeQuestion(question, request.viewer!.id);
+  });
+
+  // GET /api/questions — every user's questions, newest first, with answer + replies
+  app.get('/api/questions', { preHandler: [requireUser] }, async (request) => {
+    const { limit, cursor, mine, status, ids } = request.query as Record<string, string | undefined>;
+    const take = parseLimit(limit, 20, 50);
+
+    // ?ids=a,b,c — the page re-fetches just the cards that are waiting on the
+    // teacher, in one request. Capped so it cannot become a full-table pull.
+    if (ids !== undefined) {
+      const list = [...new Set(ids.split(',').map((s) => s.trim()).filter(Boolean))].slice(0, 50);
+      if (list.length === 0) return { data: [], nextCursor: null };
+      const rows = await prisma.question.findMany({ where: { id: { in: list } }, include: questionInclude });
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      return {
+        data: list.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r).map((r) => serializeQuestion(r, request.viewer!.id)),
+        nextCursor: null,
+      };
+    }
+
+    const where: Record<string, unknown> = {};
+    if (mine === 'true') where.userId = request.viewer!.id;
+    if (status === 'PENDING' || status === 'ANSWERED') where.status = status;
+    const cursorFilter = decodeCreatedAtIdCursor(cursor);
+    if (cursorFilter) where.AND = [cursorFilter];
+
+    const questions = await prisma.question.findMany({
+      where,
+      include: questionInclude,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take,
+    });
+
+    return {
+      data: questions.map((q) => serializeQuestion(q, request.viewer!.id)),
+      nextCursor: encodeCreatedAtIdCursor(questions, take),
+    };
+  });
+
+  // GET /api/questions/:id
+  app.get('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const question = await prisma.question.findUnique({ where: { id }, include: questionInclude });
+    if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
+    return serializeQuestion(question, request.viewer!.id);
+  });
+
+  // DELETE /api/questions/:id — owner, only while PENDING
+  app.delete('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const userId = request.viewer!.id;
+
+    try {
+      await runTransaction(async (tx) => {
+        const question = await tx.question.findUnique({ where: { id } });
+        if (!question) throw new AppError('NOT_FOUND', 'Question not found');
+        if (question.userId !== userId) throw new AppError('FORBIDDEN', 'You can only delete your own questions');
+        if (question.status !== 'PENDING') throw new AppError('VALIDATION_ERROR', 'Only unanswered questions can be deleted');
+        await tx.question.delete({ where: { id } });
+      });
+    } catch (err) {
+      if (isAppError(err)) return sendError(reply, err.code, err.message);
+      throw err;
+    }
+    return reply.status(204).send();
+  });
+
+  // POST /api/questions/:id/answer — agent answers; exactly one answer per question.
+  app.post('/api/questions/:id/answer', { preHandler: [requireAgent] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const agentId = request.agent!.id;
+    const { content, model } = (request.body ?? {}) as { content?: unknown; model?: unknown };
+
+    const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: ANSWER_MAX_LENGTH });
+    if (contentError) return sendError(reply, 'VALIDATION_ERROR', contentError);
+    if (model !== undefined) {
+      const modelError = validateString(model, 'model', { maxLength: 100 });
+      if (modelError) return sendError(reply, 'VALIDATION_ERROR', modelError);
+    }
+
+    try {
+      const answer = await runTransaction(async (tx) => {
+        // Row lock so two concurrent answers to the same question serialize here.
+        const rows = await tx.$queryRaw<{ id: string; status: string }[]>`
+          SELECT id, status FROM questions WHERE id = ${id} FOR UPDATE
+        `;
+        const question = rows[0];
+        if (!question) throw new AppError('NOT_FOUND', 'Question not found');
+        if (question.status === 'ANSWERED') throw new AppError('CONFLICT', 'Question already has an answer');
+
+        const created = await tx.answer.create({
+          data: { questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null },
+          include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },
+        });
+        await tx.question.update({ where: { id }, data: { status: 'ANSWERED' } });
+        await tx.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+        return created;
+      });
+      reply.status(201);
+      return {
+        id: answer.id,
+        questionId: answer.questionId,
+        agent: answer.agent,
+        content: answer.content,
+        model: answer.model,
+        createdAt: answer.createdAt.toISOString(),
+      };
+    } catch (err) {
+      if (isUniqueViolation(err)) return sendError(reply, 'CONFLICT', 'You have already answered this question');
+      if (isAppError(err)) return sendError(reply, err.code, err.message);
+      throw err;
+    }
+  });
+}

@@ -1,0 +1,24 @@
+{
+  "name": "popsmosis",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "npm --workspace api run db:migrate",
+    "dev:api": "npm --workspace api run dev",
+    "dev:web": "npm --workspace web run dev",
+    "test": "npm --workspace api test",
+    "build": "npm --workspace api run build && npm --workspace web run build",
+    "e2e": "npm --workspace web run e2e"
+  },
+  "devDependencies": {
+    "prisma": "^7.5.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.5.0"
+  }
+}

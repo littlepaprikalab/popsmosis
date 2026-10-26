@@ -1,0 +1,85 @@
+# Render Blueprint: the Fastify API and the Next.js web app. Postgres lives on
+# Supabase (like sparks); DATABASE_URL is its Session-pooler URI.
+# Deploy with Render > New > Blueprint, pointing at this repo. Everything with
+# `sync: false` is prompted for on first deploy; see docs/DEPLOY.md.
+#
+# The web app proxies /api/* to the API server-side, so browsers only ever talk
+# to popsmosis-web. Agents talk to popsmosis-api directly with their key.
+
+services:
+  - type: web
+    name: popsmosis-api
+    runtime: node
+    region: oregon
+    # No `plan:` on purpose. Render retains the current compute plan for an
+    # existing service when the field is omitted, so a sync never downgrades a
+    # service you upgraded in the dashboard. A service created fresh from this
+    # file gets Render's default (0.5c-512mb, i.e. paid Starter), not free.
+    # Migrations run at the end of the build (env vars are available then).
+    # On a paid instance you can move `db:deploy` to a `preDeployCommand`
+    # instead, which blocks the deploy if a migration fails.
+    # `--include=dev`: NODE_ENV=production (below) makes npm skip devDependencies,
+    # and the build needs them — `tsc` here, `typescript`/`tailwindcss` on the web
+    # service. Without it the build dies on a missing module.
+    buildCommand: npm ci --include=dev && npm --workspace api run build && npm --workspace api run db:deploy
+    startCommand: npm --workspace api run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: DATABASE_URL           # Supabase Session-pooler URI (see docs/DEPLOY.md)
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PROXY_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI     # https://<popsmosis-web host>/auth/callback
+        sync: false
+      - key: ALLOWED_ORIGINS         # https://<popsmosis-web host>
+        sync: false
+      - key: API_BASE_URL            # https://<popsmosis-api host>, substituted into the skill file
+        sync: false
+      - key: ALLOWED_EMAIL_DOMAINS   # optional, e.g. yourcompany.com — approved on sign-in without waiting for an admin
+        sync: false
+      - key: ALLOWED_EMAILS          # optional exact addresses approved on sign-in (contractors); leave blank if none
+        sync: false
+      - key: ADMIN_EMAILS            # comma-separated Google emails that get the admin role; they approve everyone else on /admin/users
+        sync: false
+      - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 10)
+        sync: false
+      - key: POPSMOSIS_ROUTINE_FIRE_URL   # optional: the teacher routine's API-trigger URL, so a topic wakes it at once
+        sync: false
+      - key: POPSMOSIS_ROUTINE_FIRE_TOKEN # optional: that trigger's bearer token, shown once when you generate it
+        sync: false
+
+  - type: web
+    name: popsmosis-web
+    runtime: node
+    region: oregon
+    # No `plan:` — see the note on popsmosis-api above.
+    # `--include=dev` for the same reason as popsmosis-api: `next build` reads
+    # next.config.ts, which needs `typescript` from devDependencies.
+    buildCommand: npm ci --include=dev && npm --workspace web run build
+    startCommand: npm --workspace web run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL      # http://popsmosis-api:3001 (Render private network) or the public API URL
+        sync: false
+      - key: NEXT_PUBLIC_SITE_URL     # https://<popsmosis-web host>
+        sync: false
+      - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
+        sync: false
+      - key: NEXT_PUBLIC_GOOGLE_REDIRECT_URI  # https://<popsmosis-web host>/auth/callback
+        sync: false
+      - key: PROXY_SECRET
+        fromService:
+          name: popsmosis-api
+          type: web
+          envVarKey: PROXY_SECRET

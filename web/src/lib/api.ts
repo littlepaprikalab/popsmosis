@@ -1,0 +1,294 @@
+const API_BASE = '/api';
+const REQUEST_TIMEOUT_MS = 30_000;
+
+export class ApiError extends Error {
+  status: number;
+  code: string | undefined;
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.status = status;
+    this.code = code;
+  }
+}
+
+// The API is a separate Render service. It spins down when idle on the free
+// plan and is briefly unroutable while a deploy swaps the instance, and Render
+// answers both windows itself — a ~160KB HTML error page with a 502/503/504,
+// never the JSON this client expects. That says nothing about the session, so
+// safe requests ride the window out instead of surfacing it as a failure.
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
+const MAX_GATEWAY_ATTEMPTS = 3;
+const GATEWAY_BACKOFF_MS = [1000, 3000, 6000];
+const GATEWAY_BUDGET_MS = 15_000; // never begin a retry past this much time in the call
+const SAFE_METHODS = new Set(['GET', 'HEAD']);
+
+// One client-wide view of whether the API is answering at all. The pages poll,
+// so a sustained outage means several callers a second each finding out on their
+// own; retrying per caller multiplies the load on an API that is already down or
+// waking, and downloads Render's ~160KB error page every time. The first caller
+// to exhaust its retries latches this, and while it holds everyone makes one
+// attempt and takes the answer — enough to notice recovery, without the storm.
+const BREAKER_COOLDOWN_MS = 10_000;
+let downUntil = 0;
+const breakerOpen = () => Date.now() < downUntil;
+
+// Spread the wave: without this every client in the outage retries in lockstep
+// and hits the API together the moment it comes back.
+const jitter = (ms: number) => Math.round(ms * (0.75 + Math.random() * 0.5));
+
+const UNREACHABLE_CODE = 'SERVER_UNAVAILABLE';
+const UNREACHABLE_MESSAGE = 'Cannot reach the server. It may be starting up — try again in a moment.';
+
+/** The request never got an answer from the API: down, waking up, or mid-deploy. */
+export function isUnreachable(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 0 || GATEWAY_STATUSES.has(err.status));
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const isSafeRequest = (options: RequestInit) => SAFE_METHODS.has((options.method ?? 'GET').toUpperCase());
+
+interface Attempts {
+  gateway: number;
+  rateLimit: number;
+  startedAt: number; // first attempt, so the retries share one time budget
+}
+
+// 403s that describe the account rather than the request: the user is not (or
+// no longer) approved. The AuthProvider re-reads /auth/me and the AccessGate
+// swaps the page for the waiting screen, so revocation lands without a reload.
+const ACCESS_CODES = new Set(['PENDING_APPROVAL', 'ACCESS_DENIED']);
+
+async function request<T>(path: string, options: RequestInit = {}, attempts?: Attempts): Promise<T> {
+  const tries: Attempts = attempts ?? { gateway: 0, rateLimit: 0, startedAt: Date.now() };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  // Retry only what a retry can help: a safe request, tries left, a budget that
+  // still fits one, and no other caller having already found the API missing.
+  const backoffMs = jitter(GATEWAY_BACKOFF_MS[Math.min(tries.gateway, GATEWAY_BACKOFF_MS.length - 1)]);
+  const retryGateway = () =>
+    isSafeRequest(options)
+    && tries.gateway < MAX_GATEWAY_ATTEMPTS
+    && !breakerOpen()
+    && Date.now() - tries.startedAt + backoffMs < GATEWAY_BUDGET_MS;
+
+  const again = async (): Promise<T> => {
+    await sleep(backoffMs);
+    return request<T>(path, options, { ...tries, gateway: tries.gateway + 1 });
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      credentials: 'include', // send the session cookie
+      signal: controller.signal,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        'X-Requested-With': 'XMLHttpRequest', // CSRF signal
+        ...options.headers,
+      },
+    });
+  } catch (err) {
+    // Nothing answered at all — a refused connection, a dropped proxy hop, or
+    // our own timeout. Same treatment as a gateway status for a safe request.
+    clearTimeout(timer); // the backoff below outlives this call's timeout
+    if (retryGateway()) return again();
+    downUntil = Date.now() + BREAKER_COOLDOWN_MS;
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiError('Request timed out', 0);
+    }
+    throw new ApiError(UNREACHABLE_MESSAGE, 0, UNREACHABLE_CODE);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  const gateway = GATEWAY_STATUSES.has(res.status);
+  if (gateway && retryGateway()) return again();
+  // The API answered, whatever it said, so it is not the thing that is missing.
+  if (!gateway) downUntil = 0;
+  else downUntil = Date.now() + BREAKER_COOLDOWN_MS;
+
+  if (!res.ok) {
+    // Render's error page is HTML and megabytes of it arrive during an outage;
+    // only spend a parse on a body that claims to be ours.
+    const err = res.headers.get('content-type')?.includes('json') ? await res.json().catch(() => null) : null;
+
+    // Retry transient 429s with backoff unless the server marked it non-retryable.
+    if (res.status === 429 && tries.rateLimit < 3 && err?.error?.retryable !== false) {
+      const retryAfter = res.headers.get('retry-after');
+      const delayMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : jitter(1000 * 2 ** tries.rateLimit);
+      await sleep(delayMs);
+      return request<T>(path, options, { ...tries, rateLimit: tries.rateLimit + 1 });
+    }
+
+    const message: string = err?.error?.message || (gateway ? UNREACHABLE_MESSAGE : res.statusText || 'Request failed');
+    const code: string | undefined = err?.error?.code || (gateway ? UNREACHABLE_CODE : undefined);
+    if (res.status === 403 && code && ACCESS_CODES.has(code) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('access-changed'));
+    }
+    if (res.status === 401 && typeof window !== 'undefined') {
+      if (message === 'User not found') {
+        fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest' } }).catch(() => {});
+        window.location.href = '/auth/callback';
+      } else if (message === 'Missing authorization token' || message === 'Invalid token') {
+        window.dispatchEvent(new CustomEvent('session-expired'));
+        throw new ApiError('Your session has expired — please sign in again.', 401);
+      }
+    }
+    throw new ApiError(message, res.status, code);
+  }
+
+  if (res.status === 204) return undefined as T;
+  return res.json();
+}
+
+// ---- Types (mirror api/src/lib/serialize.ts) ----
+
+export interface User {
+  id: string;
+  email: string;
+  name: string | null;
+  avatarUrl: string | null;
+  role: 'USER' | 'ADMIN';
+  status: UserStatus;
+  reviewedAt: string | null; // when status left PENDING
+  createdAt: string;
+}
+
+export type UserStatus = 'PENDING' | 'APPROVED' | 'DENIED';
+
+export interface PublicUser {
+  id: string;
+  name: string | null;
+  avatarUrl: string | null;
+}
+
+export interface AgentRef {
+  id: string;
+  name: string;
+}
+
+/** A file a person sent with a question or reply. `url` serves it while it is kept; `expired` once it is not. */
+export interface Attachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  expired: boolean;
+}
+
+export interface Reply {
+  id: string;
+  answerId: string;
+  authorType: 'HUMAN' | 'AGENT';
+  replyToId: string | null;
+  content: string;
+  attachments: Attachment[]; // a human reply's
+  createdAt: string;
+  user: PublicUser | null;
+  agent: AgentRef | null;
+  canDelete: boolean;
+}
+
+export interface Answer {
+  id: string;
+  questionId: string;
+  agent: AgentRef;
+  content: string;
+  model: string | null;
+  createdAt: string;
+  replies: Reply[];
+  awaitingAgent: boolean;
+}
+
+export interface Question {
+  id: string;
+  content: string;
+  status: 'PENDING' | 'ANSWERED';
+  attachments: Attachment[];
+  createdAt: string;
+  user: PublicUser;
+  answer: Answer | null;
+  isOwner: boolean;
+  canDelete: boolean;
+}
+
+export interface Agent {
+  id: string;
+  name: string;
+  enabled: boolean;
+  hasKey: boolean; // false after revoke, until a new key is minted
+  createdAt: string;
+  lastSeenAt: string | null;
+  apiKey?: string; // only on create / mint / rotate
+}
+
+/** A personal access token: how something that is not a browser signs in as you. */
+export interface UserToken {
+  id: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  token?: string; // only on create, and only once
+}
+
+export const api = {
+  // Wake a spun-down API before something single-use depends on it.
+  health: () => request<{ status: string; timestamp: string }>('/health'),
+
+  // Auth
+  authGoogle: (code: string) => request<{ user: User }>('/auth/google', { method: 'POST', body: JSON.stringify({ code }) }),
+  getMe: () => request<User>('/auth/me'),
+  logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
+
+  // Questions
+  listQuestions: (params?: Record<string, string>) =>
+    request<{ data: Question[]; nextCursor: string | null }>(`/questions?${new URLSearchParams(params)}`),
+  getQuestion: (id: string) => request<Question>(`/questions/${id}`),
+  getQuestionsByIds: (ids: string[]) =>
+    request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`),
+  askQuestion: (content: string) => request<Question>('/questions', { method: 'POST', body: JSON.stringify({ content }) }),
+  deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
+  // mine scopes latestAt to the viewer's own questions, matching the list the
+  // page is showing, so the "new activity" banner cannot promise a refresh
+  // that changes nothing. since is the caller's watermark: the server then only
+  // looks at rows written after it, which is all a poller needs to know.
+  getStatus: (mine?: boolean, since?: string | null) => {
+    const params = new URLSearchParams();
+    if (mine) params.set('mine', 'true');
+    if (since) params.set('since', since);
+    const q = params.toString();
+    return request<{ latestAt: string | null; agentLastSeenAt: string | null }>(`/questions/status${q ? `?${q}` : ''}`);
+  },
+
+  // Replies
+  addReply: (answerId: string, content: string) =>
+    request<Reply>(`/answers/${answerId}/replies`, { method: 'POST', body: JSON.stringify({ content }) }),
+  deleteReply: (id: string) => request<void>(`/replies/${id}`, { method: 'DELETE' }),
+
+  // Admin: agents
+  listAgents: () => request<{ data: Agent[] }>('/agents'),
+  createAgent: (name: string) => request<Agent>('/agents', { method: 'POST', body: JSON.stringify({ name }) }),
+  rotateAgentKey: (id: string) => request<Agent>(`/agents/${id}/rotate-key`, { method: 'POST' }),
+  revokeAgentKey: (id: string) => request<Agent>(`/agents/${id}/revoke-key`, { method: 'POST' }),
+  setAgentEnabled: (id: string, enabled: boolean) =>
+    request<Agent>(`/agents/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
+  agentSkillUrl: (id: string) => `${API_BASE}/agents/${id}/skill`,
+
+  // Personal access tokens (the caller's own; cookie sessions only)
+  listTokens: () => request<{ data: UserToken[] }>('/tokens'),
+  createToken: (name: string) => request<UserToken>('/tokens', { method: 'POST', body: JSON.stringify({ name }) }),
+  revokeToken: (id: string) => request<UserToken>(`/tokens/${id}`, { method: 'DELETE' }),
+
+  // Admin: users
+  listUsers: (q?: string, status?: UserStatus) =>
+    request<{ data: User[] }>(`/users?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}) })}`),
+  pendingUserCount: () => request<{ count: number }>('/users/pending-count'),
+  setUserRole: (id: string, role: 'ADMIN' | 'USER') =>
+    request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+  setUserStatus: (id: string, status: 'APPROVED' | 'DENIED') =>
+    request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+};
