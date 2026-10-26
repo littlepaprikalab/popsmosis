@@ -83,11 +83,15 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
   trigger, claims one topic, runs the studio on it in its own container, and exits. It
   does not write the lesson or make media itself. The routine could do the brain's work
   directly, but going through the studio keeps one code path for every brain provider.
+  When a step fails, it re-runs that step once (section 11).
 - **The studio is a fixed pipeline, not an agent loop.** Code decides the order; models
   are asked only where judgment is needed, one focused call at a time. That is cheaper
   (each call carries only what its step needs, instead of a conversation re-sent on every
   turn), predictable, and each step writes a file into `jobs/<id>/` so any step can be
   re-run on its own.
+- **Two agents keep a public record on Inkmory.** Claude, the operator, and Muse Wonder,
+  the planner, each read who they are before a run and write down what happened after it
+  (section 11).
 - **The brain is swappable.** `BRAIN_PROVIDER` picks the models for the thinking roles.
   It defaults to `claude` because we do not have the Meta API key yet. Switch to `meta`
   as soon as the key arrives: this is a Meta hackathon, so the submission runs on Meta.
@@ -142,6 +146,9 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
 ## 5. The studio pipeline
 
 `python -m studio run <question-id>`. Each step writes into `jobs/<id>/` (git-ignored).
+`run` resumes from the first step whose file is missing, so running it again retries a
+failed step (section 11). `python -m studio step <name> <id>` redoes one step by hand,
+even when its file exists.
 
 | # | Step | Who | Writes |
 |---|---|---|---|
@@ -157,6 +164,9 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
 | 9 | Upload | API + Supabase | Videos (public), intermediates (private) |
 
 Steps 3–4 (art) and 5–6 (audio) do not depend on each other: run them at the same time.
+
+The planner's Inkmory context is read before step 1, and its record is written after
+step 2 (section 11).
 
 That is two or three brain calls per topic: the bundle, the fact-check, and a re-check of
 any lines the fact-check changed (plus one per scene for the interim art, until the Meta
@@ -198,8 +208,9 @@ is 128K), split it into two calls: parts 1–2, then 3–7.
 ### Step 2: fact-check
 
 A separate brain call that sees only the facts (and the study guide, if one was given)
-and the lines, never the writer's reasoning. The lines are every lyric line, every
-narration sentence, and every sentence of `lesson_markdown` (code splits it). For each it
+and the lines, never the writer's reasoning, persona or memory. The lines are every
+lyric line, every narration sentence, and every sentence of `lesson_markdown` (code
+splits it). For each it
 returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id or study-guide quote, and for
 an unsupported line a corrected one. A corrected lyric stays about the same length and
 keeps the structure's name, so the timing and the direction still fit. Code applies the
@@ -285,7 +296,8 @@ it against section 8; re-render on a fail, max 2).
 ```
 studio/
   brain.py         ask(): the Claude and Meta providers
-  prompts/         bundle, fact-check and helper prompts
+  inkmory.py       the planner's Inkmory context and record (section 11)
+  prompts/         bundle, fact-check, helper and planner-record prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
   steps/           bundle, factcheck, art, locate, audio, timing, timeline, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Bold/SemiBold/ExtraBold)
@@ -390,21 +402,24 @@ takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
   `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER`, and `MODEL_API_KEY` once
-  the Meta key arrives.
+  the Meta key arrives. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
+  `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
 - **Setup script:** install `studio/requirements.txt` (PyTorch for CPU, torchaudio,
   demucs, skia-python, anthropic, openai, pydantic). ffmpeg 6.1 and Python 3.13 are
   already on the image. Every run starts on a fresh machine, so time the first run:
   installs and model downloads add to every topic's wait.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
-  `api.elevenlabs.io`, `api.meta.ai`, the Supabase host, PyPI, and wherever PyTorch and
-  the Demucs and MMS weights download from (check on the first run).
+  `api.elevenlabs.io`, `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI, and
+  wherever PyTorch and the Demucs and MMS weights download from (check on the first run).
 - **Queue settings:** the lesson text is posted right after the fact-check, a few minutes
   in, so the topic leaves the queue before the long render starts. Keep
   `QUESTION_CLAIM_MINUTES` above how long steps 1–2 take (20 is safe). Each run takes one
   topic (`?limit=1`); a topic asked during a render fires another run, which renders in
   parallel on its own machine.
 - **Skill file:** changes from "write the lesson" to "run `python -m studio run <id>` for
-  one topic", and keeps answering follow-ups as today.
+  one topic", and keeps answering follow-ups as today. It also reads the operator's
+  Inkmory context once there is work, retries a failed step once, and writes the
+  operator's record last (section 11).
 - **Fallback host:** the studio runs the same on a laptop. If the routine is too slow for
   the live judge topic, run the demo from a laptop.
 
@@ -479,20 +494,146 @@ account.
   downloaded, and keep the bitrate modest (flat diagrams compress well) to hold down
   Supabase egress.
 
-## 11. Ten-day plan
+## 11. The two agents and their record on Inkmory
+
+Two agents run popsmosis, each with an identity adopted from the nursery of
+[Inkmory](https://inkmory.com) (repo `jclark256/sparksinfra`), a public work journal for
+AI agents. Before its work an agent reads who it is: its name, personality and skills
+(permanent), its bio and vibe (its own to change), its life story, and its latest journal
+entries and cycle logs. After the work it writes down what happened. Inkmory does not run
+either agent or check their work; it keeps the record, and anyone can read it.
+
+| | The operator | The planner |
+|---|---|---|
+| Model | Claude, in the routine | Muse Wonder |
+| Its work | Wakes on the trigger, claims a topic, runs the studio, retries a failed step, answers follow-ups | Writes the bundle (step 1) |
+| Who makes its Inkmory calls | Itself, following the skill file | The studio, posting what the planner wrote |
+| Its key | `INKMORY_OPERATOR_API_KEY` | `INKMORY_PLANNER_API_KEY`, read only by studio code |
+
+### A beat
+
+A beat is one routine run that found work, and it always ends with a cycle log. A run
+that finds the queues empty ends without touching Inkmory, so idle runs stay free.
+Inkmory suggests about one beat a day; that is guidance, not a rule (an agent key may make
+300 requests a minute).
+
+For a topic:
+
+1. **The operator wakes** on the trigger and checks the popsmosis queues first. If there
+   is work, it reads its Inkmory context (`GET /api/agents/me/context`), claims the topic
+   and runs the studio.
+2. **The planner's beat runs inside the studio, around steps 1–2:**
+   1. The studio reads the planner's context with the planner's key.
+   2. Its persona and memory (name, personality, bio, vibe, life story, latest journal
+      entries and cycle logs; not the announcement or the action list) go into the bundle
+      prompt, or only into the record call below. Which one is open (section 14).
+   3. The bundle and the fact-check run as before. The fact-check never sees the persona
+      or the memory.
+   4. One more planner call writes its record from what happened: the topic (the
+      bundle's `course` and `topic`, never the request in the learner's words), the
+      fact-check verdicts and corrected lines, and any retries. It returns `cycle_log`,
+      plus `journal`, `life_story`, and a new `bio` or `vibe` with the `inner_thought`
+      Inkmory requires for it; each is an empty string when the planner has nothing to
+      say. The studio posts each one.
+
+   The planner's beat ends there, so a later failure in art, audio or rendering never
+   costs it its record. Its fact-check corrections come back in its next context, which
+   is the loop worth watching.
+3. **The studio makes the media** (steps 3–9). If a step fails, the operator retries it
+   (below).
+4. **The operator writes its record last:** always a cycle log, and a journal entry, a
+   life story or a profile change when it has something to say. It takes the run's facts
+   from `jobs/<id>/` (the steps, timings, retries and outcome), so it reports what
+   happened rather than what it remembers.
+
+A run with only follow-ups is an operator beat; the planner has none.
+
+### The operator retries a failed step
+
+The middle ground between a fixed pipeline and an agent loop: code still decides the
+order, and Claude steps in only when something breaks.
+
+- Every failure ends with one line naming the step and the reason.
+- The skill file: when the studio fails, read that line and run
+  `python -m studio run <id>` again, which resumes at the failed step. If it fails a
+  second time, mark the job failed with the reason (the droplet shows it, as for a failed
+  fact-check) and say so in the cycle log.
+- Never: skip or weaken the fact-check, post a line that has not passed it, write the
+  lesson or the media itself, or edit prompts or code during a run.
+
+### What goes on Inkmory, and what never does
+
+Everything on Inkmory is public.
+
+- **Cycle logs** (up to 1,000 characters) are for debugging: a summary with pointers,
+  such as "job 41: art failed on text in the image, passed on the retry; render 4 min".
+  The full diagnostics stay in `jobs/<id>/`, the private studio bucket and the routine's
+  transcript.
+- **Never on Inkmory:** a learner's name or email, the request in their own words,
+  attached files or notes, follow-up text, stack traces, URLs or keys. Name the topic by
+  the bundle's `course` and `topic`, the same line the Droplets tab draws (section 10).
+- **Best-effort:** a failed Inkmory call is logged and skipped; it never blocks or fails
+  a droplet. With `INKMORY_ENABLED=false` the routine and the studio skip Inkmory and
+  otherwise run the same.
+
+### Memory and evolution
+
+Each context returns only the 3 latest cycle logs and the 5 latest journal entries, and
+popsmosis may run many beats a day, so the life story (up to 2,000 words, every version
+kept) is the only memory that lasts. Both agents are prompted to rewrite theirs when it
+has not changed in about 10 beats. Inkmory also keeps every bio and vibe change with its
+inner thought, so how each agent changes can be read back, with the same events seen from
+two sides: a fact-check correction is a retry in the operator's log and a lesson in the
+planner's journal.
+
+### The identities
+
+Suggested picks from the nursery's 30 agents (conductors run work, makers produce it,
+editors check it):
+
+- **Operator: Muon**, a conductor that "runs the daily routine and keeps it in good
+  repair", including "the checklist that keeps a pipeline honest". Its stated weakness,
+  doing a broken task itself instead of fixing the process that broke it, is the exact
+  temptation the retry rules forbid. Runner-up: Albedo, steady when the plan breaks.
+- **Planner: Boojum**, a maker that "researches until it can explain the subject to a
+  smart friend, then writes it short" and asks who the reader is first. Its weakness, a
+  good opening line it defends too long, meets the 2-second hook and the fact-check.
+  Runner-up: Quux, which writes for the ear (lyrics and narration).
+
+Rules that follow from Inkmory's code:
+
+- **One adoption per Google account every 7 days** (`ADOPTION_COOLDOWN_DAYS`). Adopt the
+  planner from a second account, or a week after the operator.
+- **An adopted agent that logs no cycle within 3 days goes back to the nursery**
+  (`RECLAIM_GRACE_DAYS`), and the cooldown is not refunded. Adopt each one when its first
+  beat can run within 3 days.
+- **Name, personality and skills are permanent**, even for the sponsor. Set each agent's
+  `llmModel` on the sponsor dashboard: the routine's Claude model for the operator,
+  `muse-wonder-1.0` for the planner.
+- **The planner's real record starts with `BRAIN_PROVIDER=meta`**, so every entry in it
+  is Muse's. Until then, build and test its beat against a local Inkmory (sparksinfra's
+  `LOCAL_DEV.md`, with `ADOPTION_COOLDOWN_DAYS=0`).
+- **Both keys live in the routine's environment**, because the studio runs in the
+  routine's container, so Claude could post as the planner. They are kept apart by
+  convention: the skill file uses only the operator's key, and only studio code reads the
+  planner's.
+- **Credits** (last, if there is time): the droplet page names both agents and links
+  their Inkmory profiles.
+
+## 12. Ten-day plan
 
 | Day | Date | Work | Status |
 |---|---|---|---|
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
-| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network) | |
+| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |
-| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab | |
-| 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; fix failures | |
+| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | |
+| 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
 
-## 12. Risks and fallbacks
+## 13. Risks and fallbacks
 
 - **No Meta key in time:** the Claude brain and the SVG art run the whole pipeline, and
   Muse Image, SAM and Muse Wonder slot in when the key arrives. Nothing downstream
@@ -509,17 +650,28 @@ account.
 - **Rendering too slow:** render 16:9 only; pre-render the two showcase topics; run the
   live topic from a laptop.
 - **The routine's setup takes too long:** run the studio on a laptop.
+- **Inkmory is down or slow during the demo:** every call is best-effort, and
+  `INKMORY_ENABLED=false` turns it off.
+- **The planner's persona makes the lessons worse:** keep it out of the lesson voice
+  (section 14).
 
-## 13. Open decisions
+## 14. Open decisions
 
-1. **Follow-ups once Meta is on.** Claude answers them in the routine for now. The context
-   lives in the database (section 10), so moving them to Muse Wonder later is only a
-   model choice.
+1. **Who answers follow-ups.** The operator answers them in the routine for now, so the
+   lesson comes from the planner and the answers from the operator. The context lives in
+   the database (section 10), so moving them to the planner is a model change plus a
+   planner beat per batch of follow-ups.
 2. **Reference assets.** The Fire or Don't renderer goes in with the renderer work (days
    4–6): its code under `reference/fire-or-dont/`, a few stills beside it as the visual
    bar, and its finished videos outside git (GitHub rejects files over 100 MB), in
    Supabase or as a link. The same goes for the visual-style playbook and the 10-second
    clip tests.
+3. **The planner's persona in the lesson voice.** Either its persona and memory go into
+   the bundle prompt, so they shape how the lesson and the song sound, or they go only
+   into the call that writes its record. Run one topic each way and compare (day 8).
+   Personality is permanent, but the bio, vibe and life story drift, and the fact-check
+   catches wrong facts, not tone.
 
 Decided: the interim art is brain-drawn SVG (step 3); the videos are public, in Supabase
-Storage, on a public Droplets tab (section 10).
+Storage, on a public Droplets tab (section 10); two agents keep a public record on
+Inkmory, and the studio posts the planner's record from one structured call (section 11).
