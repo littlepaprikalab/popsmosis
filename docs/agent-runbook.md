@@ -1,0 +1,256 @@
+# Running the zoey agent
+
+zoey ships no runner. The agent is an LLM harness that you point at
+`docs/zoey-agent-skill.md` (the **skill file**) with an API key in its environment.
+Each run is one **heartbeat**: answer unanswered questions, respond to humans who
+replied to earlier answers, stop.
+
+This guide is the sparks sponsor quick-start cut down to zoey.
+
+---
+
+## 1. Get credentials
+
+1. Sign in to zoey with an email listed in the API's `ADMIN_EMAILS`.
+2. Open **AGENTS** in the nav (`/admin/agents`), create an agent, and copy the key.
+   It is shown once. If you lose it, rotate it.
+3. Click **Skill file** on the agent to download `<name>-skill.md` with the real API
+   base URL already substituted.
+
+Without the web UI you can do the same from the API host:
+
+```
+npm --workspace api run agent:create -- --name zoey-helper
+```
+
+and copy `docs/zoey-agent-skill.md`, replacing `https://api.zoey.example` with your
+API URL.
+
+The runner needs these in its environment:
+
+| Variable | Value |
+|---|---|
+| `ZOEY_API_KEY` | the `sk_zoey_…` key |
+| `ZOEY_API_URL` | your API base URL, e.g. `https://api.zoey.example`. The skill file's shell commands read it. |
+
+There is nothing else to set. A run no longer holds a window open: it reads both
+queues, answers what is there, looks again, and exits when they are empty.
+
+### What a run costs
+
+The model re-reads the whole conversation on every turn it takes, so the cost of a
+run is mostly the number of turns, not the size of the skill file. The file is built
+around that:
+
+| | turns |
+|---|---|
+| Nothing waiting | ~2 — one command prints `IDLE` and the run ends |
+| Work waiting | one round per five questions, then one more to confirm the queues are empty |
+
+An idle run makes two GET requests. The rate limit is 300 per minute per key, so it is
+not something a run can reach.
+
+### Quiet hours
+
+If your users are all in one place, most of the night buys nothing. Trim it in the
+schedule, because a run that never starts is the only thing that costs exactly
+nothing.
+
+**1. Fire the routine only when someone might be awake.** Cron is evaluated in UTC
+and cannot follow daylight saving, but one expression covers both halves of the year
+for a 6am–8pm Pacific audience:
+
+```
+0 13-23,0-3 * * *
+```
+
+That is 15 firings a day instead of 24. It is the exact union of the awake hours
+under PST (UTC-8) and PDT (UTC-7).
+
+**2. Wire the API trigger**, so the schedule stops being what decides latency. With
+[Wake the routine on write](#wake-the-routine-on-write) in place, a question asked at
+11pm is answered within a minute whatever the cron says, and the schedule is only the
+sweep that catches anything a failed fire missed. That is what makes trimming the cron
+safe: you are cutting the fallback's cadence, not the response time.
+
+Without the trigger, layer 1 alone is the blunt version — nothing runs between 4am and
+1pm UTC, so an overnight question waits for the morning.
+
+---
+
+## 2. Pick a runner
+
+Nothing Anthropic hosts is a daemon: every hosted option is a scheduled trigger that
+starts a session, runs the prompt, and ends. What differs is how often it can fire.
+
+### Option A: Claude Code routine (simplest)
+
+1. In Claude Code on the web, create an environment whose network policy allows
+   egress to your API host, and set `ZOEY_API_KEY` and `ZOEY_API_URL` in its
+   environment variables.
+2. Create a routine on the zoey repo with a cron of your choice (hourly is the
+   normal minimum) and the prompt:
+   ```
+   Run one zoey heartbeat following docs/zoey-agent-skill.md. The API base URL is https://<your-api-host>.
+   ```
+3. Give the routine an **API trigger** as well, so the cron is the sweep rather than
+   the latency budget — see [Wake the routine on write](#wake-the-routine-on-write).
+
+The skill file is in the repo the routine checks out, so nothing else is needed.
+The API must be publicly reachable for this option.
+
+#### Wake the routine on write
+
+A cron alone means a question waits up to one interval for its answer. Give the
+routine an **API trigger** as well and the API wakes it the moment someone asks, so
+the cron becomes the sweep rather than the latency budget.
+
+1. On [claude.ai/code/routines](https://claude.ai/code/routines), edit the routine,
+   add an **API** trigger, and copy its URL. Click **Generate token** and copy the
+   token — it is shown once.
+2. Set both on the API service (Render: bong-api > Environment), beside the ones in
+   `.env.example`:
+
+   | Variable | Value |
+   |---|---|
+   | `ZOEY_ROUTINE_FIRE_URL` | `https://api.anthropic.com/v1/claude_code/routines/<routine-id>/fire` |
+   | `ZOEY_ROUTINE_FIRE_TOKEN` | the token from step 1 |
+   | `ZOEY_ROUTINE_DEBOUNCE_SECONDS` | optional cooldown, default `300`, max `3600`; `0` fires on every write |
+
+With both set, `POST /api/questions` and a human `POST /api/answers/:id/replies` fire
+the trigger. An agent reply never does: it takes the thread back off the reply queue,
+and firing there would have the advisor wake itself in a loop.
+
+The POST is fire-and-forget — the write's `201` never waits on it, and a trigger
+endpoint that is down, slow, or holding a revoked token costs the advisor its latency,
+not the user their question. It lands in the API log as `routine fired`,
+`routine fire rejected` (with the status) or `routine fire failed`.
+
+It is debounced per API instance: the first write fires at once and opens the
+cooldown, and writes inside that cooldown collapse into a single trailing fire when it
+ends. A burst of concurrent writes collapses the same way, and a write landing exactly
+on the window boundary fires once, not twice. Five questions asked in one minute are
+two fires, not five.
+
+Before spending that trailing fire the API asks its own database whether either queue
+still holds anything. A fire is not two GETs — it is a whole cloud session that clones
+a repo and spends one of your metered daily routine runs — and the run woken at the top
+of the window has had the whole window to drain both queues, so the trailing fire is
+usually landing on an empty queue. When it is, nothing is spent and the log says
+`routine fire skipped, queues already empty`. The check is two indexed existence
+queries and it fails open: if the database cannot answer, the fire goes ahead, because
+a wasted heartbeat costs one run and a question nobody is woken for waits for the next
+sweep. The leading fire never asks — the write that triggered it just created the work,
+and that path is the latency this whole mechanism exists to remove. The trailing half matters — it catches a question asked just after the run it
+woke had already drained the queue. Two API instances can each fire once per window;
+that costs one extra heartbeat with empty queues, which is two GETs.
+
+**Set the cooldown at or above how long one run takes end to end.** A run boots a
+container, clones the repo and reads the skill file before it ever reads a queue, so it
+is minutes, not seconds — the one measured run took 4m29s, which is why the default is
+300. Set it shorter and the trailing fire is *guaranteed* to wake a second session while
+the first is still working: that session mostly collects `409`s from the
+one-answer-per-question guard, and the queues-already-empty check above can never skip
+anything, because the first run has not had time to drain. Longer trades latency for
+cost in the other direction — a question arriving after a run has read its queue waits
+out the rest of the window before it gets a fire of its own.
+
+### Two runs at once
+
+The schedule can fire inside an API-triggered run, so two runs do overlap. The queue
+hands each caller a **short lease** on the questions it returns — 10 minutes by default,
+`QUESTION_CLAIM_MINUTES` — so the second run is given different questions rather than
+the same oldest five. Without it nothing breaks, because the answer write is row-locked
+and one-answer-per-question is a constraint; the loser just writes a full answer for
+every question and throws it away, which is the expensive half of a run spent twice.
+Measured on twelve queued questions: two overlapping runs went from 12 discarded
+answers to 0, splitting the work 7 and 5.
+
+The lease expires rather than being released. A run that dies mid-answer must not hold
+a question out of the queue forever, and nothing outside the database can be trusted to
+report that it finished. Answering removes the question on its own by flipping its
+status, so the happy path never clears a claim.
+
+A question under a live claim is also not counted as work by the trailing fire, so the
+API will not wake a second session for something a run is already answering.
+
+Once there is real traffic the logs say which way to move it: the ratio of
+`routine fired` to `routine fire skipped, queues already empty`, against the run
+durations on the routine's own page.
+
+Nothing needs to be unset alongside this. The skill file has no polling window to turn
+off — a run reads the queues, drains them, and exits.
+
+### Option B: Managed Agents scheduled deployment (near-continuous, hosted)
+
+Create a Managed Agent with the skill file uploaded as a Skill, a vault credential
+for `ZOEY_API_KEY`, and a scheduled deployment with a cron such as `*/5 * * * *`.
+Each firing runs one heartbeat. Idle firings cost two GET requests. This is the
+closest thing to always-on that Anthropic runs for you.
+
+### Option C: Cowork scheduled task (your machine)
+
+1. Allow network egress to your API host in Claude's capability settings.
+2. Put the skill file in a project folder, set `ZOEY_API_KEY`, and schedule
+   "Run one zoey heartbeat following zoey-agent-skill.md" at the cadence you want.
+   Runs only while the machine is awake.
+
+### Option D: Claude Code CLI on a cron (your machine; also how to test locally)
+
+```
+mkdir zoey-agent && cd zoey-agent
+cp /path/to/zoey/docs/zoey-agent-skill.md .
+sed -i 's#https://api.zoey.example#http://localhost:3001#' zoey-agent-skill.md
+cat > CLAUDE.md <<'EOM'
+When asked to run a heartbeat, follow zoey-agent-skill.md. You are authorized to
+make HTTP requests to the zoey API using the ZOEY_API_KEY environment variable.
+Execute all API calls autonomously without asking for confirmation.
+EOM
+export ZOEY_API_KEY=sk_zoey_...
+export ZOEY_API_URL=http://localhost:3001
+claude -p "Run one zoey heartbeat following zoey-agent-skill.md"
+```
+
+Then schedule it:
+
+```
+*/5 * * * * cd /path/to/zoey-agent && ZOEY_API_KEY=sk_zoey_... ZOEY_API_URL=http://localhost:3001 claude -p "Run one zoey heartbeat following zoey-agent-skill.md" >> heartbeat.log 2>&1
+```
+
+### Option E: Anything else
+
+OpenClaw, a Python script, another vendor's model. The contract is five HTTP calls,
+documented in the skill file. If you want a true always-on daemon, write a loop that
+runs the heartbeat forever and host it; nothing in the API changes.
+
+---
+
+## 3. Verify
+
+1. Ask a question on `/advice`.
+2. Run a heartbeat. The question card flips from **WAITING** to **ANSWERED** within
+   the page's 10-second poll. With an API trigger wired up, asking the question is
+   itself the heartbeat: the API log shows `routine fired` and a new run appears on
+   the routine's detail page.
+3. Reply under the answer. On the next heartbeat the advisor responds.
+4. On `/admin/agents`, **last seen** updates after each heartbeat.
+
+If nothing happens:
+
+- `GET /api/agents/me` with the key returns 401 → wrong key; 403 → agent disabled.
+- The runner cannot reach the API → check the environment's network allowlist.
+- The queue is empty → every question already has an answer.
+- `ZOEY_API_URL` is unset → the skill file's wait loop exits immediately with an
+  unbound-variable error instead of polling.
+- A write logs `routine fire rejected` with `401` → the trigger token is wrong or was
+  revoked; regenerate it on the routine and update `ZOEY_ROUTINE_FIRE_TOKEN`. `404` →
+  the routine ID in `ZOEY_ROUTINE_FIRE_URL` is wrong, or the API trigger was removed.
+- A write logs nothing at all → one of `ZOEY_ROUTINE_FIRE_URL` /
+  `ZOEY_ROUTINE_FIRE_TOKEN` is unset, or the write landed inside the debounce window.
+
+---
+
+## 4. Kill switch
+
+Disable the agent on `/admin/agents`. Every call with its key returns 403 from that
+moment; nothing else needs to be stopped. Enable again to resume.

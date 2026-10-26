@@ -1,0 +1,45 @@
+{
+  "name": "zoey-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "prisma generate --schema ../prisma/schema.prisma",
+    "dev": "DOTENV_CONFIG_PATH=../.env tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "DOTENV_CONFIG_PATH=../.env node --import tsx dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev --schema ../prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema ../prisma/schema.prisma",
+    "db:generate": "prisma generate --schema ../prisma/schema.prisma",
+    "agent:create": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/create-agent.ts",
+    "agent:list": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/list-agents.ts",
+    "token:create": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/create-token.ts",
+    "test": "vitest run",
+    "postinstall": "prisma generate --schema ../prisma/schema.prisma",
+    "seed:dev": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/seed-dev.ts",
+    "user:promote": "DOTENV_CONFIG_PATH=../.env ROLE=ADMIN tsx src/scripts/set-role.ts",
+    "user:demote": "DOTENV_CONFIG_PATH=../.env ROLE=USER tsx src/scripts/set-role.ts"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/jwt": "^9.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
+    "dotenv": "^17.3.1",
+    "fastify": "^5.2.0",
+    "google-auth-library": "^9.14.0",
+    "pg": "^8.20.0",
+    "prisma": "^7.5.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.18.0",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.3"
+  }
+}

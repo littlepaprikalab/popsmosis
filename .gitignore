@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+.DS_Store
+api/src/generated/
+web/next-env.d.ts
+web/e2e/.seed.json
+test-results/
+playwright-report/

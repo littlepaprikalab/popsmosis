@@ -1,0 +1,187 @@
+// zoey — Q&A support with an agent-answered advice column.
+//
+// Humans sign in with Google and get a session cookie. Agents authenticate with
+// a bearer API key that is stored only as a sha256 hash. Questions get exactly
+// one answer; replies under an answer form a linear human <-> agent thread.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../api/src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// Access to the site. New sign-ins start PENDING unless the email is on the
+// auto-approve list (ALLOWED_EMAIL_DOMAINS / ALLOWED_EMAILS / ADMIN_EMAILS);
+// an admin approves or denies the rest on /admin/users. Only APPROVED users
+// can read or write anything beyond /api/auth/me.
+enum UserStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum QuestionStatus {
+  PENDING // no answer yet
+  ANSWERED // the one answer exists
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  googleId     String     @unique
+  name         String?
+  avatarUrl    String?
+  role         UserRole   @default(USER)
+  status       UserStatus @default(PENDING) // fail closed: anything that creates a user must opt in to access
+  reviewedAt   DateTime? // when status left PENDING (auto-approval sets it at sign-in)
+  reviewedById String? // the admin who approved or denied; null when auto-approved
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  reviewedBy User?      @relation("UserReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewed   User[]     @relation("UserReviews")
+  questions  Question[]
+  replies    Reply[]
+  tokens     UserToken[]
+
+  @@index([status, createdAt]) // the pending queue and its count
+  @@map("users")
+}
+
+model Agent {
+  id         String    @id @default(cuid())
+  name       String    @unique
+  apiKeyHash String?   @unique // sha256 of the raw sk_zoey_ key; the raw key is never stored. NULL = revoked, no key works until an admin mints one
+  enabled    Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime?
+
+  answers Answer[]
+  replies Reply[]
+
+  @@map("agents")
+}
+
+// A personal access token: the same human, authenticating from something that
+// is not a browser and so has no session cookie (the Zed panel in Abyss, curl,
+// a script). Only the sha256 of the raw pk_zoey_ token is stored, exactly as
+// for an agent key. A token acts as its owner and is bound by everything the
+// owner is: an unapproved or denied account gets nowhere with one, and the
+// access rules are re-applied on every request just as they are for a cookie.
+//
+// Deliberately NOT usable to mint or revoke tokens (those need the cookie), so
+// a leaked token cannot be used to entrench itself.
+model UserToken {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String // what it is for, so a list of them can be told apart
+  tokenHash  String    @unique // sha256 of the raw token; the raw token is shown once at creation and never stored
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime? // set instead of deleting, so a revoked token's name stays readable in the list
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("user_tokens")
+}
+
+model Question {
+  id        String         @id @default(cuid())
+  userId    String
+  content   String // 10..2000 chars
+  status    QuestionStatus @default(PENDING)
+  client    String? // the app it was asked from, when that app can act on an answer (lib/commands.ts); null = the web page
+  context   String? // that app's own account of its state when this was asked (Zed: camera, selection...), for the advisor to aim commands with
+  createdAt DateTime       @default(now())
+
+  // A short lease taken by the queue endpoint so two overlapping runs cannot be
+  // handed the same question. It expires on its own: a run that dies mid-answer
+  // must not hold a question out of the queue forever.
+  claimedAt   DateTime?
+  claimedById String? // the agent holding the lease; for the admin page and debugging
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers     Answer[]
+  attachments Attachment[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
+  @@map("questions")
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  questionId String
+  agentId    String
+  content    String // <= 5000 chars, markdown
+  model      String? // which LLM produced it, free text
+  commands   Json? // [{ command, description }] for the asker's client to run; only when the question's client runs them
+  createdAt  DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  replies  Reply[]
+
+  @@unique([questionId, agentId]) // second guard: one answer per agent per question
+  @@index([agentId, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)]) // status poll: MAX(createdAt)
+  @@map("answers")
+}
+
+model Reply {
+  id        String   @id @default(cuid())
+  answerId  String
+  userId    String? // set when a human wrote it
+  agentId   String? // set when the agent wrote it
+  replyToId String?  @unique // agent replies only: the human reply being answered (one agent reply per human reply)
+  content   String // 1..2000 chars
+  client    String? // human replies only: as Question.client
+  context   String? // human replies only: as Question.context
+  commands  Json? // agent replies only: as Answer.commands, when the reply it answers came from a client that runs them
+  createdAt DateTime @default(now())
+
+  answer      Answer       @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent       Agent?       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  replyTo     Reply?       @relation("AgentReplyTo", fields: [replyToId], references: [id], onDelete: Cascade)
+  agentReply  Reply?       @relation("AgentReplyTo")
+  attachments Attachment[]
+
+  @@index([answerId, createdAt])
+  @@index([createdAt(sort: Desc)]) // status poll: MAX(createdAt)
+  @@map("replies")
+}
+
+// A file a human sent with a question or a human reply (lib/attachments.ts): a screenshot, a log, a data file. Exactly
+// one of questionId / replyId is set. The bytes live in the row rather than in a bucket: there are few, each is small,
+// and they go with their message. Past ATTACHMENT_RETENTION_DAYS the bytes are let go (data NULL) and the row stays, so
+// an old thread still says what was sent.
+model Attachment {
+  id         String    @id @default(cuid())
+  questionId String?
+  replyId    String?
+  name       String // the file name as sent, without its folders
+  mimeType   String // from its bytes (an image, text), else as sent; what it is served as is decided again on the way out
+  size       Int // bytes, kept when the bytes go
+  data       Bytes?
+  purgedAt   DateTime? // when the retention let the bytes go
+  createdAt  DateTime  @default(now())
+
+  question Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  reply    Reply?    @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@index([replyId])
+  @@index([createdAt]) // the retention sweep
+  @@map("attachments")
+}

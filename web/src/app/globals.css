@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* ===== Dark theme (default) ===== */
+:root {
+  color-scheme: light dark;
+  --bg-primary: #111318;
+  --bg-secondary: #1a1d24;
+  --bg-tertiary: #22252d;
+  --border: #2a2d35;
+  --text-primary: #e5e5e5;
+  --text-secondary: #a0a0a6;
+  --text-muted: #787880;
+  --text-hover: #ffffff;
+  --accent-red: #FF3B30;
+  --accent-green: #30D158;
+  --accent-blue: #32ADE6;
+  --accent-purple: #AF52DE;
+  --accent-yellow: #FFD60A;
+  --accent-yellow-text: #000000;
+  --accent-orange: #FF9500;
+  --btn-filled-text: #ffffff;
+  --accent-cyan: #00BCD4;
+  --accent-pink: #FF6B9D;
+  --toast-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  --dialog-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  --overlay-bg: rgba(0, 0, 0, 0.85);
+  --question-box-glow: 0 0 12px rgba(255, 214, 10, 0.15);
+  --code-block-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Light theme (system preference) ===== */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg-primary: #f5f5f7;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #eeeef0;
+    --border: #d1d1d6;
+    --text-primary: #1c1c1e;
+    --text-secondary: #636366;
+    --text-muted: #86868b;
+    --text-hover: #000000;
+    --accent-red: #D92D20;
+    --accent-green: #22994E;
+    --accent-blue: #2488C5;
+    --accent-purple: #9435C4;
+    --accent-yellow: #C9A800;
+    --accent-yellow-text: #000000;
+    --accent-orange: #D67E00;
+    --btn-filled-text: #ffffff;
+    --accent-cyan: #0097A7;
+    --accent-pink: #D4365E;
+    --toast-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    --dialog-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    --overlay-bg: rgba(0, 0, 0, 0.5);
+    --question-box-glow: 0 0 12px rgba(201, 168, 0, 0.2);
+    --code-block-bg: rgba(0, 0, 0, 0.06);
+    --text-muted: #6e6e73;
+  }
+}
+
+html {
+  overflow-x: hidden;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Focus styles for keyboard accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+button:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Scrollbar */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) var(--bg-primary);
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-12px); max-height: 0; }
+  to { opacity: 1; transform: translateY(0); max-height: 100px; }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.35s ease-out forwards;
+}
+
+@keyframes loadingPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.animate-loading-pulse {
+  animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 188, 212, 0.6), 0 0 4px 1px rgba(0, 188, 212, 0.4); }
+  50% { box-shadow: 0 0 0 4px rgba(0, 188, 212, 0), 0 0 8px 2px rgba(0, 188, 212, 0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 188, 212, 0), 0 0 4px 1px rgba(0, 188, 212, 0.4); }
+}
+
+.animate-live-pulse {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livenessPulse {
+  0% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.6), 0 0 4px 1px rgba(48, 209, 88, 0.4); }
+  50% { box-shadow: 0 0 0 3px rgba(48, 209, 88, 0), 0 0 6px 2px rgba(48, 209, 88, 0.6); }
+  100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0), 0 0 4px 1px rgba(48, 209, 88, 0.4); }
+}
+
+.animate-liveness-pulse {
+  animation: livenessPulse 2s ease-in-out infinite;
+}
+
+/* Flex truncation safety — flex children default to min-width:auto which
+   prevents truncate/line-clamp from working. This global rule ensures any
+   truncated element inside a flex container can actually shrink. */
+:where(.flex, .inline-flex) > :where(.truncate, .line-clamp-1, .line-clamp-2, .line-clamp-3, .line-clamp-4) {
+  min-width: 0;
+}
+
+/* Theme-aware hover — replaces hardcoded hover:text-white */
+.hover-text:hover { color: var(--text-hover); }
+.hover-border:hover { border-color: var(--text-muted) !important; }
+
+/* Human / Agent badges */
+.badge-human {
+  background: rgba(48, 209, 88, 0.12);
+  border: 1px solid rgba(48, 209, 88, 0.4);
+  color: var(--accent-green);
+}
+.badge-agent {
+  background: rgba(50, 173, 230, 0.12);
+  border: 1px solid rgba(50, 173, 230, 0.4);
+  color: var(--accent-blue);
+}
+
+/* Markdown rendered inside answer cards */
+.md { line-height: 1.6; }
+.md p { margin: 0 0 0.75em; }
+.md p:last-child { margin-bottom: 0; }
+.md ul, .md ol { margin: 0 0 0.75em 1.25em; }
+.md ul { list-style: disc; }
+.md ol { list-style: decimal; }
+.md li { margin: 0.2em 0; }
+.md h1, .md h2, .md h3, .md h4 { font-weight: 700; margin: 1em 0 0.4em; letter-spacing: 0.02em; }
+.md h1 { font-size: 1.1em; } .md h2 { font-size: 1.05em; } .md h3, .md h4 { font-size: 1em; }
+.md code { background: var(--code-block-bg); padding: 0.1em 0.35em; border-radius: 4px; font-size: 0.9em; }
+.md pre { background: var(--code-block-bg); padding: 0.75em 1em; border-radius: 6px; overflow-x: auto; margin: 0 0 0.75em; }
+.md pre code { background: none; padding: 0; }
+.md a { color: var(--accent-blue); text-decoration: underline; }
+.md blockquote { border-left: 2px solid var(--border); padding-left: 0.75em; color: var(--text-secondary); margin: 0 0 0.75em; }
+.md strong { color: var(--text-hover); }
+.md .md-table { overflow-x: auto; margin: 0 0 0.75em; }
+.md table { border-collapse: collapse; }
+.md th, .md td { border: 1px solid var(--border); padding: 0.3em 0.6em; text-align: left; vertical-align: top; }
+.md th { font-weight: 700; background: var(--code-block-bg); }
+.md ul.contains-task-list { list-style: none; margin-left: 0; }
+.md .task-list-item input { margin-right: 0.4em; vertical-align: middle; }
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
