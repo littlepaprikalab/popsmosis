@@ -11,7 +11,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  reporter: process.env.CI ? [['list'], ['github']] : 'list',
+  // Locally a passing run is a row of dots and the totals; failures still print
+  // in full. Pass `--reporter=list` to see each test by name.
+  reporter: process.env.CI ? [['list'], ['github']] : 'dot',
   use: {
     baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
     trace: 'retain-on-failure',
