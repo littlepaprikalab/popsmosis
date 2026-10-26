@@ -39,6 +39,12 @@ META = {
 }
 META_BASE_URL = "https://api.meta.ai/v1"
 
+# Where the studio finds its Anthropic key, first match wins. In a Claude Code cloud
+# environment a variable named ANTHROPIC_API_KEY never reached the session (the name is
+# Claude Code's own), so the studio has a name of its own; ANTHROPIC_API_KEY still works
+# on a laptop.
+CLAUDE_KEY_VARS = ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
+
 # Server-side refusal fallback: a declined request is re-run, inside the same call,
 # on the model Anthropic recommends for that refusal category. Haiku 5.5 has no
 # fallback, so only the brain asks for one.
@@ -207,6 +213,10 @@ _clients: dict[str, object] = {}
 # --- Claude -------------------------------------------------------------------
 
 
+def claude_key() -> str | None:
+    return next((os.environ[name] for name in CLAUDE_KEY_VARS if os.environ.get(name)), None)
+
+
 def claude_request(
     role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
 ) -> dict:
@@ -241,9 +251,9 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
     if "claude" not in _clients:
         # The studio's calls bill to the API account behind this key, never to
         # whatever other credential the machine happens to hold.
-        key = os.environ.get("ANTHROPIC_API_KEY")
+        key = claude_key()
         if not key:
-            raise BrainError("BRAIN_PROVIDER=claude needs ANTHROPIC_API_KEY")
+            raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
         _clients["claude"] = anthropic.Anthropic(api_key=key)
     started = time.monotonic()
     try:

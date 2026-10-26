@@ -150,16 +150,26 @@ def test_meta_request_shape(tmp_path):
 
 
 def test_each_provider_needs_its_own_key(monkeypatch):
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    for name in (*brain.CLAUDE_KEY_VARS, "MODEL_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.delitem(brain._clients, "claude", raising=False)
     monkeypatch.delitem(brain._clients, "meta", raising=False)
     monkeypatch.setenv("BRAIN_PROVIDER", "claude")
-    with pytest.raises(brain.BrainError, match="needs ANTHROPIC_API_KEY"):
+    with pytest.raises(brain.BrainError, match="needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY"):
         brain.ask("brain", "Hi")
     monkeypatch.setenv("BRAIN_PROVIDER", "meta")
     with pytest.raises(brain.BrainError, match="needs MODEL_API_KEY"):
         brain.ask("brain", "Hi")
+
+
+def test_the_studio_key_wins_over_anthropic_api_key(monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "laptop")
+    monkeypatch.delenv("POPSMOSIS_ANTHROPIC_API_KEY", raising=False)
+    assert brain.claude_key() == "laptop"
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "studio")
+    assert brain.claude_key() == "studio"
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "")
+    assert brain.claude_key() == "laptop"
 
 
 def test_bad_role_provider_or_image_is_refused(monkeypatch, tmp_path):

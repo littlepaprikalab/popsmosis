@@ -1,16 +1,15 @@
-"""Live checks against the real brain. Skipped unless ANTHROPIC_API_KEY is set.
+"""Live checks against the real brain. Skipped unless the studio has an Anthropic key
+(POPSMOSIS_ANTHROPIC_API_KEY, or ANTHROPIC_API_KEY on a laptop).
 
-    ANTHROPIC_API_KEY=... python -m pytest studio/tests/test_live.py -s
+    POPSMOSIS_ANTHROPIC_API_KEY=... python -m pytest studio/tests/test_live.py -s
 """
-
-import os
 
 import pytest
 
 from studio import brain
 from studio.steps.factcheck import Line, ask_checker
 
-pytestmark = pytest.mark.skipif(not os.environ.get("ANTHROPIC_API_KEY"), reason="needs ANTHROPIC_API_KEY")
+pytestmark = pytest.mark.skipif(not brain.claude_key(), reason="needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY")
 
 PHOTOSYNTHESIS = {
     "f1": "In the light reactions, photosystem II uses light energy to split water, releasing oxygen, "

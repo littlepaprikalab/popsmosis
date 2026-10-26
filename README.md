@@ -113,8 +113,10 @@ See [docs/agent-runbook.md](docs/agent-runbook.md) for the hosted options.
 ### The studio
 
 The studio (Python 3.13) turns a topic into a droplet; so far it writes the bundle and
-fact-checks it. It reads `ANTHROPIC_API_KEY`, and its calls bill per token to that API
-account ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes into `jobs/<id>/`.
+fact-checks it. It reads `POPSMOSIS_ANTHROPIC_API_KEY` (or `ANTHROPIC_API_KEY`, which a
+Claude Code cloud environment does not pass through), and its calls bill per token to
+that API account ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes into
+`jobs/<id>/`.
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
@@ -131,7 +133,7 @@ npm --workspace api test                  # unit tests, no database
 INTEGRATION=1 npm --workspace api test    # plus the end-to-end flow against DATABASE_URL
 npm --workspace web run build
 npm run e2e                               # Playwright browser tests; needs api + web running (see web/e2e/README.md)
-python -m pytest studio                   # the studio, offline; test_live.py also runs when ANTHROPIC_API_KEY is set
+python -m pytest studio                   # the studio, offline; test_live.py also runs when POPSMOSIS_ANTHROPIC_API_KEY is set
 ```
 
 CI runs all of it: API typecheck and tests against a Postgres service, the web build,

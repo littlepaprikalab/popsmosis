@@ -134,8 +134,10 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
   Check the stop reason on every call, and turn on the API's server-side fallback so a
   declined request is retried on another Claude model.
 - **Billing.** Claude calls are billed per token to the Anthropic API account behind
-  `ANTHROPIC_API_KEY`, not to the Claude plan that runs the routine. The $150 of Meta
-  credits cover Meta calls only.
+  `POPSMOSIS_ANTHROPIC_API_KEY`, not to the Claude plan that runs the routine. In a
+  Claude Code cloud environment a variable named `ANTHROPIC_API_KEY` never reached the
+  session, hence the studio's own name; on a laptop `ANTHROPIC_API_KEY` works too. The
+  $150 of Meta credits cover Meta calls only.
 
 ## 5. The studio pipeline
 
@@ -381,7 +383,7 @@ The routine runs the studio in its own container, so there is no worker to host.
 takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
-  `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER`, and `MODEL_API_KEY` once
+  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER`, and `MODEL_API_KEY` once
   the Meta key arrives.
 - **Setup script:** install `studio/requirements.txt` (PyTorch for CPU, torchaudio,
   demucs, skia-python, anthropic, openai, pydantic). ffmpeg 6.1 and Python 3.13 are
@@ -475,7 +477,7 @@ account.
 
 | Day | Date | Work | Status |
 |---|---|---|---|
-| 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | port, plan, brain, bundle and fact-check built and tested offline; the live run waits on `ANTHROPIC_API_KEY` |
+| 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | port, plan, brain, bundle and fact-check built and tested offline; the live run waits on `POPSMOSIS_ANTHROPIC_API_KEY` |
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network) | |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |
