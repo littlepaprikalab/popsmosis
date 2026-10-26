@@ -117,7 +117,7 @@ Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image.
 One module, `studio/brain.py`, with one function both providers implement:
 
 ```python
-ask(role, prompt, schema=None, images=()) -> dict   # role: "brain" | "helper"
+ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   # role: "brain" | "helper"
 ```
 
 - **Claude** goes through Anthropic's Python SDK (`anthropic`): the system prompt, image
@@ -172,7 +172,7 @@ parts build on the facts it has already written.
 2. `scenes[3-6]`: hook, overview, one or two zoomed details. Each has `id`,
    `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
    One fixed colour per structure for the whole job.
-3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules move into
+3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
    verse, chorus, bridge, chorus).
@@ -475,7 +475,7 @@ account.
 
 | Day | Date | Work | Status |
 |---|---|---|---|
-| 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | port and plan done |
+| 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | port, plan, brain, bundle and fact-check built and tested offline; the live run waits on `ANTHROPIC_API_KEY` |
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network) | |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |

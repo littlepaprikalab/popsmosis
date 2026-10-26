@@ -11,3 +11,7 @@ web/next-env.d.ts
 web/e2e/.seed.json
 test-results/
 playwright-report/
+jobs/
+__pycache__/
+.pytest_cache/
+.venv/

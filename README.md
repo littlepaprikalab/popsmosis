@@ -27,6 +27,7 @@ advice column), whose architecture and look-and-feel come from
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
 web/     Next.js 15 + Tailwind 4. The /learn page, sign-in, and an admin page for agents.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply).
+studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
 ```
 
@@ -109,6 +110,19 @@ POPSMOSIS_API_KEY=sk_pop_... claude -p "Run one popsmosis heartbeat following po
 
 See [docs/agent-runbook.md](docs/agent-runbook.md) for the hosted options.
 
+### The studio
+
+The studio (Python 3.13) turns a topic into a droplet; so far it writes the bundle and
+fact-checks it. It reads `ANTHROPIC_API_KEY`, and its calls bill per token to that API
+account ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes into `jobs/<id>/`.
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
+python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
+python -m studio step factcheck <job-id>                               # re-run one step
+python -m studio show <job-id>                                         # facts, lyrics, verdicts, calls
+```
+
 ## Tests
 
 ```bash
@@ -117,10 +131,11 @@ npm --workspace api test                  # unit tests, no database
 INTEGRATION=1 npm --workspace api test    # plus the end-to-end flow against DATABASE_URL
 npm --workspace web run build
 npm run e2e                               # Playwright browser tests; needs api + web running (see web/e2e/README.md)
+python -m pytest studio                   # the studio, offline; test_live.py also runs when ANTHROPIC_API_KEY is set
 ```
 
 CI runs all of it: API typecheck and tests against a Postgres service, the web build,
-and the browser tests against the real stack.
+the browser tests against the real stack, and the studio's offline tests.
 
 ## API
 
