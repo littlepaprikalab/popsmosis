@@ -23,6 +23,8 @@ code wins; the README lists the endpoints as built.
    both videos when they finish rendering, updating in place without a reload.
 6. The learner asks **follow-ups** under the droplet, and the teacher answers them on its
    next pass.
+7. Every finished droplet also appears on a public **Droplets** tab, where anyone can
+   watch the videos for free without signing in.
 
 Done means: AP Psych "brain structures", an AP Bio topic, and a topic the judges pick live
 each produce watchable videos in under ~15 minutes, with every line passing the
@@ -99,7 +101,7 @@ Every other job has one provider, whatever the brain:
 
 | Job | Made by |
 |---|---|
-| Diagrams | Muse Image (`muse-image-1.0`); interim art until the Meta key arrives (step 3) |
+| Diagrams | Muse Image (`muse-image-1.0`); brain-drawn SVG until the Meta key arrives (step 3) |
 | Structure masks | SAM 3.1 (`sam-3.1`), with a helper box as the fallback |
 | Song | ElevenLabs Eleven Music (`music_v2_5`) |
 | Narration | ElevenLabs text-to-speech with timestamps |
@@ -143,14 +145,14 @@ ask(role, prompt, schema=None, images=()) -> dict   # role: "brain" | "helper"
 |---|---|---|---|
 | 1 | Bundle | Brain, one call | `bundle.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
-| | Post the lesson text | API | The droplet text is live; the topic leaves the queue |
+| | Post the lesson | API | Lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Muse Image + helper | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper | `masks/<scene>/<structure>.png`, `locations.json` |
 | 5 | Audio | ElevenLabs | `audio/song.mp3`, `audio/narration.mp3` |
 | 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
-| 9 | Upload | API + Supabase | Both videos on the droplet |
+| 9 | Upload | API + Supabase | Videos (public), intermediates (private) |
 
 Steps 3–4 (art) and 5–6 (audio) do not depend on each other: run them at the same time.
 
@@ -260,7 +262,9 @@ Section 7.
 ### Step 9: upload
 
 The API mints a signed upload URL per file and the studio uploads straight to Supabase
-Storage, so the Supabase key stays on the API. Then the studio marks the videos ready.
+Storage, so the Supabase key stays on the API: the videos to the public bucket, the
+intermediate files to the private one (section 10). Then the studio marks the videos
+ready.
 
 ### Stretch
 
@@ -396,7 +400,25 @@ takes some setup in the routine's environment:
 - **Fallback host:** the studio runs the same on a laptop. If the routine is too slow for
   the live judge topic, run the demo from a laptop.
 
-## 10. Data model (proposed)
+## 10. Storage, data model and the Droplets tab (proposed)
+
+### What is stored where
+
+The `jobs/<id>/` folder disappears with the routine's machine. These copies outlive it:
+
+| What | Where | Why |
+|---|---|---|
+| `bundle.json`, `factcheck.json` | Postgres, JSON columns on the `Answer` | Small (tens of KB). Follow-ups and the page need them, and they are saved in the same request as the lesson |
+| The song and lesson videos, a poster frame for each | Supabase Storage, public bucket `droplets/<answerId>/` | Anyone can watch them on the Droplets tab |
+| Art, masks, `locations.json`, audio, timings, timelines | Supabase Storage, private bucket `studio/<answerId>/` | Re-render after a renderer fix without paying again for the song and the art |
+
+**Follow-ups read the droplet from the database.** The reply queue includes a compact
+context taken from the bundle: `core_idea`, the facts, the misconception, the FRQ and the
+lyrics. It leaves out the scenes and the camera directions, so a thread stays a couple of
+thousand tokens. Whichever model answers reads the same context, so moving follow-ups from
+Claude to Muse Wonder later is a model change, not a data change.
+
+### Data model
 
 The videos hang off the lesson (`Answer`), so a topic still has exactly one droplet:
 
@@ -405,31 +427,59 @@ enum VideoStatus { RENDERING READY FAILED }
 
 model Answer {
   // ...as today; `model` records the brain that wrote it (claude-opus-5-5 or muse-wonder-1.0)
+  bundle         Json?        // bundle.json as it passed the fact-check; the lyrics come from here
+  factcheck      Json?        // the verdicts, for the page and the admin view
   videoStatus    VideoStatus? // null: a text-only droplet
   songVideoUrl   String?
   lessonVideoUrl String?
-  lyrics         String?      // what was sung, shown under the song
   videoError     String?      // why it FAILED, shown on the droplet and the admin page
   videoUpdatedAt DateTime?    // RENDERING for too long reads as FAILED
+  hiddenAt       DateTime?    // an admin took it off the Droplets tab
 }
 ```
 
-New agent endpoints:
+### Endpoints
 
-| Method | Path | Notes |
-|---|---|---|
-| PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, lyrics?, error? }`; the agent's own answers only |
-| POST | `/api/answers/:id/video/upload-url` | `{ file }`; returns a signed Supabase upload URL |
+| Who | Method | Path | Notes |
+|---|---|---|---|
+| Agent | POST | `/api/questions/:id/answer` | As today, plus `bundle` and `factcheck` |
+| Agent | PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, error? }`; the agent's own answers only |
+| Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL |
+| Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=` |
+| Anyone | GET | `/api/droplets/:id` | One droplet |
+| Admin | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the tab, or put it back |
+
+### The Droplets tab
+
+A `/droplets` page where anyone can watch every finished droplet for free. A topic made
+once then serves every student who comes after, and judges can browse it without an
+account.
+
+- **Outside the sign-in gate.** Today every page and endpoint past sign-in needs an
+  approved account; the two `/api/droplets` endpoints are the first that do not. Rate
+  limit them.
+- **Public:** a title made from the bundle (`course` and `topic`), the lesson text, both
+  videos and the lyrics.
+- **Never public:** the learner's name or avatar, the request in their own words (it can
+  say more than they meant to share), the files they attached, and follow-up threads.
+- **Listed automatically** once the videos are READY, so everything on it passed the
+  fact-check. An admin can hide a droplet.
+- **Later:** when someone asks for a topic that already has a droplet, offer that one
+  instead of making another.
+- **Before launch:** check that the ElevenLabs plan allows publishing its generated songs
+  publicly. Encode with `-movflags +faststart` so a video starts playing before it has
+  downloaded, and keep the bitrate modest (flat diagrams compress well) to hold down
+  Supabase egress.
 
 ## 11. Ten-day plan
 
 | Day | Date | Work | Status |
 |---|---|---|---|
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | port and plan done |
-| 2 | Oct 27 | Video fields and endpoints; skill file runs the studio; routine environment (setup script, keys, network) | |
+| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network) | |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |
-| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn` | |
+| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab | |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
@@ -454,12 +504,14 @@ New agent endpoints:
 
 ## 13. Open decisions
 
-1. **Follow-ups.** Claude answers them in the routine, as today. Once the brain is Meta,
-   should Muse Wonder answer them instead (grounded on `bundle.json`), so every word a
-   learner reads comes from Meta?
-2. **Interim art.** Brain-drawn SVG (step 3), or another image API until the Meta key
-   arrives?
-3. **Supabase Storage.** Does the project exist, and should videos be public links or
-   signed links for signed-in users only? The approval gate suggests signed links.
-4. **Reference assets.** Add the Fire or Don't renderer and its finished videos (the
-   visual bar), the visual-style playbook, and the 10-second clip tests to the repo.
+1. **Follow-ups once Meta is on.** Claude answers them in the routine for now. The context
+   lives in the database (section 10), so moving them to Muse Wonder later is only a
+   model choice.
+2. **Reference assets.** The Fire or Don't renderer goes in with the renderer work (days
+   4–6): its code under `reference/fire-or-dont/`, a few stills beside it as the visual
+   bar, and its finished videos outside git (GitHub rejects files over 100 MB), in
+   Supabase or as a link. The same goes for the visual-style playbook and the 10-second
+   clip tests.
+
+Decided: the interim art is brain-drawn SVG (step 3); the videos are public, in Supabase
+Storage, on a public Droplets tab (section 10).
