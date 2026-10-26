@@ -117,7 +117,7 @@ Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image.
 One module, `studio/brain.py`, with one function both providers implement:
 
 ```python
-ask(role, prompt, schema=None, images=()) -> dict   # role: "brain" | "helper"
+ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   # role: "brain" | "helper"
 ```
 
 - **Claude** goes through Anthropic's Python SDK (`anthropic`): the system prompt, image
@@ -134,8 +134,10 @@ ask(role, prompt, schema=None, images=()) -> dict   # role: "brain" | "helper"
   Check the stop reason on every call, and turn on the API's server-side fallback so a
   declined request is retried on another Claude model.
 - **Billing.** Claude calls are billed per token to the Anthropic API account behind
-  `ANTHROPIC_API_KEY`, not to the Claude plan that runs the routine. The $150 of Meta
-  credits cover Meta calls only.
+  `POPSMOSIS_ANTHROPIC_API_KEY`, not to the Claude plan that runs the routine. In a
+  Claude Code cloud environment a variable named `ANTHROPIC_API_KEY` never reached the
+  session, hence the studio's own name; on a laptop `ANTHROPIC_API_KEY` works too. The
+  $150 of Meta credits cover Meta calls only.
 
 ## 5. The studio pipeline
 
@@ -172,17 +174,23 @@ parts build on the facts it has already written.
 2. `scenes[3-6]`: hook, overview, one or two zoomed details. Each has `id`,
    `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
    One fixed colour per structure for the whole job.
-3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules move into
+3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
    verse, chorus, bridge, chorus).
-5. `lyrics[]`: `id`, `section`, `text`, and the `fact_id` it teaches or `"filler"`. The
-   chorus states `core_idea`. A line that names a structure uses its `name` or one of its
+5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
+   and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
    `aliases`, because hearing that word is what reveals the structure on screen.
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
    from the alignment.
+
+Code checks then hold each line's `names` and its direction together
+(`studio/checks.py`): a line names only structures its scene draws, and a spotlight
+or camera target waits until its structure has been named on that scene. They
+repair what code safely can (no spotlight, the whole scene) and report the rest
+in `checks.json`.
 
 The bundle is roughly 6–10k tokens. If it ever outgrows a model's output limit (Claude's
 is 128K), split it into two calls: parts 1–2, then 3–7.
@@ -381,7 +389,7 @@ The routine runs the studio in its own container, so there is no worker to host.
 takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
-  `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER`, and `MODEL_API_KEY` once
+  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER`, and `MODEL_API_KEY` once
   the Meta key arrives.
 - **Setup script:** install `studio/requirements.txt` (PyTorch for CPU, torchaudio,
   demucs, skia-python, anthropic, openai, pydantic). ffmpeg 6.1 and Python 3.13 are
@@ -475,7 +483,7 @@ account.
 
 | Day | Date | Work | Status |
 |---|---|---|---|
-| 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | port and plan done |
+| 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network) | |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |

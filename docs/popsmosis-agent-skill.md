@@ -126,7 +126,8 @@ fuller ask ("ATP synthesis for my AP Bio exam, I keep mixing up the stages").
 `attachments` are files the human sent with it - a photo of their notes, a diagram; read
 them before you write (see [Files sent with a message](#files-sent-with-a-message)).
 
-For **each** topic, write a lesson (see [How to teach](#how-to-teach)) and submit it:
+For **each** topic, write a lesson following "The lesson" in this repository's
+`studio/prompts/bundle.md` (and [How to answer](#how-to-answer)), and submit it:
 
 ```
 POST /api/questions/:id/answer
@@ -235,23 +236,11 @@ popsmosis's API fires this routine when the next topic or follow-up lands.
 
 ---
 
-## How to teach
+## How to answer
 
-A droplet is one short lesson that leaves the learner understanding the topic, not just
-knowing a fact about it.
+How to write a lesson lives in the studio's bundle prompt (`studio/prompts/bundle.md`),
+which writes every droplet. These rules cover everything you post yourself:
 
-- **Big picture first.** Open with one or two sentences that say what the thing is and
-  why it matters. Then the parts, in the order they happen or build on each other:
-  numbered steps for a process, a small table to compare or sort, an analogy where it
-  makes an abstract idea concrete. Use markdown (GitHub-flavored, so tables work too).
-- **Pitch it to the request.** With no level given, assume a curious learner meeting the
-  topic for the first time. When the request names one ("for my AP Bio exam", "explain
-  it like I'm ten"), write to it.
-- **Be right.** Say when something is simplified. Never invent figures, dates or
-  quotes; leave out what you are unsure of rather than guess.
-- **End with a check.** Close with one short question the learner can answer to test
-  themselves, and an invitation to ask a follow-up.
-- **Length:** most lessons fit in 250-600 words. Stay inside 5000 characters.
 - **When the request is not a topic** (a greeting, a personal problem, something you
   should not help with), answer in a line or two and suggest something to learn instead.
 - **In a thread, answer the follow-up that was asked.** Do not repeat the lesson. Go
