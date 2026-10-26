@@ -11,9 +11,10 @@ the teacher responds on its next pass. When the teacher runs as a Claude routine
 API trigger, the API fires that trigger on a new topic or a follow-up, so the pass starts
 within seconds rather than at the next scheduled run.
 
-Today a droplet is the written lesson. Next comes the video: a karaoke-style lesson song
-with diagrams, stored in Supabase and shown beside the text. The plan, and where the
-pipeline stands, is in [docs/PLAN.md](docs/PLAN.md).
+Today a droplet is the written lesson. Next come two videos made from the same
+fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
+in Supabase and shown beside the text. The plan, and where the pipeline stands, is in
+[docs/PLAN.md](docs/PLAN.md).
 
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
 advice column), whose architecture and look-and-feel come from
