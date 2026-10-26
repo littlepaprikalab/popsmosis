@@ -1,11 +1,15 @@
 """Run the studio locally.
 
     python -m studio plan --topic "brain structures" --course "AP Psych"
-    python -m studio step factcheck <job-id>     # re-run one step of a job
-    python -m studio show <job-id>               # facts, lyrics, fact-check, calls
+    python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
+    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, calls
 
 Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every brain call is logged
 to the job's calls.jsonl with its tokens, cost and time.
+
+To try a prompt draft cheaply, run the brain on Haiku first:
+STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief
+(STUDIO_BRAIN_EFFORT overrides the brain's effort the same way.)
 """
 
 from __future__ import annotations
@@ -18,12 +22,12 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
-from studio import brain, jobs
-from studio.schemas import Bundle, FactCheckReport, Request
+from studio import brain, checks, jobs
+from studio.schemas import Bundle, CheckReport, FactCheckReport, Request
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 
-STEPS = {"bundle": bundle_step.run, "factcheck": factcheck_step.run}
+STEPS = {"bundle": bundle_step.run, "check": checks.run, "factcheck": factcheck_step.run}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -39,8 +43,10 @@ def main(argv: list[str] | None = None) -> int:
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=list(STEPS))
     step.add_argument("job")
-    show = commands.add_parser("show", help="print a job's facts, lyrics, fact-check and calls")
+    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check and calls")
     show.add_argument("job")
+    for command in (plan, step, show):
+        command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
     args = parser.parse_args(argv)
 
     if args.command == "plan":
@@ -61,7 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         if not job.is_dir():
             parser.error(f"no job folder {job}")
         ok = run_steps(job, [args.name]) if args.command == "step" else True
-    print_job(job)
+    print_job(job, brief=args.brief)
     return 0 if ok else 1
 
 
@@ -70,7 +76,7 @@ def run_steps(job: Path, names: list[str]) -> bool:
         started = time.monotonic()
         print(f"{name}: running", file=sys.stderr)
         try:
-            result = STEPS[name](job, ask=_logged_ask(job))
+            result = STEPS[name](job) if name == "check" else STEPS[name](job, ask=_logged_ask(job))
         except brain.BrainError as e:
             print(f"{name}: failed: {e}", file=sys.stderr)
             return False
@@ -98,21 +104,34 @@ def _logged_ask(job: Path):
     return ask
 
 
-def print_job(job: Path) -> None:
+def print_job(job: Path, brief: bool = False) -> None:
     request = jobs.read(job / "request.json", Request)
     print(f"\n# {request.topic}" + (f" ({request.course})" if request.course else "") + f"  [{job.name}]")
     if (job / "bundle.json").exists():
-        bundle = jobs.read(job / "bundle.json", Bundle)
+        data = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
+        bundle = Bundle.model_validate(checks.fill_names(data))
         print(f"\nCore idea: {bundle.core_idea}\n\n## Facts\n")
         for fact in bundle.facts:
             print(_wrap(f"{fact.id}  {fact.text}", indent=4) + "\n")
-        print("## Lyrics\n")
+        print("## Scenes\n")
+        for scene in bundle.scenes:
+            print(_wrap(f"{scene.id}: " + ", ".join(
+                s.name + (f" ({'/'.join(s.aliases)})" if s.aliases else "") for s in scene.structures), indent=4))
+        print("\n## Lyrics\n")
         section = None
         for lyric in bundle.lyrics:
             if lyric.section != section:
                 section = lyric.section
                 print(f"[{section}]")
-            print(f"  {lyric.id:<6} {lyric.fact_id:<7} {lyric.text}")
+            names = f"  [{', '.join(lyric.names)}]" if lyric.names else ""
+            print(f"  {lyric.id:<6} {lyric.fact_id:<7} {lyric.text}{names}")
+    if (job / "checks.json").exists():
+        problems = jobs.read(job / "checks.json", CheckReport).problems
+        left = [p for p in problems if not p.repaired]
+        print(f"\n## Checks: {len(problems)} problem(s), {len(problems) - len(left)} repaired, "
+              f"{len(left)} for the prompt\n")
+        for p in sorted(problems, key=lambda p: p.repaired):
+            print(_wrap(f"{'  ' if p.repaired else '! '}{p.line_id:<6} {p.rule:<13} {p.detail}", indent=23))
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
         counts = {v: sum(line.verdict == v for line in report.lines) for v in ("SUPPORTED", "FILLER", "UNSUPPORTED")}
@@ -120,12 +139,13 @@ def print_job(job: Path) -> None:
               + ", ".join(f"{n} {v.lower()}" for v, n in counts.items()) + "\n")
         if report.reason:
             print(_wrap(f"Reason: {report.reason}") + "\n")
-        print(f"  {'line':<15} {'verdict':<11} {'source':<9} {'rnd':<3} text")
-        for line in report.lines:
-            key = f"{line.kind}:{line.id}"
-            text = textwrap.shorten(line.text, 80, placeholder="...")
-            print(f"  {key:<15} {line.verdict or '-':<11} {textwrap.shorten(line.source, 9, placeholder='~'):<9} "
-                  f"{line.round:<3} {text}")
+        if not brief:
+            print(f"  {'line':<15} {'verdict':<11} {'source':<9} {'rnd':<3} text")
+            for line in report.lines:
+                key = f"{line.kind}:{line.id}"
+                text = textwrap.shorten(line.text, 80, placeholder="...")
+                print(f"  {key:<15} {line.verdict or '-':<11} {textwrap.shorten(line.source, 9, placeholder='~'):<9} "
+                      f"{line.round:<3} {text}")
         if report.corrections:
             print("\n## Corrections\n")
             for c in report.corrections:

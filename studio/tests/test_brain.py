@@ -48,6 +48,19 @@ def test_the_helper_is_haiku_at_low_effort_without_a_fallback():
     assert "fallbacks" not in request and "betas" not in request and "system" not in request
 
 
+def test_the_brain_can_be_tried_on_a_cheaper_model_or_effort(monkeypatch):
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "claude-haiku-5-5")
+    request = brain.claude_request("brain", "Write.", None, [], None)
+    assert request["model"] == "claude-haiku-5-5" and request["output_config"] == {"effort": "high"}
+    assert "fallbacks" not in request  # Haiku 5.5 has no server-side fallback
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "")
+    monkeypatch.setenv("STUDIO_BRAIN_EFFORT", "medium")
+    request = brain.claude_request("brain", "Write.", None, [], None)
+    assert request["model"] == "claude-opus-5-5" and request["output_config"] == {"effort": "medium"}
+    assert request["fallbacks"] == "default"
+    assert brain.claude_request("helper", "Look.", None, [], None)["output_config"] == {"effort": "low"}
+
+
 def test_stop_reasons_are_checked():
     refusal = message([], "refusal", stop_details=NS(category="bio", explanation="declined"))
     with pytest.raises(brain.Refused, match=r"claude-opus-5-5 declined the request \(bio\): declined"):

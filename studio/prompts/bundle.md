@@ -56,6 +56,11 @@ overview (id "overview"), then one or two zoomed details (short ids such as
   structure at the back, below the cortex"). `color_hex` is its colour as #RRGGBB.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct
   mid-tone colours that read well on white.
+- Structures in one scene never overlap. A group (the brainstem, the limbic system, the
+  cerebral cortex) and its parts (medulla and pons; amygdala and hippocampus; the four
+  lobes) can't both be structures in the same scene. When the core idea is about groups,
+  draw the overview with the groups as its structures, and zoom in on their parts in the
+  detail scenes.
 
 ## The lesson
 
@@ -95,9 +100,13 @@ factual at all (a transition, a question to the learner).
   its own ids.
 - Tag each line with the id of the fact it teaches, or "filler" for a line that teaches
   nothing (a call-out, a rhyme bridge). Make most lines teach.
-- When a line names a structure, use its `name` or one of its `aliases` exactly. Hearing
-  that word is what reveals the structure on screen, and it appears the first time it is
-  sung.
+- Hearing a structure's name is what reveals it on screen, and it appears the first time
+  it is sung. When a line names something the viewer should see, use the `name` or an
+  alias of a structure drawn in the scene that line plays over, exactly as written. Group
+  words count too: if the chorus sings "limbic system", a scene must draw the limbic
+  system as a structure, and the chorus plays over that scene.
+- `names` lists every structure name or alias the line says, exactly as it appears in the
+  line, or [] when it names none. Code checks the direction against this list.
 - Rhyme and rhythm matter, but never at the price of a wrong or vague claim: a lyric has
   to be as true as a sentence in the lesson.
 - Ids are short and unique across lyrics and narration: "v1-1" to "v1-8", "c1-1", "v2-1",
@@ -106,10 +115,11 @@ factual at all (a transition, a question to the learner).
 ## The narration
 
 `narration` is the voice-over of the lesson video: about 2 to 3 minutes spoken (300 to
-450 words), one sentence per item, ids "n1", "n2" and on. Tag each sentence the way the
-lyrics are tagged. It teaches the same facts, in the order the scenes show them, in plain
-spoken language: short sentences, no markdown, no lists, nothing in parentheses. Name
-structures by their `name` or an alias, as the lyrics do. Open on the hook. End by
+450 words), one sentence per item, ids "n1", "n2" and on. Give each sentence its
+`names` and `fact_id` the way the lyrics have them. It teaches the same facts, in the
+order the scenes show them, in plain spoken language: short sentences, no markdown, no
+lists, nothing in parentheses. Name structures by their `name` or an alias, as the lyrics
+do. Open on the hook. End by
 setting up the exam question; the walkthrough of the answer comes from `frq`.
 
 ## Direction
@@ -117,13 +127,18 @@ setting up the exam question; the walkthrough of the answer comes from `frq`.
 `direction` has one entry for every lyric line and every narration sentence, in the same
 order, keyed by `line_id`:
 
-- `scene`: the scene on screen while the line plays. A line that names a structure plays
-  over a scene where that structure is drawn. Stay on a scene for several lines and cut
-  when the content moves on. Both videos open on the hook.
+- `scene`: the scene on screen while the line plays. It draws every structure in the
+  line's `names`. The chorus is sung three times, each time over a scene that draws what
+  it names, usually the overview. Stay on a scene for several lines and cut when the
+  content moves on. Both videos open on the hook.
 - `camera`: `target` is the structure to frame ("" for the whole scene); `zoom` is 1.0
   for the whole scene, up to about 2.5 for a close-up. Move slowly and hold each station.
 - `spotlight`: the structure the line is about, which stays bright while the others fade
   back, or "".
+- A `spotlight` or camera `target` is a structure the line names, or one already named
+  while this scene has been on screen; never one not yet sung or spoken, since it is
+  still a pale ghost. A line about no particular structure holds the whole scene ("" and
+  zoom 1.0).
 - `particles`: for a line about something that travels (a signal, a molecule), the
   structures it travels between, in order; otherwise [].
 - `caption`: almost always "". At most one short caption (a few words) per song section,

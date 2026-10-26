@@ -70,12 +70,14 @@ class Lyric(Strict):
     id: str
     section: Section
     text: str
+    names: list[str] = Field(description="Every structure name or alias the line says, as written; [] for none")
     fact_id: str = Field(description='The id of the fact this line teaches, or "filler"')
 
 
 class Narration(Strict):
     id: str
     text: str
+    names: list[str] = Field(description="Every structure name or alias the sentence says, as written; [] for none")
     fact_id: str = Field(description='The id of the fact this sentence teaches, or "filler"')
 
 
@@ -171,6 +173,19 @@ def bundle_problems(bundle: Bundle) -> list[str]:
     elif len(bundle.lesson_markdown) > LESSON_MAX_CHARS:
         problems.append(f"lesson_markdown is {len(bundle.lesson_markdown)} characters, over {LESSON_MAX_CHARS}")
     return problems
+
+
+class Problem(Strict):
+    line_id: str
+    rule: Literal["unknown-name", "not-in-scene", "name-not-said", "unlisted-name", "spotlight", "camera", "particles"]
+    detail: str
+    repaired: bool  # False: only a better bundle (the prompt) can fix it
+
+
+class CheckReport(Strict):
+    """checks.json: what the code checks found in the bundle's names and direction."""
+
+    problems: list[Problem]
 
 
 # --- Step 2: the fact-check ---------------------------------------------------

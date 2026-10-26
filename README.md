@@ -122,8 +122,11 @@ that API account ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes into
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
 python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
 python -m studio step factcheck <job-id>                               # re-run one step
-python -m studio show <job-id>                                         # facts, lyrics, verdicts, calls
+python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, calls
 ```
+
+To try a prompt change cheaply, run the brain on Haiku first (about 2 cents a topic instead of
+70): `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
 
 ## Tests
 

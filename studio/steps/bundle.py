@@ -1,6 +1,7 @@
 """Step 1: the bundle. One brain call writes everything the topic alone can give.
 
-Writes bundle.json. A new bundle makes any earlier fact-check stale, so this step
+Writes bundle.json, after the code checks (studio/checks.py) have repaired what they
+can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
 removes it.
 """
 
@@ -8,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from studio import brain
+from studio import brain, checks
 from studio.jobs import read, write
 from studio.schemas import Bundle, Request
 
@@ -22,10 +23,11 @@ def run(job: Path, ask=brain.ask) -> Bundle:
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
-    bundle = Bundle.model_validate(answer)
+    bundle, report = checks.review(Bundle.model_validate(answer))
     for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json"):
         (job / stale).unlink(missing_ok=True)
     write(job / "bundle.json", bundle)
+    write(job / "checks.json", report)
     return bundle
 
 

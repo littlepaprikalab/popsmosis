@@ -17,19 +17,19 @@ FACTS = [
 
 CHORUS = "Protons flow and ATP grows"
 
-LYRICS = [
-    ("v1-1", "verse", "Light lands on the thylakoid", "f1"),
-    ("v1-2", "verse", "Every electron hand-off pumps a proton", "f2"),
-    ("c1-1", "chorus", CHORUS, "f3"),
-    ("v2-1", "verse", "Only b6f pumps them in", "f2"),
-    ("c2-1", "chorus", CHORUS, "f3"),
-    ("b-1", "bridge", "Feel the gradient build", "filler"),
-    ("c3-1", "chorus", CHORUS, "f3"),
+LYRICS = [  # id, section, text, names, fact
+    ("v1-1", "verse", "Light lands on the thylakoid", ["thylakoid"], "f1"),
+    ("v1-2", "verse", "Every electron hand-off pumps a proton", [], "f2"),
+    ("c1-1", "chorus", CHORUS, [], "f3"),
+    ("v2-1", "verse", "Only b6f pumps them in", [], "f2"),
+    ("c2-1", "chorus", CHORUS, [], "f3"),
+    ("b-1", "bridge", "Feel the gradient build", [], "filler"),
+    ("c3-1", "chorus", CHORUS, [], "f3"),
 ]
 
-NARRATION = [
-    ("n1", "The light reactions happen in the thylakoid membrane.", "f1"),
-    ("n2", "ATP synthase uses the returning protons to make ATP.", "f3"),
+NARRATION = [  # id, text, names, fact
+    ("n1", "The light reactions happen in the thylakoid membrane.", ["thylakoid"], "f1"),
+    ("n2", "ATP synthase uses the returning protons to make ATP.", ["ATP synthase"], "f3"),
 ]
 
 LESSON = """## The light reactions
@@ -48,6 +48,7 @@ def _structure(name: str, color: str) -> dict:
 
 def bundle_data() -> dict:
     line_ids = [i for i, *_ in LYRICS] + [i for i, *_ in NARRATION]
+    scenes = {"n2": "synthase"}  # every other line plays over the overview
     return copy.deepcopy({
         "course": "AP Biology",
         "topic": "the light reactions",
@@ -75,10 +76,10 @@ def bundle_data() -> dict:
             "negative_styles": ["mumbled vocals"],
             "sections": ["verse", "chorus", "verse", "chorus", "bridge", "chorus"],
         },
-        "lyrics": [{"id": i, "section": s, "text": t, "fact_id": f} for i, s, t, f in LYRICS],
-        "narration": [{"id": i, "text": t, "fact_id": f} for i, t, f in NARRATION],
+        "lyrics": [{"id": i, "section": s, "text": t, "names": n, "fact_id": f} for i, s, t, n, f in LYRICS],
+        "narration": [{"id": i, "text": t, "names": n, "fact_id": f} for i, t, n, f in NARRATION],
         "direction": [
-            {"line_id": i, "scene": "overview", "camera": {"target": "", "zoom": 1.0},
+            {"line_id": i, "scene": scenes.get(i, "overview"), "camera": {"target": "", "zoom": 1.0},
              "spotlight": "", "particles": [], "caption": ""}
             for i in line_ids
         ],

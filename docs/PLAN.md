@@ -178,13 +178,19 @@ parts build on the facts it has already written.
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
    verse, chorus, bridge, chorus).
-5. `lyrics[]`: `id`, `section`, `text`, and the `fact_id` it teaches or `"filler"`. The
-   chorus states `core_idea`. A line that names a structure uses its `name` or one of its
+5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
+   and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
    `aliases`, because hearing that word is what reveals the structure on screen.
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
    from the alignment.
+
+Code checks then hold each line's `names` and its direction together
+(`studio/checks.py`): a line names only structures its scene draws, and a spotlight
+or camera target waits until its structure has been named on that scene. They
+repair what code safely can (no spotlight, the whole scene) and report the rest
+in `checks.json`.
 
 The bundle is roughly 6–10k tokens. If it ever outgrows a model's output limit (Claude's
 is 128K), split it into two calls: parts 1–2, then 3–7.

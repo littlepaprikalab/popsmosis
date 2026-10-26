@@ -47,7 +47,7 @@ CLAUDE_KEY_VARS = ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
 
 # Server-side refusal fallback: a declined request is re-run, inside the same call,
 # on the model Anthropic recommends for that refusal category. Haiku 5.5 has no
-# fallback, so only the brain asks for one.
+# fallback, so only the brain asks for one, and not when it runs on Haiku.
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 # USD per million tokens (input, output). Opus 5 and Opus 4.8 are fallback targets.
@@ -221,24 +221,28 @@ def claude_request(
     role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
 ) -> dict:
     """The keyword arguments for client.beta.messages.stream()."""
-    config = CLAUDE[role]
+    model, effort = CLAUDE[role]["model"], CLAUDE[role]["effort"]
+    if role == "brain":
+        # Development only: try a prompt draft on a cheaper model or effort first.
+        model = os.environ.get("STUDIO_BRAIN_MODEL") or model
+        effort = os.environ.get("STUDIO_BRAIN_EFFORT") or effort
     content: list[dict] = [
         {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": data}}
         for media_type, data in map(_image, images)
     ]
     content.append({"type": "text", "text": prompt})
-    output_config: dict = {"effort": config["effort"]}
+    output_config: dict = {"effort": effort}
     if schema is not None:
         output_config["format"] = {"type": "json_schema", "schema": strict_schema(schema)}
     request = {
-        "model": config["model"],
-        "max_tokens": config["max_tokens"],
+        "model": model,
+        "max_tokens": CLAUDE[role]["max_tokens"],
         "messages": [{"role": "user", "content": content}],
         "output_config": output_config,
     }
     if system:
         request["system"] = system
-    if role == "brain":
+    if role == "brain" and not model.startswith("claude-haiku"):
         request["fallbacks"] = "default"
         request["betas"] = [FALLBACK_BETA]
     return request

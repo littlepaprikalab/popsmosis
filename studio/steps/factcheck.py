@@ -18,7 +18,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain
+from studio import brain, checks
 from studio.jobs import read, write
 from studio.schemas import Bundle, Check, CheckedLine, Correction, FactCheck, FactCheckReport, Request
 from studio.sentences import replace_sentences, split_sentences
@@ -47,7 +47,10 @@ def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckRepo
         draft = job / "bundle.draft.json"
         if not draft.exists():
             draft.write_text((job / "bundle.json").read_text(encoding="utf-8"), encoding="utf-8")
+        # A corrected line can say different names, so the code checks run again.
+        checked, problems = checks.review(checked)
         write(job / "bundle.json", checked)
+        write(job / "checks.json", problems)
     write(job / "factcheck.json", report)
     return report
 
