@@ -21,6 +21,11 @@ since (its .json says what it was made from and by whom). To redo one by hand, d
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
 the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
 Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model.
+
+What it spent. Each call that comes back made is logged to calls.jsonl (studio/ledger.py),
+with its model, its time and its price: a Lyria song at its model's price per song; an
+ElevenLabs call in the credits its character-cost header says, in dollars too when
+ELEVENLABS_USD_PER_1K_CREDITS gives the plan's price of 1,000 credits.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ import base64
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.error
@@ -37,7 +43,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from studio import brain, jobs, media
+from studio import brain, jobs, ledger, media
 from studio.api import USER_AGENT
 from studio.schemas import Bundle
 
@@ -54,6 +60,9 @@ BEATS_PER_LINE = 8  # one sung line is two bars of 4/4 (PLAN section 5, step 5):
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
 TIMEOUT_S = 600  # a song takes a minute or two to come back
 SPEECH = ("narration", "frq")
+# USD per song, by Lyria model (Gemini API pricing). A model not here is logged with no price.
+GEMINI_SONG_PRICES = {"lyria-3.5": 0.08, "lyria-3-clip-preview": 0.04}
+ELEVENLABS_PRICE_VAR = "ELEVENLABS_USD_PER_1K_CREDITS"
 
 # send(method, url, headers, body) -> (status, response headers, response body). Tests pass their own.
 Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
@@ -211,7 +220,10 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
 def _make_eleven_song(job: Path, bundle: Bundle) -> None:
     plan, placed = composition_plan(bundle)
     body = {"model_id": MUSIC_MODEL, "composition_plan": plan}
+    started = time.monotonic()
     status, headers, audio = _eleven("POST", "/v1/music?output_format=mp3_44100_128", body)
+    if status == 200:
+        _log_eleven(job, "song", MUSIC_MODEL, headers, started)
     if status != 200 or not audio:
         raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}")
     # The plan first, then the audio: the audio file is what says the song is made.
@@ -264,9 +276,11 @@ def _make_gemini_song(job: Path, bundle: Bundle) -> None:
     model = gemini_song_model()
     body = {"contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {"responseModalities": ["AUDIO", "TEXT"]}}
+    started = time.monotonic()
     status, headers, answer = _gemini(f"/models/{urllib.parse.quote(model, safe='')}:generateContent", body)
     if status != 200:
         raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}")
+    _log(job, "song", model, started, GEMINI_SONG_PRICES.get(model))
     audio, mime_type, said = read_gemini_song(answer)
     audio = as_mp3(audio, mime_type)
     # The plan first, then the audio: the audio file is what says the song is made.
@@ -353,8 +367,11 @@ def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
     if len(text) > TTS_MAX_CHARS:
         raise media.StepFailed(f"the {kind} is {len(text)} characters; one text-to-speech call takes {TTS_MAX_CHARS}")
     voice = voice_id()
+    started = time.monotonic()
     status, headers, answer = _eleven("POST", f"/v1/text-to-speech/{voice}/with-timestamps?output_format=mp3_44100_128",
                                       {"text": text, "model_id": TTS_MODEL})
+    if status == 200:
+        _log_eleven(job, kind, TTS_MODEL, headers, started)
     if status != 200:
         raise media.StepFailed(f"text-to-speech refused the {kind}: {status} {_error(answer)}")
     try:
@@ -382,6 +399,47 @@ def join_lines(lines: list[tuple[str, str]]) -> tuple[str, list[dict]]:
         spans.append({"id": line_id, "start": len(text), "end": len(text) + len(line)})
         text += line
     return text, spans
+
+
+# --- what it spent ----------------------------------------------------------------------------
+
+
+def _log(job: Path, label: str, model: str, started: float, cost_usd: float | None,
+         credits: float | None = None) -> None:
+    """One call that came back made, as the job's calls.jsonl keeps it (studio/ledger.py)."""
+    ledger.log(job, [brain.Call(label, "audio", model, 0, 0, cost_usd, round(time.monotonic() - started, 1),
+                                "", credits=credits)])
+
+
+def _log_eleven(job: Path, label: str, model: str, headers: dict, started: float) -> None:
+    credits = eleven_credits(headers)
+    rate = eleven_usd_per_1k_credits()
+    cost = round(credits * rate / 1000, 6) if credits is not None and rate is not None else None
+    _log(job, label, model, started, cost, credits)
+
+
+def eleven_credits(headers: dict) -> float | None:
+    """The credits ElevenLabs charged for a call, from its character-cost header; None when it does not say."""
+    try:
+        return float(_header(headers, "character-cost"))
+    except ValueError:
+        return None
+
+
+def eleven_usd_per_1k_credits() -> float | None:
+    """What 1,000 ElevenLabs credits cost on this account's plan (ELEVENLABS_USD_PER_1K_CREDITS), or None."""
+    raw = os.environ.get(ELEVENLABS_PRICE_VAR, "").strip()
+    if not raw:
+        return None
+    try:
+        rate = float(raw)
+    except ValueError:
+        rate = float("nan")
+    if not 0 <= rate < float("inf"):  # NaN, negative or infinite
+        print(f"audio: {ELEVENLABS_PRICE_VAR}={raw!r} is not a price; the ElevenLabs calls are logged in credits only",
+              file=sys.stderr)
+        return None
+    return rate
 
 
 # --- helpers ---------------------------------------------------------------------------------

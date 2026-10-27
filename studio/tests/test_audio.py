@@ -69,7 +69,7 @@ class FakeGemini(FakeEleven):
 def job(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    for name in ("ELEVENLABS_VOICE_ID", "SONG_PROVIDER", "GEMINI_SONG_MODEL"):
+    for name in ("ELEVENLABS_VOICE_ID", "SONG_PROVIDER", "GEMINI_SONG_MODEL", audio.ELEVENLABS_PRICE_VAR):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(audio, "duration", lambda path: 30.0)
     monkeypatch.setattr(audio, "sleep", lambda seconds: None)
@@ -412,3 +412,55 @@ def test_a_gemini_quota_error_waits_as_long_as_it_asks(job, monkeypatch):
     audio.run(job)
     assert waits == [33.0] and len(fake.gemini()) == 2 and audio.is_done(job)
     assert audio._retry_after({}, b"not json") == 0.0 and audio._retry_after({"Retry-After": "900"}) == 300.0
+
+
+# --- what it spent (studio/ledger.py) ---------------------------------------------------------------
+
+
+def _logged(job):
+    return [json.loads(row) for row in (job / "calls.jsonl").read_text().splitlines()]
+
+
+def test_each_elevenlabs_call_is_logged_in_the_credits_it_cost(job, monkeypatch):
+    monkeypatch.setattr(audio, "send", FakeEleven())
+    audio.run(job)
+    rows = _logged(job)
+    assert [(r["label"], r["role"], r["model"]) for r in rows] == [
+        ("song", "audio", "music_v2_5"), ("narration", "audio", "eleven_multilingual_v2"),
+        ("frq", "audio", "eleven_multilingual_v2")]
+    # The fake's music answer names no cost; its speech costs a credit a character. No plan price: no dollars.
+    assert rows[0]["credits"] is None and rows[0]["cost_usd"] is None
+    narration = json.loads((job / audio.plan_path("narration")).read_text())["text"]
+    assert rows[1]["credits"] == len(narration) and rows[1]["cost_usd"] is None
+
+
+def test_the_plans_price_of_credits_turns_them_into_dollars(job, monkeypatch):
+    monkeypatch.setattr(audio, "send", FakeEleven())
+    monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, "0.30")
+    audio.run(job)
+    narration = _logged(job)[1]
+    assert narration["cost_usd"] == pytest.approx(narration["credits"] * 0.30 / 1000)
+
+
+@pytest.mark.parametrize("value", ["cheap", "-1", "nan", "inf"])
+def test_a_price_that_is_not_one_leaves_the_credits_alone(job, monkeypatch, value):
+    monkeypatch.setattr(audio, "send", FakeEleven())
+    monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, value)
+    audio.run(job)
+    assert _logged(job)[1]["cost_usd"] is None and _logged(job)[1]["credits"]
+
+
+def test_a_lyria_song_is_logged_at_its_models_price(job, monkeypatch):
+    monkeypatch.setattr(audio, "send", FakeGemini())
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    audio.run(job)
+    song = _logged(job)[0]
+    assert (song["label"], song["model"], song["cost_usd"]) == ("song", "lyria-3.5", 0.08)
+
+
+def test_a_refused_call_is_not_logged_as_spent(job, monkeypatch):
+    monkeypatch.setattr(audio, "send", FakeEleven(status=401))
+    with pytest.raises(media.StepFailed):
+        audio.run(job)
+    assert not (job / "calls.jsonl").exists()
+

@@ -47,6 +47,7 @@ The runner needs these in its environment:
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
 | `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless `SONG_PROVIDER` is `gemini` (the audio step). Its calls bill to that ElevenLabs account |
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
+| `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
 | `SONG_PROVIDER` | optional: who sings the song, `elevenlabs` (the default) or `gemini` (Lyria 3.5 on the Gemini API) |
 | `GEMINI_API_KEY` | with `SONG_PROVIDER=gemini`: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, with `SONG_PROVIDER=gemini`. Default `lyria-3.5` |
