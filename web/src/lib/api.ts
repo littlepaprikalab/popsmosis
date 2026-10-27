@@ -45,7 +45,14 @@ export function isUnreachable(err: unknown): boolean {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-const isSafeRequest = (options: RequestInit) => SAFE_METHODS.has((options.method ?? 'GET').toUpperCase());
+
+/**
+ * `idempotent`: this write lands once however many times it is sent (a PUT of the
+ * caller's own state, a POST carrying an Idempotency-Key), so it may ride out a gateway
+ * window the way a GET does. Never set it on a write whose second send does something new.
+ */
+type RequestOptions = RequestInit & { idempotent?: boolean };
+const isSafeRequest = (options: RequestOptions) => !!options.idempotent || SAFE_METHODS.has((options.method ?? 'GET').toUpperCase());
 
 interface Attempts {
   gateway: number;
@@ -53,7 +60,7 @@ interface Attempts {
   startedAt: number; // first attempt, so the retries share one time budget
 }
 
-async function request<T>(path: string, options: RequestInit = {}, attempts?: Attempts): Promise<T> {
+async function request<T>(path: string, options: RequestOptions = {}, attempts?: Attempts): Promise<T> {
   const tries: Attempts = attempts ?? { gateway: 0, rateLimit: 0, startedAt: Date.now() };
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -73,15 +80,16 @@ async function request<T>(path: string, options: RequestInit = {}, attempts?: At
   };
 
   let res: Response;
+  const { idempotent: _idempotent, ...init } = options;
   try {
     res = await fetch(`${API_BASE}${path}`, {
-      ...options,
+      ...init,
       credentials: 'include', // send the session cookie
       signal: controller.signal,
       headers: {
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
         'X-Requested-With': 'XMLHttpRequest', // CSRF signal
-        ...options.headers,
+        ...init.headers,
       },
     });
   } catch (err) {
@@ -269,12 +277,38 @@ export interface DropletCard {
   topic: string;
   excerpt: string; // the lesson's first lines, plain text
   video: DropletVideos;
+  // Absent from an API older than the likes and comments: the page then leaves them out.
+  likeCount?: number;
+  commentCount?: number;
+  liked?: boolean; // the viewer's own thumbs-up; false when signed out
   createdAt: string;
+}
+
+/** The viewer's thumbs-up on one droplet, as the API last confirmed it. */
+export interface LikeState {
+  liked: boolean;
+  likeCount: number;
+}
+
+/** A public comment on a droplet: the author's first name and initial, nothing else about them. */
+export interface DropletComment {
+  id: string;
+  content: string;
+  createdAt: string;
+  author: { name: string };
+  mine: boolean; // the viewer wrote it
+}
+
+/** A page of a droplet's comments, newest first; nextCursor brings the older ones. */
+export interface DropletCommentPage {
+  data: DropletComment[];
+  nextCursor: string | null;
 }
 
 export interface Droplet extends DropletCard {
   content: string; // the lesson, markdown
   lyrics: { section: string; text: string }[];
+  comments?: DropletCommentPage; // the first page, so the page needs one request; absent from an older API
 }
 
 export interface Agent {
@@ -325,6 +359,19 @@ export const api = {
   listDroplets: (cursor?: string | null) =>
     request<{ data: DropletCard[]; nextCursor: string | null }>(`/droplets${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
   getDroplet: (id: string) => request<Droplet>(`/droplets/${encodeURIComponent(id)}`),
+  // Thumbs-up: idempotent both ways, so each may be retried through a gateway blip.
+  setDropletLiked: (id: string, liked: boolean) =>
+    request<LikeState>(`/droplets/${encodeURIComponent(id)}/like`, { method: liked ? 'PUT' : 'DELETE', idempotent: true }),
+  listDropletComments: (id: string, cursor?: string | null) =>
+    request<DropletCommentPage & { commentCount: number }>(
+      `/droplets/${encodeURIComponent(id)}/comments${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
+  // The key makes a resend return the comment the first send made, so this one may be retried too.
+  addDropletComment: (id: string, content: string, idempotencyKey: string) =>
+    request<DropletComment>(`/droplets/${encodeURIComponent(id)}/comments`, {
+      method: 'POST', body: JSON.stringify({ content }), headers: { 'Idempotency-Key': idempotencyKey }, idempotent: true,
+    }),
+  deleteDropletComment: (id: string, commentId: string) =>
+    request<void>(`/droplets/${encodeURIComponent(id)}/comments/${encodeURIComponent(commentId)}`, { method: 'DELETE' }),
   // Admin: take a droplet off the tab, or put it back
   setDropletHidden: (answerId: string, hidden: boolean) =>
     request<{ id: string; hidden: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ hidden }) }),

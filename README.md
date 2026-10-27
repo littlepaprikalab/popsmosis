@@ -16,7 +16,8 @@ pipeline in this repo, which writes each lesson, fact-checks every line and post
 Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
 in Supabase and shown beside the text. Once a droplet's videos are done it is listed on the
-public **Droplets** tab (`/droplets`), where anyone can watch it without an account. The plan, and where the pipeline stands, is in
+public **Droplets** tab (`/droplets`), where anyone can watch it without an account, and
+anyone signed in can give it a thumbs-up and comment on it. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
 
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
@@ -29,7 +30,7 @@ advice column), whose architecture and look-and-feel come from
 ```
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
 web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, sign-in, and the admin pages.
-prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply).
+prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply, DropletLike, DropletComment).
 studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
 ```
@@ -74,9 +75,9 @@ does the same, and so does `UPDATE users SET role = 'ADMIN' WHERE email = '…'`
 An address added to `ADMIN_EMAILS` takes effect on a session that is already open, on
 its next request, without a new sign-in.
 
-To fill the page with sample data (two users, one agent, a topic with its lesson, its videos
-and a follow-up thread, one topic still waiting, and older lessons whose videos are rendering
-or failed), run `npm --workspace api run seed:dev`. It prints the agent's key. The seeded
+To fill the page with sample data (two users, one agent, a topic with its lesson, its videos,
+a follow-up thread and a like and a comment on the Droplets tab, one topic still waiting, and
+older lessons whose videos are rendering or failed), run `npm --workspace api run seed:dev`. It prints the agent's key. The seeded
 videos are two short clips in `web/public/samples/`, so `/droplets` and the players on
 `/learn` work locally with no Supabase.
 
@@ -183,12 +184,18 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24). Each: `{ id, title, course, topic, excerpt, video, createdAt }` |
-| GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content` and the song's `lyrics`; 404 unless it is on the tab |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24). Each: `{ id, title, course, topic, excerpt, video, likeCount, commentCount, liked, createdAt }` |
+| GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
+| GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 
 Only the title (the bundle's `course` and `topic`), the lesson text, the videos with
-their posters and the lyrics are public. The learner's name and avatar, the request in
-their own words, their files and the follow-ups never leave through these.
+their posters, the lyrics, the counts and the comments are public. The learner's name and
+avatar, the request in their own words, their files and the follow-ups never leave through
+these. A comment names its author by first name and last initial ("Grace H."), never their
+full name, email, picture or id. `liked` and `mine` say what is the viewer's own when the
+request carries a session cookie, and are false otherwise; the session is only verified for
+that, never renewed, so these responses never set a cookie (they send `Vary: Cookie`, and
+`Cache-Control: private` when they were read for someone).
 
 **Humans** (session cookie, `X-Requested-With: XMLHttpRequest` on writes)
 
@@ -204,6 +211,10 @@ their own words, their files and the follow-ups never leave through these.
 | DELETE | `/api/questions/:id` | own topic, only while it has no lesson (waiting, or `FAILED`) |
 | POST | `/api/answers/:id/replies` | a follow-up: `{ content, attachments? }` 1–2000 chars |
 | DELETE | `/api/replies/:id` | own reply |
+| PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
+| DELETE | `/api/droplets/:id/like` | take it back: `{ liked: false, likeCount }`; idempotent, and works once the droplet has left the tab |
+| POST | `/api/droplets/:id/comments` | a public comment on a droplet on the tab: `{ content }` 1–1000 chars, plain text, with something visible in it (not only zero-width or blank characters), no email addresses or phone numbers; `DROPLET_COMMENTS_PER_USER_PER_HOUR` (30). With an `Idempotency-Key` header (8–100 of `A-Za-z0-9_.:-`, a UUID say) a resend returns the comment the first send made, 200 instead of 201, so a POST whose answer was lost can be sent again; the same key with other words is a 409 |
+| DELETE | `/api/droplets/:id/comments/:commentId` | own comment, or any as an admin; 204 |
 | GET | `/api/attachments/:id` | a file sent with a question or reply; also to agents |
 
 **Agents** (`Authorization: Bearer sk_pop_…`)
