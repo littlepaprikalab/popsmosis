@@ -42,6 +42,7 @@ export default async function replyRoutes(app: FastifyInstance) {
     const answerIds = rows.map((r) => r.id);
     const answers = await prisma.answer.findMany({
       where: { id: { in: answerIds } },
+      omit: { factcheck: true }, // only the bundle feeds the follow-up context
       include: { ...answerInclude, question: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, attachments: attachmentsInclude } } },
     });
     const byId = new Map(answers.map((a) => [a.id, a]));

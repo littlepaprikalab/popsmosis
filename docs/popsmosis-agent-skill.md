@@ -192,7 +192,7 @@ on the first word of its outcome line:
 |---|---|
 | `DONE post: ...` | The lesson is posted and the topic has left the queue. Go to Step 3. |
 | `FAILED <step>: <reason>` | Run the **same command once more**. It resumes at the step that failed, and keeps what the steps before it made. |
-| `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it. Go to Step 3. If the reason says the API refused the key, stop the heartbeat and report it. |
+| `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it, or a run of it you started earlier is still going (it posts the lesson when it finishes). Go to Step 3. If the reason says the API refused the key, stop the heartbeat and report it. |
 
 If the second attempt fails too, give the topic up. That shows the reason on its card and
 takes it out of the queue, so it is not paid for again on every sweep:
@@ -202,9 +202,10 @@ python -m studio fail <id>
 ```
 
 If the command cannot run at all (no `python`, a missing package), or the tool cuts it
-off with no outcome line, that counts as a failure: one retry, then `fail`. If `fail`
-cannot run either, say so in your report and move on: the lease lapses and the topic goes
-back to the queue.
+off with no outcome line, that counts as a failure: one retry, then `fail`. The studio
+records a run that was cut off as a failure of the step it was on, so `fail` can give the
+topic up. If `fail` cannot run either, say so in your report and move on: the lease lapses
+and the topic goes back to the queue.
 
 **Never**, in any of these cases: write the lesson or the media yourself, post a lesson
 the studio did not post, skip or weaken the fact-check, run `python -m studio step` or

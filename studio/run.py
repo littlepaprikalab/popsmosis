@@ -18,7 +18,13 @@ Every run appends what it did to runs.jsonl and prints one line, its outcome:
 
     DONE post: lesson posted as answer <id>
     FAILED <step>: <reason>        run again to retry that step
-    STOPPED <step>: <reason>       nothing to retry: the topic is gone, taken or done
+    STOPPED <step>: <reason>       nothing to retry: the topic is gone, taken or done,
+                                   or a run of it started earlier is still going
+
+Only one run of a job goes at a time (a lock on run.lock). A run that is stopped
+before it finishes, by a tool's time limit or a kill, leaves run.current.json
+behind; the next run, `fail` or `summary` records it as a failed run of that step,
+so a topic that is killed every time is still retried once and then given up.
 
 `python -m studio fail <id>` gives the topic up with the last run's reason, and
 `python -m studio summary <id>` says what the runs did, for the operator's record.
@@ -26,6 +32,8 @@ Every run appends what it did to runs.jsonl and prints one line, its outcome:
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import re
 import sys
@@ -34,7 +42,7 @@ import traceback
 from dataclasses import asdict
 from pathlib import Path
 
-from studio import brain, jobs
+from studio import brain, checks, jobs
 from studio.api import Api, ApiError
 from studio.schemas import Bundle, FactCheckReport, Request
 from studio.steps import bundle as bundle_step
@@ -67,17 +75,66 @@ def job_dir(question_id: str) -> Path:
 
 
 def is_done(job: Path, step: str) -> bool:
-    if step == "factcheck":
-        path = job / "factcheck.json"
-        return path.exists() and jobs.read(path, FactCheckReport).status == "passed"
-    return (job / {"request": "request.json", "bundle": "bundle.json", "post": "posted.json"}[step]).exists()
+    """Whether the step's file is there and reads; one that does not is a step still to run."""
+    try:
+        if step == "request":
+            jobs.read(job / "request.json", Request)
+        elif step == "bundle":
+            checks.load(job / "bundle.json")
+        elif step == "factcheck":
+            return jobs.read(job / "factcheck.json", FactCheckReport).status == "passed"
+        else:
+            return bool(json.loads((job / "posted.json").read_text(encoding="utf-8")).get("id"))
+        return True
+    except (OSError, ValueError, KeyError):  # missing, cut short, or from an older schema
+        return False
+
+
+@contextlib.contextmanager
+def only_run(job: Path):
+    """Yield True while this process holds the job's lock, False if another run holds it.
+
+    The kernel drops the lock when the holder exits, however it exits, so a killed
+    run never blocks the next one.
+    """
+    with (job / "run.lock").open("a") as handle:
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            yield False
+            return
+        yield True
+
+
+def record_interrupted(job: Path) -> None:
+    """Turn a run.current.json left by a run that never finished into its failed run."""
+    current = job / "run.current.json"
+    try:
+        record = json.loads(current.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        current.unlink(missing_ok=True)
+        return
+    step = record.get("step", "run")
+    record.update(result=FAILED, step=step,
+                  reason=f"{step} was interrupted: the run stopped before the step finished (a time limit or a kill)")
+    record.setdefault("steps", []).append({"step": step, "seconds": None, "result": FAILED})
+    with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
+        log.write(json.dumps(record, ensure_ascii=False) + "\n")
+    current.unlink()
 
 
 def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
     job = job_dir(question_id)
     job.mkdir(parents=True, exist_ok=True)
-    ask = ask or logged_ask(job)
+    with only_run(job) as mine:
+        if not mine:
+            return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
+        record_interrupted(job)
+        return _run(job, question_id, api, ask or logged_ask(job))
+
+
+def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, str]:
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     result, step, reason = DONE, "post", "the lesson was already posted"
@@ -85,6 +142,7 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
     for step in STEPS[first:] if not is_done(job, "post") else ():
         print(f"{step}: running", file=sys.stderr)
+        jobs.write(job / "run.current.json", {"started": started, "step": step, "steps": done_steps})
         step_clock = time.monotonic()
         try:
             api = api or Api.from_env()
@@ -111,6 +169,7 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
                   "reason": reason, "steps": done_steps}
         with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
             log.write(json.dumps(record, ensure_ascii=False) + "\n")
+    (job / "run.current.json").unlink(missing_ok=True)
     return result, step, reason
 
 
@@ -140,27 +199,35 @@ def make_request(job: Path, api: Api, question: dict, ask) -> str:
     images, guides, skipped = [], [], []
     for attachment in question.get("attachments") or []:
         name, mime = attachment.get("name", "file"), attachment.get("mimeType", "")
-        if attachment.get("expired") or not ID_RE.fullmatch(str(attachment.get("id", ""))):
+        readable = mime in IMAGE_TYPES or mime.startswith("text/")  # not a PDF or anything else, yet
+        if attachment.get("expired") or not readable or not ID_RE.fullmatch(str(attachment.get("id", ""))):
+            skipped.append(name)
+            continue
+        data = download(api, attachment["url"])
+        if data is None or (mime in IMAGE_TYPES and len(data) > IMAGE_MAX_BYTES):
             skipped.append(name)
         elif mime in IMAGE_TYPES:
-            data = api.download(attachment["url"])
-            if len(data) > IMAGE_MAX_BYTES:
-                skipped.append(name)
-                continue
             path = job / "attachments" / f"{attachment['id']}{IMAGE_TYPES[mime]}"
             path.parent.mkdir(exist_ok=True)
             path.write_bytes(data)
             images.append(str(path.resolve()))
-        elif mime.startswith("text/"):
-            text = api.download(attachment["url"]).decode("utf-8", "replace").strip()
-            guides.append(f"{name}:\n{text}")
         else:
-            skipped.append(name)  # a PDF or anything else the brain cannot read yet
+            guides.append(f"{name}:\n{data.decode('utf-8', 'replace').strip()}")
     if skipped:
         print(f"request: left out {len(skipped)} file(s) the brain cannot read, too big, or expired", file=sys.stderr)
     request = Request(topic=" ".join(question["content"].split()), study_guide="\n\n".join(guides), images=images)
     jobs.write(job / "request.json", request)
     return f"{len(images)} image(s), {len(guides)} text file(s)"
+
+
+def download(api: Api, url: str) -> bytes | None:
+    """An attachment's bytes, or None once they are past the retention (410): the topic is still worth a lesson."""
+    try:
+        return api.download(url)
+    except ApiError as e:
+        if e.status == 410:
+            return None
+        raise
 
 
 def make_bundle(job: Path, api: Api, question: dict, ask) -> str:
@@ -185,7 +252,15 @@ def post_lesson(job: Path, api: Api, question: dict | None, ask) -> str:
     model = lesson_model(job)
     if model:
         body["model"] = model
-    answer = api.post_answer(job.name, body)
+    try:
+        answer = api.post_answer(job.name, body)
+    except ApiError as e:
+        # The API names the answer when it is this agent's own: an earlier post went through
+        # but its reply was lost. That is this job's lesson, so the post is done.
+        if e.status != 409 or not e.details.get("answerId"):
+            raise
+        jobs.write(job / "posted.json", {"id": e.details["answerId"], "questionId": job.name, "recovered": True})
+        return f"lesson was already posted as answer {e.details['answerId']}"
     jobs.write(job / "posted.json", answer)
     return f"lesson posted as answer {answer.get('id')}"
 
@@ -205,6 +280,12 @@ def lesson_model(job: Path) -> str | None:
 def mark_failed(question_id: str, api: Api | None = None) -> tuple[str, str]:
     """Give the topic up with its last run's reason (POST /api/questions/:id/fail)."""
     job = job_dir(question_id)
+    if not job.is_dir():
+        return STOPPED, "there is no job for this topic here"
+    with only_run(job) as mine:
+        if not mine:
+            return STOPPED, "a run of this topic is still going"
+        record_interrupted(job)
     runs = read_jsonl(job / "runs.jsonl")
     if (job / "posted.json").exists():
         return STOPPED, "the lesson is posted; there is nothing to give up"
@@ -226,6 +307,12 @@ def summary(question_id: str) -> str:
     which holds the learner's own words and must never reach Inkmory.
     """
     job = job_dir(question_id)
+    running = False
+    if job.is_dir():
+        with only_run(job) as mine:
+            running = not mine
+            if mine:
+                record_interrupted(job)
     parts = []
     if (job / "bundle.json").exists():
         bundle = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
@@ -248,7 +335,8 @@ def summary(question_id: str) -> str:
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
         parts.append(f"Fact-check {report.status} in {report.rounds} round(s), {len(report.corrections)} correction(s).")
-    parts.append("Lesson posted." if (job / "posted.json").exists() else "No lesson posted.")
+    parts.append("Lesson posted." if (job / "posted.json").exists() else
+                 "A run is still going." if running else "No lesson posted.")
     calls = read_jsonl(job / "calls.jsonl")
     if calls:
         costs = [c.get("cost_usd") for c in calls]

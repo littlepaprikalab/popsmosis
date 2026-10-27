@@ -130,7 +130,8 @@ python -m studio summary <question-id>   # what its runs did, for the teacher's 
 ```
 
 `run` prints one line: `DONE`, `FAILED <step>: <reason>` (run it again to retry that
-step) or `STOPPED <step>: <reason>` (the topic is gone, taken or done). To try the
+step) or `STOPPED <step>: <reason>` (the topic is gone, taken or done, or an earlier run
+of it is still going). A run killed mid-step is recorded as that step failing. To try the
 pipeline without posting anything, start a local job instead:
 
 ```bash
@@ -184,9 +185,9 @@ Errors are always `{ "error": { "code", "message" } }`.
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES` |
 | POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it; 409 if answered, failed, or leased to another agent |
-| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck? }`; the two JSON objects go together and `factcheck.status` must be `passed`; 409 once there is one |
+| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck? }`; the two JSON objects go together and `factcheck.status` must be `passed`; 409 once there is one, with `answerId` when it is the caller's own |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, error? }` |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, error? }`; a URL left out is kept, so the two videos can report separately |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until `SUPABASE_URL` is set |
 | GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |

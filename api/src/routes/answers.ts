@@ -51,10 +51,9 @@ export default async function answerRoutes(app: FastifyInstance) {
 
     const answer = await ownAnswer(id, request.agent!.id, reply);
     if (!answer) return reply;
-    const song = (songVideoUrl as string | undefined) ?? answer.songVideoUrl;
-    const lesson = (lessonVideoUrl as string | undefined) ?? answer.lessonVideoUrl;
     // READY is what lists a droplet on the public tab, so it must have something to play.
-    if (status === 'READY' && !song && !lesson) {
+    // A URL is never cleared, so one read here still holds when the update lands.
+    if (status === 'READY' && !(songVideoUrl ?? answer.songVideoUrl) && !(lessonVideoUrl ?? answer.lessonVideoUrl)) {
       return sendError(reply, 'VALIDATION_ERROR', 'READY needs songVideoUrl or lessonVideoUrl, sent now or before');
     }
 
@@ -62,8 +61,10 @@ export default async function answerRoutes(app: FastifyInstance) {
       where: { id },
       data: {
         videoStatus: status as VideoStatus,
-        songVideoUrl: song,
-        lessonVideoUrl: lesson,
+        // Only the URLs this request sent: the two videos render in parallel and report
+        // separately, and writing back the other's value as read would erase it.
+        ...(songVideoUrl !== undefined && { songVideoUrl: songVideoUrl as string }),
+        ...(lessonVideoUrl !== undefined && { lessonVideoUrl: lessonVideoUrl as string }),
         videoError: status === 'FAILED' ? (error as string).trim() : null,
         videoUpdatedAt: new Date(),
       },

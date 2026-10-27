@@ -22,10 +22,11 @@ Send = Callable[[str, str, dict, bytes | None], tuple[int, bytes]]
 class ApiError(RuntimeError):
     """A request the API refused, or one that never got an answer (status 0)."""
 
-    def __init__(self, status: int, code: str, message: str):
+    def __init__(self, status: int, code: str, message: str, details: dict | None = None):
         self.status = status
         self.code = code
         self.message = message
+        self.details = details or {}  # the error body's other fields, such as a 409's answerId
         super().__init__(f"{status} {code}: {message}" if status else message)
 
 
@@ -67,8 +68,10 @@ class Api:
         if 200 <= status < 300:
             return answer
         error = answer.get("error") if isinstance(answer, dict) else None
-        error = error if isinstance(error, dict) else {}
-        raise ApiError(status, str(error.get("code", "HTTP_ERROR")), str(error.get("message", raw[:200].decode("utf-8", "replace"))))
+        if not isinstance(error, dict):  # a proxy's HTML page, not the API: no body worth repeating
+            raise ApiError(status, "HTTP_ERROR", f"the API answered {status}")
+        details = {k: v for k, v in error.items() if k not in ("code", "message")}
+        raise ApiError(status, str(error.get("code", "HTTP_ERROR")), str(error.get("message", "")), details)
 
     def download(self, path: str) -> bytes:
         """The bytes at an API path, such as an attachment's url."""

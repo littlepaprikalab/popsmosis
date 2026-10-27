@@ -140,6 +140,12 @@ d('droplet endpoints', () => {
     expect(row.factcheck).toEqual(FACTCHECK);
     expect((await post(keyA, `/api/questions/${questionId}/claim`)).json().error.message).toMatch(/already has an answer/);
 
+    // A retry whose 201 was lost learns its own lesson's id from the 409; another agent learns nothing.
+    const again = await answer();
+    expect(again.statusCode).toBe(409);
+    expect(again.json().error).toMatchObject({ code: 'CONFLICT', answerId });
+    expect((await answer(keyB)).json().error).not.toHaveProperty('answerId');
+
     const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
     expect(card.answer.video).toBeNull();
     expect(card.answer).not.toHaveProperty('bundle');
@@ -177,6 +183,14 @@ d('droplet endpoints', () => {
 
     const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
     expect(card.answer.video).toMatchObject({ status: 'READY', songVideoUrl: song, lessonVideoUrl: lesson });
+
+    // The two videos render in parallel and report on their own: neither report may erase the other's URL.
+    for (let i = 0; i < 10; i++) {
+      const [s, l] = [`${song}?v=${i}`, `${lesson}?v=${i}`];
+      await Promise.all([video(keyA, answerId, { status: 'RENDERING', songVideoUrl: s }), video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: l })]);
+      expect(await prisma.answer.findUniqueOrThrow({ where: { id: answerId }, select: { songVideoUrl: true, lessonVideoUrl: true } }))
+        .toEqual({ songVideoUrl: s, lessonVideoUrl: l });
+    }
   });
 
   it('signs upload URLs for its own answers once storage is configured', async () => {

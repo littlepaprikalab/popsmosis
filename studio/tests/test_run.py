@@ -191,11 +191,14 @@ def test_a_bug_still_ends_the_run_with_its_one_line(jobs_root, capsys):
 
 def test_fail_gives_the_topic_up_with_the_last_runs_reason():
     api = FakeApi()
-    assert operator_run.mark_failed("q1", api=api) == ("STOPPED", "the last run did not fail")
-    operator_run.run("q1", api=api, ask=FakeBrain(bundle_error=brain.Refused("claude-opus-5-5", "bio")))
-    result, reason = operator_run.mark_failed("q1", api=api)
+    assert operator_run.mark_failed("q1", api=api) == ("STOPPED", "there is no job for this topic here")
+    operator_run.run("q1", api=api, ask=FakeBrain(verdict="UNSUPPORTED"))
+    operator_run.run("q1", api=api, ask=FakeBrain())  # the retry passes: nothing to give up
+    assert operator_run.mark_failed("q2", api=api)[0] == "STOPPED"
+    operator_run.run("q2", api=api, ask=FakeBrain(bundle_error=brain.Refused("claude-opus-5-5", "bio")))
+    result, reason = operator_run.mark_failed("q2", api=api)
     assert (result, reason) == ("DONE", "bundle failed: claude-opus-5-5 declined the request (bio)")
-    assert api.calls[-1] == ("fail", "q1", reason)
+    assert api.calls[-1] == ("fail", "q2", reason)
 
 
 def test_fail_never_gives_up_a_posted_lesson():
@@ -230,6 +233,92 @@ def test_only_a_question_id_names_a_job():
         operator_run.job_dir("../etc")
 
 
+# --- the seams: kills, overlaps, lost replies ---------------------------------------
+
+
+def test_a_step_file_cut_short_counts_as_not_done(jobs_root):
+    operator_run.run("q1", api=FakeApi(), ask=FakeBrain(verdict="UNSUPPORTED"))
+    (jobs_root / "q1" / "factcheck.json").write_text('{"status": "pass')  # written by an older, non-atomic studio
+    ask = FakeBrain()
+    assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
+    assert ask.labels == ["factcheck round 1"]
+
+
+def test_a_job_file_is_written_whole_or_not_at_all(jobs_root, monkeypatch):
+    path = jobs_root / "x.json"
+    jobs.write(path, {"a": 1})
+
+    def crash(*args, **kwargs):
+        raise OSError("killed mid-write")
+
+    monkeypatch.setattr(operator_run.jobs.os, "replace", crash)
+    with pytest.raises(OSError):
+        jobs.write(path, {"a": 2})
+    assert json.loads(path.read_text()) == {"a": 1}
+
+
+def test_a_run_killed_mid_step_is_recorded_as_that_step_failing_so_fail_can_give_it_up(jobs_root):
+    api = FakeApi()
+    operator_run.run("q1", api=api, ask=FakeBrain(verdict="UNSUPPORTED"))
+    # What a killed run leaves: its current step, and no line in runs.jsonl.
+    (jobs_root / "q1" / "run.current.json").write_text(json.dumps(
+        {"started": "2026-10-27T03:00:00+0000", "step": "factcheck", "steps": []}))
+    result, reason = operator_run.mark_failed("q1", api=api)
+    assert result == "DONE" and reason.startswith("factcheck failed: factcheck was interrupted")
+    runs = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
+    assert [(r["result"], r["step"]) for r in runs] == [("FAILED", "factcheck"), ("FAILED", "factcheck")]
+    assert not (jobs_root / "q1" / "run.current.json").exists()
+
+
+def test_show_prints_a_run_that_was_cut_off(jobs_root, capsys):
+    from studio.__main__ import main
+
+    operator_run.run("q1", api=FakeApi(), ask=FakeBrain(verdict="UNSUPPORTED"))
+    (jobs_root / "q1" / "run.current.json").write_text(json.dumps({"started": "t", "step": "factcheck", "steps": []}))
+    operator_run.summary("q1")  # records the interrupted run
+    assert main(["show", "q1", "--brief"]) == 0
+    assert "factcheck cut off" in capsys.readouterr().out
+
+
+def test_a_finished_run_leaves_no_current_run_behind(jobs_root):
+    operator_run.run("q1", api=FakeApi(), ask=FakeBrain(bundle_error=brain.BrainError("overloaded")))
+    assert not (jobs_root / "q1" / "run.current.json").exists()
+
+
+def test_a_second_run_of_a_job_stops_while_the_first_still_holds_it(jobs_root):
+    (jobs_root / "q1").mkdir()
+    api, ask = FakeApi(), FakeBrain()
+    with operator_run.only_run(jobs_root / "q1") as mine:
+        assert mine
+        assert operator_run.run("q1", api=api, ask=ask)[0] == "STOPPED"
+        assert operator_run.mark_failed("q1", api=api) == ("STOPPED", "a run of this topic is still going")
+        assert "A run is still going." in operator_run.summary("q1")
+    assert api.calls == [] and ask.labels == []
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"  # the lock goes with its holder
+
+
+def test_an_attachment_purged_before_the_download_is_left_out(jobs_root):
+    api = FakeApi()
+    real = api.download
+
+    def download(path):
+        if path == "/api/attachments/a1":
+            raise ApiError(410, "DOWNLOAD_FAILED", f"GET {path} answered 410")
+        return real(path)
+
+    api.download = download
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
+    request = jobs.read(jobs_root / "q1" / "request.json", Request)
+    assert request.images == [] and request.study_guide
+
+
+def test_a_lesson_posted_whose_reply_was_lost_is_recovered_from_the_409(jobs_root):
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(409, "CONFLICT", "Question already has an answer", {"answerId": "ans1"})
+    assert operator_run.run("q1", api=api, ask=FakeBrain()) == ("DONE", "post", "lesson was already posted as answer ans1")
+    assert json.loads((jobs_root / "q1" / "posted.json").read_text())["id"] == "ans1"
+
+
 # --- the API client -------------------------------------------------------------
 
 
@@ -251,6 +340,21 @@ def test_the_client_sends_the_key_and_json_and_raises_the_apis_error():
         api.fail("q1", "bundle failed: x")
     assert (caught.value.status, caught.value.code, caught.value.message) == (409, "CONFLICT", "Question already has an answer")
     assert json.loads(sent[1][3]) == {"reason": "bundle failed: x"}
+
+
+def test_the_client_keeps_an_errors_details_and_never_repeats_an_html_page():
+    def send(method, url, headers, body):
+        if url.endswith("/answer"):
+            return 409, b'{"error":{"code":"CONFLICT","message":"Question already has an answer","answerId":"ans1"}}'
+        return 502, b"<!DOCTYPE html><html><body>Bad gateway</body></html>"
+
+    api = Api("http://localhost:3001", "sk_pop_x", send=send)
+    with pytest.raises(ApiError) as caught:
+        api.post_answer("q1", {})
+    assert caught.value.details == {"answerId": "ans1"}
+    with pytest.raises(ApiError) as caught:
+        api.claim("q1")
+    assert (caught.value.status, caught.value.message) == (502, "the API answered 502")
 
 
 def test_the_client_needs_both_variables(monkeypatch):

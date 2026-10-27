@@ -152,8 +152,10 @@ passed) and runs every step after it, so running it again retries a failed step 
 (`POST /api/questions/:id/claim`), which renews the queue's lease. Every run appends to
 `runs.jsonl` and prints one line: `DONE`, `FAILED <step>: <reason>` or
 `STOPPED <step>: <reason>` (the topic was deleted, answered, given up or taken: nothing
-to retry). `python -m studio step <name> <id>` redoes one step by hand, even when its
-file exists.
+to retry). Files are written whole or not at all, only one run of a job goes at a time,
+a run killed mid-step is recorded as that step failing, and a post whose reply was lost
+is recovered from the API's 409, which names the caller's own answer. `python -m studio
+step <name> <id>` redoes one step by hand, even when its file exists.
 
 | # | Step | Who | Writes |
 |---|---|---|---|

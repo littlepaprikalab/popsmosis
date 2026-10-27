@@ -169,7 +169,8 @@ def print_job(job: Path, brief: bool = False) -> None:
     if runs:
         print("\n## Runs\n")
         for i, r in enumerate(runs, 1):
-            steps = ", ".join(f"{s['step']} {s['seconds']:.0f}s" for s in r["steps"]) or "nothing to do"
+            steps = ", ".join(f"{s['step']} " + (f"{s['seconds']:.0f}s" if s["seconds"] is not None else "cut off")
+                              for s in r["steps"]) or "nothing to do"
             print(_wrap(f"{i}. {r['started']}  {r['result']} {r['step']}: {r['reason']}  [{steps}]", indent=4))
     if (job / "calls.jsonl").exists():
         calls = [brain.Call(**{k: v for k, v in json.loads(row).items() if k != "at"})

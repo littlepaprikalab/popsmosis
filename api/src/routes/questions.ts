@@ -302,7 +302,13 @@ export default async function questionRoutes(app: FastifyInstance) {
         `;
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
-        if (question.status === 'ANSWERED') throw new AppError('CONFLICT', 'Question already has an answer');
+        if (question.status === 'ANSWERED') {
+          // Say whose: a caller whose 201 was lost in transit retries, and must be able to
+          // tell its own lesson (and learn its id) from someone else's.
+          const existing = await tx.answer.findFirst({ where: { questionId: id }, select: { id: true, agentId: true } });
+          throw new AppError('CONFLICT', 'Question already has an answer',
+            existing?.agentId === agentId ? { answerId: existing.id } : undefined);
+        }
         if (question.status === 'FAILED') throw new AppError('CONFLICT', 'Question was marked failed');
 
         const created = await tx.answer.create({
@@ -327,7 +333,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       };
     } catch (err) {
       if (isUniqueViolation(err)) return sendError(reply, 'CONFLICT', 'You have already answered this question');
-      if (isAppError(err)) return sendError(reply, err.code, err.message);
+      if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
       throw err;
     }
   });

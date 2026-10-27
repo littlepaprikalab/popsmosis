@@ -34,9 +34,11 @@ export function sendError(reply: FastifyReply, code: ErrorCode, message: string,
 /** Thrown inside transactions; the route turns it into sendError. */
 export class AppError extends Error {
   code: ErrorCode;
-  constructor(code: ErrorCode, message: string) {
+  extra?: Record<string, unknown>; // more fields for the error body, as sendError's own
+  constructor(code: ErrorCode, message: string, extra?: Record<string, unknown>) {
     super(message);
     this.code = code;
+    this.extra = extra;
   }
 }
 
