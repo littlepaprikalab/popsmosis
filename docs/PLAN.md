@@ -206,7 +206,10 @@ parts build on the facts it has already written.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
-   verse, chorus, bridge, chorus).
+   verse, chorus, bridge, chorus). The style is one high school students listen to (pop
+   with rapped verses, K-pop, pop-punk), or the learner's own when they ask for one: a
+   question line starting `Style:` becomes `song_style` in `request.json`. One tag names
+   the tempo, "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
    and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
    `aliases`, because hearing that word is what reveals the structure on screen.
@@ -270,7 +273,8 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
   `composition_plan` of one chunk per section: `text` ("[Section]\nlines"),
   `duration_ms`, `positive_styles`, `negative_styles`, `context_adherence` "high". The
   studio's code makes this call, only after the fact-check passes. Section durations come
-  from the line count (about 4.3 s per line at 112 bpm), not from the model.
+  from the line count and the styles' "<n> bpm" tag (two bars per line: 4.8 s at 100
+  bpm, 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
 - **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict

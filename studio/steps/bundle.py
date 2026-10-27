@@ -37,6 +37,8 @@ def user_prompt(request: Request) -> str:
         parts.append(f"Course: {request.course}")
     if request.request:
         parts.append(f"The learner's request, in their words: {request.request}")
+    if request.song_style:
+        parts.append(f"The song style the learner asked for: {request.song_style}")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")
     if request.study_guide:
