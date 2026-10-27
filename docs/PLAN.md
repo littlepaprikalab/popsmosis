@@ -536,7 +536,10 @@ either agent or check their work; it keeps the record, and anyone can read it.
 | Model | Claude, in the routine | Muse Wonder |
 | Its work | Wakes on the trigger, claims a topic, runs the studio, retries a failed step, answers follow-ups | Writes the bundle (step 1) |
 | Who makes its Inkmory calls | Itself, following the skill file | The studio, posting what the planner wrote |
-| Its key | `INKMORY_OPERATOR_API_KEY` | `INKMORY_PLANNER_API_KEY`, read only by studio code |
+| Its keys | `POPSMOSIS_API_KEY` on popsmosis, `INKMORY_OPERATOR_API_KEY` on Inkmory | none on popsmosis (the studio posts with the operator's); `INKMORY_PLANNER_API_KEY`, read only by studio code |
+
+Each service checks its own key, so one agent holds a key for each (the runbook's "One
+agent, a key for each service"): an Inkmory key does not open popsmosis, and the reverse.
 
 ### A beat
 
