@@ -218,9 +218,10 @@ def version(tool: str) -> str | None:
     it is not installed or does not say, so the bill shows the tool without one rather than failing."""
     if tool != "ffmpeg":
         try:
-            return importlib.metadata.version(tool)
-        except importlib.metadata.PackageNotFoundError:
+            found = importlib.metadata.version(tool)
+        except Exception:  # not installed, or an install whose metadata is broken: a version is never worth the bill
             return None
+        return found if isinstance(found, str) and found else None
     try:
         out = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, errors="replace", timeout=10).stdout
     except (OSError, subprocess.SubprocessError):

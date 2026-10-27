@@ -198,7 +198,9 @@ d('droplet endpoints', () => {
       models: [{ model: 'claude-opus-5-5', calls: 1, costUsd: 0.5, credits: null }] }], seconds: 180 };
     const videoSteps = { steps: [{ step: 'audio', seconds: 95, tries: 1, costUsd: 0.08, models: [
       { model: 'lyria-3.5', calls: 1, costUsd: 0.08, credits: null },
-      { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 3300 }] }], seconds: 300 };
+      { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 3300 }] },
+    { step: 'timing', seconds: 110, tries: 1, costUsd: 0, models: [{ model: 'htdemucs', calls: 1, costUsd: 0, credits: null }],
+      tools: [{ name: 'demucs', version: '4.1.0' }, { name: 'ffmpeg', version: null }] }], seconds: 300 };
     expect((await answer(keyA, { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: [] })).json().error.message)
       .toMatch(/breakdown/);
     const answerId = (await answer(keyA, { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: lessonSteps })).json().id;
@@ -212,8 +214,12 @@ d('droplet endpoints', () => {
     expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: { steps: 'audio' } })).statusCode).toBe(400);
     expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: videoSteps })).statusCode).toBe(200);
     const b = (await card()).answer.breakdown;
-    expect(b.steps.map((s: { part: string; step: string }) => `${s.part}:${s.step}`)).toEqual(['lesson:bundle', 'videos:audio']);
+    expect(b.steps.map((s: { part: string; step: string }) => `${s.part}:${s.step}`)).toEqual(['lesson:bundle', 'videos:audio', 'videos:timing']);
     expect(b).toMatchObject({ seconds: 480, costUsd: 0.58, credits: 3300, complete: false });
+    // Who made each model and tool, and the tools' versions as the studio sent them.
+    expect(b.steps[0]).toMatchObject({ models: [{ model: 'claude-opus-5-5', maker: 'Anthropic' }], tools: [] });
+    expect(b.steps[2]).toMatchObject({ models: [{ model: 'htdemucs', maker: 'Meta' }],
+      tools: [{ name: 'demucs', version: '4.1.0', maker: 'Meta' }, { name: 'ffmpeg', version: null, maker: 'FFmpeg' }] });
 
     // A droplet's bill stays on /learn: the public tab shows only the title, lesson, videos and lyrics.
     const listed = (await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).json();

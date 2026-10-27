@@ -186,6 +186,20 @@ def test_a_packages_version_is_the_installed_one_and_none_when_it_is_not_install
     assert ledger.version("no-such-package-popsmosis") is None
 
 
+def test_a_broken_install_costs_its_version_never_the_bill(tmp_path, monkeypatch):
+    import importlib.metadata
+
+    def broken(name):  # newer Pythons raise KeyError for an install whose metadata has no Version
+        raise KeyError("Version")
+
+    monkeypatch.setattr(importlib.metadata, "version", broken)
+    ledger.version.cache_clear()
+    (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [{"step": "art", "seconds": 1.0}]}))
+    [art] = ledger.try_breakdown(tmp_path, "videos")["steps"]
+    assert art["tools"] == [{"name": "skia-python", "version": None}]
+    ledger.version.cache_clear()  # what the fake said is not this machine's
+
+
 def test_ffmpegs_version_is_read_from_ffmpeg_and_none_when_it_cannot_say(monkeypatch):
     def ffmpeg_says(stdout):
         def run(command, **kwargs):
