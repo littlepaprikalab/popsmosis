@@ -116,8 +116,11 @@ python -m studio step factcheck <job-id>                               # re-run 
 python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, runs, calls
 ```
 
-To try a prompt change cheaply, run the brain on Haiku first (about 2 cents a topic instead of
-70): `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
+`STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` set the brain's model and effort (defaults
+`claude-opus-5-5` and `high`; effort is one of `low`, `medium`, `high`, `xhigh`, `max`).
+They apply with `BRAIN_PROVIDER=claude` only. To try a prompt change cheaply, run the brain on
+Haiku first (about 2 cents a topic instead of 70):
+`STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
 
 ## Tests
 

@@ -48,16 +48,25 @@ def test_the_helper_is_haiku_at_low_effort_without_a_fallback():
     assert "fallbacks" not in request and "betas" not in request and "system" not in request
 
 
-def test_the_brain_can_be_tried_on_a_cheaper_model_or_effort(monkeypatch):
+def test_the_brains_model_and_effort_come_from_the_environment(monkeypatch):
     monkeypatch.setenv("STUDIO_BRAIN_MODEL", "claude-haiku-5-5")
     request = brain.claude_request("brain", "Write.", None, [], None)
     assert request["model"] == "claude-haiku-5-5" and request["output_config"] == {"effort": "high"}
     assert "fallbacks" not in request  # Haiku 5.5 has no server-side fallback
     monkeypatch.setenv("STUDIO_BRAIN_MODEL", "")
-    monkeypatch.setenv("STUDIO_BRAIN_EFFORT", "medium")
+    monkeypatch.setenv("STUDIO_BRAIN_EFFORT", " medium\n")  # pasted with stray whitespace
     request = brain.claude_request("brain", "Write.", None, [], None)
     assert request["model"] == "claude-opus-5-5" and request["output_config"] == {"effort": "medium"}
     assert request["fallbacks"] == "default"
+    helper = brain.claude_request("helper", "Look.", None, [], None)
+    assert helper["model"] == "claude-haiku-5-5" and helper["output_config"] == {"effort": "low"}
+
+
+def test_a_misspelled_effort_fails_the_call_with_the_allowed_values(monkeypatch):
+    monkeypatch.setenv("STUDIO_BRAIN_EFFORT", "hihg")
+    with pytest.raises(brain.BrainError, match=r"STUDIO_BRAIN_EFFORT must be one of low, medium, high, xhigh, max"):
+        brain.claude_request("brain", "Write.", None, [], None)
+    # The helper does not read it, so its calls still go through.
     assert brain.claude_request("helper", "Look.", None, [], None)["output_config"] == {"effort": "low"}
 
 
