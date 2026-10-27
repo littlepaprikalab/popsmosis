@@ -92,13 +92,63 @@ factual at all (a transition, a question to the learner).
 
 ## The song
 
-- `music`: `positive_styles` and `negative_styles` are short style tags for a music
-  generator: genre, mood, tempo (about 112 bpm), instruments, voice. Make it catchy, with
-  every word easy to hear. `sections` is exactly verse, chorus, verse, chorus, bridge,
-  chorus.
+The song is for high school students. It should sound like something they would play on
+their own, and every word of it should be easy to hear.
+
+- `music.positive_styles` are short style tags for a music generator, one idea each:
+  genre, mood, tempo, instruments, voices and mix ("K-pop", "hip-hop verses", "male
+  group vocals", "punchy synth bass", "98 bpm").
+  - **When the learner asked for a song style**, it is your source of inspiration. Keep
+    what they asked for (the genre, the voices, the instruments, the tempo) and fill in
+    what they left out in the same spirit. It may come on its own line ("The song style
+    the learner asked for") or anywhere in the topic or request, in their own words
+    ("ATP synthesis. Style: pop-punk", "make the song K-pop").
+  - **Otherwise**, choose a style high school students listen to: pop with rapped hip-hop
+    verses, K-pop, R&B, dance-pop, pop-punk and their neighbours. Let the topic's mood
+    pick the style and its tempo: a calm or reflective topic suits a slower, smoother
+    song, and one full of action or change suits a faster one. Use the whole range of
+    tempos rather than settling near 100 bpm out of habit. These styles work well,
+    slowest first; write in their spirit rather than copying one:
+    - laid-back R&B with smooth rapped verses, warm electric piano, deep round bass,
+      soft finger snaps, smooth sung chorus with stacked harmonies, clear female vocal,
+      85 bpm, clear diction
+    - upbeat pop with hip-hop verses, clear rapped verses, catchy sung chorus, female
+      vocals, moderate tempo 96 bpm, bright synths, punchy drums, educational, clear
+      diction
+    - K-pop with hip-hop verses, vocals start immediately, no instrumental intro, vocals
+      upfront in the mix, male group vocals, sharp clear rapped verses, big catchy sung
+      chorus, moderate tempo 98 bpm, punchy synth bass, crisp claps, bright synth stabs,
+      educational, clear diction
+    - upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female
+      vocal, warm synths, finger snaps, 100 bpm, clear diction
+    - bright pop with hip-hop verses, rapped verses, big sing-along chorus, clear female
+      vocal, shimmering synths, claps, 104 bpm, clear diction
+    - dance-pop with a four-on-the-floor beat, energetic male vocal, euphoric sing-along
+      chorus, bright plucked synths, handclaps, pulsing bass, 124 bpm, clear diction
+    - pop-punk anthem at 150 bpm with a driving straight-ahead pulse, energetic male lead
+      vocal and gang vocals on the chorus, bright radio-ready master, driving electric
+      guitars and punchy live drums, clear diction
+  - Whatever the style, include these: clear diction, vocals upfront in the mix, vocals
+    start immediately with no instrumental intro (the hook is sung in the first two
+    seconds), and a big catchy sung chorus.
+  - Name the tempo in exactly one tag, "<n> bpm", from 80 to 160: the learner's tempo
+    when they gave one, otherwise the one that fits the style and the topic's mood. Code
+    times every section of the song from this tag.
+  - Never name an artist, band or song in a tag; the music generator refuses them. When
+    the learner names one, describe its sound instead.
+- `music.negative_styles` keep the words clear and the song right for a classroom: for
+  example "mumbled vocals", "long instrumental intro", "vocals buried in the mix",
+  "explicit lyrics", and anything the learner said they did not want. When the
+  learner's style asks for something that would hide the words or does not belong in a
+  classroom (screamed or growled vocals, explicit lyrics), keep the rest of their style
+  and leave that part out.
+- `music.sections` is exactly verse, chorus, verse, chorus, bridge, chorus.
 - `lyrics` is every line as sung, in order, section by section, so the chorus appears
-  three times. A line takes about 4.3 seconds to sing (two bars at 112 bpm), roughly 6 to
-  10 syllables. Aim for 8 lines per verse, 4 to 6 per chorus and 4 in the bridge.
+  three times. Each line is sung over two bars: about 4.8 seconds at 100 bpm, 3.2 at
+  150. A sung line is roughly 6 to 10 syllables; a rapped verse line can carry a few
+  more, up to about 14. Aim for 8 lines per verse, 4 to 6 per chorus and 4 in the bridge.
+  Below 100 bpm every line takes longer, so use 6 lines per verse and 4 per chorus to
+  keep the song under about 3 minutes.
 - The first line is the hook: a surprising, true claim, sung in the first two seconds.
 - The chorus sings `core_idea` and is word for word the same each time; give each repeat
   its own ids.

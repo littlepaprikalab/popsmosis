@@ -115,6 +115,24 @@ def test_a_photo_too_big_for_the_brain_is_left_out_rather_than_failing_every_try
     assert request.images == [] and request.study_guide  # the text file still came through
 
 
+def test_a_style_line_in_the_question_is_the_songs_style(jobs_root):
+    question = {**QUESTION, "attachments": [],
+                "content": "ATP synthesis for AP Bio\n  style: K-pop with hip-hop verses,\t98 bpm  "}
+    assert operator_run.run("q1", api=FakeApi(question), ask=FakeBrain())[0] == "DONE"
+    request = jobs.read(jobs_root / "q1" / "request.json", Request)
+    assert (request.topic, request.song_style) == ("ATP synthesis for AP Bio", "K-pop with hip-hop verses, 98 bpm")
+
+
+@pytest.mark.parametrize("content, split", [
+    ("Song style: pop-punk, 150 bpm\nmitosis", ("mitosis", "pop-punk, 150 bpm")),
+    ("ATP synthesis  for my\nAP Bio exam", ("ATP synthesis for my AP Bio exam", "")),
+    ("English 10\nWriting style: active and passive voice", ("English 10 Writing style: active and passive voice", "")),
+    ("Style: Romanticism versus Realism", ("Style: Romanticism versus Realism", "")),  # nothing else to teach
+])
+def test_only_a_line_that_starts_with_style_names_the_songs_style(content, split):
+    assert operator_run.split_style(content) == split
+
+
 def test_running_again_resumes_at_the_step_that_failed(jobs_root):
     api = FakeApi()
     first = operator_run.run("q1", api=api, ask=FakeBrain(bundle_error=brain.Truncated("hit max_tokens")))

@@ -32,6 +32,12 @@ def test_the_prompt_carries_the_request_and_study_guide():
     assert prompt.endswith("<study_guide>\nATP is made.\n</study_guide>")
 
 
+def test_the_prompt_carries_the_learners_song_style():
+    prompt = bundle_step.user_prompt(Request(topic="ATP", song_style="K-pop with hip-hop verses, 98 bpm"))
+    assert prompt == "Topic: ATP\n\nThe song style the learner asked for: K-pop with hip-hop verses, 98 bpm"
+    assert "The song style" not in bundle_step.user_prompt(Request(topic="ATP"))
+
+
 def test_an_answer_that_does_not_validate_is_kept_for_a_look(tmp_path):
     write(tmp_path / "request.json", Request(topic="ATP"))
 

@@ -49,7 +49,7 @@ MP3_TYPES = ("audio/mpeg", "audio/mp3")
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
-LINE_MS = 4300  # one sung line at 112 bpm (PLAN section 5, step 5)
+BEATS_PER_LINE = 8  # one sung line is two bars of 4/4 (PLAN section 5, step 5): 4.3 s at 112 bpm
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
 TIMEOUT_S = 600  # a song takes a minute or two to come back
 SPEECH = ("narration", "frq")
@@ -164,11 +164,17 @@ def sections(bundle: Bundle) -> list[dict]:
     return out
 
 
+def line_ms(bundle: Bundle) -> float:
+    """How long one line takes to sing at the tempo the song's styles name."""
+    return BEATS_PER_LINE * 60_000 / bundle.music.bpm
+
+
 def planned_sections(bundle: Bundle) -> list[dict]:
-    """Each section in sung order with its lines, and where it is planned to fall: about LINE_MS a line."""
+    """Each section in sung order with its lines, and where it is planned to fall: two bars a
+    line at the tempo the styles name."""
     out, at = [], 0
     for part in sections(bundle):
-        length = min(MAX_CHUNK_MS, max(MIN_CHUNK_MS, LINE_MS * len(part["lines"])))
+        length = min(MAX_CHUNK_MS, max(MIN_CHUNK_MS, round(line_ms(bundle) * len(part["lines"]))))
         out.append({**part, "start_ms": at, "duration_ms": length})
         at += length
     return out

@@ -60,6 +60,8 @@ IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "
 # Anthropic refuses an image over 5 MB of base64; popsmosis takes 4 MB files, so a large photo
 # is left out rather than failing the bundle on every try.
 IMAGE_MAX_BYTES = 5 * 1024 * 1024 * 3 // 4
+# A line of the question that starts "Style:" (or "Song style:") is the style the learner wants the song in.
+STYLE_LINE = re.compile(r"^[ \t]*(?:song[ \t]+)?style[ \t]*:(.*)$", re.IGNORECASE | re.MULTILINE)
 
 
 class Stop(Exception):
@@ -213,9 +215,22 @@ def make_request(job: Path, api: Api, question: dict, ask) -> str:
             guides.append(f"{name}:\n{data.decode('utf-8', 'replace').strip()}")
     if skipped:
         print(f"request: left out {len(skipped)} file(s) the brain cannot read, too big, or expired", file=sys.stderr)
-    request = Request(topic=" ".join(question["content"].split()), study_guide="\n\n".join(guides), images=images)
+    topic, style = split_style(question["content"])
+    request = Request(topic=topic, song_style=style, study_guide="\n\n".join(guides), images=images)
     jobs.write(job / "request.json", request)
-    return f"{len(images)} image(s), {len(guides)} text file(s)"
+    return f"{len(images)} image(s), {len(guides)} text file(s)" + (", a song style" if style else "")
+
+
+def split_style(content: str) -> tuple[str, str]:
+    """The question's topic, and the song style its "Style:" lines ask for ("" when none does).
+
+    A question that is only a style line keeps it all as its topic, since the rest would be empty.
+    """
+    style = " ".join(" ".join(found.split()) for found in STYLE_LINE.findall(content)).strip()
+    topic = " ".join(STYLE_LINE.sub("", content).split())
+    if not style or not topic:
+        return " ".join(content.split()), ""
+    return topic, style
 
 
 def download(api: Api, url: str) -> bytes | None:
