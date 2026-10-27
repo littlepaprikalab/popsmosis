@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from studio import jobs, media
@@ -40,6 +42,10 @@ def test_the_sample_job_gives_two_valid_timelines_that_open_on_the_hook(job):
     assert not step.is_done(job / "missing")
     timelines = make(job)
     assert step.is_done(job)
+    # New timings (or art, or a bundle) make the timelines out of date.
+    timing = job / media.timing_path("song")
+    os.utime(timing, (timing.stat().st_mtime + 10,) * 2)
+    assert not step.is_done(job)
     locations = jobs.read(job / media.LOCATIONS, Locations)
     for timeline in timelines.values():
         assert timeline_problems(timeline, locations) == []

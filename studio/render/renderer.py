@@ -38,6 +38,7 @@ SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
 SETTLE_ZOOM = 1.06
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
+WHOLE_MAX_ZOOM = 2.0
 CAPTION_FADE_S = 0.3
 FRQ_IN_S = 1.0
 
@@ -47,6 +48,18 @@ class RenderError(Exception):
 
 
 # --- each scene, once ----------------------------------------------------------------------
+
+
+def _drawn_box(pixels: np.ndarray, located: SceneLocations) -> tuple[float, float, float, float]:
+    """Around everything drawn on the white art, and every located structure: what "the whole scene" frames."""
+    drawn = pixels[..., :3].min(axis=2) < 240
+    rows, cols = np.flatnonzero(drawn.any(axis=1)), np.flatnonzero(drawn.any(axis=0))
+    if not len(rows):
+        return 0.0, 0.0, float(pixels.shape[1]), float(pixels.shape[0])
+    x0, y0, x1, y1 = float(cols[0]), float(rows[0]), float(cols[-1] + 1), float(rows[-1] + 1)
+    for s in located.structures:
+        x0, y0, x1, y1 = min(x0, s.box.x0), min(y0, s.box.y0), max(x1, s.box.x1), max(y1, s.box.y1)
+    return x0, y0, x1, y1
 
 
 def _read(path: Path, color_type) -> np.ndarray:
@@ -80,6 +93,7 @@ class SceneArt:
         self._ghosts: dict[str, skia.Image] = {}
         self._spots: dict[str, skia.Image] = {}
         self._composed: OrderedDict[tuple, skia.Image] = OrderedDict()
+        self.content = _drawn_box(pixels, located)
         self.centre = (self.width / 2, self.height / 2)
         if located.structures:
             self.centre = (sum(s.centroid.x for s in located.structures) / len(located.structures),
@@ -234,24 +248,23 @@ class Renderer:
         art = self.scene(scene_id)
         loc = self.locations.scene(scene_id).get(target) if target else None
         if loc is None:
-            return clamp_cam(Cam(art.width / 2, art.height / 2, 1.0), self.layout.view, art)
+            return self._whole(scene_id, self.layout.view)
         view = self.layout.view
         box_w, box_h = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         fits = min((view[2] - view[0]) / (box_w * FIT_PAD), (view[3] - view[1]) / (box_h * FIT_PAD)) / _fit(view, art)
         zoom = max(1.0, min(zoom, fits))
         return clamp_cam(Cam(loc.centroid.x, loc.centroid.y, zoom), view, art)
 
-    def _frame_structures(self, scene_id: str, view: Rect) -> Cam:
-        """The camera that fits every located structure on the scene, with room for labels."""
+    def _whole(self, scene_id: str, view: Rect) -> Cam:
+        """The whole scene: everything drawn on it, fitted to the view with room for labels.
+
+        Art rarely fills its canvas (a membrane is a strip across it), so this frames
+        what is drawn rather than the canvas, up to WHOLE_MAX_ZOOM."""
         art = self.scene(scene_id)
-        located = self.locations.scene(scene_id).structures
-        if not located:
-            return clamp_cam(Cam(art.width / 2, art.height / 2, 1.0), view, art)
-        x0, y0 = min(s.box.x0 for s in located), min(s.box.y0 for s in located)
-        x1, y1 = max(s.box.x1 for s in located), max(s.box.y1 for s in located)
-        fit = _fit(view, art)
-        zoom = min((view[2] - view[0]) / ((x1 - x0) * FIT_PAD), (view[3] - view[1]) / ((y1 - y0) * FIT_PAD)) / fit
-        return clamp_cam(Cam((x0 + x1) / 2, (y0 + y1) / 2, max(1.0, min(zoom, 2.0))), view, art)
+        x0, y0, x1, y1 = art.content
+        zoom = min((view[2] - view[0]) / ((x1 - x0) * FIT_PAD), (view[3] - view[1]) / ((y1 - y0) * FIT_PAD))
+        zoom = max(1.0, min(zoom / _fit(view, art), WHOLE_MAX_ZOOM))
+        return clamp_cam(Cam((x0 + x1) / 2, (y0 + y1) / 2, zoom), view, art)
 
     def _plan(self) -> list[BeatPlan]:
         plans: list[BeatPlan] = []
@@ -403,7 +416,7 @@ class Renderer:
         layout, frq = self.layout, self.timeline.frq
         art = self.scene(frq.scene)
         into = p.ease((t - frq.t0) / FRQ_IN_S)
-        whole = self._frame_structures(frq.scene, layout.frq_view)
+        whole = self._whole(frq.scene, layout.frq_view)
         last = self.timeline.beats[-1]
         if last.scene == frq.scene:
             before = self.plans[-1].cam(frq.t0, layout.view, art)

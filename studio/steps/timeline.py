@@ -93,9 +93,15 @@ def run(job: Path, ask=None) -> str:
 
 
 def is_done(job: Path) -> bool:
+    """Both timelines read, and are newer than everything they were made from."""
+    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.TIMED)]
     try:
+        newest_input = max(path.stat().st_mtime for path in inputs)
         for video in media.VIDEOS:
-            read(job / media.timeline_path(video), Timeline)
+            path = job / media.timeline_path(video)
+            read(path, Timeline)
+            if path.stat().st_mtime < newest_input:
+                return False
     except (OSError, ValueError):
         return False
     return True

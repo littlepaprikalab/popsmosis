@@ -207,7 +207,7 @@ def _worker(argv: list[str]) -> int:
     timeline = Timeline.model_validate_json(Path(timeline_file).read_text(encoding="utf-8"))
     try:
         render_range(Path(job), timeline, layout, int(first), int(last), Path(out))
-    except Exception as e:  # one line for the parent to report
+    except Exception as e:  # noqa: BLE001 -- any failure becomes one line for the parent to report
         print(f"{type(e).__name__}: {e}".replace("\n", " "), file=sys.stderr)
         return 1
     return 0
