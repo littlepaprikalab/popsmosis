@@ -21,7 +21,9 @@ cost and time, so a run can report what it spent.
 from __future__ import annotations
 
 import base64
+import contextlib
 import os
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -120,6 +122,28 @@ class Call:
 
 
 calls: list[Call] = []
+_local = threading.local()  # the calls each thread is collecting (collect())
+
+
+def _record(call: Call) -> None:
+    calls.append(call)
+    sink = getattr(_local, "sink", None)
+    if sink is not None:
+        sink.append(call)
+
+
+@contextlib.contextmanager
+def collect():
+    """The calls this thread makes inside the block, apart from any other thread's: the art and
+    audio branches of `python -m studio videos` ask at the same time."""
+    outer = getattr(_local, "sink", None)
+    _local.sink = mine = []
+    try:
+        yield mine
+    finally:
+        _local.sink = outer
+        if outer is not None:
+            outer.extend(mine)
 
 
 def ask(
@@ -281,7 +305,7 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
             message = stream.get_final_message()
     except anthropic.APIError as e:
         raise BrainError(f"{request['model']}: {e}") from e
-    calls.append(claude_call(message, request["model"], role, label, time.monotonic() - started))
+    _record(claude_call(message, request["model"], role, label, time.monotonic() - started))
     return claude_texts(message)
 
 
@@ -382,7 +406,7 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
     usage = response.usage
     input_tokens = usage.prompt_tokens if usage else 0
     output_tokens = usage.completion_tokens if usage else 0
-    calls.append(Call(label, role, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens),
+    _record(Call(label, role, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens),
                       round(seconds, 1), choice.finish_reason or ""))
     if choice.message.refusal or choice.finish_reason == "content_filter":
         raise Refused(model, explanation=choice.message.refusal)

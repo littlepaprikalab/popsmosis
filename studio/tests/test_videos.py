@@ -239,6 +239,17 @@ def test_background_detaches_the_run_and_wait_reads_its_outcome(setup, monkeypat
     assert videos.wait("q1", minutes=0.5, poll_s=0.1) == ("STOPPED", "videos", "the videos are turned off here (STUDIO_VIDEOS)")
 
 
+def test_a_background_run_that_died_without_an_outcome_can_still_be_given_up(setup):
+    api = VideoApi()
+    job = posted()
+    videos.claim(api, job)
+    jobs.write(job / videos.BACKGROUND, {"pid": 2 ** 22 + 7, "runs": 0})  # no such process: it is gone
+    result, _, reason = videos.wait("q1", minutes=0)
+    assert result == "FAILED" and "without an outcome" in reason
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+    assert api.given_up[0] == "ans1" and "without an outcome" in api.given_up[1]
+
+
 def test_wait_says_running_while_the_run_is_alive(setup):
     job = posted()
     jobs.write(job / videos.BACKGROUND, {"pid": os.getpid(), "runs": 0})
@@ -255,3 +266,25 @@ def test_a_finished_run_nobody_reaped_is_not_alive():
         time.sleep(0.05)
     assert not videos._alive(child.pid)
     child.wait()
+
+
+def test_two_branches_asking_at_once_each_log_only_their_own_calls(tmp_path, monkeypatch):
+    from studio import brain
+
+    together = threading.Barrier(2, timeout=5)
+
+    def fake_ask(role, prompt, *args, label=None, **kwargs):
+        together.wait()  # both threads are inside ask before either records its call
+        brain._record(brain.Call(label, role, "m", 10, 5, 0.01, 0.1, "end_turn"))
+        together.wait()  # and both have recorded before either logs
+        return {}
+
+    monkeypatch.setattr(brain, "ask", fake_ask)
+    ask = operator_run.logged_ask(tmp_path)
+    threads = [threading.Thread(target=ask, args=("brain", "p"), kwargs={"label": name}) for name in ("art", "audio")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    logged = sorted(json.loads(row)["label"] for row in (tmp_path / "calls.jsonl").read_text().splitlines())
+    assert logged == ["art", "audio"]

@@ -603,10 +603,7 @@ For a topic:
 
 1. **The operator wakes** on the trigger and checks the popsmosis queues first. If there
    is work, it reads its Inkmory context (`GET /api/agents/me/context`), claims the topic
-   and runs the studio. It also fetches its Inkmory skill file
-   (`GET /api/agents/me/skill`), which documents the endpoints for the record it writes
-   last; the popsmosis skill file decides what goes in it. That file reads its key from
-   `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the skill file says so.
+   and runs the studio.
 2. **The planner's beat runs inside the studio, around steps 1–2:**
    1. The studio reads the planner's context with the planner's key.
    2. Its persona and memory (name, personality, bio, vibe, life story, latest journal
@@ -626,10 +623,16 @@ For a topic:
    is the loop worth watching.
 3. **The studio makes the media** (steps 3–9). If a step fails, the operator retries it
    (below).
-4. **The operator writes its record last:** always a cycle log, and a journal entry, a
-   life story or a profile change when it has something to say. It takes the run's facts
-   from `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary
-   <id>` prints them in one paragraph), so it reports what happened rather than what it
+4. **The operator writes its record last:** always a cycle log (last of all), a journal
+   entry when the studio worked a topic (`DONE` or `FAILED`; not on a run that only
+   answered follow-ups), its first life story when it has none and a rewrite about every
+   10 beats, and a profile change when its bio or vibe no longer fits. Before writing, it
+   fetches and prints its Inkmory skill file (`GET /api/agents/me/skill`), which documents
+   the endpoints for the record; the popsmosis skill file decides what goes in it. That
+   file reads its key from `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the
+   skill file says so. It takes the run's facts from
+   `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary <id>`
+   prints them in one paragraph), so it reports what happened rather than what it
    remembers.
 
 A run with only follow-ups is an operator beat; the planner has none.

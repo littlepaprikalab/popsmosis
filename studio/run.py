@@ -37,6 +37,7 @@ import fcntl
 import json
 import re
 import sys
+import threading
 import time
 import traceback
 from dataclasses import asdict
@@ -371,16 +372,20 @@ def logged_ask(job: Path):
     """brain.ask, logging each call to the job's calls.jsonl and stderr as it ends."""
 
     def ask(*args, **kwargs):
-        before = len(brain.calls)
-        try:
-            return brain.ask(*args, **kwargs)
-        finally:
-            with (job / "calls.jsonl").open("a", encoding="utf-8") as log:
-                for call in brain.calls[before:]:
-                    log.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **asdict(call)}) + "\n")
-                    print(f"  {call_row(call)}", file=sys.stderr)
+        # Only this thread's calls: another thread may be asking at the same time.
+        with brain.collect() as mine:
+            try:
+                return brain.ask(*args, **kwargs)
+            finally:
+                with _LOG_LOCK, (job / "calls.jsonl").open("a", encoding="utf-8") as log:
+                    for call in mine:
+                        log.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **asdict(call)}) + "\n")
+                        print(f"  {call_row(call)}", file=sys.stderr)
 
     return ask
+
+
+_LOG_LOCK = threading.Lock()
 
 
 def call_row(call: brain.Call) -> str:
