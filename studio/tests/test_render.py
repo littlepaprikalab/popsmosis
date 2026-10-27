@@ -144,6 +144,8 @@ def test_late_in_a_gap_the_song_shows_its_next_line_dimmed_and_unmarked(job):
     assert (leading != 255).any(axis=-1).sum() > 1000  # the next line's words are drawn...
     marked = ((leading[..., 2] == marker[0]) & (leading[..., 1] == marker[1]) & (leading[..., 0] == marker[2])).sum()
     assert marked == 0  # ...none of them marked, since none is sung yet
+    song.frame(beats[intro + 1].t0 + 0.5)  # the line itself, sung
+    assert (band_of(song.frame(lead_at + 0.5)) == leading).all()  # a frame still depends only on its time
 
 
 def test_the_lesson_keeps_an_empty_band_in_its_gaps(job):
