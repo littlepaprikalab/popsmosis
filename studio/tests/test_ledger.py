@@ -151,3 +151,39 @@ def test_every_step_the_runners_run_has_a_place():
 
     assert operator_run.STEPS == ledger.PARTS["lesson"] and media.MEDIA_STEPS == ledger.PARTS["videos"]
     assert set(ledger.LABEL_STEPS.values()) <= set(operator_run.STEPS) | set(media.MEDIA_STEPS)
+
+
+# --- the seams: kills, full disks, numbers that are not numbers -----------------------------------
+
+
+def test_a_line_cut_short_by_a_kill_is_skipped_so_the_post_can_still_read_the_log(tmp_path):
+    with ledger.at_step("bundle"):
+        ledger.log(tmp_path, [call("bundle", cost=0.5)])
+    with (tmp_path / "calls.jsonl").open("a") as f:
+        f.write('{"at": "now", "step": "factch')  # the process died mid-line
+    assert [r["label"] for r in ledger.read(tmp_path)] == ["bundle"]
+    assert operator_run.lesson_model(tmp_path) == "claude-opus-5-5"
+    assert ledger.try_breakdown(tmp_path, "lesson")["steps"][0]["costUsd"] == 0.5
+
+
+def test_a_log_that_cannot_be_written_never_fails_the_step(tmp_path, capsys):
+    (tmp_path / "calls.jsonl").mkdir()  # open() fails, as on a full disk
+    ledger.log(tmp_path, [call("song", model="lyria-3.5", cost=0.08)])
+    assert "calls not logged" in capsys.readouterr().err
+
+
+def test_a_number_that_is_not_one_is_never_logged_or_sent(tmp_path):
+    ledger.log(tmp_path, [call("narration", cost=None, credits=float("nan"))])
+    assert ledger.read(tmp_path) == []  # left out, not written as a NaN
+    # One written by anything else still never reaches the API, whose JSON has no NaN.
+    (tmp_path / "calls.jsonl").write_text(json.dumps({"step": "audio", "label": "song", "model": "m", "cost_usd": float("nan")}) + "\n")
+    assert "NaN" in (tmp_path / "calls.jsonl").read_text()
+    assert ledger.try_breakdown(tmp_path, "videos") is None
+
+
+def test_a_run_killed_between_steps_keeps_the_bill(tmp_path):
+    (tmp_path / "run.current.json").write_text(json.dumps(
+        {"started": "x", "part": "videos", "step": "videos", "steps": [{"step": "art", "seconds": 76.0, "result": "DONE"}]}))
+    operator_run.record_interrupted(tmp_path)  # appends a try of "videos", which is no step
+    report = ledger.breakdown(tmp_path, "videos")
+    assert [s["step"] for s in report["steps"]] == ["art"] and report["seconds"] == 76.0

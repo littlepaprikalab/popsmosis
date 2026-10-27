@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import type { Breakdown, BreakdownModel, Video } from '@/lib/api';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
@@ -20,6 +20,7 @@ const STEP_LABELS: Record<string, string> = {
 
 export function usd(v: number): string {
   if (v === 0) return '$0';
+  if (v < 0.001) return '<$0.001'; // a Haiku check costs a few hundredths of a cent: not "$0.000"
   return v < 0.01 ? `$${v.toFixed(3)}` : `$${v.toFixed(2)}`;
 }
 
@@ -50,9 +51,11 @@ const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
- * with how many calls and what they cost, how long it took, and the totals. Folded until opened.
+ * with how many calls and what they cost, how long it took, and the totals. Folded until opened,
+ * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
  */
 export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; video: Video | null }) {
+  const [open, setOpen] = useState(false);
   const { steps } = breakdown;
   if (steps.length === 0) return null;
   const stepSeconds = steps.reduce((sum, s) => sum + (s.seconds ?? 0), 0);
@@ -63,18 +66,20 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
     steps.some((s) => s.models.some((m) => m.costUsd === 0)) && 'free: run on the studio’s own machine.',
     breakdown.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',
     breakdown.unpriced > 0 && 'n/a: the provider did not say what it charged.',
-    video?.status === 'RENDERING' && 'The videos’ lines are added when they are done.',
+    video?.status === 'RENDERING' && (steps.some((s) => s.part === 'videos')
+      ? 'The videos’ lines are from an earlier try; they are brought up to date when the videos are done.'
+      : 'The videos’ lines are added when they are done.'),
   ].filter((n): n is string => !!n);
 
   return (
-    <details className="mt-3 text-[11px] group" data-testid="breakdown">
+    <details className="mt-3 text-[11px] group" data-testid="breakdown" onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="cursor-pointer select-none flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}>
         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--accent-yellow)' }}>Bill of materials</span>
         <span data-testid="breakdown-total">{duration(breakdown.seconds)} · {totalCost(breakdown)}</span>
         <span className="text-[10px] group-open:hidden">show</span>
         <span className="text-[10px] hidden group-open:inline">hide</span>
       </summary>
-      <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+      {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
         <PhoneBill breakdown={breakdown} />
         <table className="w-full border-collapse hidden sm:table" style={{ color: 'var(--text-secondary)' }}>
           <thead>
@@ -127,7 +132,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
             {notes.map((n) => <li key={n}>{n}</li>)}
           </ul>
         )}
-      </div>
+      </div>}
     </details>
   );
 }

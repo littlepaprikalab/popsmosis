@@ -464,3 +464,17 @@ def test_a_refused_call_is_not_logged_as_spent(job, monkeypatch):
         audio.run(job)
     assert not (job / "calls.jsonl").exists()
 
+
+
+@pytest.mark.parametrize("header", ["nan", "inf", "-3", "lots", ""])
+def test_a_credit_count_that_is_not_one_is_not_kept(header):
+    assert audio.eleven_credits({"character-cost": header}) is None
+    assert audio.eleven_credits({"Character-Cost": "120"}) == 120.0
+
+
+def test_a_lyria_answer_with_no_song_is_not_logged_as_one(job, monkeypatch):
+    monkeypatch.setattr(audio, "send", FakeGemini(answer={"promptFeedback": {"blockReason": "OTHER"}}))
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    with pytest.raises(media.StepFailed, match="blocked"):
+        audio.run(job)
+    assert not (job / "calls.jsonl").exists()

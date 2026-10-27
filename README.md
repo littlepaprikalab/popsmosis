@@ -219,7 +219,7 @@ their own words, their files and the follow-ups never leave through these.
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until `SUPABASE_URL` is set |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, bundle, factcheck }`; 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
-| POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt }`; give the videos up (FAILED with the reason); only the current attempt may |
+| POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |
 | GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |
 | GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
@@ -236,8 +236,9 @@ Under each lesson on `/learn`, folded to its totals, is how the droplet was made
 per step, the models that ran it with their number of calls and what they cost, how long
 it took, and the total time and cost. The studio logs every model call to the job's
 `calls.jsonl` with the step that made it (`studio/ledger.py`), and sends what it adds up to
-as `breakdown`: the lesson's steps with the lesson, the videos' with READY. The `answer`
-reads it back as
+as `breakdown`: the lesson's steps with the lesson, the videos' with READY, or with the
+give-up when they fail, so a failed render's spend is on the bill too. The `answer` reads
+it back as
 
 ```json
 "breakdown": {
@@ -253,7 +254,12 @@ is priced per token (`studio/brain.py`), a Lyria song per song, and Demucs and M
 the studio's machine for free. ElevenLabs bills in its plan's credits: they are shown as
 credits (`credits`) unless `ELEVENLABS_USD_PER_1K_CREDITS` gives their price. A model whose
 provider said neither is counted in `unpriced`. The bill stays on `/learn`: the public
-Droplets tab never shows it. A render recovered on another machine counts only that
+Droplets tab never shows it.
+
+The bill is never the reason a step fails: a call log that cannot be written (a full disk)
+is reported and the step goes on, a line cut short by a kill is skipped, and a bill that
+cannot be read, is too big (16 KB) or holds a number JSON has no word for is left out of
+the request rather than sent for the API to refuse. A render recovered on another machine counts only that
 machine's tries, since the first machine's records died with it.
 
 ### Attachments

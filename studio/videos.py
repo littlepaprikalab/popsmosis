@@ -392,7 +392,8 @@ def give_up(job: Path, runs: list[dict], api: Api | None = None) -> tuple[str, s
         return STOPPED, "this job holds no attempt at the videos"
     reason = one_line(f"{last['step']} failed: {last['reason']}")
     try:
-        (api or Api.from_env()).give_up_videos(answer, reason, attempt)
+        # With what the failed tries took and cost, so the page's bill counts them too.
+        (api or Api.from_env()).give_up_videos(answer, reason, attempt, breakdown=ledger.try_breakdown(job, "videos"))
     except ApiError as e:
         return api_outcome(e)
     return DONE, f"videos given up: {reason}"

@@ -280,8 +280,8 @@ def _make_gemini_song(job: Path, bundle: Bundle) -> None:
     status, headers, answer = _gemini(f"/models/{urllib.parse.quote(model, safe='')}:generateContent", body)
     if status != 200:
         raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}")
-    _log(job, "song", model, started, GEMINI_SONG_PRICES.get(model))
     audio, mime_type, said = read_gemini_song(answer)
+    _log(job, "song", model, started, GEMINI_SONG_PRICES.get(model))  # a song came back: one song's price
     audio = as_mp3(audio, mime_type)
     # The plan first, then the audio: the audio file is what says the song is made.
     jobs.write(job / plan_path("song"), {
@@ -419,11 +419,13 @@ def _log_eleven(job: Path, label: str, model: str, headers: dict, started: float
 
 
 def eleven_credits(headers: dict) -> float | None:
-    """The credits ElevenLabs charged for a call, from its character-cost header; None when it does not say."""
+    """The credits ElevenLabs charged for a call, from its character-cost header; None when it does not
+    say, or says something that is not a count ("nan" would make the bill's JSON one the API refuses)."""
     try:
-        return float(_header(headers, "character-cost"))
+        credits = float(_header(headers, "character-cost"))
     except ValueError:
         return None
+    return credits if 0 <= credits < float("inf") else None
 
 
 def eleven_usd_per_1k_credits() -> float | None:

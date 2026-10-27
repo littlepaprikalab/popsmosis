@@ -60,14 +60,23 @@ def current_step() -> str | None:
 
 
 def log(job: Path, calls: list[brain.Call]) -> None:
-    """Append the calls to the job's calls.jsonl, tagged with this thread's step, and print each one."""
+    """Append the calls to the job's calls.jsonl, tagged with this thread's step, and print each one.
+
+    Best effort: a log that cannot be written (a full disk) is reported and the step goes on, since
+    the call it records has been paid for and what it made must still be kept.
+    """
     if not calls:
         return
     step = current_step()
-    with _lock, (job / CALLS).open("a", encoding="utf-8") as out:
-        for call in calls:
-            out.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "step": step, **asdict(call)}) + "\n")
-            print(f"  {call_row(call)}", file=sys.stderr)
+    for call in calls:
+        print(f"  {call_row(call)}", file=sys.stderr)
+    try:
+        rows = "".join(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "step": step, **asdict(call)},
+                                  allow_nan=False) + "\n" for call in calls)
+        with _lock, (job / CALLS).open("a", encoding="utf-8") as out:
+            out.write(rows)  # one write, so a kill leaves whole lines or, at worst, one cut short
+    except (OSError, ValueError) as e:
+        print(f"  calls not logged ({type(e).__name__}: {e}); the bill will be short", file=sys.stderr)
 
 
 def call_row(call: brain.Call) -> str:
@@ -80,11 +89,21 @@ def call_row(call: brain.Call) -> str:
 
 
 def read(job: Path) -> list[dict]:
-    """The job's logged calls, each a dict as written."""
-    path = job / CALLS
-    if not path.exists():
+    """The job's logged calls, each a dict as written. A line cut short by a kill mid-write is skipped:
+    the post reads this file (run.lesson_model), and one bad line must not fail it on every retry."""
+    try:
+        text = (job / CALLS).read_text(encoding="utf-8", errors="replace")
+    except OSError:
         return []
-    return [json.loads(row) for row in path.read_text(encoding="utf-8").splitlines() if row.strip()]
+    rows = []
+    for line in text.splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict):
+            rows.append(row)
+    return rows
 
 
 _CALL_FIELDS = {f.name for f in fields(brain.Call)}
@@ -137,6 +156,9 @@ def breakdown(job: Path, part: str, running: tuple[str, float] | None = None) ->
     timed: dict[str, dict] = {}
     for r in runs:
         for s in r.get("steps", []):
+            # A run killed between steps is recorded at "videos" or "run" (record_interrupted): not a step.
+            if s.get("step") not in order:
+                continue
             row = timed.setdefault(s["step"], {"seconds": None, "tries": 0})
             row["tries"] += 1
             if s.get("seconds") is not None:
@@ -162,10 +184,11 @@ def try_breakdown(job: Path, part: str, running: tuple[str, float] | None = None
     the bill is never the reason a post or an upload fails."""
     try:
         report = breakdown(job, part, running)
-    except Exception as e:  # a record cut short or from an older format
+        # Strict JSON, as the API parses it: Python would write a NaN the API refuses, failing the request.
+        size = len(json.dumps(report, allow_nan=False).encode("utf-8"))
+    except Exception as e:  # a record from an older format, or a number that is not one
         print(f"breakdown left out: {type(e).__name__}: {e}", file=sys.stderr)
         return None
-    size = len(json.dumps(report).encode("utf-8"))
     if size > MAX_BYTES:
         print(f"breakdown left out: {size} bytes, more than the API takes ({MAX_BYTES})", file=sys.stderr)
         return None

@@ -160,5 +160,9 @@ class Api:
         """This agent's droplets whose render died with its machine, each claimed as its next attempt."""
         return self.request("GET", f"/api/videos/queue?limit={limit}").get("data", [])
 
-    def give_up_videos(self, answer_id: str, reason: str, attempt: int) -> dict:
-        return self.request("POST", f"/api/answers/{answer_id}/video/fail", {"reason": reason, "attempt": attempt})
+    def give_up_videos(self, answer_id: str, reason: str, attempt: int, breakdown: dict | None = None) -> dict:
+        """Give the videos up; breakdown: what the failed tries took and cost (studio/ledger.py)."""
+        body: dict = {"reason": reason, "attempt": attempt}
+        if breakdown is not None:
+            body["breakdown"] = breakdown
+        return self.request("POST", f"/api/answers/{answer_id}/video/fail", body)
