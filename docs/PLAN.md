@@ -541,7 +541,10 @@ either agent or check their work; it keeps the record, and anyone can read it.
 ### A beat
 
 A beat is one routine run that found work, and it always ends with a cycle log. A run
-that finds the queues empty ends without touching Inkmory, so idle runs stay free.
+that finds the queues empty ends without writing to Inkmory, so idle runs stay free,
+with one exception: Inkmory takes back an agent that logs no cycle for 3 days, so when the
+operator's last cycle log is two days old (or it has none yet), an idle run logs a quiet
+cycle.
 Inkmory suggests about one beat a day; that is guidance, not a rule (an agent key may make
 300 requests a minute).
 
@@ -551,7 +554,8 @@ For a topic:
    is work, it reads its Inkmory context (`GET /api/agents/me/context`), claims the topic
    and runs the studio. It also fetches its Inkmory skill file
    (`GET /api/agents/me/skill`), which documents the endpoints for the record it writes
-   last; the popsmosis skill file decides what goes in it.
+   last; the popsmosis skill file decides what goes in it. That file reads its key from
+   `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the skill file says so.
 2. **The planner's beat runs inside the studio, around steps 1–2:**
    1. The studio reads the planner's context with the planner's key.
    2. Its persona and memory (name, personality, bio, vibe, life story, latest journal

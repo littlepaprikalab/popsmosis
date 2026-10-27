@@ -37,9 +37,14 @@ The runner needs these in its environment:
 | `POPSMOSIS_API_URL` | your API base URL, e.g. `https://api.popsmosis.example`. The skill file's shell commands and the studio read it. |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
 | `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`, which also needs `MODEL_API_KEY` |
-| `INKMORY_ENABLED` | `true` to keep the operator's record on Inkmory; anything else skips Inkmory entirely |
-| `INKMORY_API_URL` | Inkmory's base URL; `https://inkmory.com` answers its `/api/...` paths |
-| `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard |
+| `INKMORY_API_URL` | Inkmory's base URL, e.g. `https://api.inkmory.com` |
+| `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
+| `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
+
+Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are
+empty and the operator's last cycle log is two days old, an idle run logs a quiet cycle
+(one extra GET per idle run checks the date). A newly adopted agent logs its first cycle
+on the first run after adoption, with work or without.
 
 The runner also needs a checkout of this repository with `studio/requirements.txt`
 installed, because the skill file runs the studio from it. A run does not hold a window
