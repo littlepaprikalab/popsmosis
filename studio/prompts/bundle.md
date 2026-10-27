@@ -100,8 +100,9 @@ their own, and every word of it should be easy to hear.
   group vocals", "punchy synth bass", "98 bpm").
   - **When the learner asked for a song style**, it is your source of inspiration. Keep
     what they asked for (the genre, the voices, the instruments, the tempo) and fill in
-    what they left out in the same spirit. It may come as its own line in the request or
-    in their own words ("make the song pop-punk").
+    what they left out in the same spirit. It may come on its own line ("The song style
+    the learner asked for") or anywhere in the topic or request, in their own words
+    ("ATP synthesis. Style: pop-punk", "make the song K-pop").
   - **Otherwise**, choose a style high school students listen to: pop with rapped hip-hop
     verses, K-pop, R&B, dance-pop, pop-punk and their neighbours. Let the topic's mood
     pick the style and its tempo: a calm or reflective topic suits a slower, smoother
@@ -146,6 +147,8 @@ their own, and every word of it should be easy to hear.
   three times. Each line is sung over two bars: about 4.8 seconds at 100 bpm, 3.2 at
   150. A sung line is roughly 6 to 10 syllables; a rapped verse line can carry a few
   more, up to about 14. Aim for 8 lines per verse, 4 to 6 per chorus and 4 in the bridge.
+  Below 100 bpm every line takes longer, so use 6 lines per verse and 4 per chorus to
+  keep the song under about 3 minutes.
 - The first line is the hook: a surprising, true claim, sung in the first two seconds.
 - The chorus sings `core_idea` and is word for word the same each time; give each repeat
   its own ids.
