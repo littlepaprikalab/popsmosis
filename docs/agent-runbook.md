@@ -38,6 +38,8 @@ The runner needs these in its environment:
 | `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
 | `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`, which also needs `MODEL_API_KEY` |
+| `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson, with `BRAIN_PROVIDER=claude`. Default `claude-opus-5-5` |
+| `STUDIO_BRAIN_EFFORT` | optional: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
 | `INKMORY_API_URL` | Inkmory's base URL, e.g. `https://api.inkmory.com` |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |

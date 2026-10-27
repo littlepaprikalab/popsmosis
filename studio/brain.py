@@ -6,6 +6,10 @@ BRAIN_PROVIDER picks the models behind the two thinking roles (docs/PLAN.md, sec
     brain    claude-opus-5-5, effort high      muse-wonder-1.0
     helper   claude-haiku-5-5, effort low      muse-spark-1.3
 
+On the Claude provider, STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's
+model and effort; unset or empty, each keeps the default above. The meta provider
+ignores both, and the helper has no such setting.
+
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
 validated against the model before it is returned.
@@ -38,6 +42,9 @@ META = {
     "helper": {"model": "muse-spark-1.3"},
 }
 META_BASE_URL = "https://api.meta.ai/v1"
+
+# The effort levels Claude accepts (output_config.effort).
+EFFORTS = ("low", "medium", "high", "xhigh", "max")
 
 # Where the studio finds its Anthropic key, first match wins. In a Claude Code cloud
 # environment a variable named ANTHROPIC_API_KEY never reached the session (the name is
@@ -217,15 +224,23 @@ def claude_key() -> str | None:
     return next((os.environ[name] for name in CLAUDE_KEY_VARS if os.environ.get(name)), None)
 
 
+def claude_brain() -> tuple[str, str]:
+    """The brain's model and effort: STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT, else the defaults."""
+    model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or CLAUDE["brain"]["model"]
+    effort = os.environ.get("STUDIO_BRAIN_EFFORT", "").strip() or CLAUDE["brain"]["effort"]
+    if effort not in EFFORTS:
+        raise BrainError(f"STUDIO_BRAIN_EFFORT must be one of {', '.join(EFFORTS)}, not {effort!r}")
+    return model, effort
+
+
 def claude_request(
     role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
 ) -> dict:
     """The keyword arguments for client.beta.messages.stream()."""
-    model, effort = CLAUDE[role]["model"], CLAUDE[role]["effort"]
     if role == "brain":
-        # Development only: try a prompt draft on a cheaper model or effort first.
-        model = os.environ.get("STUDIO_BRAIN_MODEL") or model
-        effort = os.environ.get("STUDIO_BRAIN_EFFORT") or effort
+        model, effort = claude_brain()
+    else:
+        model, effort = CLAUDE[role]["model"], CLAUDE[role]["effort"]
     content: list[dict] = [
         {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": data}}
         for media_type, data in map(_image, images)

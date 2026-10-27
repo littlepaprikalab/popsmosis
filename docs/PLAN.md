@@ -101,6 +101,10 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` | Muse Wonder (`muse-wonder-1.0`) |
 | **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
+With `BRAIN_PROVIDER=claude`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` change the
+brain's model and effort; unset, they are the defaults above. The helper and the Meta
+models are set in `studio/brain.py`.
+
 Every other job has one provider, whatever the brain:
 
 | Job | Made by |
@@ -410,7 +414,8 @@ The routine runs the studio in its own container, so there is no worker to host.
 takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
-  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER`, and `MODEL_API_KEY` once
+  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER` (with
+  `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` once
   the Meta key arrives. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
 - **Setup script:** install `studio/requirements.txt` (PyTorch for CPU, torchaudio,

@@ -14,9 +14,10 @@ POPSMOSIS_API_URL and POPSMOSIS_API_KEY, and use the question id as the job id.
 Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every brain call is logged
 to the job's calls.jsonl with its tokens, cost and time.
 
-To try a prompt draft cheaply, run the brain on Haiku first:
+STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's model and effort on the
+Claude provider (defaults claude-opus-5-5 and high). To try a prompt draft cheaply, run
+the brain on Haiku first:
 STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief
-(STUDIO_BRAIN_EFFORT overrides the brain's effort the same way.)
 """
 
 from __future__ import annotations
@@ -63,7 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     overrides = {k: os.environ[k] for k in ("STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT") if os.environ.get(k)}
     if overrides and args.command in ("run", "plan", "step"):
-        print(f"note: development override of the brain: {overrides}", file=sys.stderr)
+        print(f"note: the brain is set by the environment: {overrides}", file=sys.stderr)
 
     if args.command in ("run", "fail", "summary"):
         if not operator_run.ID_RE.fullmatch(args.question):
