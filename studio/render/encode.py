@@ -25,6 +25,7 @@ from studio.schemas import Timeline
 PARENT_ENV = "POPSMOSIS_RENDER_PARENT"  # the render's pid, so a worker started as it died can tell
 ROOT = Path(__file__).resolve().parent.parent.parent  # the folder that holds studio/, for the workers
 PRESET = "veryfast"
+RENDER_LIMIT_BASE_S, RENDER_LIMIT_PER_S = 300.0, 3.0  # a 3-minute video may take 14 minutes
 CRF = "20"
 
 
@@ -50,8 +51,16 @@ class Rendered:
     seconds: float  # wall-clock time to draw and encode it
 
 
-def _run(args: list[str]) -> None:
-    result = subprocess.run(args, capture_output=True, text=True, check=False)
+def time_limit(timeline: Timeline) -> float:
+    """How long a render may take before it counts as hung: generous, for slower machines."""
+    return RENDER_LIMIT_BASE_S + RENDER_LIMIT_PER_S * timeline.duration
+
+
+def _run(args: list[str], timeout: float) -> None:
+    try:
+        result = subprocess.run(args, capture_output=True, text=True, check=False, timeout=timeout)
+    except subprocess.TimeoutExpired as e:
+        raise EncodeError(f"{Path(args[0]).name} took over {timeout:.0f} s") from e
     if result.returncode:
         raise EncodeError(f"{Path(args[0]).name} failed: {result.stderr.strip()[-800:]}")
 
@@ -112,6 +121,7 @@ def _render_ranges(job: Path, timeline: Timeline, layout: str, chunks: list[tupl
     env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")])),
                **{PARENT_ENV: str(os.getpid())})
     waiting = list(zip(chunks, paths))
+    deadline = time.monotonic() + time_limit(timeline)
     running: list[tuple[subprocess.Popen, Path, tuple[int, int]]] = []
     try:
         while waiting or running:
@@ -133,6 +143,8 @@ def _render_ranges(job: Path, timeline: Timeline, layout: str, chunks: list[tupl
                 if code:
                     lines = log.read_text(errors="replace").strip().splitlines()
                     raise EncodeError(lines[-1] if lines else f"the worker for frames {first}-{last} exited {code}")
+            if time.monotonic() > deadline:
+                raise EncodeError(f"the render took over {time_limit(timeline):.0f} s; its workers were stopped")
             time.sleep(0.05)
     finally:
         for proc, _, _ in running:
@@ -180,16 +192,16 @@ def encode(job: Path, timeline: Timeline, out: Path, layout: str = "h", parts: i
         listing.write_text("".join(f"file '{p.name}'\n" for p in paths))
         video = tmp_dir / "video.mp4"
         _run([ffmpeg(), "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
-              "-c", "copy", str(video)])
+              "-c", "copy", str(video)], timeout=time_limit(timeline))
         final = tmp_dir / "final.mp4"
         if timeline.audio:
             inputs, mix = audio_filter(job, timeline)
             _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(video), *inputs, "-filter_complex", mix,
                   "-map", "0:v", "-map", "[mix]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                  "-t", f"{timeline.duration:.3f}", "-movflags", "+faststart", str(final)])
+                  "-t", f"{timeline.duration:.3f}", "-movflags", "+faststart", str(final)], timeout=time_limit(timeline))
         else:
             _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(video), "-c", "copy", "-movflags", "+faststart",
-                  str(final)])
+                  str(final)], timeout=time_limit(timeline))
         out.parent.mkdir(parents=True, exist_ok=True)
         partial = out.with_name(f".{out.name}.partial")
         shutil.move(str(final), partial)

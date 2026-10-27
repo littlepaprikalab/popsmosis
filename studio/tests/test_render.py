@@ -5,6 +5,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -255,4 +256,17 @@ def test_a_worker_that_fails_stops_the_render_with_one_clear_error(job, tmp_path
     (work / media.art_path("overview")).write_bytes(b"not a png")  # fails in the workers, not before
     with pytest.raises(EncodeError, match=r"RenderError: art/overview.png is not an image"):
         encode(work, timeline, tmp_path / "out.mp4", parts=2)
+    assert not (tmp_path / "out.mp4").exists()
+
+
+@needs_ffmpeg
+def test_a_render_that_hangs_is_stopped_at_its_time_limit(job, tmp_path, monkeypatch):
+    from studio.render import encode as encode_module
+
+    monkeypatch.setattr(encode_module, "RENDER_LIMIT_BASE_S", 0.5)
+    monkeypatch.setattr(encode_module, "RENDER_LIMIT_PER_S", 0.0)
+    started = time.monotonic()
+    with pytest.raises(EncodeError, match="took over 0 s; its workers were stopped"):
+        encode(job, short_timeline(job, "song"), tmp_path / "out.mp4", parts=2)
+    assert time.monotonic() - started < 10
     assert not (tmp_path / "out.mp4").exists()

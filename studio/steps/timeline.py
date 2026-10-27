@@ -226,6 +226,10 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
 
         words = timed_line.words or [Word(word=w, start=timed_line.start, end=timed_line.end)
                                      for w in texts.get(timed_line.line_id, "").split()]
+        # A beat lasts at least a frame, so lines the aligner put at one instant push the
+        # beats after them a little late: keep each word inside its own beat.
+        words = [Word(word=w.word, start=min(max(w.start, cursor), t1), end=min(max(w.end, cursor), t1))
+                 for w in words]
         reveals = []
         for name, index in sorted(scene_names.heard([w.word for w in words]).items(), key=lambda e: e[1]):
             if name not in labels:

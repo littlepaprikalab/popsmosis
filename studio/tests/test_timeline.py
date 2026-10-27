@@ -233,3 +233,19 @@ def test_timings_that_do_not_match_the_bundle_fail_the_step(job):
 
 def test_the_step_is_found_by_name():
     assert media.step_module("timeline") is step
+
+
+def test_lines_the_aligner_put_at_one_instant_still_make_a_timeline(job):
+    timed = sample_media.timings(sample_media.bundle())
+    song = timed["song"].model_dump()
+    at = song["lines"][1]["start"]
+    for line in song["lines"][1:4]:  # three lines it could not place, all where the one before ended
+        line["start"] = line["end"] = at
+        for w in line["words"]:
+            w["start"] = w["end"] = at
+    timed["song"] = Timing.model_validate(song)
+    write_bundle(job, sample_media.bundle().model_dump(), timed)
+    timeline = make(job)["song"]
+    beats = lines(timeline)
+    assert [beats[i].t0 for i in ("v1-2", "c1-1", "v2-1")] == sorted({beats[i].t0 for i in ("v1-2", "c1-1", "v2-1")})
+    assert all(b.t0 <= w.start <= w.end <= b.t1 for b in timeline.beats for w in b.words)
