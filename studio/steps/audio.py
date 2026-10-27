@@ -9,7 +9,8 @@
 
 Every call costs credits, so a file that is already there is never asked for again,
 unless the bundle's lines have changed since it was made (its .json says what it was
-made from). To redo one by hand, delete its .mp3. Needs ELEVENLABS_API_KEY;
+made from). To redo one by hand, delete its .mp3. A busy or failing server (429, 5xx)
+is retried three times; a timeout is not, since the server may still be making it. Needs ELEVENLABS_API_KEY;
 ELEVENLABS_VOICE_ID picks another voice.
 """
 
@@ -19,6 +20,7 @@ import base64
 import json
 import os
 import subprocess
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -31,6 +33,7 @@ from studio.schemas import Bundle
 API = "https://api.elevenlabs.io"
 MUSIC_MODEL = "music_v2_5"
 TTS_MODEL = "eleven_multilingual_v2"
+TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
 LINE_MS = 4300  # one sung line at 112 bpm (PLAN section 5, step 5)
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what the music API accepts per chunk
@@ -41,6 +44,10 @@ SPEECH = ("narration", "frq")
 Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 
 
+class NoAnswer(media.StepFailed):
+    """The request never reached ElevenLabs, or the connection dropped: safe to send again."""
+
+
 def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, dict, bytes]:
     request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, **headers}, method=method)
     try:
@@ -48,11 +55,17 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
             return response.status, dict(response.headers), response.read()
     except urllib.error.HTTPError as e:
         return e.code, dict(e.headers), e.read()
-    except (urllib.error.URLError, TimeoutError, OSError) as e:
-        raise media.StepFailed(f"ElevenLabs did not answer: {getattr(e, 'reason', e)}") from e
+    except TimeoutError as e:
+        # Not retried: the server may still be making, and charging for, what was asked.
+        raise media.StepFailed(f"ElevenLabs took over {TIMEOUT_S}s to answer") from e
+    except (urllib.error.URLError, OSError) as e:
+        raise NoAnswer(f"ElevenLabs did not answer: {getattr(e, 'reason', e)}") from e
 
 
 send: Send = _urllib_send
+RETRY_STATUSES = {429, 500, 502, 503, 504}  # busy (too many songs at once) or a passing server fault
+RETRY_WAITS_S = (5, 20, 60)
+sleep = time.sleep  # tests pass their own
 
 
 def plan_path(kind: str) -> str:
@@ -91,7 +104,7 @@ def _current(job: Path, bundle: Bundle, kind: str) -> bool:
     try:
         made_from = json.loads((job / plan_path(kind)).read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return kind == "song"  # a song dropped in by hand, with no plan, is taken as it is
+        return False  # step 6 needs what it was made from, so it is made again
     wanted = song_lines(bundle) if kind == "song" else speech_lines(bundle, kind)
     return [[i, t] for i, t in made_from.get("source", [])] == [[i, t] for i, t in wanted]
 
@@ -137,11 +150,12 @@ def _make_song(job: Path, bundle: Bundle) -> None:
     status, headers, audio = _call("POST", "/v1/music?output_format=mp3_44100_128", body)
     if status != 200 or not audio:
         raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}")
-    _write_bytes(job / media.audio_path("song"), audio)
+    # The plan first, then the audio: the audio file is what says the song is made.
     jobs.write(job / plan_path("song"), {
         "source": song_lines(bundle), "model_id": MUSIC_MODEL, "sections": placed,
         "song_id": _header(headers, "song-id"), "headers": _kept(headers), "request": body,
     })
+    _write_bytes(job / media.audio_path("song"), audio)
 
 
 # --- narration and the exam question ------------------------------------------------------
@@ -159,6 +173,8 @@ def voice_id() -> str:
 
 def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
     text, spans = join_lines(lines)
+    if len(text) > TTS_MAX_CHARS:
+        raise media.StepFailed(f"the {kind} is {len(text)} characters; one text-to-speech call takes {TTS_MAX_CHARS}")
     voice = voice_id()
     status, headers, answer = _call("POST", f"/v1/text-to-speech/{voice}/with-timestamps?output_format=mp3_44100_128",
                                     {"text": text, "model_id": TTS_MODEL})
@@ -199,7 +215,26 @@ def _call(method: str, path: str, body: dict) -> tuple[int, dict, bytes]:
     if not key:
         raise media.StepFailed("ELEVENLABS_API_KEY is not set")
     headers = {"xi-api-key": key, "Content-Type": "application/json"}
-    return send(method, API + path, headers, json.dumps(body, ensure_ascii=False).encode("utf-8"))
+    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+    for wait in (*RETRY_WAITS_S, None):
+        try:
+            status, answer_headers, answer = send(method, API + path, headers, data)
+        except NoAnswer:
+            if wait is None:
+                raise
+        else:
+            if status not in RETRY_STATUSES or wait is None:
+                return status, answer_headers, answer
+            wait = max(wait, _retry_after(answer_headers))
+        sleep(wait)
+    raise AssertionError("unreachable")
+
+
+def _retry_after(headers: dict) -> float:
+    try:
+        return min(float(_header(headers, "retry-after") or 0), 300.0)
+    except ValueError:
+        return 0.0
 
 
 def _header(headers: dict, name: str) -> str:

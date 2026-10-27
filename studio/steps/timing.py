@@ -72,12 +72,21 @@ def run(job: Path, ask=brain.ask) -> str:
 
 
 def is_done(job: Path) -> bool:
+    """Every Timing is there, times the bundle's lines as they now stand, and is newer than its audio."""
     try:
-        for kind in media.TIMED:
-            jobs.read(job / media.timing_path(kind), Timing)
+        bundle = jobs.read(job / "bundle.json", Bundle)
+        expected = {"song": [line.id for line in bundle.lyrics],
+                    "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")],
+                    "frq": [i for i, _ in audio_step.speech_lines(bundle, "frq")]}
+        for kind, ids in expected.items():
+            path = job / media.timing_path(kind)
+            if timing_problems(jobs.read(path, Timing), ids):
+                return False
+            if path.stat().st_mtime < (job / media.audio_path(kind)).stat().st_mtime:
+                return False  # the audio was made again after it was timed
     except (OSError, ValueError):
         return False
-    return True
+    return audio_step.is_done(job)
 
 
 def _check(timing: Timing, line_ids: list[str], kind: str) -> None:

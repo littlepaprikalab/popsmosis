@@ -135,3 +135,24 @@ def test_timing_waits_for_the_audio(tmp_path):
     with pytest.raises(media.StepFailed, match="audio step"):
         timing.run(job)
     assert not timing.is_done(job)
+
+
+def test_timings_are_not_done_once_the_audio_or_the_lines_change(made, monkeypatch):
+    import os
+
+    monkeypatch.setattr(timing, "separate_vocals", lambda job: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([]))
+    timing.run(made)
+    assert timing.is_done(made)
+
+    timed = made / media.timing_path("song")
+    earlier = (made / media.audio_path("song")).stat().st_mtime - 10
+    os.utime(timed, (earlier, earlier))  # the song was made again after it was timed
+    assert not timing.is_done(made)
+    timing.run(made)
+    assert timing.is_done(made)
+
+    data = sample_media.bundle().model_dump()
+    data["frq"]["model_answer_steps"].append("The flow drives the synthase.")
+    jobs.write(made / "bundle.json", sample_media.bundle().model_validate(data))
+    assert not timing.is_done(made)  # a line to time that has no timing yet

@@ -38,6 +38,7 @@ def job(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.delenv("ELEVENLABS_VOICE_ID", raising=False)
     monkeypatch.setattr(audio, "duration", lambda path: 30.0)
+    monkeypatch.setattr(audio, "sleep", lambda seconds: None)
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
@@ -122,3 +123,59 @@ def test_a_refusal_or_a_missing_key_fails_the_step(job, monkeypatch):
     monkeypatch.delenv("ELEVENLABS_API_KEY")
     with pytest.raises(media.StepFailed, match="ELEVENLABS_API_KEY"):
         audio.run(job)
+
+
+def test_a_busy_server_or_a_dropped_connection_is_tried_again(job, monkeypatch):
+    fake, answers, waits = FakeEleven(), [], []
+    monkeypatch.setattr(audio, "sleep", waits.append)
+
+    def flaky(method, url, headers, body):
+        answers.append(url)
+        if len(answers) == 1:
+            return 429, {"Retry-After": "30"}, b'{"detail": "too many concurrent requests"}'
+        if len(answers) == 2:
+            raise audio.NoAnswer("connection reset")
+        return fake(method, url, headers, body)
+
+    monkeypatch.setattr(audio, "send", flaky)
+    audio.run(job)
+    assert waits == [30.0, 20] and len(fake.requests) == 3 and audio.is_done(job)
+
+
+def test_a_timeout_or_a_server_that_stays_busy_fails_without_more_calls(job, monkeypatch):
+    calls = []
+
+    def times_out(method, url, headers, body):
+        calls.append(url)
+        raise media.StepFailed("ElevenLabs took over 600s to answer")
+
+    monkeypatch.setattr(audio, "send", times_out)
+    with pytest.raises(media.StepFailed, match="600s"):
+        audio.run(job)
+    assert len(calls) == 1  # the song may still be being made, and billed
+
+    monkeypatch.setattr(audio, "send", FakeEleven(status=503))
+    with pytest.raises(media.StepFailed, match="503"):
+        audio.run(job)
+    assert len(audio.send.requests) == 1 + len(audio.RETRY_WAITS_S)
+
+
+def test_a_song_cut_off_before_its_audio_is_written_is_made_again(job, monkeypatch):
+    fake = FakeEleven()
+    monkeypatch.setattr(audio, "send", fake)
+    audio.run(job)
+    (job / "audio/song.plan.json").unlink()  # as if killed between the two writes of an older layout
+    assert not audio.is_done(job)
+    audio.run(job)
+    assert sum("/v1/music" in url for url in fake.urls()) == 2 and audio.is_done(job)
+
+
+def test_speech_too_long_for_one_call_fails_before_spending_anything(job, monkeypatch):
+    fake = FakeEleven()
+    monkeypatch.setattr(audio, "send", fake)
+    data = sample_media.bundle().model_dump()
+    data["narration"][0]["text"] = "word " * 2100
+    jobs.write(job / "bundle.json", sample_media.bundle().model_validate(data))
+    with pytest.raises(media.StepFailed, match="characters"):
+        audio.run(job)
+    assert not any("text-to-speech" in url for url in fake.urls())
