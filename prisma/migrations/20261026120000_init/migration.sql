@@ -5,9 +5,6 @@ CREATE SCHEMA IF NOT EXISTS "public";
 CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'APPROVED', 'DENIED');
-
--- CreateEnum
 CREATE TYPE "QuestionStatus" AS ENUM ('PENDING', 'ANSWERED');
 
 -- CreateTable
@@ -18,9 +15,6 @@ CREATE TABLE "users" (
     "name" TEXT,
     "avatarUrl" TEXT,
     "role" "UserRole" NOT NULL DEFAULT 'USER',
-    "status" "UserStatus" NOT NULL DEFAULT 'PENDING',
-    "reviewedAt" TIMESTAMP(3),
-    "reviewedById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -37,19 +31,6 @@ CREATE TABLE "agents" (
     "lastSeenAt" TIMESTAMP(3),
 
     CONSTRAINT "agents_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "user_tokens" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "tokenHash" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "lastUsedAt" TIMESTAMP(3),
-    "revokedAt" TIMESTAMP(3),
-
-    CONSTRAINT "user_tokens_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -112,19 +93,10 @@ CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 CREATE UNIQUE INDEX "users_googleId_key" ON "users"("googleId");
 
 -- CreateIndex
-CREATE INDEX "users_status_createdAt_idx" ON "users"("status", "createdAt");
-
--- CreateIndex
 CREATE UNIQUE INDEX "agents_name_key" ON "agents"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "agents_apiKeyHash_key" ON "agents"("apiKeyHash");
-
--- CreateIndex
-CREATE UNIQUE INDEX "user_tokens_tokenHash_key" ON "user_tokens"("tokenHash");
-
--- CreateIndex
-CREATE INDEX "user_tokens_userId_createdAt_idx" ON "user_tokens"("userId", "createdAt" DESC);
 
 -- CreateIndex
 CREATE INDEX "questions_status_createdAt_idx" ON "questions"("status", "createdAt");
@@ -161,12 +133,6 @@ CREATE INDEX "attachments_replyId_idx" ON "attachments"("replyId");
 
 -- CreateIndex
 CREATE INDEX "attachments_createdAt_idx" ON "attachments"("createdAt");
-
--- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "user_tokens" ADD CONSTRAINT "user_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "questions" ADD CONSTRAINT "questions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

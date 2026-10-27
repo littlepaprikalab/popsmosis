@@ -5,8 +5,6 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
-  | 'PENDING_APPROVAL' // signed in, an admin has not approved the account yet
-  | 'ACCESS_DENIED' // signed in, an admin denied the account
   | 'RATE_LIMITED'
   | 'CONFLICT'
   | 'GONE' // it was there once and is no longer kept
@@ -16,8 +14,6 @@ const STATUS_MAP: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
-  PENDING_APPROVAL: 403,
-  ACCESS_DENIED: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
   GONE: 410,

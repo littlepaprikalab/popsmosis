@@ -21,9 +21,7 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `GOOGLE_REDIRECT_URI` | `https://popsmosis-web.onrender.com/auth/callback` | your web hostname + `/auth/callback` |
 | `ALLOWED_ORIGINS` | `https://popsmosis-web.onrender.com` | your web origin |
 | `API_BASE_URL` | `https://popsmosis-api.onrender.com` | your API hostname; goes into the downloaded skill file |
-| `ALLOWED_EMAIL_DOMAINS` | `yourcompany.com` | optional: these domains (and subdomains) are approved on sign-in without waiting; comma-separated |
-| `ALLOWED_EMAILS` | optional | exact addresses approved on sign-in without waiting (a contractor on gmail) |
-| `ADMIN_EMAILS` | `you@yourcompany.com` | Google emails that get the admin role (and approval) on sign-in. **Set this**: somebody has to approve everyone else |
+| `ADMIN_EMAILS` | `you@yourcompany.com` | Google emails that get the admin role on sign-in. **Set this**: somebody has to manage the agents. Anyone else with a Google account can sign in and use the site |
 | `NODE_ENV` | `production` | set by the blueprint |
 | `PORT` | `3001` | set by the blueprint |
 
@@ -130,13 +128,8 @@ either use the USERS page as an existing admin, run
 Supabase SQL editor:
 
 ```sql
-UPDATE users SET role = 'ADMIN', status = 'APPROVED' WHERE email = 'them@example.com';
+UPDATE users SET role = 'ADMIN' WHERE email = 'them@example.com';
 ```
-
-Set both columns: the role says what they may do, `status` says whether they get
-past the waiting page at all. (Granting only the role no longer strands them —
-the API approves an admin it finds waiting — but writing both keeps the USERS
-page honest immediately.)
 
 The API caches user lookups for 30 seconds, so the change lands within half a
 minute without a new sign-in.
@@ -177,10 +170,9 @@ agent  ──HTTPS──> popsmosis-api (Fastify, Render) ──TLS──> Supab
 ```
 
 - The session cookie is set on the web origin because the browser never leaves it.
-- Personal access tokens (`pk_pop_...`) and agent keys (`sk_pop_...`) are
-  exempt from the proxy gate: both are for callers with no browser in front of
-  them, so they reach the API directly. Their shape is what exempts them; the
-  route guard is what authenticates them.
+- Agent keys (`sk_pop_...`) are exempt from the proxy gate: an agent has no
+  browser in front of it, so it reaches the API directly. The key's shape is
+  what exempts it; the route guard is what authenticates it.
 - `PROXY_SECRET` makes the API refuse browser-style requests that did not come
   through the web app. Agent keys bypass that gate; `/api/health` is open.
 - Migrations run at the end of the API build. On a paid instance, move
@@ -201,10 +193,8 @@ and are applied during the build.
 | A 502 on `/api/auth/me` right after signing in, ~160KB of HTML in the response | the API service was unroutable for that moment — spun down on the free plan, or mid-deploy — so Render answered with its own error page (`x-render-routing: no-deploy`) instead of the API's JSON. The web app rides out and reports these windows rather than treating them as a signed-out user; moving `popsmosis-api` off the free plan is what removes them, since free services have no zero-downtime deploy and spin down when idle. `render.yaml` declares no `plan`, so upgrading in the dashboard is enough and a sync will not undo it |
 | `403 Direct API access not allowed` in the browser | `PROXY_SECRET` differs between the two services, or `NEXT_PUBLIC_API_URL` points somewhere else |
 | Sign-in bounces with `redirect_uri_mismatch` | Google Cloud redirect URI does not exactly equal `GOOGLE_REDIRECT_URI` |
-| Sign-in works but shows "Waiting for approval" | expected for anyone outside `ALLOWED_EMAIL_DOMAINS` / `ALLOWED_EMAILS` / `ADMIN_EMAILS`: an admin approves them on `/admin/users` (the USERS link shows a count). Approval lands within 30s on other instances, immediately on the one that handled the click |
-| Nobody can approve anyone | put your address in `ADMIN_EMAILS` and redeploy, or run `npm --workspace api run user:promote -- --email you@…`, which approves as well. An open waiting page picks the change up on its own within 30s; no new sign-in needed |
+| Nobody is an admin | put your address in `ADMIN_EMAILS` and redeploy, or run `npm --workspace api run user:promote -- --email you@…`. An open session picks the change up on its own within 30s; no new sign-in needed. If it does not, check the API log for `Could not persist the admin role from ADMIN_EMAILS` |
 | `… is listed in ADMIN_EMAILS` when removing an admin | that address is an admin by configuration and the API reapplies it on every request, so the demotion is refused rather than reverted a moment later. Take the address out of `ADMIN_EMAILS`, redeploy, then demote on the USERS page |
-| Someone made an admin is still on "Waiting for approval" | their `status` is still `PENDING`. The API repairs this the next time they load a page (within 30s); if it persists, the API did not restart after the config change, or the write is failing — check the API log for `Could not persist the access fix` |
 | Sign-in works but CORS errors appear | `ALLOWED_ORIGINS` does not include the web origin (only matters if the browser hits the API directly) |
 | Agent gets `401` | wrong key; `403` means the agent is disabled on `/admin/agents` |
 | Build fails in `prisma generate` | the `postinstall` step needs the schema at `prisma/schema.prisma`; do not move it |
