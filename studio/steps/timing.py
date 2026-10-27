@@ -8,6 +8,7 @@
     timing/frq_words.json
     timing/song_report.json       how sure the aligner was of each line, and chorus drift
     audio/song.vocals.wav         the separated vocals, 16 kHz mono, kept so a re-run skips Demucs
+                                  (until the song is made again)
 
 Drift: a chorus line sung several times should take about as long each time. A
 repeat more than DRIFT_S away from the median of its repeats is flagged in the
@@ -40,6 +41,7 @@ DRIFT_S = 0.5
 MARGIN_S = 2.0  # how far past its planned ends each section's window reaches
 LOW_SCORE = 0.3  # a line the aligner is this unsure of was probably sung differently
 SAMPLE_RATE = 16000
+CHUNK_S = 30  # the aligner's front end hears a longer window this much at a time (_emission)
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
@@ -298,7 +300,7 @@ def separate_vocals(job: Path):
     import torch
 
     path = job / VOCALS
-    if path.exists():
+    if vocals_current(job):
         with wave.open(str(path), "rb") as f:
             pcm = np.frombuffer(f.readframes(f.getnframes()), dtype=np.int16)
         return torch.from_numpy(pcm.astype(np.float32) / 32768).unsqueeze(0)
@@ -327,6 +329,15 @@ def separate_vocals(job: Path):
     return vocals
 
 
+def vocals_current(job: Path) -> bool:
+    """The kept vocals were separated from the song as it now is: they are newer than it. A song
+    made again (other lines, another SONG_PROVIDER) has its vocals separated again."""
+    try:
+        return (job / VOCALS).stat().st_mtime >= (job / media.audio_path("song")).stat().st_mtime
+    except OSError:
+        return False
+
+
 def _decode(path: Path, rate: int, channels: int):
     """An audio file as float32 samples, (channels, samples), through ffmpeg."""
     import numpy as np
@@ -348,10 +359,65 @@ def mms_aligner() -> Aligner:
 
     def align(window, words: list[str]) -> list[tuple[float, float, float]]:
         with torch.inference_mode():
-            emission, _ = model(window)
+            emission = _emission(model, window)
         spans = aligner(emission[0], tokenizer(["*", *words, "*"]))[1:-1]
         seconds = window.size(1) / emission.size(1) / SAMPLE_RATE
         return [(s[0].start * seconds, s[-1].end * seconds, sum(t.score * len(t) for t in s) / sum(len(t) for t in s))
                 for s in spans]
 
     return align
+
+
+def _emission(model, window):
+    """MMS's emission for a window, the same as `model(window)[0]` in a fraction of the memory.
+
+    The memory goes on the convolutional front end, about 17 MB a second of audio, which
+    a whole song (a Gemini one) would push past 4 GB. Each of its frames hears only a
+    few hundred samples and is normalised on its own, so it runs CHUNK_S at a time and
+    gives exactly the frames one pass would; the transformer after it still hears the
+    whole window. A model of another shape (torchaudio changed) gets one pass.
+    """
+    import torch
+
+    shape = _front_end(model)
+    if shape is None or window.size(1) <= CHUNK_S * SAMPLE_RATE:
+        return model(window)[0]
+    field, stride = shape
+    inner = model.model
+    x = torch.nn.functional.layer_norm(window, window.shape) if model.normalize_waveform else window
+    frames = (x.size(1) - field) // stride + 1
+    step = CHUNK_S * SAMPLE_RATE // stride
+    pieces = [inner.feature_extractor(x[:, stride * f0:stride * (min(frames, f0 + step) - 1) + field], None)[0]
+              for f0 in range(0, frames, step)]
+    out = inner.encoder(torch.cat(pieces, dim=1), None)
+    if inner.aux is not None:
+        out = inner.aux(out)
+    if model.apply_log_softmax:
+        out = torch.nn.functional.log_softmax(out, dim=-1)
+    if model.append_star:
+        out = torch.cat((out, torch.zeros((1, out.size(1), 1), dtype=out.dtype, device=out.device)), dim=-1)
+    return out
+
+
+def _front_end(model) -> tuple[int, int] | None:
+    """How many samples one frame of the front end hears, and how far apart frames are: (400, 320)
+    for MMS. None unless the model is torchaudio's wrapped Wav2Vec2 with frame-local norms only."""
+    import torch
+
+    try:
+        inner, layers = model.model, model.model.feature_extractor.conv_layers
+        if not all(hasattr(model, a) for a in ("normalize_waveform", "apply_log_softmax", "append_star")):
+            return None
+        if not all(hasattr(inner, a) for a in ("encoder", "aux")):
+            return None
+        field, stride = 1, 1
+        for layer in layers:
+            if layer.layer_norm is not None and not isinstance(layer.layer_norm, torch.nn.LayerNorm):
+                return None  # a GroupNorm spans the whole window: pieces would differ
+            if layer.conv.padding not in ((0,), 0, "valid") or layer.conv.dilation != (1,):
+                return None
+            field += (layer.conv.kernel_size[0] - 1) * stride
+            stride *= layer.conv.stride[0]
+        return field, stride
+    except (AttributeError, TypeError, IndexError):
+        return None

@@ -1,15 +1,16 @@
 import base64
-import io
 import json
 import shutil
 import subprocess
-import wave
+from pathlib import Path
 
 import pytest
 
 from studio import jobs, media
 from studio.steps import audio
 from studio.tests import sample_media
+
+AS_MP3, DURATION = audio.as_mp3, audio.duration  # the real ones, which the job fixture stands in for
 
 
 class FakeEleven:
@@ -72,6 +73,7 @@ def job(tmp_path, monkeypatch):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(audio, "duration", lambda path: 30.0)
     monkeypatch.setattr(audio, "sleep", lambda seconds: None)
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)  # the fakes' songs are not real audio
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
@@ -339,18 +341,74 @@ def test_an_unknown_provider_fails_before_any_call(job, monkeypatch):
     assert fake.requests == []
 
 
+def _probe(path):
+    out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=format_name:stream=bit_rate",
+                          "-of", "json", str(path)], capture_output=True, text=True, check=True).stdout
+    found = json.loads(out)
+    return found["format"]["format_name"], found["streams"][0]["bit_rate"]
+
+
+def _sound(seconds, *args):
+    """Stereo 44.1 kHz noise, near silent for its first half and loud after (as a song's intro and
+    chorus differ), encoded with ffmpeg's args, as bytes."""
+    source = f"anoisesrc=d={seconds}:a=0.5:r=44100,volume='if(lt(t,{seconds / 2}),0.0005,1)':eval=frame"
+    return subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", source, "-ac", "2", *args, "pipe:1"],
+                          capture_output=True, check=True).stdout
+
+
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
-def test_a_wav_song_is_kept_as_an_mp3(job, monkeypatch):
-    pcm = io.BytesIO()
-    with wave.open(pcm, "wb") as f:
-        f.setnchannels(2)
-        f.setsampwidth(2)
-        f.setframerate(44100)
-        f.writeframes(b"\0\0\0\0" * 22050)  # half a second of silence
-    monkeypatch.setattr(audio, "send", FakeGemini(song=pcm.getvalue(), mime_type="audio/wav"))
+@pytest.mark.parametrize("sent, mime_type", [
+    (("-f", "wav"), "audio/wav"),
+    # a variable-bitrate MP3 with no length header: its length cannot be read from it as it is
+    (("-codec:a", "libmp3lame", "-q:a", "0", "-write_xing", "0", "-f", "mp3"), "audio/mpeg"),
+])
+def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, monkeypatch, sent, mime_type):
+    song = _sound(6, *sent)
+    if "-write_xing" in sent:
+        assert abs(DURATION_OF(song) - 6.0) > 0.15  # as sent, its length reads wrong (3% here)
+    monkeypatch.setattr(audio, "as_mp3", AS_MP3)
+    monkeypatch.setattr(audio, "send", FakeGemini(song=song, mime_type=mime_type))
     monkeypatch.setenv("SONG_PROVIDER", "gemini")
     audio.run(job)
-    found = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=format_name", "-of", "csv=p=0",
-                            str(job / "audio/song.mp3")], capture_output=True, text=True, check=True).stdout
-    assert found.strip() == "mp3"
-    assert json.loads((job / audio.plan_path("song")).read_text())["mime_type"] == "audio/wav"
+    assert _probe(job / "audio/song.mp3") == ("mp3", "192000")
+    assert abs(DURATION(job / "audio/song.mp3") - 6.0) < 0.1  # the MP3's own padding, a few hundredths
+    assert json.loads((job / audio.plan_path("song")).read_text())["mime_type"] == mime_type
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+def test_a_song_ffmpeg_cannot_read_fails_the_step_and_keeps_nothing(job, monkeypatch):
+    monkeypatch.setattr(audio, "as_mp3", AS_MP3)
+    monkeypatch.setattr(audio, "send", FakeGemini(song=b"not audio at all", mime_type="audio/mpeg"))
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    with pytest.raises(media.StepFailed, match="cannot keep Gemini's song .audio/mpeg. as an MP3"):
+        audio.run(job)
+    assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
+
+
+
+def DURATION_OF(data):
+    """The length ffprobe reads from audio bytes, as the later steps would read it from a file."""
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".mp3") as f:
+        f.write(data)
+        f.flush()
+        return DURATION(Path(f.name))
+
+
+def test_a_gemini_quota_error_waits_as_long_as_it_asks(job, monkeypatch):
+    fake, waits = FakeGemini(), []
+    monkeypatch.setattr(audio, "sleep", waits.append)
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    quota = {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "Quota exceeded", "details": [
+        {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "33s"}]}}
+
+    def busy_once(method, url, headers, body):
+        if "generativelanguage" in url and not fake.gemini():
+            fake.requests.append((url, headers, json.loads(body)))
+            return 429, {}, json.dumps(quota).encode()
+        return fake(method, url, headers, body)
+
+    monkeypatch.setattr(audio, "send", busy_once)
+    audio.run(job)
+    assert waits == [33.0] and len(fake.gemini()) == 2 and audio.is_done(job)
+    assert audio._retry_after({}, b"not json") == 0.0 and audio._retry_after({"Retry-After": "900"}) == 300.0

@@ -29,6 +29,7 @@ import base64
 import json
 import os
 import subprocess
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -45,7 +46,7 @@ GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
 SONG_PROVIDERS = ("elevenlabs", "gemini")
 MUSIC_MODEL = "music_v2_5"
 GEMINI_SONG_MODEL = "lyria-3.5"  # Lyria's full-length songs, sung from lyrics given in the prompt
-MP3_TYPES = ("audio/mpeg", "audio/mp3")
+SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this rate
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
@@ -267,8 +268,7 @@ def _make_gemini_song(job: Path, bundle: Bundle) -> None:
     if status != 200:
         raise media.StepFailed(f"Gemini refused the song: {status} {_error(answer)}")
     audio, mime_type, said = read_gemini_song(answer)
-    if mime_type.split(";")[0].strip().lower() not in MP3_TYPES:
-        audio = _to_mp3(audio, mime_type)  # so audio/song.mp3 is what its name and its upload say
+    audio = as_mp3(audio, mime_type)
     # The plan first, then the audio: the audio file is what says the song is made.
     jobs.write(job / plan_path("song"), {
         "source": song_lines(bundle), "provider": "gemini", "model_id": model,
@@ -313,14 +313,26 @@ def _mime(inline: dict) -> str:
     return str(inline.get("mimeType") or inline.get("mime_type") or "")
 
 
-def _to_mp3(audio: bytes, mime_type: str) -> bytes:
-    """Audio of another type (WAV, say) as an MP3, through ffmpeg."""
-    try:
-        return subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-vn", "-codec:a", "libmp3lame", "-b:a", "192k",
-                               "-f", "mp3", "pipe:1"], input=audio, capture_output=True, check=True).stdout
-    except (OSError, subprocess.CalledProcessError) as e:
-        detail = e.stderr.decode("utf-8", "replace").strip()[:200] if isinstance(e, subprocess.CalledProcessError) else e
-        raise media.StepFailed(f"cannot turn Gemini's {mime_type or 'untyped'} song into an MP3: {detail}") from e
+def as_mp3(audio: bytes, mime_type: str) -> bytes:
+    """Lyria's song as a constant-bitrate MP3, whatever it sent (an MP3 of any kind, a WAV).
+
+    Every later step reads audio/song.mp3's length from its header (ffprobe), and a
+    variable-bitrate MP3 without one reads as the wrong length; the upload calls it
+    audio/mpeg. So the song is always encoded again, once, from a file to a file, so
+    ffmpeg can seek the input and write the output's length header.
+    """
+    with tempfile.TemporaryDirectory(prefix="popsmosis-song-") as tmp:
+        source, out = Path(tmp) / "lyria", Path(tmp) / "song.mp3"
+        source.write_bytes(audio)
+        try:
+            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-vn", "-codec:a", "libmp3lame",
+                            "-b:a", SONG_BITRATE, str(out)], capture_output=True, check=True, timeout=300)
+            return out.read_bytes()
+        except subprocess.CalledProcessError as e:
+            detail = e.stderr.decode("utf-8", "replace").strip()[:200]
+        except (OSError, subprocess.TimeoutExpired) as e:
+            detail = str(e)
+    raise media.StepFailed(f"cannot keep Gemini's song ({mime_type or 'no type given'}) as an MP3: {detail}")
 
 
 # --- narration and the exam question ------------------------------------------------------
@@ -402,16 +414,25 @@ def _call(method: str, url: str, headers: dict, body: dict) -> tuple[int, dict, 
         else:
             if status not in RETRY_STATUSES or wait is None:
                 return status, answer_headers, answer
-            wait = max(wait, _retry_after(answer_headers))
+            wait = max(wait, _retry_after(answer_headers, answer))
         sleep(wait)
     raise AssertionError("unreachable")
 
 
-def _retry_after(headers: dict) -> float:
+def _retry_after(headers: dict, body: bytes = b"") -> float:
+    """How long the server asked to be left: its Retry-After header, or the retryDelay ("33s") the
+    Gemini API puts in a quota error's body instead. At most 300 s."""
     try:
-        return min(float(_header(headers, "retry-after") or 0), 300.0)
+        asked = float(_header(headers, "retry-after") or 0)
     except ValueError:
-        return 0.0
+        asked = 0.0
+    try:
+        details = json.loads(body).get("error", {}).get("details", [])
+        delays = [d["retryDelay"] for d in details if isinstance(d, dict) and isinstance(d.get("retryDelay"), str)]
+        asked = max([asked] + [float(delay.rstrip("s")) for delay in delays])
+    except (ValueError, AttributeError, TypeError):
+        pass
+    return min(asked, 300.0)
 
 
 def _header(headers: dict, name: str) -> str:

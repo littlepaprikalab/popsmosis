@@ -280,10 +280,12 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
   https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent` with
   one text prompt: the style tags (the same tempo tag), the length, the planned structure
   as timestamp ranges (`[0:09 - 0:13] Chorus`) and the lyrics under section tags, to sing
-  word for word. The answer carries the MP3 (a WAV is converted) and the lyrics Lyria
-  wrote down. Lyria keeps to the planned times only roughly, so the song's plan says its
-  sections are not pinned and step 6 aligns it as a whole. Switching the provider makes a
-  job's song again, not its speech.
+  word for word. The answer carries the audio and the lyrics Lyria wrote down; the audio,
+  an MP3 or a WAV, is always encoded again as a 192 kbps constant-bitrate MP3, so its
+  length reads true (a variable-bitrate MP3 without a length header reads a few percent
+  off). A quota error waits the `retryDelay` it names. Lyria keeps to the planned times
+  only roughly, so the song's plan says its sections are not pinned and step 6 aligns it
+  as a whole. Switching the provider makes a job's song again, not its speech.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
 - **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict
@@ -294,8 +296,12 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
 
 - **Song:** Demucs `--two-stems=vocals`, then the MMS aligner
   (`torchaudio.pipelines.MMS_FA`) on `vocals.wav` against the exact lyrics, section by
-  section; a Lyria song, whose sections are not where they were planned, all at once
-  (about 70 s and 4.5 GB for 3 minutes on CPU).
+  section; a Lyria song, whose sections are not where they were planned, all at once.
+  The aligner's convolutional front end, where its memory goes, runs 30 s of audio at a
+  time and gives exactly the frames one pass would, so a window of any length peaks near
+  2.2 GB (one pass took 4.5 GB for 3 minutes, and grows with the song); 3 minutes take
+  about 50 s on 4 CPUs. The separated vocals are kept, and separated again once the song
+  is made again.
 - **Narration:** ElevenLabs' character timings converted to words.
 - **Checks:** repeated chorus lines should have near-identical durations; flag any line
   that drifts more than 0.5 s. If a section was sung wrong, regenerate that section only.
