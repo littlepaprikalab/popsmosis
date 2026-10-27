@@ -49,9 +49,67 @@ export function totalCost(b: Breakdown): string {
 const cell = 'py-1 pr-3 align-top';
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 
+/** Who made a model or tool, as a chip after its name. Nothing when the API does not know. */
+function MakerChip({ maker }: { maker: string | null }) {
+  if (!maker) return null;
+  return (
+    <span data-testid="maker" className="inline-block ml-1.5 align-middle whitespace-nowrap text-[9px] uppercase px-1.5 py-px rounded-full font-semibold"
+      style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+      {maker}
+    </span>
+  );
+}
+
+interface Made {
+  name: string;
+  version: string | null; // a tool's, as installed on the studio's machine; a model's name is its version
+  maker: string | null;
+  steps: string[]; // the steps that used it, as the bill names them
+}
+
+/** Every model and tool the bill names, once each, in the order the steps first used them. */
+function madeWith(b: Breakdown): Made[] {
+  const made = new Map<string, Made>();
+  for (const s of b.steps) {
+    const label = STEP_LABELS[s.step] ?? s.step;
+    const used = [...s.models.map((m) => ({ name: m.model, version: null, maker: m.maker })), ...(s.tools ?? [])];
+    for (const { name, version, maker } of used) {
+      const key = `${name} ${version ?? ''}`;
+      const row = made.get(key) ?? { name, version, maker, steps: [] };
+      if (!row.steps.includes(label)) row.steps.push(label);
+      made.set(key, row);
+    }
+  }
+  return [...made.values()];
+}
+
+/** What the droplet was made with: each model and tool once, with its version, its maker and where it was used. */
+function MadeWith({ breakdown }: { breakdown: Breakdown }) {
+  const rows = madeWith(breakdown);
+  if (rows.length === 0) return null;
+  return (
+    <div data-testid="made-with" className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border)' }}>
+      <div className="text-[9px] uppercase tracking-wider font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Made with</div>
+      <ul className="space-y-1">
+        {rows.map((r) => (
+          <li key={`${r.name} ${r.version ?? ''}`} data-testid="made-with-item" className="flex flex-wrap items-center gap-x-2">
+            <span className="min-w-0 break-all" style={{ color: 'var(--text-primary)' }}>
+              {r.name}
+              {r.version && <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}> {r.version}</span>}
+              <MakerChip maker={r.maker} />
+            </span>
+            <span className="ml-auto text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>{r.steps.join(' · ')}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
- * with how many calls and what they cost, how long it took, and the totals. Folded until opened,
+ * with how many calls and what they cost, how long it took, and the totals; then everything it was
+ * made with, each model and tool with its version and its maker. Folded until opened,
  * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
  */
 export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; video: Video | null }) {
@@ -64,6 +122,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
       && 'The times add up to more than the total: the diagrams and the audio are made side by side.',
     steps.some((s) => s.tries > 1) && 'A step tried more than once counts every try, in time and in cost.',
     steps.some((s) => s.models.some((m) => m.costUsd === 0)) && 'free: run on the studio’s own machine.',
+    steps.some((s) => s.tools?.some((t) => t.version)) && 'Versions: as installed on the studio’s machine that made the videos.',
     breakdown.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',
     breakdown.unpriced > 0 && 'n/a: the provider did not say what it charged.',
     video?.status === 'RENDERING' && (steps.some((s) => s.part === 'videos')
@@ -109,7 +168,9 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
                           </>
                         )}
                       </td>
-                      <td className={`${cell} break-all`}>{m ? m.model : <span style={{ color: 'var(--text-muted)' }}>code</span>}</td>
+                      <td className={`${cell} break-all`}>
+                        {m ? <>{m.model}<MakerChip maker={m.maker} /></> : <span style={{ color: 'var(--text-muted)' }}>code</span>}
+                      </td>
                       <td className={num}>{m ? m.calls : ''}</td>
                       <td className={num}>{j === 0 ? duration(s.seconds) : ''}</td>
                       <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{m ? modelCost(m) : '—'}</td>
@@ -127,6 +188,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
             </tr>
           </tfoot>
         </table>
+        <MadeWith breakdown={breakdown} />
         {notes.length > 0 && (
           <ul className="mt-2 space-y-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
             {notes.map((n) => <li key={n}>{n}</li>)}
@@ -155,7 +217,7 @@ function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
             </div>
             {s.models.map((m) => (
               <div key={m.model} className="flex gap-2 pl-6">
-                <span className="min-w-0 break-all">{m.model}{m.calls > 1 ? ` ×${m.calls}` : ''}</span>
+                <span className="min-w-0 break-all">{m.model}{m.calls > 1 ? ` ×${m.calls}` : ''}<MakerChip maker={m.maker} /></span>
                 <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{modelCost(m)}</span>
               </div>
             ))}

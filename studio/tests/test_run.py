@@ -303,6 +303,19 @@ def test_show_prints_a_run_that_was_cut_off(jobs_root, capsys):
     assert "factcheck cut off" in capsys.readouterr().out
 
 
+def test_show_prints_the_software_each_step_ran_with_its_version(jobs_root, capsys, monkeypatch):
+    from studio import ledger
+    from studio.__main__ import main
+
+    monkeypatch.setattr(ledger, "version", {"skia-python": "144.1"}.get)
+    operator_run.run("q1", api=FakeApi(), ask=FakeBrain())
+    (jobs_root / "q1" / "run.current.json").write_text(json.dumps(
+        {"started": "t", "part": "videos", "step": "render", "steps": [{"step": "render", "seconds": 157.0}]}))
+    assert main(["show", "q1", "--brief"]) == 0
+    [render] = [line for line in capsys.readouterr().out.splitlines() if line.strip().startswith("render")]
+    assert render.endswith("code; with skia-python 144.1, ffmpeg (version n/a)")
+
+
 def test_a_finished_run_leaves_no_current_run_behind(jobs_root):
     operator_run.run("q1", api=FakeApi(), ask=FakeBrain(bundle_error=brain.BrainError("overloaded")))
     assert not (jobs_root / "q1" / "run.current.json").exists()

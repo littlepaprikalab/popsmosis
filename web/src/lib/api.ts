@@ -194,9 +194,17 @@ export interface Video {
 /** One model's part in a step: how many calls, what they cost (api/src/lib/breakdown.ts). */
 export interface BreakdownModel {
   model: string;
+  maker: string | null; // who made it: Anthropic, Meta, Google, ElevenLabs...; null when the API does not know
   calls: number;
   costUsd: number | null; // null: charged in credits, with no price set for them
   credits: number | null; // what the provider charged in its own credits (ElevenLabs)
+}
+
+/** Software a step ran on the studio's machine besides its models, at the version installed there. */
+export interface BreakdownTool {
+  name: string; // demucs, torchaudio, torch, skia-python, ffmpeg
+  version: string | null;
+  maker: string | null;
 }
 
 export interface BreakdownStep {
@@ -206,6 +214,7 @@ export interface BreakdownStep {
   tries: number;
   costUsd: number;
   models: BreakdownModel[]; // empty: code alone
+  tools?: BreakdownTool[]; // empty: none, or a bill from before they were listed; absent from an API older than this page
 }
 
 /** How the droplet was made, step by step: its bill of materials. */

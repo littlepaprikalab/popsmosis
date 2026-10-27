@@ -234,8 +234,10 @@ the question routes; the reply queue's `context` is the compact part a follow-up
 
 Under each lesson on `/learn`, folded to its totals, is how the droplet was made: one line
 per step, the models that ran it with their number of calls and what they cost, how long
-it took, and the total time and cost. The studio logs every model call to the job's
-`calls.jsonl` with the step that made it (`studio/ledger.py`), and sends what it adds up to
+it took, and the total time and cost. Under that, **Made with** lists every model and tool
+once, with its version and a chip naming its maker, and the steps that used it. The studio
+logs every model call to the job's `calls.jsonl` with the step that made it
+(`studio/ledger.py`), and sends what it adds up to
 as `breakdown`: the lesson's steps with the lesson, the videos' with READY, or with the
 give-up when they fail, so a failed render's spend is on the bill too. The `answer` reads
 it back as
@@ -243,10 +245,26 @@ it back as
 ```json
 "breakdown": {
   "steps": [ { "step": "bundle", "part": "lesson", "seconds": 196.0, "tries": 1, "costUsd": 0.5312,
-               "models": [ { "model": "claude-opus-5-5", "calls": 1, "costUsd": 0.5312, "credits": null } ] } ],
+               "models": [ { "model": "claude-opus-5-5", "maker": "Anthropic", "calls": 1, "costUsd": 0.5312, "credits": null } ],
+               "tools": [] },
+             { "step": "timing", "part": "videos", "seconds": 110.2, "tries": 1, "costUsd": 0,
+               "models": [ { "model": "htdemucs", "maker": "Meta", "calls": 1, "costUsd": 0, "credits": null },
+                           { "model": "mms-fa", "maker": "Meta", "calls": 1, "costUsd": 0, "credits": null } ],
+               "tools": [ { "name": "demucs", "version": "4.1.0", "maker": "Meta" },
+                          { "name": "torchaudio", "version": "2.11.0+cpu", "maker": "Meta" },
+                          { "name": "torch", "version": "2.11.0+cpu", "maker": "Meta" },
+                          { "name": "ffmpeg", "version": "6.1.1-3ubuntu5", "maker": "FFmpeg" } ] } ],
   "seconds": 653.3, "costUsd": 0.7981, "credits": 3214, "unpriced": 0, "complete": false
 }
 ```
+
+`tools` is the software a step ran on the studio's machine besides its models (`TOOLS` in
+`studio/ledger.py`: skia for the art and the frames, ffmpeg for the audio and the videos,
+Demucs, torchaudio and PyTorch for the timing), each with the version installed on the
+machine that added up the bill, `null` when it could not be read. `python -m studio show`
+prints them too. The API adds each model's and tool's `maker` from its name (`makerOf` in
+`api/src/lib/breakdown.ts`), so bills stored before makers were shown have them as well;
+a name it does not know has `null`. A bill sent before tools were listed has none.
 
 Every try counts, in time and in cost, the failed ones too. `seconds` is wall time: the
 art and the audio are made side by side, so it is less than the steps added up. The brain

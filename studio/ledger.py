@@ -9,10 +9,14 @@ runs.jsonl.
 
 breakdown(job, part) puts the two together for the API, which keeps it with the droplet
 (`breakdown` on POST /api/questions/:id/answer and PATCH /api/answers/:id/video): each
-step's time and tries, what it cost, and the models that ran it.
+step's time and tries, what it cost, the models that ran it, and the other software it ran
+on this machine (TOOLS) at the version installed here.
 
     {"steps": [{"step": "bundle", "seconds": 186.2, "tries": 1, "costUsd": 0.5213,
-                "models": [{"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.5213, "credits": null}]},
+                "models": [{"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.5213, "credits": null}],
+                "tools": []},
+               {"step": "render", "seconds": 157.0, "tries": 1, "costUsd": 0, "models": [],
+                "tools": [{"name": "skia-python", "version": "144.1"}, {"name": "ffmpeg", "version": "7.1.1"}]},
                ...],
      "seconds": 312.4}
 
@@ -23,7 +27,10 @@ without ELEVENLABS_USD_PER_1K_CREDITS); its credits, when the provider said them
 from __future__ import annotations
 
 import contextlib
+import functools
+import importlib.metadata
 import json
+import subprocess
 import sys
 import threading
 import time
@@ -36,6 +43,15 @@ CALLS = "calls.jsonl"
 MAX_BYTES = 16 * 1024  # what the API takes (api/src/lib/breakdown.ts); a bigger one is left out, never refused
 LESSON_STEPS = ("request", "bundle", "factcheck", "post")  # studio/run.py's STEPS
 PARTS = {"lesson": LESSON_STEPS, "videos": media.MEDIA_STEPS}
+# The software each media step runs on this machine besides its models, by the name it is
+# installed under. The bill lists each with the version installed here (version()); the API
+# adds who made it. Steps that are the studio's own code alone have none.
+TOOLS = {
+    "art": ("skia-python",),  # draws the SVG art (studio/svg.py)
+    "audio": ("ffmpeg",),  # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
+    "timing": ("demucs", "torchaudio", "torch", "ffmpeg"),  # Demucs, the MMS aligner, ffmpeg decoding the song
+    "render": ("skia-python", "ffmpeg"),  # draws the frames, encodes the videos (studio/render/)
+}
 # How a call logged before calls were tagged with their step is told apart: by its label.
 LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
@@ -174,7 +190,8 @@ def breakdown(job: Path, part: str, running: tuple[str, float] | None = None) ->
         models = _models(calls.get(name, []))
         cost = round(sum(m["costUsd"] for m in models if m["costUsd"] is not None), 6)
         steps.append({"step": name, **timed.get(name, {"seconds": None, "tries": 0}),
-                      "costUsd": cost, "models": models})
+                      "costUsd": cost, "models": models,
+                      "tools": [{"name": tool, "version": version(tool)} for tool in TOOLS.get(name, ())]})
     seconds = [_run_seconds(r) for r in runs]
     return {"steps": steps, "seconds": round(sum(s for s in seconds if s is not None), 1) if runs else None}
 
@@ -193,6 +210,23 @@ def try_breakdown(job: Path, part: str, running: tuple[str, float] | None = None
         print(f"breakdown left out: {size} bytes, more than the API takes ({MAX_BYTES})", file=sys.stderr)
         return None
     return report
+
+
+@functools.cache
+def version(tool: str) -> str | None:
+    """The version of a tool installed on this machine: a Python package's, or ffmpeg's. None when
+    it is not installed or does not say, so the bill shows the tool without one rather than failing."""
+    if tool != "ffmpeg":
+        try:
+            return importlib.metadata.version(tool)
+        except importlib.metadata.PackageNotFoundError:
+            return None
+    try:
+        out = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True, errors="replace", timeout=10).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
+    words = out.split(maxsplit=3)  # "ffmpeg version 7.1.1-1ubuntu1 Copyright (c) 2000-2025 the FFmpeg developers"
+    return words[2] if words[:2] == ["ffmpeg", "version"] and len(words) > 2 else None
 
 
 def _models(rows: list[dict]) -> list[dict]:

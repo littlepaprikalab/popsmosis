@@ -90,7 +90,7 @@ test.describe('videos on /learn', () => {
     expect(await onTab()).toBe(true);
   });
 
-  test('a finished droplet carries its bill of materials: each step, its models, time and cost', async ({ page, context }) => {
+  test('a finished droplet carries its bill of materials: each step, its models, time and cost, and what made it', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
@@ -108,6 +108,20 @@ test.describe('videos on /learn', () => {
     const table = bill.locator('table'); // the phone's copy of the bill is hidden at this width
     await expect(table.getByText('eleven_multilingual_v2')).toBeVisible();
     await expect(table.getByText('3,214 cr', { exact: true })).toBeVisible();
+    await expect(audio.getByTestId('maker')).toHaveText('Google'); // Lyria, the first of the step's models
+
+    // Everything it was made with, once each: the models and the tools, their versions and makers.
+    const made = bill.getByTestId('made-with-item');
+    await expect(made).toHaveCount(11);
+    await expect(made.first()).toContainText('claude-opus-5-5');
+    await expect(made.first()).toContainText('Write the lesson · Fact-check');
+    await expect(made.first().getByTestId('maker')).toHaveText('Anthropic');
+    for (const [name, maker] of [['htdemucs', 'Meta'], ['mms-fa', 'Meta'], ['demucs 4.1.0', 'Meta'],
+      ['torchaudio 2.11.0+cpu', 'Meta'], ['skia-python 144.1', 'Google'], ['eleven_multilingual_v2', 'ElevenLabs']]) {
+      await expect(made.filter({ hasText: name }).first().getByTestId('maker')).toHaveText(maker);
+    }
+    await expect(made.filter({ hasText: 'ffmpeg 6.1.1' })).toContainText('Song and voice · Time the words · Render');
+    await expect(bill.getByText('Versions: as installed on the studio’s machine that made the videos.')).toBeVisible();
 
     // The public tab shows the droplet, never its bill.
     await page.goto(`/droplets/${S.droplet}`);
