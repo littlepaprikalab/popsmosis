@@ -275,7 +275,7 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
   and per-character timings, so it needs no aligner.
 - **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict
   question, the model answer steps) into `audio/frq.mp3`. Both videos end on it. The
-  fact-check does not cover these lines yet; it has to before they are read aloud.
+  fact-check covers these lines (kind `frq`) and writes its fixes back into `bundle.frq`.
 
 ### Step 6: timing
 
@@ -453,8 +453,9 @@ takes some setup in the routine's environment:
   starts. The container is cached after the hook, so a cold environment pays about two
   minutes once and a warm run seconds.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
-  `api.elevenlabs.io`, `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI, and
-  wherever PyTorch and the Demucs and MMS weights download from (check on the first run).
+  `api.elevenlabs.io`, `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI,
+  `download.pytorch.org` (CPU PyTorch), `huggingface.co` (the Demucs weights, 81 MB) and
+  `dl.fbaipublicfiles.com` (the MMS aligner weights, 1.2 GB).
 - **Queue settings:** the lesson text is posted right after the fact-check, a few minutes
   in, so the topic leaves the queue before the long render starts. Keep
   `QUESTION_CLAIM_MINUTES` above the longest of steps 1–2 (the default, 20, is safe: the

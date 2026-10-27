@@ -10,7 +10,8 @@
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
     python -m studio step render <job-id>        # or a media step, once it is built (studio/media.py)
-    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, runs, calls
+    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
+    python -m studio fallback <job-id>           # the ffmpeg karaoke video, once the song is timed
 
 `run`, `fail`, `summary`, `videos`, `wait` and `recover` are the operator's
 (studio/run.py, studio/videos.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
@@ -35,13 +36,14 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import brain, checks, jobs, media
+from studio import ass_fallback, brain, checks, jobs, media
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.run import call_row, logged_ask
-from studio.schemas import CheckReport, FactCheckReport, Request
+from studio.schemas import CheckReport, FactCheckReport, Request, Timing
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
+from studio.steps import timing as timing_step
 
 STEPS = {"bundle": bundle_step.run, "check": checks.run, "factcheck": factcheck_step.run}
 # STARTED: the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
@@ -75,6 +77,8 @@ def main(argv: list[str] | None = None) -> int:
     step.add_argument("job")
     show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check, runs and calls")
     show.add_argument("job")
+    fallback = commands.add_parser("fallback", help="make the karaoke fallback video from the art, the song and its timing")
+    fallback.add_argument("job")
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
     args = parser.parse_args(argv)
@@ -110,6 +114,17 @@ def main(argv: list[str] | None = None) -> int:
         result, step, reason = operator_run.run(args.question)
         print(f"{result} {step}: {reason}")
         return EXIT_CODES[result]
+
+    if args.command == "fallback":
+        job = jobs.ROOT / args.job
+        if not job.is_dir():
+            parser.error(f"no job folder {job}")
+        try:
+            print(ass_fallback.make(job))
+        except (OSError, ValueError, media.StepFailed) as e:
+            print(f"fallback: failed: {e}", file=sys.stderr)
+            return 1
+        return 0
 
     if args.command == "plan":
         job = jobs.ROOT / (args.job or jobs.new_id(args.topic))
@@ -204,6 +219,15 @@ def print_job(job: Path, brief: bool = False) -> None:
                 print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}: {c.problem}", indent=2))
                 print(_wrap(f"- {c.before}", indent=4, first=4))
                 print(_wrap(f"+ {c.after}", indent=4, first=4) + "\n")
+    timed = [kind for kind in media.TIMED if (job / media.timing_path(kind)).exists()]
+    if timed:
+        print("\n## Timing\n")
+        for kind in timed:
+            timing = jobs.read(job / media.timing_path(kind), Timing)
+            print(f"  {kind:<10} {timing.duration:6.1f}s  {len(timing.lines)} lines")
+        if (job / timing_step.REPORT).exists():
+            report = json.loads((job / timing_step.REPORT).read_text(encoding="utf-8"))
+            print(_wrap(f"  song: {timing_step.song_notes(report)}", indent=4))
     runs = operator_run.read_jsonl(job / "runs.jsonl")
     if runs:
         print("\n## Runs\n")
