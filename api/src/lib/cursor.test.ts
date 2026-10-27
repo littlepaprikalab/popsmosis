@@ -8,7 +8,11 @@ describe('cursor', () => {
     expect(c).toBeTruthy();
     expect(decodeCursor(c)).toEqual({ createdAt: '2026-01-02T00:00:00.000Z', id: 'b' });
     const where = decodeCreatedAtIdCursor(c)!;
-    expect(where.OR).toHaveLength(2);
+    // A bound an index can seek to, and the tie-break on id among rows at the same instant.
+    expect(where).toEqual({
+      createdAt: { lte: new Date('2026-01-02T00:00:00Z') },
+      OR: [{ createdAt: { lt: new Date('2026-01-02T00:00:00Z') } }, { id: { lt: 'b' } }],
+    });
   });
   it('returns null when the page is short', () => {
     expect(encodeCreatedAtIdCursor([{ id: 'a', createdAt: new Date() }], 2)).toBeNull();

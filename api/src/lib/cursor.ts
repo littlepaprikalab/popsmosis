@@ -20,6 +20,12 @@ export function decodeCursor(cursor: string): CursorPayload | null {
 /**
  * Decode a compound (createdAt, id) cursor into a Prisma where-fragment that
  * does not skip rows with identical timestamps. Null when missing/malformed.
+ *
+ * "Older than the cursor" is `createdAt < c OR (createdAt = c AND id < i)`, written
+ * as `createdAt <= c AND (createdAt < c OR id < i)`, which means the same. The
+ * first half is a bound Postgres can seek a (…, createdAt, id) index to; the plain
+ * OR is not, so it read every row newer than the cursor and threw them away (49,984
+ * rows, 8.6 ms, for a deep page of a droplet's 60,000 comments; 0.1 ms this way).
  */
 export function decodeCreatedAtIdCursor(cursor: string | undefined): Record<string, unknown> | null {
   if (!cursor) return null;
@@ -31,9 +37,10 @@ export function decodeCreatedAtIdCursor(cursor: string | undefined): Record<stri
     return { createdAt: { lt: createdAt } };
   }
   return {
+    createdAt: { lte: createdAt },
     OR: [
       { createdAt: { lt: createdAt } },
-      { createdAt, id: { lt: decoded.id } },
+      { id: { lt: decoded.id } },
     ],
   };
 }

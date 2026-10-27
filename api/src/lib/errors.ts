@@ -47,7 +47,17 @@ export function isUniqueViolation(err: unknown): boolean {
   return !!err && typeof err === 'object' && 'code' in err && (err as { code: unknown }).code === 'P2002';
 }
 
-/** Prisma foreign-key violation: a row points at one that is no longer there. */
+/**
+ * A foreign key that points at nothing: the row it names was deleted under the write.
+ * Prisma says P2003 for its own queries; a raw query's comes back as the Postgres
+ * SQLSTATE 23503, on the error or one level down.
+ */
 export function isForeignKeyViolation(err: unknown): boolean {
-  return !!err && typeof err === 'object' && 'code' in err && (err as { code: unknown }).code === 'P2003';
+  if (!err || typeof err !== 'object') return false;
+  const { code, meta, cause } = err as { code?: unknown; meta?: { code?: unknown; driverAdapterError?: { cause?: { originalCode?: unknown; kind?: unknown } } }; cause?: unknown };
+  if (code === 'P2003' || code === '23503') return true;
+  if (meta?.code === '23503') return true;
+  const adapter = meta?.driverAdapterError?.cause;
+  if (adapter?.originalCode === '23503' || adapter?.kind === 'ForeignKeyConstraintViolation') return true;
+  return !!cause && cause !== err && isForeignKeyViolation(cause);
 }

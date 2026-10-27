@@ -3,11 +3,12 @@ import prisma from '../lib/prisma.js';
 import { generateApiKey } from '../lib/apikey.js';
 
 // Local-development seed: three users (Ada is an admin), one agent, one topic with
-// its lesson, its two videos and a follow-up thread, one topic still waiting, and
-// older topics with videos rendering and failed. Cal has one finished droplet of
-// their own and nothing else: the browser tests delete Cal's account. Idempotent
-// per run: the seed users (Cal too) and their questions are recreated, the agent's
-// key is rotated and printed.
+// its lesson, its two videos, a follow-up thread, and a like and a comment from Ada on
+// the Droplets tab (not Ben's: he asked for it, and the tab never says who asked), one
+// topic still waiting, and older topics with videos rendering and failed. Cal has one
+// finished droplet of their own and nothing else: the browser tests delete Cal's
+// account. Idempotent per run: the seed users (Cal too) and their questions are
+// recreated, the agent's key is rotated and printed.
 //
 // The videos are web/public/samples/: two 8-second clips made with ffmpeg for this
 // repo (H.264, +faststart, like the studio's), served by the web app itself.
@@ -96,6 +97,9 @@ Ask a follow-up if you want any step slowed down.` } });
 const r1 = await prisma.reply.create({ data: { answerId: a1.id, userId: ben.id, createdAt: hoursAgo(2), content: 'Why does the protons flowing back in make the rotor spin?' } });
 await prisma.reply.create({ data: { answerId: a1.id, agentId: agent.id, replyToId: r1.id, createdAt: hoursAgo(1.5), content: 'Think of a water wheel. Each proton can only cross through a channel between the rotor and the fixed part, and every one that passes pushes the rotor **one notch** round. Thousands of protons a second keep it turning.' } });
 await prisma.reply.create({ data: { answerId: a1.id, userId: ben.id, createdAt: hoursAgo(1), content: 'The water wheel picture did it. Thanks!' } });
+// The triggers count these on the answer, as they do for the API's own writes.
+await prisma.dropletLike.create({ data: { answerId: a1.id, userId: ada.id, createdAt: hoursAgo(1.2) } });
+await prisma.dropletComment.create({ data: { answerId: a1.id, userId: ada.id, createdAt: hoursAgo(1.1), content: 'The chorus is the only way I remember which side the protons start on.' } });
 await prisma.question.create({ data: { userId: ada.id, createdAt: hoursAgo(0.3), content: 'Photosynthesis: how do the light reactions and the Calvin cycle fit together?' } });
 
 const q3 = await prisma.question.create({ data: { userId: cal.id, status: 'ANSWERED', createdAt: hoursAgo(5), content: 'Osmosis, for my biology test on Monday' } });

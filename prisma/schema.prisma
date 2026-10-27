@@ -43,8 +43,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  questions Question[]
-  replies   Reply[]
+  questions       Question[]
+  replies         Reply[]
+  dropletLikes    DropletLike[]
+  dropletComments DropletComment[]
 
   @@map("users")
 }
@@ -118,9 +120,17 @@ model Answer {
   lessonBreakdown Json? // the steps up to the post, sent with the lesson
   videoBreakdown  Json? // the media steps, sent with READY
 
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  // The Droplets tab's thumbs-up and comments, counted. Kept by triggers on droplet_likes and droplet_comments
+  // (migration 20261031120000_droplet_engagement), never written by the API, so a cascade from a deleted user or a
+  // hand-run DELETE keeps them exact too.
+  likeCount    Int @default(0)
+  commentCount Int @default(0)
+
+  question Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  agent    Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
   replies  Reply[]
+  likes    DropletLike[]
+  comments DropletComment[]
 
   @@unique([questionId, agentId]) // second guard: one answer per agent per question
   @@index([agentId, createdAt(sort: Desc)])
@@ -173,4 +183,38 @@ model Attachment {
   @@index([replyId])
   @@index([createdAt]) // the retention sweep
   @@map("attachments")
+}
+
+// A signed-in person's thumbs-up on a droplet on the public Droplets tab (routes/droplets.ts). One per person per
+// droplet: the key is the pair, so liking twice is a no-op rather than a second row.
+model DropletLike {
+  answerId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([answerId, userId])
+  @@index([userId]) // a deleted user's likes go with them
+  @@map("droplet_likes")
+}
+
+// A public comment on a droplet on the Droplets tab. Unlike a Reply it is not addressed to the teacher, and anyone
+// can read it, signed in or not; it shows its author's name and picture, never their email or id.
+model DropletComment {
+  id             String   @id @default(cuid())
+  answerId       String
+  userId         String
+  content        String // 1..1000 chars, plain text
+  idempotencyKey String? // the Idempotency-Key it was posted with: a retried POST returns this comment instead of a second
+  createdAt      DateTime @default(now())
+
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([answerId, createdAt(sort: Desc), id(sort: Desc)]) // a droplet's comments, newest first, by cursor
+  @@index([userId, createdAt]) // the hourly limit; a deleted user's comments go with them
+  @@map("droplet_comments")
 }

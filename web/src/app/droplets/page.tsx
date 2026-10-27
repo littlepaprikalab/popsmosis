@@ -8,6 +8,8 @@ import { LoadingMessage } from '@/components/LoadingMessage';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { useToast } from '@/components/Toast';
 import { timeAgo } from '@/lib/time';
+import { LikeButton, formatCount } from '@/components/LikeButton';
+import { ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 
 /**
  * The public Droplets tab (docs/PLAN.md, section 10): every finished droplet, for
@@ -61,7 +63,7 @@ export default function DropletsPage() {
         <h2 className="text-2xl font-bold tracking-wider mb-1">DROPLETS</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           Every finished droplet, free to watch: a fact-checked lesson, a song to remember it by, and a lesson video.
-          No account needed. All made by AI.
+          No account needed to watch; sign in to like and comment. All made by AI.
         </p>
       </div>
 
@@ -78,27 +80,40 @@ export default function DropletsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {droplets.map((d, i) => {
             const poster = d.video.songPosterUrl || d.video.lessonPosterUrl;
+            // The like button sits beside the link, not inside it: a button within a link is
+            // not valid HTML, and a click on it would open the droplet too.
             return (
-              <Link key={d.id} href={`/droplets/${d.id}`} data-testid="droplet-card"
-                className="block rounded-lg overflow-hidden animate-fade-in transition-colors hover:brightness-110"
+              <article key={d.id} data-testid="droplet-card"
+                className="flex flex-col rounded-lg overflow-hidden animate-fade-in"
                 style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', animationDelay: `${Math.min(i, 12) * 60}ms` }}>
-                <div className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
-                  {poster ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- a remote Supabase still, no optimizer in front
-                    <img src={poster} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
-                  )}
-                </div>
-                <div className="p-4">
-                  {d.course && d.topic && (
-                    <p className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: 'var(--accent-purple)' }}>{d.course}</p>
-                  )}
-                  <h3 className="text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{d.course && d.topic ? d.topic : d.title}</h3>
-                  <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{d.excerpt}</p>
-                  <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>{timeAgo(d.createdAt)}</p>
-                </div>
-              </Link>
+                <Link href={`/droplets/${d.id}`} className="block flex-1 transition-colors hover:brightness-110">
+                  <div className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
+                    {poster ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- a remote Supabase still, no optimizer in front
+                      <img src={poster} alt="" loading="lazy" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
+                    )}
+                  </div>
+                  <div className="p-4">
+                    {d.course && d.topic && (
+                      <p className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: 'var(--accent-purple)' }}>{d.course}</p>
+                    )}
+                    <h3 className="text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{d.course && d.topic ? d.topic : d.title}</h3>
+                    <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{d.excerpt}</p>
+                    <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>{timeAgo(d.createdAt)}</p>
+                  </div>
+                </Link>
+                {d.likeCount !== undefined && (
+                  <div className="px-4 pb-3 flex items-center gap-3">
+                    <LikeButton dropletId={d.id} liked={!!d.liked} likeCount={d.likeCount} />
+                    <Link href={`/droplets/${d.id}#comments`} className="inline-flex items-center gap-1 text-xs hover-text" style={{ color: 'var(--text-secondary)' }}
+                      aria-label={`${d.commentCount ?? 0} ${d.commentCount === 1 ? 'comment' : 'comments'}`} data-testid="card-comments">
+                      <ChatBubbleLeftIcon className="w-4 h-4" aria-hidden /> {formatCount(d.commentCount ?? 0)}
+                    </Link>
+                  </div>
+                )}
+              </article>
             );
           })}
         </div>

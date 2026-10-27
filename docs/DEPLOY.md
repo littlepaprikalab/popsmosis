@@ -39,7 +39,8 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `NODE_ENV` | `production` | set by the blueprint |
 
 Optional API tuning: `DATABASE_POOL_SIZE` (default 5), `QUESTIONS_PER_USER_PER_DAY`
-(default 10), `REPLIES_PER_USER_PER_HOUR` (default 30), `ATTACHMENT_RETENTION_DAYS` (default
+(default 10), `REPLIES_PER_USER_PER_HOUR` (default 30), `DROPLET_COMMENTS_PER_USER_PER_HOUR`
+(default 30; comments on the Droplets tab), `ATTACHMENT_RETENTION_DAYS` (default
 30; how long the files sent with messages keep their bytes in Postgres, 0 for good),
 `VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
 failed).
