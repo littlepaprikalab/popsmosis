@@ -201,7 +201,10 @@ parts build on the facts it has already written.
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
    (`id`, `text`, `source_quote` when a study guide was given), `misconception`, `frq`
    (`prompt`, `predict_question`, `model_answer_steps[]`, `twist`).
-2. `scenes[3-6]`: hook, overview, one or two zoomed details. Each has `id`,
+2. `scenes[3-6]`: the hook (where it can, the topic in the learner's world), overview,
+   one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
+   in the colours of what they stand for) and a detail showing what happens when a part
+   fails. Each has `id`,
    `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
    One fixed colour per structure for the whole job.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in

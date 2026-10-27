@@ -79,9 +79,25 @@ Then:
 
 ## Scenes and structures
 
-Write 3 to 6 scenes in the order the videos use them: the hook first (id "hook"), then an
-overview (id "overview"), then one or two zoomed details (short ids such as
-"limbic-detail"). Each scene is one diagram.
+Write 3 to 6 scenes in the order the videos use them. Each scene is one diagram, and
+together they go from what the learner already knows to the parts they are learning:
+
+- The hook first (id "hook"). Where it can, it shows where the topic turns up in the
+  learner's world, at a scale they know, from the everyday detail in the facts (a
+  sprinter's leg muscle for ATP synthesis). The hook line is about what it shows.
+- Then an overview (id "overview"), then one or two zoomed details (short ids such as
+  "limbic-detail").
+- The droplet's analogy can have a scene of its own (id "analogy"), just before the
+  scene with the real thing it explains. It draws the everyday object, and each of its
+  parts that stands for a structure is a structure of its own (the "water wheel" for the
+  rotor), in the colour of the structure it stands for: the shared colour is how the
+  viewer sees which part matches which. A line that says one of its names plays over the
+  analogy scene; other lines can still use the analogy in other words.
+- When the second verse sings what happens when something fails, a detail scene can show
+  it: the same view as another scene with that one change drawn in (what blocks it as a
+  structure of its own, the flow that stopped left out).
+- For a younger audience, draw fewer structures in each scene (two or three) and leave
+  the finer parts out.
 
 - `image_prompt` describes the diagram's content for an illustrator: what is shown, from
   which view, and which structures must be visible and roughly where. Describe content
@@ -98,7 +114,8 @@ overview (id "overview"), then one or two zoomed details (short ids such as
   phrase a segmentation model can find in the image ("the small cauliflower-shaped
   structure at the back, below the cortex"). `color_hex` is its colour as #RRGGBB.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct
-  mid-tone colours that read well on white.
+  mid-tone colours that read well on white. Only an analogy part shares a colour, with the
+  structure it stands for.
 - Structures in one scene never overlap. A group (the brainstem, the limbic system, the
   cerebral cortex) and its parts (medulla and pons; amygdala and hippocampus; the four
   lobes) can't both be structures in the same scene. When the core idea is about groups,
@@ -258,8 +275,12 @@ order, keyed by `line_id`:
   while this scene has been on screen; never one not yet sung or spoken, since it is
   still a pale ghost. A line about no particular structure holds the whole scene ("" and
   zoom 1.0).
+- In the bridge, spotlight the structure the misconception is about, so the correction
+  lands on it.
 - `particles`: for a line about something that travels (a signal, a molecule), the
-  structures it travels between, in order; otherwise [].
+  structures it travels between, in order; otherwise []. Use them whenever a line tells
+  how something moves through the steps: the motion is what shows how a process works.
+  Where a failure scene shows the flow stopped, it has none.
 - `caption`: almost always "". At most one short caption (a few words) per song section,
   for a term worth seeing written.
 
