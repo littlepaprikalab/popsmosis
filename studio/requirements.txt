@@ -1,14 +1,14 @@
-# The brain, the first two steps and the media steps (docs/PLAN.md, section 9).
+# The studio and every media step (docs/PLAN.md, section 9). .claude/hooks/session-start.sh
+# installs all of it when a cloud session starts, the teacher routine's included.
 # Lower bounds are the versions the tests ran with.
 anthropic>=2.3,<3
 openai>=3.39,<4  # the Meta provider: Muse speaks the OpenAI API
 pydantic>=2.13,<3
 pytest>=9
 
-# Song timing (step 6): Demucs and the MMS forced aligner, on CPU. The CPU index keeps
-# PyTorch to ~200 MB instead of the CUDA build's gigabytes. torchaudio has been dropping
-# APIs (PLAN section 13); 2.11 still ships pipelines.MMS_FA and functional.forced_align,
-# so torch and torchaudio are pinned together and move only after timing tests pass.
+# The media steps: skia draws the art and the videos; PyTorch on CPU (its own index),
+# torchaudio's MMS aligner and Demucs time the song. Pinned where the audio lane tested.
+skia-python>=144.1,<145
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.11.0
 torchaudio==2.11.0

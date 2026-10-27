@@ -3,6 +3,9 @@
     python -m studio run <question-id>           # a topic from the queue, to a posted lesson
     python -m studio fail <question-id>          # give it up with its last run's reason
     python -m studio summary <question-id>       # what its runs did, for the operator's record
+    python -m studio videos <question-id>        # a posted lesson's videos; --background on a routine
+    python -m studio wait <question-id>          # the background videos' outcome, waiting up to 9 minutes
+    python -m studio recover                     # take a render that died with its machine, rebuild its job
 
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
@@ -10,8 +13,9 @@
     python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
     python -m studio fallback <job-id>           # the ffmpeg karaoke video, once the song is timed
 
-`run`, `fail` and `summary` are the operator's (studio/run.py); they need
-POPSMOSIS_API_URL and POPSMOSIS_API_KEY, and use the question id as the job id.
+`run`, `fail`, `summary`, `videos`, `wait` and `recover` are the operator's
+(studio/run.py, studio/videos.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
+and use the question id as the job id.
 
 Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every brain call is logged
 to the job's calls.jsonl with its tokens, cost and time.
@@ -34,6 +38,7 @@ from pathlib import Path
 
 from studio import ass_fallback, brain, checks, jobs, media
 from studio import run as operator_run
+from studio import videos as operator_videos
 from studio.run import call_row, logged_ask
 from studio.schemas import CheckReport, FactCheckReport, Request, Timing
 from studio.steps import bundle as bundle_step
@@ -41,6 +46,9 @@ from studio.steps import factcheck as factcheck_step
 from studio.steps import timing as timing_step
 
 STEPS = {"bundle": bundle_step.run, "check": checks.run, "factcheck": factcheck_step.run}
+# STARTED: the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
+EXIT_CODES = {**operator_run.EXIT_CODES, operator_videos.STARTED: 0, operator_videos.RECOVER: 0,
+              operator_videos.NONE: 0, operator_videos.RUNNING: 4}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,6 +58,13 @@ def main(argv: list[str] | None = None) -> int:
                             ("fail", "give a topic up with its last run's reason"),
                             ("summary", "what a topic's runs did, in one paragraph")):
         commands.add_parser(name, help=help_text).add_argument("question")
+    make = commands.add_parser("videos", help="a posted lesson's videos; resumes at the first media step not done")
+    make.add_argument("question")
+    make.add_argument("--background", action="store_true", help="claim, start the run detached, and return at once")
+    waiting = commands.add_parser("wait", help="the background videos' outcome line, or RUNNING after --minutes")
+    waiting.add_argument("question")
+    waiting.add_argument("--minutes", type=float, default=operator_videos.WAIT_MINUTES)
+    commands.add_parser("recover", help="take one render that died with its machine and rebuild its job here")
     plan = commands.add_parser("plan", help="start a job: the bundle, then the fact-check")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--course", default="")
@@ -71,6 +86,21 @@ def main(argv: list[str] | None = None) -> int:
     if overrides and args.command in ("run", "plan", "step"):
         print(f"note: the brain is set by the environment: {overrides}", file=sys.stderr)
 
+    if args.command == "recover":
+        result, question, reason = operator_videos.recover()
+        print(f"{result} {question}: {reason}")
+        return EXIT_CODES[result]
+    if args.command in ("videos", "wait"):
+        if not operator_run.ID_RE.fullmatch(args.question):
+            parser.error(f"{args.question!r} is not a question id")
+        if args.command == "wait":
+            result, step, reason = operator_videos.wait(args.question, minutes=args.minutes)
+        elif args.background:
+            result, step, reason = operator_videos.background(args.question)
+        else:
+            result, step, reason = operator_videos.videos(args.question)
+        print(f"{result} {step}: {reason}")
+        return EXIT_CODES[result]
     if args.command in ("run", "fail", "summary"):
         if not operator_run.ID_RE.fullmatch(args.question):
             parser.error(f"{args.question!r} is not a question id")
@@ -80,10 +110,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "fail":
             result, reason = operator_run.mark_failed(args.question)
             print(f"{result} fail: {reason}")
-            return operator_run.EXIT_CODES[result]
+            return EXIT_CODES[result]
         result, step, reason = operator_run.run(args.question)
         print(f"{result} {step}: {reason}")
-        return operator_run.EXIT_CODES[result]
+        return EXIT_CODES[result]
 
     if args.command == "fallback":
         job = jobs.ROOT / args.job
