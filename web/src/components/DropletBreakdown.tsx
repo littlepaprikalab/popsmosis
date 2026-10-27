@@ -49,12 +49,27 @@ export function totalCost(b: Breakdown): string {
 const cell = 'py-1 pr-3 align-top';
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 
-/** Who made a model or tool, as a chip after its name. Nothing when the API does not know. */
-function MakerChip({ maker }: { maker: string | null }) {
+/** Each maker's colour on the bill, from the theme's accents so it holds in light and dark. A maker not here is grey. */
+const MAKER_COLORS: Record<string, string> = {
+  Meta: 'var(--accent-blue)',
+  Anthropic: 'var(--accent-orange)',
+  Google: 'var(--accent-green)',
+  ElevenLabs: 'var(--accent-purple)',
+  FFmpeg: 'var(--accent-pink)',
+};
+
+const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+
+/** Who made a model or tool, as a chip in the maker's colour. Nothing when the API does not know. */
+function MakerChip({ maker, className = '' }: { maker: string | null; className?: string }) {
   if (!maker) return null;
+  const color = MAKER_COLORS[maker];
+  const style = color
+    ? { background: tint(color, 14), border: `1px solid ${tint(color, 45)}`, color }
+    : { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' };
   return (
-    <span data-testid="maker" className="inline-block ml-1.5 align-middle whitespace-nowrap text-[9px] uppercase px-1.5 py-px rounded-full font-semibold"
-      style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+    <span data-testid="maker" style={style}
+      className={`inline-block align-middle whitespace-nowrap text-[9px] uppercase px-1.5 py-px rounded-full font-semibold ${className}`}>
       {maker}
     </span>
   );
@@ -83,25 +98,46 @@ function madeWith(b: Breakdown): Made[] {
   return [...made.values()];
 }
 
-/** What the droplet was made with: each model and tool once, with its version, its maker and where it was used. */
+/** The bill's models and tools by who made them, in the order the pipeline first used each maker; an unknown maker last. */
+function byMaker(rows: Made[]): { maker: string | null; items: Made[] }[] {
+  const groups = new Map<string | null, Made[]>();
+  for (const r of rows) groups.set(r.maker, [...(groups.get(r.maker) ?? []), r]);
+  return [...groups].map(([maker, items]) => ({ maker, items }))
+    .sort((a, b) => Number(a.maker === null) - Number(b.maker === null));
+}
+
+/**
+ * What the droplet was made with: a card for each maker, in its colour, with each model and tool
+ * it made, the tools' versions, and the steps that used them. Two columns where they fit.
+ */
 function MadeWith({ breakdown }: { breakdown: Breakdown }) {
-  const rows = madeWith(breakdown);
-  if (rows.length === 0) return null;
+  const groups = byMaker(madeWith(breakdown));
+  if (groups.length === 0) return null;
   return (
-    <div data-testid="made-with" className="mt-2 pt-2" style={{ borderTop: '1px dashed var(--border)' }}>
-      <div className="text-[9px] uppercase tracking-wider font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Made with</div>
-      <ul className="space-y-1">
-        {rows.map((r) => (
-          <li key={`${r.name} ${r.version ?? ''}`} data-testid="made-with-item" className="flex flex-wrap items-center gap-x-2">
-            <span className="min-w-0 break-all" style={{ color: 'var(--text-primary)' }}>
-              {r.name}
-              {r.version && <span className="tabular-nums" style={{ color: 'var(--text-secondary)' }}> {r.version}</span>}
-              <MakerChip maker={r.maker} />
-            </span>
-            <span className="ml-auto text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>{r.steps.join(' · ')}</span>
-          </li>
-        ))}
-      </ul>
+    <div data-testid="made-with" className="mt-3 pt-2" style={{ borderTop: '1px dashed var(--border)' }}>
+      <div className="text-[10px] uppercase tracking-wider font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Made with</div>
+      <div className="sm:columns-2 gap-2">
+        {groups.map(({ maker, items }) => {
+          const color = (maker && MAKER_COLORS[maker]) || 'var(--text-muted)';
+          return (
+            <section key={maker ?? ''} data-testid="maker-group" className="break-inside-avoid mb-2 rounded-md pl-2.5 pr-2 py-1.5"
+              style={{ background: tint(color, 7), borderLeft: `3px solid ${color}` }}>
+              <MakerChip maker={maker ?? 'Other'} className="mb-1" />
+              <ul className="space-y-0.5">
+                {items.map((r) => (
+                  <li key={`${r.name} ${r.version ?? ''}`} data-testid="made-with-item" className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="min-w-0 break-all font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      {r.name}
+                      {r.version && <span className="font-normal tabular-nums" style={{ color: 'var(--text-secondary)' }}> {r.version}</span>}
+                    </span>
+                    <span className="ml-auto text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>{r.steps.join(' · ')}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -169,7 +205,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
                         )}
                       </td>
                       <td className={`${cell} break-all`}>
-                        {m ? <>{m.model}<MakerChip maker={m.maker} /></> : <span style={{ color: 'var(--text-muted)' }}>code</span>}
+                        {m ? <>{m.model}<MakerChip maker={m.maker} className="ml-1.5" /></> : <span style={{ color: 'var(--text-muted)' }}>code</span>}
                       </td>
                       <td className={num}>{m ? m.calls : ''}</td>
                       <td className={num}>{j === 0 ? duration(s.seconds) : ''}</td>
@@ -217,7 +253,7 @@ function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
             </div>
             {s.models.map((m) => (
               <div key={m.model} className="flex gap-2 pl-6">
-                <span className="min-w-0 break-all">{m.model}{m.calls > 1 ? ` ×${m.calls}` : ''}<MakerChip maker={m.maker} /></span>
+                <span className="min-w-0 break-all">{m.model}{m.calls > 1 ? ` ×${m.calls}` : ''}<MakerChip maker={m.maker} className="ml-1.5" /></span>
                 <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{modelCost(m)}</span>
               </div>
             ))}

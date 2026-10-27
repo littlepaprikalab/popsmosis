@@ -110,17 +110,18 @@ test.describe('videos on /learn', () => {
     await expect(table.getByText('3,214 cr', { exact: true })).toBeVisible();
     await expect(audio.getByTestId('maker')).toHaveText('Google'); // Lyria, the first of the step's models
 
-    // Everything it was made with, once each: the models and the tools, their versions and makers.
-    const made = bill.getByTestId('made-with-item');
-    await expect(made).toHaveCount(11);
-    await expect(made.first()).toContainText('claude-opus-5-5');
-    await expect(made.first()).toContainText('Write the lesson · Fact-check');
-    await expect(made.first().getByTestId('maker')).toHaveText('Anthropic');
-    for (const [name, maker] of [['htdemucs', 'Meta'], ['mms-fa', 'Meta'], ['demucs 4.1.0', 'Meta'],
-      ['torchaudio 2.11.0+cpu', 'Meta'], ['skia-python 144.1', 'Google'], ['eleven_multilingual_v2', 'ElevenLabs']]) {
-      await expect(made.filter({ hasText: name }).first().getByTestId('maker')).toHaveText(maker);
-    }
-    await expect(made.filter({ hasText: 'ffmpeg 6.1.1' })).toContainText('Song and voice · Time the words · Render');
+    // Everything it was made with, once each, by maker in the order the pipeline first used them:
+    // the models and the tools, with their versions and the steps that used them.
+    await expect(bill.getByTestId('made-with-item')).toHaveCount(11);
+    const makers = bill.getByTestId('maker-group');
+    await expect(makers.getByTestId('maker')).toHaveText(['Anthropic', 'Google', 'ElevenLabs', 'FFmpeg', 'Meta']);
+    await expect(makers.first()).toContainText('claude-opus-5-5');
+    await expect(makers.first()).toContainText('Write the lesson · Fact-check');
+    await expect(makers.nth(1).getByTestId('made-with-item')).toHaveText([/^skia-python 144\.1/, /^lyria-3\.5/]);
+    await expect(makers.nth(3)).toContainText('ffmpeg 6.1.1-3ubuntu5');
+    await expect(makers.nth(3)).toContainText('Song and voice · Time the words · Render');
+    await expect(makers.nth(4).getByTestId('made-with-item')).toHaveText([
+      /^htdemucs/, /^mms-fa/, /^demucs 4\.1\.0/, /^torchaudio 2\.11\.0\+cpu/, /^torch 2\.11\.0\+cpu/]);
     await expect(bill.getByText('Versions: as installed on the studio’s machine that made the videos.')).toBeVisible();
 
     // The public tab shows the droplet, never its bill.
