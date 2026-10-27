@@ -169,6 +169,22 @@ d('the Droplets tab', () => {
     expect((await get(`/api/droplets/${id}`)).json().video).toEqual({ songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: POSTER, lessonPosterUrl: null });
   });
 
+  it('marks READY only for the attempt that holds the render, so a run that was taken over cannot', async () => {
+    const id = await droplet(10, { videoStatus: 'RENDERING', videoAttempts: 2, videoUpdatedAt: new Date() });
+    const patch = (payload: object) => app.inject({ method: 'PATCH', url: `/api/answers/${id}/video`, headers: { authorization: `Bearer ${agentKey}` }, payload });
+    const ready = (attempt: unknown) => patch({ status: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON, attempt });
+
+    expect((await ready(0)).statusCode).toBe(400);
+    const stale = await ready(1); // the first run's machine went quiet and attempt 2 took over
+    expect(stale.statusCode).toBe(409);
+    expect((await prisma.answer.findUniqueOrThrow({ where: { id } })).videoStatus).toBe('RENDERING');
+    expect((await get('/api/droplets')).json().data).toEqual([]);
+
+    expect((await ready(2)).json()).toMatchObject({ status: 'READY', songVideoUrl: SONG });
+    expect((await ready(2)).statusCode).toBe(409); // no longer rendering
+    expect((await get('/api/droplets')).json().data.map((x: { id: string }) => x.id)).toEqual([id]);
+  });
+
   it('rate limits each visitor, whatever cookie they make up', async () => {
     const { PUBLIC_PER_CLIENT_PER_MINUTE } = await import('../lib/public-limit.js');
     const statuses: number[] = [];

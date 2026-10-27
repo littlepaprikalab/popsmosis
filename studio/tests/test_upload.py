@@ -24,6 +24,7 @@ class FakeServer:
         self.calls = []  # (method, url, headers, body)
         self.stored = {}  # "bucket/answer/file" -> (bytes, content type)
         self.fail_put = set()  # files whose PUT storage refuses
+        self.flaky_puts = 0  # this many PUTs answer 503 first, then storage recovers
         self.patch_status = 200
         self.upload_url_status = 200
         self.uploaded_at_patch = None
@@ -43,10 +44,15 @@ class FakeServer:
             path = url.split("/object/upload/sign/")[1].split("?")[0]
             if path.split("/", 2)[2] in self.fail_put:
                 return 500, b'{"statusCode":"500","error":"Internal","message":"try later"}'
+            if self.flaky_puts:
+                self.flaky_puts -= 1
+                return 503, b'{"message":"overloaded"}'
             self.stored[path] = (body, headers["Content-Type"])
             return 200, json.dumps({"Key": path}).encode()
         if method == "PATCH" and url.endswith("/video"):
             self.uploaded_at_patch = (self.job / upload.UPLOADED).exists()
+            if self.patch_status == 409:
+                return 409, b'{"error":{"code":"CONFLICT","message":"Another run has taken over these videos"}}'
             if self.patch_status != 200:
                 return self.patch_status, b'{"error":{"code":"SERVER_ERROR","message":"Internal server error"}}'
             return 200, json.dumps({"status": json.loads(body)["status"]}).encode()
@@ -72,6 +78,11 @@ def job(tmp_path):
         (job / media.poster_path(video)).write_bytes(f"jpg {video}".encode())
     jobs.write(job / "posted.json", {"id": "ans1", "questionId": "q1"})
     return job
+
+
+@pytest.fixture(autouse=True)
+def no_waits(monkeypatch):
+    monkeypatch.setattr(upload, "RETRY_DELAYS_S", (0, 0))
 
 
 @pytest.fixture
@@ -273,3 +284,48 @@ def test_upload_file_uploads_one_file_on_its_own_and_skips_it_when_unchanged(job
     server.calls.clear()
     upload.run(job, api=api)
     assert "studio/ans1/audio/song.mp3" not in [c[1].split("/sign/")[1].split("?")[0] for c in server.puts()]
+
+
+def test_a_storage_blip_is_retried_inside_the_step(job, server):
+    server.flaky_puts = 2  # the first two PUTs answer 503
+    upload.run(job, api=api_for(server))
+    assert upload.is_done(job)
+
+
+def test_storage_not_set_up_is_not_retried(job, server):
+    server.upload_url_status = 503
+    with pytest.raises(media.StepFailed):
+        upload.run(job, api=api_for(server))
+    assert len([c for c in server.calls if c[1].endswith("/upload-url")]) == 1
+
+
+def test_each_attempt_uploads_to_its_own_folder_and_reports_with_its_attempt(job, server):
+    jobs.write(job / "videos.json", {"answerId": "ans1", "attempt": 2})
+    upload.run(job, api=api_for(server))
+    assert server.stored and all(p.startswith(("droplets/ans1/a2/", "studio/ans1/a2/")) for p in server.stored)
+    [report] = server.patches()
+    assert report["attempt"] == 2
+    assert report["songVideoUrl"] == f"{STORAGE}/object/public/droplets/ans1/a2/out/song_h.mp4"
+
+    # A later attempt on this machine does not trust the earlier one's progress: it sends everything again.
+    server.calls.clear()
+    jobs.write(job / "videos.json", {"answerId": "ans1", "attempt": 3})
+    (job / upload.UPLOADED).unlink()
+    upload.run(job, api=api_for(server))
+    assert len(server.puts()) == len([p for p in server.stored if "/a2/" in p])
+    assert all("/a3/" in c[1] for c in server.puts())
+
+
+def test_a_claim_for_another_answer_is_not_this_jobs_attempt(job, server):
+    jobs.write(job / "videos.json", {"answerId": "someone-else", "attempt": 4})
+    upload.run(job, api=api_for(server))
+    assert "attempt" not in server.patches()[0]
+    assert not any("/a4/" in p for p in server.stored)
+
+
+def test_a_run_that_was_taken_over_fails_without_marking_ready_or_retrying(job, server):
+    jobs.write(job / "videos.json", {"answerId": "ans1", "attempt": 1})
+    server.patch_status = 409
+    with pytest.raises(media.StepFailed, match="taken over"):
+        upload.run(job, api=api_for(server))
+    assert len(server.patches()) == 1 and not upload.is_done(job)

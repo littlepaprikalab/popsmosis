@@ -1,9 +1,10 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import prisma from '../lib/prisma.js';
+import { Prisma } from '../generated/prisma/client.js';
 import { sendError } from '../lib/errors.js';
 import { parseLimit } from '../lib/validation.js';
-import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
-import { publicDropletSelect, publicDropletWhere, serializeDroplet, serializeDropletCard } from '../lib/droplet.js';
+import { decodeCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
+import { EXCERPT_SOURCE_LENGTH, publicDropletSelect, publicDropletWhere, serializeDroplet, serializeDropletCard } from '../lib/droplet.js';
 import { PUBLIC_PER_CLIENT_PER_MINUTE, PUBLIC_PER_INSTANCE_PER_MINUTE, WindowCounter, publicClientKey } from '../lib/public-limit.js';
 
 /**
@@ -27,13 +28,25 @@ export default async function dropletRoutes(app: FastifyInstance) {
   app.get('/api/droplets', { config, preHandler: [shared] }, async (request) => {
     const { limit, cursor } = request.query as Record<string, string | undefined>;
     const take = parseLimit(limit, 12, 24);
-    const cursorFilter = decodeCreatedAtIdCursor(cursor);
-    const rows = await prisma.answer.findMany({
-      where: { ...publicDropletWhere, ...(cursorFilter && { AND: [cursorFilter] }) },
-      select: publicDropletSelect,
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take,
-    });
+    const after = decodeCursor(cursor ?? '');
+    const at = typeof after?.createdAt === 'string' ? new Date(after.createdAt) : null;
+    const from = at && !Number.isNaN(at.getTime())
+      ? (typeof after?.id === 'string'
+        ? Prisma.sql`AND ("createdAt" < ${at} OR ("createdAt" = ${at} AND id < ${after.id}))`
+        : Prisma.sql`AND "createdAt" < ${at}`)
+      : Prisma.empty;
+    // A card needs two fields of the bundle and the start of the lesson; the bundle can be
+    // hundreds of KB, so Postgres hands back only those (the same fields publicDropletSelect
+    // names). Walks the (videoStatus, createdAt, id) index.
+    const rows = await prisma.$queryRaw<Parameters<typeof serializeDropletCard>[0][]>`
+      SELECT id, left(content, ${EXCERPT_SOURCE_LENGTH}) AS content, "createdAt",
+             jsonb_build_object('course', bundle->'course', 'topic', bundle->'topic') AS bundle,
+             "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl"
+      FROM answers
+      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${from}
+      ORDER BY "createdAt" DESC, id DESC
+      LIMIT ${take}
+    `;
     return { data: rows.map(serializeDropletCard), nextCursor: encodeCreatedAtIdCursor(rows, take) };
   });
 

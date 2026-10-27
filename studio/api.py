@@ -114,11 +114,14 @@ class Api:
         publicUrl is set for the public "droplets" bucket only. 503 until the API has SUPABASE_URL."""
         return self.request("POST", f"/api/answers/{answer_id}/upload-url", {"bucket": bucket, "file": file})
 
-    def set_video(self, answer_id: str, status: str, *, error: str | None = None,
+    def set_video(self, answer_id: str, status: str, *, error: str | None = None, attempt: int | None = None,
                   song_video_url: str | None = None, lesson_video_url: str | None = None,
                   song_poster_url: str | None = None, lesson_poster_url: str | None = None) -> dict:
-        """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved."""
+        """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved.
+        With the attempt this run holds, 409 unless it is still the render's current attempt."""
         body: dict = {"status": status}
+        if attempt is not None:
+            body["attempt"] = attempt
         for key, value in (("songVideoUrl", song_video_url), ("lessonVideoUrl", lesson_video_url),
                            ("songPosterUrl", song_poster_url), ("lessonPosterUrl", lesson_poster_url)):
             if value is not None:

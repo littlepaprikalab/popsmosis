@@ -144,11 +144,13 @@ type PublicDropletRow = {
 };
 
 const EXCERPT_LENGTH = 200;
+// How much of the lesson the list reads to make an excerpt; markdown only shrinks it.
+export const EXCERPT_SOURCE_LENGTH = EXCERPT_LENGTH * 8;
 
 /** The lesson's first lines as plain text, for a card on the list. */
 export function excerptOf(markdown: string, max = EXCERPT_LENGTH): string {
   const text = markdown
-    .slice(0, max * 8)
+    .slice(0, max * 8) // EXCERPT_SOURCE_LENGTH for the default max
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1') // links and images
     .replace(/^[ \t|:-]*-{3,}[ \t|:-]*$/gm, ' ') // table and horizontal rules
     .replace(/[#>*_`|]+/g, ' ') // headings, quotes, emphasis, code, table pipes

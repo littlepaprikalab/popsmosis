@@ -174,8 +174,13 @@ per file, so the studio never holds a Supabase key. Two buckets:
 
 | Bucket | Public | What goes in it |
 |---|---|---|
-| `droplets` | yes | `<answerId>/out/song_h.mp4`, `lesson_h.mp4` and a `.jpg` poster for each: what the Droplets tab and `/learn` play |
-| `studio` | no | `<answerId>/art/…`, `masks/…`, `locations.json`, `audio/…`, `timing/…`, `timeline_*.json`: kept so a renderer fix can re-render without paying for the song and the art again |
+| `droplets` | yes | `<answerId>/a<n>/out/song_h.mp4`, `lesson_h.mp4` and a `.jpg` poster for each: what the Droplets tab and `/learn` play |
+| `studio` | no | `<answerId>/a<n>/art/…`, `masks/…`, `locations.json`, `audio/…`, `timing/…`, `timeline_*.json`: kept so a renderer fix can re-render without paying for the song and the art again |
+
+`a<n>` is the render attempt (`studio/videos.py`): each attempt writes its own files, so a
+render that was taken over cannot overwrite the one that replaced it, and a re-render
+gets new URLs. Earlier attempts' files stay; they are small next to the egress, and can
+be deleted by hand.
 
 1. **The project.** If there is none yet, create one at supabase.com > New project (pick a
    region near Render's `oregon`, such as West US) and keep the database password: the

@@ -27,10 +27,12 @@ export default async function answerRoutes(app: FastifyInstance) {
   }
 
   // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
-  // songPosterUrl?, lessonPosterUrl?, error? }. RENDERING when the media steps start
-  // (and again as each video lands), READY when they are done, FAILED with one line
-  // on why. A URL left out keeps the one already saved, so the song can be posted
-  // before the lesson video exists.
+  // songPosterUrl?, lessonPosterUrl?, error?, attempt? }. RENDERING when the media steps
+  // start (and again as each video lands), READY when they are done, FAILED with one
+  // line on why. A URL left out keeps the one already saved, so the song can be posted
+  // before the lesson video exists. With the attempt a run holds (routes/videos.ts) it
+  // applies only while that attempt is the current render: a run whose render went
+  // quiet and was handed to another cannot mark its stale videos READY over the new one.
   app.patch('/api/answers/:id/video', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as Record<string, unknown>;
@@ -47,6 +49,10 @@ export default async function answerRoutes(app: FastifyInstance) {
       if (urlError) return sendError(reply, 'VALIDATION_ERROR', urlError);
       urls[field] = value as string;
     }
+    const { attempt } = body;
+    if (attempt !== undefined && !(Number.isInteger(attempt) && (attempt as number) > 0)) {
+      return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
+    }
     if (status === 'FAILED') {
       if (typeof error !== 'string' || !error.trim()) return sendError(reply, 'VALIDATION_ERROR', 'error is required when status is FAILED');
       if (error.length > VIDEO_ERROR_MAX_LENGTH) return sendError(reply, 'VALIDATION_ERROR', `error must be ${VIDEO_ERROR_MAX_LENGTH} characters or less`);
@@ -62,8 +68,10 @@ export default async function answerRoutes(app: FastifyInstance) {
       return sendError(reply, 'VALIDATION_ERROR', 'READY needs songVideoUrl or lessonVideoUrl, sent now or before');
     }
 
-    const updated = await prisma.answer.update({
-      where: { id },
+    // One conditional write, so the attempt check and the update cannot be split by another run.
+    const current = attempt === undefined ? {} : { videoAttempts: attempt as number, videoStatus: 'RENDERING' as const };
+    const { count } = await prisma.answer.updateMany({
+      where: { id, ...current },
       data: {
         videoStatus: status as VideoStatus,
         // Only the URLs this request sent: the two videos render in parallel and report
@@ -72,12 +80,16 @@ export default async function answerRoutes(app: FastifyInstance) {
         videoError: status === 'FAILED' ? (error as string).trim() : null,
         videoUpdatedAt: new Date(),
       },
+    });
+    await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });
+    if (count === 0) return sendError(reply, 'CONFLICT', 'Another run has taken over these videos, or they are no longer rendering');
+    const updated = await prisma.answer.findUniqueOrThrow({
+      where: { id },
       select: {
         videoStatus: true, songVideoUrl: true, lessonVideoUrl: true, songPosterUrl: true, lessonPosterUrl: true,
         videoError: true, videoUpdatedAt: true,
       },
     });
-    await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });
     return serializeVideo(updated);
   });
 
