@@ -41,6 +41,7 @@ FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
 CAPTION_FADE_S = 0.3
 FRQ_IN_S = 1.0
+EDGE_FADE = 40.0  # a label fades out over this many pixels as its dot nears the edge of the view
 
 
 class RenderError(Exception):
@@ -188,6 +189,13 @@ def to_frame(cam: Cam, view: Rect, art: SceneArt) -> tuple[float, float, float]:
 
 def mix_rect(a: Rect, b: Rect, x: float) -> Rect:
     return tuple(p.lerp(u, v, x) for u, v in zip(a, b))  # type: ignore[return-value]
+
+
+def edge_fade(x: float, y: float, view: Rect) -> float:
+    """1 while a label's dot is well inside the view, down to 0 at its edge: a label the camera moves
+    away from fades out rather than clinging to the edge, and a label on screen has its dot on screen."""
+    inside = min(x - view[0], view[2] - x, y - view[1], view[3] - y)
+    return p.clamp01(inside / EDGE_FADE)
 
 
 # --- per beat, worked out once --------------------------------------------------------------
@@ -359,10 +367,7 @@ class Renderer:
             if loc is None:
                 continue
             ax, ay = loc.label_anchor.x * scale + dx, loc.label_anchor.y * scale + dy
-            alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S)
-            # A dot the camera has moved off the view fades out rather than clinging to the edge.
-            outside = max(view[0] - ax, ax - view[2], view[1] - ay, ay - view[3], 0)
-            alpha *= p.clamp01(1 - outside / 40)
+            alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(ax, ay, view)
             if alpha > 0.01:
                 box = (loc.box.x0 * scale + dx, loc.box.y0 * scale + dy, loc.box.x1 * scale + dx, loc.box.y1 * scale + dy)
                 labels.append(p.Label(name=name, color=self.timeline.palette[name], anchor=(ax, ay), box=box, alpha=alpha,

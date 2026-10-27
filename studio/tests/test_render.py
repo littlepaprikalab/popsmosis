@@ -117,6 +117,31 @@ def test_labels_stay_in_the_frame_and_off_each_other():
     assert [(lb.x, lb.y) for lb in again] == [(lb.x, lb.y) for lb in labels]  # the same every time
 
 
+def test_a_label_whose_dot_is_off_screen_is_not_drawn(job, monkeypatch):
+    # The first live run: zoomed in on the brainstem, the cerebral cortex's dot sat just above the
+    # frame, and its pill hung from the top edge at 70% with its leader running off-screen.
+    beat = Beat(t0=0, t1=5.0, scene="overview", camera=TimelineCamera(target="Cytochrome b6f", zoom=3.0),
+                reveal=[], spotlight=None, labels=["Thylakoid", "Cytochrome b6f"], particles=[], caption=None,
+                line_id="v1-1", line="b6f pumps", words=[Word(word="b6f", start=0.2, end=0.6)])
+    frq = FrqSegment(t0=5.0, t1=6.0, scene="overview", labels=["Thylakoid"], prompt="Explain it.",
+                     predict_question="Which pumps?", predict_t=5.1, predict_pause_s=0.4,
+                     steps=[FrqStep(t=5.5, text="b6f pumps.", spotlight=None)])
+    timeline = Timeline(video="song", duration=6.0, fps=30, audio=[], beats=[beat], frq=frq,
+                        palette={"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"})
+    settled = 4.0  # the camera has finished its move onto b6f
+    camera = Renderer(job, timeline)
+    x0 = camera.art_to_frame(settled, 0, 0)[0]
+    scale = camera.art_to_frame(settled, 1, 0)[0] - x0
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    thylakoid = locations.scene("overview").get("Thylakoid")
+    thylakoid.label_anchor.x = (-15 - x0) / scale  # 15 px left of the frame
+    assert thylakoid.box.holds(thylakoid.label_anchor)
+    placed = []
+    monkeypatch.setattr(p, "place_labels", lambda labels, *args, **kw: placed.extend(labels))
+    Renderer(job, timeline, locations=locations).frame(settled)
+    assert [lb.name for lb in placed] == ["Cytochrome b6f"]
+
+
 def test_label_text_is_dark_enough_to_read_on_white():
     for color in ("#F2C230", "#2E8B57", "#E07A2F", "#3366CC", "#FFFFFF"):
         r, g, b = p.rgb(p.darken(color))

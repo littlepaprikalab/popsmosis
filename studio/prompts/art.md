@@ -35,7 +35,8 @@ art, soft gradients, clean darker outlines, on white.
   layers, water, surrounding tissue) is drawn in pale neutral or muted tones, so the
   listed structures stand out.
 - A soft shadow under a structure is fine: a dark shape with opacity 0.15 to 0.3 and an
-  feGaussianBlur filter, drawn before the structure.
+  feGaussianBlur filter, drawn before the structure and outside its group, since the
+  group is the structure itself.
 - Get the anatomy right: shapes, proportions, positions and counts as a textbook shows
   them. Simplify detail, never correctness.
 - Never anime, faces, personified characters, clip-art, 3D molecule renders, icons or
