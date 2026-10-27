@@ -48,7 +48,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, jobs, media
+from studio import brain, jobs, ledger, media
 from studio.api import Api, ApiError
 from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, job_dir, logged_ask, one_line, only_run,
                         read_jsonl, record_interrupted)
@@ -213,8 +213,9 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api, ask, record: Record,
         record.begin(step)
         clock = time.monotonic()
         try:
-            claim(api, job)  # the heartbeat: a render that stops renewing is recovered by a later run
-            reason = media.step_module(step).run(job, ask=ask) or f"{step} done"
+            with ledger.at_step(step):
+                claim(api, job)  # the heartbeat: a render that stops renewing is recovered by a later run
+                reason = media.step_module(step).run(job, ask=ask) or f"{step} done"
             result = DONE
         except Stop as e:
             result, reason = STOPPED, str(e)
@@ -391,7 +392,8 @@ def give_up(job: Path, runs: list[dict], api: Api | None = None) -> tuple[str, s
         return STOPPED, "this job holds no attempt at the videos"
     reason = one_line(f"{last['step']} failed: {last['reason']}")
     try:
-        (api or Api.from_env()).give_up_videos(answer, reason, attempt)
+        # With what the failed tries took and cost, so the page's bill counts them too.
+        (api or Api.from_env()).give_up_videos(answer, reason, attempt, breakdown=ledger.try_breakdown(job, "videos"))
     except ApiError as e:
         return api_outcome(e)
     return DONE, f"videos given up: {reason}"

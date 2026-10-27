@@ -100,8 +100,13 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     assert request.study_guide == "guide.txt:\nATP is made by ATP synthase."
 
     bundle = json.loads((job / "bundle.json").read_text())
+    breakdown = api.posted.pop("breakdown")
     assert api.posted == {"content": bundle["lesson_markdown"], "bundle": bundle,
                           "factcheck": json.loads((job / "factcheck.json").read_text()), "model": "claude-opus-5-5"}
+    # The steps before the post, each timed; the call logged before this run is the bundle's.
+    assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "factcheck"]
+    assert breakdown["steps"][1]["models"] == [{"model": "claude-opus-5-5", "calls": 1, "costUsd": None, "credits": None}]
+    assert all(s["tries"] == 1 and s["seconds"] is not None for s in breakdown["steps"])
     assert json.loads((job / "posted.json").read_text())["id"] == "ans1"
     [record] = operator_run.read_jsonl(job / "runs.jsonl")
     assert (record["result"], record["step"]) == ("DONE", "post")
@@ -236,7 +241,7 @@ def test_the_summary_names_the_topic_by_the_bundle_never_the_learners_words(jobs
     text = operator_run.summary("q1")
     assert text.startswith("job q1: AP Biology / the light reactions. 2 run(s): run 1 FAILED at bundle (overloaded); "
                            "run 2 DONE at post.")
-    assert "Fact-check passed in 1 round(s), 0 correction(s). Lesson posted. 2 brain call(s), $0.70." in text
+    assert "Fact-check passed in 1 round(s), 0 correction(s). Lesson posted. 2 model call(s), $0.70." in text
     assert "ATP synthesis" not in text and "exam" not in text
     assert len(text) <= operator_run.CYCLE_LOG_MAX
 

@@ -17,8 +17,9 @@
 (studio/run.py, studio/videos.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
 and use the question id as the job id.
 
-Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every brain call is logged
-to the job's calls.jsonl with its tokens, cost and time.
+Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every model call is logged
+to the job's calls.jsonl with its step, tokens, cost and time (studio/ledger.py), and
+`show` ends with each step's time, cost and models, as the droplet's page shows them.
 
 STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's model and effort on the
 Claude provider (defaults claude-opus-5-5 and high). To try a prompt draft cheaply, run
@@ -36,10 +37,11 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, jobs, media
+from studio import ass_fallback, brain, checks, jobs, ledger, media
 from studio import run as operator_run
 from studio import videos as operator_videos
-from studio.run import call_row, logged_ask
+from studio.ledger import call_row
+from studio.run import logged_ask
 from studio.schemas import CheckReport, FactCheckReport, Request, Timing
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
@@ -160,7 +162,8 @@ def run_steps(job: Path, names: list[str]) -> bool:
             print(f"{name}: {e}", file=sys.stderr)
             return False
         try:
-            result = step(job) if name == "check" else step(job, ask=logged_ask(job))
+            with ledger.at_step(name):
+                result = step(job) if name == "check" else step(job, ask=logged_ask(job))
         except (brain.BrainError, media.StepFailed) as e:
             print(f"{name}: failed: {e}", file=sys.stderr)
             return False
@@ -238,16 +241,26 @@ def print_job(job: Path, brief: bool = False) -> None:
             steps = ", ".join(f"{s['step']} " + (f"{s['seconds']:.0f}s" if s["seconds"] is not None else "cut off")
                               for s in r["steps"]) or "nothing to do"
             print(_wrap(f"{i}. {r['started']}  {r['result']} {r['step']}: {r['reason']}  [{steps}]", indent=4))
-    if (job / "calls.jsonl").exists():
-        calls = [brain.Call(**{k: v for k, v in json.loads(row).items() if k != "at"})
-                 for row in (job / "calls.jsonl").read_text(encoding="utf-8").splitlines() if row.strip()]
+    rows = ledger.read(job)
+    if rows:
+        calls = [ledger.as_call(row) for row in rows]
         print(f"\n## Calls\n\n  {'call':<20} {'model':<17} {'in':>7} {'out':>7} {'cost':>8} {'time':>7}")
         for call in calls:
             print(f"  {call_row(call)}")
-        costs = [c.cost_usd for c in calls]
-        total = f"${sum(costs):.4f}" if None not in costs else "n/a"
         print(f"  {'total':<20} {'':<17} {sum(c.input_tokens for c in calls):>7} "
-              f"{sum(c.output_tokens for c in calls):>7} {total:>8} {sum(c.seconds for c in calls):>6.1f}s")
+              f"{sum(c.output_tokens for c in calls):>7} {ledger.cost_text(rows):>8} {sum(c.seconds for c in calls):>6.1f}s")
+    for part in ledger.PARTS:
+        report = ledger.try_breakdown(job, part)
+        if not report or not report["steps"]:
+            continue
+        took = f"{report['seconds'] / 60:.1f} min" if report["seconds"] is not None else "time n/a"
+        print(f"\n## Breakdown: the {part}, {took}\n")
+        for row in report["steps"]:
+            seconds = f"{row['seconds']:.0f}s" if row["seconds"] is not None else "cut off"
+            tries = f" ({row['tries']} tries)" if row["tries"] > 1 else ""
+            models = ", ".join(f"{m['model']} x{m['calls']}" for m in row["models"]) or "code"
+            cost = f"${row['costUsd']:.4f}" + ("+" if any(m["costUsd"] is None for m in row["models"]) else "")
+            print(f"  {row['step']:<10} {seconds:>6}{tries:<10} {cost:<10} {models}")
 
 
 def _wrap(text: str, indent: int = 0, first: int = 0) -> str:

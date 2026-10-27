@@ -16,7 +16,8 @@ report and in the step's summary line; the timing is still written, since the
 renderer can live with it, but a flagged section is the one to regenerate.
 
 torch, torchaudio and demucs are imported only when the song is aligned, so the rest
-of the studio (and its tests) load without them.
+of the studio (and its tests) load without them. Both models run on this machine, so
+calls.jsonl logs them with their time and no cost (studio/ledger.py).
 """
 
 from __future__ import annotations
@@ -25,13 +26,14 @@ import json
 import re
 import statistics
 import subprocess
+import time
 import unicodedata
 import wave
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Callable
 
-from studio import brain, jobs, media
+from studio import brain, jobs, ledger, media
 from studio.schemas import TOLERANCE_S, Bundle, TimedLine, Timing, Word, timing_problems
 from studio.steps import audio as audio_step
 
@@ -42,6 +44,8 @@ MARGIN_S = 2.0  # how far past its planned ends each section's window reaches
 LOW_SCORE = 0.3  # a line the aligner is this unsure of was probably sung differently
 SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner's front end hears a longer window this much at a time (_emission)
+DEMUCS_MODEL = "htdemucs"
+MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
@@ -210,7 +214,12 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     """The song's Timing and its report. `align` and `vocals` stand in for MMS and Demucs in tests."""
     plan = json.loads((job / audio_step.plan_path("song")).read_text(encoding="utf-8"))
     length = audio_step.duration(job / media.audio_path("song"))
-    vocals = vocals if vocals is not None else separate_vocals(job)
+    if vocals is None:
+        started, cached = time.monotonic(), vocals_current(job)
+        vocals = separate_vocals(job)
+        if not cached:
+            _log_local(job, "song vocals", DEMUCS_MODEL, started)
+    aligning = None if align else time.monotonic()
     align = align or mms_aligner()
     texts = {line.id: line.text for line in bundle.lyrics}
     planned_ms = sum(s["duration_ms"] for s in plan["sections"])
@@ -247,7 +256,14 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
                                    words=line_words))
             scores[line_id] = round(sum(line_scores) / len(line_scores), 3) if line_scores else None
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
+    if aligning is not None:
+        _log_local(job, "song alignment", MMS_MODEL, aligning)
     return timing, song_report(timing, texts, scores)
+
+
+def _log_local(job: Path, label: str, model: str, started: float) -> None:
+    """A model run on this machine: its time, and no bill."""
+    ledger.log(job, [brain.Call(label, "local", model, 0, 0, 0.0, round(time.monotonic() - started, 1), "")])
 
 
 def windows(plan: dict) -> list[dict]:
@@ -309,7 +325,7 @@ def separate_vocals(job: Path):
     from demucs.apply import apply_model
     from demucs.pretrained import get_model
 
-    model = get_model("htdemucs")  # what `demucs --two-stems=vocals` uses
+    model = get_model(DEMUCS_MODEL)  # what `demucs --two-stems=vocals` uses
     model.eval()
     mix = torch.from_numpy(_decode(job / media.audio_path("song"), model.samplerate, model.audio_channels))
     ref = mix.mean(0)
