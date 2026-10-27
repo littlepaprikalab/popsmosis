@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import type { Breakdown, BreakdownModel, Video } from '@/lib/api';
+import type { Breakdown, BreakdownModel, BreakdownStep, Video } from '@/lib/api';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
 const STEP_LABELS: Record<string, string> = {
@@ -75,77 +75,32 @@ function MakerChip({ maker, className = '' }: { maker: string | null; className?
   );
 }
 
-interface Made {
+/** One line of a step on the bill: a model it called, or a tool it ran, at the version installed. */
+interface Line {
   name: string;
-  version: string | null; // a tool's, as installed on the studio's machine; a model's name is its version
+  version: string | null; // a tool's; a model's name is its version
   maker: string | null;
-  steps: string[]; // the steps that used it, as the bill names them
+  calls: number | null; // a model's; a tool is run, not called
+  cost: string | null; // a model's; a tool is not billed
 }
 
-/** Every model and tool the bill names, once each, in the order the steps first used them. */
-function madeWith(b: Breakdown): Made[] {
-  const made = new Map<string, Made>();
-  for (const s of b.steps) {
-    const label = STEP_LABELS[s.step] ?? s.step;
-    const used = [...s.models.map((m) => ({ name: m.model, version: null, maker: m.maker })), ...(s.tools ?? [])];
-    for (const { name, version, maker } of used) {
-      const key = `${name} ${version ?? ''}`;
-      const row = made.get(key) ?? { name, version, maker, steps: [] };
-      if (!row.steps.includes(label)) row.steps.push(label);
-      made.set(key, row);
-    }
-  }
-  return [...made.values()];
+/** A step's models, then the tools it ran on the studio's machine. */
+function linesOf(s: BreakdownStep): Line[] {
+  return [
+    ...s.models.map((m) => ({ name: m.model, version: null, maker: m.maker, calls: m.calls, cost: modelCost(m) })),
+    ...(s.tools ?? []).map((t) => ({ name: t.name, version: t.version, maker: t.maker, calls: null, cost: null })),
+  ];
 }
 
-/** The bill's models and tools by who made them, in the order the pipeline first used each maker; an unknown maker last. */
-function byMaker(rows: Made[]): { maker: string | null; items: Made[] }[] {
-  const groups = new Map<string | null, Made[]>();
-  for (const r of rows) groups.set(r.maker, [...(groups.get(r.maker) ?? []), r]);
-  return [...groups].map(([maker, items]) => ({ maker, items }))
-    .sort((a, b) => Number(a.maker === null) - Number(b.maker === null));
-}
-
-/**
- * What the droplet was made with: a card for each maker, in its colour, with each model and tool
- * it made, the tools' versions, and the steps that used them. Two columns where they fit.
- */
-function MadeWith({ breakdown }: { breakdown: Breakdown }) {
-  const groups = byMaker(madeWith(breakdown));
-  if (groups.length === 0) return null;
-  return (
-    <div data-testid="made-with" className="mt-3 pt-2" style={{ borderTop: '1px dashed var(--border)' }}>
-      <div className="text-[10px] uppercase tracking-wider font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Made with</div>
-      <div className="sm:columns-2 gap-2">
-        {groups.map(({ maker, items }) => {
-          const color = (maker && MAKER_COLORS[maker]) || 'var(--text-muted)';
-          return (
-            <section key={maker ?? ''} data-testid="maker-group" className="break-inside-avoid mb-2 rounded-md pl-2.5 pr-2 py-1.5"
-              style={{ background: tint(color, 7), borderLeft: `3px solid ${color}` }}>
-              <MakerChip maker={maker ?? 'Other'} className="mb-1" />
-              <ul className="space-y-0.5">
-                {items.map((r) => (
-                  <li key={`${r.name} ${r.version ?? ''}`} data-testid="made-with-item" className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="min-w-0 break-all font-semibold" style={{ color: 'var(--text-primary)' }}>
-                      {r.name}
-                      {r.version && <span className="font-normal tabular-nums" style={{ color: 'var(--text-secondary)' }}> {r.version}</span>}
-                    </span>
-                    <span className="ml-auto text-[10px] text-right" style={{ color: 'var(--text-muted)' }}>{r.steps.join(' · ')}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          );
-        })}
-      </div>
-    </div>
-  );
+/** A line's name, with a tool's version after it in a lighter colour. */
+function LineName({ line }: { line: Line }) {
+  return <>{line.name}{line.version && <span style={{ color: 'var(--text-muted)' }}> {line.version}</span>}</>;
 }
 
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
- * with how many calls and what they cost, how long it took, and the totals; then everything it was
- * made with, each model and tool with its version and its maker. Folded until opened,
+ * with how many calls and what they cost, the tools it ran with their versions, who made each,
+ * how long it took, and the totals. Folded until opened,
  * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
  */
 export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; video: Video | null }) {
@@ -181,7 +136,8 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
               <th className={`${cell} font-semibold`}>#</th>
               <th className={`${cell} font-semibold`}>Step</th>
-              <th className={`${cell} font-semibold`}>Model</th>
+              <th className={`${cell} font-semibold`}>Model / tool</th>
+              <th className={`${cell} font-semibold`}>Maker</th>
               <th className={`${num} font-semibold`}>Qty</th>
               <th className={`${num} font-semibold`}>Time</th>
               <th className={`${num} font-semibold !pr-0`}>Cost</th>
@@ -189,10 +145,11 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
           </thead>
           <tbody>
             {steps.map((s, i) => {
-              const rows = s.models.length > 0 ? s.models : [null];
+              const lines = linesOf(s);
+              const rows = lines.length > 0 ? lines : [null];
               return (
                 <Fragment key={`${s.part}-${s.step}`}>
-                  {rows.map((m, j) => (
+                  {rows.map((l, j) => (
                     <tr key={j} data-testid={j === 0 ? 'breakdown-step' : undefined}
                       style={j === rows.length - 1 && i < steps.length - 1 ? { borderBottom: '1px solid var(--border)' } : undefined}>
                       <td className={`${cell} tabular-nums`} style={{ color: 'var(--text-muted)' }}>{j === 0 ? String(i + 1).padStart(2, '0') : ''}</td>
@@ -204,12 +161,11 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
                           </>
                         )}
                       </td>
-                      <td className={`${cell} break-all`}>
-                        {m ? <>{m.model}<MakerChip maker={m.maker} className="ml-1.5" /></> : <span style={{ color: 'var(--text-muted)' }}>code</span>}
-                      </td>
-                      <td className={num}>{m ? m.calls : ''}</td>
+                      <td className={`${cell} break-all`}>{l ? <LineName line={l} /> : <span style={{ color: 'var(--text-muted)' }}>code</span>}</td>
+                      <td className={cell}><MakerChip maker={l?.maker ?? null} /></td>
+                      <td className={num}>{l?.calls ?? ''}</td>
                       <td className={num}>{j === 0 ? duration(s.seconds) : ''}</td>
-                      <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{m ? modelCost(m) : '—'}</td>
+                      <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{l?.cost ?? '—'}</td>
                     </tr>
                   ))}
                 </Fragment>
@@ -218,13 +174,12 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
           </tbody>
           <tfoot>
             <tr className="font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
-              <td className={cell} colSpan={4}>Total</td>
+              <td className={cell} colSpan={5}>Total</td>
               <td className={num}>{duration(breakdown.seconds)}</td>
               <td className={`${num} !pr-0`}>{totalCost(breakdown)}</td>
             </tr>
           </tfoot>
         </table>
-        <MadeWith breakdown={breakdown} />
         {notes.length > 0 && (
           <ul className="mt-2 space-y-0.5 text-[10px]" style={{ color: 'var(--text-muted)' }}>
             {notes.map((n) => <li key={n}>{n}</li>)}
@@ -235,7 +190,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
   );
 }
 
-/** The same bill on a phone, where six columns do not fit: each step on a line with its time, its models under it. */
+/** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
 function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
@@ -251,10 +206,12 @@ function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
               </span>
               <span className="ml-auto tabular-nums whitespace-nowrap">{duration(s.seconds)}</span>
             </div>
-            {s.models.map((m) => (
-              <div key={m.model} className="flex gap-2 pl-6">
-                <span className="min-w-0 break-all">{m.model}{m.calls > 1 ? ` ×${m.calls}` : ''}<MakerChip maker={m.maker} className="ml-1.5" /></span>
-                <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{modelCost(m)}</span>
+            {linesOf(s).map((l) => (
+              <div key={`${l.name} ${l.version ?? ''}`} className="flex gap-2 pl-6">
+                <span className="min-w-0 break-all">
+                  <LineName line={l} />{l.calls !== null && l.calls > 1 ? ` ×${l.calls}` : ''}<MakerChip maker={l.maker} className="ml-1.5" />
+                </span>
+                <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{l.cost ?? ''}</span>
               </div>
             ))}
           </li>

@@ -90,7 +90,7 @@ test.describe('videos on /learn', () => {
     expect(await onTab()).toBe(true);
   });
 
-  test('a finished droplet carries its bill of materials: each step, its models, time and cost, and what made it', async ({ page, context }) => {
+  test('a finished droplet carries its bill of materials: each step, its models and tools, their makers, time and cost', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
@@ -110,18 +110,18 @@ test.describe('videos on /learn', () => {
     await expect(table.getByText('3,214 cr', { exact: true })).toBeVisible();
     await expect(audio.getByTestId('maker')).toHaveText('Google'); // Lyria, the first of the step's models
 
-    // Everything it was made with, once each, by maker in the order the pipeline first used them:
-    // the models and the tools, with their versions and the steps that used them.
-    await expect(bill.getByTestId('made-with-item')).toHaveCount(11);
-    const makers = bill.getByTestId('maker-group');
-    await expect(makers.getByTestId('maker')).toHaveText(['Anthropic', 'Google', 'ElevenLabs', 'FFmpeg', 'Meta']);
-    await expect(makers.first()).toContainText('claude-opus-5-5');
-    await expect(makers.first()).toContainText('Write the lesson · Fact-check');
-    await expect(makers.nth(1).getByTestId('made-with-item')).toHaveText([/^skia-python 144\.1/, /^lyria-3\.5/]);
-    await expect(makers.nth(3)).toContainText('ffmpeg 6.1.1-3ubuntu5');
-    await expect(makers.nth(3)).toContainText('Song and voice · Time the words · Render');
-    await expect(makers.nth(4).getByTestId('made-with-item')).toHaveText([
-      /^htdemucs/, /^mms-fa/, /^demucs 4\.1\.0/, /^torchaudio 2\.11\.0\+cpu/, /^torch 2\.11\.0\+cpu/]);
+    // Each step's tools follow its models, with the versions the studio ran, and every line names its maker.
+    const line = (text: string) => table.locator('tr').filter({ hasText: text });
+    for (const [name, maker] of [['claude-haiku-5-5', 'Anthropic'], ['eleven_multilingual_v2', 'ElevenLabs'],
+      ['htdemucs', 'Meta'], ['mms-fa', 'Meta'], ['demucs 4.1.0', 'Meta'], ['torchaudio 2.11.0+cpu', 'Meta'],
+      ['torch 2.11.0+cpu', 'Meta']]) {
+      await expect(line(name).first().getByTestId('maker')).toHaveText(maker);
+    }
+    const render = bill.getByTestId('breakdown-step').filter({ hasText: 'Render' });
+    await expect(render).toContainText('skia-python 144.1');
+    await expect(render.getByTestId('maker')).toHaveText('Google');
+    await expect(line('ffmpeg 6.1.1-3ubuntu5')).toHaveCount(3); // the audio, the timing and the render each ran it
+    await expect(table.getByTestId('maker')).toHaveCount(15); // 7 model lines and 8 tool lines
     await expect(bill.getByText('Versions: as installed on the studio’s machine that made the videos.')).toBeVisible();
 
     // The public tab shows the droplet, never its bill.

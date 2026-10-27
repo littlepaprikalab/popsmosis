@@ -234,11 +234,10 @@ the question routes; the reply queue's `context` is the compact part a follow-up
 
 Under each lesson on `/learn`, folded to its totals, is how the droplet was made: one line
 per step, the models that ran it with their number of calls and what they cost, how long
-it took, and the total time and cost. Under that, **Made with** lists every model and tool
-once, with its version and the steps that used it, on a card for its maker in the maker's
-colour, the makers in the order the pipeline first used them. The studio logs every model
-call to the job's `calls.jsonl` with the step that made it (`studio/ledger.py`), and sends
-what it adds up to
+it took, and the total time and cost. Under a step's models are the tools it ran on the
+studio's machine, with their versions, and every line has a chip in its maker's colour. The
+studio logs every model call to the job's `calls.jsonl` with the step that made it
+(`studio/ledger.py`), and sends what it adds up to
 as `breakdown`: the lesson's steps with the lesson, the videos' with READY, or with the
 give-up when they fail, so a failed render's spend is on the bill too. The `answer` reads
 it back as
