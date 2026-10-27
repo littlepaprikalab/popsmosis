@@ -203,7 +203,7 @@ export default function AdminAgentsPage() {
                     </button>
                   </>
                 ) : (
-                  <button onClick={() => rotate(a)} className="px-3 py-1.5 rounded" style={{ background: 'var(--accent-green)', color: 'var(--btn-filled-text)', border: '1px solid transparent' }}>
+                  <button onClick={() => rotate(a)} className="px-3 py-1.5 rounded" style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)', border: '1px solid transparent' }}>
                     Mint key
                   </button>
                 )}

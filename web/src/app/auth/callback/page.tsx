@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { MIN_AGE } from '@/lib/legal';
 import { useAuth } from '@/lib/auth';
+import { Wordmark } from '@/components/Wordmark';
 
 function friendlyAuthError(msg: string): string {
   const lower = msg.toLowerCase();
@@ -104,7 +105,7 @@ export default function AuthCallbackPage() {
   const button = (label: string) => (
     <button onClick={handleSignIn}
       className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer"
-      style={{ background: 'var(--accent-green)', color: 'var(--btn-filled-text)' }}>
+      style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
       {label}
     </button>
   );
@@ -113,7 +114,7 @@ export default function AuthCallbackPage() {
     <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
       <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <h1 className="text-2xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-red)' }}>POPSMOSIS</h1>
+        <h1 className="mb-3"><Wordmark size="lg" /></h1>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
           Droplets for learning.
         </p>

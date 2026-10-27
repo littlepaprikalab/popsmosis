@@ -20,12 +20,12 @@ export function ServerUnavailable({ onRetry }: { onRetry: () => Promise<void> })
         style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
         <h1 className="text-xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-orange)' }}>SERVER UNAVAILABLE</h1>
         <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-          POPSMOSIS cannot reach its API right now. It may be starting back up after being idle, or a deploy may be
+          POPsmosis cannot reach its API right now. It may be starting back up after being idle, or a deploy may be
           in progress. Your sign-in is fine — this usually clears in under a minute.
         </p>
         <button onClick={retry} disabled={retrying}
           className="px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-60"
-          style={{ background: 'var(--accent-green)', color: 'var(--btn-filled-text)' }}>
+          style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
           {retrying ? 'Retrying...' : 'Try again'}
         </button>
       </div>

@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
+import { Wordmark } from '@/components/Wordmark';
 
-const activeStyle = { color: 'var(--text-hover)', borderBottom: '2px solid var(--accent-red)' } as const;
+const activeStyle = { color: 'var(--text-hover)', borderBottom: '2px solid var(--accent-brand)' } as const;
 const idleStyle = { color: 'var(--text-secondary)' } as const;
 
 export function Nav() {
@@ -54,7 +55,7 @@ export function Nav() {
         </button>
       </>
     ) : (
-      <Link href={signInHref} className="hover-text transition-colors" style={{ color: 'var(--accent-green)' }} onClick={onClick}>
+      <Link href={signInHref} className="hover-text transition-colors" style={{ color: 'var(--accent-brand)' }} onClick={onClick}>
         SIGN IN
       </Link>
     )
@@ -64,8 +65,8 @@ export function Nav() {
     <nav ref={navRef} className="sticky top-0 z-50 relative"
       style={{ backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
       <div className="flex items-center gap-6 px-6 py-3 max-w-full overflow-hidden">
-        <Link href="/" aria-label="POPSMOSIS home" className="text-lg font-bold tracking-wider whitespace-nowrap shrink-0" style={{ color: 'var(--accent-red)' }}>
-          POPSMOSIS
+        <Link href="/" aria-label="POPsmosis home" className="flex items-center shrink-0">
+          <Wordmark />
         </Link>
 
         {/* Desktop */}

@@ -47,7 +47,7 @@ export default function AccountPage() {
       <PageContainer maxWidth="xl" className="py-10 px-4 text-center">
         <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>Sign in to see your account.</p>
         <Link href="/auth/callback?returnTo=%2Faccount" className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider"
-          style={{ background: 'var(--accent-green)', color: 'var(--btn-filled-text)' }}>
+          style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
           Sign in with Google
         </Link>
       </PageContainer>
