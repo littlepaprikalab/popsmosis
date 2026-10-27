@@ -1,8 +1,15 @@
-"""Run the studio locally.
+"""Run the studio.
 
-    python -m studio plan --topic "brain structures" --course "AP Psych"
+    python -m studio run <question-id>           # a topic from the queue, to a posted lesson
+    python -m studio fail <question-id>          # give it up with its last run's reason
+    python -m studio summary <question-id>       # what its runs did, for the operator's record
+
+    python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
-    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, calls
+    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, runs, calls
+
+`run`, `fail` and `summary` are the operator's (studio/run.py); they need
+POPSMOSIS_API_URL and POPSMOSIS_API_KEY, and use the question id as the job id.
 
 Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every brain call is logged
 to the job's calls.jsonl with its tokens, cost and time.
@@ -20,10 +27,11 @@ import os
 import sys
 import textwrap
 import time
-from dataclasses import asdict
 from pathlib import Path
 
 from studio import brain, checks, jobs
+from studio import run as operator_run
+from studio.run import call_row, logged_ask
 from studio.schemas import CheckReport, FactCheckReport, Request
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
@@ -32,8 +40,12 @@ STEPS = {"bundle": bundle_step.run, "check": checks.run, "factcheck": factcheck_
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m studio", description="Run the popsmosis studio locally.")
+    parser = argparse.ArgumentParser(prog="python -m studio", description="Run the popsmosis studio.")
     commands = parser.add_subparsers(dest="command", required=True)
+    for name, help_text in (("run", "a topic from the queue, to a posted lesson; resumes at the first missing step"),
+                            ("fail", "give a topic up with its last run's reason"),
+                            ("summary", "what a topic's runs did, in one paragraph")):
+        commands.add_parser(name, help=help_text).add_argument("question")
     plan = commands.add_parser("plan", help="start a job: the bundle, then the fact-check")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--course", default="")
@@ -44,14 +56,28 @@ def main(argv: list[str] | None = None) -> int:
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=list(STEPS))
     step.add_argument("job")
-    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check and calls")
+    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check, runs and calls")
     show.add_argument("job")
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
     args = parser.parse_args(argv)
     overrides = {k: os.environ[k] for k in ("STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT") if os.environ.get(k)}
-    if overrides and args.command != "show":
+    if overrides and args.command in ("run", "plan", "step"):
         print(f"note: development override of the brain: {overrides}", file=sys.stderr)
+
+    if args.command in ("run", "fail", "summary"):
+        if not operator_run.ID_RE.fullmatch(args.question):
+            parser.error(f"{args.question!r} is not a question id")
+        if args.command == "summary":
+            print(operator_run.summary(args.question))
+            return 0
+        if args.command == "fail":
+            result, reason = operator_run.mark_failed(args.question)
+            print(f"{result} fail: {reason}")
+            return operator_run.EXIT_CODES[result]
+        result, step, reason = operator_run.run(args.question)
+        print(f"{result} {step}: {reason}")
+        return operator_run.EXIT_CODES[result]
 
     if args.command == "plan":
         job = jobs.ROOT / (args.job or jobs.new_id(args.topic))
@@ -80,7 +106,7 @@ def run_steps(job: Path, names: list[str]) -> bool:
         started = time.monotonic()
         print(f"{name}: running", file=sys.stderr)
         try:
-            result = STEPS[name](job) if name == "check" else STEPS[name](job, ask=_logged_ask(job))
+            result = STEPS[name](job) if name == "check" else STEPS[name](job, ask=logged_ask(job))
         except brain.BrainError as e:
             print(f"{name}: failed: {e}", file=sys.stderr)
             return False
@@ -90,22 +116,6 @@ def run_steps(job: Path, names: list[str]) -> bool:
             return False
         print(f"{name}: done in {took:.0f}s", file=sys.stderr)
     return True
-
-
-def _logged_ask(job: Path):
-    """brain.ask, logging each call to the job's calls.jsonl and stderr as it ends."""
-
-    def ask(*args, **kwargs):
-        before = len(brain.calls)
-        try:
-            return brain.ask(*args, **kwargs)
-        finally:
-            with (job / "calls.jsonl").open("a", encoding="utf-8") as log:
-                for call in brain.calls[before:]:
-                    log.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **asdict(call)}) + "\n")
-                    print(f"  {_call_row(call)}", file=sys.stderr)
-
-    return ask
 
 
 def print_job(job: Path, brief: bool = False) -> None:
@@ -155,24 +165,22 @@ def print_job(job: Path, brief: bool = False) -> None:
                 print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}: {c.problem}", indent=2))
                 print(_wrap(f"- {c.before}", indent=4, first=4))
                 print(_wrap(f"+ {c.after}", indent=4, first=4) + "\n")
+    runs = operator_run.read_jsonl(job / "runs.jsonl")
+    if runs:
+        print("\n## Runs\n")
+        for i, r in enumerate(runs, 1):
+            steps = ", ".join(f"{s['step']} {s['seconds']:.0f}s" for s in r["steps"]) or "nothing to do"
+            print(_wrap(f"{i}. {r['started']}  {r['result']} {r['step']}: {r['reason']}  [{steps}]", indent=4))
     if (job / "calls.jsonl").exists():
         calls = [brain.Call(**{k: v for k, v in json.loads(row).items() if k != "at"})
                  for row in (job / "calls.jsonl").read_text(encoding="utf-8").splitlines() if row.strip()]
         print(f"\n## Calls\n\n  {'call':<20} {'model':<17} {'in':>7} {'out':>7} {'cost':>8} {'time':>7}")
         for call in calls:
-            print(f"  {_call_row(call)}")
+            print(f"  {call_row(call)}")
         costs = [c.cost_usd for c in calls]
         total = f"${sum(costs):.4f}" if None not in costs else "n/a"
         print(f"  {'total':<20} {'':<17} {sum(c.input_tokens for c in calls):>7} "
               f"{sum(c.output_tokens for c in calls):>7} {total:>8} {sum(c.seconds for c in calls):>6.1f}s")
-
-
-def _call_row(call: brain.Call) -> str:
-    cost = f"${call.cost_usd:.4f}" if call.cost_usd is not None else "n/a"
-    flags = "".join([" fell back" if call.fell_back else "",
-                     f" ({call.stop_reason})" if call.stop_reason not in ("end_turn", "stop") else ""])
-    return (f"{call.label:<20} {call.model:<17} {call.input_tokens:>7} {call.output_tokens:>7} {cost:>8} "
-            f"{call.seconds:>6.1f}s{flags}")
 
 
 def _wrap(text: str, indent: int = 0, first: int = 0) -> str:

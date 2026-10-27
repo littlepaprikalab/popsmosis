@@ -6,6 +6,7 @@ import { validateString, containsPersonalInfo, parseLimit } from '../lib/validat
 import { replyInclude, serializeReply, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
+import { followUpContext } from '../lib/droplet.js';
 
 export const REPLY_MAX_LENGTH = 2000;
 const REPLIES_PER_USER_PER_HOUR = parseInt(process.env.REPLIES_PER_USER_PER_HOUR || '30', 10);
@@ -56,7 +57,12 @@ export default async function replyRoutes(app: FastifyInstance) {
             id: a.question.id, content: a.question.content,
             attachments: a.question.attachments.map(serializeAttachment), createdAt: a.question.createdAt.toISOString(), user: a.question.user,
           },
-          answer: { id: serialized.id, content: serialized.content, createdAt: serialized.createdAt },
+          answer: {
+            id: serialized.id, content: serialized.content, createdAt: serialized.createdAt,
+            // The droplet as the studio planned it, without the scenes and camera directions; null for a
+            // lesson posted without a bundle.
+            context: followUpContext(a.bundle),
+          },
           thread: a.replies.map((r) => serializeReply(r)),
           // The reply the agent must respond to: the newest human reply.
           replyTo: last && !last.agentId ? serializeReply(last) : null,

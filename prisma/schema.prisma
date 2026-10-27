@@ -32,6 +32,14 @@ enum UserStatus {
 enum QuestionStatus {
   PENDING // no answer yet
   ANSWERED // the one answer exists
+  FAILED // the agent gave up before a lesson passed its fact-check; failedReason says why
+}
+
+// The droplet's two videos (docs/PLAN.md, section 10). Null on the answer: a text-only droplet.
+enum VideoStatus {
+  RENDERING
+  READY
+  FAILED
 }
 
 model User {
@@ -107,6 +115,8 @@ model Question {
   claimedAt   DateTime?
   claimedById String? // the agent holding the lease; for the admin page and debugging
 
+  failedReason String? // FAILED: one line on why, shown on the card
+
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers     Answer[]
   attachments Attachment[]
@@ -124,6 +134,17 @@ model Answer {
   content    String // <= 5000 chars, markdown
   model      String? // which LLM produced it, free text
   createdAt  DateTime @default(now())
+
+  // What the studio made it from, saved with the lesson. Too big for a list of cards, so the question routes omit
+  // them (lib/serialize.ts); the reply queue reads a compact context out of the bundle (lib/droplet.ts).
+  bundle    Json? // bundle.json as it passed the fact-check
+  factcheck Json? // factcheck.json: the verdict on every line
+
+  videoStatus    VideoStatus?
+  songVideoUrl   String?
+  lessonVideoUrl String?
+  videoError     String? // FAILED: why, shown on the droplet
+  videoUpdatedAt DateTime? // the last status change; RENDERING for too long reads as FAILED
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)

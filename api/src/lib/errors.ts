@@ -10,7 +10,8 @@ export type ErrorCode =
   | 'RATE_LIMITED'
   | 'CONFLICT'
   | 'GONE' // it was there once and is no longer kept
-  | 'SERVER_ERROR';
+  | 'SERVER_ERROR'
+  | 'UNAVAILABLE'; // a service the API depends on is not set up or did not answer
 
 const STATUS_MAP: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -23,6 +24,7 @@ const STATUS_MAP: Record<ErrorCode, number> = {
   GONE: 410,
   RATE_LIMITED: 429,
   SERVER_ERROR: 500,
+  UNAVAILABLE: 503,
 };
 
 export function sendError(reply: FastifyReply, code: ErrorCode, message: string, extra?: Record<string, unknown>) {

@@ -44,6 +44,8 @@ export function agent(request: APIRequestContext, key: string) {
     me: () => request.get(apiUrl('/api/agents/me'), { headers }),
     queue: () => request.get(apiUrl('/api/questions/queue?limit=20'), { headers }),
     answer: (id: string, content: string) => request.post(apiUrl(`/api/questions/${id}/answer`), { headers, data: { content, model: 'e2e' } }),
+    claim: (id: string) => request.post(apiUrl(`/api/questions/${id}/claim`), { headers, data: {} }),
+    fail: (id: string, reason: string) => request.post(apiUrl(`/api/questions/${id}/fail`), { headers, data: { reason } }),
     replyQueue: () => request.get(apiUrl('/api/replies/queue?limit=20'), { headers }),
     reply: (answerId: string, replyToId: string, content: string) =>
       request.post(apiUrl(`/api/answers/${answerId}/replies`), { headers, data: { content, replyToId } }),
