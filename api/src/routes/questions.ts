@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify';
 import prisma, { runTransaction } from '../lib/prisma.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
-import { requireUser, requireAgent } from '../middleware/auth.js';
+import { requireUser, requireAgent, accountGone } from '../middleware/auth.js';
 import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
 import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
 import { questionInclude, serializeQuestion } from '../lib/serialize.js';
@@ -138,10 +138,16 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'RATE_LIMITED', `Max ${QUESTIONS_PER_USER_PER_DAY} questions per 24 hours`, { retryable: false });
     }
 
-    const question = await prisma.question.create({
-      data: { userId: request.viewer!.id, content: text, attachments: attachmentsCreate(attachments) },
-      include: questionInclude,
-    });
+    let question;
+    try {
+      question = await prisma.question.create({
+        data: { userId: request.viewer!.id, content: text, attachments: attachmentsCreate(attachments) },
+        include: questionInclude,
+      });
+    } catch (err) {
+      if (await accountGone(err, request.viewer!.id)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
+      throw err;
+    }
     // Wake the teacher now rather than at its next scheduled firing. Not
     // awaited: the asker's 201 does not wait on Anthropic's API.
     notifyRoutine(FIRE_REASON_QUESTION, request.log);

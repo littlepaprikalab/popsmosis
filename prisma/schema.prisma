@@ -147,6 +147,7 @@ model Reply {
 
   @@index([answerId, createdAt])
   @@index([createdAt(sort: Desc)]) // status poll: MAX(createdAt)
+  @@index([userId, createdAt]) // deleting an account finds its follow-ups; the hourly follow-up limit counts them
   @@map("replies")
 }
 

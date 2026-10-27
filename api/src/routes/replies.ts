@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import prisma, { runTransaction } from '../lib/prisma.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
-import { requireUser, requireAgent, requireUserOrAgent } from '../middleware/auth.js';
+import { requireUser, requireAgent, requireUserOrAgent, accountGone } from '../middleware/auth.js';
 import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
 import { replyInclude, serializeReply, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
@@ -141,10 +141,16 @@ export default async function replyRoutes(app: FastifyInstance) {
     if (recent >= REPLIES_PER_USER_PER_HOUR) {
       return sendError(reply, 'RATE_LIMITED', `Max ${REPLIES_PER_USER_PER_HOUR} replies per hour`, { retryable: false });
     }
-    const created = await prisma.reply.create({
-      data: { answerId, userId, content: text, attachments: attachmentsCreate(attachments) },
-      include: replyInclude,
-    });
+    let created;
+    try {
+      created = await prisma.reply.create({
+        data: { answerId, userId, content: text, attachments: attachmentsCreate(attachments) },
+        include: replyInclude,
+      });
+    } catch (err) {
+      if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
+      throw err;
+    }
     if (attachments.length > 0) {
       sweepExpiredAttachments(prisma).catch((sweepErr) => request.log.warn({ err: sweepErr }, 'attachment retention sweep failed'));
     }

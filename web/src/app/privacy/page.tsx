@@ -134,7 +134,8 @@ export default function PrivacyPage() {
         </dl>
         <p>
           While it makes a lesson, the AI teacher keeps working files, which can include your request and your files, on
-          the computer that runs it, so it can retry a step that failed. They are never published.
+          the computer that runs it, so it can retry a step that failed. They are never published
+          (see <a href="#retention">section 6</a> for how long they stay).
         </p>
         <p>
           We may also disclose information if the law requires it, to protect someone&rsquo;s safety or rights, or if
@@ -151,6 +152,9 @@ export default function PrivacyPage() {
           <li><strong>Lessons and videos:</strong> published for as long as Popsmosis runs, unless they are taken down.</li>
           <li><strong>Server logs and backups:</strong> kept by our providers for a limited time, after which they
             expire.</li>
+          <li><strong>The AI teacher&rsquo;s working files:</strong> kept on the computer that runs the teacher until
+            they are cleared. Deleting a request or your account doesn&rsquo;t reach them on its own; write to us and we
+            will clear yours.</li>
         </ul>
       </Section>
 
@@ -166,6 +170,10 @@ export default function PrivacyPage() {
           <li><strong>A lesson:</strong> if you want a lesson made from your request taken down, write to us at{' '}
             <Contact />.</li>
         </ul>
+        <p>
+          These take your data out of Popsmosis straight away. Copies in server logs, backups and the AI teacher&rsquo;s
+          working files (<a href="#retention">section 6</a>) go later; write to us if you want them cleared sooner.
+        </p>
       </Section>
 
       <Section id="rights" title="8. Your rights">

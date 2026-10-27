@@ -46,3 +46,8 @@ export function isAppError(err: unknown): err is AppError {
 export function isUniqueViolation(err: unknown): boolean {
   return !!err && typeof err === 'object' && 'code' in err && (err as { code: unknown }).code === 'P2002';
 }
+
+/** Prisma foreign-key violation: a row points at one that is no longer there. */
+export function isForeignKeyViolation(err: unknown): boolean {
+  return !!err && typeof err === 'object' && 'code' in err && (err as { code: unknown }).code === 'P2003';
+}

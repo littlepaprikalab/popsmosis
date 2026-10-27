@@ -293,6 +293,16 @@ downtime. Either service can go first: the API before it ignores the studio's `b
 field, and the web app shows no bill for an answer that has none. Deploy `popsmosis-api`
 first anyway, as for any migration.
 
+`20261031120000_learner_privacy` (learners private, lessons public) lets
+`questions."userId"` be null, which Postgres records without touching a row, and adds an
+index on `replies ("userId", "createdAt")`, built while the build runs; on today's table
+that takes moments, and it holds writes to `replies` only while it builds. Deploy
+`popsmosis-api` **first**: until it is live, an old API still shows every learner's topics
+to everyone, and the new web app's account deletion has no endpoint to call. Do not roll
+the API back past this change once anyone has taken back a request or deleted their account:
+the old code expects every request to have a learner and its `/learn` breaks on the ones that
+do not. Roll forward instead.
+
 ## Troubleshooting
 
 | Symptom | Cause |

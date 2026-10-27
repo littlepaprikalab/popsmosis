@@ -235,4 +235,80 @@ d('learner privacy', () => {
     expect((await app.inject({ method: 'DELETE', url: '/api/auth/me', headers: asAgent() })).statusCode).toBe(401);
     expect(await prisma.user.count()).toBe(3);
   });
+
+  it('answers 401, not a 500, to a session this instance still remembers after the account was deleted', async () => {
+    const { answerId } = await lesson(ben, 'Glaciers, please');
+    // This instance has Ben cached (middleware/auth.ts); the account goes behind its back, as on another instance.
+    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(ben.cookie) })).statusCode).toBe(200);
+    await prisma.user.delete({ where: { id: ben.id } });
+
+    for (const [url, content] of [['/api/questions', 'Still here?'], [`/api/answers/${answerId}/replies`, 'And here?']]) {
+      const res = await app.inject({ method: 'POST', url, headers: asUser(ben.cookie), payload: { content } });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error.message).toBe('User not found'); // the web app signs out on exactly this
+    }
+    // The stale entry went with the first refusal: reads are refused at once too.
+    expect((await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(ben.cookie) })).statusCode).toBe(401);
+  });
+
+  it('refuses a lesson for a request deleted before it landed, and leaves nothing behind', async () => {
+    const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(ben.cookie), payload: { content: 'Tides, then never mind' } });
+    const id = asked.json().id as string;
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}`, headers: asUser(ben.cookie) })).statusCode).toBe(204);
+    const late = await app.inject({ method: 'POST', url: `/api/questions/${id}/answer`, headers: asAgent(), payload: { content: 'The Moon pulls the oceans.' } });
+    expect(late.statusCode).toBe(404); // the studio reads a 404 as "the topic was deleted" and stops
+    expect(await prisma.answer.count()).toBe(0);
+  });
+
+  // The teacher works on its own clock, so a lesson can land in the same instant the learner deletes. The row lock
+  // both routes take (SELECT ... FOR UPDATE) has to make every such race end in one of two whole states. Which one
+  // wins varies run to run; the two orders on their own are pinned by the tests above.
+  it('a lesson landing as the learner takes the request back ends whole either way, never half', async () => {
+    for (let round = 0; round < 12; round++) {
+      const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(ben.cookie), payload: { content: `Race ${round}: tides` } });
+      const id = asked.json().id as string;
+      const [answer, del] = await Promise.all([
+        app.inject({ method: 'POST', url: `/api/questions/${id}/answer`, headers: asAgent(), payload: { content: 'The Moon pulls the oceans.' } }),
+        app.inject({ method: 'DELETE', url: `/api/questions/${id}`, headers: asUser(ben.cookie) }),
+      ]);
+      expect(del.statusCode).toBe(204);
+      const row = await prisma.question.findUnique({ where: { id }, include: { answers: true } });
+      if (answer.statusCode === 201) {
+        // The lesson came first: the request was taken back around it.
+        expect(row).toMatchObject({ userId: null, content: '', status: 'ANSWERED' });
+        expect(row!.answers).toHaveLength(1);
+      } else {
+        // The delete came first: nothing is left for the lesson to hang on.
+        expect(answer.statusCode).toBe(404);
+        expect(row).toBeNull();
+      }
+      // Each user may ask 10 a day; the race is the subject here, not the quota.
+      await prisma.question.updateMany({ where: { id }, data: { createdAt: new Date(Date.now() - 2 * 86_400_000) } });
+    }
+  });
+
+  it('a lesson or a follow-up landing as the account is deleted ends whole either way, never a server error', async () => {
+    for (let round = 0; round < 6; round++) {
+      const learner = await user(`racer${round}`);
+      const { answerId } = await lesson(learner, `Race ${round}: volcanoes`);
+      const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(learner.cookie), payload: { content: `Race ${round}: earthquakes` } });
+      const pendingId = asked.json().id as string;
+      const [answer, followUp, del] = await Promise.all([
+        app.inject({ method: 'POST', url: `/api/questions/${pendingId}/answer`, headers: asAgent(), payload: { content: 'Plates slip.' } }),
+        app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(learner.cookie), payload: { content: 'One more question' } }),
+        app.inject({ method: 'DELETE', url: '/api/auth/me', headers: asUser(learner.cookie) }),
+      ]);
+      expect(del.statusCode).toBe(204);
+      expect(await prisma.user.count({ where: { id: learner.id } })).toBe(0);
+      // The lesson that was already there stays, taken back.
+      expect((await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).statusCode).toBe(200);
+      // The racing lesson: kept and taken back, or never made.
+      const pending = await prisma.question.findUnique({ where: { id: pendingId } });
+      if (answer.statusCode === 201) expect(pending).toMatchObject({ userId: null, content: '' });
+      else { expect(answer.statusCode).toBe(404); expect(pending).toBeNull(); }
+      // The racing follow-up: posted and then deleted with the account, or refused. Never a 500.
+      expect([201, 401, 403]).toContain(followUp.statusCode);
+      expect(await prisma.reply.count({ where: { answerId, userId: { not: null } } })).toBe(0);
+    }
+  });
 });

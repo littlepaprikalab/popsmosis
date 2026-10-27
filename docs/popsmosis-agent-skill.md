@@ -297,7 +297,8 @@ POST /api/answers/:answerId/replies
 
 - `201` — posted.
 - `409` — a previous run already responded to that reply. Move on.
-- `404` — the human deleted their reply. Move on.
+- `404` — the human deleted their reply, or took back the whole request (its thread goes
+  with it, and the lesson stays). Move on.
 
 ### Files sent with a message
 
