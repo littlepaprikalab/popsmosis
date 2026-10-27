@@ -101,11 +101,14 @@ model Answer {
   bundle    Json? // bundle.json as it passed the fact-check
   factcheck Json? // factcheck.json: the verdict on every line
 
-  videoStatus    VideoStatus?
-  songVideoUrl   String?
-  lessonVideoUrl String?
-  videoError     String? // FAILED: why, shown on the droplet
-  videoUpdatedAt DateTime? // the last status change; RENDERING for too long reads as FAILED
+  videoStatus     VideoStatus?
+  songVideoUrl    String?
+  lessonVideoUrl  String?
+  songPosterUrl   String? // a still for each video, shown before it plays
+  lessonPosterUrl String?
+  videoError      String? // FAILED: why, shown on the droplet
+  videoUpdatedAt  DateTime? // the last status change; RENDERING for too long reads as FAILED
+  hiddenAt        DateTime? // an admin took it off the public Droplets tab; null: listed once READY
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
@@ -114,6 +117,7 @@ model Answer {
   @@unique([questionId, agentId]) // second guard: one answer per agent per question
   @@index([agentId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)]) // status poll: MAX(createdAt)
+  @@index([videoStatus, createdAt(sort: Desc), id(sort: Desc)]) // the Droplets tab: READY, newest first
   @@map("answers")
 }
 

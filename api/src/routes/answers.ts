@@ -1,13 +1,13 @@
 import { FastifyInstance, FastifyReply } from 'fastify';
 import prisma from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
-import { requireAgent } from '../middleware/auth.js';
-import { VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoStatus } from '../lib/droplet.js';
+import { requireAdmin, requireAgent } from '../middleware/auth.js';
+import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoField, type VideoStatus } from '../lib/droplet.js';
 import { BUCKETS, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
 
-// The agent's half of a droplet's videos (docs/PLAN.md, section 10). Both routes
-// are for the agent's own answers only: a key can finish its own droplets, never
-// another agent's.
+// The agent's half of a droplet's videos (docs/PLAN.md, section 10), for the agent's
+// own answers only: a key can finish its own droplets, never another agent's. And
+// the admin's switch that takes a droplet off the public Droplets tab.
 export default async function answerRoutes(app: FastifyInstance) {
   // The answer, or null once the error has been sent.
   async function ownAnswer(id: string, agentId: string, reply: FastifyReply) {
@@ -26,21 +26,26 @@ export default async function answerRoutes(app: FastifyInstance) {
     return answer;
   }
 
-  // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?, error? }.
-  // RENDERING when the media steps start (and again as each video lands), READY
-  // when they are done, FAILED with one line on why. A URL left out keeps the one
-  // already saved, so the song can be posted before the lesson video exists.
+  // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
+  // songPosterUrl?, lessonPosterUrl?, error? }. RENDERING when the media steps start
+  // (and again as each video lands), READY when they are done, FAILED with one line
+  // on why. A URL left out keeps the one already saved, so the song can be posted
+  // before the lesson video exists.
   app.patch('/api/answers/:id/video', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { status, songVideoUrl, lessonVideoUrl, error } = (request.body ?? {}) as {
-      status?: unknown; songVideoUrl?: unknown; lessonVideoUrl?: unknown; error?: unknown;
-    };
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const { status, error } = body;
+    const { songVideoUrl, lessonVideoUrl } = body;
     if (!VIDEO_STATUSES.includes(status as VideoStatus)) {
       return sendError(reply, 'VALIDATION_ERROR', `status must be one of ${VIDEO_STATUSES.join(', ')}`);
     }
-    for (const [field, value] of [['songVideoUrl', songVideoUrl], ['lessonVideoUrl', lessonVideoUrl]] as const) {
-      const urlError = value === undefined ? null : videoUrlError(value, field);
+    const urls: Partial<Record<VideoField, string>> = {};
+    for (const field of VIDEO_FIELDS) {
+      const value = body[field];
+      if (value === undefined) continue;
+      const urlError = videoUrlError(value, field);
       if (urlError) return sendError(reply, 'VALIDATION_ERROR', urlError);
+      urls[field] = value as string;
     }
     if (status === 'FAILED') {
       if (typeof error !== 'string' || !error.trim()) return sendError(reply, 'VALIDATION_ERROR', 'error is required when status is FAILED');
@@ -63,12 +68,14 @@ export default async function answerRoutes(app: FastifyInstance) {
         videoStatus: status as VideoStatus,
         // Only the URLs this request sent: the two videos render in parallel and report
         // separately, and writing back the other's value as read would erase it.
-        ...(songVideoUrl !== undefined && { songVideoUrl: songVideoUrl as string }),
-        ...(lessonVideoUrl !== undefined && { lessonVideoUrl: lessonVideoUrl as string }),
+        ...urls,
         videoError: status === 'FAILED' ? (error as string).trim() : null,
         videoUpdatedAt: new Date(),
       },
-      select: { videoStatus: true, songVideoUrl: true, lessonVideoUrl: true, videoError: true, videoUpdatedAt: true },
+      select: {
+        videoStatus: true, songVideoUrl: true, lessonVideoUrl: true, songPosterUrl: true, lessonPosterUrl: true,
+        videoError: true, videoUpdatedAt: true,
+      },
     });
     await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });
     return serializeVideo(updated);
@@ -94,5 +101,20 @@ export default async function answerRoutes(app: FastifyInstance) {
       request.log.warn({ err, bucket, answerId: id }, 'signed upload URL failed');
       return sendError(reply, 'UNAVAILABLE', 'File storage did not give an upload URL; try again', { retryable: true });
     }
+  });
+
+  // PATCH /api/answers/:id — admin: { hidden }. True takes the droplet off the public
+  // Droplets tab, false puts it back. The lesson stays on /learn either way.
+  app.patch('/api/answers/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const { hidden } = (request.body ?? {}) as { hidden?: unknown };
+    if (typeof hidden !== 'boolean') return sendError(reply, 'VALIDATION_ERROR', 'hidden must be true or false');
+    const answer = await prisma.answer.findUnique({ where: { id }, select: { hiddenAt: true } });
+    if (!answer) return sendError(reply, 'NOT_FOUND', 'Answer not found');
+    // Hiding again keeps the first time it was hidden.
+    const hiddenAt = hidden ? (answer.hiddenAt ?? new Date()) : null;
+    const updated = await prisma.answer.update({ where: { id }, data: { hiddenAt }, select: { id: true, hiddenAt: true } });
+    request.log.info({ answerId: id, hidden, adminId: request.viewer!.id }, 'droplet visibility changed');
+    return { id: updated.id, hidden: updated.hiddenAt !== null, hiddenAt: updated.hiddenAt?.toISOString() ?? null };
   });
 }
