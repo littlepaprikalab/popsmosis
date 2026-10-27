@@ -1,4 +1,5 @@
 import json
+import subprocess
 import threading
 
 import pytest
@@ -151,6 +152,74 @@ def test_every_step_the_runners_run_has_a_place():
 
     assert operator_run.STEPS == ledger.PARTS["lesson"] and media.MEDIA_STEPS == ledger.PARTS["videos"]
     assert set(ledger.LABEL_STEPS.values()) <= set(operator_run.STEPS) | set(media.MEDIA_STEPS)
+    assert set(ledger.TOOLS) <= set(media.MEDIA_STEPS)
+
+
+# --- the software each step ran, and its version on this machine -------------------------------
+
+
+def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_here(tmp_path, monkeypatch):
+    monkeypatch.setattr(ledger, "version", {"demucs": "4.1.0", "torchaudio": "2.11.0", "torch": "2.11.0+cpu",
+                                            "skia-python": "144.1", "ffmpeg": "7.1.1"}.get)
+    (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [
+        {"step": "timing", "seconds": 110.0}, {"step": "timeline", "seconds": 0.3}, {"step": "render", "seconds": 157.0}]}))
+    with ledger.at_step("timing"):
+        ledger.log(tmp_path, [call("song vocals", model="htdemucs", cost=0.0, role="local")])
+    steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
+    assert steps["timing"]["models"] == [{"model": "htdemucs", "calls": 1, "costUsd": 0.0, "credits": None}]
+    assert steps["timing"]["tools"] == [{"name": "demucs", "version": "4.1.0"}, {"name": "torchaudio", "version": "2.11.0"},
+                                        {"name": "torch", "version": "2.11.0+cpu"}, {"name": "ffmpeg", "version": "7.1.1"}]
+    assert steps["render"]["tools"] == [{"name": "skia-python", "version": "144.1"}, {"name": "ffmpeg", "version": "7.1.1"}]
+    assert steps["timeline"]["tools"] == []  # the studio's own code
+
+
+def test_the_lessons_steps_run_no_software_of_their_own(tmp_path):
+    with ledger.at_step("bundle"):
+        ledger.log(tmp_path, [call("bundle")])
+    assert [s["tools"] for s in ledger.breakdown(tmp_path, "lesson")["steps"]] == [[]]
+
+
+def test_a_packages_version_is_the_installed_one_and_none_when_it_is_not_installed():
+    import importlib.metadata
+
+    assert ledger.version("pytest") == importlib.metadata.version("pytest")
+    assert ledger.version("no-such-package-popsmosis") is None
+
+
+def test_a_broken_install_costs_its_version_never_the_bill(tmp_path, monkeypatch):
+    import importlib.metadata
+
+    def broken(name):  # newer Pythons raise KeyError for an install whose metadata has no Version
+        raise KeyError("Version")
+
+    monkeypatch.setattr(importlib.metadata, "version", broken)
+    ledger.version.cache_clear()
+    (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [{"step": "art", "seconds": 1.0}]}))
+    [art] = ledger.try_breakdown(tmp_path, "videos")["steps"]
+    assert art["tools"] == [{"name": "skia-python", "version": None}]
+    ledger.version.cache_clear()  # what the fake said is not this machine's
+
+
+def test_ffmpegs_version_is_read_from_ffmpeg_and_none_when_it_cannot_say(monkeypatch):
+    def ffmpeg_says(stdout):
+        def run(command, **kwargs):
+            assert command == ["ffmpeg", "-version"]
+            return subprocess.CompletedProcess(command, 0, stdout=stdout)
+        return run
+
+    def missing(command, **kwargs):
+        raise FileNotFoundError("ffmpeg")
+
+    for run, expected in [
+        (ffmpeg_says("ffmpeg version 7.1.1-1ubuntu1 Copyright (c) 2000-2025 the FFmpeg developers\nbuilt with gcc"), "7.1.1-1ubuntu1"),
+        (ffmpeg_says("something else entirely"), None),
+        (ffmpeg_says(""), None),
+        (missing, None),
+    ]:
+        ledger.version.cache_clear()
+        monkeypatch.setattr(subprocess, "run", run)
+        assert ledger.version("ffmpeg") == expected
+    ledger.version.cache_clear()  # what the fakes said is not this machine's ffmpeg
 
 
 # --- the seams: kills, full disks, numbers that are not numbers -----------------------------------

@@ -56,18 +56,23 @@ const SAMPLE_BREAKDOWN = {
   },
   videoBreakdown: {
     steps: [
-      { step: 'art', seconds: 76.0, tries: 1, costUsd: 0.0081, models: [{ model: 'claude-haiku-5-5', calls: 3, costUsd: 0.0081, credits: null }] },
+      { step: 'art', seconds: 76.0, tries: 1, costUsd: 0.0081, models: [{ model: 'claude-haiku-5-5', calls: 3, costUsd: 0.0081, credits: null }],
+        tools: [{ name: 'skia-python', version: '144.1' }] },
       { step: 'locate', seconds: 0.1, tries: 1, costUsd: 0, models: [] },
       { step: 'audio', seconds: 94.6, tries: 1, costUsd: 0.08, models: [
         { model: 'lyria-3.5', calls: 1, costUsd: 0.08, credits: null },
         { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 3214 },
-      ] },
+      ], tools: [{ name: 'ffmpeg', version: '6.1.1-3ubuntu5' }] },
       { step: 'timing', seconds: 110.2, tries: 1, costUsd: 0, models: [
         { model: 'htdemucs', calls: 1, costUsd: 0, credits: null },
         { model: 'mms-fa', calls: 1, costUsd: 0, credits: null },
+      ], tools: [
+        { name: 'demucs', version: '4.1.0' }, { name: 'torchaudio', version: '2.11.0+cpu' },
+        { name: 'torch', version: '2.11.0+cpu' }, { name: 'ffmpeg', version: '6.1.1-3ubuntu5' },
       ] },
       { step: 'timeline', seconds: 0.3, tries: 1, costUsd: 0, models: [] },
-      { step: 'render', seconds: 157.0, tries: 1, costUsd: 0, models: [] },
+      { step: 'render', seconds: 157.0, tries: 1, costUsd: 0, models: [],
+        tools: [{ name: 'skia-python', version: '144.1' }, { name: 'ffmpeg', version: '6.1.1-3ubuntu5' }] },
       { step: 'upload', seconds: 14.2, tries: 1, costUsd: 0, models: [] },
     ],
     seconds: 376.3,

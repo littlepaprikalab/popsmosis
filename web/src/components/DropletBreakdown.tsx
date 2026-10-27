@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import type { Breakdown, BreakdownModel, Video } from '@/lib/api';
+import type { Breakdown, BreakdownModel, BreakdownStep, Video } from '@/lib/api';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
 const STEP_LABELS: Record<string, string> = {
@@ -49,9 +49,58 @@ export function totalCost(b: Breakdown): string {
 const cell = 'py-1 pr-3 align-top';
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
 
+/** Each maker's colour on the bill, from the theme's accents so it holds in light and dark. A maker not here is grey. */
+const MAKER_COLORS: Record<string, string> = {
+  Meta: 'var(--accent-blue)',
+  Anthropic: 'var(--accent-orange)',
+  Google: 'var(--accent-green)',
+  ElevenLabs: 'var(--accent-purple)',
+  FFmpeg: 'var(--accent-pink)',
+};
+
+const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+
+/** Who made a model or tool, as a chip in the maker's colour. Nothing when the API does not know. */
+function MakerChip({ maker, className = '' }: { maker: string | null; className?: string }) {
+  if (!maker) return null;
+  const color = MAKER_COLORS[maker];
+  const style = color
+    ? { background: tint(color, 14), border: `1px solid ${tint(color, 45)}`, color }
+    : { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' };
+  return (
+    <span data-testid="maker" style={style}
+      className={`inline-block align-middle whitespace-nowrap text-[9px] uppercase px-1.5 py-px rounded-full font-semibold ${className}`}>
+      {maker}
+    </span>
+  );
+}
+
+/** One line of a step on the bill: a model it called, or a tool it ran, at the version installed. */
+interface Line {
+  name: string;
+  version: string | null; // a tool's; a model's name is its version
+  maker: string | null;
+  calls: number | null; // a model's; a tool is run, not called
+  cost: string | null; // a model's; a tool is not billed
+}
+
+/** A step's models, then the tools it ran on the studio's machine. */
+function linesOf(s: BreakdownStep): Line[] {
+  return [
+    ...s.models.map((m) => ({ name: m.model, version: null, maker: m.maker, calls: m.calls, cost: modelCost(m) })),
+    ...(s.tools ?? []).map((t) => ({ name: t.name, version: t.version, maker: t.maker, calls: null, cost: null })),
+  ];
+}
+
+/** A line's name, with a tool's version after it in a lighter colour. */
+function LineName({ line }: { line: Line }) {
+  return <>{line.name}{line.version && <span style={{ color: 'var(--text-muted)' }}> {line.version}</span>}</>;
+}
+
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
- * with how many calls and what they cost, how long it took, and the totals. Folded until opened,
+ * with how many calls and what they cost, the tools it ran with their versions, who made each,
+ * how long it took, and the totals. Folded until opened,
  * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
  */
 export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; video: Video | null }) {
@@ -64,6 +113,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
       && 'The times add up to more than the total: the diagrams and the audio are made side by side.',
     steps.some((s) => s.tries > 1) && 'A step tried more than once counts every try, in time and in cost.',
     steps.some((s) => s.models.some((m) => m.costUsd === 0)) && 'free: run on the studio’s own machine.',
+    steps.some((s) => s.tools?.some((t) => t.version)) && 'Versions: as installed on the studio’s machine that made the videos.',
     breakdown.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',
     breakdown.unpriced > 0 && 'n/a: the provider did not say what it charged.',
     video?.status === 'RENDERING' && (steps.some((s) => s.part === 'videos')
@@ -86,7 +136,8 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
               <th className={`${cell} font-semibold`}>#</th>
               <th className={`${cell} font-semibold`}>Step</th>
-              <th className={`${cell} font-semibold`}>Model</th>
+              <th className={`${cell} font-semibold`}>Model / tool</th>
+              <th className={`${cell} font-semibold`}>Maker</th>
               <th className={`${num} font-semibold`}>Qty</th>
               <th className={`${num} font-semibold`}>Time</th>
               <th className={`${num} font-semibold !pr-0`}>Cost</th>
@@ -94,10 +145,11 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
           </thead>
           <tbody>
             {steps.map((s, i) => {
-              const rows = s.models.length > 0 ? s.models : [null];
+              const lines = linesOf(s);
+              const rows = lines.length > 0 ? lines : [null];
               return (
                 <Fragment key={`${s.part}-${s.step}`}>
-                  {rows.map((m, j) => (
+                  {rows.map((l, j) => (
                     <tr key={j} data-testid={j === 0 ? 'breakdown-step' : undefined}
                       style={j === rows.length - 1 && i < steps.length - 1 ? { borderBottom: '1px solid var(--border)' } : undefined}>
                       <td className={`${cell} tabular-nums`} style={{ color: 'var(--text-muted)' }}>{j === 0 ? String(i + 1).padStart(2, '0') : ''}</td>
@@ -109,10 +161,11 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
                           </>
                         )}
                       </td>
-                      <td className={`${cell} break-all`}>{m ? m.model : <span style={{ color: 'var(--text-muted)' }}>code</span>}</td>
-                      <td className={num}>{m ? m.calls : ''}</td>
+                      <td className={`${cell} break-all`}>{l ? <LineName line={l} /> : <span style={{ color: 'var(--text-muted)' }}>code</span>}</td>
+                      <td className={cell}><MakerChip maker={l?.maker ?? null} /></td>
+                      <td className={num}>{l?.calls ?? ''}</td>
                       <td className={num}>{j === 0 ? duration(s.seconds) : ''}</td>
-                      <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{m ? modelCost(m) : '—'}</td>
+                      <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{l?.cost ?? '—'}</td>
                     </tr>
                   ))}
                 </Fragment>
@@ -121,7 +174,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
           </tbody>
           <tfoot>
             <tr className="font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
-              <td className={cell} colSpan={4}>Total</td>
+              <td className={cell} colSpan={5}>Total</td>
               <td className={num}>{duration(breakdown.seconds)}</td>
               <td className={`${num} !pr-0`}>{totalCost(breakdown)}</td>
             </tr>
@@ -137,7 +190,7 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
   );
 }
 
-/** The same bill on a phone, where six columns do not fit: each step on a line with its time, its models under it. */
+/** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
 function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
@@ -153,10 +206,12 @@ function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
               </span>
               <span className="ml-auto tabular-nums whitespace-nowrap">{duration(s.seconds)}</span>
             </div>
-            {s.models.map((m) => (
-              <div key={m.model} className="flex gap-2 pl-6">
-                <span className="min-w-0 break-all">{m.model}{m.calls > 1 ? ` ×${m.calls}` : ''}</span>
-                <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{modelCost(m)}</span>
+            {linesOf(s).map((l) => (
+              <div key={`${l.name} ${l.version ?? ''}`} className="flex gap-2 pl-6">
+                <span className="min-w-0 break-all">
+                  <LineName line={l} />{l.calls !== null && l.calls > 1 ? ` ×${l.calls}` : ''}<MakerChip maker={l.maker} className="ml-1.5" />
+                </span>
+                <span className="ml-auto tabular-nums whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>{l.cost ?? ''}</span>
               </div>
             ))}
           </li>

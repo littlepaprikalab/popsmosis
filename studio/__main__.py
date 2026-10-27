@@ -260,7 +260,8 @@ def print_job(job: Path, brief: bool = False) -> None:
             tries = f" ({row['tries']} tries)" if row["tries"] > 1 else ""
             models = ", ".join(f"{m['model']} x{m['calls']}" for m in row["models"]) or "code"
             cost = f"${row['costUsd']:.4f}" + ("+" if any(m["costUsd"] is None for m in row["models"]) else "")
-            print(f"  {row['step']:<10} {seconds:>6}{tries:<10} {cost:<10} {models}")
+            tools = ", ".join(f"{t['name']} {t['version'] or '(version n/a)'}" for t in row["tools"])
+            print(f"  {row['step']:<10} {seconds:>6}{tries:<10} {cost:<10} {models}" + (f"; with {tools}" if tools else ""))
 
 
 def _wrap(text: str, indent: int = 0, first: int = 0) -> str:
