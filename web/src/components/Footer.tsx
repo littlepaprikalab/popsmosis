@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Wordmark } from '@/components/Wordmark';
 
 export function Footer() {
   return (
@@ -16,7 +17,7 @@ export function Footer() {
         </a>
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>
-        <span style={{ fontWeight: 700, color: 'var(--accent-red)' }}>POPSMOSIS</span>
+        <Wordmark size="sm" />
         {' · droplets for learning. Lessons are written by an AI teacher.'}
       </div>
     </footer>
