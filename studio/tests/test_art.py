@@ -275,6 +275,11 @@ def test_a_shadow_inside_a_structures_group_is_not_part_of_it():
     faint = ('<g data-structure="Thylakoid"><circle cx="896" cy="512" r="120" fill="#2E8B57" fill-opacity="0.4" '
              'stroke="#1B5E3A" stroke-width="4"/></g>')
     assert svg.masks(svg.check(svg_text(faint), [THYLAKOID]).root, ["Thylakoid"])["Thylakoid"][512, 896]
+    # A drop shadow merges the shape back on top, crisp, so under one the fill still counts.
+    drop = ('<defs><filter id="d"><feGaussianBlur in="SourceAlpha" stdDeviation="6"/><feOffset dx="4" dy="6"/>'
+            '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>')
+    shadowed = svg_text(drop, faint.replace('<g data-structure="Thylakoid">', '<g data-structure="Thylakoid" filter="url(#d)">'))
+    assert svg.masks(svg.check(shadowed, [THYLAKOID]).root, ["Thylakoid"])["Thylakoid"][512, 896]
     # A structure that is nothing but a soft glow still has a mask.
     glow = svg_text('<defs><filter id="s"><feGaussianBlur stdDeviation="10"/></filter></defs>',
                     '<g data-structure="Thylakoid" filter="url(#s)" opacity="0.3">'

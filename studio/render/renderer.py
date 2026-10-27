@@ -41,7 +41,7 @@ FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
 CAPTION_FADE_S = 0.3
 FRQ_IN_S = 1.0
-EDGE_FADE = 40.0  # a label fades out over this many pixels as its dot nears the edge of the view
+EDGE_FADE = 2 * p.DOT_R  # a label fades out as its dot nears the edge of the view, over about the dot's width
 
 
 class RenderError(Exception):
@@ -192,7 +192,7 @@ def mix_rect(a: Rect, b: Rect, x: float) -> Rect:
 
 
 def edge_fade(x: float, y: float, view: Rect) -> float:
-    """1 while a label's dot is well inside the view, down to 0 at its edge: a label the camera moves
+    """1 while a label's dot is wholly inside the view, down to 0 at its edge: a label the camera moves
     away from fades out rather than clinging to the edge, and a label on screen has its dot on screen."""
     inside = min(x - view[0], view[2] - x, y - view[1], view[3] - y)
     return p.clamp01(inside / EDGE_FADE)

@@ -117,9 +117,11 @@ def test_labels_stay_in_the_frame_and_off_each_other():
     assert [(lb.x, lb.y) for lb in again] == [(lb.x, lb.y) for lb in labels]  # the same every time
 
 
-def test_a_label_whose_dot_is_off_screen_is_not_drawn(job, monkeypatch):
+@pytest.mark.parametrize("dot_x, shown", [(-15, False), (3, False), (20, True)])
+def test_a_label_is_drawn_only_while_its_dot_is_on_screen(job, monkeypatch, dot_x, shown):
     # The first live run: zoomed in on the brainstem, the cerebral cortex's dot sat just above the
-    # frame, and its pill hung from the top edge at 70% with its leader running off-screen.
+    # frame, and its pill hung from the top edge at 70% with its leader running off-screen. A dot
+    # wholly on screen, though near the edge, keeps its label at full strength.
     beat = Beat(t0=0, t1=5.0, scene="overview", camera=TimelineCamera(target="Cytochrome b6f", zoom=3.0),
                 reveal=[], spotlight=None, labels=["Thylakoid", "Cytochrome b6f"], particles=[], caption=None,
                 line_id="v1-1", line="b6f pumps", words=[Word(word="b6f", start=0.2, end=0.6)])
@@ -134,12 +136,17 @@ def test_a_label_whose_dot_is_off_screen_is_not_drawn(job, monkeypatch):
     scale = camera.art_to_frame(settled, 1, 0)[0] - x0
     locations = jobs.read(job / media.LOCATIONS, Locations)
     thylakoid = locations.scene("overview").get("Thylakoid")
-    thylakoid.label_anchor.x = (-15 - x0) / scale  # 15 px left of the frame
+    thylakoid.label_anchor.x = (dot_x - x0) / scale  # dot_x px from the frame's left edge
     assert thylakoid.box.holds(thylakoid.label_anchor)
     placed = []
     monkeypatch.setattr(p, "place_labels", lambda labels, *args, **kw: placed.extend(labels))
     Renderer(job, timeline, locations=locations).frame(settled)
-    assert [lb.name for lb in placed] == ["Cytochrome b6f"]
+    alphas = {lb.name: lb.alpha for lb in placed}
+    assert alphas["Cytochrome b6f"] == pytest.approx(1)
+    if shown:
+        assert alphas["Thylakoid"] == pytest.approx(1)
+    else:
+        assert alphas.get("Thylakoid", 0) < 0.3  # its dot is (partly) cut off: it has faded out
 
 
 def test_label_text_is_dark_enough_to_read_on_white():

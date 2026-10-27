@@ -158,15 +158,16 @@ def rasterise(root: ET.Element) -> np.ndarray:
 def masks(root: ET.Element, names: list[str]) -> dict[str, np.ndarray]:
     """Per structure, a bool array: True where it is visible in the art.
 
-    A soft shadow or glow drawn inside the structure's own group (see-through and blurred)
-    is not the structure, so it is left out of the mask, unless the structure is nothing else.
+    A soft shadow or glow drawn inside the structure's own group (see-through, under a
+    filter that only blurs) is not the structure, so it is left out of the mask, unless
+    the structure is nothing else.
     """
     prepared = _prepared(root)
     found = {}
     for name in names:
         mask = _render(_painted(prepared, name), skia.ColorBLACK)[:, :, 0] >= 128
         if not mask.any():
-            mask = _render(_painted(prepared, name, soft=True), skia.ColorBLACK)[:, :, 0] >= 128
+            mask = _render(_painted(prepared, name, keep_soft=True), skia.ColorBLACK)[:, :, 0] >= 128
         found[name] = mask
     return found
 
@@ -280,15 +281,30 @@ def _opacity(value: str | None) -> float:
     return min(max(number, 0.0), 1.0)
 
 
-def _painted(root: ET.Element, name: str, soft: bool = False) -> ET.Element:
+def _soft_filters(root: ET.Element) -> set[str]:
+    """The ids of filters that only blur what they are on, never drawing it crisp again: a soft
+    shadow or glow. A drop shadow, which merges the source graphic back on top, is not one."""
+    soft = set()
+    for f in root.iter(f"{{{NS}}}filter"):
+        steps = [el for el in f.iter() if el is not f]
+        blurs = any(_local(el.tag) == "feGaussianBlur" for el in steps)
+        crisp = any(_local(el.tag) != "feGaussianBlur" and "SourceGraphic" in (el.get("in"), el.get("in2"))
+                    for el in steps)
+        if blurs and not crisp and f.get("id"):
+            soft.add(f.get("id"))
+    return soft
+
+
+def _painted(root: ET.Element, name: str, keep_soft: bool = False) -> ET.Element:
     """A copy with the structure white and every other painted thing black, all opaque.
 
     Gradients, filters and SVG masks go, so edges stay where the shapes are. Something
     drawn mostly see-through is left out unless it belongs to the structure, since the
     structure shows through it in the art; so is the structure's own soft shadow or glow
-    (see-through and blurred), unless `soft`.
+    (see-through, under a filter that only blurs), unless `keep_soft`.
     """
     root = copy.deepcopy(root)
+    soft = _soft_filters(root)
 
     def walk(el: ET.Element, fill: str, stroke: str, fill_op: float, stroke_op: float, opacity: float,
              owner: str | None, blurred: bool = False) -> None:
@@ -301,7 +317,7 @@ def _painted(root: ET.Element, name: str, soft: bool = False) -> ET.Element:
         fill_op = _opacity(props.get("fill-opacity")) if "fill-opacity" in props else fill_op
         stroke_op = _opacity(props.get("stroke-opacity")) if "stroke-opacity" in props else stroke_op
         opacity *= _opacity(props.get("opacity"))
-        blurred = blurred or props.get("filter", "none") not in ("none", "")
+        blurred = blurred or any(ref.lstrip("#") in soft for ref in URL.findall(props.get("filter", "")))
         owner = el.get(MARK, owner)
         for key in PAINT_PROPS:
             el.attrib.pop(key, None)
@@ -311,7 +327,7 @@ def _painted(root: ET.Element, name: str, soft: bool = False) -> ET.Element:
         if tag in SHAPES:
             mine = owner == name
             color = "#FFFFFF" if mine else "#000000"
-            faint_kept = mine and (soft or not blurred)
+            faint_kept = mine and (keep_soft or not blurred)
             el.set("fill", "none" if fill == "none" or (not faint_kept and opacity * fill_op < 0.5) else color)
             el.set("stroke", "none" if stroke == "none" or (not faint_kept and opacity * stroke_op < 0.5) else color)
         for child in el:
