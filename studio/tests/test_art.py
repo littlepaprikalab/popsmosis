@@ -332,3 +332,20 @@ def test_the_sample_timelines_fit_the_locations_the_art_step_writes(job):
     locations = jobs.read(job / media.LOCATIONS, Locations)
     for video in media.VIDEOS:
         assert timeline_problems(jobs.read(job / media.timeline_path(video), Timeline), locations) == []
+
+
+def test_model_written_names_stay_inside_the_job_and_apart(job):
+    from studio.schemas import Scene
+
+    names = ["α subunit", "β subunit"]
+    scene = Scene(id="../ATP synthase", image_prompt="x", structures=[
+        Structure(name=n, aliases=[], sam_phrase=n, color_hex=c) for n, c in zip(names, ["#3366CC", "#CC6633"])])
+    answer = svg_text(blob(names[0], "#3366CC", x=600), blob(names[1], "#CC6633", x=1200))
+    (job / "art").mkdir(exist_ok=True)
+    drawing = art.draw(job, sample_media.bundle(), scene, lambda *a, **k: {"text": answer}, resume=False)
+    located = art.save(job, scene, drawing)  # validates every path against the API's upload rule
+    masks = [s.mask for s in located.structures]
+    assert len(set(masks)) == 2
+    for path in [located.art, *masks]:
+        assert (job / path).resolve().is_relative_to(job.resolve()) and (job / path).exists()
+    assert list((job / "art").glob("*.svg")) == [job / "art" / f"{media.file_name(scene.id)}.svg"]

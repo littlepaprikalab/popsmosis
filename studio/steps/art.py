@@ -4,7 +4,7 @@ One brain call per scene draws it (studio/prompts/art.md), every structure in on
 marked with its name. Code checks the drawing (studio/svg.py); if anything is wrong it
 asks again with the problems and the drawing, up to MAX_TRIES times in all.
 
-Writes, per scene, art/<scene>.svg (the drawing, kept for debugging and for resuming),
+Writes, per scene (paths from studio/media.py), art/<scene>.svg (the drawing, kept for debugging and for resuming),
 art/<scene>.png and masks/<scene>/<slug>.png; then locations.json, last. A refused
 drawing is kept as art/<scene>.try<n>.svg. Since the drawing says where every structure
 is, the locate step has nothing left to do.
@@ -46,7 +46,7 @@ MAX_TRIES = 3
 def run(job: Path, ask=brain.ask) -> str:
     bundle = checks.load(job / "bundle.json")
     resume = located(job) is None
-    (job / media.LOCATIONS).unlink(missing_ok=True)
+    media.restart(job, media.LOCATIONS)
     (job / "art").mkdir(exist_ok=True)
     scenes, left_out = [], []
     for scene in bundle.scenes:
@@ -88,13 +88,18 @@ def located(job: Path) -> Locations | None:
     return locations
 
 
+def _kept(job: Path, scene: Scene, attempt: int | None = None) -> Path:
+    """art/<scene>.svg, the drawing kept; art/<scene>.try<n>.svg, a refused one."""
+    return job / "art" / (media.file_name(scene.id) + (f".try{attempt}" if attempt else "") + ".svg")
+
+
 def _marker(bundle: Bundle, scene: Scene) -> str:
     return f"<!-- popsmosis art {key(bundle, scene)} -->\n"
 
 
 def _saved(job: Path, bundle: Bundle, scene: Scene) -> str | None:
     """The scene's kept drawing, if it was drawn for this scene as the bundle now has it."""
-    path, marker = job / "art" / f"{scene.id}.svg", _marker(bundle, scene)
+    path, marker = _kept(job, scene), _marker(bundle, scene)
     try:
         with path.open(encoding="utf-8") as f:
             head = f.read(len(marker))
@@ -163,7 +168,7 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
         drawing = judge(text[len(marker):], scene)
         if drawing.enough(scene):
             return drawing
-    for old in (job / "art").glob(f"{scene.id}.try*.svg"):
+    for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.svg"):
         old.unlink()
 
     best, previous = None, None
@@ -179,20 +184,20 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
         if drawing.usable and not drawing.problems:
             break
         if drawing.text:
-            (job / "art" / f"{scene.id}.try{n}.svg").write_text(drawing.text, encoding="utf-8")
+            _kept(job, scene, n).write_text(drawing.text, encoding="utf-8")
         previous = drawing
     if best is None or not best.enough(scene):
         why = (best or drawing).problems
         raise media.StepFailed(f"scene {scene.id}: no usable drawing in {MAX_TRIES} tries: {why[0]}"
                                + (f" (and {len(why) - 1} more problems)" if len(why) > 1 else ""))
-    (job / "art" / f"{scene.id}.svg").write_text(marker + best.text, encoding="utf-8")
+    _kept(job, scene).write_text(marker + best.text, encoding="utf-8")
     return best
 
 
 def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
     """Write the scene's art and masks; return its locations."""
     (job / media.art_path(scene.id)).write_bytes(svg.png(drawing.art))
-    folder = job / "masks" / scene.id
+    folder = (job / media.mask_path(scene.id, "-")).parent  # masks/<scene>/
     shutil.rmtree(folder, ignore_errors=True)  # masks of structures this drawing leaves out
     folder.mkdir(parents=True)
     structures = []
