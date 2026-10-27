@@ -363,15 +363,20 @@ come from step 6.
       "words": [{"word": "Broca", "start": 12.6, "end": 13.0}, ...]
     }
   ],
-  "frq": {"t0": 195.5, "t1": 212.5, "scene": "overview", "prompt": "...", "predict_question": "...",
+  "frq": {"t0": 195.5, "t1": 212.5, "scene": "overview", "labels": ["Broca's area", ...],
+          "prompt": "...", "predict_question": "...",
           "predict_t": 204.7, "predict_pause_s": 5,
           "steps": [{"t": 209.7, "text": "...", "spotlight": "Broca's area"}]}
 }
 ```
 
-Validation (pydantic): `t0 < t1`; the beats run from 0 to `frq.t0` with no gaps; a
+Validation (pydantic): `t0 < t1`; the beats run from 0 to `frq.t0`, each starting
+exactly where the last ended, so every frame (`n / fps`, `beat_at(t)`) has one; a
 reveal is labelled, and a spotlight or camera target waits for its reveal; a label once
-shown stays on that scene; every name has a colour; the steps follow the predict pause.
+shown stays on that scene; zoom is at least 1; every name has a colour; the steps follow
+the predict pause, each spotlighting a structure the card labels. Paths are ones the
+API's upload takes, built by `studio/media.py`, which turns model-written scene ids and
+structure names into safe, distinct file names.
 `timeline_problems()` adds that every name is located on its scene's art. Both videos
 open on the hook: the timeline step makes the first beat the hook scene.
 
@@ -716,7 +721,25 @@ before it land:
 5. **Web and upload:** the Droplets tab, the players on `/learn`, and the upload step (step 9).
 
 They join in `python -m studio run`: after the post, art and audio at the same time,
-then the timeline, render and upload, reporting the videos' status to the API.
+then the timeline, render and upload, reporting the videos' status to the API. The join
+also has to close these seams, which no lane owns:
+
+- **`run` stops at the post today** (a posted job runs no steps), so it has to go on to
+  the media steps, and `fail` after the post gives up the videos (`PATCH .../video`
+  `FAILED` with the reason), not the topic.
+- **Heartbeat.** The API reads a render that has not reported for `VIDEO_STALE_MINUTES`
+  (60) as failed, so mark the videos `RENDERING` before each media step, as `run` renews
+  the claim before each step today.
+- **The tool's time limit.** The skill file gives `run` a 10-minute timeout, which is
+  the Bash tool's maximum, and a run with videos will take longer. Run the media part in
+  the background and poll it, keep the routine alive until it ends, and update the
+  skill file.
+- **The machine goes away.** `jobs/<id>/` dies with the routine's machine, and a posted
+  topic has left the queue, so a run cut off after the post has nothing to resume
+  from. Upload each intermediate file as its step finishes, and give the operator a way
+  to find its droplets whose videos failed or went stale and resume them from the
+  stored bundle and those files (an agent endpoint). Without it, a crash after the post
+  leaves a droplet without videos for good.
 
 ## 13. Risks and fallbacks
 

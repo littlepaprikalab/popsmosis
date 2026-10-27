@@ -62,11 +62,25 @@ def test_the_sample_masks_match_the_art_and_the_locations(job):
     assert thylakoid[int(b6f.y)][int(b6f.x)] == 0
 
 
-def test_frq_lines_and_slugs():
+def test_frq_lines():
     bundle = sample_media.bundle()
     assert [i for i, _ in media.frq_lines(bundle)] == ["frq-prompt", "frq-predict", "frq-step-1", "frq-step-2"]
-    assert media.slug("Broca's area") == "broca-s-area"
-    assert media.mask_path("overview", "Cytochrome b6f") == "masks/overview/cytochrome-b6f.png"
+
+
+def test_names_the_model_wrote_become_safe_distinct_paths_the_api_takes():
+    assert media.art_path("limbic-detail") == "art/limbic-detail.png"  # already a slug: kept as it is
+    assert media.mask_path("overview", "Broca's area").startswith("masks/overview/broca-s-area-")
+    paths = [media.art_path(s) for s in ("Brain Overview", "../etc", "", "Ω")]
+    paths += [media.mask_path("overview", n) for n in ("α subunit", "β subunit", "Na+/K+ pump", "x" * 300)]
+    assert all(media.SAFE_PATH.fullmatch(p) and len(p) <= 300 for p in paths), paths
+    assert len(set(paths)) == len(paths)
+    assert media.mask_path("overview", "α subunit") == media.mask_path("overview", "α subunit")
+
+
+def test_restart_removes_a_steps_index_files(tmp_path):
+    (tmp_path / "locations.json").write_text("{}")
+    media.restart(tmp_path, "locations.json", "timeline_song.json")
+    assert not (tmp_path / "locations.json").exists()
 
 
 def song() -> dict:
@@ -75,6 +89,10 @@ def song() -> dict:
 
 @pytest.mark.parametrize("break_it, message", [
     (lambda t: t["beats"][1].update(t0=t["beats"][1]["t0"] + 1), "not where the beat before it ends"),
+    (lambda t: t["beats"][1].update(t0=t["beats"][1]["t0"] + 0.01), "not where the beat before it ends"),
+    (lambda t: t["beats"][1]["camera"].update(zoom=0.5), "shows past it"),
+    (lambda t: t["beats"][1].update(t1=float("nan")), "not a finite number"),
+    (lambda t: t["frq"].update(labels=["Thylakoid"]), "which it does not label"),
     (lambda t: t["beats"][0].update(t0=0.5), "not 0"),
     (lambda t: t["beats"][0].update(labels=[]), "without labelling it"),
     (lambda t: t["beats"][1].update(spotlight="Cytochrome b6f"), "before it is revealed"),
@@ -91,6 +109,25 @@ def test_a_broken_timeline_is_refused(break_it, message):
     break_it(data)
     with pytest.raises(ValidationError, match=message):
         Timeline.model_validate(data)
+
+
+def test_every_frame_finds_its_beat_or_the_exam_question():
+    timeline = sample_media.timeline("song")
+    assert timeline.frame_count == round(timeline.duration * timeline.fps)
+    held = [timeline.beat_at(n / timeline.fps) for n in range(timeline.frame_count)]
+    assert all((beat is None) == (n / timeline.fps >= timeline.frq.t0) for n, beat in enumerate(held))
+    second = timeline.beats[1]
+    assert timeline.beat_at(second.t0) is second  # a beat holds its own start
+    assert timeline.beat_at(second.t0 - 1e-9) is timeline.beats[0]
+
+
+def test_paths_outside_the_job_or_that_the_api_refuses_are_refused():
+    locations = sample_media.locations().model_dump()
+    for bad in ("../art/hook.png", "art/brain overview.png", "/tmp/x.png"):
+        broken = copy.deepcopy(locations)
+        broken["scenes"][0]["art"] = bad
+        with pytest.raises(ValidationError, match="not a path in the job folder"):
+            Locations.model_validate(broken)
 
 
 def test_a_timeline_may_only_name_what_its_scene_has_located():
