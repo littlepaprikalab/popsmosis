@@ -11,14 +11,20 @@ For each file the API mints a signed upload URL (POST /api/answers/:id/upload-ur
 the bytes go straight to Supabase, so the Supabase key stays on the API and the agent
 key is never sent to Supabase. The answer is the one in posted.json.
 
-upload.progress.json records each file as it lands, with its hash, so a run that
-stopped halfway, or a run after a re-render, uploads only what is new. uploaded.json
-is written last, after every file, and then the videos are marked READY with their
-public URLs; if that report does not get through, uploaded.json goes again so the
-step is not done, and running it again only sends the report.
+The files are an explicit list built from studio/media.py, the bundle's scenes (art)
+and locations.json (masks), never a glob of the folder: the job also holds lock and log
+files, and jobs.write's .<name>.partial files mid-write.
 
-Setting RENDERING when the media steps start is not this step's: `python -m studio
-run` does that when it runs steps 3-9.
+upload.progress.json records each file as it lands, with its hash, so a run that
+stopped halfway, or a run after a re-render, uploads only what is new. Then the videos
+are marked READY with their public URLs and posters, and only after that is
+uploaded.json written: done means the page knows. If the report does not get through
+the step fails, and running it again only sends the report.
+
+upload_file() uploads one file on its own, for a run that copies each intermediate as
+its step finishes (the job folder dies with the routine's machine).
+
+RENDERING and FAILED are not this step's to send: whatever runs steps 3-9 owns them.
 """
 
 from __future__ import annotations
@@ -31,6 +37,7 @@ from pydantic import BaseModel, ValidationError
 
 from studio import brain, jobs, media
 from studio.api import Api, ApiError
+from studio.schemas import Bundle, Locations
 
 UPLOADED = "uploaded.json"
 PROGRESS = "upload.progress.json"
@@ -93,17 +100,24 @@ def public_files(job: Path) -> list[str]:
 
 
 def private_files(job: Path) -> tuple[list[str], list[str]]:
-    """What a re-render needs, as (there, missing). Art and masks are whatever scenes the job has."""
-    named = ([media.LOCATIONS]
-             + [media.audio_path(k) for k in media.TIMED]
-             + [media.timing_path(k) for k in media.TIMED]
-             + [media.timeline_path(v) for v in media.VIDEOS])
+    """What a re-render needs, as (there, missing): the art of every scene in the bundle,
+    every mask locations.json names, and the fixed files of steps 4-7."""
+    named = [media.LOCATIONS]
+    try:
+        named += [media.art_path(scene.id) for scene in jobs.read(job / "bundle.json", Bundle).scenes]
+    except (OSError, ValueError, ValidationError):
+        pass  # no bundle here: the art is reported missing below
+    try:
+        locations = jobs.read(job / media.LOCATIONS, Locations)
+        named += [s.art for s in locations.scenes] + [m.mask for s in locations.scenes for m in s.structures]
+    except (OSError, ValueError, ValidationError):
+        pass  # locations.json itself is reported missing
+    named += ([media.audio_path(k) for k in media.TIMED]
+              + [media.timing_path(k) for k in media.TIMED]
+              + [media.timeline_path(v) for v in media.VIDEOS])
+    named = list(dict.fromkeys(named))  # the art is named by both
     there = [p for p in named if (job / p).is_file()]
-    missing = [p for p in named if p not in there]
-    globbed = sorted(p.relative_to(job).as_posix() for pattern in ("art/*.png", "masks/*/*.png") for p in job.glob(pattern))
-    if not any(p.startswith("art/") for p in globbed):
-        missing.insert(0, "art/*.png")
-    return globbed + there, missing
+    return there, [p for p in named if p not in there]
 
 
 def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
@@ -113,11 +127,12 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
     private, missing = private_files(job)
     api = api or Api.from_env()
 
-    progress = _progress(job, answer)
     sent = 0
     for bucket, files in ((PRIVATE, private), (PUBLIC, public)):
         for file in files:
-            sent += _upload(job, api, progress, bucket, file)
+            sent += upload_file(api, job, answer, bucket, file)[1]
+
+    progress = _progress(job, answer)
 
     def url(path: str) -> str | None:
         entry = progress.files.get(path)
@@ -129,13 +144,12 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
         song_poster_url=url(media.poster_path("song")), lesson_poster_url=url(media.poster_path("lesson")),
         missing=missing,
     )
-    jobs.write(job / UPLOADED, uploaded)
     try:
         api.set_video(answer, "READY", song_video_url=uploaded.song_video_url, lesson_video_url=uploaded.lesson_video_url,
                       song_poster_url=uploaded.song_poster_url, lesson_poster_url=uploaded.lesson_poster_url)
     except ApiError as e:
-        (job / UPLOADED).unlink(missing_ok=True)  # not done until the page knows: a retry only sends this
         raise media.StepFailed(f"files uploaded, but marking the videos READY failed: {e}") from e
+    jobs.write(job / UPLOADED, uploaded)  # last: done means READY was sent
 
     kept = len(public) + len(private) - sent
     line = f"uploaded {sent} file(s) for answer {answer}" + (f" ({kept} unchanged)" if kept else "")
@@ -155,24 +169,28 @@ def _progress(job: Path, answer: str) -> Progress:
     return Progress(answer_id=answer)
 
 
-def _upload(job: Path, api: Api, progress: Progress, bucket: Bucket, file: str) -> int:
-    """Upload one file unless this exact file is already there; 1 if it was sent."""
-    data = (job / file).read_bytes()
+def upload_file(api: Api, job: Path, answer_id: str, bucket: Bucket, path: str) -> tuple[UploadedFile, int]:
+    """Upload one file of the job to <bucket>/<answer_id>/<path>, unless this exact file is
+    already there, and record it in upload.progress.json. Returns the record and 1 if it was
+    sent, 0 if it was already there. Raises StepFailed when the API or storage refuses it."""
+    progress = _progress(job, answer_id)
+    data = (job / path).read_bytes()
     digest = hashlib.sha256(data).hexdigest()
-    done = progress.files.get(file)
+    done = progress.files.get(path)
     if done and done.bucket == bucket and done.sha256 == digest:
-        return 0
-    content_type = CONTENT_TYPES.get(Path(file).suffix.lower(), "application/octet-stream")
+        return done, 0
+    content_type = CONTENT_TYPES.get(Path(path).suffix.lower(), "application/octet-stream")
     try:
-        signed = api.upload_url(progress.answer_id, bucket, file)
+        signed = api.upload_url(answer_id, bucket, path)
         api.put_file(signed["uploadUrl"], data, content_type, PUBLIC_CACHE_S if bucket == PUBLIC else PRIVATE_CACHE_S)
     except ApiError as e:
-        raise media.StepFailed(f"{bucket}/{file}: {e}") from e
+        raise media.StepFailed(f"{bucket}/{path}: {e}") from e
     except (KeyError, TypeError) as e:
-        raise media.StepFailed(f"{bucket}/{file}: the API sent no upload URL") from e
+        raise media.StepFailed(f"{bucket}/{path}: the API sent no upload URL") from e
     public_url = signed.get("publicUrl") if bucket == PUBLIC else None
     if bucket == PUBLIC and not public_url:
-        raise media.StepFailed(f"{bucket}/{file}: the API sent no public URL")
-    progress.files[file] = UploadedFile(bucket=bucket, sha256=digest, size=len(data), public_url=public_url)
+        raise media.StepFailed(f"{bucket}/{path}: the API sent no public URL")
+    entry = UploadedFile(bucket=bucket, sha256=digest, size=len(data), public_url=public_url)
+    progress.files[path] = entry
     jobs.write(job / PROGRESS, progress)
-    return 1
+    return entry, 1

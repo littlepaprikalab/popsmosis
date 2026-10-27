@@ -93,7 +93,8 @@ def test_uploads_the_videos_public_and_the_rest_private_then_marks_them_ready(jo
     private = {p.removeprefix("studio/ans1/") for p in server.stored if p.startswith("studio/")}
     assert {"locations.json", "audio/song.mp3", "audio/narration.mp3", "audio/frq.mp3", "timing/song_words.json",
             "timing/narration_words.json", "timing/frq_words.json", "timeline_song.json", "timeline_lesson.json",
-            "art/hook.png", "art/overview.png", "art/synthase.png", "masks/overview/cytochrome-b6f.png"} <= private
+            "art/hook.png", "art/overview.png", "art/synthase.png",
+            media.mask_path("overview", "Cytochrome b6f")} <= private
     assert not any(p.startswith(("out/", "posted", "bundle", "request", "upload")) for p in private)
     assert server.stored["droplets/ans1/out/song_h.mp4"] == (b"mp4 song", "video/mp4")
     assert server.stored["droplets/ans1/out/lesson_h.jpg"][1] == "image/jpeg"
@@ -105,8 +106,8 @@ def test_uploads_the_videos_public_and_the_rest_private_then_marks_them_ready(jo
         assert headers["x-upsert"] == "true"
     assert {h["Cache-Control"] for _, u, h, _ in server.puts() if "/droplets/" in u} == {"max-age=300"}
 
-    # uploaded.json is written before the report, and the report carries every public URL.
-    assert server.uploaded_at_patch is True
+    # The report goes before uploaded.json, so done means READY was sent; it carries every public URL.
+    assert server.uploaded_at_patch is False
     assert server.patches() == [{
         "status": "READY",
         "songVideoUrl": f"{STORAGE}/object/public/droplets/ans1/out/song_h.mp4",
@@ -149,7 +150,7 @@ def test_a_report_that_does_not_get_through_leaves_the_step_not_done(job, server
     server.patch_status = 500
     with pytest.raises(media.StepFailed, match="marking the videos READY failed"):
         upload.run(job, api=api_for(server))
-    assert server.uploaded_at_patch is True and not upload.is_done(job)
+    assert not (job / upload.UPLOADED).exists()
 
     server.patch_status = 200
     server.calls.clear()
@@ -249,3 +250,26 @@ def test_set_video_sends_only_what_it_was_given():
     api.set_video("ans1", "RENDERING", song_video_url="https://x/s.mp4")
     assert sent == [("PATCH", f"{API}/api/answers/ans1/video", {"status": "FAILED", "error": "render: ffmpeg exited 1"}),
                     ("PATCH", f"{API}/api/answers/ans1/video", {"status": "RENDERING", "songVideoUrl": "https://x/s.mp4"})]
+
+
+def test_only_the_named_files_go_never_partial_lock_or_stray_ones(job, server):
+    (job / "art" / ".hook.png.partial").write_bytes(b"half")
+    (job / "art" / "old-scene.png").write_bytes(b"from a bundle this job no longer has")
+    (job / "run.lock").write_text("")
+    (job / "runs.jsonl").write_text("{}\n")
+    upload.run(job, api=api_for(server))
+    files = {p.split("/", 2)[2] for p in server.stored}
+    assert not any(f.startswith(".") or "/." in f or f.endswith((".partial", ".lock", ".jsonl")) for f in files)
+    assert "art/old-scene.png" not in files
+
+
+def test_upload_file_uploads_one_file_on_its_own_and_skips_it_when_unchanged(job, server):
+    api = api_for(server)
+    entry, sent = upload.upload_file(api, job, "ans1", "studio", "audio/song.mp3")
+    assert sent == 1 and entry.bucket == "studio" and entry.public_url is None
+    assert server.stored["studio/ans1/audio/song.mp3"] == (b"ID3 song", "audio/mpeg")
+    assert upload.upload_file(api, job, "ans1", "studio", "audio/song.mp3")[1] == 0
+    # The step later finds it already there.
+    server.calls.clear()
+    upload.run(job, api=api)
+    assert "studio/ans1/audio/song.mp3" not in [c[1].split("/sign/")[1].split("?")[0] for c in server.puts()]

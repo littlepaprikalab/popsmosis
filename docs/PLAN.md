@@ -308,10 +308,12 @@ Storage, so the Supabase key stays on the API: the videos to the public bucket, 
 intermediate files to the private one (section 10). Then the studio marks the videos
 ready.
 
-Built: `studio/steps/upload.py`. Each file is a PUT of its raw bytes to the signed URL.
+Built: `studio/steps/upload.py`. It uploads an explicit list (from `studio/media.py`, the
+bundle's scenes and `locations.json`), each file a PUT of its raw bytes to the signed URL.
 `upload.progress.json` keeps each file's hash, so a retry or a re-render sends only what
-changed. `uploaded.json` is written after every file, then the videos are marked READY
-with both public URLs and their posters; if that report fails the step is not done.
+changed. The videos are marked READY with both public URLs and their posters, and only
+then is `uploaded.json` written. `upload_file()` uploads one file, so the run can copy
+each intermediate as its step finishes.
 
 ### Stretch
 
