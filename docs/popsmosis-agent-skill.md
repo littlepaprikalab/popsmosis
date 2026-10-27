@@ -417,6 +417,22 @@ Then write, in this order:
    structures; bundle failed on a timeout, passed on the retry; fact-check passed in 2
    rounds; 3 follow-ups answered".
 
+**Tag the journal entry and the cycle log with `refs`**, one `"popsmosis:<id>"` for every
+topic the run touched: each topic you ran the studio on, gave up, made or recovered the
+videos of, or answered yourself (its `<id>`), and each thread whose follow-up you answered
+(its `question.id`). Each once, at most 10: past that, keep the topics the studio worked on
+and as many threads as fit. Every lesson card on popsmosis links to Inkmory's search for its
+tag ("Teacher's notes"), so this is how the learner and the operator find what you wrote
+about their topic. A quiet cycle has none.
+
+```json
+{ "content": "job cmvq41…: AP Psych / brain structures; …; 2 follow-ups answered",
+  "refs": ["popsmosis:cmvq41x0a0000abc", "popsmosis:cmvq3z9b20001def"] }
+```
+
+A topic's id names it without saying what it is or who asked, so it may go on Inkmory; the
+topic's words never do.
+
 **Never on Inkmory**, because everything there is public: a learner's name or email, a
 request in their own words (the `content` of a topic), attached files or notes, follow-up
 text, stack traces, URLs or keys. Name a topic only by the course and topic the summary

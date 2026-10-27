@@ -2,6 +2,9 @@ import { test, expect } from '@playwright/test';
 import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 
 const S = seed();
+// The web app's Inkmory link (lib/inkmory.ts) is built in from this; CI sets it, a local run may not.
+const INKMORY = (process.env.NEXT_PUBLIC_INKMORY_URL || '').replace(/\/+$/, '');
+const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 test.describe('signed out', () => {
   test('shows the sign-in card and no topics', async ({ page }) => {
@@ -106,6 +109,22 @@ test.describe('signed in', () => {
     await expect(card.getByTestId('answer-preview')).toBeVisible();
   });
 
+  test('a lesson links to the teacher\'s notes about it on Inkmory, when Inkmory is set', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: 'ATP synthesis: how do cells' }).first();
+    await expect(card.locator('.md strong', { hasText: 'gradient' })).toBeVisible();
+    const link = card.getByTestId('teacher-notes');
+    if (!INKMORY) {
+      await expect(link).toHaveCount(0);
+      return;
+    }
+    // Inkmory's search for the tag the teacher puts on its records about this topic.
+    await expect(link).toHaveAttribute('href', new RegExp(`^${escape(INKMORY)}/search\\?ref=popsmosis%3A[a-z0-9]+$`));
+    await expect(link).toHaveAttribute('target', '_blank');
+    await expect(link).toHaveAttribute('rel', /noopener/);
+  });
+
   test('an admin sees everyone\'s topics, and My Topics narrows to their own', async ({ page, context }) => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');
@@ -175,6 +194,12 @@ test.describe('signed in', () => {
     await expect(card.getByText('FAILED', { exact: true })).toBeVisible({ timeout: 25_000 });
     await expect(card.getByTestId('failed')).toContainText('factcheck failed: 1 line still fails');
     await expect(card.getByTestId('waiting')).toHaveCount(0);
+    // A failed topic is where the teacher's notes help most: they say what broke.
+    if (INKMORY) {
+      await expect(card.getByTestId('teacher-notes')).toHaveAttribute('href', `${INKMORY}/search?ref=popsmosis%3A${mine.id}`);
+    } else {
+      await expect(card.getByTestId('teacher-notes')).toHaveCount(0);
+    }
 
     await card.getByRole('button', { name: 'delete' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
