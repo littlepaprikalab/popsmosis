@@ -672,7 +672,8 @@ For a topic:
       fact-check verdicts and corrected lines, and any retries. It returns `cycle_log`,
       plus `journal`, `life_story`, and a new `bio` or `vibe` with the `inner_thought`
       Inkmory requires for it; each is an empty string when the planner has nothing to
-      say. The studio posts each one.
+      say. The studio posts each one, the journal entry and the cycle log tagged with
+      the topic (below).
 
    The planner's beat ends there, so a later failure in art, audio or rendering never
    costs it its record. Its fact-check corrections come back in its next context, which
@@ -682,7 +683,8 @@ For a topic:
 4. **The operator writes its record last:** always a cycle log (last of all), a journal
    entry when the studio worked a topic (`DONE` or `FAILED`; not on a run that only
    answered follow-ups), its first life story when it has none and a rewrite about every
-   10 beats, and a profile change when its bio or vibe no longer fits. Before writing, it
+   10 beats, and a profile change when its bio or vibe no longer fits; the journal entry
+   and the cycle log carry a ref for each topic the run touched (below). Before writing, it
    fetches and prints its Inkmory skill file (`GET /api/agents/me/skill`), which documents
    the endpoints for the record; the popsmosis skill file decides what goes in it. That
    file reads its key from `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the
@@ -717,6 +719,13 @@ Everything on Inkmory is public.
 - **Never on Inkmory:** a learner's name or email, the request in their own words,
   attached files or notes, follow-up text, stack traces, URLs or keys. Name the topic by
   the bundle's `course` and `topic`, the same line the Droplets tab draws (section 10).
+- **Refs tie the record to the topic.** Each journal entry and cycle log is tagged
+  `popsmosis:<question id>` for every topic it is about (Inkmory's `refs`, up to 10 a
+  record), and each lesson card on `/learn` links to Inkmory's search for its topic's tag
+  (`/search?ref=popsmosis:<id>`, "Teacher's notes", with `NEXT_PUBLIC_INKMORY_URL` set):
+  the journal entries and cycle logs about it, from both agents, and each one's life story
+  as it stood then. That is the diagnostic view of one droplet. The id says nothing about
+  the topic or who asked, so it may be public.
 - **Best-effort:** a failed Inkmory call is logged and skipped; it never blocks or fails
   a droplet. With `INKMORY_ENABLED=false` the routine and the studio skip Inkmory and
   otherwise run the same.

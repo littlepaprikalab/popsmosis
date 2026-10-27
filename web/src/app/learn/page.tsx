@@ -23,6 +23,7 @@ import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown } from '@/components/DropletBreakdown';
 import { Wordmark } from '@/components/Wordmark';
 import { MIN_AGE } from '@/lib/legal';
+import { inkmoryRecordsUrl } from '@/lib/inkmory';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -126,6 +127,20 @@ const STATUS_BADGES: Record<Question['status'], { label: string; color: string }
 };
 
 /**
+ * What the teacher wrote about this topic on Inkmory: its journal entries and cycle logs from the
+ * runs that worked on it, and its life story as it stood then (lib/inkmory.ts). Its record is
+ * written at the end of each run, so a run still going has added nothing yet.
+ */
+function TeacherNotesLink({ href }: { href: string }) {
+  return (
+    <a href={href} target="_blank" rel="noopener noreferrer" className="underline hover-text" data-testid="teacher-notes"
+      title="The teacher's journal, cycle logs and life story for this droplet, on Inkmory">
+      Teacher&rsquo;s notes on Inkmory &#8599;
+    </a>
+  );
+}
+
+/**
  * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
  * back a fresh questions array every 15s, so without this every card on the
  * page — markdown, thread and all — re-renders on a tick that changed one of
@@ -143,6 +158,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
   // Only re-derived when the answer text itself changes; a re-render must not
   // pay to strip markdown for a teaser that is hidden while the card is open.
   const snippet = useMemo(() => (answer ? snippetOf(answer.content) : ''), [answer?.content]);
+  const notesUrl = inkmoryRecordsUrl(q.id);
 
   return (
     <CollapsibleCard
@@ -222,15 +238,20 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   <Markdown>{answer.content}</Markdown>
                 </div>
                 <LessonVideos video={answer.video} />
-                {answer.video?.status === 'READY' && (
-                  <p className="text-[10px] mt-2 flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
-                    {answer.hidden ? <span>Hidden from the Droplets tab.</span> : <Link href={`/droplets/${answer.id}`} className="underline hover-text">On the public Droplets tab</Link>}
-                    {isAdmin && (
-                      <button onClick={() => onSetHidden(q.id, answer, !answer.hidden)} className="uppercase tracking-wider hover-text"
-                        style={{ color: answer.hidden ? 'var(--accent-green)' : 'var(--accent-red)' }} data-testid="toggle-hidden">
-                        {answer.hidden ? 'put back' : 'hide'}
-                      </button>
+                {(answer.video?.status === 'READY' || notesUrl) && (
+                  <p className="text-[10px] mt-2 flex flex-wrap items-center gap-x-3 gap-y-1" style={{ color: 'var(--text-muted)' }}>
+                    {answer.video?.status === 'READY' && (
+                      <>
+                        {answer.hidden ? <span>Hidden from the Droplets tab.</span> : <Link href={`/droplets/${answer.id}`} className="underline hover-text">On the public Droplets tab</Link>}
+                        {isAdmin && (
+                          <button onClick={() => onSetHidden(q.id, answer, !answer.hidden)} className="uppercase tracking-wider hover-text"
+                            style={{ color: answer.hidden ? 'var(--accent-green)' : 'var(--accent-red)' }} data-testid="toggle-hidden">
+                            {answer.hidden ? 'put back' : 'hide'}
+                          </button>
+                        )}
+                      </>
                     )}
+                    {notesUrl && <TeacherNotesLink href={notesUrl} />}
                   </p>
                 )}
                 {answer.breakdown && <DropletBreakdown breakdown={answer.breakdown} video={answer.video} />}
@@ -243,6 +264,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
           ) : q.status === 'FAILED' ? (
             <p className="text-xs" style={{ color: 'var(--text-muted)' }} data-testid="failed">
               The teacher couldn&rsquo;t make this droplet{q.failedReason ? `: ${q.failedReason}` : '.'} Ask again, or try the topic another way.
+              {notesUrl && <span className="block mt-1.5 text-[10px]"><TeacherNotesLink href={notesUrl} /></span>}
             </p>
           ) : (
             <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="waiting">

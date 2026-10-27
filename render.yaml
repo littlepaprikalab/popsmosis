@@ -90,6 +90,8 @@ services:
         sync: false
       - key: NEXT_PUBLIC_GOOGLE_REDIRECT_URI  # https://<popsmosis-web host>/auth/callback
         sync: false
+      - key: NEXT_PUBLIC_INKMORY_URL  # optional: https://inkmory.com, for each lesson's link to the teacher's notes there
+        sync: false
       - key: PROXY_SECRET
         fromService:
           name: popsmosis-api

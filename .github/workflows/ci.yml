@@ -87,6 +87,7 @@ jobs:
       ALLOWED_ORIGINS: http://localhost:3000
       NEXT_PUBLIC_API_URL: http://localhost:3001
       API_BASE_URL: http://localhost:3001
+      NEXT_PUBLIC_INKMORY_URL: https://inkmory.example  # the lesson cards' link to the teacher's notes
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

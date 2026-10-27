@@ -35,6 +35,7 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `NEXT_PUBLIC_SITE_URL` | `https://popsmosis-web.onrender.com` | your web origin |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | same client ID as the API | Google Cloud |
 | `NEXT_PUBLIC_GOOGLE_REDIRECT_URI` | `https://popsmosis-web.onrender.com/auth/callback` | must equal `GOOGLE_REDIRECT_URI` |
+| `NEXT_PUBLIC_INKMORY_URL` | `https://inkmory.com` | optional: each lesson card links to the teacher's notes on Inkmory, the records it tagged with the topic ([PLAN.md](PLAN.md), section 11). Built into the page, so a change needs a rebuild. Unset: no link |
 | `PROXY_SECRET` | copied from popsmosis-api | the blueprint wires it with `fromService` |
 | `NODE_ENV` | `production` | set by the blueprint |
 
