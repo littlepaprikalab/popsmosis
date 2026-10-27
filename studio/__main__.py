@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import textwrap
 import time
@@ -23,7 +24,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from studio import brain, checks, jobs
-from studio.schemas import Bundle, CheckReport, FactCheckReport, Request
+from studio.schemas import CheckReport, FactCheckReport, Request
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 
@@ -48,6 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
     args = parser.parse_args(argv)
+    overrides = {k: os.environ[k] for k in ("STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT") if os.environ.get(k)}
+    if overrides and args.command != "show":
+        print(f"note: development override of the brain: {overrides}", file=sys.stderr)
 
     if args.command == "plan":
         job = jobs.ROOT / (args.job or jobs.new_id(args.topic))
@@ -108,8 +112,7 @@ def print_job(job: Path, brief: bool = False) -> None:
     request = jobs.read(job / "request.json", Request)
     print(f"\n# {request.topic}" + (f" ({request.course})" if request.course else "") + f"  [{job.name}]")
     if (job / "bundle.json").exists():
-        data = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
-        bundle = Bundle.model_validate(checks.fill_names(data))
+        bundle = checks.load(job / "bundle.json")
         print(f"\nCore idea: {bundle.core_idea}\n\n## Facts\n")
         for fact in bundle.facts:
             print(_wrap(f"{fact.id}  {fact.text}", indent=4) + "\n")

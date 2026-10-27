@@ -21,9 +21,8 @@ from studio.schemas import Bundle, CheckReport, Problem
 
 
 def run(job: Path) -> CheckReport:
-    """Re-check a job's bundle.json in place. Lines written before `names` existed get it from their text."""
-    data = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
-    bundle, report = review(Bundle.model_validate(fill_names(data)))
+    """Re-check a job's bundle.json in place."""
+    bundle, report = review(load(job / "bundle.json"))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
     return report
@@ -35,7 +34,16 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
-    problems: list[Problem] = []
+    problems = [
+        Problem(line_id=f"scene:{scene}", rule="empty-scene", repaired=False,
+                detail=f'scene "{scene}" draws no structures, so nothing on it can be revealed or spotlit')
+        for scene, structures in drawn.items() if not structures
+    ]
+    problems += [
+        Problem(line_id="structures", rule="shared-name", repaired=False,
+                detail=f'"{word}" names {" and ".join(owners)}, but only reveals {canon[word]}')
+        for word, owners in shared_names(data["scenes"]).items()
+    ]
     # The song and the lesson video are separate videos, so each reveals from scratch.
     for stream in (data["lyrics"], data["narration"]):
         revealed: dict[str, set[str]] = {scene: set() for scene in drawn}
@@ -48,30 +56,64 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
 
+# Curly quotes and long dashes read as plain ones, so "Broca’s area" is "Broca's area".
+# Each swaps one character for one, so positions in the folded text match the original.
+_PLAIN = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"', "\u2013": "-", "\u2014": "-"})
+
+
+def fold(text: str) -> str:
+    return text.translate(_PLAIN).lower()
+
+
 def canonical_names(scenes: list[dict]) -> dict[str, str]:
-    """Every structure name and alias, lowercased, mapped to the structure's name."""
+    """Every structure name and alias, folded, mapped to the structure's name (the first, if shared)."""
     canon: dict[str, str] = {}
     for scene in scenes:
         for structure in scene["structures"]:
             for word in (structure["name"], *structure["aliases"]):
-                canon.setdefault(word.lower(), structure["name"])
+                canon.setdefault(fold(word), structure["name"])
     return canon
+
+
+def shared_names(scenes: list[dict]) -> dict[str, list[str]]:
+    """Names or aliases that belong to more than one structure."""
+    owners: dict[str, list[str]] = {}
+    for scene in scenes:
+        for structure in scene["structures"]:
+            for word in (structure["name"], *structure["aliases"]):
+                names = owners.setdefault(fold(word), [])
+                if structure["name"] not in names:
+                    names.append(structure["name"])
+    return {word: names for word, names in owners.items() if len(names) > 1}
 
 
 def said(text: str, canon: dict[str, str]) -> dict[str, str]:
     """The structures a line says, each mapped to the words it uses for it.
 
-    Longer names win, so "motor cortex" is not also read as "cortex".
+    This is how the timeline reveals structures too: by the words heard. Longer names
+    win, so "motor cortex" is not also read as "cortex".
     """
     found: dict[str, str] = {}
     taken: list[tuple[int, int]] = []
+    folded = fold(text)
     for word in sorted(canon, key=len, reverse=True):
-        for m in re.finditer(rf"(?<!\w){re.escape(word)}(?!\w)", text, re.IGNORECASE):
+        for m in re.finditer(rf"(?<!\w){re.escape(word)}(?!\w)", folded):
             if any(start < m.end() and m.start() < end for start, end in taken):
                 continue
             taken.append(m.span())
-            found.setdefault(canon[word], m.group())
+            found.setdefault(canon[word], text[m.start() : m.end()])
     return found
+
+
+def merge(earlier: CheckReport, later: CheckReport) -> CheckReport:
+    """One report for a bundle checked twice (before and after the fact-check), without repeats."""
+    problems = {(p.line_id, p.rule, p.detail): p for p in [*earlier.problems, *later.problems]}
+    return CheckReport(problems=list(problems.values()))
+
+
+def load(path: Path) -> Bundle:
+    """Read a bundle.json; lines written before `names` existed get it from their text."""
+    return Bundle.model_validate(fill_names(json.loads(path.read_text(encoding="utf-8"))))
 
 
 def fill_names(data: dict) -> dict:
@@ -85,12 +127,12 @@ def fill_names(data: dict) -> dict:
 def _check_names(line: dict, canon: dict[str, str], scene: str, drawn: set[str], problems: list[Problem]) -> set[str]:
     kept, named = [], set()
     for name in line["names"]:
-        structure = canon.get(name.lower())
+        structure = canon.get(fold(name))
         if structure is None:
             problems.append(Problem(line_id=line["id"], rule="unknown-name", repaired=False,
                                     detail=f'names "{name}", which no scene draws'))
             kept.append(name)
-        elif not re.search(rf"(?<!\w){re.escape(name)}(?!\w)", line["text"], re.IGNORECASE):
+        elif not re.search(rf"(?<!\w){re.escape(fold(name))}(?!\w)", fold(line["text"])):
             problems.append(Problem(line_id=line["id"], rule="name-not-said", repaired=True,
                                     detail=f'lists "{name}" but never says it; dropped'))
         else:
@@ -112,7 +154,7 @@ def _check_names(line: dict, canon: dict[str, str], scene: str, drawn: set[str],
 def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene: str, drawn: set[str],
                      revealed: set[str], problems: list[Problem]) -> None:
     def misplaced(name: str) -> str | None:
-        structure = canon.get(name.lower())
+        structure = canon.get(fold(name))
         if structure not in drawn:
             return f'is not drawn in scene "{scene}"'
         if structure not in revealed:
@@ -128,7 +170,7 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         problems.append(Problem(line_id=line_id, rule="camera", repaired=True,
                                 detail=f"camera on {target} {why}; whole scene instead"))
         direction["camera"] = {"target": "", "zoom": 1.0}
-    stops = [p for p in direction["particles"] if canon.get(p.lower()) in drawn]
+    stops = [p for p in direction["particles"] if canon.get(fold(p)) in drawn]
     if stops != direction["particles"]:
         stops = stops if len(stops) >= 2 else []
         problems.append(Problem(line_id=line_id, rule="particles", repaired=True,

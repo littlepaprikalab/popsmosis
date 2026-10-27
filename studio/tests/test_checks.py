@@ -1,8 +1,9 @@
 import json
+import random
 
 from studio import checks
 from studio.jobs import read, write
-from studio.schemas import Bundle, CheckReport, Request
+from studio.schemas import Bundle, CheckReport, Problem, Request
 from studio.steps import bundle as bundle_step
 from studio.tests.sample import bundle_data
 
@@ -61,6 +62,12 @@ def test_a_group_no_scene_draws_is_left_for_the_prompt():
     assert bundle.lyrics[5].names == ["limbic system"]
 
 
+def test_a_scene_with_nothing_to_reveal_is_left_for_the_prompt():
+    _, found, report = review(lambda d: d["scenes"][2].update(structures=[]))
+    assert ("scene:synthase", "empty-scene", False) in found
+    assert report.problems[0].detail.startswith('scene "synthase" draws no structures')
+
+
 def test_a_name_the_scene_does_not_draw_is_left_for_the_prompt():
     _, found, report = review(lambda d: direction(d, "n2").update(scene="overview"))
     assert found == [("n2", "not-in-scene", False)]
@@ -110,3 +117,58 @@ def test_the_bundle_step_saves_the_repaired_bundle_and_the_checks(tmp_path):
     assert read(tmp_path / "bundle.json", Bundle).direction[2].spotlight == ""
     [problem] = read(tmp_path / "checks.json", CheckReport).problems
     assert (problem.line_id, problem.rule, problem.repaired) == ("c1-1", "spotlight", True)
+
+
+def test_curly_quotes_and_dashes_match_plain_ones():
+    canon = {"broca's area": "Broca's area", "na-k pump": "Na-K pump"}
+    assert checks.said("Broca’s area builds words", canon) == {"Broca's area": "Broca’s area"}
+    assert checks.said("the Na–K pump", canon) == {"Na-K pump": "Na–K pump"}
+
+    def change(d):
+        d["scenes"][1]["structures"][1].update(name="Broca's area")
+        line(d, "v2-1").update(text="Broca’s area builds them", names=["Broca's area"])
+        direction(d, "v2-1").update(spotlight="Broca's area")
+
+    _, found, _ = review(change)
+    assert found == []
+
+
+def test_a_word_two_structures_share_is_left_for_the_prompt():
+    def change(d):
+        d["scenes"][1]["structures"][0]["aliases"] = ["membrane"]
+        d["scenes"][1]["structures"][1]["aliases"] = ["membrane"]
+
+    _, found, report = review(change)
+    assert found == [("structures", "shared-name", False)]
+    assert report.problems[0].detail == '"membrane" names Thylakoid and Cytochrome b6f, but only reveals Thylakoid'
+
+
+def test_merging_two_reports_keeps_both_without_repeats():
+    a = Problem(line_id="v1-1", rule="spotlight", detail="x", repaired=True)
+    b = Problem(line_id="scene:hook", rule="empty-scene", detail="y", repaired=False)
+    c = Problem(line_id="c1-1", rule="unlisted-name", detail="z", repaired=True)
+    merged = checks.merge(CheckReport(problems=[a, b]), CheckReport(problems=[b, c]))
+    assert merged.problems == [a, b, c]
+
+
+def test_checking_a_checked_bundle_changes_nothing():
+    """A repair never makes a new problem, whatever the model wrote."""
+    rng = random.Random(1026)
+    words = ["thylakoid", "Thylakoid", "ATP synthase", "Cytochrome b6f", "limbic system", "", "b6f"]
+    targets = ["", "Thylakoid", "thylakoid", "Cytochrome b6f", "ATP synthase", "nowhere"]
+    for _ in range(300):
+        data = bundle_data()
+        for item in [*data["lyrics"], *data["narration"]]:
+            item["names"] = rng.sample(words, rng.randint(0, 3))
+        for d in data["direction"]:
+            d["scene"] = rng.choice(["hook", "overview", "synthase"])
+            d["spotlight"] = rng.choice(targets)
+            d["camera"] = {"target": rng.choice(targets), "zoom": rng.choice([1.0, 2.0])}
+            d["particles"] = rng.sample(targets, rng.randint(0, 3))
+        if rng.random() < 0.2:
+            data["scenes"][0]["structures"] = []
+        once, first = checks.review(Bundle.model_validate(data))
+        twice, second = checks.review(once)
+        assert twice == once
+        assert not any(p.repaired for p in second.problems)
+        assert {(p.line_id, p.rule) for p in second.problems} <= {(p.line_id, p.rule) for p in first.problems}

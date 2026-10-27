@@ -185,3 +185,30 @@ def test_max_rounds_is_respected(rounds):
     fake = FakeChecker(lambda text: ("UNSUPPORTED", "", text + "!") if text.startswith(SEEDED) else supported(text))
     report, _ = check_bundle(bundle(), "", fake, max_rounds=rounds)
     assert report.status == "failed" and len(fake.payloads) == rounds
+
+
+def test_checks_after_a_correction_join_the_bundle_steps_checks(tmp_path):
+    from studio.schemas import CheckReport, Problem
+
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    write(tmp_path / "bundle.json", bundle())
+    earlier = Problem(line_id="c1-1", rule="spotlight", detail="from the bundle step", repaired=True)
+    write(tmp_path / "checks.json", CheckReport(problems=[earlier]))
+
+    def names_the_thylakoid(text):  # the correction says a name the line did not list
+        return ("UNSUPPORTED", "", "Only b6f by the thylakoid pumps") if text == SEEDED else supported(text)
+
+    factcheck.run(tmp_path, ask=FakeChecker(names_the_thylakoid))
+    problems = read(tmp_path / "checks.json", CheckReport).problems
+    assert problems[0] == earlier
+    assert [(p.line_id, p.rule) for p in problems[1:]] == [("v1-2", "unlisted-name")]
+    assert read(tmp_path / "bundle.json", Bundle).lyrics[1].names == ["thylakoid"]
+
+
+def test_a_bundle_from_before_names_can_still_be_fact_checked(tmp_path):
+    data = bundle_data()
+    for item in [*data["lyrics"], *data["narration"]]:
+        del item["names"]
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    (tmp_path / "bundle.json").write_text(json.dumps(data))
+    assert factcheck.run(tmp_path, ask=FakeChecker(supported)).status == "passed"
