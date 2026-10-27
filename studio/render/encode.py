@@ -9,6 +9,7 @@ folder and moved into place last.
 
 from __future__ import annotations
 
+import itertools
 import multiprocessing
 import os
 import shutil
@@ -49,14 +50,16 @@ class Rendered:
 
 
 def _run(args: list[str]) -> None:
-    result = subprocess.run(args, capture_output=True, text=True)
+    result = subprocess.run(args, capture_output=True, text=True, check=False)
     if result.returncode:
         raise EncodeError(f"{Path(args[0]).name} failed: {result.stderr.strip()[-800:]}")
 
 
 def render_range(job: str, timeline_json: str, layout: str, first: int, last: int, out: str) -> int:
     """Draw frames [first, last) and encode them, video only; runs in a worker process."""
-    from studio.render.renderer import Renderer  # imported here: skia loads in the worker
+    from studio.render.renderer import (
+        Renderer,  # imported here: skia loads in the worker
+    )
 
     timeline = Timeline.model_validate_json(timeline_json)
     renderer = Renderer(Path(job), timeline, layout)
@@ -81,7 +84,7 @@ def render_range(job: str, timeline_json: str, layout: str, first: int, last: in
 def ranges(frames: int, parts: int) -> list[tuple[int, int]]:
     parts = max(1, min(parts, frames))
     cuts = [round(frames * i / parts) for i in range(parts + 1)]
-    return [(a, b) for a, b in zip(cuts, cuts[1:]) if b > a]
+    return [(a, b) for a, b in itertools.pairwise(cuts) if b > a]
 
 
 def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[list[str], str]:

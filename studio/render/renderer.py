@@ -196,6 +196,7 @@ class Renderer:
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
                 raise RenderError(f"scene {scene_id} has no locations")
+            self.scene(scene_id)  # load every scene now, so a missing file fails before any frame
         self.starts = [b.t0 for b in timeline.beats]
         # When each structure is first revealed on each scene.
         self.revealed: dict[str, dict[str, float]] = {}
@@ -280,6 +281,13 @@ class Renderer:
             else:
                 hi = mid - 1
         return lo
+
+    def art_to_frame(self, t: float, x: float, y: float) -> tuple[float, float]:
+        """Where an art pixel of the beat at t lands on the frame (before the exam question)."""
+        i = self.beat_index(t)
+        art = self.scene(self.timeline.beats[i].scene)
+        scale, dx, dy = to_frame(self.plans[i].cam(t, self.layout.view, art), self.layout.view, art)
+        return x * scale + dx, y * scale + dy
 
     # --- drawing ---------------------------------------------------------------------------
 

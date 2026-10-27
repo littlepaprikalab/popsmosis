@@ -38,11 +38,10 @@ def make(job):
 
 def test_the_sample_job_gives_two_valid_timelines_that_open_on_the_hook(job):
     assert not step.is_done(job / "missing")
-    message = make(job)
+    timelines = make(job)
     assert step.is_done(job)
     locations = jobs.read(job / media.LOCATIONS, Locations)
-    timelines = message
-    for video, timeline in timelines.items():
+    for timeline in timelines.values():
         assert timeline_problems(timeline, locations) == []
         assert timeline.beats[0].scene == "hook"
         assert timeline.beats[0].t0 == 0

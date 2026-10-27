@@ -75,7 +75,7 @@ def darken(hex_color: str, contrast: float = 5.0) -> str:
     f = 0.85
     while f > 0.05 and 1.05 / (_luminance(r * f, g * f, b * f) + 0.05) < contrast:
         f -= 0.05
-    return "#{:02X}{:02X}{:02X}".format(round(r * f), round(g * f), round(b * f))
+    return f"#{round(r * f):02X}{round(g * f):02X}{round(b * f):02X}"
 
 
 # --- text ---------------------------------------------------------------------------------

@@ -31,8 +31,22 @@ from pydantic import ValidationError
 from studio import checks, media
 from studio.jobs import read, write
 from studio.media import StepFailed
-from studio.schemas import (AudioClip, Beat, Bundle, FrqSegment, FrqStep, Locations, Particles, Reveal,
-                            Timeline, TimelineCamera, Timing, Word, timeline_problems, timing_problems)
+from studio.schemas import (
+    AudioClip,
+    Beat,
+    Bundle,
+    FrqSegment,
+    FrqStep,
+    Locations,
+    Particles,
+    Reveal,
+    Timeline,
+    TimelineCamera,
+    Timing,
+    Word,
+    timeline_problems,
+    timing_problems,
+)
 
 HOOK = "hook"
 GAP_S = 1.5  # a silence at least this long between lines gets a beat of its own
@@ -172,9 +186,9 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     def gap(t0: float, t1: float, after: dict | None) -> None:
         scene = after["scene"] if after else hook
         camera = after["camera"] if after else TimelineCamera(target=None, zoom=1.0)
-        beats.append(dict(t0=t0, t1=t1, scene=scene, camera=camera, reveal=[], spotlight=None,
-                          labels=list(revealed.get(scene, [])), particles=[], caption=None, line_id=None,
-                          line="", words=[]))
+        beats.append({"t0": t0, "t1": t1, "scene": scene, "camera": camera, "reveal": [], "spotlight": None,
+                      "labels": list(revealed.get(scene, [])), "particles": [], "caption": None, "line_id": None,
+                      "line": "", "words": []})
         captions.append(None)
 
     first = voice.lines[0].start if voice.lines else voice.duration
@@ -205,21 +219,17 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
                 labels.append(name)
                 reveals.append(Reveal(name=name, t=min(max(words[index].start, cursor), t1)))
 
-        def shown(name: str) -> str | None:
-            structure = scene_names.canonical(name) if name else None
-            return structure if structure in labels else None
-
-        spotlight = shown(direction.spotlight) if direction else None
-        target = shown(direction.camera.target) if direction else None
+        spotlight = _shown(direction.spotlight, scene_names, labels) if direction else None
+        target = _shown(direction.camera.target, scene_names, labels) if direction else None
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
         stops = [s for s in (scene_names.canonical(p) for p in (direction.particles if direction else [])) if s]
         stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
         particles = [Particles(path=stops, color=PARTICLE_COLOR, trail=True)] if len(stops) >= 2 else []
 
-        beats.append(dict(t0=cursor, t1=t1, scene=scene, camera=TimelineCamera(target=target, zoom=zoom),
-                          reveal=reveals, spotlight=spotlight, labels=list(labels), particles=particles,
-                          caption=None, line_id=timed_line.line_id, line=texts.get(timed_line.line_id, ""),
-                          words=words))
+        beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
+                      "reveal": reveals, "spotlight": spotlight, "labels": list(labels), "particles": particles,
+                      "caption": None, "line_id": timed_line.line_id, "line": texts.get(timed_line.line_id, ""),
+                      "words": words})
         captions.append((direction.caption.strip() or None) if direction else None)
         cursor = t1
         if silent and following > t1:
@@ -233,6 +243,12 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     frq, audio, duration = _exam_question(bundle, timed, voice, cursor, revealed, names, beats[-1]["scene"])
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], frq=frq)
+
+
+def _shown(name: str, scene_names: Names, labels: list[str]) -> str | None:
+    """A direction's spotlight or target, if it is located on the scene and revealed there by now."""
+    structure = scene_names.canonical(name) if name else None
+    return structure if structure in labels else None
 
 
 def _section_runs(bundle: Bundle) -> dict[str, int]:
