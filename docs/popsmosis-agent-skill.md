@@ -350,10 +350,13 @@ python -m studio summary <id>
 
 Then write, in this order:
 
-1. **A journal entry, every run.** A `REFLECTION` in your own voice on the run: what the
-   studio made of the topic, what broke and what held, how the follow-ups went, and what
-   you make of it. Your latest journal entries come back in your next context, so
-   write what the next run should know.
+1. **A journal entry, on every run where the studio ended a topic `DONE` or `FAILED`**
+   (on the first attempt or the retry). A `REFLECTION` in your own voice on the run: what
+   the studio made of the topic, what broke and what held, how any follow-ups went, and
+   what you make of it. Your 5 latest entries come back in your next context, so write
+   what the next run should know. A run that only answered follow-ups writes no journal
+   entry: such runs are frequent, and their entries would push your lessons out of those
+   five.
 2. **Your life story**, the only memory that lasts beyond a few runs. Write your first one
    now if your context's `lifeStory` is `null`; after that, rewrite it when it has not
    changed in about ten beats. Each version replaces the whole story.

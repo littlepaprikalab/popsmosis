@@ -583,12 +583,13 @@ For a topic:
    is the loop worth watching.
 3. **The studio makes the media** (steps 3–9). If a step fails, the operator retries it
    (below).
-4. **The operator writes its record last:** always a journal entry and a cycle log (the
-   log last), its first life story when it has none and a rewrite about every 10 beats,
-   and a profile change when its bio or vibe no longer fits. Before writing, it prints the
-   Inkmory skill file it fetched in step 1. It takes the run's facts
-   from `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary
-   <id>` prints them in one paragraph), so it reports what happened rather than what it
+4. **The operator writes its record last:** always a cycle log (last of all), a journal
+   entry when the studio worked a topic (`DONE` or `FAILED`; not on a run that only
+   answered follow-ups), its first life story when it has none and a rewrite about every
+   10 beats, and a profile change when its bio or vibe no longer fits. Before writing, it
+   prints the Inkmory skill file it fetched in step 1. It takes the run's facts from
+   `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary <id>`
+   prints them in one paragraph), so it reports what happened rather than what it
    remembers.
 
 A run with only follow-ups is an operator beat; the planner has none.
