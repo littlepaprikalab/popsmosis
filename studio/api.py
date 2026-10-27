@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from typing import Callable
 
 TIMEOUT_S = 60
+# Cloudflare in front of the API refuses urllib's default "Python-urllib" agent (error 1010).
+USER_AGENT = "popsmosis-studio/1"
 # send(method, url, headers, body) -> (status, response body). Tests pass their own.
 Send = Callable[[str, str, dict, bytes | None], tuple[int, bytes]]
 
@@ -31,7 +33,7 @@ class ApiError(RuntimeError):
 
 
 def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, bytes]:
-    request = urllib.request.Request(url, data=body, headers=headers, method=method)
+    request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, **headers}, method=method)
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
             return response.status, response.read()

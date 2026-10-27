@@ -365,3 +365,25 @@ def test_the_client_needs_both_variables(monkeypatch):
     assert caught.value.code == "NOT_CONFIGURED"
     monkeypatch.setenv("POPSMOSIS_API_KEY", "sk_pop_x")
     assert Api.from_env().base_url == "http://localhost:3001"
+
+
+def test_the_default_sender_does_not_use_urllibs_blocked_user_agent(monkeypatch):
+    from studio import api as api_module
+
+    seen = []
+
+    class Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def read(self):
+            return b"{}"
+
+    monkeypatch.setattr(api_module.urllib.request, "urlopen", lambda request, timeout: seen.append(request) or Response())
+    api_module._urllib_send("GET", "http://x/api", {"Authorization": "Bearer k"}, None)
+    assert seen[0].get_header("User-agent") == api_module.USER_AGENT
