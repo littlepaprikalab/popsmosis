@@ -1,6 +1,16 @@
-# The brain and the first two steps; later steps add theirs (docs/PLAN.md, section 9).
+# The brain, the first two steps and the media steps (docs/PLAN.md, section 9).
 # Lower bounds are the versions the tests ran with.
 anthropic>=2.3,<3
 openai>=3.39,<4  # the Meta provider: Muse speaks the OpenAI API
 pydantic>=2.13,<3
 pytest>=9
+
+# Song timing (step 6): Demucs and the MMS forced aligner, on CPU. The CPU index keeps
+# PyTorch to ~200 MB instead of the CUDA build's gigabytes. torchaudio has been dropping
+# APIs (PLAN section 13); 2.11 still ships pipelines.MMS_FA and functional.forced_align,
+# so torch and torchaudio are pinned together and move only after timing tests pass.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.11.0
+torchaudio==2.11.0
+demucs==4.1.0
+numpy>=2

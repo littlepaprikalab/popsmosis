@@ -1,0 +1,237 @@
+"""Step 5: audio. ElevenLabs sings the song and reads the narration and the exam question.
+
+    audio/song.mp3                Eleven Music, one composition-plan chunk per section
+    audio/song.plan.json          the plan sent, which lines each chunk sings, the song id
+    audio/narration.mp3           text-to-speech, the narration sentences in order
+    audio/narration.chars.json    what was read, where each line sits in it, and the
+    audio/frq.mp3                 character timings the TTS returned (step 6 turns them
+    audio/frq.chars.json          into words without an aligner)
+
+Every call costs credits, so a file that is already there is never asked for again,
+unless the bundle's lines have changed since it was made (its .json says what it was
+made from). To redo one by hand, delete its .mp3. Needs ELEVENLABS_API_KEY;
+ELEVENLABS_VOICE_ID picks another voice.
+"""
+
+from __future__ import annotations
+
+import base64
+import json
+import os
+import subprocess
+import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Callable
+
+from studio import brain, jobs, media
+from studio.api import USER_AGENT
+from studio.schemas import Bundle
+
+API = "https://api.elevenlabs.io"
+MUSIC_MODEL = "music_v2_5"
+TTS_MODEL = "eleven_multilingual_v2"
+DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
+LINE_MS = 4300  # one sung line at 112 bpm (PLAN section 5, step 5)
+MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what the music API accepts per chunk
+TIMEOUT_S = 600  # a song takes a minute or two to come back
+SPEECH = ("narration", "frq")
+
+# send(method, url, headers, body) -> (status, response headers, response body). Tests pass their own.
+Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
+
+
+def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, dict, bytes]:
+    request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, **headers}, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
+            return response.status, dict(response.headers), response.read()
+    except urllib.error.HTTPError as e:
+        return e.code, dict(e.headers), e.read()
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise media.StepFailed(f"ElevenLabs did not answer: {getattr(e, 'reason', e)}") from e
+
+
+send: Send = _urllib_send
+
+
+def plan_path(kind: str) -> str:
+    """What an audio file was made from: audio/song.plan.json, audio/<speech>.chars.json."""
+    return f"audio/{kind}.plan.json" if kind == "song" else f"audio/{kind}.chars.json"
+
+
+def run(job: Path, ask=brain.ask) -> str:
+    bundle = jobs.read(job / "bundle.json", Bundle)
+    made = []
+    for kind in media.TIMED:
+        if _current(job, bundle, kind):
+            continue
+        (job / "audio").mkdir(exist_ok=True)
+        if kind == "song":
+            _make_song(job, bundle)
+        else:
+            _make_speech(job, kind, speech_lines(bundle, kind))
+        made.append(kind)
+    lengths = ", ".join(f"{kind} {duration(job / media.audio_path(kind)):.1f}s" for kind in media.TIMED)
+    return f"made {', '.join(made) or 'nothing (all cached)'}; {lengths}"
+
+
+def is_done(job: Path) -> bool:
+    try:
+        bundle = jobs.read(job / "bundle.json", Bundle)
+    except (OSError, ValueError):
+        return False
+    return all(_current(job, bundle, kind) for kind in media.TIMED)
+
+
+def _current(job: Path, bundle: Bundle, kind: str) -> bool:
+    """The audio file is there and was made from the bundle's lines as they now stand."""
+    if not (job / media.audio_path(kind)).exists():
+        return False
+    try:
+        made_from = json.loads((job / plan_path(kind)).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return kind == "song"  # a song dropped in by hand, with no plan, is taken as it is
+    wanted = song_lines(bundle) if kind == "song" else speech_lines(bundle, kind)
+    return [[i, t] for i, t in made_from.get("source", [])] == [[i, t] for i, t in wanted]
+
+
+# --- the song --------------------------------------------------------------------------
+
+
+def song_lines(bundle: Bundle) -> list[tuple[str, str]]:
+    return [(line.id, line.text) for line in bundle.lyrics]
+
+
+def sections(bundle: Bundle) -> list[dict]:
+    """The lyrics in sung order, one entry per section: its name, its lines and their ids."""
+    out: list[dict] = []
+    for line in bundle.lyrics:
+        if not out or out[-1]["section"] != line.section:
+            out.append({"section": line.section, "line_ids": [], "lines": []})
+        out[-1]["line_ids"].append(line.id)
+        out[-1]["lines"].append(line.text)
+    return out
+
+
+def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
+    """The music request's plan, one chunk per section, and where each section is planned to fall."""
+    chunks, placed, at = [], [], 0
+    for part in sections(bundle):
+        length = min(MAX_CHUNK_MS, max(MIN_CHUNK_MS, LINE_MS * len(part["lines"])))
+        chunks.append({
+            "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
+            "duration_ms": length,
+            "positive_styles": list(bundle.music.positive_styles),
+            "negative_styles": list(bundle.music.negative_styles),
+            "context_adherence": "high",
+        })
+        placed.append({"section": part["section"], "line_ids": part["line_ids"], "start_ms": at, "duration_ms": length})
+        at += length
+    return {"chunks": chunks}, placed
+
+
+def _make_song(job: Path, bundle: Bundle) -> None:
+    plan, placed = composition_plan(bundle)
+    body = {"model_id": MUSIC_MODEL, "composition_plan": plan}
+    status, headers, audio = _call("POST", "/v1/music?output_format=mp3_44100_128", body)
+    if status != 200 or not audio:
+        raise media.StepFailed(f"Eleven Music refused the song: {status} {_error(audio)}")
+    _write_bytes(job / media.audio_path("song"), audio)
+    jobs.write(job / plan_path("song"), {
+        "source": song_lines(bundle), "model_id": MUSIC_MODEL, "sections": placed,
+        "song_id": _header(headers, "song-id"), "headers": _kept(headers), "request": body,
+    })
+
+
+# --- narration and the exam question ------------------------------------------------------
+
+
+def speech_lines(bundle: Bundle, kind: str) -> list[tuple[str, str]]:
+    if kind == "narration":
+        return [(n.id, n.text) for n in bundle.narration]
+    return media.frq_lines(bundle)
+
+
+def voice_id() -> str:
+    return os.environ.get("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
+
+
+def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
+    text, spans = join_lines(lines)
+    voice = voice_id()
+    status, headers, answer = _call("POST", f"/v1/text-to-speech/{voice}/with-timestamps?output_format=mp3_44100_128",
+                                    {"text": text, "model_id": TTS_MODEL})
+    if status != 200:
+        raise media.StepFailed(f"text-to-speech refused the {kind}: {status} {_error(answer)}")
+    try:
+        data = json.loads(answer)
+        audio = base64.b64decode(data["audio_base64"])
+        alignment = data["alignment"]
+        if not {"characters", "character_start_times_seconds", "character_end_times_seconds"} <= set(alignment):
+            raise KeyError("character timings")
+    except (ValueError, KeyError, TypeError) as e:
+        raise media.StepFailed(f"text-to-speech sent back something unreadable for the {kind}: {e}") from e
+    # The timings first, then the audio: the audio file is what says this kind is made.
+    jobs.write(job / plan_path(kind), {
+        "source": lines, "text": text, "lines": spans, "voice_id": voice, "model_id": TTS_MODEL,
+        "alignment": alignment, "headers": _kept(headers),
+    })
+    _write_bytes(job / media.audio_path(kind), audio)
+
+
+def join_lines(lines: list[tuple[str, str]]) -> tuple[str, list[dict]]:
+    """The lines read as one text, and each line's [start, end) in it, in characters."""
+    text, spans = "", []
+    for line_id, line in lines:
+        if text:
+            text += " "
+        spans.append({"id": line_id, "start": len(text), "end": len(text) + len(line)})
+        text += line
+    return text, spans
+
+
+# --- helpers ---------------------------------------------------------------------------------
+
+
+def _call(method: str, path: str, body: dict) -> tuple[int, dict, bytes]:
+    key = os.environ.get("ELEVENLABS_API_KEY")
+    if not key:
+        raise media.StepFailed("ELEVENLABS_API_KEY is not set")
+    headers = {"xi-api-key": key, "Content-Type": "application/json"}
+    return send(method, API + path, headers, json.dumps(body, ensure_ascii=False).encode("utf-8"))
+
+
+def _header(headers: dict, name: str) -> str:
+    return next((v for k, v in headers.items() if k.lower() == name), "")
+
+
+def _kept(headers: dict) -> dict:
+    """The response headers worth keeping: ids, costs and counts."""
+    return {k.lower(): v for k, v in headers.items()
+            if any(word in k.lower() for word in ("id", "cost", "count", "credit", "character"))}
+
+
+def _error(body: bytes) -> str:
+    text = body.decode("utf-8", "replace")
+    try:
+        detail = json.loads(text).get("detail", text)
+    except (ValueError, AttributeError):
+        detail = text
+    return json.dumps(detail)[:300] if not isinstance(detail, str) else detail[:300]
+
+
+def _write_bytes(path: Path, data: bytes) -> None:
+    partial = path.with_name(f".{path.name}.partial")
+    partial.write_bytes(data)
+    os.replace(partial, path)
+
+
+def duration(path: Path) -> float:
+    """An audio file's length in seconds (ffprobe)."""
+    try:
+        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                              str(path)], capture_output=True, text=True, check=True).stdout
+        return float(out.strip())
+    except (OSError, subprocess.CalledProcessError, ValueError) as e:
+        raise media.StepFailed(f"cannot read the length of {path.name}: {e}") from e
