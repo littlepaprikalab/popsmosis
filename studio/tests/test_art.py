@@ -258,6 +258,35 @@ def test_see_through_context_does_not_hide_a_structure_but_solid_context_does():
     assert svg.locate(mask).box.x1 == 896
 
 
+def test_a_shadow_inside_a_structures_group_is_not_part_of_it():
+    # The first live run: the hippocampus, a thin arch, carried its blurred shadow in its own
+    # group; the shadow was the widest part of the mask, so the label pointed at the shadow.
+    shadow = '<ellipse cx="896" cy="760" rx="300" ry="90" fill="#000000" opacity="0.18" filter="url(#s)"/>'
+    arch = '<path d="M 700 500 C 760 300 1030 300 1090 500" fill="none" stroke="#17A589" stroke-width="44"/>'
+    text = svg_text('<defs><filter id="s"><feGaussianBlur stdDeviation="10"/></filter></defs>',
+                    f'<g data-structure="Thylakoid">{shadow}{arch}</g>')
+    mask = svg.masks(svg.check(text, [THYLAKOID]).root, ["Thylakoid"])["Thylakoid"]
+    assert not mask[760, 896] and mask[350, 896]
+    found = svg.locate(mask)
+    assert found.box.y1 < 520
+    assert mask[int(found.label_anchor.y), int(found.label_anchor.x)]
+
+    # Drawn see-through on purpose, without a blur, it is the structure: its fill counts, not just its outline.
+    faint = ('<g data-structure="Thylakoid"><circle cx="896" cy="512" r="120" fill="#2E8B57" fill-opacity="0.4" '
+             'stroke="#1B5E3A" stroke-width="4"/></g>')
+    assert svg.masks(svg.check(svg_text(faint), [THYLAKOID]).root, ["Thylakoid"])["Thylakoid"][512, 896]
+    # A drop shadow merges the shape back on top, crisp, so under one the fill still counts.
+    drop = ('<defs><filter id="d"><feGaussianBlur in="SourceAlpha" stdDeviation="6"/><feOffset dx="4" dy="6"/>'
+            '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>')
+    shadowed = svg_text(drop, faint.replace('<g data-structure="Thylakoid">', '<g data-structure="Thylakoid" filter="url(#d)">'))
+    assert svg.masks(svg.check(shadowed, [THYLAKOID]).root, ["Thylakoid"])["Thylakoid"][512, 896]
+    # A structure that is nothing but a soft glow still has a mask.
+    glow = svg_text('<defs><filter id="s"><feGaussianBlur stdDeviation="10"/></filter></defs>',
+                    '<g data-structure="Thylakoid" filter="url(#s)" opacity="0.3">'
+                    '<circle cx="896" cy="512" r="120" fill="#2E8B57"/></g>')
+    assert svg.masks(svg.check(glow, [THYLAKOID]).root, ["Thylakoid"])["Thylakoid"][512, 896]
+
+
 def test_a_label_anchor_is_deep_inside_even_when_the_centroid_is_not():
     yy, xx = np.mgrid[0:media.ART_HEIGHT, 0:media.ART_WIDTH]
     distance = np.hypot(xx - 896, yy - 512)

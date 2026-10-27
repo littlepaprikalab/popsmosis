@@ -11,6 +11,13 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"\0" * 8
 ANSWER = '{"checks": [{"id": "lyric:v1-1", "verdict": "FILLER", "source": "", "problem": "", "corrected": ""}]}'
 
 
+@pytest.fixture(autouse=True)
+def default_brain(monkeypatch):
+    """The defaults, whatever the session's environment sets (a cloud environment may run the brain on Haiku)."""
+    for name in ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT"):
+        monkeypatch.delenv(name, raising=False)
+
+
 def text(t):
     return NS(type="text", text=t)
 

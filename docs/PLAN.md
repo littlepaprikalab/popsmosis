@@ -450,8 +450,9 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
 
 Measured on a cloud session's container (4 cores, 15 GB RAM): encoding 1080p H.264 runs
 at about 100 fps (`veryfast`) or 64 fps (`medium`), so encoding one 3:15 video takes
-1–1.5 minutes. Drawing shares the same cores and has not been measured yet. The target is
-a 3-minute video in under 5 minutes per layout.
+1–1.5 minutes. Drawing and encoding together, on the first live run ("brain structures",
+4 workers): the 3:14 song took 90 s and the 2:37 lesson 66 s. The target is a 3-minute
+video in under 5 minutes per layout.
 
 ## 8. Quality rules (also the QA checklist)
 
@@ -738,9 +739,9 @@ Rules that follow from Inkmory's code:
 |---|---|---|---|
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days, the planner's beat against a local Inkmory |
-| 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
-| 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |
-| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | |
+| 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
+| 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Left: Muse Image + SAM when the Meta key arrives; matching Fire or Don't |
+| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; the upload in `run`; agent credits |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
