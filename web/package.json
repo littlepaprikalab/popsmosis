@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "icons": "node scripts/icons.mjs",
     "e2e": "playwright test"
   },
   "dependencies": {

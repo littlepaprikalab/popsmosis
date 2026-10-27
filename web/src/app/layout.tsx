@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   },
   description: 'Droplets for learning. Ask for any topic and get a short lesson you can ask follow-ups under.',
   applicationName: 'POPsmosis',
-  icons: { icon: '/icon.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
