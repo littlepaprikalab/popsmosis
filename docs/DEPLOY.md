@@ -223,8 +223,8 @@ be deleted by hand.
 Nothing on `popsmosis-web` changes: the pages read the public URLs from the API, and its
 Content-Security-Policy already allows `https:` media and images.
 
-**Before launch:** the ElevenLabs plan has to allow publishing its songs publicly
-(docs/PLAN.md, section 10, "Before launch").
+**Before launch:** the ElevenLabs plan has to allow publishing its songs publicly, and with
+`SONG_PROVIDER=gemini` Google's terms for Lyria's songs (docs/PLAN.md, section 10, "Before launch").
 
 ## How it fits together
 

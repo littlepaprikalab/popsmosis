@@ -8,7 +8,7 @@ from studio.schemas import Timing, timing_problems
 from studio.steps import audio, timing
 from studio.steps.timing import spoken, timing_from_chars, words_of
 from studio.tests import sample_media
-from studio.tests.test_audio import FakeEleven
+from studio.tests.test_audio import FakeEleven, FakeGemini
 
 
 def test_words_lose_the_punctuation_around_them_but_keep_their_own():
@@ -61,6 +61,7 @@ def test_speech_timings_survive_characters_the_tts_dropped_or_changed():
 def made(tmp_path, monkeypatch):
     """The sample job with fake audio: the plan and character timings a real run would leave."""
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.delenv("SONG_PROVIDER", raising=False)
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
     job = tmp_path / "sample"
@@ -93,6 +94,39 @@ def test_the_song_is_aligned_section_by_section_in_song_time(made):
     assert 8.6 <= chorus.start < chorus.end <= 12.9  # inside the chorus's planned place
     assert [w.word for w in chorus.words] == ["Protons", "flow", "and", "ATP", "grows"]
     assert report["drifting"] == [] and report["unsure"] == []
+
+
+def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
+    """Lyria keeps to the planned sections only roughly (an intro, a longer verse), so its
+    lines are looked for in the whole song at once rather than where each was planned."""
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    monkeypatch.setattr(audio, "send", FakeGemini())
+    monkeypatch.setattr(audio, "duration", lambda path: 41.0)  # longer than the 30.1s planned
+    job = tmp_path / "sample"
+    job.mkdir()
+    bundle = sample_media.bundle()
+    jobs.write(job / "bundle.json", bundle)
+    audio.run(job)
+
+    calls = []
+    vocals = np.zeros((1, int(41.0 * timing.SAMPLE_RATE)), dtype=np.float32)
+    timed, report = timing.song_timing(job, bundle, align=even_aligner(calls), vocals=vocals)
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    (heard, words), = calls  # one window: the whole song
+    assert heard == vocals.shape[-1]
+    assert words[:5] == ["light", "lands", "on", "the", "thylakoid"] and words[-5:] == ["protons", "flow", "and",
+                                                                                       "eitipi", "grows"]
+    assert timed.duration == 41.0
+
+
+def test_a_song_plan_from_before_the_choice_is_aligned_section_by_section():
+    plan = {"sections": [{"section": "verse", "line_ids": ["a"], "start_ms": 0, "duration_ms": 4300},
+                         {"section": "chorus", "line_ids": ["b"], "start_ms": 4300, "duration_ms": 4300}]}
+    assert timing.windows(plan) == plan["sections"]
+    assert timing.windows({**plan, "sections_pinned": False}) == [
+        {"line_ids": ["a", "b"], "start_ms": 0, "duration_ms": 8600}]
 
 
 def test_a_chorus_sung_slower_is_flagged_and_a_mumbled_line_is_unsure(made):

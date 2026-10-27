@@ -2,7 +2,8 @@
 
     timing/song_words.json        Demucs takes the vocals out of the song, then the MMS
                                   forced aligner finds the exact lyrics in them, one
-                                  section at a time
+                                  section at a time (across the whole song at once when
+                                  its sections are not pinned: a Gemini song)
     timing/narration_words.json   from the character timings the TTS returned (step 5)
     timing/frq_words.json
     timing/song_report.json       how sure the aligner was of each line, and chorus drift
@@ -214,7 +215,7 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     scale = length * 1000 / planned_ms if planned_ms else 1.0  # the song can run a little long or short
 
     lines, scores, previous = [], {}, 0.0
-    for section in plan["sections"]:
+    for section in windows(plan):
         t0 = max(0.0, section["start_ms"] * scale / 1000 - MARGIN_S)
         t1 = min(length, (section["start_ms"] + section["duration_ms"]) * scale / 1000 + MARGIN_S)
         window = vocals[..., int(t0 * SAMPLE_RATE):int(t1 * SAMPLE_RATE)]
@@ -245,6 +246,16 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
             scores[line_id] = round(sum(line_scores) / len(line_scores), 3) if line_scores else None
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
     return timing, song_report(timing, texts, scores)
+
+
+def windows(plan: dict) -> list[dict]:
+    """Where to look for each section's lines: where it was planned, when the provider keeps
+    to the plan (Eleven Music makes each section a chunk of its planned length), else the
+    whole song at once (Lyria, which may add an intro or sing a section longer or shorter)."""
+    if plan.get("sections_pinned", True):
+        return plan["sections"]
+    planned_ms = sum(s["duration_ms"] for s in plan["sections"])
+    return [{"line_ids": [i for s in plan["sections"] for i in s["line_ids"]], "start_ms": 0, "duration_ms": planned_ms}]
 
 
 def song_report(timing: Timing, texts: dict[str, str], scores: dict[str, float | None]) -> dict:

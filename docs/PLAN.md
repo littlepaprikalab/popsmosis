@@ -111,7 +111,7 @@ Every other job has one provider, whatever the brain:
 |---|---|
 | Diagrams | Muse Image (`muse-image-1.0`); brain-drawn SVG until the Meta key arrives (step 3) |
 | Structure masks | SAM 3.1 (`sam-3.1`), with a helper box as the fallback |
-| Song | ElevenLabs Eleven Music (`music_v2_5`) |
+| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API with `SONG_PROVIDER=gemini` |
 | Narration | ElevenLabs text-to-speech with timestamps |
 | Word timing (song) | Demucs (vocals) + Meta's MMS forced aligner, both open source, run locally |
 | Timeline | Code |
@@ -168,7 +168,7 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Muse Image + helper | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper | `masks/<scene>/<structure>.png`, `locations.json` |
-| 5 | Audio | ElevenLabs | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
+| 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
 | 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
@@ -271,6 +271,14 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
   `duration_ms`, `positive_styles`, `negative_styles`, `context_adherence` "high". The
   studio's code makes this call, only after the fact-check passes. Section durations come
   from the line count (about 4.3 s per line at 112 bpm), not from the model.
+- **Or the song from Lyria** (`SONG_PROVIDER=gemini`): `POST
+  https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent` with
+  one text prompt: the style tags, the length, the planned structure as timestamp ranges
+  (`[0:09 - 0:13] Chorus`) and the lyrics under section tags, to sing word for word. The
+  answer carries the MP3 (a WAV is converted) and the lyrics Lyria wrote down. Lyria keeps
+  to the planned times only roughly, so the song's plan says its sections are not pinned
+  and step 6 aligns it as a whole. Switching the provider makes a job's song again, not
+  its speech.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
 - **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict
@@ -281,7 +289,8 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
 
 - **Song:** Demucs `--two-stems=vocals`, then the MMS aligner
   (`torchaudio.pipelines.MMS_FA`) on `vocals.wav` against the exact lyrics, section by
-  section.
+  section; a Lyria song, whose sections are not where they were planned, all at once
+  (about 70 s and 4.5 GB for 3 minutes on CPU).
 - **Narration:** ElevenLabs' character timings converted to words.
 - **Checks:** repeated chorus lines should have near-identical durations; flag any line
   that drifts more than 0.5 s. If a section was sung wrong, regenerate that section only.
@@ -452,7 +461,8 @@ The routine runs the studio in its own container, so there is no worker to host.
 takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
-  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `BRAIN_PROVIDER` (with
+  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SONG_PROVIDER` (with
+  `GEMINI_API_KEY` for `gemini`), `BRAIN_PROVIDER` (with
   `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` once
   the Meta key arrives. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
@@ -462,7 +472,7 @@ takes some setup in the routine's environment:
   starts. The container is cached after the hook, so a cold environment pays about two
   minutes once and a warm run seconds.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
-  `api.elevenlabs.io`, `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI,
+  `api.elevenlabs.io`, `generativelanguage.googleapis.com` (a Lyria song), `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI,
   `download.pytorch.org` (CPU PyTorch), `huggingface.co` (the Demucs weights, 81 MB) and
   `dl.fbaipublicfiles.com` (the MMS aligner weights, 1.2 GB).
 - **Queue settings:** the lesson text is posted right after the fact-check, a few minutes
@@ -567,7 +577,8 @@ account.
 - **Later:** when someone asks for a topic that already has a droplet, offer that one
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs
-  publicly. Encode with `-movflags +faststart` so a video starts playing before it has
+  publicly, and Google's terms for Lyria's when `SONG_PROVIDER=gemini` (they carry a
+  SynthID watermark). Encode with `-movflags +faststart` so a video starts playing before it has
   downloaded, and keep the bitrate modest (flat diagrams compress well) to hold down
   Supabase egress.
 

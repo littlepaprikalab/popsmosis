@@ -45,8 +45,11 @@ The runner needs these in its environment:
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
-| `ELEVENLABS_API_KEY` | the song and the narration (the audio step). Its calls bill to that ElevenLabs account |
+| `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless `SONG_PROVIDER` is `gemini` (the audio step). Its calls bill to that ElevenLabs account |
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
+| `SONG_PROVIDER` | optional: who sings the song, `elevenlabs` (the default) or `gemini` (Lyria 3.5 on the Gemini API) |
+| `GEMINI_API_KEY` | with `SONG_PROVIDER=gemini`: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
+| `GEMINI_SONG_MODEL` | optional: the Lyria model, with `SONG_PROVIDER=gemini`. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
 
 Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are
@@ -146,7 +149,8 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
      warm run's hook takes seconds.
    - **Network policy:** allow
      - your API host, `api.anthropic.com`, `api.elevenlabs.io`, the Supabase host and
-       the Inkmory host (and `api.meta.ai` once the Meta key arrives): what a run calls;
+       the Inkmory host (and `api.meta.ai` once the Meta key arrives, and
+       `generativelanguage.googleapis.com` with `SONG_PROVIDER=gemini`): what a run calls;
      - `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` (PyTorch's CPU
        wheels), `registry.npmjs.org`, and `archive.ubuntu.com` with `security.ubuntu.com`
        (ffmpeg and libEGL, when the image lacks them): what the session hook installs;
