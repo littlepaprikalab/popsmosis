@@ -185,6 +185,8 @@ export interface Video {
   status: 'RENDERING' | 'READY' | 'FAILED';
   songVideoUrl: string | null;
   lessonVideoUrl: string | null;
+  songPosterUrl: string | null;
+  lessonPosterUrl: string | null;
   error: string | null;
   updatedAt: string | null;
 }
@@ -197,6 +199,7 @@ export interface Answer {
   model: string | null;
   createdAt: string;
   video: Video | null; // null: a text-only droplet
+  hidden: boolean; // an admin took it off the public Droplets tab
   replies: Reply[];
   awaitingAgent: boolean;
 }
@@ -212,6 +215,29 @@ export interface Question {
   answer: Answer | null;
   isOwner: boolean;
   canDelete: boolean;
+}
+
+/** A droplet on the public tab (api/src/lib/droplet.ts). Nothing about who asked for it. */
+export interface DropletVideos {
+  songVideoUrl: string | null;
+  lessonVideoUrl: string | null;
+  songPosterUrl: string | null;
+  lessonPosterUrl: string | null;
+}
+
+export interface DropletCard {
+  id: string;
+  title: string; // "AP Biology: ATP synthesis"
+  course: string;
+  topic: string;
+  excerpt: string; // the lesson's first lines, plain text
+  video: DropletVideos;
+  createdAt: string;
+}
+
+export interface Droplet extends DropletCard {
+  content: string; // the lesson, markdown
+  lyrics: { section: string; text: string }[];
 }
 
 export interface Agent {
@@ -257,6 +283,14 @@ export const api = {
   addReply: (answerId: string, content: string) =>
     request<Reply>(`/answers/${answerId}/replies`, { method: 'POST', body: JSON.stringify({ content }) }),
   deleteReply: (id: string) => request<void>(`/replies/${id}`, { method: 'DELETE' }),
+
+  // The public Droplets tab: no sign-in needed
+  listDroplets: (cursor?: string | null) =>
+    request<{ data: DropletCard[]; nextCursor: string | null }>(`/droplets${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
+  getDroplet: (id: string) => request<Droplet>(`/droplets/${encodeURIComponent(id)}`),
+  // Admin: take a droplet off the tab, or put it back
+  setDropletHidden: (answerId: string, hidden: boolean) =>
+    request<{ id: string; hidden: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ hidden }) }),
 
   // Admin: agents
   listAgents: () => request<{ data: Agent[] }>('/agents'),

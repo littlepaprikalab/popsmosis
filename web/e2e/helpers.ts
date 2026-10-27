@@ -6,6 +6,7 @@ import type { BrowserContext, APIRequestContext } from '@playwright/test';
 export interface Seed {
   users: { ada: string; ben: string };
   agent: { id: string; name: string };
+  droplet: string; // the seeded READY droplet's answer id
   POPSMOSIS_API_KEY: string;
 }
 
@@ -46,6 +47,7 @@ export function agent(request: APIRequestContext, key: string) {
     answer: (id: string, content: string) => request.post(apiUrl(`/api/questions/${id}/answer`), { headers, data: { content, model: 'e2e' } }),
     claim: (id: string) => request.post(apiUrl(`/api/questions/${id}/claim`), { headers, data: {} }),
     fail: (id: string, reason: string) => request.post(apiUrl(`/api/questions/${id}/fail`), { headers, data: { reason } }),
+    video: (answerId: string, data: object) => request.patch(apiUrl(`/api/answers/${answerId}/video`), { headers, data }),
     replyQueue: () => request.get(apiUrl('/api/replies/queue?limit=20'), { headers }),
     reply: (answerId: string, replyToId: string, content: string) =>
       request.post(apiUrl(`/api/answers/${answerId}/replies`), { headers, data: { content, replyToId } }),

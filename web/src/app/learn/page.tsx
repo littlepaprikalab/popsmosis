@@ -19,6 +19,7 @@ import { UserAvatar, AgentAvatar } from '@/components/UserAvatar';
 import { ReplyThread } from '@/components/ReplyThread';
 import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
+import { LessonVideos } from '@/components/DropletPlayers';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -28,6 +29,28 @@ const POLL_MS = 10_000;
 const ARMED_POLL_MS = 15_000;
 const QUESTION_MIN = 3; // a topic can be one short word: "DNA"
 const QUESTION_MAX = 2000;
+// The videos start rendering a few minutes after the lesson is posted (docs/PLAN.md,
+// section 5), so a lesson this new with no videos yet is watched for them too.
+const VIDEO_WATCH_MS = 15 * 60_000;
+
+/**
+ * A card the armed poll re-fetches: a topic with no lesson yet, a thread where a
+ * human spoke last, videos still rendering, or a lesson new enough that its videos
+ * may be about to start.
+ */
+function isArmed(q: Question, now = Date.now()): boolean {
+  if (q.status === 'PENDING' || q.answer?.awaitingAgent) return true;
+  const answer = q.answer;
+  if (!answer) return false;
+  if (answer.video?.status === 'RENDERING') return true;
+  return !answer.video && now - new Date(answer.createdAt).getTime() < VIDEO_WATCH_MS;
+}
+
+/** Whether a re-fetched card differs from the one on screen in anything a card shows. */
+function videoKey(a: Answer | null): string {
+  const v = a?.video;
+  return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden].join('|') : `none|${a?.hidden}`;
+}
 
 export default function LearnPage() {
   return (
@@ -104,11 +127,13 @@ const STATUS_BADGES: Record<Question['status'], { label: string; color: string }
  * page — markdown, thread and all — re-renders on a tick that changed one of
  * them. Callers must pass stable callbacks for that to hold.
  */
-const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRequestDelete }: {
+const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerChange, onRequestDelete, onSetHidden }: {
   q: Question;
   index: number;
+  isAdmin: boolean;
   onAnswerChange: (questionId: string, answer: Answer) => void;
   onRequestDelete: (questionId: string) => void;
+  onSetHidden: (questionId: string, answer: Answer, hidden: boolean) => void;
 }) {
   const answer = q.answer;
   // Only re-derived when the answer text itself changes; a re-render must not
@@ -180,6 +205,18 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
                 <div className="md text-sm" style={{ color: 'var(--text-primary)' }}>
                   <Markdown>{answer.content}</Markdown>
                 </div>
+                <LessonVideos video={answer.video} />
+                {answer.video?.status === 'READY' && (
+                  <p className="text-[10px] mt-2 flex items-center gap-3" style={{ color: 'var(--text-muted)' }}>
+                    {answer.hidden ? <span>Hidden from the Droplets tab.</span> : <Link href={`/droplets/${answer.id}`} className="underline hover-text">On the public Droplets tab</Link>}
+                    {isAdmin && (
+                      <button onClick={() => onSetHidden(q.id, answer, !answer.hidden)} className="uppercase tracking-wider hover-text"
+                        style={{ color: answer.hidden ? 'var(--accent-green)' : 'var(--accent-red)' }} data-testid="toggle-hidden">
+                        {answer.hidden ? 'put back' : 'hide'}
+                      </button>
+                    )}
+                  </p>
+                )}
                 <ReplyThread answer={answer} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">
@@ -253,16 +290,12 @@ function LearnContent() {
 
   // Ask the cheap status endpoint; when something newer exists, show the banner.
   // Localized refresh: only the topics that are waiting on the teacher.
-  const armedIds = questions
-    .filter((q) => q.status === 'PENDING' || q.answer?.awaitingAgent)
-    .map((q) => q.id);
+  const armedIds = questions.filter((q) => isArmed(q)).map((q) => q.id);
   const armedKey = armedIds.join(',');
   const questionsRef = useRef(questions);
   questionsRef.current = questions;
   usePolling(() => {
-    const ids = questionsRef.current
-      .filter((q) => q.status === 'PENDING' || q.answer?.awaitingAgent)
-      .map((q) => q.id);
+    const ids = questionsRef.current.filter((q) => isArmed(q)).map((q) => q.id);
     if (ids.length === 0) return;
     // The API caps ?ids= at 50; chunk so every armed card refreshes, not just the first 50.
     const chunks: string[][] = [];
@@ -277,7 +310,8 @@ function LearnContent() {
         const changed = next.status !== q.status
           || (next.answer?.id ?? null) !== (q.answer?.id ?? null)
           || (next.answer?.replies.length ?? 0) !== (q.answer?.replies.length ?? 0)
-          || next.answer?.awaitingAgent !== q.answer?.awaitingAgent;
+          || next.answer?.awaitingAgent !== q.answer?.awaitingAgent
+          || videoKey(next.answer) !== videoKey(q.answer);
         return changed ? next : q;
       }));
       // Keep the status watermark current so our own localized updates do not trip the banner.
@@ -368,6 +402,16 @@ function LearnContent() {
     if (last && (!latestSeenRef.current || last.createdAt > latestSeenRef.current)) latestSeenRef.current = last.createdAt;
   }, []);
 
+  const setHidden = useCallback(async (questionId: string, answer: Answer, hidden: boolean) => {
+    try {
+      await api.setDropletHidden(answer.id, hidden);
+      setQuestions((prev) => prev.map((q) => (q.id === questionId && q.answer ? { ...q, answer: { ...q.answer, hidden } } : q)));
+      showToast(hidden ? 'Taken off the Droplets tab.' : 'Back on the Droplets tab.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to change it', 'error');
+    }
+  }, [showToast]);
+
   if (authLoading) return <LoadingMessage />;
 
   if (unreachable) return <ServerUnavailable onRetry={retry} />;
@@ -390,7 +434,8 @@ function LearnContent() {
             Sign in with Google
           </Link>
           <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-            Topics and lessons are visible to signed-in members.
+            Topics and lessons are visible to signed-in members. Finished droplets are free to watch on the{' '}
+            <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, no sign-in needed.
           </p>
         </div>
       </div>
@@ -501,8 +546,10 @@ function LearnContent() {
               key={q.id}
               q={q}
               index={i}
+              isAdmin={user.role === 'ADMIN'}
               onAnswerChange={updateAnswer}
               onRequestDelete={setPendingDelete}
+              onSetHidden={setHidden}
             />
           ))}
         </div>
