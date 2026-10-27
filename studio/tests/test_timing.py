@@ -177,6 +177,12 @@ def test_a_line_pulled_out_of_place_is_heard_alone_between_its_neighbours(made):
     assert "re-aligned alone: v1-2" in timing.song_notes(report)
 
 
+def test_the_notes_read_a_report_from_before_lines_were_heard_alone():
+    """`python -m studio show` reads the report of a job timed before the repair pass."""
+    report = {"lines": [], "drift": [], "drifting": [], "unsure": ["c1-1"]}
+    assert timing.song_notes(report) == "no repeated lines; aligner unsure of c1-1"
+
+
 def test_a_line_with_no_room_between_its_neighbours_stays_as_it_was(made):
     bundle = sample_media.bundle()
     vocals = np.zeros((1, int(30.1 * timing.SAMPLE_RATE)), dtype=np.float32)
