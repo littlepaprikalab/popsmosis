@@ -14,7 +14,6 @@
     "db:generate": "prisma generate --schema ../prisma/schema.prisma",
     "agent:create": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/create-agent.ts",
     "agent:list": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/list-agents.ts",
-    "token:create": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/create-token.ts",
     "test": "vitest run",
     "postinstall": "prisma generate --schema ../prisma/schema.prisma",
     "seed:dev": "DOTENV_CONFIG_PATH=../.env tsx src/scripts/seed-dev.ts",

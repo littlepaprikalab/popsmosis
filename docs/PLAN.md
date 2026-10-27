@@ -478,8 +478,8 @@ A `/droplets` page where anyone can watch every finished droplet for free. A top
 once then serves every student who comes after, and judges can browse it without an
 account.
 
-- **Outside the sign-in gate.** Today every page and endpoint past sign-in needs an
-  approved account; the two `/api/droplets` endpoints are the first that do not. Rate
+- **Outside the sign-in gate.** Today every page and endpoint past sign-in needs a
+  signed-in account; the two `/api/droplets` endpoints are the first that do not. Rate
   limit them.
 - **Public:** a title made from the bundle (`course` and `topic`), the lesson text, both
   videos and the lyrics.

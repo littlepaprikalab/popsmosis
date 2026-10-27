@@ -47,7 +47,7 @@ d('question queue claim lease', () => {
     agentB = kb.raw;
     await prisma.agent.create({ data: { name: 'a', apiKeyHash: ka.hashed } });
     await prisma.agent.create({ data: { name: 'b', apiKeyHash: kb.hashed } });
-    const u = await prisma.user.create({ data: { email: 'a@b.c', googleId: 'g1', name: 'Ada', status: 'APPROVED' } });
+    const u = await prisma.user.create({ data: { email: 'a@b.c', googleId: 'g1', name: 'Ada' } });
     userId = u.id;
     for (let i = 1; i <= 6; i++) {
       await prisma.question.create({

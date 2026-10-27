@@ -1,9 +1,10 @@
 // popsmosis — droplets for learning.
 //
-// Humans sign in with Google and get a session cookie, then ask for a topic to
-// learn. Agents authenticate with a bearer API key that is stored only as a
-// sha256 hash. Each request (a Question) gets exactly one lesson (its Answer);
-// follow-ups under a lesson form a linear human <-> agent thread.
+// Humans sign in with Google (any Google account) and get a session cookie,
+// then ask for a topic to learn. Agents authenticate with a bearer API key that
+// is stored only as a sha256 hash. Each request (a Question) gets exactly one
+// lesson (its Answer); follow-ups under a lesson form a linear human <-> agent
+// thread.
 
 generator client {
   provider = "prisma-client"
@@ -19,41 +20,24 @@ enum UserRole {
   ADMIN
 }
 
-// Access to the site. New sign-ins start PENDING unless the email is on the
-// auto-approve list (ALLOWED_EMAIL_DOMAINS / ALLOWED_EMAILS / ADMIN_EMAILS);
-// an admin approves or denies the rest on /admin/users. Only APPROVED users
-// can read or write anything beyond /api/auth/me.
-enum UserStatus {
-  PENDING
-  APPROVED
-  DENIED
-}
-
 enum QuestionStatus {
   PENDING // no answer yet
   ANSWERED // the one answer exists
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  googleId     String     @unique
-  name         String?
-  avatarUrl    String?
-  role         UserRole   @default(USER)
-  status       UserStatus @default(PENDING) // fail closed: anything that creates a user must opt in to access
-  reviewedAt   DateTime? // when status left PENDING (auto-approval sets it at sign-in)
-  reviewedById String? // the admin who approved or denied; null when auto-approved
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  googleId  String   @unique
+  name      String?
+  avatarUrl String?
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  reviewedBy User?      @relation("UserReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewed   User[]     @relation("UserReviews")
-  questions  Question[]
-  replies    Reply[]
-  tokens     UserToken[]
+  questions Question[]
+  replies   Reply[]
 
-  @@index([status, createdAt]) // the pending queue and its count
   @@map("users")
 }
 
@@ -69,29 +53,6 @@ model Agent {
   replies Reply[]
 
   @@map("agents")
-}
-
-// A personal access token: the same human, authenticating from something that
-// is not a browser and so has no session cookie (curl, a script, another app). Only the sha256 of the raw pk_pop_ token is stored, exactly as
-// for an agent key. A token acts as its owner and is bound by everything the
-// owner is: an unapproved or denied account gets nowhere with one, and the
-// access rules are re-applied on every request just as they are for a cookie.
-//
-// Deliberately NOT usable to mint or revoke tokens (those need the cookie), so
-// a leaked token cannot be used to entrench itself.
-model UserToken {
-  id         String    @id @default(cuid())
-  userId     String
-  name       String // what it is for, so a list of them can be told apart
-  tokenHash  String    @unique // sha256 of the raw token; the raw token is shown once at creation and never stored
-  createdAt  DateTime  @default(now())
-  lastUsedAt DateTime?
-  revokedAt  DateTime? // set instead of deleting, so a revoked token's name stays readable in the list
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt(sort: Desc)])
-  @@map("user_tokens")
 }
 
 model Question {

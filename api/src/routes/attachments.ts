@@ -6,7 +6,7 @@ import { servedAs, contentDisposition, sniffMimeType } from '../lib/attachments.
 
 export default async function attachmentRoutes(app: FastifyInstance) {
   // GET /api/attachments/:id — a file sent with a question or reply, to whoever may read the thread it is in: any
-  // approved user (the pages show every user's questions) and the teacher. Served as lib/attachments.ts decides, in a
+  // signed-in user (the pages show every user's questions) and the teacher. Served as lib/attachments.ts decides, in a
   // sandbox, so a file can only ever be looked at or saved.
   app.get('/api/attachments/:id', { preHandler: [requireUserOrAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };

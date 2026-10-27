@@ -1,10 +1,10 @@
 /**
  * Attachments against a real Postgres (DATABASE_URL). Skipped unless INTEGRATION=1, like the other integration files.
  *
- * Covers: a question and a human reply carrying files, sent with a personal access token -> the files listed on the
- * thread and in both of the teacher's queues, without their bytes -> each served to a reader as its bytes say it is,
- * never as it claimed -> the limits, an agent's reply refused files, and a stranger refused the bytes -> the retention
- * letting the bytes go and keeping the row -> the files going with their message.
+ * Covers: a question and a human reply carrying files -> the files listed on the thread and in both of the teacher's
+ * queues, without their bytes -> each served to a reader as its bytes say it is, never as it claimed -> the limits, an
+ * agent's reply refused files, and a stranger refused the bytes -> the retention letting the bytes go and keeping the
+ * row -> the files going with their message.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -17,7 +17,6 @@ d('attachments', () => {
   let prisma: (typeof import('./../lib/prisma.js'))['default'];
   let cookieA: string;
   let cookieB: string;
-  let patToken: string;
   let agentKey: string;
   const tag = `att-${Date.now()}`;
 
@@ -35,14 +34,11 @@ d('attachments', () => {
     app = await buildApp();
     await app.ready();
 
-    const approved = { status: 'APPROVED' as const, reviewedAt: new Date() };
-    const userA = await prisma.user.create({ data: { email: `${tag}-a@example.com`, googleId: `${tag}-a`, name: 'Ada', ...approved } });
-    const userB = await prisma.user.create({ data: { email: `${tag}-b@example.com`, googleId: `${tag}-b`, name: 'Ben', status: 'PENDING' } });
+    const userA = await prisma.user.create({ data: { email: `${tag}-a@example.com`, googleId: `${tag}-a`, name: 'Ada' } });
+    const userB = await prisma.user.create({ data: { email: `${tag}-b@example.com`, googleId: `${tag}-b`, name: 'Ben' } });
     const { SESSION_EXPIRES_IN } = await import('./../lib/session.js');
     cookieA = `popsmosis_session=${app.jwt.sign({ sub: userA.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
     cookieB = `popsmosis_session=${app.jwt.sign({ sub: userB.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
-    const minted = await app.inject({ method: 'POST', url: '/api/tokens', headers: asUser(cookieA), payload: { name: 'my script' } });
-    patToken = minted.json().token;
 
     const k = generateApiKey();
     agentKey = k.raw;
@@ -64,7 +60,7 @@ d('attachments', () => {
 
   it('takes a question with its files and lists them, without their bytes', async () => {
     const r = await app.inject({
-      method: 'POST', url: '/api/questions', headers: asBearer(patToken),
+      method: 'POST', url: '/api/questions', headers: asUser(cookieA),
       payload: {
         content: `${tag} explain ATP synthesis from my notes`,
         attachments: [
@@ -99,7 +95,7 @@ d('attachments', () => {
     expect(shot.headers['content-security-policy']).toMatch(/sandbox/);
     expect(shot.rawPayload.equals(png)).toBe(true);
 
-    const log = await app.inject({ method: 'GET', url: logUrl, headers: asBearer(patToken) });
+    const log = await app.inject({ method: 'GET', url: logUrl, headers: asUser(cookieA) });
     expect(log.headers['content-type']).toBe('text/plain; charset=utf-8');
     expect(log.body).toBe('ATP synthase spins like a rotor.\n');
 
@@ -113,16 +109,16 @@ d('attachments', () => {
     expect(relabelled.headers['content-type']).toBe('application/octet-stream');
   });
 
-  it('refuses the bytes to anyone not signed in and approved, and a file that is not there', async () => {
+  it('serves the bytes to anyone signed in, refuses them to anyone else, and a file that is not there', async () => {
     expect((await app.inject({ method: 'GET', url: shotUrl })).statusCode).toBe(401);
-    expect((await app.inject({ method: 'GET', url: shotUrl, headers: asUser(cookieB) })).statusCode).toBe(403);
-    expect((await app.inject({ method: 'GET', url: '/api/attachments/nope', headers: asBearer(patToken) })).statusCode).toBe(404);
+    expect((await app.inject({ method: 'GET', url: shotUrl, headers: asUser(cookieB) })).statusCode).toBe(200); // every user sees every thread
+    expect((await app.inject({ method: 'GET', url: '/api/attachments/nope', headers: asUser(cookieA) })).statusCode).toBe(404);
   });
 
   it('refuses a message whose files break a limit, before writing anything', async () => {
     const before = await prisma.question.count({ where: { content: { startsWith: tag } } });
     const over = await app.inject({
-      method: 'POST', url: '/api/questions', headers: asBearer(patToken),
+      method: 'POST', url: '/api/questions', headers: asUser(cookieA),
       payload: { content: `${tag} too much`, attachments: Array.from({ length: 6 }, (_, i) => ({ name: `f${i}.txt`, data: b64('x') })) },
     });
     expect(over.statusCode).toBe(400);
@@ -136,7 +132,7 @@ d('attachments', () => {
     });
     answerId = answered.json().id;
     const r = await app.inject({
-      method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asBearer(patToken),
+      method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieA),
       payload: { content: 'Still confused - see this', attachments: [{ name: 'again.png', data: b64(png) }] },
     });
     expect(r.statusCode).toBe(201);
@@ -168,18 +164,18 @@ d('attachments', () => {
       ['pasted.png', true], ['atp-notes.txt', true], ['evil.html', true],
     ]);
     expect(card.json().answer.replies[0].attachments[0].expired).toBe(false); // the reply's is still within it
-    const gone = await app.inject({ method: 'GET', url: shotUrl, headers: asBearer(patToken) });
+    const gone = await app.inject({ method: 'GET', url: shotUrl, headers: asUser(cookieA) });
     expect(gone.statusCode).toBe(410);
   });
 
   it('drops the files with their message', async () => {
     const r = await app.inject({
-      method: 'POST', url: '/api/questions', headers: asBearer(patToken),
+      method: 'POST', url: '/api/questions', headers: asUser(cookieA),
       payload: { content: `${tag} a question to take back`, attachments: [{ name: 'a.txt', data: b64('a') }] },
     });
     const id = r.json().id;
     expect(await prisma.attachment.count({ where: { questionId: id } })).toBe(1);
-    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}`, headers: asBearer(patToken) })).statusCode).toBe(204);
+    expect((await app.inject({ method: 'DELETE', url: `/api/questions/${id}`, headers: asUser(cookieA) })).statusCode).toBe(204);
     expect(await prisma.attachment.count({ where: { questionId: id } })).toBe(0);
   });
 });

@@ -6,7 +6,7 @@ import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import prisma from './lib/prisma.js';
-import { hashApiKey, isAgentToken, isWellFormedAgentToken, isUserToken, isWellFormedUserToken, bearerToken } from './lib/apikey.js';
+import { hashApiKey, isAgentToken, isWellFormedAgentToken, bearerToken } from './lib/apikey.js';
 import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } from './lib/session.js';
 import { resolveAgentToken } from './middleware/auth.js';
 import authRoutes from './routes/auth.js';
@@ -14,7 +14,6 @@ import questionRoutes from './routes/questions.js';
 import replyRoutes from './routes/replies.js';
 import agentRoutes from './routes/agents.js';
 import userRoutes from './routes/users.js';
-import tokenRoutes from './routes/tokens.js';
 import attachmentRoutes from './routes/attachments.js';
 
 export async function buildApp() {
@@ -44,10 +43,6 @@ export async function buildApp() {
     app.addHook('onRequest', async (request, reply) => {
       const token = bearerToken(request.headers.authorization);
       if (isWellFormedAgentToken(token)) return; // agents call the API directly
-      // ...and so do personal access tokens: calling the API without a browser
-      // in front of it is the whole reason one exists. Shape only here, as for
-      // an agent key — the route guard is what actually authenticates it.
-      if (isWellFormedUserToken(token)) return;
       if (request.url === '/api/health') return;
       if (request.headers['x-proxy-token'] !== PROXY_SECRET) {
         return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Direct API access not allowed' } });
@@ -65,7 +60,7 @@ export async function buildApp() {
   }
   await app.register(jwt, { secret: process.env.JWT_SECRET });
 
-  // ---- Rate limiting keyed by agent key hash, then access token, then session subject, then IP ----
+  // ---- Rate limiting keyed by agent key hash, then session subject, then IP ----
   const subFromCookie = (req: FastifyRequest): string | null => {
     const token = sessionCookieToken(req.cookies);
     if (!token) return null;
@@ -81,10 +76,6 @@ export async function buildApp() {
     keyGenerator: (req: FastifyRequest) => {
       const token = bearerToken(req.headers.authorization);
       if (isAgentToken(token)) return `agent:${hashApiKey(token).slice(0, 16)}`;
-      // Keyed by the token rather than the IP it came from: a token is one
-      // caller wherever it runs, and several of them behind one NAT must not
-      // share the anonymous bucket they would otherwise all land in.
-      if (isUserToken(token)) return `token:${hashApiKey(token).slice(0, 16)}`;
       const sub = subFromCookie(req);
       if (sub) return `user:${sub}`;
       return req.ip;
@@ -92,7 +83,6 @@ export async function buildApp() {
     max: (req: FastifyRequest) => {
       const token = bearerToken(req.headers.authorization);
       if (isAgentToken(token)) return 300;
-      if (isUserToken(token)) return 200; // the same human, so the same allowance as their browser
       if (hasSessionCookie(req.cookies)) return 200;
       return 60;
     },
@@ -177,7 +167,6 @@ export async function buildApp() {
   await app.register(replyRoutes);
   await app.register(agentRoutes);
   await app.register(userRoutes);
-  await app.register(tokenRoutes);
   await app.register(attachmentRoutes);
 
   app.get('/api/health', async (_request, reply) => {

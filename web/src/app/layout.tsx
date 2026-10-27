@@ -4,7 +4,6 @@ import { AuthProvider } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { AccessGate } from '@/components/AccessGate';
 import { ToastProvider } from '@/components/Toast';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -32,7 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Nav />
             <main className="flex-1">
               <ErrorBoundary>
-                <AccessGate>{children}</AccessGate>
+                {children}
               </ErrorBoundary>
             </main>
             <Footer />
