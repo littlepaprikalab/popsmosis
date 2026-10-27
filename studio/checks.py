@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 
 from studio.jobs import write
-from studio.schemas import Bundle, CheckReport, Problem
+from studio.schemas import BPM_TAG, Bundle, CheckReport, Problem
 
 
 def run(job: Path) -> CheckReport:
@@ -53,7 +53,23 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             named = _check_names(line, canon, scene, drawn[scene], problems)
             revealed[scene] |= named & drawn[scene]
             _check_direction(line["id"], direction, canon, scene, drawn[scene], revealed[scene], problems)
+    problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
+    """The styles name one tempo, the one the song's sections are timed by (Music.bpm), so the
+    music generator is never asked for one pace and given section lengths for another."""
+    bpm = bundle.music.bpm
+    styles = [BPM_TAG.sub(lambda found: found[0] if round(float(found[1])) == bpm else f"{bpm} bpm", style)
+              for style in music["positive_styles"]]
+    if not any(BPM_TAG.search(style) for style in styles):
+        styles.append(f"{bpm} bpm")
+    if styles == music["positive_styles"]:
+        return []
+    music["positive_styles"] = styles
+    return [Problem(line_id="music", rule="tempo", repaired=True,
+                    detail=f"the styles now name only {bpm} bpm, the tempo the song's sections are timed by")]
 
 
 # Curly quotes and long dashes read as plain ones, so "Broca’s area" is "Broca's area".

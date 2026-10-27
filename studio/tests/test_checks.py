@@ -172,3 +172,15 @@ def test_checking_a_checked_bundle_changes_nothing():
         assert twice == once
         assert not any(p.repaired for p in second.problems)
         assert {(p.line_id, p.rule) for p in second.problems} <= {(p.line_id, p.rule) for p in first.problems}
+
+
+def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
+    def styles(tags):
+        bundle, found, _ = review(lambda d: d["music"].update(positive_styles=tags))
+        return bundle.music.positive_styles, found
+
+    assert styles(["K-pop", "98 BPM"]) == (["K-pop", "98 BPM"], [])
+    repaired = [("music", "tempo", True)]
+    assert styles(["bright pop"]) == (["bright pop", "112 bpm"], repaired)  # none named: what songs used to be
+    assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
+    assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)

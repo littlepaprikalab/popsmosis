@@ -21,6 +21,9 @@ Section = Literal["verse", "chorus", "bridge"]
 SECTION_ORDER = ["verse", "chorus", "verse", "chorus", "bridge", "chorus"]
 Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
+BPM_RANGE = (80, 160)  # the tempos the song may take; a line is two bars, so 6.0 s down to 3.0 s
+DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
+BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
 
 
 class Strict(BaseModel):
@@ -71,6 +74,14 @@ class Music(Strict):
     positive_styles: list[str]
     negative_styles: list[str]
     sections: list[Section]
+
+    @property
+    def bpm(self) -> int:
+        """The first tempo the styles name ("98 bpm"), held to BPM_RANGE; DEFAULT_BPM when they name none."""
+        for style in self.positive_styles:
+            if found := BPM_TAG.search(style):
+                return min(BPM_RANGE[1], max(BPM_RANGE[0], round(float(found.group(1)))))
+        return DEFAULT_BPM
 
 
 class Lyric(Strict):
@@ -183,9 +194,9 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 
 
 class Problem(Strict):
-    line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list
+    line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles"]
+                  "spotlight", "camera", "particles", "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -248,6 +259,7 @@ class Request(Strict):
     topic: str
     course: str = ""
     request: str = ""  # their own words, when they said more than the topic
+    song_style: str = ""  # the style they asked the song to have, in their words
     study_guide: str = ""
     images: list[str] = []  # paths to photos of their notes
 
