@@ -4,6 +4,8 @@ import json
 import os
 import shutil
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -11,7 +13,7 @@ skia = pytest.importorskip("skia", reason="skia-python is not installed (or its 
 
 from studio import jobs, media
 from studio.render import primitives as p
-from studio.render.encode import encode, poster_time, ranges, write_poster
+from studio.render.encode import EncodeError, encode, poster_time, ranges, write_poster
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
@@ -72,14 +74,14 @@ def test_a_structure_is_a_pale_ghost_until_its_name_is_sung(job, song):
 
 def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
-    plain = art.compose({}, {})
-    lit = art.compose({}, {"Cytochrome b6f": 1.0})
+    _, plain = art.compose({}, {})
+    _, lit = art.compose({}, {"Cytochrome b6f": 1.0})
     plain_px, lit_px = plain.toarray(), lit.toarray()
     thylakoid = located(job, "overview", "Thylakoid").label_anchor
     b6f = located(job, "overview", "Cytochrome b6f").centroid
     assert (lit_px[int(b6f.y), int(b6f.x)] == plain_px[int(b6f.y), int(b6f.x)]).all()
     assert lit_px[int(thylakoid.y), int(thylakoid.x)][:3].min() > plain_px[int(thylakoid.y), int(thylakoid.x)][:3].min() + 80
-    assert art.compose({}, {"Cytochrome b6f": 1.0}) is lit  # composed once, then reused
+    assert art.compose({}, {"Cytochrome b6f": 1.0})[1] is lit  # composed once, then reused
 
 
 def test_the_lyric_band_is_white_and_marks_the_word_being_sung(song):
@@ -220,3 +222,37 @@ def test_the_poster_is_late_in_the_fullest_beat(job, tmp_path):
 
 def test_the_render_step_is_found_by_name():
     assert media.step_module("render") is render_step
+
+
+@needs_ffmpeg
+def test_a_render_started_from_a_plain_script_does_not_run_the_script_again(job, tmp_path):
+    # Workers are their own processes: a caller without `if __name__ == "__main__"` is not re-run.
+    jobs.write(tmp_path / "timeline.json", short_timeline(job, "song"))
+    script = tmp_path / "render_it.py"
+    marker = tmp_path / "runs.txt"
+    script.write_text(
+        "from pathlib import Path\n"
+        "from studio import jobs\n"
+        "from studio.render.encode import encode\n"
+        "from studio.schemas import Timeline\n"
+        f"with open({str(marker)!r}, 'a') as f: f.write('run\\n')\n"
+        f"timeline = jobs.read(Path({str(tmp_path / 'timeline.json')!r}), Timeline)\n"
+        f"encode(Path({str(job)!r}), timeline, Path({str(tmp_path / 'out.mp4')!r}), parts=2)\n")
+    root = Path(__file__).resolve().parent.parent.parent
+    env = dict(os.environ, PYTHONPATH=str(root))
+    result = subprocess.run([sys.executable, str(script)], cwd=tmp_path, env=env, capture_output=True, text=True,
+                            timeout=120, check=False)
+    assert result.returncode == 0, result.stderr[-2000:]
+    assert marker.read_text() == "run\n"
+    assert (tmp_path / "out.mp4").stat().st_size > 0
+
+
+@needs_ffmpeg
+def test_a_worker_that_fails_stops_the_render_with_one_clear_error(job, tmp_path):
+    work = tmp_path / "job"
+    shutil.copytree(job, work)
+    timeline = short_timeline(work, "song")
+    (work / media.art_path("overview")).write_bytes(b"not a png")  # fails in the workers, not before
+    with pytest.raises(EncodeError, match=r"RenderError: art/overview.png is not an image"):
+        encode(work, timeline, tmp_path / "out.mp4", parts=2)
+    assert not (tmp_path / "out.mp4").exists()

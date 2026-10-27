@@ -60,9 +60,9 @@ jobs:
           python-version: '3.13'
           cache: pip
           cache-dependency-path: studio/requirements.txt
-      # The renderer's tests encode with ffmpeg; skia-python needs libEGL.
-      - run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends ffmpeg libegl1
+      - run: sudo apt-get update -q && sudo apt-get install -y -q libegl1  # skia-python loads libEGL.so.1
       - run: pip install -r studio/requirements.txt
+      - run: sudo apt-get install -y -q --no-install-recommends ffmpeg  # the renderer's tests encode video
       - run: python -m pytest studio
 
   e2e:

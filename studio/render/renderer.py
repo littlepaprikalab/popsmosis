@@ -49,6 +49,13 @@ class RenderError(Exception):
 # --- each scene, once ----------------------------------------------------------------------
 
 
+def _read(path: Path, color_type) -> np.ndarray:
+    try:
+        return skia.Image.open(str(path)).toarray(colorType=color_type)
+    except (RuntimeError, ValueError) as e:
+        raise RenderError(f"{path.parent.name}/{path.name} is not an image the renderer can read ({e})") from e
+
+
 class SceneArt:
     """One scene's art and masks, and the washes made from them, composed on demand."""
 
@@ -57,7 +64,7 @@ class SceneArt:
         art_file = job / located.art
         if not art_file.exists():
             raise RenderError(f"no art for scene {located.scene} ({located.art})")
-        pixels = skia.Image.open(str(art_file)).toarray(colorType=skia.kBGRA_8888_ColorType)
+        pixels = _read(art_file, skia.kBGRA_8888_ColorType)
         pixels[..., 3] = 255
         self.width, self.height = pixels.shape[1], pixels.shape[0]
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
@@ -66,7 +73,7 @@ class SceneArt:
             mask_file = job / s.mask
             if not mask_file.exists():
                 raise RenderError(f"no mask for {s.name} on {located.scene} ({s.mask})")
-            grey = skia.Image.open(str(mask_file)).toarray(colorType=skia.kGray_8_ColorType)
+            grey = _read(mask_file, skia.kGray_8_ColorType)
             if grey.shape != pixels.shape[:2]:
                 raise RenderError(f"the mask for {s.name} on {located.scene} is not the art's size")
             self.masks[s.name] = skia.Image.fromarray(np.ascontiguousarray(grey), colorType=skia.kAlpha_8_ColorType)
@@ -78,14 +85,16 @@ class SceneArt:
             self.centre = (sum(s.centroid.x for s in located.structures) / len(located.structures),
                            sum(s.centroid.y for s in located.structures) / len(located.structures))
 
-    def _surface(self) -> skia.Surface:
-        return skia.Surface.MakeRaster(skia.ImageInfo.Make(self.width, self.height, skia.kBGRA_8888_ColorType,
-                                                           skia.kPremul_AlphaType))
+    def _surface(self, alpha_only: bool = False) -> skia.Surface:
+        kind = skia.kAlpha_8_ColorType if alpha_only else skia.kBGRA_8888_ColorType
+        return skia.Surface.MakeRaster(skia.ImageInfo.Make(self.width, self.height, kind, skia.kPremul_AlphaType))
 
     def ghost(self, name: str) -> skia.Image:
-        """White where the structure is, with a soft edge: drawn at GHOST_WASH over the art."""
+        """Where the structure is, with a soft edge: drawn white at GHOST_WASH over the art.
+
+        Washes are alpha only (a byte a pixel), so a scene with many structures stays small."""
         if name not in self._ghosts:
-            surface = self._surface()
+            surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorTRANSPARENT)
             canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
@@ -94,9 +103,9 @@ class SceneArt:
         return self._ghosts[name]
 
     def spot(self, name: str) -> skia.Image:
-        """White everywhere but the structure: drawn at SPOT_WASH, it leaves only that one bright."""
+        """Everywhere but the structure: drawn white at SPOT_WASH, it leaves only that one bright."""
         if name not in self._spots:
-            surface = self._surface()
+            surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorWHITE)
             canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
@@ -105,27 +114,29 @@ class SceneArt:
             self._spots[name] = surface.makeImageSnapshot()
         return self._spots[name]
 
-    def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> skia.Image:
-        """The art with each ghost and spotlight wash at its level (0-1), kept for reuse."""
+    def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[tuple, skia.Image]:
+        """The art with each ghost and spotlight wash at its level (0-1), kept for reuse; and its key."""
         key = (tuple(sorted((n, round(v, 3)) for n, v in ghosts.items() if v > 0.002 and n in self.masks)),
                tuple(sorted((n, round(v, 3)) for n, v in spots.items() if v > 0.002 and n in self.masks)))
         if not key[0] and not key[1]:
-            return self.art
+            return key, self.art
         if key in self._composed:
             self._composed.move_to_end(key)
-            return self._composed[key]
+            return key, self._composed[key]
         surface = self._surface()
         canvas = surface.getCanvas()
         canvas.drawImage(self.art, 0, 0)
         for name, level in key[0]:
-            canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(), skia.Paint(Alphaf=GHOST_WASH * level))
+            canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
+                             skia.Paint(Color=skia.ColorWHITE, Alphaf=GHOST_WASH * level))
         for name, level in key[1]:
-            canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(), skia.Paint(Alphaf=SPOT_WASH * level))
+            canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
+                             skia.Paint(Color=skia.ColorWHITE, Alphaf=SPOT_WASH * level))
         image = surface.makeImageSnapshot()
         self._composed[key] = image
         while len(self._composed) > 6:
             self._composed.popitem(last=False)
-        return image
+        return key, image
 
 
 # --- the camera ----------------------------------------------------------------------------
@@ -310,8 +321,8 @@ class Renderer:
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,
                          ghosts: dict[str, float], spots: dict[str, float]) -> None:
         art = self.scene(scene_id)
-        composed = art.compose(ghosts, spots)
-        key = (scene_id, id(composed), round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
+        washes, composed = art.compose(ghosts, spots)
+        key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
         if self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
             return

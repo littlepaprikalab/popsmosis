@@ -10,19 +10,19 @@ folder and moved into place last.
 from __future__ import annotations
 
 import itertools
-import multiprocessing
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
-from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
 from studio.render.layouts import LAYOUTS
 from studio.schemas import Timeline
 
+ROOT = Path(__file__).resolve().parent.parent.parent  # the folder that holds studio/, for the workers
 PRESET = "veryfast"
 CRF = "20"
 
@@ -55,30 +55,71 @@ def _run(args: list[str]) -> None:
         raise EncodeError(f"{Path(args[0]).name} failed: {result.stderr.strip()[-800:]}")
 
 
-def render_range(job: str, timeline_json: str, layout: str, first: int, last: int, out: str) -> int:
-    """Draw frames [first, last) and encode them, video only; runs in a worker process."""
-    from studio.render.renderer import (
-        Renderer,  # imported here: skia loads in the worker
-    )
+def render_range(job: Path, timeline: Timeline, layout: str, first: int, last: int, out: Path) -> None:
+    """Draw frames [first, last) and encode them, video only. Runs in a worker process."""
+    from studio.render.renderer import Renderer  # skia loads in the worker
 
-    timeline = Timeline.model_validate_json(timeline_json)
-    renderer = Renderer(Path(job), timeline, layout)
+    renderer = Renderer(job, timeline, layout)
     size = LAYOUTS[layout]
-    proc = subprocess.Popen(
-        [ffmpeg(), "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgra",
-         "-s", f"{size.width}x{size.height}", "-r", str(timeline.fps), "-i", "-",
-         "-c:v", "libx264", "-preset", PRESET, "-crf", CRF, "-pix_fmt", "yuv420p", "-threads", "2", out],
-        stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    with open(out.with_suffix(".ffmpeg.log"), "wb") as log:
+        proc = subprocess.Popen(
+            [ffmpeg(), "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgra",
+             "-s", f"{size.width}x{size.height}", "-r", str(timeline.fps), "-i", "-",
+             "-c:v", "libx264", "-preset", PRESET, "-crf", CRF, "-pix_fmt", "yuv420p", "-threads", "2", str(out)],
+            stdin=subprocess.PIPE, stderr=log)
+        try:
+            for n in range(first, last):
+                proc.stdin.write(memoryview(renderer.frame(n / timeline.fps)).cast("B"))
+            proc.stdin.close()
+        except BrokenPipeError:
+            pass  # ffmpeg stopped early; its exit code and log say why
+        except BaseException:
+            proc.kill()
+            raise
+        finally:
+            code = proc.wait()
+    if code:
+        error = out.with_suffix(".ffmpeg.log").read_text(errors="replace").strip()
+        raise EncodeError(f"ffmpeg failed on frames {first}-{last}: {error[-800:]}")
+
+
+def _render_ranges(job: Path, timeline: Timeline, layout: str, chunks: list[tuple[int, int]], paths: list[Path],
+                   n_workers: int, tmp_dir: Path) -> None:
+    """Run render_range for each range in its own `python -m studio.render.encode` process, n at a time.
+
+    Plain processes rather than multiprocessing, so a worker never re-runs the
+    caller's script; the first failure stops the rest and is raised as EncodeError.
+    """
+    timeline_file = tmp_dir / "timeline.json"
+    timeline_file.write_text(timeline.model_dump_json(), encoding="utf-8")
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")])))
+    waiting = list(zip(chunks, paths))
+    running: list[tuple[subprocess.Popen, Path, tuple[int, int]]] = []
     try:
-        for n in range(first, last):
-            proc.stdin.write(memoryview(renderer.frame(n / timeline.fps)).cast("B"))
-        proc.stdin.close()
-    except BrokenPipeError:
-        pass
-    error = proc.stderr.read().decode(errors="replace")
-    if proc.wait():
-        raise EncodeError(f"ffmpeg failed on frames {first}-{last}: {error.strip()[-800:]}")
-    return last - first
+        while waiting or running:
+            while waiting and len(running) < n_workers:
+                (first, last), path = waiting.pop(0)
+                log = path.with_suffix(".worker.log")
+                with open(log, "wb") as err:
+                    proc = subprocess.Popen(
+                        [sys.executable, "-m", "studio.render.encode", str(job.resolve()), str(timeline_file),
+                         layout, str(first), str(last), str(path)],
+                        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=err, env=env)
+                running.append((proc, log, (first, last)))
+            for item in list(running):
+                proc, log, (first, last) = item
+                code = proc.poll()
+                if code is None:
+                    continue
+                running.remove(item)
+                if code:
+                    lines = log.read_text(errors="replace").strip().splitlines()
+                    raise EncodeError(lines[-1] if lines else f"the worker for frames {first}-{last} exited {code}")
+            time.sleep(0.05)
+    finally:
+        for proc, _, _ in running:
+            proc.kill()
+            proc.wait()
 
 
 def ranges(frames: int, parts: int) -> list[tuple[int, int]]:
@@ -116,13 +157,7 @@ def encode(job: Path, timeline: Timeline, out: Path, layout: str = "h", parts: i
     with tempfile.TemporaryDirectory(prefix="popsmosis-render-") as tmp:
         tmp_dir = Path(tmp)
         paths = [tmp_dir / f"part{i:03d}.mp4" for i in range(len(chunks))]
-        payload = timeline.model_dump_json()
-        context = multiprocessing.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=min(n_workers, len(chunks)), mp_context=context) as pool:
-            futures = [pool.submit(render_range, str(job.resolve()), payload, layout, a, b, str(path))
-                       for (a, b), path in zip(chunks, paths)]
-            for future in futures:
-                future.result()
+        _render_ranges(job, timeline, layout, chunks, paths, n_workers, tmp_dir)
         listing = tmp_dir / "parts.txt"
         listing.write_text("".join(f"file '{p.name}'\n" for p in paths))
         video = tmp_dir / "video.mp4"
@@ -165,3 +200,18 @@ def poster_time(timeline: Timeline) -> float:
     best = max(timeline.beats, key=lambda b: (len(b.labels), -b.t0))
     return max(best.t0, best.t1 - 0.5)
 
+
+def _worker(argv: list[str]) -> int:
+    """python -m studio.render.encode <job> <timeline.json> <layout> <first> <last> <out.mp4>"""
+    job, timeline_file, layout, first, last, out = argv
+    timeline = Timeline.model_validate_json(Path(timeline_file).read_text(encoding="utf-8"))
+    try:
+        render_range(Path(job), timeline, layout, int(first), int(last), Path(out))
+    except Exception as e:  # one line for the parent to report
+        print(f"{type(e).__name__}: {e}".replace("\n", " "), file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(_worker(sys.argv[1:]))
