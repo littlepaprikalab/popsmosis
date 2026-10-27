@@ -239,6 +239,17 @@ def test_background_detaches_the_run_and_wait_reads_its_outcome(setup, monkeypat
     assert videos.wait("q1", minutes=0.5, poll_s=0.1) == ("STOPPED", "videos", "the videos are turned off here (STUDIO_VIDEOS)")
 
 
+def test_a_background_run_that_died_without_an_outcome_can_still_be_given_up(setup):
+    api = VideoApi()
+    job = posted()
+    videos.claim(api, job)
+    jobs.write(job / videos.BACKGROUND, {"pid": 2 ** 22 + 7, "runs": 0})  # no such process: it is gone
+    result, _, reason = videos.wait("q1", minutes=0)
+    assert result == "FAILED" and "without an outcome" in reason
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+    assert api.given_up[0] == "ans1" and "without an outcome" in api.given_up[1]
+
+
 def test_wait_says_running_while_the_run_is_alive(setup):
     job = posted()
     jobs.write(job / videos.BACKGROUND, {"pid": os.getpid(), "runs": 0})

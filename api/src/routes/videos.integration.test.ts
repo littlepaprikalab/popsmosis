@@ -81,6 +81,7 @@ d('video claim and queue', () => {
     const renewed = await claim(id, { attempt: 1 });
     expect(renewed.statusCode).toBe(200);
     expect(renewed.json().attempt).toBe(1);
+    expect(renewed.json().bundle).toBeUndefined(); // the heartbeat does not resend the lesson's plan
     expect((await row(id)).videoUpdatedAt!.getTime()).toBeGreaterThan(before.getTime());
 
     // A second run, with no attempt or the wrong one, is turned away while the first is alive.
@@ -144,6 +145,13 @@ d('video claim and queue', () => {
     const [a, b] = await Promise.all([queue(), queue()]);
     const got = [...a.json().data, ...b.json().data].map((x: { answerId: string }) => x.answerId).sort();
     expect(got).toEqual([...ids].sort());
+
+    // One call handing out several: every one comes with the plan a fresh machine needs.
+    process.env.VIDEO_MAX_ATTEMPTS = '3'; // both have used the default two
+    for (const id of ids) await goQuiet(id);
+    const batch = (await queue(keyA, 5)).json().data;
+    expect(batch).toHaveLength(2);
+    expect(batch.every((x: { bundle: unknown }) => x.bundle !== undefined)).toBe(true);
   });
 
   it('gives the videos up for the current attempt only, and a given-up render can be started again by hand', async () => {
