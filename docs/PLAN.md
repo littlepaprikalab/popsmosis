@@ -607,6 +607,9 @@ account.
     first comment instead of a second.
   - *Who:* a public read says which like and comments are the viewer's own when it
     carries a session cookie, without renewing it, so a public response never sets one.
+  - *One request a page:* a droplet comes with the first page of its comments. Every
+    public request spends the instance's shared ceiling, so a page that needed two
+    would serve half as many visitors.
 - **Later:** when someone asks for a topic that already has a droplet, offer that one
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs

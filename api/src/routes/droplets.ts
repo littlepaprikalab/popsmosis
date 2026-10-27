@@ -6,7 +6,7 @@ import { containsPersonalInfo, parseLimit, validateString } from '../lib/validat
 import { decodeCreatedAtIdCursor, decodeCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
 import { EXCERPT_SOURCE_LENGTH, publicDropletSelect, publicDropletWhere, serializeDroplet, serializeDropletCard } from '../lib/droplet.js';
 import {
-  COMMENT_MAX_LENGTH, COMMENTS_PAGE_MAX, COMMENTS_PAGE_SIZE, commentSelect, commentsPerUserPerHour, idempotencyKeyOf, serializeComment,
+  COMMENT_MAX_LENGTH, COMMENTS_PAGE_MAX, COMMENTS_PAGE_SIZE, commentSelect, commentsPerUserPerHour, hasVisibleText, idempotencyKeyOf, serializeComment,
 } from '../lib/engagement.js';
 import { PUBLIC_PER_CLIENT_PER_MINUTE, PUBLIC_PER_INSTANCE_PER_MINUTE, WindowCounter, publicClientKey } from '../lib/public-limit.js';
 import { requireUser, sessionSubject } from '../middleware/auth.js';
@@ -81,7 +81,21 @@ export default async function dropletRoutes(app: FastifyInstance) {
     return { data: rows.map((row) => serializeDropletCard(row, row.liked)), nextCursor: encodeCreatedAtIdCursor(rows, take) };
   });
 
-  // GET /api/droplets/:id — one droplet, by its answer id; 404 unless it is on the tab.
+  // A page of a droplet's comments, newest first. Walks the (answerId, createdAt DESC, id DESC) index.
+  async function commentsPage(answerId: string, viewer: string | null, take: number, cursor?: string) {
+    const after = decodeCreatedAtIdCursor(cursor);
+    const rows = await prisma.dropletComment.findMany({
+      where: { answerId, ...(after ? { AND: [after] } : {}) },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take,
+      select: commentSelect,
+    });
+    return { data: rows.map((c) => serializeComment(c, viewer)), nextCursor: encodeCreatedAtIdCursor(rows, take) };
+  }
+
+  // GET /api/droplets/:id — one droplet, by its answer id, with the first page of its comments;
+  // 404 unless it is on the tab. One request for the whole page: every public request spends the
+  // instance's shared ceiling, so a page view that needed two would halve how many it can serve.
   app.get('/api/droplets/:id', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
     const { id } = request.params as { id: string };
@@ -90,31 +104,20 @@ export default async function dropletRoutes(app: FastifyInstance) {
     const liked = !!viewer && !!(await prisma.dropletLike.findUnique({
       where: { answerId_userId: { answerId: id, userId: viewer } }, select: { userId: true },
     }));
-    return serializeDroplet(row, liked);
+    return { ...serializeDroplet(row, liked), comments: await commentsPage(id, viewer, COMMENTS_PAGE_SIZE) };
   });
 
-  // GET /api/droplets/:id/comments — newest first; ?cursor=, ?limit= (default 20, max 50). The
-  // count comes back with every page, so loading more also brings the count up to date.
+  // GET /api/droplets/:id/comments — newest first; ?cursor=, ?limit= (default 20, max 50): the
+  // pages after the one GET /api/droplets/:id brings. The count comes back with every page, so
+  // loading more also brings the count up to date.
   app.get('/api/droplets/:id/comments', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
     const { id } = request.params as { id: string };
     const { limit, cursor } = request.query as Record<string, string | undefined>;
-    const take = parseLimit(limit, COMMENTS_PAGE_SIZE, COMMENTS_PAGE_MAX);
     const droplet = await prisma.answer.findFirst({ where: { id, ...publicDropletWhere }, select: { commentCount: true } });
     if (!droplet) return sendError(reply, 'NOT_FOUND', 'Droplet not found');
-    const after = decodeCreatedAtIdCursor(cursor);
-    // Walks the (answerId, createdAt DESC, id DESC) index.
-    const rows = await prisma.dropletComment.findMany({
-      where: { answerId: id, ...(after ? { AND: [after] } : {}) },
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take,
-      select: commentSelect,
-    });
-    return {
-      data: rows.map((c) => serializeComment(c, viewer)),
-      nextCursor: encodeCreatedAtIdCursor(rows, take),
-      commentCount: droplet.commentCount,
-    };
+    const page = await commentsPage(id, viewer, parseLimit(limit, COMMENTS_PAGE_SIZE, COMMENTS_PAGE_MAX), cursor);
+    return { ...page, commentCount: droplet.commentCount };
   });
 
   // PUT /api/droplets/:id/like — the viewer's thumbs-up; DELETE takes it back. Both are
@@ -168,6 +171,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
     const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: COMMENT_MAX_LENGTH });
     if (contentError) return sendError(reply, 'VALIDATION_ERROR', contentError);
     const text = (content as string).trim();
+    if (!hasVisibleText(text)) return sendError(reply, 'VALIDATION_ERROR', 'content must have something to read in it');
     if (containsPersonalInfo(text)) {
       return sendError(reply, 'VALIDATION_ERROR', 'Comments are public: please leave out email addresses and phone numbers');
     }

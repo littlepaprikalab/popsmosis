@@ -214,6 +214,33 @@ d('likes and comments on the Droplets tab', () => {
       }
     });
 
+    it('comes with the droplet, first page and all, so the page needs one request', async () => {
+      const id = await droplet();
+      const at = Date.now() - 60_000;
+      await prisma.dropletComment.createMany({ data: Array.from({ length: 25 }, (_, i) => ({ answerId: id, userId: i % 2 ? alan.id : grace.id, content: `c${i}`, createdAt: new Date(at + i * 1000) })) });
+
+      const one = (await get(`/api/droplets/${id}`, alan.cookie)).json();
+      expect(one.commentCount).toBe(25);
+      expect(one.comments.data).toHaveLength(20);
+      expect(one.comments.data[0]).toEqual({ id: expect.any(String), content: 'c24', createdAt: expect.any(String), author: { name: 'Grace H.' }, mine: false });
+      expect(one.comments.data[1]).toMatchObject({ content: 'c23', author: { name: 'Alan T.' }, mine: true });
+      // The rest follow the embedded page's cursor on the comments route.
+      const rest = (await get(`/api/droplets/${id}/comments?cursor=${one.comments.nextCursor}`)).json();
+      expect(rest.data.map((c: { content: string }) => c.content)).toEqual(['c4', 'c3', 'c2', 'c1', 'c0']);
+      expect(rest.nextCursor).toBeNull();
+      // Signed out, the same page says nothing is theirs.
+      expect((await get(`/api/droplets/${id}`)).json().comments.data.every((c: { mine: boolean }) => !c.mine)).toBe(true);
+    });
+
+    it('needs something a reader can see', async () => {
+      const id = await droplet();
+      for (const blank of ['\u200B\u200B', '\u3164', '\u2800\u2800', ' \u00AD ', '\u2060\uFEFF', '\u200E\u200F']) {
+        expect((await comment(id, grace.cookie, blank)).statusCode).toBe(400);
+      }
+      for (const ok of ['👍', 'a\u200Bb', '👩‍🔬 nice', 'ok']) expect((await comment(id, grace.cookie, ok)).statusCode).toBe(201);
+      expect((await counts(id)).commentCount).toBe(4);
+    });
+
     it('pages through comments made in the same instant without skipping or repeating one', async () => {
       const id = await droplet();
       const at = new Date('2026-10-30T12:00:00.000Z');
@@ -293,6 +320,35 @@ d('likes and comments on the Droplets tab', () => {
       const c3 = (await comment(id, grace.cookie, 'before hiding')).json().id;
       await prisma.answer.update({ where: { id }, data: { hiddenAt: new Date() } });
       expect((await del(c3, grace.cookie)).statusCode).toBe(204);
+    });
+  });
+
+  describe('the edges', () => {
+    it('refuses a deleted account whose session is still cached, without a server error or a stray row', async () => {
+      const id = await droplet();
+      expect((await like(id, alan.cookie)).statusCode).toBe(200); // the auth cache now holds Alan
+      await prisma.user.delete({ where: { id: alan.id } });
+      const liked = await like(id, alan.cookie);
+      const commented = await comment(id, alan.cookie, 'from beyond');
+      for (const res of [liked, commented]) expect([401, 404]).toContain(res.statusCode);
+      expect(await prisma.dropletLike.count({ where: { answerId: id } })).toBe(0);
+      expect(await prisma.dropletComment.count({ where: { answerId: id } })).toBe(0);
+      expect(await counts(id)).toEqual({ likeCount: 0, commentCount: 0 });
+    });
+
+    it('answers every like racing the droplet’s deletion with a 200 or a 404, never a 500, and leaves nothing behind', async () => {
+      const people = await Promise.all(Array.from({ length: 20 }, (_, i) => user(`Racer ${i}`)));
+      for (let round = 0; round < 3; round++) {
+        const id = await droplet(round);
+        const [, ...results] = await Promise.all([
+          new Promise((r) => setTimeout(r, 2)).then(() => prisma.answer.delete({ where: { id } })),
+          ...people.map((p) => like(id, p.cookie)),
+          ...people.slice(0, 5).map((p) => comment(id, p.cookie, 'racing')),
+        ]);
+        for (const res of results) expect([200, 201, 404]).toContain(res.statusCode);
+        expect(await prisma.dropletLike.count({ where: { answerId: id } })).toBe(0);
+        expect(await prisma.dropletComment.count({ where: { answerId: id } })).toBe(0);
+      }
     });
   });
 

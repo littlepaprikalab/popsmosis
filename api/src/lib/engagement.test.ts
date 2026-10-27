@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { commentsPerUserPerHour, idempotencyKeyOf, publicAuthorName, serializeComment } from './engagement.js';
+import { commentsPerUserPerHour, hasVisibleText, idempotencyKeyOf, publicAuthorName, serializeComment } from './engagement.js';
 import { isForeignKeyViolation } from './errors.js';
 
 describe('a comment in public', () => {
@@ -19,6 +19,15 @@ describe('a comment in public', () => {
     expect(serializeComment(row, 'u2').mine).toBe(false);
     expect(serializeComment(row, null).mine).toBe(false);
     expect(JSON.stringify(serializeComment(row, null))).not.toContain('u1');
+  });
+});
+
+describe('a comment with nothing to read', () => {
+  it('is told apart from one with something, whatever it is padded with', () => {
+    for (const blank of ['', '   ', '\u200B', '\u200C\u200D', '\u3164', '\u2800', '\u00AD', '\uFEFF', '\u2060', '\u202E', '\u115F\u1160', '\uFFA0']) {
+      expect(hasVisibleText(blank)).toBe(false);
+    }
+    for (const text of ['a', '👍', '\u200Bx', '日本', 'مرحبا', '👩‍🔬']) expect(hasVisibleText(text)).toBe(true);
   });
 });
 

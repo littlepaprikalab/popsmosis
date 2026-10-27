@@ -17,6 +17,16 @@ export function commentsPerUserPerHour(): number {
   return Number.isNaN(n) || n <= 0 ? 30 : n;
 }
 
+// Characters that show nothing: zero-width spaces and joiners, direction marks, the word
+// joiner, the BOM, the soft hyphen, and the Hangul fillers and Braille blank people use to
+// post "empty" text. trim() keeps them, so a comment of nothing but these would post blank.
+const INVISIBLE = /[\s\u00AD\u115F\u1160\u180E\u200B-\u200F\u2028-\u202F\u2060-\u206F\u2800\u3164\uFEFF\uFFA0]/gu;
+
+/** True when the text has at least one character a reader would see. */
+export function hasVisibleText(text: string): boolean {
+  return text.replace(INVISIBLE, '').length > 0;
+}
+
 // A UUID, a ULID, anything a client makes up for one attempt; not a place for a payload.
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9_.:-]{8,100}$/;
 

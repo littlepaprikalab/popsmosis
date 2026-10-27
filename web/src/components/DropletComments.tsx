@@ -3,7 +3,7 @@
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { api, ApiError, DropletComment } from '@/lib/api';
+import { api, ApiError, DropletComment, DropletCommentPage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useGuardedSubmit } from '@/lib/useGuardedSubmit';
 import { timeAgo } from '@/lib/time';
@@ -25,24 +25,43 @@ interface Props {
   dropletId: string;
   count: number;
   setCount: Dispatch<SetStateAction<number>>;
+  initial?: DropletCommentPage; // the first page, read with the droplet: no second request to show it
 }
 
 /**
  * The public comments under a droplet, newest first. Anyone can read them; a signed-in
  * person can add one and delete their own, and an admin can delete any.
  */
-export function DropletComments({ dropletId, count, setCount }: Props) {
+export function DropletComments({ dropletId, count, setCount, initial }: Props) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const pathname = usePathname();
-  const [comments, setComments] = useState<DropletComment[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [comments, setComments] = useState<DropletComment[]>(initial?.data ?? []);
+  const [cursor, setCursor] = useState<string | null>(initial?.nextCursor ?? null);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>(initial ? 'ready' : 'loading');
+  const hadInitial = useRef(!!initial);
   const [loadingMore, setLoadingMore] = useState(false);
   const [text, setText] = useState('');
   const [pendingDelete, setPendingDelete] = useState<DropletComment | null>(null);
   const { submitting, guard } = useGuardedSubmit();
   const attempt = useRef<{ key: string; content: string } | null>(null);
+
+  // An unsent comment outlives the page: a reload, or a session that ended in another tab and
+  // a trip to sign in and back, finds it waiting. Per tab, and gone once it posts.
+  const draftKey = `popsmosis:comment-draft:${dropletId}`;
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(draftKey);
+      if (saved) setText((current) => current || saved);
+    } catch { /* storage blocked: start empty */ }
+  }, [draftKey]);
+  const changeText = (value: string) => {
+    setText(value);
+    try {
+      if (value.trim()) sessionStorage.setItem(draftKey, value);
+      else sessionStorage.removeItem(draftKey);
+    } catch { /* storage blocked: the draft lives only on the page */ }
+  };
 
   const load = useCallback(async () => {
     setState('loading');
@@ -57,7 +76,8 @@ export function DropletComments({ dropletId, count, setCount }: Props) {
     }
   }, [dropletId, setCount]);
 
-  useEffect(() => { load(); }, [load]);
+  // Fetched here only when the droplet came without them; "Try again" calls load itself.
+  useEffect(() => { if (!hadInitial.current) load(); }, [load]);
 
   const loadMore = async () => {
     if (!cursor || loadingMore) return;
@@ -86,7 +106,7 @@ export function DropletComments({ dropletId, count, setCount }: Props) {
         setComments((prev) => [posted, ...prev.filter((c) => c.id !== posted.id)]);
         setCount((n) => n + 1);
       }
-      setText('');
+      changeText('');
     } catch (err) {
       const gone = err instanceof ApiError && err.status === 404;
       showToast(gone ? 'This droplet is no longer on the Droplets tab.' : err instanceof Error ? err.message : 'Failed to post your comment', 'error');
@@ -134,7 +154,7 @@ export function DropletComments({ dropletId, count, setCount }: Props) {
               id="comment-box"
               rows={2}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => changeText(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } }}
               placeholder="Add a comment… (Ctrl+Enter to post)"
               maxLength={COMMENT_MAX_LENGTH}

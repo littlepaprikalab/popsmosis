@@ -156,7 +156,7 @@ export default function DropletPage() {
       </div>
 
       {droplet.commentCount !== undefined && (
-        <DropletComments dropletId={droplet.id} count={commentCount} setCount={setCommentCount} />
+        <DropletComments dropletId={droplet.id} count={commentCount} setCount={setCommentCount} initial={droplet.comments} />
       )}
 
       <p className="text-[10px] mt-6" style={{ color: 'var(--text-muted)' }}>

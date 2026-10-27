@@ -182,8 +182,8 @@ Errors are always `{ "error": { "code", "message" } }`.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24). Each: `{ id, title, course, topic, excerpt, video, likeCount, commentCount, liked, createdAt }` |
-| GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content` and the song's `lyrics`; 404 unless it is on the tab |
-| GET | `/api/droplets/:id/comments` | its comments, newest first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
+| GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
+| GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 
 Only the title (the bundle's `course` and `topic`), the lesson text, the videos with
 their posters, the lyrics, the counts and the comments are public. The learner's name and
@@ -210,7 +210,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
 | DELETE | `/api/droplets/:id/like` | take it back: `{ liked: false, likeCount }`; idempotent, and works once the droplet has left the tab |
-| POST | `/api/droplets/:id/comments` | a public comment on a droplet on the tab: `{ content }` 1–1000 chars, plain text, no email addresses or phone numbers; `DROPLET_COMMENTS_PER_USER_PER_HOUR` (30). With an `Idempotency-Key` header (8–100 of `A-Za-z0-9_.:-`, a UUID say) a resend returns the comment the first send made, 200 instead of 201, so a POST whose answer was lost can be sent again; the same key with other words is a 409 |
+| POST | `/api/droplets/:id/comments` | a public comment on a droplet on the tab: `{ content }` 1–1000 chars, plain text, with something visible in it (not only zero-width or blank characters), no email addresses or phone numbers; `DROPLET_COMMENTS_PER_USER_PER_HOUR` (30). With an `Idempotency-Key` header (8–100 of `A-Za-z0-9_.:-`, a UUID say) a resend returns the comment the first send made, 200 instead of 201, so a POST whose answer was lost can be sent again; the same key with other words is a 409 |
 | DELETE | `/api/droplets/:id/comments/:commentId` | own comment, or any as an admin; 204 |
 | GET | `/api/attachments/:id` | a file sent with a question or reply; also to agents |
 

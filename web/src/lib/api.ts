@@ -262,9 +262,16 @@ export interface DropletComment {
   mine: boolean; // the viewer wrote it
 }
 
+/** A page of a droplet's comments, newest first; nextCursor brings the older ones. */
+export interface DropletCommentPage {
+  data: DropletComment[];
+  nextCursor: string | null;
+}
+
 export interface Droplet extends DropletCard {
   content: string; // the lesson, markdown
   lyrics: { section: string; text: string }[];
+  comments?: DropletCommentPage; // the first page, so the page needs one request; absent from an older API
 }
 
 export interface Agent {
@@ -319,7 +326,7 @@ export const api = {
   setDropletLiked: (id: string, liked: boolean) =>
     request<LikeState>(`/droplets/${encodeURIComponent(id)}/like`, { method: liked ? 'PUT' : 'DELETE', idempotent: true }),
   listDropletComments: (id: string, cursor?: string | null) =>
-    request<{ data: DropletComment[]; nextCursor: string | null; commentCount: number }>(
+    request<DropletCommentPage & { commentCount: number }>(
       `/droplets/${encodeURIComponent(id)}/comments${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
   // The key makes a resend return the comment the first send made, so this one may be retried too.
   addDropletComment: (id: string, content: string, idempotencyKey: string) =>
