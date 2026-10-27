@@ -41,9 +41,10 @@ class VideoApi(FakeApi):
         handed, self.queue = self.queue[:limit], self.queue[limit:]
         return handed
 
-    def give_up_videos(self, answer_id, reason, attempt):
+    def give_up_videos(self, answer_id, reason, attempt, breakdown=None):
         self._call("give_up_videos", answer_id, reason, attempt)
         self.given_up = (answer_id, reason, attempt)
+        self.given_up_breakdown = breakdown
         return {"status": "FAILED", "error": reason}
 
 
@@ -163,6 +164,24 @@ def test_a_run_cut_off_mid_step_counts_as_a_failure_that_fail_gives_up(setup):
     result, reason = operator_run.mark_failed("q1", api=api)
     assert result == "DONE" and api.given_up == ("ans1", reason.removeprefix("videos given up: "), 1)
     assert api.given_up[1].startswith("render failed: render was interrupted")
+
+
+def test_giving_up_sends_what_the_failed_tries_took_and_cost(setup):
+    from studio import brain, ledger
+
+    api = VideoApi()
+    job = posted()
+    setup.fail["render"] = 2
+    with ledger.at_step("art"):  # what the art step would have logged
+        ledger.log(job, [brain.Call("art hook", "helper", "claude-haiku-5-5", 10, 5, 0.002, 1.0, "end_turn")])
+    assert videos.videos("q1", api=api)[:2] == ("FAILED", "render")
+    # The retry is killed between steps: recorded at "videos", which is no step of the bill.
+    jobs.write(job / "run.current.json", {"started": "x", "part": "videos", "step": "videos",
+                                          "steps": [{"step": "render", "seconds": 4.0, "result": "FAILED"}]})
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+    bill = {s["step"]: s for s in api.given_up_breakdown["steps"]}
+    assert bill["render"]["tries"] == 2 and "videos" not in bill
+    assert bill["art"]["models"] == [{"model": "claude-haiku-5-5", "calls": 1, "costUsd": 0.002, "credits": None}]
 
 
 def test_fail_after_videos_that_were_made_gives_nothing_up(setup):

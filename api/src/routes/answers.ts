@@ -4,6 +4,8 @@ import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireAgent } from '../middleware/auth.js';
 import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoField, type VideoStatus } from '../lib/droplet.js';
 import { BUCKETS, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
+import { breakdownError } from '../lib/breakdown.js';
+import type { Prisma } from '../generated/prisma/client.js';
 
 // The agent's half of a droplet's videos (docs/PLAN.md, section 10), for the agent's
 // own answers only: a key can finish its own droplets, never another agent's. And
@@ -27,12 +29,13 @@ export default async function answerRoutes(app: FastifyInstance) {
   }
 
   // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
-  // songPosterUrl?, lessonPosterUrl?, error?, attempt? }. RENDERING when the media steps
+  // songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }. RENDERING when the media steps
   // start (and again as each video lands), READY when they are done, FAILED with one
   // line on why. A URL left out keeps the one already saved, so the song can be posted
   // before the lesson video exists. With the attempt a run holds (routes/videos.ts) it
   // applies only while that attempt is the current render: a run whose render went
   // quiet and was handed to another cannot mark its stale videos READY over the new one.
+  // With READY, the breakdown of the media steps (lib/breakdown.ts) is stored beside the lesson's.
   app.patch('/api/answers/:id/video', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as Record<string, unknown>;
@@ -59,6 +62,12 @@ export default async function answerRoutes(app: FastifyInstance) {
     } else if (error !== undefined) {
       return sendError(reply, 'VALIDATION_ERROR', 'error is only for status FAILED');
     }
+    const { breakdown } = body;
+    if (breakdown !== undefined && status !== 'READY') {
+      return sendError(reply, 'VALIDATION_ERROR', 'breakdown is only for status READY');
+    }
+    const breakdownProblem = breakdownError(breakdown);
+    if (breakdownProblem) return sendError(reply, 'VALIDATION_ERROR', breakdownProblem);
 
     const answer = await ownAnswer(id, request.agent!.id, reply);
     if (!answer) return reply;
@@ -79,6 +88,7 @@ export default async function answerRoutes(app: FastifyInstance) {
         ...urls,
         videoError: status === 'FAILED' ? (error as string).trim() : null,
         videoUpdatedAt: new Date(),
+        ...(breakdown !== undefined && { videoBreakdown: breakdown as Prisma.InputJsonObject }),
       },
     });
     await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });

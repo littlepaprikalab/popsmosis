@@ -193,6 +193,33 @@ d('droplet endpoints', () => {
     }
   });
 
+  it('keeps the breakdown: the lesson\'s steps with the lesson, the videos\' with READY, shown on the card', async () => {
+    const lessonSteps = { steps: [{ step: 'bundle', seconds: 180, tries: 1, costUsd: 0.5,
+      models: [{ model: 'claude-opus-5-5', calls: 1, costUsd: 0.5, credits: null }] }], seconds: 180 };
+    const videoSteps = { steps: [{ step: 'audio', seconds: 95, tries: 1, costUsd: 0.08, models: [
+      { model: 'lyria-3.5', calls: 1, costUsd: 0.08, credits: null },
+      { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 3300 }] }], seconds: 300 };
+    expect((await answer(keyA, { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: [] })).json().error.message)
+      .toMatch(/breakdown/);
+    const answerId = (await answer(keyA, { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: lessonSteps })).json().id;
+    const card = async () => (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
+    expect((await card()).answer.breakdown).toMatchObject({
+      steps: [{ step: 'bundle', part: 'lesson', seconds: 180, costUsd: 0.5 }], seconds: 180, costUsd: 0.5, complete: true,
+    });
+
+    const song = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.mp4';
+    expect((await video(keyA, answerId, { status: 'RENDERING', breakdown: videoSteps })).json().error.message).toMatch(/only for status READY/);
+    expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: { steps: 'audio' } })).statusCode).toBe(400);
+    expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: videoSteps })).statusCode).toBe(200);
+    const b = (await card()).answer.breakdown;
+    expect(b.steps.map((s: { part: string; step: string }) => `${s.part}:${s.step}`)).toEqual(['lesson:bundle', 'videos:audio']);
+    expect(b).toMatchObject({ seconds: 480, costUsd: 0.58, credits: 3300, complete: false });
+
+    // A droplet's bill stays on /learn: the public tab shows only the title, lesson, videos and lyrics.
+    const listed = (await app.inject({ method: 'GET', url: `/api/droplets/${answerId}` })).json();
+    expect(listed).not.toHaveProperty('breakdown');
+  });
+
   it('signs upload URLs for its own answers once storage is configured', async () => {
     const answerId = (await answer()).json().id;
     const upload = (key: string, payload: object) => post(key, `/api/answers/${answerId}/upload-url`, payload);

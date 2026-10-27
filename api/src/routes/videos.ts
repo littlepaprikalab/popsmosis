@@ -5,6 +5,7 @@ import { requireAgent } from '../middleware/auth.js';
 import { FAILED_REASON_MAX_LENGTH, videoStaleMinutes } from '../lib/droplet.js';
 import { videoMaxAttempts } from '../lib/video-claim.js';
 import { parseLimit, validateString } from '../lib/validation.js';
+import { breakdownError } from '../lib/breakdown.js';
 
 // The claim on a droplet's videos (lib/video-claim.ts): who is rendering them, which
 // attempt this is, and the queue that hands a render whose machine died to a later run.
@@ -127,22 +128,28 @@ export default async function videoRoutes(app: FastifyInstance) {
     return { data: answers.map((a) => serializeClaim(a)) };
   });
 
-  // POST /api/answers/:id/video/fail — { reason, attempt }: give the videos up after a
-  // second failure. The lesson stays; the droplet shows the reason. Only the run that
+  // POST /api/answers/:id/video/fail — { reason, attempt, breakdown? }: give the videos up
+  // after a second failure. The lesson stays; the droplet shows the reason, and with the
+  // breakdown, what the failed tries took and cost (lib/breakdown.ts). Only the run that
   // holds the current attempt may, so a run that was taken over cannot fail the render
   // that replaced it.
   app.post('/api/answers/:id/video/fail', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
-    const body = (request.body ?? {}) as { reason?: unknown; attempt?: unknown };
+    const body = (request.body ?? {}) as { reason?: unknown; attempt?: unknown; breakdown?: unknown };
     const reasonError = validateString(body.reason, 'reason', { required: true, minLength: 1, maxLength: FAILED_REASON_MAX_LENGTH });
     if (reasonError) return sendError(reply, 'VALIDATION_ERROR', reasonError);
     const attempt = attemptOf(body.attempt);
     if (attempt === null || attempt === 'invalid') return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
+    const breakdownProblem = breakdownError(body.breakdown);
+    if (breakdownProblem) return sendError(reply, 'VALIDATION_ERROR', breakdownProblem);
+    // Written in the same conditional UPDATE, so only the attempt that holds the render can; none sent keeps what is there.
+    const breakdown = body.breakdown === undefined ? null : JSON.stringify(body.breakdown);
 
     const failed = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE answers
-      SET "videoStatus" = 'FAILED', "videoError" = ${(body.reason as string).trim()}, "videoUpdatedAt" = now()
+      SET "videoStatus" = 'FAILED', "videoError" = ${(body.reason as string).trim()}, "videoUpdatedAt" = now(),
+          "videoBreakdown" = COALESCE(${breakdown}::jsonb, "videoBreakdown")
       WHERE id = ${id} AND "agentId" = ${agentId} AND "videoStatus" = 'RENDERING' AND "videoAttempts" = ${attempt}
       RETURNING id
     `;
