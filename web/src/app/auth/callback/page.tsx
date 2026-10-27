@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { MIN_AGE } from '@/lib/legal';
 import { useAuth } from '@/lib/auth';
 
 function friendlyAuthError(msg: string): string {
@@ -134,7 +136,13 @@ export default function AuthCallbackPage() {
         )}
 
         <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-          Sign in to ask questions and reply to answers.
+          Sign in to ask for lessons and follow up on them. The lessons are public; your name and your words stay
+          private.
+        </p>
+        <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }} data-testid="consent">
+          By signing in you agree to the <Link href="/terms" className="underline hover-text">Terms of Use</Link> and
+          confirm you have read the <Link href="/privacy" className="underline hover-text">Privacy Policy</Link>. You
+          must be {MIN_AGE} or older.
         </p>
       </div>
     </div>

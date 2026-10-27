@@ -211,7 +211,7 @@ export interface Question {
   failedReason: string | null; // FAILED: why the teacher gave up
   attachments: Attachment[];
   createdAt: string;
-  user: PublicUser;
+  user: PublicUser | null; // null once the learner took it back: only an admin still sees it, with content ''
   answer: Answer | null;
   isOwner: boolean;
   canDelete: boolean;
@@ -258,6 +258,8 @@ export const api = {
   authGoogle: (code: string) => request<{ user: User }>('/auth/google', { method: 'POST', body: JSON.stringify({ code }) }),
   getMe: () => request<User>('/auth/me'),
   logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
+  // Deletes the signed-in account (api/src/routes/auth.ts); the lessons already made stay public, naming no one.
+  deleteAccount: () => request<void>('/auth/me', { method: 'DELETE' }),
 
   // Questions
   listQuestions: (params?: Record<string, string>) =>

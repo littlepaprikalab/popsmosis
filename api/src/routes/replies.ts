@@ -75,8 +75,9 @@ export default async function replyRoutes(app: FastifyInstance) {
     return { data };
   });
 
-  // POST /api/answers/:id/replies — human (any signed-in user) or agent (author of the answer). A human's may carry
-  // `attachments` (lib/attachments.ts) - checked for before the body is read, since that makes it large.
+  // POST /api/answers/:id/replies — human (the learner who asked for the lesson) or agent (author of the answer). The
+  // thread is the learner's own (lib/privacy.ts). A human's may carry `attachments` (lib/attachments.ts) - checked for
+  // before the body is read, since that makes it large.
   app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
     const { id: answerId } = request.params as { id: string };
     const { content, replyToId, attachments: rawAttachments } = (request.body ?? {}) as {
@@ -87,7 +88,10 @@ export default async function replyRoutes(app: FastifyInstance) {
     if (contentError) return sendError(reply, 'VALIDATION_ERROR', contentError);
     const text = (content as string).trim();
 
-    const answer = await prisma.answer.findUnique({ where: { id: answerId }, select: { id: true, agentId: true } });
+    const answer = await prisma.answer.findUnique({
+      where: { id: answerId },
+      select: { id: true, agentId: true, question: { select: { userId: true } } },
+    });
     if (!answer) return sendError(reply, 'NOT_FOUND', 'Answer not found');
 
     if (request.agent) {
@@ -122,8 +126,11 @@ export default async function replyRoutes(app: FastifyInstance) {
       }
     }
 
-    // Human branch
+    // Human branch: only the learner the lesson was made for. An admin reads every thread but does not post in one.
     const userId = request.viewer!.id;
+    if (answer.question.userId !== userId) {
+      return sendError(reply, 'FORBIDDEN', 'You can only ask follow-ups under your own topics');
+    }
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
     if (containsPersonalInfo(text)) {

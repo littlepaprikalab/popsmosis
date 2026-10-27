@@ -1,8 +1,9 @@
 import { FastifyInstance } from 'fastify';
 import { OAuth2Client } from 'google-auth-library';
-import prisma from '../lib/prisma.js';
-import { sendError } from '../lib/errors.js';
-import { requireUser } from '../middleware/auth.js';
+import prisma, { runTransaction } from '../lib/prisma.js';
+import { sendError, AppError, isAppError } from '../lib/errors.js';
+import { requireUser, invalidateUserCache } from '../middleware/auth.js';
+import { detachQuestions } from '../lib/privacy.js';
 import { setSessionCookie, clearSessionCookie, SESSION_EXPIRES_IN } from '../lib/session.js';
 import { isAdminEmail } from '../lib/access.js';
 import { publicUser } from '../lib/serialize.js';
@@ -95,5 +96,36 @@ export default async function authRoutes(app: FastifyInstance) {
   app.post('/api/auth/logout', async (_request, reply) => {
     clearSessionCookie(reply);
     return { ok: true };
+  });
+
+  // DELETE /api/auth/me — delete the signed-in account (the /account page; the /privacy page promises it). The
+  // account row goes, and with it every request that has no lesson yet, their files, and every follow-up the person
+  // wrote. A request that has a lesson is taken back instead: the learner's side of it goes and the lesson stays
+  // public, naming no one (lib/privacy.ts). Signing in again later makes a new, empty account.
+  app.delete('/api/auth/me', { preHandler: [requireUser] }, async (request, reply) => {
+    const viewer = request.viewer!;
+    try {
+      await runTransaction(async (tx) => {
+        if (viewer.role === 'ADMIN' && (await tx.user.count({ where: { role: 'ADMIN' } })) <= 1) {
+          throw new AppError('VALIDATION_ERROR', 'You are the only admin. Make someone else an admin before you delete your account.');
+        }
+        // Locked as the answer route locks them, so no request gains a lesson while the account goes: one with a
+        // lesson is kept, one without is deleted, and the two must not cross.
+        const rows = await tx.$queryRaw<{ id: string; status: string }[]>`
+          SELECT id, status FROM questions WHERE "userId" = ${viewer.id} FOR UPDATE
+        `;
+        await detachQuestions(tx, rows.filter((r) => r.status === 'ANSWERED').map((r) => r.id));
+        // The rest cascades from the user row: requests with no lesson and their files, and every follow-up the
+        // person wrote, with its files and the teacher's reply to it.
+        await tx.user.delete({ where: { id: viewer.id } });
+      });
+    } catch (err) {
+      if (isAppError(err)) return sendError(reply, err.code, err.message);
+      throw err;
+    }
+    request.log.info({ userId: viewer.id }, 'account deleted');
+    invalidateUserCache(viewer.id); // other instances notice within their cache TTL (middleware/auth.ts)
+    clearSessionCookie(reply);
+    return reply.status(204).send();
   });
 }

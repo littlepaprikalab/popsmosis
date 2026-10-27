@@ -47,7 +47,8 @@ export function Nav() {
             <Link href="/admin/users" className="hover-text transition-colors" style={isActive('/admin/users') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>USERS</Link>
           </>
         )}
-        <span style={{ color: 'var(--text-secondary)' }}>@{displayName}</span>
+        <Link href="/account" className="hover-text transition-colors" title="Your account"
+          style={isActive('/account') ? activeStyle : { color: 'var(--text-secondary)' }} onClick={onClick}>@{displayName}</Link>
         <button onClick={() => { logout(); onClick?.(); }} className="hover-text transition-colors text-left" style={{ color: 'var(--text-muted)' }}>
           LOGOUT
         </button>

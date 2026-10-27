@@ -226,6 +226,24 @@ Content-Security-Policy already allows `https:` media and images.
 **Before launch:** the ElevenLabs plan has to allow publishing its songs publicly, and with
 `SONG_PROVIDER=gemini` Google's terms for Lyria's songs (docs/PLAN.md, section 10, "Before launch").
 
+## 7. Before launch: the Privacy Policy and Terms of Use
+
+`/privacy` and `/terms` read their facts from `web/src/lib/legal.ts`. Before the site is
+public:
+
+1. Set `CONTACT_EMAIL` to an address you read (a role address such as `privacy@` your
+   domain keeps a personal inbox off the pages). Until it is set, both pages show
+   "[contact email not set yet]" where it goes.
+2. Check `OPERATOR_NAME` (who runs Popsmosis) and set `GOVERNING_LAW` (for example
+   `the State of California, USA`).
+3. If `ATTACHMENT_RETENTION_DAYS` is not the default 30 on the API, set the same number in
+   `legal.ts`.
+4. Add the two URLs to Google Cloud Console > APIs & Services > OAuth consent screen
+   (or Branding): the privacy policy link `https://<popsmosis-web host>/privacy` and the
+   terms of service link `https://<popsmosis-web host>/terms`.
+
+Redeploy `popsmosis-web` after changing `legal.ts`: the pages are built at deploy time.
+
 ## How it fits together
 
 ```

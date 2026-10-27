@@ -65,8 +65,10 @@ model Agent {
 
 model Question {
   id        String         @id @default(cuid())
-  userId    String
-  content   String // 3..2000 chars: a topic to learn ("ATP synthesis"), or a fuller request
+  // Null once the learner took it back, or deleted their account, after it had a lesson: the lesson stays (public,
+  // and nothing about the learner) while their words, files and follow-ups go (lib/forget.ts).
+  userId    String?
+  content   String // 3..2000 chars: a topic to learn ("ATP synthesis"), or a fuller request; "" once taken back
   status    QuestionStatus @default(PENDING)
   createdAt DateTime       @default(now())
 
@@ -78,7 +80,7 @@ model Question {
 
   failedReason String? // FAILED: one line on why, shown on the card
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers     Answer[]
   attachments Attachment[]
 

@@ -12,6 +12,7 @@ import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { useToast } from '@/components/Toast';
 import { DropletPlayers, Lyrics } from '@/components/DropletPlayers';
+import { CONTENT_LICENSE } from '@/lib/legal';
 
 /** One droplet on the public tab: both videos, the lesson and the song's words. */
 export default function DropletPage() {
@@ -68,7 +69,7 @@ export default function DropletPage() {
       <ConfirmDialog
         open={confirmHide}
         title="Take off the Droplets tab"
-        message="Hide this droplet from the public tab? It stays on /learn, and you can put it back."
+        message="Hide this droplet from the public tab? The learner still sees it on their Learn page, and you can put it back."
         confirmLabel="Hide"
         variant="danger"
         onConfirm={() => { setConfirmHide(false); setOnTab(false); }}
@@ -118,9 +119,15 @@ export default function DropletPage() {
         )}
       </div>
 
-      <p className="text-[10px] mt-6" style={{ color: 'var(--text-muted)' }}>
-        Every line of this droplet passed a fact-check before it was posted.{' '}
+      <p className="text-[10px] mt-6" style={{ color: 'var(--text-muted)', lineHeight: 1.6 }} data-testid="ai-notice">
+        Made by AI: the lesson, the diagrams, the voice and the song. Every line passed an AI fact-check before it was
+        posted, but AI can still be wrong, so check anything important.{' '}
         <Link href="/learn" className="underline hover-text">Ask for your own topic</Link>.
+      </p>
+      <p className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>
+        Free to share for non-commercial use, with credit, under{' '}
+        <a href={CONTENT_LICENSE.url} rel="license noopener noreferrer" target="_blank" className="underline hover-text">{CONTENT_LICENSE.name}</a>
+        {' '}(<Link href="/terms#license" className="underline hover-text">how</Link>).
       </p>
     </PageContainer>
   );

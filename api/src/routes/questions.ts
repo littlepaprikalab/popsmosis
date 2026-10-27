@@ -10,6 +10,7 @@ import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
+import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -19,12 +20,13 @@ const QUESTIONS_PER_USER_PER_DAY = parseInt(process.env.QUESTIONS_PER_USER_PER_D
 export default async function questionRoutes(app: FastifyInstance) {
   // GET /api/questions/status — cheap "anything new?" probe for polling.
   // Considers questions, answers, and replies so a page refreshes for any of them.
-  // ?mine=true scopes latestAt the same way GET /api/questions does, so the
-  // banner on the "my questions" tab does not fire for a stranger's activity
-  // that a refresh would not show.
+  // Scoped the same way GET /api/questions is (to the viewer's own questions,
+  // unless an admin asks for everyone's), so the banner does not fire for a
+  // stranger's activity that a refresh would not show.
   app.get('/api/questions/status', { preHandler: [requireUser] }, async (request, reply) => {
     const { mine, since } = request.query as Record<string, string | undefined>;
     const viewerId = request.viewer!.id;
+    const scoped = mine === 'true' || request.viewer!.role !== 'ADMIN';
 
     // ?since=<ISO> — the caller's own watermark. A poller only needs to know
     // whether anything newer than that exists, and saying so costs an index
@@ -45,7 +47,7 @@ export default async function questionRoutes(app: FastifyInstance) {
     // Every row a scoped viewer can see hangs off one of their questions, so
     // each subquery walks back to questions."userId". Both hops are indexed:
     // answers by questionId, replies by answerId.
-    const latest = mine === 'true'
+    const latest = scoped
       ? Prisma.sql`GREATEST(
           (SELECT MAX(q."createdAt") FROM questions q
              WHERE q."userId" = ${viewerId} ${newerQ}),
@@ -149,26 +151,28 @@ export default async function questionRoutes(app: FastifyInstance) {
     return serializeQuestion(question, request.viewer!.id);
   });
 
-  // GET /api/questions — every user's questions, newest first, with answer + replies
+  // GET /api/questions — the viewer's own questions, newest first, with answer + replies. An admin gets everyone's
+  // (they keep the site running), or their own with ?mine=true. Other people's lessons are on the public Droplets
+  // tab; their requests, files and follow-ups are theirs alone (lib/privacy.ts).
   app.get('/api/questions', { preHandler: [requireUser] }, async (request) => {
     const { limit, cursor, mine, status, ids } = request.query as Record<string, string | undefined>;
     const take = parseLimit(limit, 20, 50);
+    const viewer = request.viewer!;
 
     // ?ids=a,b,c — the page re-fetches just the cards that are waiting on the
     // teacher, in one request. Capped so it cannot become a full-table pull.
     if (ids !== undefined) {
       const list = [...new Set(ids.split(',').map((s) => s.trim()).filter(Boolean))].slice(0, 50);
       if (list.length === 0) return { data: [], nextCursor: null };
-      const rows = await prisma.question.findMany({ where: { id: { in: list } }, include: questionInclude });
+      const rows = await prisma.question.findMany({ where: { id: { in: list }, ...readableQuestions(viewer) }, include: questionInclude });
       const byId = new Map(rows.map((r) => [r.id, r]));
       return {
-        data: list.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r).map((r) => serializeQuestion(r, request.viewer!.id)),
+        data: list.map((id) => byId.get(id)).filter((r): r is NonNullable<typeof r> => !!r).map((r) => serializeQuestion(r, viewer.id)),
         nextCursor: null,
       };
     }
 
-    const where: Record<string, unknown> = {};
-    if (mine === 'true') where.userId = request.viewer!.id;
+    const where: Record<string, unknown> = mine === 'true' ? { userId: viewer.id } : { ...readableQuestions(viewer) };
     if (status === 'PENDING' || status === 'ANSWERED' || status === 'FAILED') where.status = status;
     const cursorFilter = decodeCreatedAtIdCursor(cursor);
     if (cursorFilter) where.AND = [cursorFilter];
@@ -181,31 +185,37 @@ export default async function questionRoutes(app: FastifyInstance) {
     });
 
     return {
-      data: questions.map((q) => serializeQuestion(q, request.viewer!.id)),
+      data: questions.map((q) => serializeQuestion(q, viewer.id)),
       nextCursor: encodeCreatedAtIdCursor(questions, take),
     };
   });
 
-  // GET /api/questions/:id
+  // GET /api/questions/:id — the viewer's own, or anyone's for an admin; anyone else's is not found.
   app.get('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const question = await prisma.question.findUnique({ where: { id }, include: questionInclude });
+    const question = await prisma.question.findFirst({ where: { id, ...readableQuestions(request.viewer!) }, include: questionInclude });
     if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
     return serializeQuestion(question, request.viewer!.id);
   });
 
-  // DELETE /api/questions/:id — owner, only while it has no lesson (PENDING or FAILED)
+  // DELETE /api/questions/:id — owner. One with no lesson yet (PENDING or FAILED) goes entirely. One with a lesson
+  // is taken back: the learner's words, files and follow-ups go and the request no longer names them, while the
+  // lesson stays for everyone else (lib/privacy.ts).
   app.delete('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = request.viewer!.id;
 
     try {
       await runTransaction(async (tx) => {
-        const question = await tx.question.findUnique({ where: { id } });
+        // Locked as the answer route locks it, so a lesson cannot land between the look and the delete.
+        const rows = await tx.$queryRaw<{ userId: string | null; status: string }[]>`
+          SELECT "userId", status FROM questions WHERE id = ${id} FOR UPDATE
+        `;
+        const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
         if (question.userId !== userId) throw new AppError('FORBIDDEN', 'You can only delete your own questions');
-        if (question.status === 'ANSWERED') throw new AppError('VALIDATION_ERROR', 'Only unanswered questions can be deleted');
-        await tx.question.delete({ where: { id } });
+        if (question.status === 'ANSWERED') await detachQuestions(tx, [id]);
+        else await tx.question.delete({ where: { id } });
       });
     } catch (err) {
       if (isAppError(err)) return sendError(reply, err.code, err.message);

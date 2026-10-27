@@ -2,8 +2,10 @@
  * End-to-end flow against a real Postgres (DATABASE_URL). Skipped unless
  * INTEGRATION=1 so `npm test` stays database-free in CI by default.
  *
- * Covers: ask -> agent auth -> answer -> one-answer rule -> human reply ->
- * reply queue -> agent reply -> one-agent-reply-per-human-reply -> delete rules.
+ * Covers: ask -> only the asker (and admins) see it -> agent auth -> answer ->
+ * one-answer rule -> the asker's follow-up -> reply queue -> agent reply ->
+ * one-agent-reply-per-human-reply -> delete rules. Taking back a request and
+ * deleting an account are in routes/privacy.integration.test.ts.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -102,7 +104,7 @@ d('question / answer / reply flow', () => {
     expect(pii.statusCode).toBe(400);
   });
 
-  it('lets a user ask and everyone signed in see it', async () => {
+  it('lets a user ask, and only they and the admins see it', async () => {
     const r = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} How do I reset my password?` } });
     expect(r.statusCode).toBe(201);
     const q = r.json();
@@ -111,26 +113,38 @@ d('question / answer / reply flow', () => {
     expect(q.canDelete).toBe(true);
     expect(q.answer).toBeNull();
 
-    const listB = await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(cookieB) });
-    expect(listB.statusCode).toBe(200);
-    const found = listB.json().data.find((x: { id: string }) => x.id === questionId);
+    // Another learner sees none of it: not in the list, with or without ?mine, not by id, not in a re-fetch.
+    for (const url of ['/api/questions', '/api/questions?mine=true', `/api/questions?ids=${questionId}`]) {
+      const res = await app.inject({ method: 'GET', url, headers: asUser(cookieB) });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().data.find((x: { id: string }) => x.id === questionId)).toBeUndefined();
+    }
+    expect((await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(cookieB) })).statusCode).toBe(404);
+
+    // An admin sees everyone's, as someone else's.
+    const listAdmin = await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(adminCookie) });
+    const found = listAdmin.json().data.find((x: { id: string }) => x.id === questionId);
     expect(found).toBeTruthy();
     expect(found.isOwner).toBe(false);
     expect(found.canDelete).toBe(false);
+    expect((await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(adminCookie) })).statusCode).toBe(200);
+    // ...and only their own with ?mine=true.
+    const adminMine = await app.inject({ method: 'GET', url: '/api/questions?mine=true', headers: asUser(adminCookie) });
+    expect(adminMine.json().data.find((x: { id: string }) => x.id === questionId)).toBeUndefined();
 
-    const mine = await app.inject({ method: 'GET', url: '/api/questions?mine=true', headers: asUser(cookieB) });
-    expect(mine.json().data.find((x: { id: string }) => x.id === questionId)).toBeUndefined();
-
-    const status = await app.inject({ method: 'GET', url: '/api/questions/status', headers: asUser(cookieB) });
+    const status = await app.inject({ method: 'GET', url: '/api/questions/status', headers: asUser(adminCookie) });
     expect(status.json().latestAt >= q.createdAt).toBe(true);
 
-    // ?mine=true scopes latestAt like the list: B's own tab must not report A's
-    // question as new activity, or the refresh banner promises nothing.
-    const mineStatus = await app.inject({ method: 'GET', url: '/api/questions/status?mine=true', headers: asUser(cookieB) });
-    expect(mineStatus.statusCode).toBe(200);
-    expect(mineStatus.json().latestAt === null || mineStatus.json().latestAt < q.createdAt).toBe(true);
-    // The teacher heartbeat is never scoped — a stalled runner is everyone's problem.
-    expect(mineStatus.json().agentLastSeenAt).toBe(status.json().agentLastSeenAt);
+    // latestAt is scoped like the list: B's page must not report A's question as
+    // new activity, or the refresh banner promises nothing. For B that holds
+    // with or without ?mine=true, since B's list is B's own either way.
+    for (const url of ['/api/questions/status?mine=true', '/api/questions/status']) {
+      const mineStatus = await app.inject({ method: 'GET', url, headers: asUser(cookieB) });
+      expect(mineStatus.statusCode).toBe(200);
+      expect(mineStatus.json().latestAt === null || mineStatus.json().latestAt < q.createdAt).toBe(true);
+      // The teacher heartbeat is never scoped — a stalled runner is everyone's problem.
+      expect(mineStatus.json().agentLastSeenAt).toBe(status.json().agentLastSeenAt);
+    }
 
     // B's own question does move B's scoped watermark.
     const own = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieB), payload: { content: `${tag} Where do I find my invoices?` } });
@@ -150,8 +164,8 @@ d('question / answer / reply flow', () => {
     const beforeStatus = await app.inject({ method: 'GET', url: `/api/questions/status?mine=true&since=${encodeURIComponent(justBefore)}`, headers: asUser(cookieB) });
     expect(beforeStatus.json().latestAt).toBe(at);
 
-    // The bound applies unscoped too, and A's question stays invisible to B's scoped probe.
-    const globalSince = await app.inject({ method: 'GET', url: `/api/questions/status?since=${encodeURIComponent(justBefore)}`, headers: asUser(cookieB) });
+    // The bound applies unscoped too (an admin's), and A's question stays invisible to B's scoped probe.
+    const globalSince = await app.inject({ method: 'GET', url: `/api/questions/status?since=${encodeURIComponent(justBefore)}`, headers: asUser(adminCookie) });
     expect(globalSince.json().latestAt >= at).toBe(true);
     const scopedPastA = await app.inject({ method: 'GET', url: `/api/questions/status?mine=true&since=${encodeURIComponent(q.createdAt)}`, headers: asUser(cookieB) });
     expect(scopedPastA.json().latestAt).toBe(at);
@@ -194,24 +208,33 @@ d('question / answer / reply flow', () => {
     expect(q.json().status).toBe('ANSWERED');
     expect(q.json().answer.content).toContain('Forgot password');
     expect(q.json().answer.awaitingAgent).toBe(false);
-    expect(q.json().canDelete).toBe(false);
+    // The asker can always take a request back; one with a lesson keeps the lesson (privacy.integration.test.ts).
+    expect(q.json().canDelete).toBe(true);
   });
 
-  it('refuses to delete an answered question, allows deleting a pending one', async () => {
-    const r = await app.inject({ method: 'DELETE', url: `/api/questions/${questionId}`, headers: asUser(cookieA) });
-    expect(r.statusCode).toBe(400);
+  it('lets only the owner delete a question, and a pending one goes entirely', async () => {
     const other = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieB), payload: { content: `${tag} temporary question to delete` } });
     const notOwner = await app.inject({ method: 'DELETE', url: `/api/questions/${other.json().id}`, headers: asUser(cookieA) });
     expect(notOwner.statusCode).toBe(403);
+    const admin = await app.inject({ method: 'DELETE', url: `/api/questions/${other.json().id}`, headers: asUser(adminCookie) });
+    expect(admin.statusCode).toBe(403);
     const owner = await app.inject({ method: 'DELETE', url: `/api/questions/${other.json().id}`, headers: asUser(cookieB) });
     expect(owner.statusCode).toBe(204);
+    expect(await prisma.question.count({ where: { id: other.json().id } })).toBe(0);
   });
 
-  it('threads: human replies, agent owes a response, agent replies once', async () => {
+  it('threads: the asker follows up, agent owes a response, agent replies once', async () => {
     const empty = await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) });
     expect(empty.json().data).toEqual([]);
 
-    const hr = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieB), payload: { content: 'That link is greyed out for me.' } });
+    // The thread is the asker's: another learner, or an admin, cannot post in it.
+    for (const cookie of [cookieB, adminCookie]) {
+      const stranger = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookie), payload: { content: 'Me too!' } });
+      expect(stranger.statusCode).toBe(403);
+    }
+    expect((await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) })).json().data).toEqual([]);
+
+    const hr = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieA), payload: { content: 'That link is greyed out for me.' } });
     expect(hr.statusCode).toBe(201);
     humanReplyId = hr.json().id;
     expect(hr.json().authorType).toBe('HUMAN');
@@ -248,7 +271,7 @@ d('question / answer / reply flow', () => {
 
   it('threads keep going: human -> agent -> human -> agent, and the agent always sees the whole thread', async () => {
     // Round 2: the human replies again under the same answer.
-    const h2 = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieB), payload: { content: 'Incognito worked. Is there a permanent fix?' } });
+    const h2 = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieA), payload: { content: 'Incognito worked. Is there a permanent fix?' } });
     expect(h2.statusCode).toBe(201);
 
     const queue = await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) });
@@ -268,8 +291,8 @@ d('question / answer / reply flow', () => {
     expect(a2.statusCode).toBe(201);
     expect((await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) })).json().data).toEqual([]);
 
-    // Round 3 from a different human on the same answer also lands in the queue.
-    const h3 = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieA), payload: { content: 'Same problem here, that fixed it too.' } });
+    // Round 3 lands in the queue the same way.
+    const h3 = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(cookieA), payload: { content: 'That fixed it, thanks.' } });
     expect(h3.statusCode).toBe(201);
     const q3 = await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) });
     expect(q3.json().data[0].replyTo.id).toBe(h3.json().id);
@@ -283,9 +306,11 @@ d('question / answer / reply flow', () => {
   });
 
   it('only the author can delete a reply, and the agent reply cascades', async () => {
-    const notAuthor = await app.inject({ method: 'DELETE', url: `/api/replies/${humanReplyId}`, headers: asUser(cookieA) });
-    expect(notAuthor.statusCode).toBe(403);
-    const author = await app.inject({ method: 'DELETE', url: `/api/replies/${humanReplyId}`, headers: asUser(cookieB) });
+    for (const cookie of [cookieB, adminCookie]) {
+      const notAuthor = await app.inject({ method: 'DELETE', url: `/api/replies/${humanReplyId}`, headers: asUser(cookie) });
+      expect(notAuthor.statusCode).toBe(403);
+    }
+    const author = await app.inject({ method: 'DELETE', url: `/api/replies/${humanReplyId}`, headers: asUser(cookieA) });
     expect(author.statusCode).toBe(204);
     const q = await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(cookieA) });
     // The deleted human reply and the agent's response to it are gone; later rounds remain.

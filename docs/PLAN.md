@@ -584,6 +584,12 @@ account.
   videos and the lyrics.
 - **Never public:** the learner's name or avatar, the request in their own words (it can
   say more than they meant to share), the files they attached, and follow-up threads.
+- **Private on /learn too.** A learner sees only their own topics, and only they post
+  follow-ups in their thread; admins see everyone's to moderate (`api/src/lib/privacy.ts`).
+  A learner can take a request back, or delete their account: their words, files and
+  follow-ups go, and the lesson stays on the tab naming no one (`questions.userId` null).
+  `/privacy` and `/terms` tell users so, and the droplets are shared under CC BY-NC-SA 4.0
+  (`web/src/lib/legal.ts`).
 - **Listed automatically** once the videos are READY, so everything on it passed the
   fact-check. An admin can hide a droplet.
 - **Later:** when someone asks for a topic that already has a droplet, offer that one

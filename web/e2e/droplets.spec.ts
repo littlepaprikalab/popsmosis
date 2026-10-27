@@ -10,7 +10,7 @@ const LESSON = `${BASE}/samples/lesson.mp4`;
 test.describe('the Droplets tab, signed out', () => {
   test('lists the finished droplets and plays one, with no sign-in', async ({ page }) => {
     await page.goto('/learn');
-    await page.getByRole('link', { name: 'DROPLETS', exact: true }).click();
+    await page.getByRole('navigation').getByRole('link', { name: 'DROPLETS', exact: true }).click();
     await expect(page).toHaveURL(/\/droplets$/);
     await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
 
@@ -28,6 +28,9 @@ test.describe('the Droplets tab, signed out', () => {
     await expect(page.getByTestId('lyrics').getByText('Spin the rotor, make the ATP')).toBeVisible();
     // The follow-up thread stays on /learn.
     await expect(page.getByText('water wheel')).toHaveCount(0);
+    // Labelled as made by AI, with the license it is shared under.
+    await expect(page.getByTestId('ai-notice')).toContainText('Made by AI');
+    await expect(page.getByRole('link', { name: 'CC BY-NC-SA 4.0' })).toHaveAttribute('href', 'https://creativecommons.org/licenses/by-nc-sa/4.0/');
 
     const song = page.getByLabel('song video');
     await expect(song).toHaveAttribute('poster', '/samples/song.jpg');
