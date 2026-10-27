@@ -93,3 +93,21 @@ class Api:
 
     def fail(self, question_id: str, reason: str) -> dict:
         return self.request("POST", f"/api/questions/{question_id}/fail", {"reason": reason})
+
+    # --- the videos (docs/PLAN.md, section 12) ---------------------------------
+
+    def claim_videos(self, answer_id: str, attempt: int | None = None) -> dict:
+        """Start an attempt at the videos (no attempt), or renew the one this run holds.
+
+        Returns {answerId, questionId, attempt, bundle, factcheck, video}; 409 when another
+        run holds them, they are made, or their attempts are used up.
+        """
+        return self.request("POST", f"/api/answers/{answer_id}/video/claim",
+                            {"attempt": attempt} if attempt is not None else {})
+
+    def videos_queue(self, limit: int = 1) -> list[dict]:
+        """This agent's droplets whose render died with its machine, each claimed as its next attempt."""
+        return self.request("GET", f"/api/videos/queue?limit={limit}").get("data", [])
+
+    def give_up_videos(self, answer_id: str, reason: str, attempt: int) -> dict:
+        return self.request("POST", f"/api/answers/{answer_id}/video/fail", {"reason": reason, "attempt": attempt})

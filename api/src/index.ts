@@ -16,6 +16,7 @@ import agentRoutes from './routes/agents.js';
 import userRoutes from './routes/users.js';
 import attachmentRoutes from './routes/attachments.js';
 import answerRoutes from './routes/answers.js';
+import videoRoutes from './routes/videos.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -171,6 +172,7 @@ export async function buildApp() {
   await app.register(userRoutes);
   await app.register(attachmentRoutes);
   await app.register(answerRoutes);
+  await app.register(videoRoutes);
 
   app.get('/api/health', async (_request, reply) => {
     try {

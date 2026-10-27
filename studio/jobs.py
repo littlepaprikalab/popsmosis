@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import time
 from pathlib import Path
 from typing import TypeVar
@@ -27,7 +28,9 @@ def write(path: Path, data: BaseModel | dict | list) -> None:
         text = data.model_dump_json(indent=2)
     else:
         text = json.dumps(data, indent=2, ensure_ascii=False)
-    partial = path.with_name(f".{path.name}.partial")
+    # Its own partial file per writer: two threads (the art and audio branches renewing the
+    # claim) may write the same file at once, and each must replace it whole.
+    partial = path.with_name(f".{path.name}.{os.getpid()}-{threading.get_ident()}.partial")
     partial.write_text(text + "\n", encoding="utf-8")
     os.replace(partial, path)
 
