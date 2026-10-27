@@ -222,13 +222,15 @@ def timeline(video: str, the_bundle: Bundle | None = None) -> Timeline:
     answer_at = t0 + asked + media.PREDICT_PAUSE_S
     steps = [line for line in frq_timing.lines if line.line_id.startswith("frq-step-")]
     duration = round(answer_at + frq_timing.duration - asked, 3)
+    # The card sits over the overview with everything on it labelled, a review of the whole diagram.
+    labels = [s.name for s in next(scene for scene in the_bundle.scenes if scene.id == "overview").structures]
     spotlights = ["Cytochrome b6f", "ATP synthase", None]
     frq = FrqSegment(
-        t0=t0, t1=duration, scene="overview", prompt=the_bundle.frq.prompt,
+        t0=t0, t1=duration, scene="overview", labels=labels, prompt=the_bundle.frq.prompt,
         predict_question=the_bundle.frq.predict_question, predict_t=round(t0 + asked, 3),
         predict_pause_s=media.PREDICT_PAUSE_S,
         steps=[FrqStep(t=round(answer_at + line.start - asked, 3), text=the_bundle.frq.model_answer_steps[i],
-                       spotlight=spotlights[min(i, 2)] if spotlights[min(i, 2)] in shown.get("overview", []) else None)
+                       spotlight=spotlights[min(i, 2)] if spotlights[min(i, 2)] in labels else None)
                for i, line in enumerate(steps)])
     audio = [
         AudioClip(path=voice.audio, at=0),

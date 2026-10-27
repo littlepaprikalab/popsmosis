@@ -8,10 +8,13 @@ cross-references are checked by validators, which never reach the schema.
 
 from __future__ import annotations
 
+import bisect
+import functools
+import math
 import re
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FILLER = "filler"
 Section = Literal["verse", "chorus", "bridge"]
@@ -255,7 +258,20 @@ class Request(Strict):
 # Times are seconds; positions are art pixels, (0, 0) at the top left. Their paths, and
 # how a media step is built, are in studio/media.py.
 
-TOLERANCE_S = 0.05  # how far apart two times may be and still count as the same
+TOLERANCE_S = 0.05  # how far a word or a reveal may stray past its line or beat
+EXACT_S = 1e-6  # beats meet exactly (code sets each t0 to the t1 before it), so no frame falls between two
+# The API's rule for an upload path (api/src/lib/storage.ts, FILE_RE): relative, and never "." or "..".
+SAFE_PATH = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)*")
+
+
+def _job_path(value: str) -> str:
+    if not SAFE_PATH.fullmatch(value) or len(value) > 300:
+        raise ValueError(f"{value!r} is not a path in the job folder the API would take; "
+                         "build it with studio/media.py")
+    return value
+
+
+JobPath = Annotated[str, AfterValidator(_job_path)]  # a file in the job folder, relative to it
 
 
 class Point(Strict):
@@ -281,7 +297,7 @@ class Box(Strict):
 
 class Location(Strict):
     name: str  # the structure's name, as the bundle's scene lists it
-    mask: str  # masks/<scene>/<slug>.png (studio/media.py)
+    mask: JobPath  # media.mask_path(scene, name)
     box: Box  # around the visible part of the structure
     centroid: Point  # of the visible part; where the camera aims
     label_anchor: Point  # where the label's leader line ends: inside the structure, clear of its neighbours
@@ -290,7 +306,7 @@ class Location(Strict):
 
 class SceneLocations(Strict):
     scene: str
-    art: str  # art/<scene>.png
+    art: JobPath  # media.art_path(scene)
     width: int
     height: int
     # A structure that could not be found is left out: the timeline then gives it no
@@ -368,7 +384,7 @@ class TimedLine(Strict):
 class Timing(Strict):
     """timing/<kind>_words.json: when each line, and each word in it, is heard in one audio file (step 6)."""
 
-    audio: str  # the file it times: audio/song.mp3, audio/narration.mp3 or audio/frq.mp3
+    audio: JobPath  # the file it times: audio/song.mp3, audio/narration.mp3 or audio/frq.mp3
     duration: float  # that file's length
     lines: list[TimedLine]  # in the order they are heard
 
@@ -414,7 +430,7 @@ def timing_problems(timing: Timing, line_ids: list[str]) -> list[str]:
 class AudioClip(Strict):
     """A stretch of an audio file, played from `at` in the video."""
 
-    path: str
+    path: JobPath
     at: float
     start: float = 0.0  # where in the file to start
     end: float | None = None  # where in the file to stop; None: its end
@@ -471,6 +487,7 @@ class FrqSegment(Strict):
     t0: float  # the card appears; the beats end here
     t1: float  # the video ends
     scene: str  # the diagram behind the card
+    labels: list[str]  # the structures shown revealed and labelled on it; each step's spotlight is one
     prompt: str
     predict_question: str
     predict_t: float  # the countdown starts
@@ -481,8 +498,9 @@ class FrqSegment(Strict):
 class Timeline(Strict):
     """timeline_song.json, timeline_lesson.json: everything the renderer draws, and when (step 7).
 
-    Every frame depends only on its time: before frq.t0 it draws the beat that holds
-    t, from frq.t0 the exam question.
+    Every frame depends only on its time. Frame n is at n / fps, for n below
+    frame_count; beat_at(t) is the beat that holds it (t0 <= t < t1), or None from
+    frq.t0 on, where the exam question is drawn.
     """
 
     video: Literal["song", "lesson"]
@@ -505,25 +523,54 @@ class Timeline(Strict):
             raise ValueError("; ".join(problems))
         return self
 
+    @property
+    def frame_count(self) -> int:
+        return math.ceil(round(self.duration * self.fps, 6))
 
-def _near(a: float, b: float) -> bool:
-    return abs(a - b) <= TOLERANCE_S
+    @functools.cached_property
+    def _starts(self) -> list[float]:
+        return [beat.t0 for beat in self.beats]
+
+    def beat_at(self, t: float) -> Beat | None:
+        """The beat on screen at t; None from the exam question on."""
+        if t >= self.frq.t0:
+            return None
+        return self.beats[max(0, bisect.bisect_right(self._starts, t) - 1)]
+
+
+def _same(a: float, b: float) -> bool:
+    return abs(a - b) <= EXACT_S
+
+
+def _times(timeline: Timeline) -> list[float]:
+    frq = timeline.frq
+    times = [timeline.duration, frq.t0, frq.t1, frq.predict_t, frq.predict_pause_s] + [s.t for s in frq.steps]
+    for beat in timeline.beats:
+        times += [beat.t0, beat.t1, beat.camera.zoom] + [r.t for r in beat.reveal]
+        times += [t for w in beat.words for t in (w.start, w.end)]
+    for clip in timeline.audio:
+        times += [clip.at, clip.start] + ([clip.end] if clip.end is not None else [])
+    return times
 
 
 def timeline_shape_problems(timeline: Timeline) -> list[str]:
     """What a timeline must hold on its own: beats that cover the video up to the exam question, in order."""
     problems = []
+    if not all(math.isfinite(t) for t in _times(timeline)):
+        return ["a time is not a finite number"]
     if timeline.duration <= 0 or timeline.fps <= 0:
         problems.append("duration and fps must be positive")
     if not timeline.beats:
         return problems + ["no beats"]
-    if not _near(timeline.beats[0].t0, 0):
+    if not _same(timeline.beats[0].t0, 0):
         problems.append(f"the first beat starts at {timeline.beats[0].t0}, not 0")
     for i, beat in enumerate(timeline.beats):
         where = f"beat {i} ({beat.line_id or 'gap'})"
         if beat.t0 >= beat.t1:
             problems.append(f"{where} runs {beat.t0}-{beat.t1}")
-        if i and not _near(timeline.beats[i - 1].t1, beat.t0):
+        if beat.camera.zoom < 1:
+            problems.append(f"{where} zooms to {beat.camera.zoom}; 1.0 shows the whole art, and less shows past it")
+        if i and not _same(timeline.beats[i - 1].t1, beat.t0):
             problems.append(f"{where} starts at {beat.t0}, not where the beat before it ends")
         for reveal in beat.reveal:
             if reveal.name not in beat.labels:
@@ -549,9 +596,15 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
                 problems.append(f"beat {i} spotlights or aims at {name} before it is revealed on {beat.scene}")
 
     frq = timeline.frq
-    if not _near(timeline.beats[-1].t1, frq.t0):
+    for name in frq.labels:
+        if name not in timeline.palette:
+            problems.append(f"the exam question names {name}, which has no colour in the palette")
+    for step in frq.steps:
+        if step.spotlight and step.spotlight not in frq.labels:
+            problems.append(f"the exam question spotlights {step.spotlight}, which it does not label")
+    if not _same(timeline.beats[-1].t1, frq.t0):
         problems.append(f"the beats end at {timeline.beats[-1].t1}, not where the exam question starts ({frq.t0})")
-    if not _near(frq.t1, timeline.duration):
+    if not _same(frq.t1, timeline.duration):
         problems.append(f"the exam question ends at {frq.t1}, not at the end of the video ({timeline.duration})")
     if not frq.t0 <= frq.predict_t:
         problems.append("the predict pause starts before the exam question")
@@ -575,7 +628,7 @@ def timeline_problems(timeline: Timeline, locations: Locations) -> list[str]:
               [r.name for r in beat.reveal] + beat.labels + [beat.spotlight, beat.camera.target]
               + [n for p in beat.particles for n in p.path])
              for i, beat in enumerate(timeline.beats)]
-    shown.append(("the exam question", timeline.frq.scene, [step.spotlight for step in timeline.frq.steps]))
+    shown.append(("the exam question", timeline.frq.scene, timeline.frq.labels))
     for where, scene_id, names in shown:
         scene = locations.scene(scene_id)
         if scene is None:

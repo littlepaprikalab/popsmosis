@@ -3,7 +3,7 @@
 Every path is relative to the job folder, jobs/<id>/. The models are in studio/schemas.py.
 
     art/<scene>.png                     3     RGB, ART_WIDTH x ART_HEIGHT, white background, no text in it
-    masks/<scene>/<slug>.png            3/4   8-bit greyscale, the art's size: 255 where the structure is
+    masks/<scene>/<structure>.png       3/4   8-bit greyscale, the art's size: 255 where the structure is
                                               visible in the art (what covers it is left out), 0 elsewhere
     locations.json                      3/4   Locations: each structure's mask, box, centroid, label anchor
     audio/song.mp3                      5     the song
@@ -15,8 +15,14 @@ Every path is relative to the job folder, jobs/<id>/. The models are in studio/s
     timeline_song.json                  7     a Timeline for each video
     timeline_lesson.json                7
     out/song_h.mp4, out/lesson_h.mp4    8     1920x1080, 30 fps, H.264 + AAC, -movflags +faststart
-    out/song_h.jpg, out/lesson_h.jpg    8     a poster frame for each
+    out/song_h.jpg, out/lesson_h.jpg    8     a poster frame for each, beside its video: a poster's
+                                              URL is its video's with .jpg for .mp4
     out/song_fallback_h.mp4             -     the ffmpeg karaoke fallback (PLAN section 7)
+
+Scene ids and structure names are written by the model, so they never reach a path
+as they are: file_name() makes each one safe for the job folder and for the API's
+upload paths, and distinct ("α subunit" and "β subunit" do not share a mask).
+Always build paths with the functions below.
 
 Interim art (brain-drawn SVG, until the Meta key arrives) writes the masks and
 locations.json itself, so locate has nothing left to do.
@@ -28,17 +34,22 @@ A step is a module studio/steps/<name>.py, for each name in MEDIA_STEPS, with
     is_done(job: Path) -> bool              whether its files are there and read
 
 `python -m studio step <name> <job>` runs one as soon as its module exists. A step
-writes its index file (locations.json, a Timing, a Timeline) last, after the files
-it points to, with jobs.write, so a run stopped halfway never looks done.
+starts by removing its index files (locations.json, a Timing, a Timeline) with
+restart(), and writes them last, after the files they point to, with jobs.write: a
+run stopped halfway, even on a re-run, never looks done with old and new files mixed.
+A step that runs makes every later one stale, so `run` runs every step after the
+first one that is not done, as it already does for the bundle.
 """
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import re
+from pathlib import Path
 from types import ModuleType
 
-from studio.schemas import Bundle
+from studio.schemas import SAFE_PATH, Bundle  # every path built here passes SAFE_PATH
 
 MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
 VIDEOS = ("song", "lesson")
@@ -56,16 +67,27 @@ class StepFailed(Exception):
 
 
 def slug(name: str) -> str:
-    """A structure's name as a file name: "Broca's area" -> "broca-s-area"."""
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "structure"
+    """Lowercase letters, digits and dashes: "Broca's area" -> "broca-s-area"."""
+    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40].strip("-")
+
+
+def file_name(name: str) -> str:
+    """A scene id or structure name as a file name: itself when it is already a slug
+    ("limbic-detail"), else its slug and a short hash of the name ("broca-s-area-3c2e1a"),
+    so two names never share a file and none can leave its folder."""
+    plain = slug(name)
+    if plain and plain == name:
+        return name
+    digest = hashlib.sha256(name.encode("utf-8")).hexdigest()[:6]
+    return f"{plain}-{digest}" if plain else digest
 
 
 def art_path(scene: str) -> str:
-    return f"art/{scene}.png"
+    return f"art/{file_name(scene)}.png"
 
 
 def mask_path(scene: str, structure: str) -> str:
-    return f"masks/{scene}/{slug(structure)}.png"
+    return f"masks/{file_name(scene)}/{file_name(structure)}.png"
 
 
 def audio_path(kind: str) -> str:
@@ -86,6 +108,12 @@ def video_path(video: str, layout: str = "h") -> str:
 
 def poster_path(video: str, layout: str = "h") -> str:
     return f"out/{video}_{layout}.jpg"
+
+
+def restart(job: Path, *index_files: str) -> None:
+    """Remove a step's index files before it writes anything, so it is not done until it finishes."""
+    for name in index_files:
+        (job / name).unlink(missing_ok=True)
 
 
 def frq_lines(bundle: Bundle) -> list[tuple[str, str]]:
