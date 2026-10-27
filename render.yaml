@@ -24,7 +24,11 @@ services:
     # `--include=dev`: NODE_ENV=production (below) makes npm skip devDependencies,
     # and the build needs them — `tsc` here, `typescript`/`tailwindcss` on the web
     # service. Without it the build dies on a missing module.
-    buildCommand: npm ci --include=dev && npm --workspace api run build && npm --workspace api run db:deploy
+    # `--workspace api --include-workspace-root` installs only the API's (and the
+    # root's) packages. A plain `npm ci` also pulls in the web app's Next.js,
+    # React and Playwright, which more than doubles node_modules (about 1 GB vs
+    # 440 MB) and slows both the install and Render's upload of the build.
+    buildCommand: npm ci --include=dev --workspace api --include-workspace-root && npm --workspace api run build && npm --workspace api run db:deploy
     startCommand: npm --workspace api run start
     healthCheckPath: /api/health
     envVars:
