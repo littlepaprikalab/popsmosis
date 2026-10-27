@@ -109,7 +109,7 @@ def encode(job: Path, timeline: Timeline, out: Path, layout: str = "h", parts: i
     for clip in timeline.audio:
         if not (job / clip.path).exists():
             raise EncodeError(f"no audio file {clip.path}")
-    frames = max(1, round(timeline.duration * timeline.fps))
+    frames = timeline.frame_count
     n_workers = parts or workers()
     # More ranges than workers, so one slow range does not hold up the rest.
     chunks = ranges(frames, n_workers * 2)

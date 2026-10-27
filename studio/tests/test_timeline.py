@@ -117,6 +117,7 @@ def test_a_structure_the_art_could_not_locate_is_never_revealed_or_spotlit(job):
     song = lines(timelines["song"])
     assert song["v2-1"].reveal == [] and song["v2-1"].spotlight is None and song["v2-1"].camera.target is None
     assert all(s.spotlight != "Cytochrome b6f" for s in timelines["song"].frq.steps)
+    assert "Cytochrome b6f" not in timelines["song"].frq.labels
 
 
 def test_both_videos_open_on_the_hook_even_when_the_direction_does_not(job):
@@ -184,6 +185,9 @@ def test_instrumental_gaps_get_beats_of_their_own(job):
     after = timeline.beats.index(gaps[1]) - 1
     assert gaps[1].scene == timeline.beats[after].scene and gaps[1].camera == timeline.beats[after].camera
     assert timeline.frq.t0 == pytest.approx(timed["song"].duration)
+    # Beats meet exactly, from 0 to the exam question, so every frame has one.
+    ends = [0.0] + [b.t1 for b in timeline.beats]
+    assert [b.t0 for b in timeline.beats] == ends[:-1] and ends[-1] == timeline.frq.t0
 
 
 def test_the_exam_question_pauses_to_predict_then_spotlights_each_step(job):
@@ -205,6 +209,9 @@ def test_the_exam_question_pauses_to_predict_then_spotlights_each_step(job):
         # The song shows the overview ("Cytochrome b6f pumps protons."); the lesson never does.
         expected = {"song": ("overview", ["Cytochrome b6f", None]), "lesson": ("synthase", [None, "ATP synthase"])}
         assert (frq.scene, [s.spotlight for s in frq.steps]) == expected[video]
+        # The card reviews the whole diagram: what the video revealed there first, then the rest.
+        card = {"song": ["Thylakoid", "Cytochrome b6f"], "lesson": ["ATP synthase"]}
+        assert frq.labels == card[video]
         assert timeline.duration == pytest.approx(frq.t1)
 
 

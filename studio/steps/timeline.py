@@ -17,7 +17,9 @@ No model calls, so it is free to run again:
   lesson), held for at least CAPTION_HOLD_S.
 - After the song or the narration, the exam question: audio/frq.mp3 up to the end of the
   predict question, a pause of media.PREDICT_PAUSE_S, then the rest, with each step
-  spotlighting the structure it names.
+  spotlighting the structure it names. The card labels what the video revealed on its
+  scene and every step's spotlight.
+- Beats meet exactly: each starts where the one before it ends, from 0 to the exam question.
 """
 
 from __future__ import annotations
@@ -60,6 +62,7 @@ TAIL_S = 1.5  # the last exam step stays on screen this long after its line is r
 
 def run(job: Path, ask=None) -> str:
     """Write both timelines; `ask` is unused (no model calls)."""
+    media.restart(job, *(media.timeline_path(video) for video in media.VIDEOS))
     bundle = checks.load(job / "bundle.json")
     locations = read(job / media.LOCATIONS, Locations)
     timed = {kind: read(job / media.timing_path(kind), Timing) for kind in media.TIMED}
@@ -116,6 +119,10 @@ class Names:
     """The structures one scene can reveal (the located ones), each with the words that name it."""
 
     entries: list[tuple[tuple[str, ...], str]]  # (folded words, structure name), longest first
+
+    @property
+    def located(self) -> set[str]:
+        return {name for _, name in self.entries}
 
     @classmethod
     def for_scene(cls, bundle: Bundle, scene_id: str, located: set[str]) -> Names:
@@ -291,24 +298,30 @@ def _exam_question(bundle: Bundle, timed: dict[str, Timing], voice: Timing, t0: 
     frq_timing = timed["frq"]
     predict = frq_timing.line("frq-predict")
     asked = predict.end if predict else frq_timing.duration
-    predict_t = round(t0 + asked, 3)
+    predict_t = max(t0, round(t0 + asked, 3))
     answer_at = predict_t + media.PREDICT_PAUSE_S
     offset = answer_at - asked
-    steps_text = bundle.frq.model_answer_steps
     scene = _exam_scene(bundle, revealed, names, last_scene)
+    scene_names = names.get(scene) or Names([])
     steps = []
-    for i, text in enumerate(steps_text, 1):
+    for i, text in enumerate(bundle.frq.model_answer_steps, 1):
         line = frq_timing.line(f"frq-step-{i}")
         t = offset + (line.start if line else asked)
-        steps.append(FrqStep(t=round(max(t, answer_at), 3), text=text, spotlight=names[scene].first_named(text)
-                             if scene in names else None))
+        steps.append(FrqStep(t=round(max(t, answer_at), 3), text=text, spotlight=scene_names.first_named(text)))
+    # The card reviews the whole diagram: what this video revealed on the scene, in that
+    # order, then every other structure located there (each step's spotlight among them).
+    labels = list(revealed.get(scene, []))
+    for structure in next((sc.structures for sc in bundle.scenes if sc.id == scene), []):
+        if structure.name in scene_names.located and structure.name not in labels:
+            labels.append(structure.name)
     duration = round(offset + frq_timing.duration + TAIL_S, 3)
     audio = [
         AudioClip(path=voice.audio, at=0),
-        AudioClip(path=frq_timing.audio, at=round(t0, 3), start=0, end=round(asked, 3)),
+        AudioClip(path=frq_timing.audio, at=t0, start=0, end=round(asked, 3)),
         AudioClip(path=frq_timing.audio, at=round(answer_at, 3), start=round(asked, 3)),
     ]
-    frq = FrqSegment(t0=round(t0, 3), t1=duration, scene=scene, prompt=bundle.frq.prompt,
+    # t0 is exactly where the last beat ends: beats meet the exam question with no gap.
+    frq = FrqSegment(t0=t0, t1=duration, scene=scene, labels=labels, prompt=bundle.frq.prompt,
                      predict_question=bundle.frq.predict_question, predict_t=predict_t,
                      predict_pause_s=media.PREDICT_PAUSE_S, steps=steps)
     return frq, audio, duration

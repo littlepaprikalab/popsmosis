@@ -159,7 +159,7 @@ def short_timeline(job, video: str) -> Timeline:
     beat = Beat(t0=0, t1=1.0, scene="hook", camera=TimelineCamera(target=None, zoom=1.0),
                 reveal=[Reveal(name="Thylakoid", t=0.8)], spotlight=None, labels=["Thylakoid"], particles=[],
                 caption=None, line_id="v1-1", line="Light lands on the thylakoid", words=words)
-    frq = FrqSegment(t0=1.0, t1=2.0, scene="overview", prompt="Explain it.", predict_question="Which pumps?",
+    frq = FrqSegment(t0=1.0, t1=2.0, scene="overview", labels=["Thylakoid"], prompt="Explain it.", predict_question="Which pumps?",
                      predict_t=1.1, predict_pause_s=0.4, steps=[FrqStep(t=1.5, text="b6f pumps.", spotlight=None)])
     return Timeline(video=video, duration=2.0, fps=30,
                     audio=[AudioClip(path="audio/tone.mp3", at=0, end=1.0),

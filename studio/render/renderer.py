@@ -197,17 +197,17 @@ class Renderer:
             if self.locations.scene(scene_id) is None:
                 raise RenderError(f"scene {scene_id} has no locations")
             self.scene(scene_id)  # load every scene now, so a missing file fails before any frame
-        self.starts = [b.t0 for b in timeline.beats]
+        self._index = {id(beat): i for i, beat in enumerate(timeline.beats)}
         # When each structure is first revealed on each scene.
         self.revealed: dict[str, dict[str, float]] = {}
         for beat in timeline.beats:
             for r in beat.reveal:
                 self.revealed.setdefault(beat.scene, {}).setdefault(r.name, r.t)
         frq = timeline.frq
-        self.frq_reveals = dict(self.revealed.get(frq.scene, {}))
-        for step in frq.steps:
-            if step.spotlight:
-                self.frq_reveals.setdefault(step.spotlight, step.t)
+        # The card shows frq.labels revealed: those revealed before stay as they were, the
+        # rest fill in as the card arrives.
+        earlier = self.revealed.get(frq.scene, {})
+        self.frq_reveals = {name: earlier.get(name, frq.t0) for name in frq.labels}
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
@@ -273,14 +273,9 @@ class Renderer:
         return plans
 
     def beat_index(self, t: float) -> int:
-        lo, hi = 0, len(self.starts) - 1
-        while lo < hi:
-            mid = (lo + hi + 1) // 2
-            if self.starts[mid] <= t:
-                lo = mid
-            else:
-                hi = mid - 1
-        return lo
+        """The index of the beat on screen at t (Timeline.beat_at); the last beat from the exam question on."""
+        beat = self.timeline.beat_at(t)
+        return self._index[id(beat)] if beat is not None else len(self.timeline.beats) - 1
 
     def art_to_frame(self, t: float, x: float, y: float) -> tuple[float, float]:
         """Where an art pixel of the beat at t lands on the frame (before the exam question)."""
@@ -435,6 +430,3 @@ class Renderer:
             band_y = layout.height - layout.band_h + layout.band_h * into
             p.draw_band(canvas, (0, band_y, layout.width, band_y + layout.band_h), [], t, layout.band_font)
 
-
-def frame_count(timeline: Timeline) -> int:
-    return max(1, round(timeline.duration * timeline.fps))

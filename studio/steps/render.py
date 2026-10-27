@@ -24,6 +24,9 @@ def run(job: Path, ask=None) -> str:
     from studio.render.encode import EncodeError, encode, write_poster
     from studio.render.renderer import RenderError
 
+    # A re-render cut off halfway must not leave last time's videos looking done.
+    media.restart(job, *(path(video, LAYOUT) for video in media.VIDEOS
+                         for path in (media.video_path, media.poster_path)))
     locations = read(job / media.LOCATIONS, Locations)
     done = []
     for video in media.VIDEOS:
