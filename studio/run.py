@@ -44,6 +44,7 @@ from pathlib import Path
 
 from studio import brain, checks, jobs
 from studio.api import Api, ApiError
+from studio.media import StepFailed  # the media steps raise it too
 from studio.schemas import Bundle, FactCheckReport, Request
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
@@ -62,10 +63,6 @@ IMAGE_MAX_BYTES = 5 * 1024 * 1024 * 3 // 4
 
 class Stop(Exception):
     """Nothing a retry can fix: the topic was deleted, answered, given up or taken, or the key was refused."""
-
-
-class StepFailed(Exception):
-    """The step ran and did not succeed; running again retries it."""
 
 
 def job_dir(question_id: str) -> Path:

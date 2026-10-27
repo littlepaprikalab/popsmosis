@@ -6,6 +6,7 @@
 
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
+    python -m studio step render <job-id>        # or a media step, once it is built (studio/media.py)
     python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, runs, calls
 
 `run`, `fail` and `summary` are the operator's (studio/run.py); they need
@@ -30,7 +31,7 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import brain, checks, jobs
+from studio import brain, checks, jobs, media
 from studio import run as operator_run
 from studio.run import call_row, logged_ask
 from studio.schemas import CheckReport, FactCheckReport, Request
@@ -55,7 +56,7 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--image", type=Path, action="append", default=[], help="a photo of notes; repeatable")
     plan.add_argument("--job", help="the job id (default: made from the topic and the time)")
     step = commands.add_parser("step", help="re-run one step of an existing job")
-    step.add_argument("name", choices=list(STEPS))
+    step.add_argument("name", choices=[*STEPS, *media.MEDIA_STEPS])
     step.add_argument("job")
     show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check, runs and calls")
     show.add_argument("job")
@@ -107,11 +108,18 @@ def run_steps(job: Path, names: list[str]) -> bool:
         started = time.monotonic()
         print(f"{name}: running", file=sys.stderr)
         try:
-            result = STEPS[name](job) if name == "check" else STEPS[name](job, ask=logged_ask(job))
-        except brain.BrainError as e:
+            step = media.step_module(name).run if name in media.MEDIA_STEPS else STEPS[name]
+        except LookupError as e:  # not built yet
+            print(f"{name}: {e}", file=sys.stderr)
+            return False
+        try:
+            result = step(job) if name == "check" else step(job, ask=logged_ask(job))
+        except (brain.BrainError, media.StepFailed) as e:
             print(f"{name}: failed: {e}", file=sys.stderr)
             return False
         took = time.monotonic() - started
+        if isinstance(result, str):
+            print(f"{name}: {result}", file=sys.stderr)
         if isinstance(result, FactCheckReport) and result.status == "failed":
             print(f"{name}: failed after {took:.0f}s: {result.reason}", file=sys.stderr)
             return False

@@ -168,13 +168,21 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Muse Image + helper | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper | `masks/<scene>/<structure>.png`, `locations.json` |
-| 5 | Audio | ElevenLabs | `audio/song.mp3`, `audio/narration.mp3` |
-| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json` |
+| 5 | Audio | ElevenLabs | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
+| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
 | 9 | Upload | API + Supabase | Videos (public), intermediates (private) |
 
 Steps 3–4 (art) and 5–6 (audio) do not depend on each other: run them at the same time.
+
+The files steps 3–9 pass to each other are fixed in code, so each step can be built
+before the ones ahead of it exist: their paths and the rules for a media step in
+`studio/media.py`, their models (`Locations`, `Timing`, `Timeline`) and checks in
+`studio/schemas.py`, and a sample job that has all of them in `studio/tests/sample_media.py`
+(`python -m studio.tests.sample_media jobs/sample --art --audio`). `python -m studio step
+<name> <job>` runs a media step as soon as its module is in `studio/steps/`; wiring them
+into `run`, after the post, comes once they are built.
 
 The planner's Inkmory context is read before step 1, and its record is written after
 step 2 (section 11).
@@ -265,6 +273,9 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
   from the line count (about 4.3 s per line at 112 bpm), not from the model.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
+- **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict
+  question, the model answer steps) into `audio/frq.mp3`. Both videos end on it. The
+  fact-check does not cover these lines yet; it has to before they are read aloud.
 
 ### Step 6: timing
 
@@ -275,7 +286,8 @@ resort is the helper giving the label anchor point directly. `locations.json` ho
 - **Checks:** repeated chorus lines should have near-identical durations; flag any line
   that drifts more than 0.5 s. If a section was sung wrong, regenerate that section only.
 
-Output is `[{word, start, end}]`.
+Output is a `Timing` per audio file: each line by id, with its start, end and
+`[{word, start, end}]`.
 
 ### Step 7: timeline
 
@@ -309,6 +321,7 @@ studio/
   brain.py         ask(): the Claude and Meta providers
   run.py           run, fail, summary: one topic from the queue to a posted lesson
   api.py           the popsmosis agent endpoints the studio calls
+  media.py         the files steps 3-9 pass to each other, and how a media step is built
   inkmory.py       the planner's Inkmory context and record (section 11)
   prompts/         bundle, fact-check, helper and planner-record prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
@@ -322,34 +335,45 @@ jobs/<id>/         one folder per topic (git-ignored)
 
 ## 6. Timeline format
 
-The contract between the studio and the renderer. The model writes none of the times:
-`t0`, `t1` and `words` come from step 6.
+The contract between the studio and the renderer: `Timeline` in `studio/schemas.py`,
+which wins over this sketch. The model writes none of the times: `t0`, `t1` and `words`
+come from step 6.
 
 ```jsonc
 {
-  "audio": "audio/song.mp3", "duration": 195.5, "fps": 30,
+  "video": "song", "duration": 212.5, "fps": 30,
+  "audio": [                               // mixed into one track
+    {"path": "audio/song.mp3", "at": 0},
+    {"path": "audio/frq.mp3", "at": 195.5, "start": 0, "end": 9.2},   // the question
+    {"path": "audio/frq.mp3", "at": 209.7, "start": 9.2}               // the answer, after the pause
+  ],
   "palette": {"Broca's area": "#E07A2F", ...},
   "beats": [
     {
       "t0": 12.4, "t1": 16.8,
       "scene": "overview",
-      "camera": {"target": "Broca's area", "zoom": 1.6, "ease": "inOut"},
-      "reveal": ["Broca's area"],          // fades from ghost to full when the word is sung
+      "camera": {"target": "Broca's area", "zoom": 1.6, "ease": "inOut"},   // target null: the whole scene
+      "reveal": [{"name": "Broca's area", "t": 12.6}],   // fades from ghost to full when the word is sung
       "spotlight": "Broca's area",         // others washed pale; null = none
-      "labels": ["Broca's area", "Wernicke's area"],  // all previously introduced labels stay
+      "labels": ["Broca's area", "Wernicke's area"],  // everything revealed on this scene so far
       "particles": [{"path": ["Wernicke's area", "Broca's area"], "color": "#F2C230", "trail": true}],
       "caption": null,                     // at most ~1 per section, held >= 4 s
+      "line_id": "v1-2",                   // null in an instrumental gap
       "line": "Broca builds the words you say",
-      "words": [{"w": "Broca", "t": 12.6}, ...]
+      "words": [{"word": "Broca", "start": 12.6, "end": 13.0}, ...]
     }
   ],
-  "frq": {"t0": 166.0, "predict_pause_s": 5, "steps": [{"t": 172.0, "text": "..."}]}
+  "frq": {"t0": 195.5, "t1": 212.5, "scene": "overview", "prompt": "...", "predict_question": "...",
+          "predict_t": 204.7, "predict_pause_s": 5,
+          "steps": [{"t": 209.7, "text": "...", "spotlight": "Broca's area"}]}
 }
 ```
 
-Validation (pydantic): every label, reveal and spotlight name exists in that scene's
-locations; `t0 < t1`; the beats cover the whole audio; the first beat starts at 0 and is
-the hook.
+Validation (pydantic): `t0 < t1`; the beats run from 0 to `frq.t0` with no gaps; a
+reveal is labelled, and a spotlight or camera target waits for its reveal; a label once
+shown stays on that scene; every name has a colour; the steps follow the predict pause.
+`timeline_problems()` adds that every name is located on its scene's art. Both videos
+open on the hook: the timeline step makes the first beat the hook scene.
 
 ## 7. The renderer
 
@@ -675,6 +699,23 @@ Rules that follow from Inkmory's code:
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
+
+### Days 3–7 in parallel
+
+The media files are fixed in code (section 5), so days 3–7 run as lanes at the same
+time, each on its own branch and pull request, against the sample job until the lanes
+before it land:
+
+1. **The routine** (set up by hand): its environment, the API trigger, then adopt the
+   operator on Inkmory and run its first beat.
+2. **Audio:** song, narration and the exam question (step 5), their timings (step 6),
+   the karaoke fallback; and the exam question's lines in the fact-check.
+3. **Art:** the interim SVG art, its masks and `locations.json` (steps 3–4).
+4. **Timeline and renderer** (steps 7–8), on the sample job's art and timings.
+5. **Web and upload:** the Droplets tab, the players on `/learn`, and the upload step (step 9).
+
+They join in `python -m studio run`: after the post, art and audio at the same time,
+then the timeline, render and upload, reporting the videos' status to the API.
 
 ## 13. Risks and fallbacks
 
