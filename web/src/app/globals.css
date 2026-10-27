@@ -9,8 +9,13 @@
   --border: #2a2d35;
   --text-primary: #e5e5e5;
   --text-secondary: #a0a0a6;
-  --text-muted: #787880;
+  --text-muted: #8a8a92;
   --text-hover: #ffffff;
+  /* Brand aqua: active tab, primary buttons. --accent-brand-text is the text on it. */
+  --accent-brand: #4CC9F0;
+  --accent-brand-text: #06202B;
+  /* The wordmark chip: one color in both themes, so the mark never changes. */
+  --brand-chip: #0B7499;
   --accent-red: #FF3B30;
   --accent-green: #30D158;
   --accent-blue: #32ADE6;
@@ -39,6 +44,8 @@
     --text-secondary: #636366;
     --text-muted: #86868b;
     --text-hover: #000000;
+    --accent-brand: #0B7499;
+    --accent-brand-text: #ffffff;
     --accent-red: #D92D20;
     --accent-green: #22994E;
     --accent-blue: #2488C5;
