@@ -3,10 +3,15 @@
 POPSMOSIS_API_URL and POPSMOSIS_API_KEY are the same two variables the skill file's
 shell commands read. Only the agent endpoints the studio needs are here
 (README, "API"); errors come back as ApiError with the API's own code and message.
+
+The one request that does not go to the API is put_file: the bytes of a video or an
+intermediate file go straight to Supabase Storage, on a signed URL the API minted
+(upload_url), so neither the Supabase key nor the agent key is ever sent there.
 """
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import urllib.error
@@ -19,6 +24,9 @@ TIMEOUT_S = 60
 USER_AGENT = "popsmosis-studio/1"
 # send(method, url, headers, body) -> (status, response body). Tests pass their own.
 Send = Callable[[str, str, dict, bytes | None], tuple[int, bytes]]
+# A body bigger than this is streamed in blocks: urllib sends bytes in one sendall, and
+# the timeout would then cap the whole upload of a video rather than each block of it.
+STREAM_OVER_BYTES = 1024 * 1024
 
 
 class ApiError(RuntimeError):
@@ -33,7 +41,12 @@ class ApiError(RuntimeError):
 
 
 def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, bytes]:
-    request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, **headers}, method=method)
+    headers = {"User-Agent": USER_AGENT, **headers}
+    data: bytes | io.BytesIO | None = body
+    if body is not None and len(body) > STREAM_OVER_BYTES:
+        data = io.BytesIO(body)  # sent 8 KB at a time; the length keeps it from going chunked
+        headers["Content-Length"] = str(len(body))
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
             return response.status, response.read()
@@ -94,6 +107,40 @@ class Api:
     def fail(self, question_id: str, reason: str) -> dict:
         return self.request("POST", f"/api/questions/{question_id}/fail", {"reason": reason})
 
+    # --- the videos (docs/PLAN.md, section 10) ----------------------------------
+
+    def upload_url(self, answer_id: str, bucket: str, file: str) -> dict:
+        """A signed URL to PUT one file to, at <bucket>/<answer_id>/<file>: { uploadUrl, path, publicUrl }.
+        publicUrl is set for the public "droplets" bucket only. 503 until the API has SUPABASE_URL."""
+        return self.request("POST", f"/api/answers/{answer_id}/upload-url", {"bucket": bucket, "file": file})
+
+    def set_video(self, answer_id: str, status: str, *, error: str | None = None, attempt: int | None = None,
+                  song_video_url: str | None = None, lesson_video_url: str | None = None,
+                  song_poster_url: str | None = None, lesson_poster_url: str | None = None) -> dict:
+        """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved.
+        With the attempt this run holds, 409 unless it is still the render's current attempt."""
+        body: dict = {"status": status}
+        if attempt is not None:
+            body["attempt"] = attempt
+        for key, value in (("songVideoUrl", song_video_url), ("lessonVideoUrl", lesson_video_url),
+                           ("songPosterUrl", song_poster_url), ("lessonPosterUrl", lesson_poster_url)):
+            if value is not None:
+                body[key] = value
+        if error is not None:
+            body["error"] = error
+        return self.request("PATCH", f"/api/answers/{answer_id}/video", body)
+
+    def put_file(self, upload_url: str, data: bytes, content_type: str, cache_seconds: int = 3600) -> None:
+        """PUT one file's bytes to a signed Supabase Storage URL, as supabase-js's uploadToSignedUrl
+        does: the raw bytes, their Content-Type, and the token in the URL as the only credential."""
+        headers = {"Content-Type": content_type, "Cache-Control": f"max-age={cache_seconds}", "x-upsert": "true"}
+        status, raw = self.send("PUT", upload_url, headers, data)
+        if not 200 <= status < 300:
+            try:
+                message = json.loads(raw).get("message") or json.loads(raw).get("error") or ""
+            except (ValueError, AttributeError):
+                message = ""
+            raise ApiError(status, "UPLOAD_FAILED", f"storage answered {status}" + (f": {message}" if message else ""))
     # --- the videos (docs/PLAN.md, section 12) ---------------------------------
 
     def claim_videos(self, answer_id: str, attempt: int | None = None) -> dict:

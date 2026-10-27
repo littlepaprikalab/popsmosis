@@ -57,10 +57,16 @@ export function videoUrlError(value: unknown, field: string): string | null {
   return `${field} must be an http(s) URL`;
 }
 
+// The video fields the page, the agent and the Droplets tab read.
+export const VIDEO_FIELDS = ['songVideoUrl', 'lessonVideoUrl', 'songPosterUrl', 'lessonPosterUrl'] as const;
+export type VideoField = (typeof VIDEO_FIELDS)[number];
+
 type VideoRow = {
   videoStatus: VideoStatus | null;
   songVideoUrl: string | null;
   lessonVideoUrl: string | null;
+  songPosterUrl: string | null;
+  lessonPosterUrl: string | null;
   videoError: string | null;
   videoUpdatedAt: Date | null;
 };
@@ -74,6 +80,8 @@ export function serializeVideo(a: VideoRow, now: Date = new Date()) {
     status: stale ? ('FAILED' as const) : a.videoStatus,
     songVideoUrl: a.songVideoUrl,
     lessonVideoUrl: a.lessonVideoUrl,
+    songPosterUrl: a.songPosterUrl,
+    lessonPosterUrl: a.lessonPosterUrl,
     error: stale ? STALE_VIDEO_ERROR : a.videoError,
     updatedAt: a.videoUpdatedAt?.toISOString() ?? null,
   };
@@ -101,5 +109,92 @@ export function followUpContext(bundle: unknown) {
       twist: str(frq.twist),
     },
     lyrics: list(bundle.lyrics).map((l) => ({ section: str(l.section), text: str(l.text) })),
+  };
+}
+
+// --- The public Droplets tab (docs/PLAN.md, section 10) ---------------------------
+
+/**
+ * Only these fields leave the database for the public endpoints: never the question,
+ * its asker, its files or the follow-ups. The bundle is read for its title and lyrics.
+ */
+export const publicDropletSelect = {
+  id: true,
+  content: true,
+  createdAt: true,
+  bundle: true,
+  songVideoUrl: true,
+  lessonVideoUrl: true,
+  songPosterUrl: true,
+  lessonPosterUrl: true,
+} as const;
+
+/** What the Droplets tab may list: the videos are READY and no admin hid it. */
+export const publicDropletWhere = { videoStatus: 'READY' as const, hiddenAt: null };
+
+type PublicDropletRow = {
+  id: string;
+  content: string;
+  createdAt: Date;
+  bundle: unknown;
+  songVideoUrl: string | null;
+  lessonVideoUrl: string | null;
+  songPosterUrl: string | null;
+  lessonPosterUrl: string | null;
+};
+
+const EXCERPT_LENGTH = 200;
+// How much of the lesson the list reads to make an excerpt; markdown only shrinks it.
+export const EXCERPT_SOURCE_LENGTH = EXCERPT_LENGTH * 8;
+
+/** The lesson's first lines as plain text, for a card on the list. */
+export function excerptOf(markdown: string, max = EXCERPT_LENGTH): string {
+  const text = markdown
+    .slice(0, max * 8) // EXCERPT_SOURCE_LENGTH for the default max
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1') // links and images
+    .replace(/^[ \t|:-]*-{3,}[ \t|:-]*$/gm, ' ') // table and horizontal rules
+    .replace(/[#>*_`|]+/g, ' ') // headings, quotes, emphasis, code, table pipes
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+}
+
+/** "AP Biology: the light reactions", from the bundle; never the learner's own words. */
+export function dropletTitle(bundle: unknown): { title: string; course: string; topic: string } {
+  const course = isObject(bundle) && typeof bundle.course === 'string' ? bundle.course.trim() : '';
+  const topic = isObject(bundle) && typeof bundle.topic === 'string' ? bundle.topic.trim() : '';
+  const title = course && topic ? `${course}: ${topic}` : topic || course || 'A droplet';
+  return { title, course, topic };
+}
+
+function publicVideo(a: PublicDropletRow) {
+  return {
+    songVideoUrl: a.songVideoUrl,
+    lessonVideoUrl: a.lessonVideoUrl,
+    songPosterUrl: a.songPosterUrl,
+    lessonPosterUrl: a.lessonPosterUrl,
+  };
+}
+
+/** A card on the list: the title, a few lines of the lesson, the videos. */
+export function serializeDropletCard(a: PublicDropletRow) {
+  return {
+    id: a.id,
+    ...dropletTitle(a.bundle),
+    excerpt: excerptOf(a.content),
+    video: publicVideo(a),
+    createdAt: a.createdAt.toISOString(),
+  };
+}
+
+/** One droplet: the card, the whole lesson and the song's lyrics. */
+export function serializeDroplet(a: PublicDropletRow) {
+  const lyrics = isObject(a.bundle) && Array.isArray(a.bundle.lyrics) ? a.bundle.lyrics.filter(isObject) : [];
+  return {
+    ...serializeDropletCard(a),
+    content: a.content,
+    lyrics: lyrics
+      .map((l) => ({ section: typeof l.section === 'string' ? l.section : '', text: typeof l.text === 'string' ? l.text : '' }))
+      .filter((l) => l.text),
   };
 }

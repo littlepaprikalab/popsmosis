@@ -39,6 +39,8 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
               "style-src 'self' 'unsafe-inline'",
               'img-src \'self\' https: data:',
+              // The droplet videos live in Supabase Storage's public bucket (docs/PLAN.md, section 10).
+              "media-src 'self' https:",
               `connect-src 'self' ${apiUrl} https://accounts.google.com`,
               "font-src 'self'",
               "object-src 'none'",

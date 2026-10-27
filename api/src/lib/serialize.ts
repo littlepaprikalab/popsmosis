@@ -61,8 +61,11 @@ type AnswerRow = {
   videoStatus: VideoStatus | null;
   songVideoUrl: string | null;
   lessonVideoUrl: string | null;
+  songPosterUrl: string | null;
+  lessonPosterUrl: string | null;
   videoError: string | null;
   videoUpdatedAt: Date | null;
+  hiddenAt: Date | null;
   agent: { id: string; name: string };
   replies: ReplyRow[];
 };
@@ -117,6 +120,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     model: a.model,
     createdAt: a.createdAt.toISOString(),
     video: serializeVideo(a), // null: a text-only droplet
+    hidden: a.hiddenAt !== null, // an admin took it off the public Droplets tab
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,

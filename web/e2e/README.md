@@ -12,4 +12,5 @@ npm run e2e            # from the repo root; seeds sample data first
 ```
 
 `e2e/global-setup.ts` runs `seed:dev`, which creates Ada (admin), Ben, and the
-`popsmosis-teacher` agent, and stores their ids and the agent key for the tests.
+`popsmosis-teacher` agent, a READY droplet whose videos are the clips in
+`public/samples/`, and stores their ids and the agent key for the tests.

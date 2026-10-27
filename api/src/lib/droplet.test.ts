@@ -1,5 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { dropletJsonError, videoUrlError, serializeVideo, followUpContext, STALE_VIDEO_ERROR, DROPLET_JSON_MAX_BYTES } from './droplet.js';
+import {
+  dropletJsonError, videoUrlError, serializeVideo, followUpContext, STALE_VIDEO_ERROR, DROPLET_JSON_MAX_BYTES,
+  dropletTitle, excerptOf, serializeDroplet, serializeDropletCard,
+} from './droplet.js';
 
 describe('dropletJsonError', () => {
   const passed = { status: 'passed', rounds: 1, lines: [] };
@@ -35,7 +38,7 @@ describe('videoUrlError', () => {
 describe('serializeVideo', () => {
   afterEach(() => { delete process.env.VIDEO_STALE_MINUTES; });
   const row = (status: 'RENDERING' | 'READY' | 'FAILED' | null, minutesAgo: number) => ({
-    videoStatus: status, songVideoUrl: null, lessonVideoUrl: null, videoError: null,
+    videoStatus: status, songVideoUrl: null, lessonVideoUrl: null, songPosterUrl: null, lessonPosterUrl: null, videoError: null,
     videoUpdatedAt: new Date(Date.now() - minutesAgo * 60_000),
   });
   it('is null for a text-only droplet', () => {
@@ -71,5 +74,39 @@ describe('followUpContext', () => {
   it('is null without a bundle, and tolerant of a partial one', () => {
     expect(followUpContext(null)).toBeNull();
     expect(followUpContext({ topic: 'DNA', facts: 'nope' })).toMatchObject({ topic: 'DNA', facts: [], lyrics: [] });
+  });
+});
+
+describe('the public droplet', () => {
+  const row = {
+    id: 'a1',
+    content: '## ATP synthase\n\nA **rotary motor** in the [inner membrane](https://x.org).\n\n| A | B |\n|---|---|\n| 1 | 2 |',
+    createdAt: new Date('2026-10-27T12:00:00Z'),
+    bundle: {
+      course: 'AP Biology', topic: 'ATP synthase', core_idea: 'x', scenes: [{ id: 's' }],
+      lyrics: [{ id: 'l1', section: 'verse', text: 'Protons flow', names: [], fact_id: 'f1' }, { id: 'l2', section: 'chorus' }, 'junk'],
+    },
+    songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null,
+  };
+
+  it('is titled from the bundle, never the request', () => {
+    expect(dropletTitle(row.bundle)).toEqual({ title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase' });
+    expect(dropletTitle({ topic: 'DNA' }).title).toBe('DNA');
+    expect(dropletTitle(null).title).toBe('A droplet');
+  });
+
+  it('lists a card with plain-text lines of the lesson', () => {
+    const card = serializeDropletCard(row);
+    expect(card.excerpt).toBe('ATP synthase A rotary motor in the inner membrane. A B 1 2');
+    expect(card.video).toEqual({ songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null });
+    expect(Object.keys(card).sort()).toEqual(['course', 'createdAt', 'excerpt', 'id', 'title', 'topic', 'video']);
+    expect(excerptOf('word '.repeat(100), 20)).toBe('word word word word…');
+  });
+
+  it('shows one with the lesson and the lyrics, and nothing else from the bundle', () => {
+    const droplet = serializeDroplet(row);
+    expect(droplet.content).toBe(row.content);
+    expect(droplet.lyrics).toEqual([{ section: 'verse', text: 'Protons flow' }]);
+    expect(JSON.stringify(droplet)).not.toMatch(/core_idea|scenes|fact_id/);
   });
 });
