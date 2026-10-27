@@ -100,9 +100,18 @@ The teacher runs it on a topic from the queue, by the question's id. That needs
 
 ```bash
 python -m studio run <question-id>       # claim, bundle, fact-check, post; again resumes at the first missing step
-python -m studio fail <question-id>      # after a second failure: give the topic up with the reason
+python -m studio fail <question-id>      # after a second failure: give the topic up (its videos, once posted)
 python -m studio summary <question-id>   # what its runs did, for the teacher's record
+python -m studio videos <question-id>    # the posted lesson's two videos; --background on a routine
+python -m studio wait <question-id>      # the background videos' outcome, waiting up to 9 minutes
+python -m studio recover                 # take a render that died with its machine and rebuild its job here
 ```
+
+`videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
+the timeline, render and upload. `run` claims the videos as soon as it posts the lesson,
+and `videos` renews the claim before every step, so a render whose machine dies is handed
+to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=off` makes
+text-only droplets.
 
 `run` prints one line: `DONE`, `FAILED <step>: <reason>` (run it again to retry that
 step) or `STOPPED <step>: <reason>` (the topic is gone, taken or done, or an earlier run
@@ -136,6 +145,12 @@ python -m pytest studio                   # the studio, offline; test_live.py al
 CI runs all of it: API typecheck and tests against a Postgres service, the web build,
 the browser tests against the real stack, and the studio's offline tests.
 
+In a Claude Code cloud session, `.claude/hooks/session-start.sh` sets all of this up before
+the session starts: ffmpeg and libEGL, the studio's packages (PyTorch, Demucs and skia
+included) and the song timing's models, the node packages and Prisma client, and a running
+Postgres with the `popsmosis` database migrated and `DATABASE_URL` set. The first session in
+an environment takes about two minutes; later ones skip what has not changed.
+
 ## API
 
 Errors are always `{ "error": { "code", "message" } }`.
@@ -167,6 +182,9 @@ Errors are always `{ "error": { "code", "message" } }`.
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, error? }`; a URL left out is kept, so the two videos can report separately |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until `SUPABASE_URL` is set |
+| POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, bundle, factcheck }`; 409 when another run holds them, they are READY, or the attempts are used up |
+| GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
+| POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt }`; give the videos up (FAILED with the reason); only the current attempt may |
 | GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |
 | GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
