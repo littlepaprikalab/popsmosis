@@ -16,9 +16,12 @@ last try the scene keeps its best drawing and leaves those structures out of
 locations.json (the timeline then skips them), as long as at least half of the scene's
 structures are located. Fewer than that and the scene could not teach, so the step fails.
 
+Each kept drawing starts with a key made from the topic and its scene, so art drawn for
+an earlier bundle never counts as done: if the bundle is written again, the art is too.
 Running the step again redraws every scene. A run that stopped partway (no
-locations.json yet) keeps the scenes it already drew, unless the scene or the prompt
-changed since.
+locations.json yet) keeps the scenes it already drew, unless their scene changed since.
+An answer cut off at the output limit counts as a refused try; any other brain error
+fails the step, and the scenes already drawn are kept for the retry.
 """
 
 from __future__ import annotations
@@ -66,7 +69,8 @@ def is_done(job: Path) -> bool:
 
 
 def located(job: Path) -> Locations | None:
-    """locations.json, if it reads, matches the bundle, and the files it points to are there."""
+    """locations.json, if it reads, matches the bundle, the files it points to are there, and
+    the art drawn as SVG was drawn for this bundle's scenes."""
     try:
         locations = read(job / media.LOCATIONS, Locations)
         bundle = checks.load(job / "bundle.json")
@@ -75,7 +79,28 @@ def located(job: Path) -> Locations | None:
     if locations_problems(locations, bundle):
         return None
     files = [s.art for s in locations.scenes] + [s.mask for scene in locations.scenes for s in scene.structures]
-    return locations if all((job / f).exists() for f in files) else None
+    if not all((job / f).exists() for f in files):
+        return None
+    for scene in bundle.scenes:
+        drawn = locations.scene(scene.id)
+        if any(s.found_by == "svg" for s in drawn.structures) and not _saved(job, bundle, scene):
+            return None
+    return locations
+
+
+def _marker(bundle: Bundle, scene: Scene) -> str:
+    return f"<!-- popsmosis art {key(bundle, scene)} -->\n"
+
+
+def _saved(job: Path, bundle: Bundle, scene: Scene) -> str | None:
+    """The scene's kept drawing, if it was drawn for this scene as the bundle now has it."""
+    path, marker = job / "art" / f"{scene.id}.svg", _marker(bundle, scene)
+    try:
+        with path.open(encoding="utf-8") as f:
+            head = f.read(len(marker))
+            return head + f.read() if head == marker else None
+    except (OSError, UnicodeDecodeError):
+        return None
 
 
 # --- one scene ----------------------------------------------------------------------
@@ -101,7 +126,10 @@ class Drawing:
 
 def judge(text: str, scene: Scene) -> Drawing:
     """Check a drawing, and if it can be used, draw it and find its structures."""
-    checked = svg.check(text, scene.structures)
+    try:
+        checked = svg.check(text, scene.structures)
+    except RecursionError:
+        return Drawing(text, ["the SVG nests groups too deeply; keep it to a few levels"])
     drawing = Drawing(text, checked.all())
     if checked.problems:
         return drawing
@@ -111,6 +139,9 @@ def judge(text: str, scene: Scene) -> Drawing:
         all_masks = svg.masks(checked.root, names)
     except ValueError as e:
         drawing.problems.append(str(e))
+        return drawing
+    except RecursionError:
+        drawing.problems.append("the SVG nests groups too deeply; keep it to a few levels")
         return drawing
     drawing.usable = True
     for name in names:
@@ -126,33 +157,35 @@ def judge(text: str, scene: Scene) -> Drawing:
 
 def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
     """The scene's drawing: the saved one when resuming, else the brain's best of MAX_TRIES."""
-    saved = job / "art" / f"{scene.id}.svg"
-    marker = f"<!-- popsmosis art {key(bundle, scene)} -->\n"
-    if resume and saved.exists():
-        text = saved.read_text(encoding="utf-8")
-        if text.startswith(marker):
-            drawing = judge(text[len(marker):], scene)
-            if drawing.enough(scene):
-                return drawing
+    marker = _marker(bundle, scene)
+    text = _saved(job, bundle, scene) if resume else None
+    if text is not None:
+        drawing = judge(text[len(marker):], scene)
+        if drawing.enough(scene):
+            return drawing
     for old in (job / "art").glob(f"{scene.id}.try*.svg"):
         old.unlink()
 
     best, previous = None, None
     for n in range(1, MAX_TRIES + 1):
-        answer = ask("brain", user_prompt(bundle, scene, previous), system=PROMPT,
-                     label=f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
-        drawing = judge(svg.extract(answer["text"]), scene)
+        try:
+            answer = ask("brain", user_prompt(bundle, scene, previous), system=PROMPT,
+                         label=f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
+            drawing = judge(svg.extract(answer["text"]), scene)
+        except brain.Truncated:
+            drawing = Drawing("", ["the answer was cut off before </svg>; draw it simpler, under 40 KB"])
         if drawing.usable and (best is None or len(drawing.found) >= len(best.found)):
             best = drawing
         if drawing.usable and not drawing.problems:
             break
-        (job / "art" / f"{scene.id}.try{n}.svg").write_text(drawing.text, encoding="utf-8")
+        if drawing.text:
+            (job / "art" / f"{scene.id}.try{n}.svg").write_text(drawing.text, encoding="utf-8")
         previous = drawing
     if best is None or not best.enough(scene):
         why = (best or drawing).problems
         raise media.StepFailed(f"scene {scene.id}: no usable drawing in {MAX_TRIES} tries: {why[0]}"
                                + (f" (and {len(why) - 1} more problems)" if len(why) > 1 else ""))
-    saved.write_text(marker + best.text, encoding="utf-8")
+    (job / "art" / f"{scene.id}.svg").write_text(marker + best.text, encoding="utf-8")
     return best
 
 
@@ -175,8 +208,11 @@ def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
 
 
 def key(bundle: Bundle, scene: Scene) -> str:
-    """Changes when the scene, the topic or the prompt does: a saved drawing is reused only if it has not."""
-    data = json.dumps([bundle.topic, scene.model_dump(), PROMPT], sort_keys=True)
+    """Changes when the topic or the scene does (its prompt, structures, colours).
+
+    Not when the art prompt does: a prompt change should not redraw finished jobs.
+    """
+    data = json.dumps([bundle.topic, scene.model_dump()], sort_keys=True)
     return hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]
 
 
@@ -198,6 +234,6 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     if previous is not None:
         parts.append("Your last drawing of this scene, below, was refused:\n"
                      + "\n".join(f"- {p}" for p in previous.problems)
-                     + "\nDraw the whole scene again with these fixed, and answer with the SVG only.\n"
-                     + f"<last_drawing>\n{previous.text}\n</last_drawing>")
+                     + "\nDraw the whole scene again with these fixed, and answer with the SVG only."
+                     + (f"\n<last_drawing>\n{previous.text}\n</last_drawing>" if previous.text else ""))
     return "\n\n".join(parts)

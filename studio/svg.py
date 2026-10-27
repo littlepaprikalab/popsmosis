@@ -35,6 +35,7 @@ ET.register_namespace("xlink", XLINK)
 
 MARK = "data-structure"
 VIEWBOX = (0.0, 0.0, float(ART_WIDTH), float(ART_HEIGHT))
+MAX_BYTES = 400_000  # the prompt asks for under 40 KB; far past that it is runaway output
 MIN_AREA = 1500  # visible pixels a structure needs before a label can point at it (about 40 x 40)
 
 SHAPES = {"path", "rect", "circle", "ellipse", "line", "polyline", "polygon"}
@@ -78,6 +79,8 @@ def extract(answer: str) -> str:
 
 def check(text: str, structures: list[Structure]) -> Checked:
     """Parse a drawing and check it against the scene's structures."""
+    if len(text.encode("utf-8")) > MAX_BYTES:
+        return Checked(None, [f"the SVG is {len(text) // 1000} KB; keep it under 40 KB with smooth curves"])
     # No DTD at all: that rules out entity expansion and external entities before parsing.
     if re.search(r"<!(DOCTYPE|ENTITY)", text, re.IGNORECASE):
         return Checked(None, ["the SVG must not have a DOCTYPE or entities"])
@@ -120,10 +123,15 @@ def check(text: str, structures: list[Structure]) -> Checked:
         problems.append("the SVG must not contain " + ", ".join(sorted(refused))
                         + f"; allowed elements are {', '.join(sorted(ALLOWED))}")
 
+    # A name marked with another case or spacing ("ATP Synthase") still counts, and is
+    # rewritten to the listed name, which is what the masks look for.
+    canon = {_squash(s.name): s.name for s in structures}
     marked: dict[str, list[ET.Element]] = {}
     for el in root.iter():
         if el.get(MARK) is not None:
-            marked.setdefault(el.get(MARK), []).append(el)
+            name = canon.get(_squash(el.get(MARK)), el.get(MARK))
+            el.set(MARK, name)
+            marked.setdefault(name, []).append(el)
     listed = {s.name for s in structures}
     for s in structures:
         found = marked.get(s.name, [])
@@ -300,12 +308,20 @@ def _painted(root: ET.Element, name: str) -> ET.Element:
     return root
 
 
+def _squash(name: str) -> str:
+    return " ".join(name.split()).casefold()
+
+
 def _hex(value: str) -> str | None:
+    """#RRGGBB from #RRGGBB, #RGB, #RRGGBBAA or rgb(r, g, b); None for anything else."""
     value = value.strip()
-    if re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
-        return value.upper()
+    if re.fullmatch(r"#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?", value):
+        return value[:7].upper()
     if re.fullmatch(r"#[0-9A-Fa-f]{3}", value):
         return "#" + "".join(c * 2 for c in value[1:]).upper()
+    rgb = re.fullmatch(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(,[^)]*)?\)", value)
+    if rgb and all(int(c) <= 255 for c in rgb.groups()[:3]):
+        return "#" + "".join(f"{int(c):02X}" for c in rgb.groups()[:3])
     return None
 
 

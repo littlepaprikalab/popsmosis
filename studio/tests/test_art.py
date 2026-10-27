@@ -267,3 +267,68 @@ def test_a_label_anchor_is_deep_inside_even_when_the_centroid_is_not():
     ax, ay = found.label_anchor.x, found.label_anchor.y
     assert ring[int(ay), int(ax)] and 215 < np.hypot(ax - 896, ay - 512) < 245
     assert svg.locate(np.zeros_like(ring)) is None
+
+
+# --- review fixes: staleness, cut-off answers, lenient names and colours -------------------
+
+
+def test_art_drawn_for_an_earlier_bundle_is_not_done(job):
+    art.run(job, FakeArtist())
+    assert art.is_done(job) and locate.is_done(job)
+    data = sample_media.bundle().model_dump()
+    data["scenes"][2]["structures"][0]["color_hex"] = "#AA0000"  # same scene ids, a new colour
+    jobs.write(job / "bundle.json", data)
+    assert not art.is_done(job) and not locate.is_done(job)
+    data["scenes"][2]["structures"][0]["color_hex"] = "#3366CC"
+    data["topic"] = "the Calvin cycle"
+    jobs.write(job / "bundle.json", data)
+    assert not art.is_done(job)
+
+
+def test_an_answer_cut_off_is_a_refused_try_and_other_brain_errors_fail_the_step(job):
+    from studio import brain
+
+    class CutOffOnce(FakeArtist):
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if label == "art hook":
+                self.prompts.append((label, prompt))
+                raise brain.Truncated("hit max_tokens")
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    artist = CutOffOnce()
+    art.run(job, artist)
+    assert artist.labels()[:2] == ["art hook", "art hook try 2"]
+    assert "cut off" in artist.prompts[1][1] and "<last_drawing>" not in artist.prompts[1][1]
+
+    def refuses(*args, **kwargs):
+        raise brain.Refused("model")
+
+    with pytest.raises(brain.Refused):
+        art.run(job, refuses)
+
+
+def test_names_in_another_case_and_rgb_colours_count():
+    loose = '<g data-structure="  thylakoid "><rect width="300" height="300" fill="rgb(46, 139, 87)"/></g>'
+    checked = svg.check(svg_text(loose), [THYLAKOID])
+    assert checked.all() == []
+    mask = svg.masks(checked.root, ["Thylakoid"])["Thylakoid"]
+    assert mask[100, 100] and svg.locate(mask) is not None
+    assert problems_of(svg_text(blob("Thylakoid", "#2E8B57CC"))) == []
+
+
+def test_runaway_and_deeply_nested_drawings_are_refused():
+    huge = svg_text(blob("Thylakoid", "#2E8B57"), "<g>" + '<rect width="1" height="1"/>' * 20000 + "</g>")
+    assert "keep it under 40 KB" in problems_of(huge)[0]
+    deep = svg_text("<g>" * 3000 + blob("Thylakoid", "#2E8B57") + "</g>" * 3000)
+    scene = sample_media.bundle().scenes[0]
+    drawing = art.judge(deep, scene)
+    assert not drawing.usable and "nests groups too deeply" in drawing.problems[0]
+
+
+def test_the_sample_timelines_fit_the_locations_the_art_step_writes(job):
+    from studio.schemas import Timeline, timeline_problems
+
+    art.run(job, FakeArtist())
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    for video in media.VIDEOS:
+        assert timeline_problems(jobs.read(job / media.timeline_path(video), Timeline), locations) == []
