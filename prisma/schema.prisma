@@ -113,8 +113,13 @@ model Answer {
   hiddenAt        DateTime? // an admin took it off the public Droplets tab; null: listed once READY
   videoAttempts   Int          @default(0) // renders started (POST /api/answers/:id/video/claim); recovery stops at VIDEO_MAX_ATTEMPTS
 
+  // How the droplet was made, step by step: each step's time and tries, its cost and the models that ran it
+  // (studio/ledger.py, lib/breakdown.ts). Shown under the lesson on /learn.
+  lessonBreakdown Json? // the steps up to the post, sent with the lesson
+  videoBreakdown  Json? // the media steps, sent with READY
+
   // The Droplets tab's thumbs-up and comments, counted. Kept by triggers on droplet_likes and droplet_comments
-  // (migration 20261030120000_droplet_engagement), never written by the API, so a cascade from a deleted user or a
+  // (migration 20261031120000_droplet_engagement), never written by the API, so a cascade from a deleted user or a
   // hand-run DELETE keeps them exact too.
   likeCount    Int @default(0)
   commentCount Int @default(0)

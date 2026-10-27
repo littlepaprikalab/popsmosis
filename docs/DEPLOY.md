@@ -270,6 +270,12 @@ running API always uses `DATABASE_URL`. If that is the transaction pooler (port 
 downtime. Deploy `popsmosis-api` before `popsmosis-web`, since the web app's new pages call
 its new endpoints.
 
+`20261030120000_breakdown` (each droplet's bill of materials) adds two nullable `JSONB`
+columns to `answers` (`lessonBreakdown`, `videoBreakdown`); it rewrites no rows and needs no
+downtime. Either service can go first: the API before it ignores the studio's `breakdown`
+field, and the web app shows no bill for an answer that has none. Deploy `popsmosis-api`
+first anyway, as for any migration.
+
 ## Troubleshooting
 
 | Symptom | Cause |

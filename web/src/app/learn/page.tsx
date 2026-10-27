@@ -20,6 +20,8 @@ import { ReplyThread } from '@/components/ReplyThread';
 import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
+import { DropletBreakdown } from '@/components/DropletBreakdown';
+import { Wordmark } from '@/components/Wordmark';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -49,7 +51,8 @@ function isArmed(q: Question, now = Date.now()): boolean {
 /** Whether a re-fetched card differs from the one on screen in anything a card shows. */
 function videoKey(a: Answer | null): string {
   const v = a?.video;
-  return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden].join('|') : `none|${a?.hidden}`;
+  const bill = a?.breakdown ? `${a.breakdown.steps.length}|${a.breakdown.seconds}` : 'no-bill';
+  return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden, bill].join('|') : `none|${a?.hidden}|${bill}`;
 }
 
 export default function LearnPage() {
@@ -217,6 +220,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                     )}
                   </p>
                 )}
+                {answer.breakdown && <DropletBreakdown breakdown={answer.breakdown} video={answer.video} />}
                 <ReplyThread answer={answer} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">
@@ -421,7 +425,7 @@ function LearnContent() {
       <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
         <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
           style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-          <h1 className="text-2xl font-bold mb-2 tracking-wider" style={{ color: 'var(--accent-red)' }}>POPSMOSIS</h1>
+          <h1 className="mb-3"><Wordmark size="lg" /></h1>
           <p className="text-sm mb-1 font-bold" style={{ color: 'var(--text-primary)' }}>
             Droplets for learning
           </p>
@@ -430,7 +434,7 @@ function LearnContent() {
           </p>
           <Link href="/auth/callback?returnTo=%2Flearn"
             className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"
-            style={{ background: 'var(--accent-green)', color: 'var(--btn-filled-text)' }}>
+            style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
             Sign in with Google
           </Link>
           <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
@@ -495,8 +499,8 @@ function LearnContent() {
             disabled={!canAsk}
             className="px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors"
             style={{
-              background: canAsk ? 'var(--accent-green)' : 'var(--bg-tertiary)',
-              color: canAsk ? 'var(--btn-filled-text)' : 'var(--text-muted)',
+              background: canAsk ? 'var(--accent-brand)' : 'var(--bg-tertiary)',
+              color: canAsk ? 'var(--accent-brand-text)' : 'var(--text-muted)',
             }}
           >
             {submitting ? '...' : 'SUBMIT'}

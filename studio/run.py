@@ -37,20 +37,19 @@ import fcntl
 import json
 import re
 import sys
-import threading
 import time
 import traceback
-from dataclasses import asdict
 from pathlib import Path
 
-from studio import brain, checks, jobs
+from studio import brain, checks, jobs, ledger
 from studio.api import Api, ApiError
+from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
 from studio.schemas import Bundle, FactCheckReport, Request
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 
-STEPS = ("request", "bundle", "factcheck", "post")
+STEPS = ledger.LESSON_STEPS  # ("request", "bundle", "factcheck", "post")
 DONE, FAILED, STOPPED = "DONE", "FAILED", "STOPPED"
 EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3}
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -146,8 +145,9 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
         step_clock = time.monotonic()
         try:
             api = api or Api.from_env()
-            question = claim(api, question_id) if step != "post" else None
-            reason = STEP_RUNNERS[step](job, api, question, ask)
+            with ledger.at_step(step):
+                question = claim(api, question_id) if step != "post" else None
+                reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
         except Stop as e:
             result, reason = STOPPED, str(e)
@@ -265,6 +265,10 @@ def post_lesson(job: Path, api: Api, question: dict | None, ask) -> str:
     model = lesson_model(job)
     if model:
         body["model"] = model
+    # How long each step took and what it cost, shown under the droplet (studio/ledger.py).
+    breakdown = ledger.try_breakdown(job, "lesson")
+    if breakdown:
+        body["breakdown"] = breakdown
     try:
         answer = api.post_answer(job.name, body)
     except ApiError as e:
@@ -295,7 +299,7 @@ STEP_RUNNERS = {"request": make_request, "bundle": make_bundle, "factcheck": mak
 
 def lesson_model(job: Path) -> str | None:
     """The model that wrote the bundle: after a fallback, the one that answered."""
-    models = [call["model"] for call in read_jsonl(job / "calls.jsonl") if call.get("label") == "bundle"]
+    models = [call["model"] for call in ledger.read(job) if call.get("label") == "bundle"]
     return models[-1] if models else None
 
 
@@ -372,11 +376,9 @@ def summary(question_id: str) -> str:
         last = video_runs[-1]
         parts.append({DONE: "Videos made.", FAILED: f"Videos failed at {last['step']}.",
                       STOPPED: f"Videos stopped at {last['step']}."}[last["result"]])
-    calls = read_jsonl(job / "calls.jsonl")
+    calls = [c for c in ledger.read(job) if c.get("role") != "local"]  # Demucs and MMS run here, unbilled
     if calls:
-        costs = [c.get("cost_usd") for c in calls]
-        cost = f"${sum(costs):.2f}" if None not in costs else "cost n/a"
-        parts.append(f"{len(calls)} brain call(s), {cost}.")
+        parts.append(f"{len(calls)} model call(s), {ledger.cost_text(calls)}.")
     return _short(" ".join(parts), CYCLE_LOG_MAX)
 
 
@@ -384,7 +386,7 @@ def summary(question_id: str) -> str:
 
 
 def logged_ask(job: Path):
-    """brain.ask, logging each call to the job's calls.jsonl and stderr as it ends."""
+    """brain.ask, logging each call to the job's calls.jsonl (tagged with its step) and stderr as it ends."""
 
     def ask(*args, **kwargs):
         # Only this thread's calls: another thread may be asking at the same time.
@@ -392,23 +394,9 @@ def logged_ask(job: Path):
             try:
                 return brain.ask(*args, **kwargs)
             finally:
-                with _LOG_LOCK, (job / "calls.jsonl").open("a", encoding="utf-8") as log:
-                    for call in mine:
-                        log.write(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **asdict(call)}) + "\n")
-                        print(f"  {call_row(call)}", file=sys.stderr)
+                ledger.log(job, mine)
 
     return ask
-
-
-_LOG_LOCK = threading.Lock()
-
-
-def call_row(call: brain.Call) -> str:
-    cost = f"${call.cost_usd:.4f}" if call.cost_usd is not None else "n/a"
-    flags = "".join([" fell back" if call.fell_back else "",
-                     f" ({call.stop_reason})" if call.stop_reason not in ("end_turn", "stop") else ""])
-    return (f"{call.label:<20} {call.model:<17} {call.input_tokens:>7} {call.output_tokens:>7} {cost:>8} "
-            f"{call.seconds:>6.1f}s{flags}")
 
 
 def read_jsonl(path: Path) -> list[dict]:

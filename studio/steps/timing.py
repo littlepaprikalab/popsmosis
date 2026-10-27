@@ -6,7 +6,9 @@
                                   its sections are not pinned: a Gemini song)
     timing/narration_words.json   from the character timings the TTS returned (step 5)
     timing/frq_words.json
-    timing/song_report.json       how sure the aligner was of each line, and chorus drift
+    timing/song_report.json       how sure the aligner was of each line, the lines it was unsure
+                                  of that it heard again alone between their neighbours, and
+                                  chorus drift
     audio/song.vocals.wav         the separated vocals, 16 kHz mono, kept so a re-run skips Demucs
                                   (until the song is made again)
 
@@ -16,7 +18,8 @@ report and in the step's summary line; the timing is still written, since the
 renderer can live with it, but a flagged section is the one to regenerate.
 
 torch, torchaudio and demucs are imported only when the song is aligned, so the rest
-of the studio (and its tests) load without them.
+of the studio (and its tests) load without them. Both models run on this machine, so
+calls.jsonl logs them with their time and no cost (studio/ledger.py).
 """
 
 from __future__ import annotations
@@ -25,13 +28,14 @@ import json
 import re
 import statistics
 import subprocess
+import time
 import unicodedata
 import wave
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Callable
 
-from studio import brain, jobs, media
+from studio import brain, jobs, ledger, media
 from studio.schemas import TOLERANCE_S, Bundle, TimedLine, Timing, Word, timing_problems
 from studio.steps import audio as audio_step
 
@@ -41,7 +45,10 @@ DRIFT_S = 0.5
 MARGIN_S = 2.0  # how far past its planned ends each section's window reaches
 LOW_SCORE = 0.3  # a line the aligner is this unsure of was probably sung differently
 SAMPLE_RATE = 16000
-CHUNK_S = 30  # the aligner's front end hears a longer window this much at a time (_emission)
+CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
+CONTEXT_S = 5  # with this much of the audio either side of each piece
+DEMUCS_MODEL = "htdemucs"
+MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
@@ -210,44 +217,83 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     """The song's Timing and its report. `align` and `vocals` stand in for MMS and Demucs in tests."""
     plan = json.loads((job / audio_step.plan_path("song")).read_text(encoding="utf-8"))
     length = audio_step.duration(job / media.audio_path("song"))
-    vocals = vocals if vocals is not None else separate_vocals(job)
+    if vocals is None:
+        started, cached = time.monotonic(), vocals_current(job)
+        vocals = separate_vocals(job)
+        if not cached:
+            _log_local(job, "song vocals", DEMUCS_MODEL, started)
+    aligning = None if align else time.monotonic()
     align = align or mms_aligner()
     texts = {line.id: line.text for line in bundle.lyrics}
     planned_ms = sum(s["duration_ms"] for s in plan["sections"])
     scale = length * 1000 / planned_ms if planned_ms else 1.0  # the song can run a little long or short
 
-    lines, scores, previous = [], {}, 0.0
+    lines, scores = [], {}
     for section in windows(plan):
         t0 = max(0.0, section["start_ms"] * scale / 1000 - MARGIN_S)
         t1 = min(length, (section["start_ms"] + section["duration_ms"]) * scale / 1000 + MARGIN_S)
-        window = vocals[..., int(t0 * SAMPLE_RATE):int(t1 * SAMPLE_RATE)]
-        words = [(line_id, word) for line_id in section["line_ids"] for word, _, _ in words_of(texts[line_id])]
-        sayable = [i for i, (_, word) in enumerate(words) if spoken(word)]
-        found = align(window, [spoken(words[i][1]) for i in sayable]) if sayable else []
-        timed: list[tuple[float, float, float] | None] = [None] * len(words)
-        for i, (start, end, score) in zip(sayable, found):
-            timed[i] = (start + t0, end + t0, score)
-        for line_id in section["line_ids"]:
-            line_words, line_scores = [], []
-            for i, (owner, word) in enumerate(words):
-                if owner != line_id:
-                    continue
-                # A word the aligner cannot spell ("+") sits at the end of the one before it.
-                start, end, score = timed[i] if timed[i] else (previous, previous, None)
-                start = max(start, previous)
-                end = min(max(end, start), length)
-                start = min(start, end)
-                line_words.append(Word(word=word, start=round(start, 3), end=round(end, 3)))
-                if score is not None:
-                    line_scores.append(score)
-                previous = end
-            if not line_words:
-                raise media.StepFailed(f"{line_id} has no words to time")
-            lines.append(TimedLine(line_id=line_id, start=line_words[0].start, end=line_words[-1].end,
-                                   words=line_words))
-            scores[line_id] = round(sum(line_scores) / len(line_scores), 3) if line_scores else None
+        previous = lines[-1].end if lines else 0.0
+        for line, score in _align_lines(vocals, align, texts, section["line_ids"], t0, t1, previous, length):
+            lines.append(line)
+            scores[line.line_id] = score
+    realigned = []
+    # A line the aligner was unsure of, among many, may have been pulled out of place by a
+    # repeat or an ad-lib the lyrics do not have (seven words crammed into the last second
+    # before the next line). Heard alone between its neighbours, it finds where it is sung.
+    for k, line in enumerate(lines):
+        if scores[line.line_id] is None or scores[line.line_id] >= LOW_SCORE:
+            continue
+        t0 = lines[k - 1].end if k else 0.0
+        t1 = lines[k + 1].start if k + 1 < len(lines) else length
+        try:
+            (again, score), = _align_lines(vocals, align, texts, [line.line_id], t0, t1, t0, t1)
+        except (RuntimeError, ValueError):  # too little room between its neighbours for its words
+            continue
+        if score is not None and score > scores[line.line_id]:
+            lines[k], scores[line.line_id] = again, score
+            realigned.append(line.line_id)
     timing = Timing(audio=media.audio_path("song"), duration=round(length, 3), lines=lines)
-    return timing, song_report(timing, texts, scores)
+    if aligning is not None:
+        _log_local(job, "song alignment", MMS_MODEL, aligning)
+    return timing, {**song_report(timing, texts, scores), "realigned": realigned}
+
+
+def _align_lines(vocals, align: Aligner, texts: dict[str, str], line_ids: list[str], t0: float, t1: float,
+                 previous: float, end_by: float) -> list[tuple[TimedLine, float | None]]:
+    """The lines aligned together in the vocals between t0 and t1 (song time), each with the
+    aligner's mean score for its words; no word starts before `previous` or ends after `end_by`."""
+    window = vocals[..., int(t0 * SAMPLE_RATE):int(t1 * SAMPLE_RATE)]
+    words = [(line_id, word) for line_id in line_ids for word, _, _ in words_of(texts[line_id])]
+    sayable = [i for i, (_, word) in enumerate(words) if spoken(word)]
+    found = align(window, [spoken(words[i][1]) for i in sayable]) if sayable else []
+    timed: list[tuple[float, float, float] | None] = [None] * len(words)
+    for i, (start, end, score) in zip(sayable, found):
+        timed[i] = (start + t0, end + t0, score)
+    out = []
+    for line_id in line_ids:
+        line_words, line_scores = [], []
+        for i, (owner, word) in enumerate(words):
+            if owner != line_id:
+                continue
+            # A word the aligner cannot spell ("+") sits at the end of the one before it.
+            start, end, score = timed[i] if timed[i] else (previous, previous, None)
+            start = max(start, previous)
+            end = min(max(end, start), end_by)
+            start = min(start, end)
+            line_words.append(Word(word=word, start=round(start, 3), end=round(end, 3)))
+            if score is not None:
+                line_scores.append(score)
+            previous = end
+        if not line_words:
+            raise media.StepFailed(f"{line_id} has no words to time")
+        out.append((TimedLine(line_id=line_id, start=line_words[0].start, end=line_words[-1].end, words=line_words),
+                    round(sum(line_scores) / len(line_scores), 3) if line_scores else None))
+    return out
+
+
+def _log_local(job: Path, label: str, model: str, started: float) -> None:
+    """A model run on this machine: its time, and no bill."""
+    ledger.log(job, [brain.Call(label, "local", model, 0, 0, 0.0, round(time.monotonic() - started, 1), "")])
 
 
 def windows(plan: dict) -> list[dict]:
@@ -289,6 +335,8 @@ def song_notes(report: dict) -> str:
     notes = [f"chorus drift at most {worst:.2f}s" if report["drift"] else "no repeated lines"]
     if report["drifting"]:
         notes.append(f"DRIFT over {DRIFT_S}s: {', '.join(report['drifting'])}")
+    if report.get("realigned"):  # a report from before the repair pass has none
+        notes.append(f"re-aligned alone: {', '.join(report['realigned'])}")
     if report["unsure"]:
         notes.append(f"aligner unsure of {', '.join(report['unsure'])}")
     return "; ".join(notes)
@@ -309,7 +357,7 @@ def separate_vocals(job: Path):
     from demucs.apply import apply_model
     from demucs.pretrained import get_model
 
-    model = get_model("htdemucs")  # what `demucs --two-stems=vocals` uses
+    model = get_model(DEMUCS_MODEL)  # what `demucs --two-stems=vocals` uses
     model.eval()
     mix = torch.from_numpy(_decode(job / media.audio_path("song"), model.samplerate, model.audio_channels))
     ref = mix.mean(0)
@@ -369,34 +417,31 @@ def mms_aligner() -> Aligner:
 
 
 def _emission(model, window):
-    """MMS's emission for a window, the same as `model(window)[0]` in a fraction of the memory.
+    """MMS's emission for a window, heard CHUNK_S at a time with CONTEXT_S of audio either side.
 
-    The memory goes on the convolutional front end, about 17 MB a second of audio, which
-    a whole song (a Gemini one) would push past 4 GB. Each of its frames hears only a
-    few hundred samples and is normalised on its own, so it runs CHUNK_S at a time and
-    gives exactly the frames one pass would; the transformer after it still hears the
-    whole window. A model of another shape (torchaudio changed) gets one pass.
+    MMS learned from utterances of seconds, not minutes, and one pass over a whole song
+    (a Gemini one) blurs what it hears: the first live Lyria song had 15 of its 28 lines
+    unsure heard in one pass, and 3 heard in pieces. Each piece is a pass of its own (the
+    memory, about 17 MB a second of audio on the front end, stays that of one piece) and
+    keeps only the frames of its middle CHUNK_S; its frames fall on the grid one pass
+    would give, so the pieces join into an emission with one pass's frames. A model of
+    another shape (torchaudio changed) gets one pass.
     """
     import torch
 
     shape = _front_end(model)
-    if shape is None or window.size(1) <= CHUNK_S * SAMPLE_RATE:
+    if shape is None or window.size(1) <= (CHUNK_S + 2 * CONTEXT_S) * SAMPLE_RATE:
         return model(window)[0]
     field, stride = shape
-    inner = model.model
-    x = torch.nn.functional.layer_norm(window, window.shape) if model.normalize_waveform else window
-    frames = (x.size(1) - field) // stride + 1
-    step = CHUNK_S * SAMPLE_RATE // stride
-    pieces = [inner.feature_extractor(x[:, stride * f0:stride * (min(frames, f0 + step) - 1) + field], None)[0]
-              for f0 in range(0, frames, step)]
-    out = inner.encoder(torch.cat(pieces, dim=1), None)
-    if inner.aux is not None:
-        out = inner.aux(out)
-    if model.apply_log_softmax:
-        out = torch.nn.functional.log_softmax(out, dim=-1)
-    if model.append_star:
-        out = torch.cat((out, torch.zeros((1, out.size(1), 1), dtype=out.dtype, device=out.device)), dim=-1)
-    return out
+    frames = (window.size(1) - field) // stride + 1
+    step, context = int(CHUNK_S * SAMPLE_RATE) // stride, int(CONTEXT_S * SAMPLE_RATE) // stride
+    pieces = []
+    for f0 in range(0, frames, step):
+        f1 = min(frames, f0 + step)
+        a, b = max(0, f0 - context), min(frames, f1 + context)
+        heard = model(window[:, a * stride:(b - 1) * stride + field])[0]  # frames a to b of the window
+        pieces.append(heard[:, f0 - a:f1 - a])
+    return torch.cat(pieces, dim=1)
 
 
 def _front_end(model) -> tuple[int, int] | None:

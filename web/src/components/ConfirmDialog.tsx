@@ -107,7 +107,8 @@ export function ConfirmDialog({
     else if (!open && el.open) el.close();
   }, [open]);
 
-  const accentVar = variant === 'danger' ? 'var(--accent-red)' : 'var(--accent-green)';
+  const accentVar = variant === 'danger' ? 'var(--accent-red)' : 'var(--accent-brand)';
+  const confirmText = variant === 'danger' ? 'var(--btn-filled-text)' : 'var(--accent-brand-text)';
   const IconComponent = variant === 'danger' ? ExclamationTriangleIcon : QuestionMarkCircleIcon;
 
   return (
@@ -137,7 +138,7 @@ export function ConfirmDialog({
             type="button"
             autoFocus
             onClick={onConfirm}
-            style={{ ...confirmBtnBase, background: accentVar }}
+            style={{ ...confirmBtnBase, background: accentVar, color: confirmText }}
             onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
             onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >

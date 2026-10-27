@@ -11,12 +11,11 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'POPSMOSIS — droplets for learning',
-    template: '%s — POPSMOSIS',
+    default: 'POPsmosis — droplets for learning',
+    template: '%s — POPsmosis',
   },
   description: 'Droplets for learning. Ask for any topic and get a short lesson you can ask follow-ups under.',
-  applicationName: 'POPSMOSIS',
-  icons: { icon: '/icon.svg' },
+  applicationName: 'POPsmosis',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -137,14 +137,61 @@ def test_a_chorus_sung_slower_is_flagged_and_a_mumbled_line_is_unsure(made):
 
     def align(window, words):
         seen.append(words)
-        if len(seen) == 4:  # the second chorus: sung twice as fast, and unsure
+        # The second chorus: sung twice as fast, and unsure, and no surer heard alone after the six sections.
+        if len(seen) == 4 or len(seen) > 6:
             return even_aligner([], pitch=0.3, score=0.1)(window, words)
         return even_aligner([])(window, words)
 
     timed, report = timing.song_timing(made, bundle, align=align, vocals=vocals)
+    assert len(seen) == 7 and seen[-1] == seen[3]  # heard alone once more, and kept as it was
     assert report["drifting"] == ["c2-1"]
-    assert report["unsure"] == ["c2-1"]
+    assert report["unsure"] == ["c2-1"] and report["realigned"] == []
     assert "DRIFT over 0.5s: c2-1" in timing.song_notes(report)
+
+
+def test_a_line_pulled_out_of_place_is_heard_alone_between_its_neighbours(made):
+    """A repeat the lyrics do not have can pull a line's words into the last moment before the
+    next line, unsure. Heard alone between its neighbours, it is placed where it is sung."""
+    bundle = sample_media.bundle()
+    vocals = np.zeros((1, int(30.1 * timing.SAMPLE_RATE)), dtype=np.float32)
+    calls = []
+
+    def align(window, words):
+        calls.append((window.shape[-1], words))
+        if len(calls) == 1:  # the first verse: its second line crammed against the chorus
+            end = window.shape[-1] / timing.SAMPLE_RATE
+            return even_aligner([])(window, words[:5]) + [(end - 0.6 + i * 0.1, end - 0.55 + i * 0.1, 0.05)
+                                                          for i in range(6)]
+        return even_aligner([])(window, words)
+
+    timed, report = timing.song_timing(made, bundle, align=align, vocals=vocals)
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    first, second, chorus = timed.line("v1-1"), timed.line("v1-2"), timed.line("c1-1")
+    heard, words = calls[-1]
+    assert words == ["every", "electron", "handoff", "pumps", "a", "proton"]
+    assert heard == pytest.approx((chorus.start - first.end) * timing.SAMPLE_RATE, abs=2)  # between its neighbours
+    assert second.words[0].start == pytest.approx(first.end + timing.MARGIN_S + 0.2, abs=1e-3)
+    assert [b.start - a.start for a, b in zip(second.words, second.words[1:])] == pytest.approx([0.6] * 5, abs=2e-3)
+    assert first.end < second.start and second.end <= chorus.start
+    assert report["realigned"] == ["v1-2"] and report["unsure"] == []
+    assert "re-aligned alone: v1-2" in timing.song_notes(report)
+
+
+def test_a_line_with_no_room_between_its_neighbours_stays_as_it_was(made):
+    bundle = sample_media.bundle()
+    vocals = np.zeros((1, int(30.1 * timing.SAMPLE_RATE)), dtype=np.float32)
+    calls = []
+
+    def align(window, words):
+        calls.append(words)
+        if len(calls) > 6:
+            raise RuntimeError("targets length is too long for CTC")  # torchaudio's forced_align, short of frames
+        return even_aligner([], score=0.1 if len(calls) == 2 else 0.9)(window, words)
+
+    timed, report = timing.song_timing(made, bundle, align=align, vocals=vocals)
+    assert len(calls) == 7
+    assert report["unsure"] == ["c1-1"] and report["realigned"] == []
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
 
 
 def test_the_step_writes_all_three_timings_and_reports_drift(made, monkeypatch):
@@ -161,6 +208,10 @@ def test_the_step_writes_all_three_timings_and_reports_drift(made, monkeypatch):
         assert timing_problems(jobs.read(made / media.timing_path(kind), Timing), ids) == []
     report = json.loads((made / timing.REPORT).read_text())
     assert {d["line_id"] for d in report["drift"]} == {"c1-1", "c2-1", "c3-1"}
+    # Demucs and MMS ran here: logged with their time and no bill, after the audio step's paid calls.
+    local = [json.loads(row) for row in (made / "calls.jsonl").read_text().splitlines()][3:]
+    assert [(r["label"], r["role"], r["model"], r["cost_usd"]) for r in local] == [
+        ("song vocals", "local", "htdemucs", 0.0), ("song alignment", "local", "mms-fa", 0.0)]
 
 
 def test_timing_waits_for_the_audio(tmp_path):
@@ -244,27 +295,42 @@ def _tiny_mms(norm="layer_norm"):
     return torch, model.eval()
 
 
-def test_the_aligner_hears_a_long_window_in_pieces_and_gets_what_one_pass_would(monkeypatch):
+def test_the_aligner_hears_a_long_window_in_pieces_with_audio_either_side(monkeypatch):
+    """One pass over minutes of song blurs what MMS hears, so a long window is heard a piece
+    at a time, each piece a pass of its own with CONTEXT_S either side, keeping its middle."""
     torch, model = _tiny_mms()
     assert timing._front_end(model) == (400, 320)
     monkeypatch.setattr(timing, "CHUNK_S", 1)
+    monkeypatch.setattr(timing, "CONTEXT_S", 0.5)
     window = torch.randn(1, int(4.37 * timing.SAMPLE_RATE)) * 0.1  # four pieces and a bit
-    calls = []
-    extract = model.model.feature_extractor.forward
-    monkeypatch.setattr(model.model.feature_extractor, "forward", lambda x, n: calls.append(x.size(1)) or extract(x, n))
     with torch.inference_mode():
+        whole = model(window)[0]
+        heard = []
+        run = model.forward
+        monkeypatch.setattr(model, "forward", lambda x, *rest: heard.append(x.size(1)) or run(x, *rest))
         pieces = timing._emission(model, window)
-        monkeypatch.setattr(timing, "CHUNK_S", 60)
-        whole = timing._emission(model, window)
-    assert len(calls) == 6 and calls[-1] == window.size(1)  # five pieces, then the one pass
-    assert pieces.shape == whole.shape and pieces.shape[-1] == 29
-    assert torch.allclose(pieces, whole, atol=1e-5)
+        # The second piece keeps frames 50-99, heard from frame 25 to 124: half a second either side.
+        second = run(window[:, 25 * 320:124 * 320 + 400])[0][:, 25:75]
+    assert pieces.shape == whole.shape and pieces.shape[-1] == 29  # one pass's frames
+    assert len(heard) == 5 and max(heard) == 99 * 320 + 400  # five pieces, none longer than 2 s of frames
+    assert torch.allclose(pieces[:, 50:100], second, atol=1e-6)
+    assert not torch.allclose(pieces, whole, atol=1e-3)  # each piece heard only its own audio
+
+
+def test_a_window_no_longer_than_a_piece_and_its_context_is_heard_in_one_pass(monkeypatch):
+    torch, model = _tiny_mms()
+    monkeypatch.setattr(timing, "CHUNK_S", 1)
+    monkeypatch.setattr(timing, "CONTEXT_S", 0.5)
+    window = torch.randn(1, 2 * timing.SAMPLE_RATE) * 0.1
+    with torch.inference_mode():
+        assert torch.equal(timing._emission(model, window), model(window)[0])
 
 
 def test_a_front_end_normalised_across_the_window_is_heard_in_one_pass(monkeypatch):
     torch, model = _tiny_mms(norm="group_norm")
     assert timing._front_end(model) is None
     monkeypatch.setattr(timing, "CHUNK_S", 1)
+    monkeypatch.setattr(timing, "CONTEXT_S", 0.5)
     window = torch.randn(1, 3 * timing.SAMPLE_RATE) * 0.1
     with torch.inference_mode():
         assert torch.equal(timing._emission(model, window), model(window)[0])

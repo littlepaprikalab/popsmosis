@@ -119,13 +119,17 @@ def test_uploads_the_videos_public_and_the_rest_private_then_marks_them_ready(jo
 
     # The report goes before uploaded.json, so done means READY was sent; it carries every public URL.
     assert server.uploaded_at_patch is False
-    assert server.patches() == [{
+    [patch] = server.patches()
+    breakdown = patch.pop("breakdown")
+    assert patch == {
         "status": "READY",
         "songVideoUrl": f"{STORAGE}/object/public/droplets/ans1/out/song_h.mp4",
         "lessonVideoUrl": f"{STORAGE}/object/public/droplets/ans1/out/lesson_h.mp4",
         "songPosterUrl": f"{STORAGE}/object/public/droplets/ans1/out/song_h.jpg",
         "lessonPosterUrl": f"{STORAGE}/object/public/droplets/ans1/out/lesson_h.jpg",
-    }]
+    }
+    # With it, the media steps' breakdown: here only this step, timed up to the report.
+    assert [(s["step"], s["tries"], s["models"]) for s in breakdown["steps"]] == [("upload", 1, [])]
     record = jobs.read(job / upload.UPLOADED, upload.Uploaded)
     assert record.answer_id == "ans1" and record.missing == []
     assert record.files["audio/song.mp3"].bucket == "studio" and record.files["audio/song.mp3"].public_url is None

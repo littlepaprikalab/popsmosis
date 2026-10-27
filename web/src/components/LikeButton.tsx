@@ -106,7 +106,7 @@ export function LikeButton({ dropletId, liked, likeCount, size = 'sm' }: Props) 
       aria-label={`${like.liked ? 'Unlike' : 'Like'} this droplet (${count})`} title={like.liked ? 'Unlike' : 'Like'}
       className={`${base} hover:brightness-110`}
       style={like.liked
-        ? { color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)', background: 'rgba(50, 173, 230, 0.12)' }
+        ? { color: 'var(--accent-brand)', border: '1px solid var(--accent-brand)' }
         : idle}>
       {like.liked ? <ThumbSolid className={icon} aria-hidden /> : <ThumbOutline className={icon} aria-hidden />}
       <span data-testid="like-count">{formatCount(like.likeCount)}</span>

@@ -143,7 +143,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
 
       try {
         // Only a droplet on the tab, decided in the same statement as the insert. The trigger
-        // counts it (prisma/migrations/20261030120000_droplet_engagement).
+        // counts it (prisma/migrations/20261031120000_droplet_engagement).
         await prisma.$executeRaw`
           INSERT INTO droplet_likes ("answerId", "userId")
           SELECT id, ${userId} FROM answers WHERE id = ${id} AND "videoStatus" = 'READY' AND "hiddenAt" IS NULL

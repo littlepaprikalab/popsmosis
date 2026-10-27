@@ -167,8 +167,8 @@ export function DropletComments({ dropletId, count, setCount, initial }: Props) 
               disabled={!text.trim() || submitting}
               className="px-3 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider transition-colors"
               style={{
-                background: text.trim() ? 'var(--accent-green)' : 'var(--bg-tertiary)',
-                color: text.trim() ? 'var(--btn-filled-text)' : 'var(--text-muted)',
+                background: text.trim() ? 'var(--accent-brand)' : 'var(--bg-tertiary)',
+                color: text.trim() ? 'var(--accent-brand-text)' : 'var(--text-muted)',
               }}
             >
               {submitting ? '…' : 'Comment'}

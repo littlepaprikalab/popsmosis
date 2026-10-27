@@ -5,7 +5,7 @@
  * the way the droplet is: an anonymous visitor reads it. So it carries as little about
  * its author as still says who wrote it, a first name and an initial, and never their
  * email, their Google picture or their id. The counts live on the droplet's row and are
- * kept by triggers (prisma/migrations/20261030120000_droplet_engagement).
+ * kept by triggers (prisma/migrations/20261031120000_droplet_engagement).
  */
 
 export const COMMENT_MAX_LENGTH = 1000;

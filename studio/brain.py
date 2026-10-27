@@ -15,7 +15,7 @@ cut down to what both providers accept (strict_schema), and every answer is
 validated against the model before it is returned.
 
 Every call, including one that fails, is appended to `calls` with its tokens,
-cost and time, so a run can report what it spent.
+cost and time, so a run can report what it spent (studio/ledger.py logs it to the job).
 """
 
 from __future__ import annotations
@@ -119,6 +119,7 @@ class Call:
     seconds: float
     stop_reason: str
     fell_back: bool = False
+    credits: float | None = None  # what the provider charged in its own credits (ElevenLabs), when it says
 
 
 calls: list[Call] = []

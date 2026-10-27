@@ -170,4 +170,22 @@ d('video claim and queue', () => {
     await fail(id, { reason: 'still failing', attempt: 2 });
     expect((await claim(id)).json().error.message).toMatch(/given up after 2 attempt/);
   });
+
+  it('keeps what the failed tries took and cost with the give-up, from the current attempt only', async () => {
+    const id = await lesson();
+    await claim(id);
+    const bill = { steps: [{ step: 'audio', seconds: 95, tries: 2, costUsd: 0.16,
+      models: [{ model: 'lyria-3.5', calls: 2, costUsd: 0.16, credits: null }] }], seconds: 140 };
+    expect((await fail(id, { reason: 'x', attempt: 1, breakdown: { steps: 'audio' } })).statusCode).toBe(400);
+    expect((await fail(id, { reason: 'late', attempt: 2, breakdown: bill })).statusCode).toBe(409);
+    expect((await row(id)).videoBreakdown).toBeNull(); // a run that does not hold the render writes nothing
+
+    expect((await fail(id, { reason: 'timing failed: no vocals', attempt: 1, breakdown: bill })).statusCode).toBe(200);
+    expect((await row(id)).videoBreakdown).toEqual(bill);
+
+    // Started again by hand and given up without one (an older studio): the bill already there stays.
+    await claim(id);
+    expect((await fail(id, { reason: 'again', attempt: 2 })).statusCode).toBe(200);
+    expect((await row(id)).videoBreakdown).toEqual(bill);
+  });
 });
