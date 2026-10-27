@@ -11,6 +11,9 @@ services:
     name: popsmosis-api
     runtime: node
     region: oregon
+    # Pushes to the branch do not deploy; trigger each deploy by hand (Manual
+    # Deploy in the dashboard, or a deploy hook). See docs/DEPLOY.md.
+    autoDeployTrigger: "off"
     # No `plan:` on purpose. Render retains the current compute plan for an
     # existing service when the field is omitted, so a sync never downgrades a
     # service you upgraded in the dashboard. A service created fresh from this
@@ -62,6 +65,7 @@ services:
     name: popsmosis-web
     runtime: node
     region: oregon
+    autoDeployTrigger: "off"       # deploy by hand, like popsmosis-api
     # No `plan:` — see the note on popsmosis-api above.
     # `--include=dev` for the same reason as popsmosis-api: `next build` reads
     # next.config.ts, which needs `typescript` from devDependencies.

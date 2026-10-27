@@ -182,9 +182,16 @@ agent  ──HTTPS──> popsmosis-api (Fastify, Render) ──TLS──> Supab
 
 ## Redeploys and migrations
 
-Push to `main`; Render auto-deploys both services. Schema changes ship as new files in
-`prisma/migrations/` (create them locally with `npm --workspace api run db:migrate`)
-and are applied during the build.
+Auto-deploy is off for both services (`autoDeployTrigger: "off"` in `render.yaml`), so a
+push to `main` does not ship anything by itself. Deploy each service by hand: open it in
+the Render dashboard and pick **Manual Deploy > Deploy latest commit**, or call its
+deploy hook (Settings > Deploy Hook) from a script. Deploy `popsmosis-api` first when a
+change needs a migration, so the schema is in place before the web app relies on it.
+To turn auto-deploy back on, set `autoDeployTrigger: commit` (every push) or
+`checksPass` (only once CI passes) and sync the Blueprint.
+
+Schema changes ship as new files in `prisma/migrations/` (create them locally with
+`npm --workspace api run db:migrate`) and are applied during the API build.
 
 ## Troubleshooting
 
