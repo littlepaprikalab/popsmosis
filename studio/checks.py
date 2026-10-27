@@ -35,7 +35,11 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
-    problems: list[Problem] = []
+    problems = [
+        Problem(line_id=f"scene:{scene}", rule="empty-scene", repaired=False,
+                detail=f'scene "{scene}" draws no structures, so nothing on it can be revealed or spotlit')
+        for scene, structures in drawn.items() if not structures
+    ]
     # The song and the lesson video are separate videos, so each reveals from scratch.
     for stream in (data["lyrics"], data["narration"]):
         revealed: dict[str, set[str]] = {scene: set() for scene in drawn}

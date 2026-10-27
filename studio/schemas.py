@@ -176,8 +176,9 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 
 
 class Problem(Strict):
-    line_id: str
-    rule: Literal["unknown-name", "not-in-scene", "name-not-said", "unlisted-name", "spotlight", "camera", "particles"]
+    line_id: str  # or "scene:<id>" for a problem with a whole scene
+    rule: Literal["empty-scene", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name", "spotlight",
+                  "camera", "particles"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 

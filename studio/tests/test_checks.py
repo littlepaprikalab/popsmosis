@@ -61,6 +61,12 @@ def test_a_group_no_scene_draws_is_left_for_the_prompt():
     assert bundle.lyrics[5].names == ["limbic system"]
 
 
+def test_a_scene_with_nothing_to_reveal_is_left_for_the_prompt():
+    _, found, report = review(lambda d: d["scenes"][2].update(structures=[]))
+    assert ("scene:synthase", "empty-scene", False) in found
+    assert report.problems[0].detail.startswith('scene "synthase" draws no structures')
+
+
 def test_a_name_the_scene_does_not_draw_is_left_for_the_prompt():
     _, found, report = review(lambda d: direction(d, "n2").update(scene="overview"))
     assert found == [("n2", "not-in-scene", False)]
