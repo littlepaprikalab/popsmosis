@@ -209,7 +209,7 @@ class FactCheck(Strict):
 
 
 class CheckedLine(Strict):
-    kind: Literal["lyric", "narration", "lesson"]
+    kind: Literal["lyric", "narration", "lesson", "frq"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -219,7 +219,7 @@ class CheckedLine(Strict):
 
 class Correction(Strict):
     round: int
-    kind: Literal["lyric", "narration", "lesson"]
+    kind: Literal["lyric", "narration", "lesson", "frq"]
     ids: list[str]
     before: str
     after: str

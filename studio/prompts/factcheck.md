@@ -8,7 +8,9 @@ You get JSON with:
 - `lines`: the lines to check, each with an `id` and its `text`. The id says where a line
   comes from: "lyric:..." is a sung line, "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
-  row's cells are separated by " | "). Lines come in order, so read each one in the
+  row's cells are separated by " | "), and "frq:..." a line of the exam question both
+  videos read aloud at the end: its prompt, the predict question, or a step of the model
+  answer. Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only.
 
@@ -34,7 +36,8 @@ one check per line, with the line's id:
 When you write `corrected`:
 
 - Keep the line's job and voice. A lyric stays a singable lyric of about the same length
-  and rhythm. A narration sentence stays one spoken sentence. A lesson sentence keeps its
+  and rhythm. A narration sentence stays one spoken sentence. An exam-question line
+  stays a question if it was one, and a model-answer step stays one spoken sentence. A lesson sentence keeps its
   inline markdown, and a table row keeps the same cells, separated by " | ".
 - Keep every structure name the line uses: hearing the name is what reveals the structure
   on screen.
