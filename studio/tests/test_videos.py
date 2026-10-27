@@ -255,3 +255,25 @@ def test_a_finished_run_nobody_reaped_is_not_alive():
         time.sleep(0.05)
     assert not videos._alive(child.pid)
     child.wait()
+
+
+def test_two_branches_asking_at_once_each_log_only_their_own_calls(tmp_path, monkeypatch):
+    from studio import brain
+
+    together = threading.Barrier(2, timeout=5)
+
+    def fake_ask(role, prompt, *args, label=None, **kwargs):
+        together.wait()  # both threads are inside ask before either records its call
+        brain._record(brain.Call(label, role, "m", 10, 5, 0.01, 0.1, "end_turn"))
+        together.wait()  # and both have recorded before either logs
+        return {}
+
+    monkeypatch.setattr(brain, "ask", fake_ask)
+    ask = operator_run.logged_ask(tmp_path)
+    threads = [threading.Thread(target=ask, args=("brain", "p"), kwargs={"label": name}) for name in ("art", "audio")]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    logged = sorted(json.loads(row)["label"] for row in (tmp_path / "calls.jsonl").read_text().splitlines())
+    assert logged == ["art", "audio"]
