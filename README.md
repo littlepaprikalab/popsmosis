@@ -20,6 +20,12 @@ public **Droplets** tab (`/droplets`), where anyone can watch it without an acco
 anyone signed in can give it a thumbs-up and comment on it. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
 
+The lessons are everyone's; the learners are private. What a learner sends (the request in
+their own words, their files, their follow-ups) is seen only by them, the teacher and the
+admins, and a learner can take a request back or delete their account while the lesson
+stays public. The [Privacy Policy and Terms of Use](#privacy-and-the-legal-pages) say so
+to users at `/privacy` and `/terms`.
+
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
 advice column), whose architecture and look-and-feel come from
 [sparks](https://github.com/jclark256/sparks). The API still names a topic request a
@@ -201,21 +207,23 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/auth/google` | `{ code }` from the OAuth redirect; sets the cookie |
+| POST | `/api/auth/google` | `{ code, acceptTerms: true }` from the OAuth redirect; sets the cookie. 400 without `acceptTerms`, the box on the sign-in page; the account records the Terms version and the time |
+| POST | `/api/auth/terms` | `{ accept: true }`: agree to the current Terms when the account's record is older or missing (`termsCurrent: false` on `/api/auth/me`) |
 | GET | `/api/auth/me` | current user |
 | POST | `/api/auth/logout` | clears the cookie |
-| GET | `/api/questions` | everyone's topics, newest first; `?mine=true`, `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
-| GET | `/api/questions/:id` | one topic with its lesson and follow-ups |
-| GET | `/api/questions/status` | `{ latestAt }` for polling |
+| DELETE | `/api/auth/me` | deletes the account: requests with no lesson, files and follow-ups go, requests with a lesson are taken back (below); refused for the only admin |
+| GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
+| GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
+| GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
 | POST | `/api/questions` | ask for a topic: `{ content, attachments? }` 3–2000 chars; `attachments` see [Attachments](#attachments) |
-| DELETE | `/api/questions/:id` | own topic, only while it has no lesson (waiting, or `FAILED`) |
-| POST | `/api/answers/:id/replies` | a follow-up: `{ content, attachments? }` 1–2000 chars |
+| DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
+| POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars |
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
 | DELETE | `/api/droplets/:id/like` | take it back: `{ liked: false, likeCount }`; idempotent, and works once the droplet has left the tab |
 | POST | `/api/droplets/:id/comments` | a public comment on a droplet on the tab: `{ content }` 1–1000 chars, plain text, with something visible in it (not only zero-width or blank characters), no email addresses or phone numbers; `DROPLET_COMMENTS_PER_USER_PER_HOUR` (30). With an `Idempotency-Key` header (8–100 of `A-Za-z0-9_.:-`, a UUID say) a resend returns the comment the first send made, 200 instead of 201, so a POST whose answer was lost can be sent again; the same key with other words is a 409 |
 | DELETE | `/api/droplets/:id/comments/:commentId` | own comment, or any as an admin; 204 |
-| GET | `/api/attachments/:id` | a file sent with a question or reply; also to agents |
+| GET | `/api/attachments/:id` | a file in the caller's own thread (anyone's, for an admin); also to agents; 404 otherwise |
 
 **Agents** (`Authorization: Bearer sk_pop_…`)
 
@@ -304,6 +312,40 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
+
+## Privacy and the legal pages
+
+Two sides, kept apart in the API (`api/src/lib/privacy.ts`):
+
+- **Public:** the lesson, its videos, lyrics and a title from the bundle's `course` and
+  `topic`, on the Droplets tab. Nothing about who asked.
+- **The learner's own:** their name, email and photo, the request in their words, their
+  files and the follow-up thread. A learner sees only their own topics on `/learn`, and only
+  they post follow-ups in their thread. Admins see everyone's (to moderate and fix things)
+  and the teacher reads what it answers.
+
+A learner can **take back** a request from its card: with no lesson yet it is deleted; with
+one, their words, files and thread are deleted and `questions.userId` is set to null, so
+the lesson stays on the tab naming no one. **Deleting an account** (`/account`) does that
+for every request with a lesson and deletes everything else, except for the only admin,
+who has to make someone else an admin first.
+
+`/privacy`, `/terms` and `/consumer-health-data` (the policy Washington's My Health My
+Data Act requires, with its own footer link) are plain pages in `web/src/app/`. The facts
+they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Little Paprika
+Lab, Washington State), the contact address, the governing law (Washington, King County
+courts), the minimum age (13), the file retention (keep it equal to
+`ATTACHMENT_RETENTION_DAYS`) and the license the droplets are shared under
+(CC BY-NC-SA 4.0), and the contact address, which is also the copyright (DMCA) agent's.
+
+**Agreeing.** Nobody signs in without ticking a box that names the Terms, the arbitration
+and class action waiver in them, and the Privacy Policy (`AgreeToTerms`); the API refuses
+the sign-in without it and records the version and the time on the account
+(`api/src/lib/terms.ts`). When the pages change in a way people must agree to again, move
+`TERMS_VERSION` there: everyone is then asked once, before anything else, at their next
+visit (`TermsGate`). For any change, move `LAST_UPDATED` in `legal.ts`. When a change to the
+code changes what the pages promise, change the pages with it. The pages were written
+without a lawyer; have one read them if Popsmosis grows.
 
 ## Deploy
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { AgreeToTerms } from '@/components/AgreeToTerms';
 import { useAuth } from '@/lib/auth';
 import { Wordmark } from '@/components/Wordmark';
 
@@ -25,6 +26,7 @@ export default function AuthCallbackPage() {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(true);
+  const [agreed, setAgreed] = useState(false); // the box: nobody goes on to Google without it
   const exchangeStarted = useRef(false);
 
   useEffect(() => {
@@ -66,7 +68,10 @@ export default function AuthCallbackPage() {
         // while Render has no instance to route to, and the exchange follows a
         // server that has just answered.
         await api.health().catch(() => {});
-        const result = await api.authGoogle(code);
+        // The box was ticked on this page before Google; the API refuses the sign-in without it, and records it.
+        const acceptTerms = sessionStorage.getItem('terms_agreed') === '1';
+        sessionStorage.removeItem('terms_agreed');
+        const result = await api.authGoogle(code, acceptTerms);
         login(result.user);
         const dest = safeReturnTo(sessionStorage.getItem('auth_return_to')) ?? '/learn';
         sessionStorage.removeItem('auth_return_to');
@@ -87,6 +92,9 @@ export default function AuthCallbackPage() {
       setError('Google OAuth is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID.');
       return;
     }
+    if (!agreed) return;
+    // Carried across Google's redirect, like the state, and sent with the code (above).
+    sessionStorage.setItem('terms_agreed', '1');
     const state = crypto.randomUUID();
     sessionStorage.setItem('oauth_state', state);
     const params = new URLSearchParams({
@@ -101,11 +109,18 @@ export default function AuthCallbackPage() {
   };
 
   const button = (label: string) => (
-    <button onClick={handleSignIn}
-      className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors cursor-pointer"
-      style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
-      {label}
-    </button>
+    <>
+      <div className="mb-4">
+        <AgreeToTerms checked={agreed} onChange={setAgreed} />
+      </div>
+      <button onClick={handleSignIn} disabled={!agreed}
+        className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"
+        style={agreed
+          ? { background: 'var(--accent-brand)', color: 'var(--accent-brand-text)', cursor: 'pointer' }
+          : { background: 'var(--bg-tertiary)', color: 'var(--text-muted)', cursor: 'not-allowed' }}>
+        {label}
+      </button>
+    </>
   );
 
   return (
@@ -127,15 +142,19 @@ export default function AuthCallbackPage() {
         ) : processing ? (
           <p style={{ color: 'var(--text-muted)' }}>Authenticating...</p>
         ) : !clientId ? (
-          <div className="mb-4 p-3 rounded text-sm" style={{ background: 'rgba(255, 59, 48, 0.12)', color: 'var(--accent-red)' }}>
-            Google OAuth is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID.
-          </div>
+          <>
+            <div className="mb-4 p-3 rounded text-sm" style={{ background: 'rgba(255, 59, 48, 0.12)', color: 'var(--accent-red)' }}>
+              Google OAuth is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID.
+            </div>
+            {button('Sign in with Google')}
+          </>
         ) : (
           button('Sign in with Google')
         )}
 
         <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-          Sign in to ask questions and reply to answers.
+          Sign in to ask for lessons and follow up on them. The lessons are public; your requests and follow-ups stay
+          private. Comments you post on a droplet are public.
         </p>
       </div>
     </div>

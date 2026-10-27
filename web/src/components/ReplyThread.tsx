@@ -12,6 +12,7 @@ import { timeAgo } from '@/lib/time';
 
 interface Props {
   answer: Answer;
+  canReply: boolean; // the thread is the learner's own: an admin reading someone else's sees it but cannot post in it
   onChange: (answer: Answer) => void;
 }
 
@@ -20,7 +21,7 @@ interface Props {
  * responses, plus a box to add a reply. Shape follows sparks' ViewerComments
  * without votes.
  */
-export function ReplyThread({ answer, onChange }: Props) {
+export function ReplyThread({ answer, canReply, onChange }: Props) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [text, setText] = useState('');
@@ -109,7 +110,7 @@ export function ReplyThread({ answer, onChange }: Props) {
         </p>
       )}
 
-      {user && (
+      {user && canReply && (
         <div className="flex gap-2 items-start">
           <textarea
             rows={1}

@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
+import { TermsGate } from '@/components/TermsGate';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
 
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </ErrorBoundary>
             </main>
             <Footer />
+            <TermsGate />
           </ToastProvider>
         </AuthProvider>
       </body>

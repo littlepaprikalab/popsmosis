@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import prisma from '../lib/prisma.js';
-import { sendError } from '../lib/errors.js';
+import { sendError, isForeignKeyViolation } from '../lib/errors.js';
 import { hashApiKey, isAgentToken, isWellFormedAgentToken, bearerToken } from '../lib/apikey.js';
 import { sessionCookieToken, renewSessionIfNeeded } from '../lib/session.js';
 import { TtlCache } from '../lib/ttl-cache.js';
@@ -20,6 +20,18 @@ export function invalidateAgentCache(apiKeyHash?: string) {
 }
 export function invalidateUserCache(userId: string) {
   userCache.delete(userId);
+}
+
+/**
+ * Whether a write failed because the signed-in account was deleted after this request was let in: from another tab,
+ * or while this instance still had the account cached (USER_TTL_MS). The caller answers 401 "User not found", which
+ * the web app reads as signed out, rather than a 500.
+ */
+export async function accountGone(err: unknown, userId: string): Promise<boolean> {
+  if (!isForeignKeyViolation(err)) return false;
+  if (await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })) return false;
+  invalidateUserCache(userId);
+  return true;
 }
 
 export interface UserAuth {

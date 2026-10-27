@@ -9,6 +9,11 @@ test.describe('signed out', () => {
     await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
     await expect(page.getByText('WHAT DO YOU WANT TO LEARN?', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
+    // What signing in agrees to, linked, before anyone signs in.
+    const consent = page.getByTestId('consent');
+    await expect(consent).toContainText('13 or older');
+    await expect(consent.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms');
+    await expect(consent.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
   });
 
   test('/ redirects to /learn', async ({ page }) => {
@@ -23,13 +28,16 @@ test.describe('signed out', () => {
 });
 
 test.describe('signed in', () => {
-  test('sees everyone\'s topics with the sparks look', async ({ page, context }) => {
+  test('sees only their own topics, with the sparks look', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible();
-    // Seeded: Ada's waiting topic and Ben's finished one, both visible to Ben.
-    await expect(page.getByText('Photosynthesis: how do the light')).toBeVisible();
+    // Seeded: Ben's finished topic is his to see; Ada's waiting one is not.
     await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
+    await expect(page.getByText('Photosynthesis: how do the light')).toHaveCount(0);
+    await expect(page.getByTestId('privacy-note')).toContainText('Only you see your requests');
+    // No filter: there is only one list a learner can see.
+    await expect(page.getByRole('button', { name: 'My Topics' })).toHaveCount(0);
     await expect(page.getByText('BREWING', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('READY', { exact: true }).first()).toBeVisible();
     // Badges and the agent's markdown lesson.
@@ -98,13 +106,54 @@ test.describe('signed in', () => {
     await expect(card.getByTestId('answer-preview')).toBeVisible();
   });
 
-  test('My Topics filter narrows to the caller', async ({ page, context }) => {
-    await signIn(context, S.users.ben);
+  test('an admin sees everyone\'s topics, and My Topics narrows to their own', async ({ page, context }) => {
+    await signIn(context, S.users.ada);
     await page.goto('/learn');
+    await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
+    await expect(page.getByText('Photosynthesis: how do the light')).toBeVisible();
+    // Someone else's thread is readable, but not the admin's to post in.
+    const bens = page.getByTestId('question-card').filter({ hasText: 'ATP synthesis: how do cells' }).first();
+    await expect(bens.getByText('Think of a water wheel')).toBeVisible();
+    await expect(bens.getByPlaceholder(/Ask a follow-up/)).toHaveCount(0);
+
     await page.getByRole('button', { name: 'My Topics' }).click();
     await expect(page).toHaveURL(/mine=1/);
-    await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
-    await expect(page.getByText('Photosynthesis: how do the light')).toHaveCount(0);
+    await expect(page.getByText('Photosynthesis: how do the light')).toBeVisible();
+    await expect(page.getByText('ATP synthesis: how do cells')).toHaveCount(0);
+  });
+
+  test('a topic with a lesson can be deleted: the request goes, the lesson stays on the Droplets tab', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: diffusion, for my quiz`;
+    const asked = await request.post(apiUrl('/api/questions'), {
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' },
+      data: { content: text },
+    });
+    expect(asked.status()).toBe(201);
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const questionId = (await asked.json()).id;
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    const answer = await bot.answer(questionId, 'Particles spread from **high to low** concentration.');
+    const answerId = (await answer.json()).id;
+    const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);
+    expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`, lessonVideoUrl: `${BASE}/samples/lesson.mp4` })).status()).toBe(200);
+
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await card.getByRole('button', { name: 'delete' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('The lesson stays on the public Droplets tab');
+    await dialog.getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
+    await expect(page.getByText('The lesson stays for others to learn from')).toBeVisible();
+
+    // The lesson is still public, and the request no longer says who asked or what they wrote.
+    const tab = await request.get(apiUrl(`/api/droplets/${answerId}`));
+    expect(tab.status()).toBe(200);
+    expect((await tab.json()).content).toContain('high to low');
+    await page.reload();
+    await expect(page.getByText(text)).toHaveCount(0);
   });
 
   test('a topic the teacher gives up says why, in place, and can be deleted', async ({ page, context, request }) => {
@@ -209,8 +258,8 @@ test.describe('signed in', () => {
   });
 
   test('pages through many topics by cursor as the user scrolls', async ({ page, context }) => {
-    // seed:dev creates 26 topics (2 recent + 24 older), more than one 20-item page.
-    await signIn(context, S.users.ben);
+    // seed:dev creates 27 topics (3 recent + 24 older), more than one 20-item page, and an admin sees them all.
+    await signIn(context, S.users.ada);
     await page.goto('/learn');
     const cards = page.getByTestId('question-card');
     await expect(cards).toHaveCount(20);

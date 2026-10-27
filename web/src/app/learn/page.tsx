@@ -22,6 +22,7 @@ import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown } from '@/components/DropletBreakdown';
 import { Wordmark } from '@/components/Wordmark';
+import { MIN_AGE } from '@/lib/legal';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -154,11 +155,17 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
           {/* Header */}
           <div className="flex items-center justify-between mb-2 gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <UserAvatar name={q.user.name} avatarUrl={q.user.avatarUrl} />
-              <span className="text-xs font-bold truncate" style={{ color: 'var(--text-secondary)' }}>
-                {q.user.name || 'someone'}
-              </span>
-              <span className="badge-human text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold">human</span>
+              {q.user ? (
+                <>
+                  <UserAvatar name={q.user.name} avatarUrl={q.user.avatarUrl} />
+                  <span className="text-xs font-bold truncate" style={{ color: 'var(--text-secondary)' }}>
+                    {q.user.name || 'someone'}
+                  </span>
+                  <span className="badge-human text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold">human</span>
+                </>
+              ) : (
+                <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>request removed</span>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-[10px] uppercase font-bold" style={{ color: STATUS_BADGES[q.status].color }}>
@@ -174,7 +181,13 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
           </div>
 
           {/* The request — clamped while collapsed so a folded card stays one glance */}
-          <p className={`text-sm whitespace-pre-wrap break-words ${collapsed ? 'line-clamp-3' : ''}`} style={{ color: 'var(--text-primary)' }}>{q.content}</p>
+          {q.user ? (
+            <p className={`text-sm whitespace-pre-wrap break-words ${collapsed ? 'line-clamp-3' : ''}`} style={{ color: 'var(--text-primary)' }}>{q.content}</p>
+          ) : (
+            <p className="text-sm italic" style={{ color: 'var(--text-muted)' }} data-testid="request-removed">
+              The learner took this request back. Their words, files and follow-ups are deleted; the lesson stays.
+            </p>
+          )}
           {!collapsed && <AttachmentList attachments={q.attachments} />}
         </>
       )}
@@ -221,7 +234,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   </p>
                 )}
                 {answer.breakdown && <DropletBreakdown breakdown={answer.breakdown} video={answer.video} />}
-                <ReplyThread answer={answer} onChange={(a) => onAnswerChange(q.id, a)} />
+                <ReplyThread answer={answer} canReply={q.isOwner} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">
                 <CollapseButton onClick={collapse} />
@@ -249,6 +262,9 @@ function LearnContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const mine = searchParams.get('mine') === '1';
+  const isAdmin = user?.role === 'ADMIN';
+  // The API shows a learner only their own topics (lib/privacy.ts); an admin sees everyone's unless they filter.
+  const ownOnly = mine || !isAdmin;
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -390,13 +406,16 @@ function LearnContent() {
   };
 
   const handleDelete = async (id: string) => {
+    const hadLesson = questions.find((q) => q.id === id)?.status === 'ANSWERED';
     try {
       await api.deleteQuestion(id);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
+      if (hadLesson) showToast('Your request is deleted. The lesson stays for others to learn from.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to delete topic', 'error');
     }
   };
+  const deleting = questions.find((q) => q.id === pendingDelete);
 
   // Stable identity: QuestionCard is memoized, and a callback rebuilt each
   // render would re-render every card on the page anyway.
@@ -438,8 +457,14 @@ function LearnContent() {
             Sign in with Google
           </Link>
           <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
-            Topics and lessons are visible to signed-in members. Finished droplets are free to watch on the{' '}
-            <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, no sign-in needed.
+            The lessons the teacher makes are public, free to watch on the{' '}
+            <Link href="/droplets" className="underline hover-text">Droplets tab</Link> with no sign-in. Your requests
+            and your follow-ups stay private.
+          </p>
+          <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }} data-testid="consent">
+            Before you sign in you&rsquo;ll be asked to agree to the{' '}
+            <Link href="/terms" className="underline hover-text">Terms of Use</Link> and the{' '}
+            <Link href="/privacy" className="underline hover-text">Privacy Policy</Link>. You must be {MIN_AGE} or older.
           </p>
         </div>
       </div>
@@ -452,8 +477,10 @@ function LearnContent() {
     <PageContainer className="py-6">
       <ConfirmDialog
         open={!!pendingDelete}
-        title="Delete topic"
-        message="Delete this topic request? This cannot be undone."
+        title={deleting?.status === 'ANSWERED' ? 'Delete your request' : 'Delete topic'}
+        message={deleting?.status === 'ANSWERED'
+          ? 'Delete your request? Your words, your files and the follow-ups under it are deleted. The lesson stays on the public Droplets tab for others to learn from, with nothing linking it to you. This cannot be undone.'
+          : 'Delete this topic request? This cannot be undone.'}
         confirmLabel="Delete"
         variant="danger"
         onConfirm={() => { if (pendingDelete) handleDelete(pendingDelete); setPendingDelete(null); }}
@@ -464,6 +491,10 @@ function LearnContent() {
         <h2 className="text-2xl font-bold tracking-wider mb-1">LEARN</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           Ask for any topic. The teacher makes each one a droplet, a short lesson; ask follow-ups under it to go deeper.
+        </p>
+        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }} data-testid="privacy-note">
+          Only you see your requests and follow-ups. Each lesson is shared with everyone on the{' '}
+          <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, without your name or your request.
         </p>
         {agentLastSeenAt !== undefined && (
           <p className="text-[10px] uppercase tracking-wider mt-2 flex items-center gap-1.5" style={{ color: teacherStale ? 'var(--accent-orange)' : 'var(--text-muted)' }}>
@@ -507,13 +538,13 @@ function LearnContent() {
           </button>
         </div>
         <p className="text-[10px] mt-2 flex justify-between" style={{ color: 'var(--text-muted)' }}>
-          <span>No personal info. Min {QUESTION_MIN} characters. Enter adds a line; Ctrl+Enter (⌘+Enter) or Submit sends.</span>
+          <span>No personal info: the lesson will be public. Min {QUESTION_MIN} characters. Enter adds a line; Ctrl+Enter (⌘+Enter) or Submit sends.</span>
           <span>{newQuestion.length}/{QUESTION_MAX}</span>
         </p>
       </div>
 
-      {/* Filter */}
-      <div className="flex items-center gap-3 mb-4">
+      {/* Filter: an admin's view of everyone's topics, or their own */}
+      {isAdmin && <div className="flex items-center gap-3 mb-4">
         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Filter:</span>
         <button
           onClick={() => setMine(!mine)}
@@ -524,7 +555,7 @@ function LearnContent() {
         >
           My Topics
         </button>
-      </div>
+      </div>}
 
       {hasNew && !loading && (
         <button
@@ -540,8 +571,11 @@ function LearnContent() {
         <LoadingMessage />
       ) : questions.length === 0 ? (
         <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>
-          <p>{mine ? 'You have not asked for a topic yet.' : 'No topics yet. Ask for the first one!'}</p>
-          <p className="text-xs mt-2">Use the form above. The teacher picks up new topics on its next pass.</p>
+          <p>{ownOnly ? 'You have not asked for a topic yet.' : 'No topics yet. Ask for the first one!'}</p>
+          <p className="text-xs mt-2">
+            Use the form above. The teacher picks up new topics on its next pass. Or watch what others asked for on the{' '}
+            <Link href="/droplets" className="underline hover-text">Droplets tab</Link>.
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -550,7 +584,7 @@ function LearnContent() {
               key={q.id}
               q={q}
               index={i}
-              isAdmin={user.role === 'ADMIN'}
+              isAdmin={isAdmin}
               onAnswerChange={updateAnswer}
               onRequestDelete={setPendingDelete}
               onSetHidden={setHidden}

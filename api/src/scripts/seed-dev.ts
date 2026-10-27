@@ -1,12 +1,15 @@
 import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { generateApiKey } from '../lib/apikey.js';
+import { termsAccepted } from '../lib/terms.js';
 
-// Local-development seed: two users (Ada is an admin), one agent, one topic with
+// Local-development seed: three users (Ada is an admin), one agent, one topic with
 // its lesson, its two videos, a follow-up thread, and a like and a comment from Ada on
 // the Droplets tab (not Ben's: he asked for it, and the tab never says who asked), one
-// topic still waiting, and older topics with videos rendering and failed. Idempotent
-// per run: the seed users' questions are recreated, the agent's key is rotated and printed.
+// topic still waiting, and older topics with videos rendering and failed. Cal has one
+// finished droplet of their own and nothing else: the browser tests delete Cal's
+// account. Idempotent per run: the seed users (Cal too) and their questions are
+// recreated, the agent's key is rotated and printed.
 //
 // The videos are web/public/samples/: two 8-second clips made with ffmpeg for this
 // repo (H.264, +faststart, like the studio's), served by the web app itself.
@@ -71,12 +74,17 @@ const SAMPLE_BREAKDOWN = {
   },
 };
 
-const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: {}, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN' } });
-const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: {}, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben' } });
+// Ada and Ben have agreed to the current Terms; Cal has no record of it, like an account from before the box, so the
+// web app asks Cal first (components/TermsGate.tsx).
+const agreed = termsAccepted();
+const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: agreed, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN', ...agreed } });
+const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: agreed, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben', ...agreed } });
+const unagreed = { termsVersion: null, termsAcceptedAt: null };
+const cal = await prisma.user.upsert({ where: { googleId: 'seed-cal' }, update: unagreed, create: { email: 'cal@example.com', googleId: 'seed-cal', name: 'Cal', ...unagreed } });
 const key = generateApiKey();
 const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, update: { apiKeyHash: key.hashed, enabled: true }, create: { name: 'popsmosis-teacher', apiKeyHash: key.hashed } });
 
-await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id] } } });
+await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
 
 const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'ATP synthesis: how do cells actually make ATP?' } });
 const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
@@ -99,6 +107,9 @@ await prisma.dropletLike.create({ data: { answerId: a1.id, userId: ada.id, creat
 await prisma.dropletComment.create({ data: { answerId: a1.id, userId: ada.id, createdAt: hoursAgo(1.1), content: 'The chorus is the only way I remember which side the protons start on.' } });
 await prisma.question.create({ data: { userId: ada.id, createdAt: hoursAgo(0.3), content: 'Photosynthesis: how do the light reactions and the Calvin cycle fit together?' } });
 
+const q3 = await prisma.question.create({ data: { userId: cal.id, status: 'ANSWERED', createdAt: hoursAgo(5), content: 'Osmosis, for my biology test on Monday' } });
+const a3 = await prisma.answer.create({ data: { questionId: q3.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(4.5), bundle: { ...ATP_BUNDLE, topic: 'Osmosis' }, factcheck: PASSED, ...SAMPLE_VIDEO, content: '**Osmosis** is water moving across a membrane toward the side with more dissolved stuff.' } });
+
 // Filler history from earlier days (outside the 24h ask quota) so the list has
 // more than one page to scroll through.
 const topics = ['mitosis', 'the French Revolution', "Bayes' theorem", 'plate tectonics', 'supply and demand', 'the Krebs cycle', "Newton's laws", 'DNA replication', 'the water cycle', 'black holes', 'the immune system', 'compound interest'];
@@ -118,5 +129,5 @@ for (let i = 0; i < 24; i++) {
   }
 }
 
-console.log(JSON.stringify({ users: { ada: ada.id, ben: ben.id }, agent: { id: agent.id, name: agent.name }, droplet: a1.id, POPSMOSIS_API_KEY: key.raw }));
+console.log(JSON.stringify({ users: { ada: ada.id, ben: ben.id, cal: cal.id }, agent: { id: agent.id, name: agent.name }, droplet: a1.id, calDroplet: a3.id, POPSMOSIS_API_KEY: key.raw }));
 await prisma.$disconnect();

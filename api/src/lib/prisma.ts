@@ -53,7 +53,7 @@ const prisma = basePrisma.$extends({
   },
 });
 
-type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+export type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 /**
  * Run an interactive transaction, retrying the whole thing on transient

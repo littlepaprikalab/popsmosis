@@ -4,9 +4,10 @@ import { resolve } from 'path';
 import type { BrowserContext, APIRequestContext } from '@playwright/test';
 
 export interface Seed {
-  users: { ada: string; ben: string };
+  users: { ada: string; ben: string; cal: string }; // Cal is there to be deleted (account.spec.ts)
   agent: { id: string; name: string };
   droplet: string; // the seeded READY droplet's answer id
+  calDroplet: string; // Cal's READY droplet, which outlives Cal's account
   POPSMOSIS_API_KEY: string;
 }
 

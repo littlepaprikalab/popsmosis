@@ -62,8 +62,8 @@ export default function DropletsPage() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">DROPLETS</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Every finished droplet, free to watch: a fact-checked lesson, a song to remember it by, and a lesson video.
-          No account needed to watch; sign in to like and comment.
+          Every finished droplet, free to watch: a lesson checked line by line by AI, a song to remember it by, and a lesson video.
+          No account needed to watch; sign in to like and comment. All made by AI.
         </p>
       </div>
 

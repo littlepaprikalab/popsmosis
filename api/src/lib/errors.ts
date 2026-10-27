@@ -42,6 +42,11 @@ export function isAppError(err: unknown): err is AppError {
   return err instanceof AppError;
 }
 
+/** Prisma's "the row to update or delete is not there". */
+export function isNotFound(err: unknown): boolean {
+  return !!err && typeof err === 'object' && 'code' in err && (err as { code: unknown }).code === 'P2025';
+}
+
 /** Prisma unique-constraint violation. */
 export function isUniqueViolation(err: unknown): boolean {
   return !!err && typeof err === 'object' && 'code' in err && (err as { code: unknown }).code === 'P2002';

@@ -3,8 +3,8 @@
  *
  * Covers: a question and a human reply carrying files -> the files listed on the thread and in both of the teacher's
  * queues, without their bytes -> each served to a reader as its bytes say it is, never as it claimed -> the limits, an
- * agent's reply refused files, and a stranger refused the bytes -> the retention letting the bytes go and keeping the
- * row -> the files going with their message.
+ * agent's reply refused files, and another learner refused the bytes -> the retention letting the bytes go and keeping
+ * the row -> the files going with their message.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -17,6 +17,7 @@ d('attachments', () => {
   let prisma: (typeof import('./../lib/prisma.js'))['default'];
   let cookieA: string;
   let cookieB: string;
+  let adminCookie: string;
   let agentKey: string;
   const tag = `att-${Date.now()}`;
 
@@ -39,6 +40,8 @@ d('attachments', () => {
     const { SESSION_EXPIRES_IN } = await import('./../lib/session.js');
     cookieA = `popsmosis_session=${app.jwt.sign({ sub: userA.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
     cookieB = `popsmosis_session=${app.jwt.sign({ sub: userB.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
+    const admin = await prisma.user.create({ data: { email: `${tag}-admin@example.com`, googleId: `${tag}-admin`, name: 'Root', role: 'ADMIN' } });
+    adminCookie = `popsmosis_session=${app.jwt.sign({ sub: admin.id }, { expiresIn: SESSION_EXPIRES_IN })}`;
 
     const k = generateApiKey();
     agentKey = k.raw;
@@ -109,9 +112,13 @@ d('attachments', () => {
     expect(relabelled.headers['content-type']).toBe('application/octet-stream');
   });
 
-  it('serves the bytes to anyone signed in, refuses them to anyone else, and a file that is not there', async () => {
+  it('serves the bytes to the learner who sent them, an admin and the teacher, and to no one else', async () => {
     expect((await app.inject({ method: 'GET', url: shotUrl })).statusCode).toBe(401);
-    expect((await app.inject({ method: 'GET', url: shotUrl, headers: asUser(cookieB) })).statusCode).toBe(200); // every user sees every thread
+    expect((await app.inject({ method: 'GET', url: shotUrl, headers: asUser(adminCookie) })).statusCode).toBe(200);
+    // Another learner is told it is not there, as for a file that is not.
+    const stranger = await app.inject({ method: 'GET', url: shotUrl, headers: asUser(cookieB) });
+    expect(stranger.statusCode).toBe(404);
+    expect(stranger.rawPayload.equals(png)).toBe(false);
     expect((await app.inject({ method: 'GET', url: '/api/attachments/nope', headers: asUser(cookieA) })).statusCode).toBe(404);
   });
 
@@ -153,6 +160,12 @@ d('attachments', () => {
 
     const card = await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(cookieA) });
     expect(card.json().answer.replies[0].attachments.map((a: { name: string }) => a.name)).toEqual(['again.png']);
+
+    // A follow-up's file is the thread's too: the learner and the teacher, not another learner.
+    const replyFile = humanReply.attachments[0].url;
+    expect((await app.inject({ method: 'GET', url: replyFile, headers: asUser(cookieA) })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: replyFile, headers: asBearer(agentKey) })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'GET', url: replyFile, headers: asUser(cookieB) })).statusCode).toBe(404);
   });
 
   it('lets the bytes go past the retention and keeps the row, which then answers 410', async () => {
