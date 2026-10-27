@@ -20,6 +20,7 @@ import { ReplyThread } from '@/components/ReplyThread';
 import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
+import { DropletBreakdown } from '@/components/DropletBreakdown';
 import { MIN_AGE } from '@/lib/legal';
 
 const PAGE_SIZE = 20;
@@ -50,7 +51,8 @@ function isArmed(q: Question, now = Date.now()): boolean {
 /** Whether a re-fetched card differs from the one on screen in anything a card shows. */
 function videoKey(a: Answer | null): string {
   const v = a?.video;
-  return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden].join('|') : `none|${a?.hidden}`;
+  const bill = a?.breakdown ? `${a.breakdown.steps.length}|${a.breakdown.seconds}` : 'no-bill';
+  return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden, bill].join('|') : `none|${a?.hidden}|${bill}`;
 }
 
 export default function LearnPage() {
@@ -230,6 +232,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                     )}
                   </p>
                 )}
+                {answer.breakdown && <DropletBreakdown breakdown={answer.breakdown} video={answer.video} />}
                 <ReplyThread answer={answer} canReply={q.isOwner} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">

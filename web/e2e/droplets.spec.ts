@@ -93,6 +93,31 @@ test.describe('videos on /learn', () => {
     expect(await onTab()).toBe(true);
   });
 
+  test('a finished droplet carries its bill of materials: each step, its models, time and cost', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
+    const bill = card.getByTestId('breakdown');
+    await bill.scrollIntoViewIfNeeded();
+    // Folded to its totals: the lesson's 4.6 min and the videos' 6.3, and what was spent.
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
+    await expect(bill.locator('table')).toBeHidden();
+
+    await bill.locator('summary').click();
+    await expect(bill.getByTestId('breakdown-step')).toHaveCount(10);
+    const audio = bill.getByTestId('breakdown-step').filter({ hasText: 'Song and voice' });
+    await expect(audio).toContainText('lyria-3.5');
+    await expect(audio).toContainText('$0.08');
+    const table = bill.locator('table'); // the phone's copy of the bill is hidden at this width
+    await expect(table.getByText('eleven_multilingual_v2')).toBeVisible();
+    await expect(table.getByText('3,214 cr', { exact: true })).toBeVisible();
+
+    // The public tab shows the droplet, never its bill.
+    await page.goto(`/droplets/${S.droplet}`);
+    await expect(page.getByRole('heading', { name: 'ATP synthesis' })).toBeVisible();
+    await expect(page.getByTestId('breakdown')).toHaveCount(0);
+  });
+
   test('a failed render says why under the lesson', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');

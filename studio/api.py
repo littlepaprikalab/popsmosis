@@ -116,9 +116,11 @@ class Api:
 
     def set_video(self, answer_id: str, status: str, *, error: str | None = None, attempt: int | None = None,
                   song_video_url: str | None = None, lesson_video_url: str | None = None,
-                  song_poster_url: str | None = None, lesson_poster_url: str | None = None) -> dict:
+                  song_poster_url: str | None = None, lesson_poster_url: str | None = None,
+                  breakdown: dict | None = None) -> dict:
         """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved.
-        With the attempt this run holds, 409 unless it is still the render's current attempt."""
+        With the attempt this run holds, 409 unless it is still the render's current attempt.
+        breakdown, with READY: the media steps' time, cost and models (studio/ledger.py)."""
         body: dict = {"status": status}
         if attempt is not None:
             body["attempt"] = attempt
@@ -128,6 +130,8 @@ class Api:
                 body[key] = value
         if error is not None:
             body["error"] = error
+        if breakdown is not None:
+            body["breakdown"] = breakdown
         return self.request("PATCH", f"/api/answers/{answer_id}/video", body)
 
     def put_file(self, upload_url: str, data: bytes, content_type: str, cache_seconds: int = 3600) -> None:
@@ -156,5 +160,9 @@ class Api:
         """This agent's droplets whose render died with its machine, each claimed as its next attempt."""
         return self.request("GET", f"/api/videos/queue?limit={limit}").get("data", [])
 
-    def give_up_videos(self, answer_id: str, reason: str, attempt: int) -> dict:
-        return self.request("POST", f"/api/answers/{answer_id}/video/fail", {"reason": reason, "attempt": attempt})
+    def give_up_videos(self, answer_id: str, reason: str, attempt: int, breakdown: dict | None = None) -> dict:
+        """Give the videos up; breakdown: what the failed tries took and cost (studio/ledger.py)."""
+        body: dict = {"reason": reason, "attempt": attempt}
+        if breakdown is not None:
+            body["breakdown"] = breakdown
+        return self.request("POST", f"/api/answers/{answer_id}/video/fail", body)

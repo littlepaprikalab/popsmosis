@@ -3,6 +3,7 @@
  * both read these, so the shape is fixed here rather than leaking Prisma rows.
  */
 import { serializeVideo, type VideoStatus } from './droplet.js';
+import { serializeBreakdown } from './breakdown.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
@@ -66,6 +67,8 @@ type AnswerRow = {
   videoError: string | null;
   videoUpdatedAt: Date | null;
   hiddenAt: Date | null;
+  lessonBreakdown: unknown;
+  videoBreakdown: unknown;
   agent: { id: string; name: string };
   replies: ReplyRow[];
 };
@@ -120,6 +123,8 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     model: a.model,
     createdAt: a.createdAt.toISOString(),
     video: serializeVideo(a), // null: a text-only droplet
+    // Each step's time, cost and models (lib/breakdown.ts); null when the studio sent none.
+    breakdown: serializeBreakdown(a.lessonBreakdown, a.videoBreakdown),
     hidden: a.hiddenAt !== null, // an admin took it off the public Droplets tab
     replies,
     // True while the latest reply is from a human: the agent owes a response.

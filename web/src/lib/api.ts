@@ -191,6 +191,33 @@ export interface Video {
   updatedAt: string | null;
 }
 
+/** One model's part in a step: how many calls, what they cost (api/src/lib/breakdown.ts). */
+export interface BreakdownModel {
+  model: string;
+  calls: number;
+  costUsd: number | null; // null: charged in credits, with no price set for them
+  credits: number | null; // what the provider charged in its own credits (ElevenLabs)
+}
+
+export interface BreakdownStep {
+  step: string; // the studio's name: bundle, factcheck, art, audio, timing, render...
+  part: 'lesson' | 'videos';
+  seconds: number | null; // every try together
+  tries: number;
+  costUsd: number;
+  models: BreakdownModel[]; // empty: code alone
+}
+
+/** How the droplet was made, step by step: its bill of materials. */
+export interface Breakdown {
+  steps: BreakdownStep[];
+  seconds: number | null; // wall time; the art and the audio are made side by side
+  costUsd: number;
+  credits: number | null; // credits of the calls with no price
+  unpriced: number; // models with neither a price nor credits: the provider did not say
+  complete: boolean; // every call priced
+}
+
 export interface Answer {
   id: string;
   questionId: string;
@@ -199,6 +226,7 @@ export interface Answer {
   model: string | null;
   createdAt: string;
   video: Video | null; // null: a text-only droplet
+  breakdown: Breakdown | null; // null: the studio sent none (a lesson written by hand, or an older one)
   hidden: boolean; // an admin took it off the public Droplets tab
   replies: Reply[];
   awaitingAgent: boolean;

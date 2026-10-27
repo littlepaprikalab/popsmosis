@@ -10,6 +10,7 @@ import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
+import { breakdownError } from '../lib/breakdown.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
@@ -287,12 +288,13 @@ export default async function questionRoutes(app: FastifyInstance) {
 
   // POST /api/questions/:id/answer — agent answers; exactly one answer per question.
   // The studio sends the bundle and fact-check the lesson came from with it
-  // (lib/droplet.ts); a lesson written by hand may leave both out.
+  // (lib/droplet.ts), and the breakdown of its steps so far (lib/breakdown.ts); a lesson
+  // written by hand may leave all three out.
   app.post('/api/questions/:id/answer', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
-    const { content, model, bundle, factcheck } = (request.body ?? {}) as {
-      content?: unknown; model?: unknown; bundle?: unknown; factcheck?: unknown;
+    const { content, model, bundle, factcheck, breakdown } = (request.body ?? {}) as {
+      content?: unknown; model?: unknown; bundle?: unknown; factcheck?: unknown; breakdown?: unknown;
     };
 
     const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: ANSWER_MAX_LENGTH });
@@ -301,7 +303,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       const modelError = validateString(model, 'model', { maxLength: 100 });
       if (modelError) return sendError(reply, 'VALIDATION_ERROR', modelError);
     }
-    const jsonError = dropletJsonError(bundle, factcheck);
+    const jsonError = dropletJsonError(bundle, factcheck) ?? breakdownError(breakdown);
     if (jsonError) return sendError(reply, 'VALIDATION_ERROR', jsonError);
 
     try {
@@ -325,6 +327,7 @@ export default async function questionRoutes(app: FastifyInstance) {
           data: {
             questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null,
             ...(bundle !== undefined && { bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject }),
+            ...(breakdown !== undefined && { lessonBreakdown: breakdown as Prisma.InputJsonObject }),
           },
           include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },
         });

@@ -161,6 +161,10 @@ def test_the_step_writes_all_three_timings_and_reports_drift(made, monkeypatch):
         assert timing_problems(jobs.read(made / media.timing_path(kind), Timing), ids) == []
     report = json.loads((made / timing.REPORT).read_text())
     assert {d["line_id"] for d in report["drift"]} == {"c1-1", "c2-1", "c3-1"}
+    # Demucs and MMS ran here: logged with their time and no bill, after the audio step's paid calls.
+    local = [json.loads(row) for row in (made / "calls.jsonl").read_text().splitlines()][3:]
+    assert [(r["label"], r["role"], r["model"], r["cost_usd"]) for r in local] == [
+        ("song vocals", "local", "htdemucs", 0.0), ("song alignment", "local", "mms-fa", 0.0)]
 
 
 def test_timing_waits_for_the_audio(tmp_path):

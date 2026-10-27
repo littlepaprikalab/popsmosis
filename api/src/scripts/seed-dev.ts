@@ -42,6 +42,36 @@ const SAMPLE_VIDEO = {
   videoUpdatedAt: hoursAgo(2.4),
 };
 
+// The bill of materials under the lesson (lib/breakdown.ts), in the numbers of the first live runs (docs/PLAN.md, section 12).
+const SAMPLE_BREAKDOWN = {
+  lessonBreakdown: {
+    steps: [
+      { step: 'request', seconds: 0.6, tries: 1, costUsd: 0, models: [] },
+      { step: 'bundle', seconds: 196.0, tries: 1, costUsd: 0.5312, models: [{ model: 'claude-opus-5-5', calls: 1, costUsd: 0.5312, credits: null }] },
+      { step: 'factcheck', seconds: 80.4, tries: 1, costUsd: 0.1788, models: [{ model: 'claude-opus-5-5', calls: 1, costUsd: 0.1788, credits: null }] },
+    ],
+    seconds: 277.0,
+  },
+  videoBreakdown: {
+    steps: [
+      { step: 'art', seconds: 76.0, tries: 1, costUsd: 0.0081, models: [{ model: 'claude-haiku-5-5', calls: 3, costUsd: 0.0081, credits: null }] },
+      { step: 'locate', seconds: 0.1, tries: 1, costUsd: 0, models: [] },
+      { step: 'audio', seconds: 94.6, tries: 1, costUsd: 0.08, models: [
+        { model: 'lyria-3.5', calls: 1, costUsd: 0.08, credits: null },
+        { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 3214 },
+      ] },
+      { step: 'timing', seconds: 110.2, tries: 1, costUsd: 0, models: [
+        { model: 'htdemucs', calls: 1, costUsd: 0, credits: null },
+        { model: 'mms-fa', calls: 1, costUsd: 0, credits: null },
+      ] },
+      { step: 'timeline', seconds: 0.3, tries: 1, costUsd: 0, models: [] },
+      { step: 'render', seconds: 157.0, tries: 1, costUsd: 0, models: [] },
+      { step: 'upload', seconds: 14.2, tries: 1, costUsd: 0, models: [] },
+    ],
+    seconds: 376.3,
+  },
+};
+
 const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: {}, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN' } });
 const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: {}, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben' } });
 const cal = await prisma.user.upsert({ where: { googleId: 'seed-cal' }, update: {}, create: { email: 'cal@example.com', googleId: 'seed-cal', name: 'Cal' } });
@@ -51,7 +81,7 @@ const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, 
 await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
 
 const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'ATP synthesis: how do cells actually make ATP?' } });
-const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, factcheck: PASSED, ...SAMPLE_VIDEO, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
+const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
 
 1. The electron transport chain pumps protons (H+) out of the matrix, building up a **gradient** across the membrane.
 2. The protons can only flow back in through ATP synthase, and that flow spins its rotor.
