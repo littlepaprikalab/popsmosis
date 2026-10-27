@@ -40,6 +40,11 @@ HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the f
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
 CAPTION_FADE_S = 0.3
+# In the song, the next line shows in the band this long before it is sung, unmarked and
+# dimmed, as karaoke does: the eye gets to its first word as the voice does, and a singer
+# who comes in early (Lyria adds a take now and then) lands on words already on screen.
+LEAD_S = 1.5
+BLINK_S = 0.5  # an empty band shorter than this would blink: the next line takes the whole gap
 FRQ_IN_S = 1.0
 EDGE_FADE = 2 * p.DOT_R  # a label fades out as its dot nears the edge of the view, over about the dot's width
 
@@ -400,8 +405,21 @@ class Renderer:
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
         if beat.caption:
             p.draw_caption(canvas, beat.caption, layout.width / 2, layout.margin + 8, layout.caption_font, caption_alpha)
-        p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height), self._band_words(beat), t,
-                    layout.band_font)
+        p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
+                    self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _band_beat(self, i: int, t: float):
+        """The beat whose line the band shows at t: beat i's own, or in the song, late in an
+        instrumental gap, the next line's (none of its words has started, so none is marked).
+        The camera, spotlight and caption keep to the beat: only the words lead."""
+        beats = self.timeline.beats
+        beat = beats[i]
+        if beat.line_id is not None or self.timeline.video != "song" or i + 1 == len(beats) or not beats[i + 1].words:
+            return beat
+        lead_at = beat.t1 - LEAD_S
+        if lead_at - beat.t0 < BLINK_S:
+            lead_at = beat.t0
+        return beats[i + 1] if t >= lead_at else beat
 
     def _band_words(self, beat) -> list[p.BandWord]:
         shown = beat.line.split()
