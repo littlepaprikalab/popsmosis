@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1024">
+  <defs>
+    <radialGradient id="stroma-shade" cx="0.45" cy="0.4" r="0.65">
+      <stop offset="0" stop-color="#F4F8E8"/>
+      <stop offset="1" stop-color="#DCE8C4"/>
+    </radialGradient>
+    <linearGradient id="envelope-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D9E7B8"/>
+      <stop offset="1" stop-color="#AFC48A"/>
+    </linearGradient>
+    <linearGradient id="thylakoid-shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7CC79A"/>
+      <stop offset="0.5" stop-color="#2E8B57"/>
+      <stop offset="1" stop-color="#1F6B42"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <ellipse cx="904" cy="540" rx="590" ry="300" fill="#000000" opacity="0.18" filter="url(#soft)"/>
+  <ellipse cx="896" cy="512" rx="590" ry="305" fill="url(#envelope-shade)" stroke="#7E9460" stroke-width="4"/>
+  <ellipse cx="896" cy="512" rx="562" ry="279" fill="url(#stroma-shade)" stroke="#9DB27A" stroke-width="3"/>
+  <circle cx="640" cy="690" r="34" fill="#E9E1C8" stroke="#C9BC93" stroke-width="2"/>
+  <circle cx="1210" cy="330" r="26" fill="#E9E1C8" stroke="#C9BC93" stroke-width="2"/>
+  <g data-structure="Thylakoid">
+    <path d="M620 452 C660.0 452 660.0 548 700 548" fill="none" stroke="#2E8B57" stroke-width="9" stroke-linecap="round"/>
+    <path d="M820 562 C860.0 562 860.0 428 900 428" fill="none" stroke="#2E8B57" stroke-width="9" stroke-linecap="round"/>
+    <path d="M1020 442 C1060.0 442 1060.0 543 1100 543" fill="none" stroke="#2E8B57" stroke-width="9" stroke-linecap="round"/>
+    <path d="M1220 557 C1250.0 557 1250.0 458 1280 458" fill="none" stroke="#2E8B57" stroke-width="9" stroke-linecap="round"/>
+    <rect x="490" y="375" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="490" y="401" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="490" y="427" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="490" y="453" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="490" y="479" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="490" y="505" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="690" y="485" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="690" y="511" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="690" y="537" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="690" y="563" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="690" y="589" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="690" y="615" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="890" y="365" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="890" y="391" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="890" y="417" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="890" y="443" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="890" y="469" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="890" y="495" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1090" y="480" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1090" y="506" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1090" y="532" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1090" y="558" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1090" y="584" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1090" y="610" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1270" y="395" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1270" y="421" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1270" y="447" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1270" y="473" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1270" y="499" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+    <rect x="1270" y="525" width="140" height="22" rx="11" fill="url(#thylakoid-shade)" stroke="#1B5E3A" stroke-width="2.5"/>
+  </g>
+</svg>

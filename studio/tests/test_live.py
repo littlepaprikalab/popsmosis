@@ -40,3 +40,23 @@ def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
     assert seeded.corrected and seeded.corrected != "Every electron hand-off pumps a proton"
     assert checks["lyric:v1-1"].verdict == "SUPPORTED"
     assert checks["lyric:v1-3"].verdict == "SUPPORTED"
+
+
+def test_the_brain_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
+    """One scene of the sample bundle, drawn live. STUDIO_BRAIN_MODEL=claude-haiku-5-5 to try it cheaply."""
+    from studio.steps import art
+    from studio.tests import sample_media
+
+    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    bundle = sample_media.bundle()
+    scene = next(s for s in bundle.scenes if s.id == "overview")
+    (tmp_path / "art").mkdir()
+    before = len(brain.calls)
+    drawing = art.draw(tmp_path, bundle, scene, brain.ask, resume=False)
+    for call in brain.calls[before:]:
+        print(f"{call.label}: {call.model} {call.input_tokens} in, {call.output_tokens} out, "
+              f"${call.cost_usd or 0:.4f}, {call.seconds}s")
+    print("problems on the kept drawing:", drawing.problems)
+    art.save(tmp_path, scene, drawing)
+    print("art:", tmp_path / "art" / "overview.png")
+    assert drawing.enough(scene)
