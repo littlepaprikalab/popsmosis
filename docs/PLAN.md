@@ -541,6 +541,8 @@ model Answer {
   videoError     String?      // why it FAILED, shown on the droplet and the admin page
   videoUpdatedAt DateTime?    // RENDERING for too long reads as FAILED
   hiddenAt       DateTime?    // an admin took it off the Droplets tab
+  likeCount      Int          // thumbs-up on the Droplets tab (DropletLike), kept by a trigger
+  commentCount   Int          // comments on it (DropletComment), likewise
 }
 
 enum QuestionStatus { PENDING ANSWERED FAILED }
@@ -569,6 +571,10 @@ the videos' (`videoStatus`).
 | Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=` |
 | Anyone | GET | `/api/droplets/:id` | One droplet |
 | Admin | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the tab, or put it back |
+| Anyone | GET | `/api/droplets/:id/comments` | Its comments, newest first, `?cursor=` |
+| Human | PUT / DELETE | `/api/droplets/:id/like` | Thumbs-up, and taking it back; idempotent both ways |
+| Human | POST | `/api/droplets/:id/comments` | `{ content }`, with an optional `Idempotency-Key` |
+| Human | DELETE | `/api/droplets/:id/comments/:commentId` | Its author, or an admin |
 
 ### The Droplets tab
 
@@ -586,6 +592,24 @@ account.
   say more than they meant to share), the files they attached, and follow-up threads.
 - **Listed automatically** once the videos are READY, so everything on it passed the
   fact-check. An admin can hide a droplet.
+- **Thumbs-up and comments.** Anyone signed in can like a droplet on the tab and comment
+  on it; anyone can read both. A comment names its author as "Grace H.", never their
+  full name, picture or email, since the tab is open to anyone and many of the people
+  here are students. Comments are not follow-ups: they are for other viewers, not the
+  teacher, who never reads them. An admin can delete any comment; a hidden droplet's
+  likes and comments are kept and come back with it.
+  - *Counts:* `likeCount` and `commentCount` on the `Answer`, kept by triggers on
+    `droplet_likes` and `droplet_comments`, so a list of cards reads them off the row it
+    already reads, and a deleted user's likes leave the counts exact.
+  - *Reliable:* liking is a PUT and unliking a DELETE, each idempotent, so retries are
+    safe; the page sends only where the clicks ended up, one request at a time. A
+    comment carries an `Idempotency-Key`, so a resend after a lost answer returns the
+    first comment instead of a second.
+  - *Who:* a public read says which like and comments are the viewer's own when it
+    carries a session cookie, without renewing it, so a public response never sets one.
+  - *One request a page:* a droplet comes with the first page of its comments. Every
+    public request spends the instance's shared ceiling, so a page that needed two
+    would serve half as many visitors.
 - **Later:** when someone asks for a topic that already has a droplet, offer that one
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 
 const S = seed();
@@ -121,5 +121,212 @@ test.describe('videos on /learn', () => {
     const failed = page.getByTestId('videos-failed').first();
     await failed.scrollIntoViewIfNeeded();
     await expect(failed).toContainText('render: ffmpeg exited 1 on the song.');
+  });
+});
+
+test.describe('likes and comments on the Droplets tab', () => {
+  const cookieOf = (userId: string) => ({ cookie: `popsmosis_session=${sessionToken(userId)}` });
+  const asWriter = (userId: string) => ({ ...cookieOf(userId), 'x-requested-with': 'XMLHttpRequest' });
+  // The droplet as the API tells this person, so a test checks what landed, not only what the page shows.
+  const seenBy = async (request: APIRequestContext, userId: string) =>
+    (await request.get(apiUrl(`/api/droplets/${S.droplet}`), { headers: cookieOf(userId) })).json() as Promise<{ liked: boolean; likeCount: number }>;
+  // Start from no like by this person, whatever an earlier try of the test left.
+  const unlikeFirst = async (request: APIRequestContext, userId: string) => {
+    expect((await request.delete(apiUrl(`/api/droplets/${S.droplet}/like`), { headers: asWriter(userId) })).status()).toBe(200);
+    return (await seenBy(request, userId)).likeCount;
+  };
+  const atpCard = (page: Page) => page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' }).first();
+
+  test('signed out: the counts and comments show, and adding to them asks for a sign-in', async ({ page }) => {
+    await page.goto('/droplets');
+    const card = atpCard(page);
+    await expect(card.getByTestId('like-signin')).toHaveText(/\b1\b/); // Ada's
+    await expect(card.getByTestId('like-button')).toHaveCount(0);
+    await expect(card.getByTestId('card-comments')).toHaveText(/\b1\b/);
+
+    await card.getByTestId('card-comments').click();
+    await expect(page).toHaveURL(new RegExp(`/droplets/${S.droplet}#comments$`));
+    const comments = page.getByTestId('droplet-comments');
+    await expect(comments).toBeInViewport();
+    await expect(comments.getByTestId('comment')).toHaveCount(1);
+    await expect(comments.getByText('The chorus is the only way')).toBeVisible();
+    await expect(comments.getByText('Ada', { exact: true })).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Add a comment' })).toHaveCount(0);
+    await expect(page.getByTestId('comment-signin')).toHaveAttribute('href', `/auth/callback?returnTo=${encodeURIComponent(`/droplets/${S.droplet}`)}`);
+    // Ben asked for this droplet; nothing here says so.
+    await expect(page.getByText('Ben')).toHaveCount(0);
+  });
+
+  test('signed in: a thumbs-up lands, holds across a reload and across pages, and comes back off', async ({ page, context, request }) => {
+    const before = await unlikeFirst(request, S.users.ben);
+    await signIn(context, S.users.ben);
+    await page.goto('/droplets');
+    const like = atpCard(page).getByTestId('like-button');
+    await expect(like).toHaveAttribute('aria-pressed', 'false');
+    await expect(like.getByTestId('like-count')).toHaveText(String(before));
+
+    await like.click();
+    await expect(like).toHaveAttribute('aria-pressed', 'true');
+    await expect(like.getByTestId('like-count')).toHaveText(String(before + 1));
+    await expect.poll(() => seenBy(request, S.users.ben)).toEqual(expect.objectContaining({ liked: true, likeCount: before + 1 }));
+
+    await page.reload();
+    await expect(like).toHaveAttribute('aria-pressed', 'true');
+    await atpCard(page).getByRole('heading', { name: 'ATP synthesis' }).click();
+    await expect(page).toHaveURL(new RegExp(`/droplets/${S.droplet}$`));
+    const onPage = page.getByTestId('droplet-engagement').getByTestId('like-button');
+    await expect(onPage).toHaveAttribute('aria-pressed', 'true');
+    await expect(onPage.getByTestId('like-count')).toHaveText(String(before + 1));
+
+    await onPage.click();
+    await expect(onPage).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(() => seenBy(request, S.users.ben)).toEqual(expect.objectContaining({ liked: false, likeCount: before }));
+
+    // Back on the list, the card says what the droplet page just did, not what the list said before.
+    await page.goBack();
+    await expect(page).toHaveURL(/\/droplets$/);
+    await expect(like).toHaveAttribute('aria-pressed', 'false');
+    await expect(like.getByTestId('like-count')).toHaveText(String(before));
+  });
+
+  test('a droplet page is one request, comments and all', async ({ page }) => {
+    const calls: string[] = [];
+    page.on('request', (r) => { const path = new URL(r.url()).pathname; if (path.startsWith('/api/droplets')) calls.push(`${r.method()} ${path}`); });
+    await page.goto(`/droplets/${S.droplet}`);
+    await expect(page.getByTestId('comment').first()).toBeVisible();
+    expect(calls).toEqual([`GET /api/droplets/${S.droplet}`]);
+  });
+
+  test('a like sent into a gateway blip is sent again and lands', async ({ page, context, request }) => {
+    const before = await unlikeFirst(request, S.users.ben);
+    await signIn(context, S.users.ben);
+    let sent = 0;
+    // Render answers a deploy's swap window itself, with an HTML 502.
+    await page.route('**/api/droplets/*/like', (route) => {
+      sent += 1;
+      return sent === 1 ? route.fulfill({ status: 502, contentType: 'text/html', body: '<html>502</html>' }) : route.continue();
+    });
+    await page.goto(`/droplets/${S.droplet}`);
+    const like = page.getByTestId('droplet-engagement').getByTestId('like-button');
+    await like.click();
+    await expect.poll(() => seenBy(request, S.users.ben), { timeout: 15_000 }).toEqual(expect.objectContaining({ liked: true, likeCount: before + 1 }));
+    expect(sent).toBe(2);
+    await expect(like).toHaveAttribute('aria-pressed', 'true');
+    await page.unroute('**/api/droplets/*/like');
+    await like.click();
+    await expect.poll(() => seenBy(request, S.users.ben)).toEqual(expect.objectContaining({ liked: false, likeCount: before }));
+  });
+
+  test('signed out in another tab: a click goes to sign in, records nothing, and an unsent comment waits for the return', async ({ page, context, request }) => {
+    const before = await unlikeFirst(request, S.users.ben);
+    await signIn(context, S.users.ben);
+    await page.goto(`/droplets/${S.droplet}`);
+    const like = page.getByTestId('droplet-engagement').getByTestId('like-button');
+    await expect(like).toBeVisible(); // signed in, for now
+    const draft = `half-written ${Date.now()}: the gradient part`;
+    await page.getByRole('textbox', { name: 'Add a comment' }).fill(draft);
+
+    // Sessions slide (each request renews one past its halfway mark), so an open page does not
+    // time out; what ends one under it is signing out somewhere else, which clears the cookie.
+    await context.clearCookies();
+    await like.click();
+    await expect(page).toHaveURL(new RegExp(`/auth/callback\\?reason=session_expired&returnTo=${encodeURIComponent(`/droplets/${S.droplet}`)}`));
+    expect(await seenBy(request, S.users.ben)).toEqual(expect.objectContaining({ liked: false, likeCount: before }));
+
+    // Signed back in, the page they were on still has what they were writing.
+    await signIn(context, S.users.ben);
+    await page.goto(`/droplets/${S.droplet}`);
+    await expect(page.getByRole('textbox', { name: 'Add a comment' })).toHaveValue(draft);
+    await page.getByRole('textbox', { name: 'Add a comment' }).fill('');
+  });
+
+  test('clicking fast on a slow network ends where the last click left it, on the page and in the API', async ({ page, context, request }) => {
+    const before = await unlikeFirst(request, S.users.ben);
+    await signIn(context, S.users.ben);
+    // Each like takes a while to answer, so the clicks pile up behind one in flight.
+    let sent = 0;
+    await page.route('**/api/droplets/*/like', async (route) => { sent += 1; await new Promise((r) => setTimeout(r, 400)); await route.continue(); });
+    await page.goto(`/droplets/${S.droplet}`);
+    const like = page.getByTestId('droplet-engagement').getByTestId('like-button');
+    for (let i = 0; i < 5; i++) await like.click({ delay: 0 });
+    await expect(like).toHaveAttribute('aria-pressed', 'true');
+    await expect(like.getByTestId('like-count')).toHaveText(String(before + 1));
+    await expect.poll(() => seenBy(request, S.users.ben), { timeout: 15_000 }).toEqual(expect.objectContaining({ liked: true, likeCount: before + 1 }));
+    expect(sent).toBeLessThan(5); // the clicks in between were never sent: only where they ended up
+
+    await page.unroute('**/api/droplets/*/like');
+    await page.reload();
+    await expect(like).toHaveAttribute('aria-pressed', 'true');
+    await like.click();
+    await expect.poll(() => seenBy(request, S.users.ben)).toEqual(expect.objectContaining({ liked: false, likeCount: before }));
+  });
+
+  test('a comment posts once even when its first answer is lost, holds across a reload, and its author deletes it', async ({ page, context, request }) => {
+    await signIn(context, S.users.ada);
+    await page.goto(`/droplets/${S.droplet}`);
+    const section = page.getByTestId('droplet-comments');
+    await expect(section.getByTestId('comment').first()).toBeVisible();
+    const before = Number(await section.getByTestId('comment-count').textContent());
+    const text = `E2E ${Date.now()}: the rap verse is where the gradient finally clicked`;
+
+    // The first send reaches the API and its answer never comes back. The page sends it
+    // again with the same Idempotency-Key, and gets the same comment rather than a second.
+    let lost = 0;
+    await page.route('**/api/droplets/*/comments', async (route) => {
+      if (route.request().method() !== 'POST' || lost > 0) return route.continue();
+      lost += 1;
+      await route.fetch();
+      return route.abort('connectionreset');
+    });
+    await page.getByRole('textbox', { name: 'Add a comment' }).fill(text);
+    await section.getByRole('button', { name: 'Comment', exact: true }).click();
+    const mine = section.getByTestId('comment').filter({ hasText: text });
+    await expect(mine).toHaveCount(1);
+    expect(lost).toBe(1);
+    await expect(section.getByTestId('comment-count')).toHaveText(String(before + 1));
+    await expect(page.getByRole('textbox', { name: 'Add a comment' })).toHaveValue('');
+    const listed = await (await request.get(apiUrl(`/api/droplets/${S.droplet}/comments?limit=50`))).json();
+    expect(listed.data.filter((c: { content: string }) => c.content === text)).toHaveLength(1);
+    expect(listed.commentCount).toBe(before + 1);
+    await page.unroute('**/api/droplets/*/comments');
+
+    await page.reload();
+    await expect(mine).toHaveCount(1);
+    await expect(mine.getByText('you', { exact: true })).toBeVisible();
+    // Ben may not delete it, and is not offered to.
+    expect((await request.delete(apiUrl(`/api/droplets/${S.droplet}/comments/${listed.data.find((c: { content: string }) => c.content === text).id}`), { headers: asWriter(S.users.ben) })).status()).toBe(403);
+
+    await mine.getByTestId('delete-comment').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(mine).toHaveCount(0);
+    await expect(section.getByTestId('comment-count')).toHaveText(String(before));
+    await page.reload();
+    await expect(section.getByTestId('comment')).toHaveCount(before);
+  });
+
+  test('markup in a comment is shown as text, and nothing in it runs', async ({ page, context }) => {
+    await signIn(context, S.users.ada);
+    await page.goto(`/droplets/${S.droplet}`);
+    const payload = `<img src=x onerror="window.__pwned=1"><script>window.__pwned=1</script> **not bold** ${Date.now()}`;
+    await page.getByRole('textbox', { name: 'Add a comment' }).fill(payload);
+    await page.getByTestId('droplet-comments').getByRole('button', { name: 'Comment', exact: true }).click();
+    const row = page.getByTestId('comment').filter({ hasText: payload });
+    await expect(row).toHaveCount(1);
+    await page.reload();
+    await expect(row).toHaveCount(1);
+    await expect(row.locator('img, script, strong')).toHaveCount(0);
+    expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined();
+    await row.getByTestId('delete-comment').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(row).toHaveCount(0);
+  });
+
+  test('someone else’s comment offers no delete to a member who is not an admin', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto(`/droplets/${S.droplet}`);
+    const adas = page.getByTestId('comment').filter({ hasText: 'The chorus is the only way' });
+    await expect(adas).toBeVisible();
+    await expect(adas.getByTestId('delete-comment')).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Add a comment' })).toBeVisible();
   });
 });
