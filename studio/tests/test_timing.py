@@ -8,7 +8,7 @@ from studio.schemas import Timing, timing_problems
 from studio.steps import audio, timing
 from studio.steps.timing import spoken, timing_from_chars, words_of
 from studio.tests import sample_media
-from studio.tests.test_audio import FakeEleven
+from studio.tests.test_audio import FakeEleven, FakeGemini
 
 
 def test_words_lose_the_punctuation_around_them_but_keep_their_own():
@@ -61,6 +61,7 @@ def test_speech_timings_survive_characters_the_tts_dropped_or_changed():
 def made(tmp_path, monkeypatch):
     """The sample job with fake audio: the plan and character timings a real run would leave."""
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.delenv("SONG_PROVIDER", raising=False)
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
     job = tmp_path / "sample"
@@ -93,6 +94,40 @@ def test_the_song_is_aligned_section_by_section_in_song_time(made):
     assert 8.6 <= chorus.start < chorus.end <= 12.9  # inside the chorus's planned place
     assert [w.word for w in chorus.words] == ["Protons", "flow", "and", "ATP", "grows"]
     assert report["drifting"] == [] and report["unsure"] == []
+
+
+def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
+    """Lyria keeps to the planned sections only roughly (an intro, a longer verse), so its
+    lines are looked for in the whole song at once rather than where each was planned."""
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    monkeypatch.setattr(audio, "send", FakeGemini())
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)
+    monkeypatch.setattr(audio, "duration", lambda path: 41.0)  # longer than the 30.1s planned
+    job = tmp_path / "sample"
+    job.mkdir()
+    bundle = sample_media.bundle()
+    jobs.write(job / "bundle.json", bundle)
+    audio.run(job)
+
+    calls = []
+    vocals = np.zeros((1, int(41.0 * timing.SAMPLE_RATE)), dtype=np.float32)
+    timed, report = timing.song_timing(job, bundle, align=even_aligner(calls), vocals=vocals)
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    (heard, words), = calls  # one window: the whole song
+    assert heard == vocals.shape[-1]
+    assert words[:5] == ["light", "lands", "on", "the", "thylakoid"] and words[-5:] == ["protons", "flow", "and",
+                                                                                       "eitipi", "grows"]
+    assert timed.duration == 41.0
+
+
+def test_a_song_plan_from_before_the_choice_is_aligned_section_by_section():
+    plan = {"sections": [{"section": "verse", "line_ids": ["a"], "start_ms": 0, "duration_ms": 4300},
+                         {"section": "chorus", "line_ids": ["b"], "start_ms": 4300, "duration_ms": 4300}]}
+    assert timing.windows(plan) == plan["sections"]
+    assert timing.windows({**plan, "sections_pinned": False}) == [
+        {"line_ids": ["a", "b"], "start_ms": 0, "duration_ms": 8600}]
 
 
 def test_a_chorus_sung_slower_is_flagged_and_a_mumbled_line_is_unsure(made):
@@ -172,3 +207,64 @@ def test_a_rerun_that_fails_halfway_leaves_nothing_that_looks_done(made, monkeyp
         timing.run(made)
     assert not timing.is_done(made)
     assert not (made / media.timing_path("song")).exists() and not (made / timing.REPORT).exists()
+
+
+def test_kept_vocals_are_used_only_for_the_song_they_came_from(made):
+    import os
+
+    vocals, song = made / timing.VOCALS, made / media.audio_path("song")
+    assert not timing.vocals_current(made)  # none yet
+    vocals.write_bytes(b"RIFF")
+    assert timing.vocals_current(made)
+    later = vocals.stat().st_mtime + 10
+    os.utime(song, (later, later))  # the song was made again (another provider, other lines)
+    assert not timing.vocals_current(made)
+
+
+# --- the aligner's front end in pieces ----------------------------------------------------------
+
+
+def _tiny_mms(norm="layer_norm"):
+    """A small model of MMS's make: its front end's kernels and strides (400 samples a frame, 320
+    apart), a narrow transformer, the waveform normalised, log-softmax and a star appended."""
+    torch = pytest.importorskip("torch")
+    torchaudio = pytest.importorskip("torchaudio")
+    from torchaudio.pipelines import MMS_FA
+    from torchaudio.pipelines._wav2vec2 import utils
+
+    torch.manual_seed(0)
+    convs = [(16, k, s) for _, k, s in MMS_FA._params["extractor_conv_layer_config"]]
+    inner = torchaudio.models.wav2vec2_model(
+        extractor_mode=norm, extractor_conv_layer_config=convs, extractor_conv_bias=True, encoder_embed_dim=32,
+        encoder_projection_dropout=0.0, encoder_pos_conv_kernel=16, encoder_pos_conv_groups=4,
+        encoder_num_layers=2, encoder_num_heads=2, encoder_attention_dropout=0.0, encoder_ff_interm_features=64,
+        encoder_ff_interm_dropout=0.0, encoder_dropout=0.0, encoder_layer_norm_first=True,
+        encoder_layer_drop=0.0, aux_num_out=28)
+    model = utils._extend_model(inner, normalize_waveform=True, apply_log_softmax=True, append_star=True)
+    return torch, model.eval()
+
+
+def test_the_aligner_hears_a_long_window_in_pieces_and_gets_what_one_pass_would(monkeypatch):
+    torch, model = _tiny_mms()
+    assert timing._front_end(model) == (400, 320)
+    monkeypatch.setattr(timing, "CHUNK_S", 1)
+    window = torch.randn(1, int(4.37 * timing.SAMPLE_RATE)) * 0.1  # four pieces and a bit
+    calls = []
+    extract = model.model.feature_extractor.forward
+    monkeypatch.setattr(model.model.feature_extractor, "forward", lambda x, n: calls.append(x.size(1)) or extract(x, n))
+    with torch.inference_mode():
+        pieces = timing._emission(model, window)
+        monkeypatch.setattr(timing, "CHUNK_S", 60)
+        whole = timing._emission(model, window)
+    assert len(calls) == 6 and calls[-1] == window.size(1)  # five pieces, then the one pass
+    assert pieces.shape == whole.shape and pieces.shape[-1] == 29
+    assert torch.allclose(pieces, whole, atol=1e-5)
+
+
+def test_a_front_end_normalised_across_the_window_is_heard_in_one_pass(monkeypatch):
+    torch, model = _tiny_mms(norm="group_norm")
+    assert timing._front_end(model) is None
+    monkeypatch.setattr(timing, "CHUNK_S", 1)
+    window = torch.randn(1, 3 * timing.SAMPLE_RATE) * 0.1
+    with torch.inference_mode():
+        assert torch.equal(timing._emission(model, window), model(window)[0])

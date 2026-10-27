@@ -111,7 +111,11 @@ python -m studio recover                 # take a render that died with its mach
 ```
 
 `videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
-the timeline, render and upload. `run` claims the videos as soon as it posts the lesson,
+the timeline, render and upload. `SONG_PROVIDER` picks who sings the song: `elevenlabs`
+(the default, Eleven Music, with `ELEVENLABS_API_KEY`) or `gemini` (Lyria 3.5 on the Gemini
+API, with `GEMINI_API_KEY`; `GEMINI_SONG_MODEL` picks another Lyria model). The narration
+is ElevenLabs either way. Switching it makes a job's song again on its next run, and only
+the song. `run` claims the videos as soon as it posts the lesson,
 and `videos` renews the claim before every step, so a render whose machine dies is handed
 to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=off` makes
 text-only droplets.
