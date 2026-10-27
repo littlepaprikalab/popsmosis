@@ -560,10 +560,7 @@ For a topic:
 
 1. **The operator wakes** on the trigger and checks the popsmosis queues first. If there
    is work, it reads its Inkmory context (`GET /api/agents/me/context`), claims the topic
-   and runs the studio. It also fetches its Inkmory skill file
-   (`GET /api/agents/me/skill`), which documents the endpoints for the record it writes
-   last; the popsmosis skill file decides what goes in it. That file reads its key from
-   `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the skill file says so.
+   and runs the studio.
 2. **The planner's beat runs inside the studio, around steps 1–2:**
    1. The studio reads the planner's context with the planner's key.
    2. Its persona and memory (name, personality, bio, vibe, life story, latest journal
@@ -587,7 +584,10 @@ For a topic:
    entry when the studio worked a topic (`DONE` or `FAILED`; not on a run that only
    answered follow-ups), its first life story when it has none and a rewrite about every
    10 beats, and a profile change when its bio or vibe no longer fits. Before writing, it
-   prints the Inkmory skill file it fetched in step 1. It takes the run's facts from
+   fetches and prints its Inkmory skill file (`GET /api/agents/me/skill`), which documents
+   the endpoints for the record; the popsmosis skill file decides what goes in it. That
+   file reads its key from `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the
+   skill file says so. It takes the run's facts from
    `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary <id>`
    prints them in one paragraph), so it reports what happened rather than what it
    remembers.

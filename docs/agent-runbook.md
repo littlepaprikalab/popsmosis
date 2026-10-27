@@ -40,7 +40,7 @@ The runner needs these in its environment:
 | `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`, which also needs `MODEL_API_KEY` |
 | `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson, with `BRAIN_PROVIDER=claude`. Default `claude-opus-5-5` |
 | `STUDIO_BRAIN_EFFORT` | optional: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
-| `INKMORY_API_URL` | Inkmory's base URL, e.g. `https://api.inkmory.com` |
+| `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
 
