@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1024">
+  <defs>
+    <linearGradient id="stroma" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#EEF5E4"/>
+    </linearGradient>
+    <linearGradient id="lumen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E8F1F6"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="membrane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6DBE8D"/>
+      <stop offset="0.5" stop-color="#2E8B57"/>
+      <stop offset="1" stop-color="#6DBE8D"/>
+    </linearGradient>
+    <radialGradient id="b6f" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#F6B57E"/>
+      <stop offset="0.55" stop-color="#E07A2F"/>
+      <stop offset="1" stop-color="#A9551B"/>
+    </radialGradient>
+    <radialGradient id="other-protein" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#E6E6E6"/>
+      <stop offset="1" stop-color="#A9A9A9"/>
+    </radialGradient>
+    <filter id="shadow"><feGaussianBlur stdDeviation="10"/></filter>
+  </defs>
+  <rect x="150" y="250" width="1492" height="230" fill="url(#stroma)"/>
+  <rect x="150" y="560" width="1492" height="230" fill="url(#lumen)"/>
+  <g data-structure="Thylakoid">
+    <path d="M150 470 C500 455 1290 485 1642 470 L1642 570 C1290 585 500 555 150 570 Z" fill="url(#membrane)" stroke="#1B5E3A" stroke-width="3"/>
+    <path d="M150 520 C500 505 1290 535 1642 520" fill="none" stroke="#1F6B42" stroke-width="2" stroke-dasharray="14 10" opacity="0.6"/>
+  </g>
+  <g>
+    <ellipse cx="452" cy="540" rx="110" ry="40" fill="#000000" opacity="0.2" filter="url(#shadow)"/>
+    <path d="M370 430 C360 380 420 350 450 360 C490 340 545 380 535 430 L540 610 C540 650 380 650 370 610 Z" fill="url(#other-protein)" stroke="#7A7A7A" stroke-width="3"/>
+    <ellipse cx="1340" cy="545" rx="100" ry="38" fill="#000000" opacity="0.2" filter="url(#shadow)"/>
+    <path d="M1265 440 C1255 395 1310 365 1345 375 C1385 360 1430 400 1420 445 L1425 600 C1425 640 1270 640 1265 600 Z" fill="url(#other-protein)" stroke="#7A7A7A" stroke-width="3"/>
+  </g>
+  <ellipse cx="904" cy="545" rx="120" ry="42" fill="#000000" opacity="0.22" filter="url(#shadow)"/>
+  <g data-structure="Cytochrome b6f">
+    <path d="M800 420 C790 360 860 340 890 365 C900 340 960 345 975 380 C1000 395 1000 430 990 450 L995 610 C1000 660 905 670 895 640 C870 670 800 660 805 615 Z" fill="url(#b6f)" stroke="#8A4415" stroke-width="3.5"/>
+    <path d="M896 368 L896 640" fill="none" stroke="#A9551B" stroke-width="3" opacity="0.7"/>
+    <ellipse cx="850" cy="400" rx="22" ry="14" fill="#F8C9A0" opacity="0.7"/>
+  </g>
+</svg>
