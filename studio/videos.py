@@ -307,7 +307,14 @@ def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -
                     ours = [r for r in read_jsonl(job / "runs.jsonl")[started.get("runs", 0):] if r.get("part") == "videos"]
                     if ours:
                         return ours[-1]["result"], ours[-1]["step"], ours[-1]["reason"]
-                    return FAILED, "videos", f"the background run ended without an outcome; see {job / LOG}"
+                    # It died before writing one (an import that failed, say): record it, so the
+                    # retry and `fail` treat it like any other failed run of the videos.
+                    reason = f"the background run ended without an outcome; see {job / LOG}"
+                    with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
+                        log.write(json.dumps({"started": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "part": "videos",
+                                              "seconds": None, "result": FAILED, "step": "videos",
+                                              "reason": reason, "steps": []}) + "\n")
+                    return FAILED, "videos", reason
         if time.monotonic() >= deadline:
             try:
                 step = json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "videos")
