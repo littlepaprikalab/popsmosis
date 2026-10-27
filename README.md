@@ -31,8 +31,45 @@ to users at `/privacy` and `/terms`.
 
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
 advice column), whose architecture and look-and-feel come from
-[sparks](https://github.com/jclark256/sparks). The API still names a topic request a
-*question*, the lesson its *answer*, and follow-ups *replies*.
+[sparks](https://github.com/jclark256/sparks). Both are earlier projects by the same
+author, and both are private. The API still names a topic request a *question*, the lesson
+its *answer*, and follow-ups *replies*.
+
+## Built during the hackathon
+
+Popsmosis is an entry to the Meta Global AI Developer Hackathon (October 26 to November 4,
+2026). It started on the event's first day from a copy of zoey, made in one commit:
+`c037cc0` ("Copy zoey as the starting point for popsmosis"). Everything after that commit
+was built during the event, and `git diff c037cc0 HEAD` shows all of it. As of November 3,
+about 67,200 of the repo's 74,600 lines of code and docs (90%) were new, counted with
+`git blame`, leaving out the lockfile, JSON data files, fonts and images.
+
+**Came from zoey:**
+
+- The API's base: Google sign-in, session cookies, hashed agent API keys, the request,
+  answer and follow-up flow, and firing a Claude routine trigger when something new arrives.
+- The web app's shell and shared components, the admin pages for users and agents, and the
+  end-to-end test setup.
+- The first database tables, the Render Blueprint and the deploy guide.
+- The look-and-feel, which zoey took from sparks.
+
+**Built during the event:**
+
+- **The studio** (`studio/`, about 36,000 lines of Python, all new): the pipeline that
+  writes a lesson, fact-checks every line, draws the scene art as SVG, makes the narration,
+  the lesson song and an exam question, times every word, renders the videos and uploads
+  them to Supabase.
+- **The Droplets tab** (`/droplets`): public lesson pages with video players, thumbs-ups,
+  comments and an admin hide.
+- **Song choice:** the learner picks the song's style, and the song can come from Lyria on
+  the Gemini API.
+- **The bill of materials:** each droplet's time, cost, models and tools for every step.
+- **Privacy and the legal pages:** public lessons and private learners, taking a request
+  back, account deletion (`/account`), the Privacy Policy, the Terms of Use and the
+  Consumer Health Data Privacy Policy.
+- **Open sign-in:** anyone can sign in, and zoey's personal access tokens are gone.
+- **The brand:** the POPsmosis wordmark and the aqua drop icon.
+- **The teacher's skill file and runbook,** adapted from zoey's advice column for teaching.
 
 ## Layout
 
@@ -828,3 +865,14 @@ The API starts as `node --import tsx dist/index.js`: the build is typechecked an
 compiled by `tsc`, but the Prisma-generated client uses extension-less ESM imports
 that plain Node cannot resolve, so the tsx loader stays in the start command (same as
 sparks).
+
+## License
+
+Copyright (C) 2026 Spicy Ginger Labs.
+
+The code is licensed under the GNU Affero General Public License, version 3 only
+(AGPL-3.0-only); the full text is in [LICENSE](LICENSE). In short: you may use, change and
+share it, but if you run a changed version for other people, including as a website, you
+must publish all of its source code under the same license. The license gives no rights to
+the Popsmosis name or logo. The lessons the site publishes are shared under CC BY-NC-SA
+4.0, as the Terms of Use say.

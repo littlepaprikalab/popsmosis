@@ -2,6 +2,7 @@
   "name": "popsmosis-api",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
     "predev": "prisma generate --schema ../prisma/schema.prisma",
