@@ -21,6 +21,11 @@ export function Footer() {
           PRIVACY
         </Link>
         <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>|</span>
+        {/* Washington's My Health My Data Act wants its own link, on the home page (every page has this footer) */}
+        <Link href="/consumer-health-data" className="hover-text transition-colors" style={{ color: 'var(--text-muted)' }}>
+          CONSUMER HEALTH DATA
+        </Link>
+        <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>|</span>
         <Link href="/terms" className="hover-text transition-colors" style={{ color: 'var(--text-muted)' }}>
           TERMS
         </Link>

@@ -16,6 +16,18 @@ test.describe('the Privacy Policy and Terms of Use', () => {
     await expect(page).toHaveURL(/\/terms$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Terms of Use' })).toBeVisible();
     await expect(page.locator('#license')).toContainText('CC BY-NC-SA 4.0');
+    await expect(page.locator('#law')).toContainText('the State of Washington, USA');
+  });
+
+  test('the Consumer Health Data Privacy Policy has its own link on the home page', async ({ page }) => {
+    // Washington's My Health My Data Act: a separate link, on the home page, to a page of its own.
+    await page.goto('/');
+    await page.getByRole('contentinfo').getByRole('link', { name: 'CONSUMER HEALTH DATA', exact: true }).click();
+    await expect(page).toHaveURL(/\/consumer-health-data$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Consumer Health Data Privacy Policy' })).toBeVisible();
+    for (const id of ['collect', 'sources', 'shared', 'third-parties', 'rights']) await expect(page.locator(`#${id}`)).toBeVisible();
+    await expect(page.locator('#rights')).toContainText('45 days');
+    await expect(page.getByRole('link', { name: 'www.atg.wa.gov/file-complaint' })).toHaveAttribute('href', 'https://www.atg.wa.gov/file-complaint');
   });
 });
 

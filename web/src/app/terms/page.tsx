@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage, Section, Contact } from '@/components/LegalPage';
-import { OPERATOR_NAME, MIN_AGE, GOVERNING_LAW, CONTENT_LICENSE } from '@/lib/legal';
+import { OPERATOR_NAME, MIN_AGE, GOVERNING_LAW, COURTS, CONTENT_LICENSE } from '@/lib/legal';
 
 export const metadata: Metadata = {
   title: 'Terms of Use',
@@ -192,10 +192,11 @@ export default function TermsPage() {
 
       <Section id="law" title="15. Law and disputes">
         <p>
-          These terms are governed by the laws of {law}. If you use Popsmosis as a consumer, you keep any protections
-          the law where you live gives you, including the right to bring a claim in your local courts. Please write to us
-          first: most problems can be solved by email. If part of these terms can&rsquo;t be enforced, the rest still
-          applies. These terms and the Privacy Policy are the whole agreement between you and us about Popsmosis.
+          These terms are governed by the laws of {law}, without regard to its rules on conflicts of law. Disputes about
+          Popsmosis are heard in {COURTS}. If you use Popsmosis as a consumer, you keep any protections the law where you
+          live gives you, including the right to bring a claim in your local courts. Please write to us first: most
+          problems can be solved by email. If part of these terms can&rsquo;t be enforced, the rest still applies. These
+          terms and the Privacy Policy are the whole agreement between you and us about Popsmosis.
         </p>
       </Section>
 

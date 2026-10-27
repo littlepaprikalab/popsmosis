@@ -318,10 +318,13 @@ the lesson stays on the tab naming no one. **Deleting an account** (`/account`) 
 for every request with a lesson and deletes everything else, except for the only admin,
 who has to make someone else an admin first.
 
-`/privacy` and `/terms` are plain pages in `web/src/app/`. The facts they rest on are in
-`web/src/lib/legal.ts`: who runs Popsmosis, the contact address, the governing law, the
-minimum age (13), the file retention (keep it equal to `ATTACHMENT_RETENTION_DAYS`) and the
-license the droplets are shared under (CC BY-NC-SA 4.0). **Set `CONTACT_EMAIL` before
+`/privacy`, `/terms` and `/consumer-health-data` (the policy Washington's My Health My
+Data Act requires, with its own footer link) are plain pages in `web/src/app/`. The facts
+they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Little Paprika
+Lab, Washington State), the contact address, the governing law (Washington, King County
+courts), the minimum age (13), the file retention (keep it equal to
+`ATTACHMENT_RETENTION_DAYS`) and the license the droplets are shared under
+(CC BY-NC-SA 4.0). **Set `CONTACT_EMAIL` before
 launch**: until it is set, both pages show a notice in its place. When a change to the code
 changes what the pages promise, change the pages and `LAST_UPDATED` with it. The pages were
 written without a lawyer; have one read them if Popsmosis grows.

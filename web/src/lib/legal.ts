@@ -1,23 +1,28 @@
 /**
- * The facts the Privacy Policy (/privacy) and the Terms of Use (/terms) are built on, in one place. Change them
- * here, and move LAST_UPDATED whenever either page changes what it promises.
+ * The facts the Privacy Policy (/privacy), the Consumer Health Data Privacy Policy (/consumer-health-data) and the
+ * Terms of Use (/terms) are built on, in one place. Change them here, and move LAST_UPDATED whenever a page changes
+ * what it promises.
  */
 
 /** Who runs Popsmosis: the "we" in both pages, and who people's data is entrusted to. */
 export const OPERATOR_NAME = 'Little Paprika Lab';
 
+/** Where the operator is based, as the pages say it. */
+export const OPERATOR_LOCATION = 'Washington State, USA';
+
 /**
  * Where people write about their data, takedowns, mistakes in a lesson and these terms. Set it before launch: while
- * it is empty both pages say so in place of the address. A role address (privacy@ or hello@ your domain) keeps a
- * personal inbox off the pages.
+ * it is empty the pages say so in place of the address, and Washington's My Health My Data Act requires an address
+ * that people can send requests to. A role address (privacy@ or hello@ your domain) keeps a personal inbox off the
+ * pages.
  */
 export const CONTACT_EMAIL = '';
 
-/**
- * The law the Terms are governed by, as it reads after "the laws of": "the State of California, USA". Empty reads as
- * the place the operator is based.
- */
-export const GOVERNING_LAW = '';
+/** The law the Terms are governed by, as it reads after "the laws of". Empty reads as the place the operator is based. */
+export const GOVERNING_LAW = 'the State of Washington, USA';
+
+/** Where a dispute is heard, unless a consumer's own law lets them go to their local courts (Terms, section 15). */
+export const COURTS = 'the state and federal courts located in King County, Washington';
 
 export const LAST_UPDATED = '27 October 2026';
 

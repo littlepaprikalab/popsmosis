@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage, Section, Contact } from '@/components/LegalPage';
-import { OPERATOR_NAME, MIN_AGE, ATTACHMENT_RETENTION_DAYS } from '@/lib/legal';
+import { OPERATOR_NAME, OPERATOR_LOCATION, MIN_AGE, ATTACHMENT_RETENTION_DAYS } from '@/lib/legal';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -34,8 +34,9 @@ export default function PrivacyPage() {
       <Section id="who" title="1. Who we are">
         <p>
           Popsmosis is a free learning site. You ask for a topic and an AI teacher makes you a <em>droplet</em>: a short,
-          fact-checked lesson with a narrated video and a song. Popsmosis is run by <strong>{OPERATOR_NAME}</strong>{' '}
-          (&ldquo;we&rdquo;, &ldquo;us&rdquo;), which is responsible for your personal data as this policy describes.
+          fact-checked lesson with a narrated video and a song. Popsmosis is run by <strong>{OPERATOR_NAME}</strong>,
+          based in {OPERATOR_LOCATION} (&ldquo;we&rdquo;, &ldquo;us&rdquo;), which is responsible for your personal data
+          as this policy describes.
           You can reach us at <Contact />.
         </p>
       </Section>
@@ -186,6 +187,11 @@ export default function PrivacyPage() {
           You can delete your data yourself (<a href="#delete">section 7</a>). For anything else, email <Contact /> from
           the address you sign in with. We will answer within 30 days, and we won&rsquo;t treat you differently for
           asking.
+        </p>
+        <p>
+          Washington residents: health information you choose to include in what you send is covered by our{' '}
+          <Link href="/consumer-health-data">Consumer Health Data Privacy Policy</Link>, which sets out your rights over
+          it under Washington&rsquo;s My Health My Data Act.
         </p>
         <p>
           California residents: we don&rsquo;t sell or share personal information as the California Consumer Privacy Act
