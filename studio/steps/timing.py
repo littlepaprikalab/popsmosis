@@ -51,6 +51,8 @@ def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     if not audio_step.is_done(job):
         raise media.StepFailed("the audio step has not made all three audio files from this bundle yet")
+    # Not done until all three are written again; the cached vocals are kept.
+    media.restart(job, *(media.timing_path(kind) for kind in media.TIMED), REPORT)
     parts = []
     for kind in ("narration", "frq"):
         try:

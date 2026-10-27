@@ -156,3 +156,19 @@ def test_timings_are_not_done_once_the_audio_or_the_lines_change(made, monkeypat
     data["frq"]["model_answer_steps"].append("The flow drives the synthase.")
     jobs.write(made / "bundle.json", sample_media.bundle().model_validate(data))
     assert not timing.is_done(made)  # a line to time that has no timing yet
+
+
+def test_a_rerun_that_fails_halfway_leaves_nothing_that_looks_done(made, monkeypatch):
+    monkeypatch.setattr(timing, "separate_vocals", lambda job: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([]))
+    timing.run(made)
+    assert timing.is_done(made)
+
+    def broken(job):
+        raise media.StepFailed("Demucs ran out of memory")
+
+    monkeypatch.setattr(timing, "separate_vocals", broken)
+    with pytest.raises(media.StepFailed):
+        timing.run(made)
+    assert not timing.is_done(made)
+    assert not (made / media.timing_path("song")).exists() and not (made / timing.REPORT).exists()
