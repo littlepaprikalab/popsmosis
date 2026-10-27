@@ -21,11 +21,15 @@ def new_id(topic: str) -> str:
 
 
 def write(path: Path, data: BaseModel | dict | list) -> None:
+    """Write the whole file or none of it: a step is done when its file exists, so a run
+    stopped mid-write must not leave half a file that reads as a finished step."""
     if isinstance(data, BaseModel):
         text = data.model_dump_json(indent=2)
     else:
         text = json.dumps(data, indent=2, ensure_ascii=False)
-    path.write_text(text + "\n", encoding="utf-8")
+    partial = path.with_name(f".{path.name}.partial")
+    partial.write_text(text + "\n", encoding="utf-8")
+    os.replace(partial, path)
 
 
 def read(path: Path, model: type[M]) -> M:

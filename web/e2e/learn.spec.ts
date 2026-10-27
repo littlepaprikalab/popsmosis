@@ -107,6 +107,31 @@ test.describe('signed in', () => {
     await expect(page.getByText('Photosynthesis: how do the light')).toHaveCount(0);
   });
 
+  test('a topic the teacher gives up says why, in place, and can be deleted', async ({ page, context, request }) => {
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+
+    const text = `E2E ${Date.now()}: a topic that cannot pass its fact-check`;
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('waiting')).toBeVisible();
+
+    // The studio claims the topic, fails twice, and the operator gives it up.
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const mine = (await (await bot.queue()).json()).data.find((q: { content: string }) => q.content === text);
+    expect((await bot.claim(mine.id)).status()).toBe(200);
+    expect((await bot.fail(mine.id, 'factcheck failed: 1 line still fails')).status()).toBe(200);
+
+    await expect(card.getByText('FAILED', { exact: true })).toBeVisible({ timeout: 25_000 });
+    await expect(card.getByTestId('failed')).toContainText('factcheck failed: 1 line still fails');
+    await expect(card.getByTestId('waiting')).toHaveCount(0);
+
+    await card.getByRole('button', { name: 'delete' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(page.getByTestId('question-card').filter({ hasText: text })).toHaveCount(0);
+  });
+
   test('ask for a topic, get a lesson from the teacher, follow up, get a reply back; all without reloading', async ({ page, context, request }) => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');

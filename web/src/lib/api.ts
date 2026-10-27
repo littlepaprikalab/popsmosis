@@ -180,6 +180,15 @@ export interface Reply {
   canDelete: boolean;
 }
 
+/** The droplet's two videos; RENDERING past the API's stale limit already reads as FAILED. */
+export interface Video {
+  status: 'RENDERING' | 'READY' | 'FAILED';
+  songVideoUrl: string | null;
+  lessonVideoUrl: string | null;
+  error: string | null;
+  updatedAt: string | null;
+}
+
 export interface Answer {
   id: string;
   questionId: string;
@@ -187,6 +196,7 @@ export interface Answer {
   content: string;
   model: string | null;
   createdAt: string;
+  video: Video | null; // null: a text-only droplet
   replies: Reply[];
   awaitingAgent: boolean;
 }
@@ -194,7 +204,8 @@ export interface Answer {
 export interface Question {
   id: string;
   content: string;
-  status: 'PENDING' | 'ANSWERED';
+  status: 'PENDING' | 'ANSWERED' | 'FAILED';
+  failedReason: string | null; // FAILED: why the teacher gave up
   attachments: Attachment[];
   createdAt: string;
   user: PublicUser;

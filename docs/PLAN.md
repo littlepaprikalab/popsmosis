@@ -1,6 +1,6 @@
 # Popsmosis — droplets for learning
 
-Status: **day 1 of 10** (Oct 26). Built for the Meta Global AI Developer Hackathon (Indie
+Status: **day 2 of 10** (Oct 27). Built for the Meta Global AI Developer Hackathon (Indie
 track); the submission is due Nov 4, 9:00 PM ET. The zoey port is done (below); this is
 the plan the rest of the build follows. Where the code and this document differ, the
 code wins; the README lists the endpoints as built.
@@ -146,15 +146,22 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
 ## 5. The studio pipeline
 
 `python -m studio run <question-id>`. Each step writes into `jobs/<id>/` (git-ignored).
-`run` resumes from the first step whose file is missing, so running it again retries a
-failed step (section 11). `python -m studio step <name> <id>` redoes one step by hand,
-even when its file exists.
+`run` resumes from the first step whose file is missing (a fact-check counts once it has
+passed) and runs every step after it, so running it again retries a failed step (section
+11). Before each step until the lesson is posted it claims the topic again
+(`POST /api/questions/:id/claim`), which renews the queue's lease. Every run appends to
+`runs.jsonl` and prints one line: `DONE`, `FAILED <step>: <reason>` or
+`STOPPED <step>: <reason>` (the topic was deleted, answered, given up or taken: nothing
+to retry). Files are written whole or not at all, only one run of a job goes at a time,
+a run killed mid-step is recorded as that step failing, and a post whose reply was lost
+is recovered from the API's 409, which names the caller's own answer. `python -m studio
+step <name> <id>` redoes one step by hand, even when its file exists.
 
 | # | Step | Who | Writes |
 |---|---|---|---|
 | 1 | Bundle | Brain, one call | `bundle.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
-| | Post the lesson | API | Lesson text, bundle and fact-check saved; the topic leaves the queue |
+| | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Muse Image + helper | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper | `masks/<scene>/<structure>.png`, `locations.json` |
 | 5 | Audio | ElevenLabs | `audio/song.mp3`, `audio/narration.mp3` |
@@ -296,6 +303,8 @@ it against section 8; re-render on a fail, max 2).
 ```
 studio/
   brain.py         ask(): the Claude and Meta providers
+  run.py           run, fail, summary: one topic from the queue to a posted lesson
+  api.py           the popsmosis agent endpoints the studio calls
   inkmory.py       the planner's Inkmory context and record (section 11)
   prompts/         bundle, fact-check, helper and planner-record prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
@@ -413,7 +422,8 @@ takes some setup in the routine's environment:
   wherever PyTorch and the Demucs and MMS weights download from (check on the first run).
 - **Queue settings:** the lesson text is posted right after the fact-check, a few minutes
   in, so the topic leaves the queue before the long render starts. Keep
-  `QUESTION_CLAIM_MINUTES` above how long steps 1–2 take (20 is safe). Each run takes one
+  `QUESTION_CLAIM_MINUTES` above the longest of steps 1–2 (the default, 20, is safe: the
+  studio renews the claim before each step). Each run takes one
   topic (`?limit=1`); a topic asked during a render fires another run, which renders in
   parallel on its own machine.
 - **Skill file:** changes from "write the lesson" to "run `python -m studio run <id>` for
@@ -423,7 +433,10 @@ takes some setup in the routine's environment:
 - **Fallback host:** the studio runs the same on a laptop. If the routine is too slow for
   the live judge topic, run the demo from a laptop.
 
-## 10. Storage, data model and the Droplets tab (proposed)
+## 10. Storage, data model and the Droplets tab
+
+Built on day 2: the `Answer` fields below except `hiddenAt`, and the agent endpoints.
+The Droplets tab, its two public endpoints and the admin hide are day 7.
 
 ### What is stored where
 
@@ -457,17 +470,32 @@ model Answer {
   lessonVideoUrl String?
   videoError     String?      // why it FAILED, shown on the droplet and the admin page
   videoUpdatedAt DateTime?    // RENDERING for too long reads as FAILED
-  hiddenAt       DateTime?    // an admin took it off the Droplets tab
+  hiddenAt       DateTime?    // an admin took it off the Droplets tab (day 7)
+}
+
+enum QuestionStatus { PENDING ANSWERED FAILED }
+
+model Question {
+  // ...as today
+  failedReason   String?      // FAILED: why the operator gave the topic up, shown on its card
 }
 ```
+
+A topic can fail before it has a lesson (the bundle, or a fact-check that does not pass),
+so the failure that section 11 shows on the droplet lives on the `Question`: `FAILED`
+takes it out of the queue, so a topic that cannot pass is not paid for again on every
+sweep, and the asker can delete it and ask again. Once there is a lesson, a failure is
+the videos' (`videoStatus`).
 
 ### Endpoints
 
 | Who | Method | Path | Notes |
 |---|---|---|---|
-| Agent | POST | `/api/questions/:id/answer` | As today, plus `bundle` and `factcheck` |
+| Agent | POST | `/api/questions/:id/claim` | Take or renew the lease on one topic, and read it with its attachments |
+| Agent | POST | `/api/questions/:id/answer` | As today, plus `bundle` and `factcheck`, together; refused unless the fact-check passed |
+| Agent | POST | `/api/questions/:id/fail` | `{ reason }`; the agent that last claimed it only |
 | Agent | PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, error? }`; the agent's own answers only |
-| Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL |
+| Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` on the API) |
 | Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=` |
 | Anyone | GET | `/api/droplets/:id` | One droplet |
 | Admin | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the tab, or put it back |
@@ -513,7 +541,10 @@ either agent or check their work; it keeps the record, and anyone can read it.
 ### A beat
 
 A beat is one routine run that found work, and it always ends with a cycle log. A run
-that finds the queues empty ends without touching Inkmory, so idle runs stay free.
+that finds the queues empty ends without writing to Inkmory, so idle runs stay free,
+with one exception: Inkmory takes back an agent that logs no cycle for 3 days, so when the
+operator's last cycle log is two days old (or it has none yet), an idle run logs a quiet
+cycle.
 Inkmory suggests about one beat a day; that is guidance, not a rule (an agent key may make
 300 requests a minute).
 
@@ -521,7 +552,10 @@ For a topic:
 
 1. **The operator wakes** on the trigger and checks the popsmosis queues first. If there
    is work, it reads its Inkmory context (`GET /api/agents/me/context`), claims the topic
-   and runs the studio.
+   and runs the studio. It also fetches its Inkmory skill file
+   (`GET /api/agents/me/skill`), which documents the endpoints for the record it writes
+   last; the popsmosis skill file decides what goes in it. That file reads its key from
+   `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the skill file says so.
 2. **The planner's beat runs inside the studio, around steps 1–2:**
    1. The studio reads the planner's context with the planner's key.
    2. Its persona and memory (name, personality, bio, vibe, life story, latest journal
@@ -543,8 +577,9 @@ For a topic:
    (below).
 4. **The operator writes its record last:** always a cycle log, and a journal entry, a
    life story or a profile change when it has something to say. It takes the run's facts
-   from `jobs/<id>/` (the steps, timings, retries and outcome), so it reports what
-   happened rather than what it remembers.
+   from `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary
+   <id>` prints them in one paragraph), so it reports what happened rather than what it
+   remembers.
 
 A run with only follow-ups is an operator beat; the planner has none.
 
@@ -556,8 +591,8 @@ order, and Claude steps in only when something breaks.
 - Every failure ends with one line naming the step and the reason.
 - The skill file: when the studio fails, read that line and run
   `python -m studio run <id>` again, which resumes at the failed step. If it fails a
-  second time, mark the job failed with the reason (the droplet shows it, as for a failed
-  fact-check) and say so in the cycle log.
+  second time, mark the job failed with the reason (`python -m studio fail <id>`: the
+  card shows it, as for a failed fact-check) and say so in the cycle log.
 - Never: skip or weaken the fact-check, post a line that has not passed it, write the
   lesson or the media itself, or edit prompts or code during a run.
 
@@ -625,7 +660,7 @@ Rules that follow from Inkmory's code:
 | Day | Date | Work | Status |
 |---|---|---|---|
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
-| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | |
+| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days, the planner's beat against a local Inkmory |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | |
 | 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | |

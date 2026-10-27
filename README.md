@@ -11,7 +11,9 @@ the teacher responds on its next pass. When the teacher runs as a Claude routine
 API trigger, the API fires that trigger on a new topic or a follow-up, so the pass starts
 within seconds rather than at the next scheduled run.
 
-Today a droplet is the written lesson. Next come two videos made from the same
+The teacher does not write the lessons itself: it runs the **studio**, a Python
+pipeline in this repo, which writes each lesson, fact-checks every line and posts it.
+Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
 in Supabase and shown beside the text. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
@@ -27,7 +29,7 @@ advice column), whose architecture and look-and-feel come from
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
 web/     Next.js 15 + Tailwind 4. The /learn page, sign-in, and an admin page for agents.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply).
-studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check so far.
+studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
 ```
 
@@ -75,29 +77,43 @@ To fill the page with sample data (two users, one agent, a topic with its lesson
 follow-up thread, one topic still waiting), run `npm --workspace api run seed:dev`. It prints
 the agent's key.
 
-Run a heartbeat against the local API with Claude Code CLI:
+Run a heartbeat against the local API with Claude Code CLI, from this checkout (the skill
+file runs the studio, below, from here):
 
 ```bash
-mkdir ../popsmosis-agent && cp docs/popsmosis-agent-skill.md ../popsmosis-agent/ && cd ../popsmosis-agent
-sed -i 's#https://api.popsmosis.example#http://localhost:3001#' popsmosis-agent-skill.md
-POPSMOSIS_API_KEY=sk_pop_... claude -p "Run one popsmosis heartbeat following popsmosis-agent-skill.md"
+export POPSMOSIS_API_URL=http://localhost:3001 POPSMOSIS_API_KEY=sk_pop_... POPSMOSIS_ANTHROPIC_API_KEY=sk-ant-...
+claude -p "Run one popsmosis heartbeat following docs/popsmosis-agent-skill.md"
 ```
 
 See [docs/agent-runbook.md](docs/agent-runbook.md) for the hosted options.
 
 ### The studio
 
-The studio (Python 3.13) turns a topic into a droplet; so far it writes the bundle and
-fact-checks it. It reads `POPSMOSIS_ANTHROPIC_API_KEY` (or `ANTHROPIC_API_KEY`, which a
-Claude Code cloud environment does not pass through), and its calls bill per token to
-that API account ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes into
-`jobs/<id>/`.
+The studio (Python 3.13) turns a topic into a droplet; so far it writes the bundle,
+fact-checks it and posts the lesson. It reads `POPSMOSIS_ANTHROPIC_API_KEY` (or
+`ANTHROPIC_API_KEY`, which a Claude Code cloud environment does not pass through), and its
+calls bill per token to that API account ([docs/PLAN.md](docs/PLAN.md), section 4). Each
+job writes into `jobs/<id>/`.
+
+The teacher runs it on a topic from the queue, by the question's id. That needs
+`POPSMOSIS_API_URL` and `POPSMOSIS_API_KEY` too, and is what the skill file does:
+
+```bash
+python -m studio run <question-id>       # claim, bundle, fact-check, post; again resumes at the first missing step
+python -m studio fail <question-id>      # after a second failure: give the topic up with the reason
+python -m studio summary <question-id>   # what its runs did, for the teacher's record
+```
+
+`run` prints one line: `DONE`, `FAILED <step>: <reason>` (run it again to retry that
+step) or `STOPPED <step>: <reason>` (the topic is gone, taken or done, or an earlier run
+of it is still going). A run killed mid-step is recorded as that step failing. To try the
+pipeline without posting anything, start a local job instead:
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
 python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
 python -m studio step factcheck <job-id>                               # re-run one step
-python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, calls
+python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, runs, calls
 ```
 
 To try a prompt change cheaply, run the brain on Haiku first (about 2 cents a topic instead of
@@ -128,11 +144,11 @@ Errors are always `{ "error": { "code", "message" } }`.
 | POST | `/api/auth/google` | `{ code }` from the OAuth redirect; sets the cookie |
 | GET | `/api/auth/me` | current user |
 | POST | `/api/auth/logout` | clears the cookie |
-| GET | `/api/questions` | everyone's topics, newest first; `?mine=true`, `?cursor=`, or `?ids=a,b` for specific ones |
+| GET | `/api/questions` | everyone's topics, newest first; `?mine=true`, `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one topic with its lesson and follow-ups |
 | GET | `/api/questions/status` | `{ latestAt }` for polling |
 | POST | `/api/questions` | ask for a topic: `{ content, attachments? }` 3–2000 chars; `attachments` see [Attachments](#attachments) |
-| DELETE | `/api/questions/:id` | own topic, only while it has no lesson |
+| DELETE | `/api/questions/:id` | own topic, only while it has no lesson (waiting, or `FAILED`) |
 | POST | `/api/answers/:id/replies` | a follow-up: `{ content, attachments? }` 1–2000 chars |
 | DELETE | `/api/replies/:id` | own reply |
 | GET | `/api/attachments/:id` | a file sent with a question or reply; also to agents |
@@ -142,11 +158,20 @@ Errors are always `{ "error": { "code", "message" } }`.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/api/agents/me` | confirm the key |
-| GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first |
-| POST | `/api/questions/:id/answer` | the lesson: `{ content, model? }`; 409 once there is one |
-| GET | `/api/replies/queue?limit=N` | threads where a human followed up last |
+| GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES` |
+| POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it; 409 if answered, failed, or leased to another agent |
+| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck? }`; the two JSON objects go together and `factcheck.status` must be `passed`; 409 once there is one, with `answerId` when it is the caller's own |
+| POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, error? }`; a URL left out is kept, so the two videos can report separately |
+| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until `SUPABASE_URL` is set |
+| GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |
 | GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
+
+A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
+both URLs and the error. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
+reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
+the question routes; the reply queue's `context` is the compact part a follow-up needs.
 
 ### Attachments
 

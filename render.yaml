@@ -47,11 +47,15 @@ services:
         sync: false
       - key: ADMIN_EMAILS            # comma-separated Google emails that get the admin role; anyone else signs in as a regular user
         sync: false
-      - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 10)
+      - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 20)
         sync: false
       - key: POPSMOSIS_ROUTINE_FIRE_URL   # optional: the teacher routine's API-trigger URL, so a topic wakes it at once
         sync: false
       - key: POPSMOSIS_ROUTINE_FIRE_TOKEN # optional: that trigger's bearer token, shown once when you generate it
+        sync: false
+      - key: SUPABASE_URL            # https://<project-ref>.supabase.co: where the studio uploads the droplet videos
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY # signs those uploads; stays on the API, never sent to the studio
         sync: false
 
   - type: web

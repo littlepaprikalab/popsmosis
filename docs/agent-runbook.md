@@ -2,9 +2,11 @@
 
 popsmosis ships no runner. The agent is an LLM harness that you point at
 `docs/popsmosis-agent-skill.md` (the **skill file**) with an API key in its environment.
-Each run is one **heartbeat**: write a lesson for every topic still waiting, answer
-follow-ups under earlier lessons, stop. (The API calls a topic request a *question*,
-its lesson an *answer*, and follow-ups *replies*; this guide uses the API's words.)
+Each run is one **heartbeat**: run the studio (`python -m studio run <id>`) on a waiting
+topic, which writes, fact-checks and posts its lesson; answer follow-ups under earlier
+lessons; keep a short record of the run on Inkmory; stop. (The API calls a topic request a
+*question*, its lesson an *answer*, and follow-ups *replies*; this guide uses the API's
+words.)
 
 This guide is the sparks sponsor quick-start cut down to popsmosis.
 
@@ -32,10 +34,22 @@ The runner needs these in its environment:
 | Variable | Value |
 |---|---|
 | `POPSMOSIS_API_KEY` | the `sk_pop_…` key |
-| `POPSMOSIS_API_URL` | your API base URL, e.g. `https://api.popsmosis.example`. The skill file's shell commands read it. |
+| `POPSMOSIS_API_URL` | your API base URL, e.g. `https://api.popsmosis.example`. The skill file's shell commands and the studio read it. |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
+| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`, which also needs `MODEL_API_KEY` |
+| `INKMORY_API_URL` | Inkmory's base URL, e.g. `https://api.inkmory.com` |
+| `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
+| `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
 
-There is nothing else to set. A run no longer holds a window open: it reads both
-queues, answers what is there, looks again, and exits when they are empty.
+Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are
+empty and the operator's last cycle log is two days old, an idle run logs a quiet cycle
+(one extra GET per idle run checks the date). A newly adopted agent logs its first cycle
+on the first run after adoption, with work or without.
+
+The runner also needs a checkout of this repository with `studio/requirements.txt`
+installed, because the skill file runs the studio from it. A run does not hold a window
+open: it reads both queues, runs the studio on one topic, answers the follow-ups, looks
+again, and exits when they are empty.
 
 ### What a run costs
 
@@ -46,10 +60,12 @@ around that:
 | | turns |
 |---|---|
 | Nothing waiting | ~2 — one command prints `IDLE` and the run ends |
-| Work waiting | one round per five questions, then one more to confirm the queues are empty |
+| Work waiting | a few per topic (the studio run, a retry if a step fails), one per follow-up, two for the Inkmory record, and one more round to confirm the queues are empty |
 
-An idle run makes two GET requests. The rate limit is 300 per minute per key, so it is
-not something a run can reach.
+An idle run makes two GET requests and never touches Inkmory. A topic also costs its
+brain calls, billed to `POPSMOSIS_ANTHROPIC_API_KEY`: the first live run on "brain
+structures" was 2 Opus calls, $0.71, in 4.6 minutes. The rate limit is 300 per minute
+per key, so it is not something a run can reach.
 
 ### Quiet hours
 
@@ -86,9 +102,15 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 
 ### Option A: Claude Code routine (simplest)
 
-1. In Claude Code on the web, create an environment whose network policy allows
-   egress to your API host, and set `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` in its
-   environment variables.
+1. In Claude Code on the web, create an environment for the routine:
+   - **Environment variables:** everything in the table in section 1.
+   - **Setup script:** `pip install -r studio/requirements.txt`. Every run starts on a
+     fresh machine, so this runs before every topic; keep it to the studio's own
+     requirements.
+   - **Network policy:** allow your API host, `api.anthropic.com`, PyPI
+     (`pypi.org`, `files.pythonhosted.org`) and the Inkmory host. Later steps of the
+     studio add `api.elevenlabs.io`, `api.meta.ai` and the Supabase host
+     ([PLAN.md](PLAN.md), section 9).
 2. Create a routine on the popsmosis repo with a cron of your choice (hourly is the
    normal minimum) and the prompt:
    ```
@@ -97,8 +119,13 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 3. Give the routine an **API trigger** as well, so the cron is the sweep rather than
    the latency budget — see [Wake the routine on write](#wake-the-routine-on-write).
 
-The skill file is in the repo the routine checks out, so nothing else is needed.
-The API must be publicly reachable for this option.
+The skill file and the studio are in the repo the routine checks out, so nothing else
+is needed. The API must be publicly reachable for this option.
+
+A topic is several minutes of studio work. Set `QUESTION_CLAIM_MINUTES` on the API
+above the longest single step (the default 20 is safe): the studio renews the topic's
+claim before each step, and a lapsed claim lets an overlapping run start the same topic
+again.
 
 #### Wake the routine on write
 
@@ -159,9 +186,9 @@ out the rest of the window before it gets a fire of its own.
 ### Two runs at once
 
 The schedule can fire inside an API-triggered run, so two runs do overlap. The queue
-hands each caller a **short lease** on the questions it returns — 10 minutes by default,
-`QUESTION_CLAIM_MINUTES` — so the second run is given different questions rather than
-the same oldest five. Without it nothing breaks, because the answer write is row-locked
+hands each caller a **short lease** on the questions it returns — 20 minutes by default,
+`QUESTION_CLAIM_MINUTES`, renewed by the studio before each step — so the second run is
+given different questions rather than the same oldest five. Without it nothing breaks, because the answer write is row-locked
 and one-answer-per-question is a constraint; the loser just writes a full answer for
 every question and throws it away, which is the expensive half of a run spent twice.
 Measured on twelve queued questions: two overlapping runs went from 12 discarded
@@ -184,8 +211,9 @@ off — a run reads the queues, drains them, and exits.
 
 ### Option B: Managed Agents scheduled deployment (near-continuous, hosted)
 
-Create a Managed Agent with the skill file uploaded as a Skill, a vault credential
-for `POPSMOSIS_API_KEY`, and a scheduled deployment with a cron such as `*/5 * * * *`.
+Create a Managed Agent with the skill file uploaded as a Skill, vault credentials for
+the variables in section 1, this repository mounted with the studio's requirements
+installed, and a scheduled deployment with a cron such as `*/5 * * * *`.
 Each firing runs one heartbeat. Idle firings cost two GET requests. This is the
 closest thing to always-on that Anthropic runs for you.
 
@@ -198,30 +226,29 @@ closest thing to always-on that Anthropic runs for you.
 
 ### Option D: Claude Code CLI on a cron (your machine; also how to test locally)
 
+Run it from a checkout of this repository, where the studio lives, with the studio's
+requirements installed (README, "The studio"):
+
 ```
-mkdir popsmosis-agent && cd popsmosis-agent
-cp /path/to/popsmosis/docs/popsmosis-agent-skill.md .
-sed -i 's#https://api.popsmosis.example#http://localhost:3001#' popsmosis-agent-skill.md
-cat > CLAUDE.md <<'EOM'
-When asked to run a heartbeat, follow popsmosis-agent-skill.md. You are authorized to
-make HTTP requests to the popsmosis API using the POPSMOSIS_API_KEY environment variable.
-Execute all API calls autonomously without asking for confirmation.
-EOM
+cd /path/to/popsmosis
 export POPSMOSIS_API_KEY=sk_pop_...
 export POPSMOSIS_API_URL=http://localhost:3001
-claude -p "Run one popsmosis heartbeat following popsmosis-agent-skill.md"
+export POPSMOSIS_ANTHROPIC_API_KEY=sk-ant-...
+claude -p "Run one popsmosis heartbeat following docs/popsmosis-agent-skill.md. You are authorized to make the HTTP requests and run the studio commands it describes, autonomously, without asking for confirmation."
 ```
 
 Then schedule it:
 
 ```
-*/5 * * * * cd /path/to/popsmosis-agent && POPSMOSIS_API_KEY=sk_pop_... POPSMOSIS_API_URL=http://localhost:3001 claude -p "Run one popsmosis heartbeat following popsmosis-agent-skill.md" >> heartbeat.log 2>&1
+*/5 * * * * cd /path/to/popsmosis && . ./.env.agent && claude -p "Run one popsmosis heartbeat following docs/popsmosis-agent-skill.md" >> heartbeat.log 2>&1
 ```
+
+with the variables from section 1 exported in `.env.agent` (keep it out of git).
 
 ### Option E: Anything else
 
-OpenClaw, a Python script, another vendor's model. The contract is five HTTP calls,
-documented in the skill file. If you want a true always-on daemon, write a loop that
+OpenClaw, a Python script, another vendor's model. The contract is a few HTTP calls
+and the studio's commands, documented in the skill file. If you want a true always-on daemon, write a loop that
 runs the heartbeat forever and host it; nothing in the API changes.
 
 ---
@@ -229,8 +256,9 @@ runs the heartbeat forever and host it; nothing in the API changes.
 ## 3. Verify
 
 1. Ask for a topic on `/learn`.
-2. Run a heartbeat. The topic's card flips from **BREWING** to **READY** within
-   the page's 10-second poll. With an API trigger wired up, asking for the topic is
+2. Run a heartbeat. The topic's card flips from **BREWING** to **READY** once the
+   studio's fact-check passes, about five minutes in, or to **FAILED** with the reason
+   if the studio gave up on it after a retry. With an API trigger wired up, asking for the topic is
    itself the heartbeat: the API log shows `routine fired` and a new run appears on
    the routine's detail page.
 3. Ask a follow-up under the lesson. On the next heartbeat the teacher responds.
@@ -240,9 +268,11 @@ If nothing happens:
 
 - `GET /api/agents/me` with the key returns 401 → wrong key; 403 → agent disabled.
 - The runner cannot reach the API → check the environment's network allowlist.
-- The queue is empty → every question already has an answer.
-- `POPSMOSIS_API_URL` is unset → the skill file's wait loop exits immediately with an
-  unbound-variable error instead of polling.
+- The queue is empty → every question already has an answer, or was given up.
+- The studio fails → `python -m studio show <id>` on the runner prints the job, its runs
+  and each step's outcome; `jobs/<id>/runs.jsonl` and `calls.jsonl` hold the details.
+- `POPSMOSIS_API_URL` is unset → Step 0 prints `ERR 000 000`, and the studio stops with
+  "POPSMOSIS_API_URL and POPSMOSIS_API_KEY must both be set".
 - A write logs `routine fire rejected` with `401` → the trigger token is wrong or was
   revoked; regenerate it on the routine and update `POPSMOSIS_ROUTINE_FIRE_TOKEN`. `404` →
   the routine ID in `POPSMOSIS_ROUTINE_FIRE_URL` is wrong, or the API trigger was removed.

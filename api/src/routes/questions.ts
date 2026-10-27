@@ -9,6 +9,7 @@ import { questionInclude, serializeQuestion } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
+import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -168,7 +169,7 @@ export default async function questionRoutes(app: FastifyInstance) {
 
     const where: Record<string, unknown> = {};
     if (mine === 'true') where.userId = request.viewer!.id;
-    if (status === 'PENDING' || status === 'ANSWERED') where.status = status;
+    if (status === 'PENDING' || status === 'ANSWERED' || status === 'FAILED') where.status = status;
     const cursorFilter = decodeCreatedAtIdCursor(cursor);
     if (cursorFilter) where.AND = [cursorFilter];
 
@@ -193,7 +194,7 @@ export default async function questionRoutes(app: FastifyInstance) {
     return serializeQuestion(question, request.viewer!.id);
   });
 
-  // DELETE /api/questions/:id — owner, only while PENDING
+  // DELETE /api/questions/:id — owner, only while it has no lesson (PENDING or FAILED)
   app.delete('/api/questions/:id', { preHandler: [requireUser] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const userId = request.viewer!.id;
@@ -203,7 +204,7 @@ export default async function questionRoutes(app: FastifyInstance) {
         const question = await tx.question.findUnique({ where: { id } });
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
         if (question.userId !== userId) throw new AppError('FORBIDDEN', 'You can only delete your own questions');
-        if (question.status !== 'PENDING') throw new AppError('VALIDATION_ERROR', 'Only unanswered questions can be deleted');
+        if (question.status === 'ANSWERED') throw new AppError('VALIDATION_ERROR', 'Only unanswered questions can be deleted');
         await tx.question.delete({ where: { id } });
       });
     } catch (err) {
@@ -213,11 +214,76 @@ export default async function questionRoutes(app: FastifyInstance) {
     return reply.status(204).send();
   });
 
+  // POST /api/questions/:id/claim — agent: take, or renew, the lease on one
+  // question, and get it back with its attachments. The studio calls it before
+  // each step that writes the lesson, so a long fact-check or a retried step
+  // keeps the question out of an overlapping run's queue. The lease is the
+  // queue's own (lib/claim.ts): the same agent may always renew it, another
+  // agent only once it has lapsed.
+  app.post('/api/questions/:id/claim', { preHandler: [requireAgent] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const agentId = request.agent!.id;
+    const claimed = await prisma.$queryRaw<{ id: string }[]>`
+      UPDATE questions
+      SET "claimedAt" = now(), "claimedById" = ${agentId}
+      WHERE id = ${id} AND status = 'PENDING'
+        AND ("claimedAt" IS NULL OR "claimedById" = ${agentId}
+             OR "claimedAt" < now() - make_interval(mins => ${claimMinutes()}))
+      RETURNING id
+    `;
+    await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+    const question = await prisma.question.findUnique({ where: { id }, include: questionInclude });
+    if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
+    if (claimed.length === 0) {
+      if (question.status === 'ANSWERED') return sendError(reply, 'CONFLICT', 'Question already has an answer');
+      if (question.status === 'FAILED') return sendError(reply, 'CONFLICT', 'Question was marked failed');
+      return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
+    }
+    return serializeQuestion(question);
+  });
+
+  // POST /api/questions/:id/fail — agent: give up on a question before it has a
+  // lesson, with one line on why. It leaves the queue, so a topic that cannot
+  // pass its fact-check is not paid for again on every sweep, and the card shows
+  // the reason. Only the agent that last claimed it may, so a run cannot fail a
+  // question another run has since picked up.
+  app.post('/api/questions/:id/fail', { preHandler: [requireAgent] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const agentId = request.agent!.id;
+    const { reason } = (request.body ?? {}) as { reason?: unknown };
+    const reasonError = validateString(reason, 'reason', { required: true, minLength: 1, maxLength: FAILED_REASON_MAX_LENGTH });
+    if (reasonError) return sendError(reply, 'VALIDATION_ERROR', reasonError);
+
+    try {
+      await runTransaction(async (tx) => {
+        const rows = await tx.$queryRaw<{ status: string; claimedById: string | null }[]>`
+          SELECT status, "claimedById" FROM questions WHERE id = ${id} FOR UPDATE
+        `;
+        const question = rows[0];
+        if (!question) throw new AppError('NOT_FOUND', 'Question not found');
+        if (question.status === 'ANSWERED') throw new AppError('CONFLICT', 'Question already has an answer');
+        if (question.status === 'FAILED') throw new AppError('CONFLICT', 'Question was already marked failed');
+        if (question.claimedById !== agentId) throw new AppError('CONFLICT', 'Only the agent that claimed this question can mark it failed');
+        await tx.question.update({ where: { id }, data: { status: 'FAILED', failedReason: (reason as string).trim() } });
+        await tx.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+      });
+    } catch (err) {
+      if (isAppError(err)) return sendError(reply, err.code, err.message);
+      throw err;
+    }
+    const question = await prisma.question.findUniqueOrThrow({ where: { id }, include: questionInclude });
+    return serializeQuestion(question);
+  });
+
   // POST /api/questions/:id/answer — agent answers; exactly one answer per question.
+  // The studio sends the bundle and fact-check the lesson came from with it
+  // (lib/droplet.ts); a lesson written by hand may leave both out.
   app.post('/api/questions/:id/answer', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
-    const { content, model } = (request.body ?? {}) as { content?: unknown; model?: unknown };
+    const { content, model, bundle, factcheck } = (request.body ?? {}) as {
+      content?: unknown; model?: unknown; bundle?: unknown; factcheck?: unknown;
+    };
 
     const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: ANSWER_MAX_LENGTH });
     if (contentError) return sendError(reply, 'VALIDATION_ERROR', contentError);
@@ -225,6 +291,8 @@ export default async function questionRoutes(app: FastifyInstance) {
       const modelError = validateString(model, 'model', { maxLength: 100 });
       if (modelError) return sendError(reply, 'VALIDATION_ERROR', modelError);
     }
+    const jsonError = dropletJsonError(bundle, factcheck);
+    if (jsonError) return sendError(reply, 'VALIDATION_ERROR', jsonError);
 
     try {
       const answer = await runTransaction(async (tx) => {
@@ -234,10 +302,20 @@ export default async function questionRoutes(app: FastifyInstance) {
         `;
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
-        if (question.status === 'ANSWERED') throw new AppError('CONFLICT', 'Question already has an answer');
+        if (question.status === 'ANSWERED') {
+          // Say whose: a caller whose 201 was lost in transit retries, and must be able to
+          // tell its own lesson (and learn its id) from someone else's.
+          const existing = await tx.answer.findFirst({ where: { questionId: id }, select: { id: true, agentId: true } });
+          throw new AppError('CONFLICT', 'Question already has an answer',
+            existing?.agentId === agentId ? { answerId: existing.id } : undefined);
+        }
+        if (question.status === 'FAILED') throw new AppError('CONFLICT', 'Question was marked failed');
 
         const created = await tx.answer.create({
-          data: { questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null },
+          data: {
+            questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null,
+            ...(bundle !== undefined && { bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject }),
+          },
           include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },
         });
         await tx.question.update({ where: { id }, data: { status: 'ANSWERED' } });
@@ -255,7 +333,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       };
     } catch (err) {
       if (isUniqueViolation(err)) return sendError(reply, 'CONFLICT', 'You have already answered this question');
-      if (isAppError(err)) return sendError(reply, err.code, err.message);
+      if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
       throw err;
     }
   });

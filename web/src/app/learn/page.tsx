@@ -92,6 +92,12 @@ function snippetOf(markdown: string, max = 240): string {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+const STATUS_BADGES: Record<Question['status'], { label: string; color: string }> = {
+  PENDING: { label: 'BREWING', color: 'var(--accent-yellow)' },
+  ANSWERED: { label: 'READY', color: 'var(--accent-green)' },
+  FAILED: { label: 'FAILED', color: 'var(--accent-red)' },
+};
+
 /**
  * One topic request, its lesson, and the follow-ups under it. Memoized on purpose: the armed poll hands
  * back a fresh questions array every 15s, so without this every card on the
@@ -127,8 +133,8 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
               <span className="badge-human text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold">human</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] uppercase font-bold" style={{ color: q.status === 'PENDING' ? 'var(--accent-yellow)' : 'var(--accent-green)' }}>
-                {q.status === 'PENDING' ? 'BREWING' : 'READY'}
+              <span className="text-[10px] uppercase font-bold" style={{ color: STATUS_BADGES[q.status].color }}>
+                {STATUS_BADGES[q.status].label}
               </span>
               <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{timeAgo(q.createdAt)}</span>
               {q.canDelete && (
@@ -180,6 +186,10 @@ const QuestionCard = memo(function QuestionCard({ q, index, onAnswerChange, onRe
                 <CollapseButton onClick={collapse} />
               </div>
             </>
+          ) : q.status === 'FAILED' ? (
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }} data-testid="failed">
+              The teacher couldn&rsquo;t make this droplet{q.failedReason ? `: ${q.failedReason}` : '.'} Ask again, or try the topic another way.
+            </p>
           ) : (
             <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
               <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />

@@ -2,6 +2,8 @@
  * Response shapes shared by the question routes. The web app and the agent
  * both read these, so the shape is fixed here rather than leaking Prisma rows.
  */
+import { serializeVideo, type VideoStatus } from './droplet.js';
+
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
 // Never the bytes: a list of cards must not drag every file out of the database. GET /api/attachments/:id serves them.
@@ -19,9 +21,12 @@ export const answerInclude = {
   replies: { include: replyInclude, orderBy: { createdAt: 'asc' as const } },
 } as const;
 
+// Tens of KB each, and a page of cards needs neither: the reply queue reads the bundle on its own.
+export const answerOmit = { bundle: true, factcheck: true } as const;
+
 export const questionInclude = {
   user: { select: userSelect },
-  answers: { include: answerInclude, orderBy: { createdAt: 'asc' as const } },
+  answers: { omit: answerOmit, include: answerInclude, orderBy: { createdAt: 'asc' as const } },
   attachments: attachmentsInclude,
 } as const;
 
@@ -53,6 +58,11 @@ type AnswerRow = {
   content: string;
   model: string | null;
   createdAt: Date;
+  videoStatus: VideoStatus | null;
+  songVideoUrl: string | null;
+  lessonVideoUrl: string | null;
+  videoError: string | null;
+  videoUpdatedAt: Date | null;
   agent: { id: string; name: string };
   replies: ReplyRow[];
 };
@@ -61,7 +71,8 @@ type QuestionRow = {
   id: string;
   userId: string;
   content: string;
-  status: 'PENDING' | 'ANSWERED';
+  status: 'PENDING' | 'ANSWERED' | 'FAILED';
+  failedReason: string | null;
   createdAt: Date;
   user: { id: string; name: string | null; avatarUrl: string | null };
   answers: AnswerRow[];
@@ -105,6 +116,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     content: a.content,
     model: a.model,
     createdAt: a.createdAt.toISOString(),
+    video: serializeVideo(a), // null: a text-only droplet
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,
@@ -117,12 +129,13 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string) {
     id: q.id,
     content: q.content,
     status: q.status,
+    failedReason: q.status === 'FAILED' ? q.failedReason : null,
     attachments: q.attachments.map(serializeAttachment),
     createdAt: q.createdAt.toISOString(),
     user: q.user,
     answer: q.answers[0] ? serializeAnswer(q.answers[0], viewerId) : null,
     isOwner,
-    canDelete: isOwner && q.status === 'PENDING',
+    canDelete: isOwner && q.status !== 'ANSWERED', // a failed topic has no lesson to keep either
   };
 }
 
