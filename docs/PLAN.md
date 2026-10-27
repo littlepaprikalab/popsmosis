@@ -431,7 +431,9 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
   - **Particles** (stretch): dots moving slowly along a polyline between structure
     centroids, one highlighted particle with a fading trail, pausing at each stop.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
-    centred, the current word highlighted by its timing.
+    centred, the current word highlighted by its timing. In the song, the next line shows
+    dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
+    spotlight still move when it is sung).
   - **Caption pill:** optional, top area, held at least 4 s.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
   - **FRQ segment:** a question card over the diagram, a visible countdown during the

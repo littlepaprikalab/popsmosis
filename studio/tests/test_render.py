@@ -25,9 +25,12 @@ from studio.schemas import (
     Reveal,
     Timeline,
     TimelineCamera,
+    Timing,
     Word,
 )
+from studio.render import renderer as renderer_module
 from studio.steps import render as render_step
+from studio.steps import timeline as timeline_step
 from studio.tests import sample_media
 
 needs_ffmpeg = pytest.mark.skipif(not (shutil.which("ffmpeg") and shutil.which("ffprobe")),
@@ -94,6 +97,62 @@ def test_the_lyric_band_is_white_and_marks_the_word_being_sung(song):
     marker = p.rgb("#FDE68A")
     marked = ((band[..., 2] == marker[0]) & (band[..., 1] == marker[1]) & (band[..., 0] == marker[2])).sum()
     assert marked > 1000
+
+
+def gapped(job, video: str) -> Timeline:
+    """The sample's timeline with instrumental gaps: a 3 s intro, and 2 s more before each
+    chorus (each sentence of the narration, for the lesson)."""
+    bundle = sample_media.bundle()
+    timed = sample_media.timings(bundle)
+    for kind, starts_gap in (("song", lambda line_id: line_id.startswith("c")), ("narration", lambda line_id: True)):
+        data = timed[kind].model_dump()
+        for i, line in enumerate(data["lines"]):
+            shift = 3.0 + 2.0 * sum(1 for earlier in data["lines"][1:i + 1] if starts_gap(earlier["line_id"]))
+            line["start"] += shift
+            line["end"] += shift
+            for w in line["words"]:
+                w["start"] += shift
+                w["end"] += shift
+        data["duration"] = data["lines"][-1]["end"] + 4.0
+        timed[kind] = Timing.model_validate(data)
+    return timeline_step.build(video, bundle, timed, jobs.read(job / media.LOCATIONS, Locations))
+
+
+def band_of(frame):
+    return frame[media.VIDEO_HEIGHT - 100:, :, :3].copy()  # the frame is a view the next one draws over
+
+
+def test_late_in_a_gap_the_song_shows_its_next_line_dimmed_and_unmarked(job):
+    song = Renderer(job, gapped(job, "song"))
+    beats = song.timeline.beats
+    gaps = [i for i, b in enumerate(beats) if b.line_id is None]
+    intro, before_chorus, outro = gaps[0], gaps[1], gaps[-1]
+    assert beats[intro].t1 - beats[intro].t0 == pytest.approx(3.0, abs=0.05)
+    lead_at = beats[intro].t1 - renderer_module.LEAD_S
+    assert song._band_beat(intro, lead_at - 0.05) is beats[intro]  # a long gap: the band stays empty...
+    assert song._band_beat(intro, lead_at + 0.05) is beats[intro + 1]  # ...until the next line leads
+    # A gap too short to be worth an empty band shows the next line throughout.
+    short = beats[before_chorus]
+    assert short.t1 - short.t0 < renderer_module.LEAD_S + renderer_module.BLINK_S
+    assert song._band_beat(before_chorus, short.t0 + 0.01) is beats[before_chorus + 1]
+    # After the last line there is no next line to lead.
+    assert outro == len(beats) - 1 and song._band_beat(outro, beats[outro].t1 - 0.01) is beats[outro]
+
+    marker = p.rgb("#FDE68A")
+    empty, leading = band_of(song.frame(lead_at - 0.5)), band_of(song.frame(lead_at + 0.5))
+    assert (empty == 255).all()
+    assert (leading != 255).any(axis=-1).sum() > 1000  # the next line's words are drawn...
+    marked = ((leading[..., 2] == marker[0]) & (leading[..., 1] == marker[1]) & (leading[..., 0] == marker[2])).sum()
+    assert marked == 0  # ...none of them marked, since none is sung yet
+    song.frame(beats[intro + 1].t0 + 0.5)  # the line itself, sung
+    assert (band_of(song.frame(lead_at + 0.5)) == leading).all()  # a frame still depends only on its time
+
+
+def test_the_lesson_keeps_an_empty_band_in_its_gaps(job):
+    lesson = Renderer(job, gapped(job, "lesson"))
+    beats = lesson.timeline.beats
+    gaps = [i for i, b in enumerate(beats) if b.line_id is None]
+    assert gaps and all(lesson._band_beat(i, beats[i].t1 - 0.01) is beats[i] for i in gaps)
 
 
 def test_labels_stay_in_the_frame_and_off_each_other():
