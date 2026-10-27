@@ -91,7 +91,8 @@ export async function buildApp() {
   // ---- CSRF: cookie-authenticated writes must carry a same-origin signal ----
   app.addHook('onRequest', async (request, reply) => {
     const isWrite = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method);
-    const usesCookie = !request.headers.authorization && hasSessionCookie(request.cookies);
+    // Same rule as requireUser: the cookie is the credential unless the bearer is an agent key.
+    const usesCookie = hasSessionCookie(request.cookies) && !isAgentToken(bearerToken(request.headers.authorization));
     if (!isWrite || !usesCookie) return;
     const hasXhrHeader = request.headers['x-requested-with'] === 'XMLHttpRequest';
     const site = request.headers['sec-fetch-site'];

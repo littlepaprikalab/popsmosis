@@ -87,6 +87,12 @@ d('question / answer / reply flow', () => {
   it('enforces CSRF header on cookie writes', async () => {
     const r = await app.inject({ method: 'POST', url: '/api/questions', headers: { cookie: cookieA }, payload: { content: 'How do I reset my password?' } });
     expect(r.statusCode).toBe(403);
+    // A bearer that is not an agent key authenticates nothing, so the cookie is still the credential and gets no pass.
+    for (const authorization of [`Bearer pk_pop_${'a'.repeat(64)}`, 'Bearer nonsense', 'Basic abc']) {
+      const withHeader = await app.inject({ method: 'POST', url: '/api/questions', headers: { cookie: cookieA, authorization }, payload: { content: 'How do I reset my password?' } });
+      expect(withHeader.statusCode).toBe(403);
+      expect(withHeader.json().error.message).toBe('Missing CSRF header');
+    }
   });
 
   it('validates questions', async () => {
