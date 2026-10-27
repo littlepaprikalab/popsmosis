@@ -42,7 +42,6 @@ docs/    PLAN.md, the agent skill file, and the runbook for running it.
 | Auth | Google OAuth (humans) + hashed API keys (agents) |
 | Frontend | Next.js + Tailwind |
 | Agent | `docs/popsmosis-agent-skill.md`, run by any LLM harness |
-| Non-browser clients | `pk_pop_` personal access tokens (see below) |
 
 ## Local development
 
@@ -51,7 +50,7 @@ with `http://localhost:3000/auth/callback` as an authorized redirect URI.
 
 ```bash
 docker compose up -d                      # Postgres on :5432
-cp .env.example .env                      # fill in JWT_SECRET, GOOGLE_*, ADMIN_EMAILS (and optionally ALLOWED_EMAIL_DOMAINS)
+cp .env.example .env                      # fill in JWT_SECRET, GOOGLE_*, ADMIN_EMAILS
 npm install
 npm --workspace api run db:migrate        # apply migrations, generate the client
 npm --workspace api run dev               # API on :3001
@@ -65,38 +64,14 @@ npm --workspace api run agent:create -- --name popsmosis-teacher
 ```
 
 Or sign in with an `ADMIN_EMAILS` address and use **AGENTS** in the nav: create,
-rotate, revoke, mint, enable, disable, and download the skill file. **USERS** is where
-access is granted: anyone with a Google account can sign in, but they see only a
-waiting page until an admin approves them there (or denies them, or revokes them
-later). Addresses on `ALLOWED_EMAIL_DOMAINS` / `ALLOWED_EMAILS` / `ADMIN_EMAILS` skip
-the queue. The same page promotes and demotes admins — except for an address in `ADMIN_EMAILS`,
-which is an admin by configuration and is refused there rather than demoted and quietly
-restored. From the shell,
-`npm --workspace api run user:promote -- --email them@example.com` does the same (and
-approves them), and so does `UPDATE users SET role = 'ADMIN', status = 'APPROVED' WHERE
-email = '…'` in SQL. However the role gets set, the API keeps access in step with it on
-the next request: an admin found waiting is approved, and an address added to
-`ADMIN_EMAILS` takes effect on a session that is already open, so nobody ends up stuck
-on the waiting page they were meant to be able to clear.
-
-### Access tokens (non-browser clients)
-
-A human signs in with Google and gets a session cookie, which is no use to
-something without a browser. **TOKENS** in the nav mints a personal access
-token (`pk_pop_...`, shown once) that authenticates as you on the same
-endpoints your browser uses, from curl, a script, or another app. From the shell:
-
-```bash
-npm --workspace api run token:create -- --email you@example.com --name "my script"
-```
-
-A token is exactly its owner and no more: it is refused if the account is not
-approved, and it cannot mint or revoke tokens (that needs the cookie), so a
-leaked token can neither replace itself nor revoke the one you would kill it
-with. Revoking takes effect at once on the instance that handles it, and within
-`USER_TOKEN_TTL_MS` (10s) on any other instance that had recently seen the token
-— the auth caches are per-process, as they already are for agent keys. Unlike a browser request, a token
-call goes straight to the API rather than through the Next.js proxy.
+rotate, revoke, mint, enable, disable, and download the skill file. Anyone with a
+Google account can sign in and use the site; there is no approval step. **USERS**
+promotes and demotes admins — except for an address in `ADMIN_EMAILS`, which is an
+admin by configuration and is refused there rather than demoted and quietly restored.
+From the shell, `npm --workspace api run user:promote -- --email them@example.com`
+does the same, and so does `UPDATE users SET role = 'ADMIN' WHERE email = '…'` in SQL.
+An address added to `ADMIN_EMAILS` takes effect on a session that is already open, on
+its next request, without a new sign-in.
 
 To fill the page with sample data (two users, one agent, a topic with its lesson and a
 follow-up thread, one topic still waiting), run `npm --workspace api run seed:dev`. It prints
@@ -210,7 +185,7 @@ At most 5 per message, 4 MB each and 8 MB together, sent inside the message's ow
 message and its files are written together or not at all; they are kept in Postgres beside it
 and go when it does. Each comes back listed on its message as
 `{ id, name, mimeType, size, url, expired }`, never with its bytes; `GET url` serves them to any
-approved user and to the teacher, whose queues list them the same way. What a file is served as
+signed-in user and to the teacher, whose queues list them the same way. What a file is served as
 is decided from its bytes, not from what was sent: PNG, JPEG, GIF and WebP as themselves, UTF-8
 text as `text/plain`, anything else as a download, all in a sandbox. Past
 `ATTACHMENT_RETENTION_DAYS` (default 30, 0 keeps them) the bytes are let go and the row stays,

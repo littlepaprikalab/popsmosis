@@ -35,11 +35,9 @@ d('question / answer / reply flow', () => {
     app = await buildApp();
     await app.ready();
 
-    // Access defaults to PENDING at the schema level; these three are approved, like real auto-approved sign-ins.
-    const approved = { status: 'APPROVED' as const, reviewedAt: new Date() };
-    userA = await prisma.user.create({ data: { email: `${tag}-a@example.com`, googleId: `${tag}-a`, name: 'Ada', ...approved } });
-    userB = await prisma.user.create({ data: { email: `${tag}-b@example.com`, googleId: `${tag}-b`, name: 'Ben', ...approved } });
-    const admin = await prisma.user.create({ data: { email: `${tag}-admin@example.com`, googleId: `${tag}-admin`, name: 'Root', role: 'ADMIN', ...approved } });
+    userA = await prisma.user.create({ data: { email: `${tag}-a@example.com`, googleId: `${tag}-a`, name: 'Ada' } });
+    userB = await prisma.user.create({ data: { email: `${tag}-b@example.com`, googleId: `${tag}-b`, name: 'Ben' } });
+    const admin = await prisma.user.create({ data: { email: `${tag}-admin@example.com`, googleId: `${tag}-admin`, name: 'Root', role: 'ADMIN' } });
     const { SESSION_EXPIRES_IN } = await import('./lib/session.js');
     // Full-lifetime tokens, like a real sign-in issues, so ordinary requests are not renewed mid-test.
     const mk = (id: string) => `popsmosis_session=${app.jwt.sign({ sub: id }, { expiresIn: SESSION_EXPIRES_IN })}`;
@@ -89,6 +87,12 @@ d('question / answer / reply flow', () => {
   it('enforces CSRF header on cookie writes', async () => {
     const r = await app.inject({ method: 'POST', url: '/api/questions', headers: { cookie: cookieA }, payload: { content: 'How do I reset my password?' } });
     expect(r.statusCode).toBe(403);
+    // A bearer that is not an agent key authenticates nothing, so the cookie is still the credential and gets no pass.
+    for (const authorization of [`Bearer pk_pop_${'a'.repeat(64)}`, 'Bearer nonsense', 'Basic abc']) {
+      const withHeader = await app.inject({ method: 'POST', url: '/api/questions', headers: { cookie: cookieA, authorization }, payload: { content: 'How do I reset my password?' } });
+      expect(withHeader.statusCode).toBe(403);
+      expect(withHeader.json().error.message).toBe('Missing CSRF header');
+    }
   });
 
   it('validates questions', async () => {
@@ -399,117 +403,46 @@ d('question / answer / reply flow', () => {
 
     // Validation and not-found.
     expect((await app.inject({ method: 'PATCH', url: `/api/users/${userA.id}`, headers: asUser(adminCookie), payload: { role: 'ROOT' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PATCH', url: `/api/users/${userA.id}`, headers: asUser(adminCookie), payload: {} })).statusCode).toBe(400);
     expect((await app.inject({ method: 'PATCH', url: '/api/users/nope', headers: asUser(adminCookie), payload: { role: 'ADMIN' } })).statusCode).toBe(404);
   });
 
-  it('pending users can only see that they are pending until an admin approves them', async () => {
-    // Cal signed in with a Google account outside the auto-approve list: the row exists, status PENDING.
+  it('lets anyone who signs in use the site at once: there is no approval step', async () => {
+    // A fresh Google sign-in creates a row with nothing but the schema defaults.
     const cal = await prisma.user.create({ data: { email: `${tag}-cal@example.com`, googleId: `${tag}-cal`, name: 'Cal' } });
     const cookieCal = `popsmosis_session=${app.jwt.sign({ sub: cal.id }, { expiresIn: '30d' })}`;
-    expect(cal.status).toBe('PENDING');
 
-    // /me works (that is how the waiting page polls); everything else is 403 PENDING_APPROVAL.
     const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieCal) });
     expect(me.statusCode).toBe(200);
-    expect(me.json().status).toBe('PENDING');
-    for (const url of ['/api/questions', '/api/questions/status', '/api/users', '/api/agents']) {
-      const r = await app.inject({ method: 'GET', url, headers: asUser(cookieCal) });
-      expect(r.statusCode).toBe(403);
-      expect(r.json().error.code).toBe('PENDING_APPROVAL');
+    expect(me.json()).toMatchObject({ email: `${tag}-cal@example.com`, role: 'USER' });
+    expect(me.json()).not.toHaveProperty('status');
+    for (const url of ['/api/questions', '/api/questions/status']) {
+      expect((await app.inject({ method: 'GET', url, headers: asUser(cookieCal) })).statusCode).toBe(200);
     }
-    const ask = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieCal), payload: { content: 'Can I post while pending? I should not be able to.' } });
-    expect(ask.statusCode).toBe(403);
-    expect(ask.json().error.code).toBe('PENDING_APPROVAL');
-
-    // The admin sees the queue (oldest first) and the count.
-    const queue = await app.inject({ method: 'GET', url: `/api/users?status=PENDING&q=${tag}`, headers: asUser(adminCookie) });
-    expect(queue.json().data.map((u: { email: string }) => u.email)).toEqual([`${tag}-cal@example.com`]);
-    expect((await app.inject({ method: 'GET', url: '/api/users/pending-count', headers: asUser(adminCookie) })).json().count).toBeGreaterThanOrEqual(1);
-    expect((await app.inject({ method: 'GET', url: '/api/users?status=nope', headers: asUser(adminCookie) })).statusCode).toBe(400);
-
-    // Deny: still no access, with a different code so the UI can say so.
-    const deny = await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { status: 'DENIED' } });
-    expect(deny.statusCode).toBe(200);
-    expect(deny.json().status).toBe('DENIED');
-    expect(deny.json().reviewedAt).not.toBeNull();
-    const denied = await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(cookieCal) });
-    expect(denied.statusCode).toBe(403);
-    expect(denied.json().error.code).toBe('ACCESS_DENIED');
-
-    // Approve: works on the very next request (cache invalidated), and records who did it.
-    const approve = await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { status: 'APPROVED' } });
-    expect(approve.json().status).toBe('APPROVED');
-    expect((await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(cookieCal) })).statusCode).toBe(200);
-    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('popsmosis_session=', ''))!.sub;
-    expect((await prisma.user.findUnique({ where: { id: cal.id } }))!.reviewedById).toBe(adminId);
-
-    // Validation: bad status, no fields, own access, denying an admin.
-    expect((await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { status: 'PENDING' } })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: {} })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'PATCH', url: `/api/users/${adminId}`, headers: asUser(adminCookie), payload: { status: 'DENIED' } })).statusCode).toBe(400);
-    expect((await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { role: 'ADMIN' } })).statusCode).toBe(200);
-    const denyAdmin = await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { status: 'DENIED' } });
-    expect(denyAdmin.statusCode).toBe(400);
-    expect(denyAdmin.json().error.message).toMatch(/admin role/);
-    // Demote and deny in one call is allowed; a denied user's session is dead for everything but /me.
-    expect((await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { role: 'USER', status: 'DENIED' } })).json()).toMatchObject({ role: 'USER', status: 'DENIED' });
-    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieCal) })).json().status).toBe('DENIED');
-
-    // Promoting a pending user approves them too.
-    await prisma.user.update({ where: { id: cal.id }, data: { status: 'PENDING', role: 'USER' } });
-    const promote = await app.inject({ method: 'PATCH', url: `/api/users/${cal.id}`, headers: asUser(adminCookie), payload: { role: 'ADMIN' } });
-    expect(promote.json()).toMatchObject({ role: 'ADMIN', status: 'APPROVED' });
+    const ask = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieCal), payload: { content: 'Plate tectonics: why do the plates move at all?' } });
+    expect(ask.statusCode).toBe(201);
+    // Signed in is not admin.
+    expect((await app.inject({ method: 'GET', url: '/api/users', headers: asUser(cookieCal) })).statusCode).toBe(403);
     await prisma.user.delete({ where: { id: cal.id } });
-  });
-
-  it('an admin left pending gets in: the row is reconciled on the next request, not only at sign-in', async () => {
-    // `UPDATE users SET role = 'ADMIN'` in a SQL console grants the role and
-    // leaves status PENDING. Nothing inside the product can repair that from
-    // there: every route except /me answers 403 PENDING_APPROVAL, /admin/users
-    // included, so the new admin is stuck on the waiting page they are supposed
-    // to be able to clear. The session resolver has to notice.
-    const { invalidateUserCache } = await import('./middleware/auth.js');
-    const dee = await prisma.user.create({ data: { email: `${tag}-dee@example.com`, googleId: `${tag}-dee`, name: 'Dee', role: 'ADMIN' } });
-    expect(dee.status).toBe('PENDING');
-    const cookieDee = `popsmosis_session=${app.jwt.sign({ sub: dee.id }, { expiresIn: '30d' })}`;
-
-    // The waiting page's own poll is what unsticks it.
-    const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieDee) });
-    expect(me.statusCode).toBe(200);
-    expect(me.json()).toMatchObject({ role: 'ADMIN', status: 'APPROVED' });
-    // Written back, not just answered: the admin list and the next instance agree.
-    const stored = (await prisma.user.findUnique({ where: { id: dee.id } }))!;
-    expect(stored.status).toBe('APPROVED');
-    expect(stored.reviewedAt).not.toBeNull();
-    expect(stored.reviewedById).toBeNull(); // automatic, so no admin is credited with it
-
-    // Same again on a row an admin had denied: the approval must not read as
-    // that admin's doing, with a reviewedAt saying it happened just now.
-    const adminId = app.jwt.decode<{ sub: string }>(adminCookie.replace('popsmosis_session=', ''))!.sub;
-    await prisma.user.update({ where: { id: dee.id }, data: { status: 'DENIED', reviewedAt: new Date(), reviewedById: adminId } });
-    invalidateUserCache(dee.id);
-    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieDee) })).json().status).toBe('APPROVED');
-    expect((await prisma.user.findUnique({ where: { id: dee.id } }))!.reviewedById).toBeNull();
-    expect((await app.inject({ method: 'GET', url: '/api/users/pending-count', headers: asUser(cookieDee) })).statusCode).toBe(200);
-    await prisma.user.delete({ where: { id: dee.id } });
   });
 
   it('ADMIN_EMAILS reaches a session that is already open, without signing in again', async () => {
     const { invalidateUserCache } = await import('./middleware/auth.js');
     const eve = await prisma.user.create({ data: { email: `${tag}-eve@example.com`, googleId: `${tag}-eve`, name: 'Eve' } });
     const cookieEve = `popsmosis_session=${app.jwt.sign({ sub: eve.id }, { expiresIn: '30d' })}`;
-    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieEve) })).json().status).toBe('PENDING');
+    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieEve) })).json().role).toBe('USER');
 
-    // The documented way out of "nobody can approve anyone": add the address and
+    // The documented way out of "nobody is an admin": add the address and
     // redeploy. A redeploy starts on an empty auth cache, which is what the
     // invalidate stands in for here.
     const before = process.env.ADMIN_EMAILS;
     process.env.ADMIN_EMAILS = `${tag}-eve@example.com`;
     invalidateUserCache(eve.id);
     try {
-      const me = await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieEve) });
-      expect(me.json()).toMatchObject({ role: 'ADMIN', status: 'APPROVED' });
-      expect((await app.inject({ method: 'GET', url: '/api/users/pending-count', headers: asUser(cookieEve) })).statusCode).toBe(200);
+      expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieEve) })).json().role).toBe('ADMIN');
+      expect((await app.inject({ method: 'GET', url: '/api/users', headers: asUser(cookieEve) })).statusCode).toBe(200);
+      // Written back, not just answered: the admin list and the next instance agree.
+      expect((await prisma.user.findUnique({ where: { id: eve.id } }))!.role).toBe('ADMIN');
     } finally {
       if (before === undefined) delete process.env.ADMIN_EMAILS; else process.env.ADMIN_EMAILS = before;
       invalidateUserCache(eve.id);
@@ -517,49 +450,22 @@ d('question / answer / reply flow', () => {
     await prisma.user.delete({ where: { id: eve.id } });
   });
 
-  it('refuses a demotion or denial that ADMIN_EMAILS would undo, instead of reporting a success that reverts', async () => {
+  it('refuses a demotion that ADMIN_EMAILS would undo, instead of reporting a success that reverts', async () => {
     const { invalidateUserCache } = await import('./middleware/auth.js');
-    const gus = await prisma.user.create({
-      data: { email: `${tag}-gus@example.com`, googleId: `${tag}-gus`, name: 'Gus', role: 'ADMIN', status: 'APPROVED', reviewedAt: new Date() },
-    });
+    const gus = await prisma.user.create({ data: { email: `${tag}-gus@example.com`, googleId: `${tag}-gus`, name: 'Gus', role: 'ADMIN' } });
     const before = process.env.ADMIN_EMAILS;
     process.env.ADMIN_EMAILS = `${tag}-gus@example.com`;
     try {
-      for (const payload of [{ role: 'USER' }, { status: 'DENIED' }, { role: 'USER', status: 'DENIED' }]) {
-        const r = await app.inject({ method: 'PATCH', url: `/api/users/${gus.id}`, headers: asUser(adminCookie), payload });
-        expect(r.statusCode).toBe(400);
-        expect(r.json().error.message).toMatch(/ADMIN_EMAILS/);
-      }
+      const r = await app.inject({ method: 'PATCH', url: `/api/users/${gus.id}`, headers: asUser(adminCookie), payload: { role: 'USER' } });
+      expect(r.statusCode).toBe(400);
+      expect(r.json().error.message).toMatch(/ADMIN_EMAILS/);
       // Still an admin, so the refusal was the whole story.
       expect((await prisma.user.findUnique({ where: { id: gus.id } }))!.role).toBe('ADMIN');
-      // Approving is not a reversal — the config wants that too, so it is allowed.
-      await prisma.user.update({ where: { id: gus.id }, data: { status: 'PENDING', role: 'USER' } });
-      expect((await app.inject({ method: 'PATCH', url: `/api/users/${gus.id}`, headers: asUser(adminCookie), payload: { status: 'APPROVED' } })).statusCode).toBe(200);
     } finally {
       if (before === undefined) delete process.env.ADMIN_EMAILS; else process.env.ADMIN_EMAILS = before;
       invalidateUserCache(gus.id);
     }
     await prisma.user.delete({ where: { id: gus.id } });
-  });
-
-  it('leaves a denied user denied: the lists let people skip the queue, they do not reverse a decision', async () => {
-    const { invalidateUserCache } = await import('./middleware/auth.js');
-    const fay = await prisma.user.create({
-      data: { email: `${tag}-fay@example.com`, googleId: `${tag}-fay`, name: 'Fay', status: 'DENIED', reviewedAt: new Date() },
-    });
-    const cookieFay = `popsmosis_session=${app.jwt.sign({ sub: fay.id }, { expiresIn: '30d' })}`;
-    const before = process.env.ALLOWED_EMAIL_DOMAINS;
-    process.env.ALLOWED_EMAIL_DOMAINS = 'example.com';
-    invalidateUserCache(fay.id);
-    try {
-      expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers: asUser(cookieFay) })).json().status).toBe('DENIED');
-      const blocked = await app.inject({ method: 'GET', url: '/api/questions', headers: asUser(cookieFay) });
-      expect(blocked.json().error.code).toBe('ACCESS_DENIED');
-    } finally {
-      if (before === undefined) delete process.env.ALLOWED_EMAIL_DOMAINS; else process.env.ALLOWED_EMAIL_DOMAINS = before;
-      invalidateUserCache(fay.id);
-    }
-    await prisma.user.delete({ where: { id: fay.id } });
   });
 
   it('refuses to demote the last admin', async () => {

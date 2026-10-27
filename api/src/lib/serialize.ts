@@ -145,13 +145,6 @@ export type SerializedReply = ReturnType<typeof serializeReply>;
 export type SerializedAttachment = ReturnType<typeof serializeAttachment>;
 
 /** The signed-in user's own record, and the rows on /admin/users. */
-export function publicUser(u: {
-  id: string; email: string; name: string | null; avatarUrl: string | null;
-  role: string; status: string; reviewedAt: Date | null; createdAt: Date;
-}) {
-  return {
-    id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, role: u.role, status: u.status,
-    reviewedAt: u.reviewedAt ? u.reviewedAt.toISOString() : null,
-    createdAt: u.createdAt.toISOString(),
-  };
+export function publicUser(u: { id: string; email: string; name: string | null; avatarUrl: string | null; role: string; createdAt: Date }) {
+  return { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, role: u.role, createdAt: u.createdAt.toISOString() };
 }

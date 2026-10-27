@@ -9,12 +9,8 @@ import { generateApiKey } from '../lib/apikey.js';
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600e3);
 
-const approved = { status: 'APPROVED' as const, reviewedAt: new Date() };
-const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: {}, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN', ...approved } });
-const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: {}, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben', ...approved } });
-// Cal has signed in but nobody has approved him yet. Re-seeding puts him back in the queue.
-const pending = { status: 'PENDING' as const, reviewedAt: null, reviewedById: null };
-const cal = await prisma.user.upsert({ where: { googleId: 'seed-cal' }, update: pending, create: { email: 'cal@example.com', googleId: 'seed-cal', name: 'Cal', ...pending } });
+const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: {}, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN' } });
+const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: {}, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben' } });
 const key = generateApiKey();
 const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, update: { apiKeyHash: key.hashed, enabled: true }, create: { name: 'popsmosis-teacher', apiKeyHash: key.hashed } });
 
@@ -53,5 +49,5 @@ for (let i = 0; i < 24; i++) {
   }
 }
 
-console.log(JSON.stringify({ users: { ada: ada.id, ben: ben.id, cal: cal.id }, agent: { id: agent.id, name: agent.name }, POPSMOSIS_API_KEY: key.raw }));
+console.log(JSON.stringify({ users: { ada: ada.id, ben: ben.id }, agent: { id: agent.id, name: agent.name }, POPSMOSIS_API_KEY: key.raw }));
 await prisma.$disconnect();

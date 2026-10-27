@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
-import { api } from '@/lib/api';
 
 const activeStyle = { color: 'var(--text-hover)', borderBottom: '2px solid var(--accent-red)' } as const;
 const idleStyle = { color: 'var(--text-secondary)' } as const;
@@ -12,18 +11,6 @@ const idleStyle = { color: 'var(--text-secondary)' } as const;
 export function Nav() {
   const { user, loading, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [pendingUsers, setPendingUsers] = useState(0);
-  const isAdmin = user?.role === 'ADMIN' && user.status === 'APPROVED';
-
-  // How many sign-ins are waiting: one indexed COUNT per admin page load, and
-  // again when /admin/users approves or denies someone. No polling.
-  useEffect(() => {
-    if (!isAdmin) { setPendingUsers(0); return; }
-    const load = () => api.pendingUserCount().then((r) => setPendingUsers(r.count)).catch(() => {});
-    load();
-    window.addEventListener('users-changed', load);
-    return () => window.removeEventListener('users-changed', load);
-  }, [isAdmin]);
   const navRef = useRef<HTMLElement>(null);
   const pathname = usePathname();
   const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -54,17 +41,10 @@ export function Nav() {
   const authLinks = (onClick?: () => void) => (
     loading ? null : user ? (
       <>
-        <Link href="/tokens" className="hover-text transition-colors" style={isActive('/tokens') ? activeStyle : idleStyle} onClick={onClick}>TOKENS</Link>
         {user.role === 'ADMIN' && (
           <>
             <Link href="/admin/agents" className="hover-text transition-colors" style={isActive('/admin/agents') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>AGENTS</Link>
-            <Link href="/admin/users" className="hover-text transition-colors inline-flex items-center gap-1.5" style={isActive('/admin/users') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>
-              USERS
-              {pendingUsers > 0 && (
-                <span className="text-[10px] font-bold px-1.5 rounded-full leading-4" title={`${pendingUsers} waiting for approval`} data-testid="pending-badge"
-                  style={{ background: 'var(--accent-orange)', color: 'var(--accent-yellow-text)' }}>{pendingUsers}</span>
-              )}
-            </Link>
+            <Link href="/admin/users" className="hover-text transition-colors" style={isActive('/admin/users') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>USERS</Link>
           </>
         )}
         <span style={{ color: 'var(--text-secondary)' }}>@{displayName}</span>

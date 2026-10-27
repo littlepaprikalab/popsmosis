@@ -28,7 +28,7 @@ d('queuesHaveWork', () => {
   });
 
   const makeUser = () => prisma.user.create({
-    data: { email: `u${Date.now()}${Math.random()}@example.com`, googleId: `g${Date.now()}${Math.random()}`, name: 'Ada', status: 'APPROVED' },
+    data: { email: `u${Date.now()}${Math.random()}@example.com`, googleId: `g${Date.now()}${Math.random()}`, name: 'Ada' },
   });
   const makeAgent = () => prisma.agent.create({
     data: { name: `popsmosis${Date.now()}${Math.random()}`, apiKeyHash: `h${Date.now()}${Math.random()}` },

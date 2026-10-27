@@ -53,11 +53,6 @@ interface Attempts {
   startedAt: number; // first attempt, so the retries share one time budget
 }
 
-// 403s that describe the account rather than the request: the user is not (or
-// no longer) approved. The AuthProvider re-reads /auth/me and the AccessGate
-// swaps the page for the waiting screen, so revocation lands without a reload.
-const ACCESS_CODES = new Set(['PENDING_APPROVAL', 'ACCESS_DENIED']);
-
 async function request<T>(path: string, options: RequestInit = {}, attempts?: Attempts): Promise<T> {
   const tries: Attempts = attempts ?? { gateway: 0, rateLimit: 0, startedAt: Date.now() };
   const controller = new AbortController();
@@ -124,9 +119,6 @@ async function request<T>(path: string, options: RequestInit = {}, attempts?: At
 
     const message: string = err?.error?.message || (gateway ? UNREACHABLE_MESSAGE : res.statusText || 'Request failed');
     const code: string | undefined = err?.error?.code || (gateway ? UNREACHABLE_CODE : undefined);
-    if (res.status === 403 && code && ACCESS_CODES.has(code) && typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('access-changed'));
-    }
     if (res.status === 401 && typeof window !== 'undefined') {
       if (message === 'User not found') {
         fetch(`${API_BASE}/auth/logout`, { method: 'POST', credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest' } }).catch(() => {});
@@ -151,12 +143,8 @@ export interface User {
   name: string | null;
   avatarUrl: string | null;
   role: 'USER' | 'ADMIN';
-  status: UserStatus;
-  reviewedAt: string | null; // when status left PENDING
   createdAt: string;
 }
-
-export type UserStatus = 'PENDING' | 'APPROVED' | 'DENIED';
 
 export interface PublicUser {
   id: string;
@@ -236,16 +224,6 @@ export interface Agent {
   apiKey?: string; // only on create / mint / rotate
 }
 
-/** A personal access token: how something that is not a browser signs in as you. */
-export interface UserToken {
-  id: string;
-  name: string;
-  createdAt: string;
-  lastUsedAt: string | null;
-  revokedAt: string | null;
-  token?: string; // only on create, and only once
-}
-
 export const api = {
   // Wake a spun-down API before something single-use depends on it.
   health: () => request<{ status: string; timestamp: string }>('/health'),
@@ -289,17 +267,8 @@ export const api = {
     request<Agent>(`/agents/${id}`, { method: 'PATCH', body: JSON.stringify({ enabled }) }),
   agentSkillUrl: (id: string) => `${API_BASE}/agents/${id}/skill`,
 
-  // Personal access tokens (the caller's own; cookie sessions only)
-  listTokens: () => request<{ data: UserToken[] }>('/tokens'),
-  createToken: (name: string) => request<UserToken>('/tokens', { method: 'POST', body: JSON.stringify({ name }) }),
-  revokeToken: (id: string) => request<UserToken>(`/tokens/${id}`, { method: 'DELETE' }),
-
   // Admin: users
-  listUsers: (q?: string, status?: UserStatus) =>
-    request<{ data: User[] }>(`/users?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}) })}`),
-  pendingUserCount: () => request<{ count: number }>('/users/pending-count'),
+  listUsers: (q?: string) => request<{ data: User[] }>(`/users?${new URLSearchParams(q ? { q } : {})}`),
   setUserRole: (id: string, role: 'ADMIN' | 'USER') =>
     request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
-  setUserStatus: (id: string, status: 'APPROVED' | 'DENIED') =>
-    request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 };

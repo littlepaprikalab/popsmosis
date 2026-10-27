@@ -31,8 +31,6 @@ if (role === 'USER') {
     process.exit(1);
   }
 }
-// Promoting also approves: an admin who is stuck on the waiting page cannot approve anyone.
-const approve = role === 'ADMIN' && user.status !== 'APPROVED' ? { status: 'APPROVED' as const, reviewedAt: new Date() } : {};
-await prisma.user.update({ where: { id: user.id }, data: { role, ...approve } });
-console.log(`${email} is now ${role}${'status' in approve ? ' (and approved)' : ''}. Takes effect within 30s on running instances (auth cache), immediately after their next sign-in.`);
+await prisma.user.update({ where: { id: user.id }, data: { role } });
+console.log(`${email} is now ${role}. Takes effect within 30s on running instances (auth cache), immediately after their next sign-in.`);
 await prisma.$disconnect();

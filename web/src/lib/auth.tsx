@@ -9,7 +9,6 @@ interface AuthContext {
   unreachable: boolean; // the API never answered; says nothing about the session
   login: (user: User) => void;
   logout: () => Promise<void>;
-  refresh: () => Promise<void>;
   retry: () => Promise<void>;
 }
 
@@ -19,7 +18,6 @@ const AuthCtx = createContext<AuthContext>({
   unreachable: false,
   login: () => {},
   logout: async () => {},
-  refresh: async () => {},
   retry: async () => {},
 });
 
@@ -69,14 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('session-expired', onExpired);
   }, []);
 
-  useEffect(() => {
-    // Fired by the api client on a 403 that says the account is pending or denied:
-    // re-read /auth/me so the AccessGate shows the right screen.
-    const onAccess = () => { if (userRef.current) api.getMe().then(setUser).catch(() => {}); };
-    window.addEventListener('access-changed', onAccess);
-    return () => window.removeEventListener('access-changed', onAccess);
-  }, []);
-
   const login = (u: User) => { setUser(u); setUnreachable(false); }; // cookie already set by the API
 
   const logout = async () => {
@@ -84,12 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const refresh = async () => {
-    try { setUser(await api.getMe()); } catch { /* ignore: the current user stands */ }
-  };
-
   return (
-    <AuthCtx.Provider value={{ user, loading, unreachable, login, logout, refresh, retry: loadMe }}>
+    <AuthCtx.Provider value={{ user, loading, unreachable, login, logout, retry: loadMe }}>
       {children}
     </AuthCtx.Provider>
   );

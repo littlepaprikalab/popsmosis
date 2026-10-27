@@ -293,48 +293,6 @@ test.describe('admin', () => {
   });
 });
 
-test.describe('approval', () => {
-  test('a pending user waits; the admin approves; the waiting page lets them through', async ({ browser, page, context }) => {
-    // Cal signed in but is not on the auto-approve list: every page is the waiting room.
-    await signIn(context, S.users.cal);
-    await page.goto('/learn');
-    await expect(page.getByText('WAITING FOR APPROVAL')).toBeVisible();
-    await expect(page.getByText('cal@example.com')).toBeVisible();
-    await expect(page.getByText('WHAT DO YOU WANT TO LEARN?', { exact: true })).toHaveCount(0);
-    await page.goto('/admin/users');
-    await expect(page.getByText('WAITING FOR APPROVAL')).toBeVisible();
-
-    // Ada sees him in the queue and on the nav badge, and approves.
-    const adaCtx = await browser.newContext();
-    await signIn(adaCtx, S.users.ada);
-    const ada = await adaCtx.newPage();
-    await ada.goto('/admin/users');
-    await expect(ada.getByTestId('pending-badge')).toHaveText('1');
-    const calRow = ada.getByTestId('pending-row').filter({ hasText: 'cal@example.com' });
-    await calRow.getByRole('button', { name: 'Approve' }).click();
-    await ada.getByRole('dialog').getByRole('button', { name: 'Approve' }).click();
-    await expect(ada.getByTestId('pending-row')).toHaveCount(0);
-    await expect(ada.getByTestId('pending-badge')).toHaveCount(0);
-    const approvedRow = ada.getByTestId('user-row').filter({ hasText: 'cal@example.com' });
-    await expect(approvedRow.getByText(/approved just now/)).toBeVisible();
-
-    // Cal's page polls /auth/me and lets him in without a reload.
-    await expect(page.getByText('WAITING FOR APPROVAL')).toHaveCount(0, { timeout: 30_000 });
-    await expect(page.getByText('USERS', { exact: true })).toHaveCount(0); // approved, not admin
-    await page.goto('/learn');
-    await expect(page.getByText('@Cal')).toBeVisible();
-    await expect(page.getByText('ATP synthesis: how do cells')).toBeVisible();
-
-    // Revoke: Cal's next request 403s, the client re-reads /me, the gate closes.
-    await approvedRow.getByRole('button', { name: 'Revoke' }).click();
-    await ada.getByRole('dialog').getByRole('button', { name: 'Revoke' }).click();
-    await expect(approvedRow.getByText('denied', { exact: true })).toBeVisible();
-    await page.reload();
-    await expect(page.getByText('ACCESS DENIED')).toBeVisible();
-    await adaCtx.close();
-  });
-});
-
 // The API is a separate Render service that spins down when idle and goes
 // unroutable for a moment mid-deploy. Render answers those windows itself with
 // an HTML error page, which must never be read as "this user is signed out".

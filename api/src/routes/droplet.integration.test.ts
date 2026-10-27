@@ -61,7 +61,7 @@ d('droplet endpoints', () => {
     keyB = kb.raw;
     await prisma.agent.create({ data: { name: 'teacher', apiKeyHash: ka.hashed } });
     await prisma.agent.create({ data: { name: 'other', apiKeyHash: kb.hashed } });
-    const user = await prisma.user.create({ data: { email: 'ada@example.com', googleId: 'g-ada', name: 'Ada', status: 'APPROVED' } });
+    const user = await prisma.user.create({ data: { email: 'ada@example.com', googleId: 'g-ada', name: 'Ada' } });
     userId = user.id;
     const { SESSION_EXPIRES_IN } = await import('../lib/session.js');
     cookie = `popsmosis_session=${app.jwt.sign({ sub: userId }, { expiresIn: SESSION_EXPIRES_IN })}`;

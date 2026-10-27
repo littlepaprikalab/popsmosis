@@ -4,7 +4,7 @@ import { resolve } from 'path';
 import type { BrowserContext, APIRequestContext } from '@playwright/test';
 
 export interface Seed {
-  users: { ada: string; ben: string; cal: string }; // cal is seeded PENDING
+  users: { ada: string; ben: string };
   agent: { id: string; name: string };
   POPSMOSIS_API_KEY: string;
 }

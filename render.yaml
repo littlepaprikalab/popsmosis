@@ -45,11 +45,7 @@ services:
         sync: false
       - key: API_BASE_URL            # https://<popsmosis-api host>, substituted into the skill file
         sync: false
-      - key: ALLOWED_EMAIL_DOMAINS   # optional, e.g. yourcompany.com — approved on sign-in without waiting for an admin
-        sync: false
-      - key: ALLOWED_EMAILS          # optional exact addresses approved on sign-in (contractors); leave blank if none
-        sync: false
-      - key: ADMIN_EMAILS            # comma-separated Google emails that get the admin role; they approve everyone else on /admin/users
+      - key: ADMIN_EMAILS            # comma-separated Google emails that get the admin role; anyone else signs in as a regular user
         sync: false
       - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 20)
         sync: false
