@@ -27,7 +27,8 @@ mark() { local name=$1; shift; digest "$@" > "$STAMPS/$name"; }
 #    art and the renderer) loads libEGL.so.1.
 missing=()
 command -v ffmpeg >/dev/null 2>&1 || missing+=(ffmpeg)
-ldconfig -p | grep -q 'libEGL\.so\.1' || missing+=(libegl1)
+# (grep reads all of ldconfig's output: with -q, pipefail could see ldconfig's SIGPIPE.)
+ldconfig -p 2>/dev/null | grep 'libEGL\.so\.1' >/dev/null || missing+=(libegl1)
 if [ ${#missing[@]} -gt 0 ]; then
   apt_install() { DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends "${missing[@]}" >/dev/null 2>&1; }
   apt_install || { apt-get update -q >/dev/null 2>&1 && apt_install; } \

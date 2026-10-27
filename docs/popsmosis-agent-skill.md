@@ -328,7 +328,8 @@ need it. Never send `attachments` yourself: a reply carrying them is refused wit
 ### Step 3b: Finish the videos
 
 Only when Step 2b printed `STARTED`. Your machine goes away when the run ends, and the
-render with it, so wait for the videos before you look again:
+render with it, so wait for the videos before you look again. Each call waits up to 9
+minutes, so give the command a timeout of 10 minutes:
 
 ```bash
 python -m studio wait <id>; echo "exit $?"
