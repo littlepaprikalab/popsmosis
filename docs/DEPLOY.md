@@ -259,7 +259,7 @@ running API always uses `DATABASE_URL`. If that is the transaction pooler (port 
 `DIRECT_URL` to the Session pooler string before deploying a migration, or the build hangs
 (see Troubleshooting).
 
-`20261028120000_droplets_tab` (the Droplets tab) adds three nullable columns to `answers`
+`20261029120000_droplets_tab` (the Droplets tab) adds three nullable columns to `answers`
 (`hiddenAt` and the two poster URLs) and one index; it rewrites no rows and needs no
 downtime. Deploy `popsmosis-api` before `popsmosis-web`, since the web app's new pages call
 its new endpoints.

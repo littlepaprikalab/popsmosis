@@ -109,6 +109,7 @@ model Answer {
   videoError      String? // FAILED: why, shown on the droplet
   videoUpdatedAt  DateTime? // the last status change; RENDERING for too long reads as FAILED
   hiddenAt        DateTime? // an admin took it off the public Droplets tab; null: listed once READY
+  videoAttempts   Int          @default(0) // renders started (POST /api/answers/:id/video/claim); recovery stops at VIDEO_MAX_ATTEMPTS
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   agent    Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
