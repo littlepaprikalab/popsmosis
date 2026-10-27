@@ -13,7 +13,7 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | Key | Value | Where it comes from |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres` | Supabase > Project Settings > Database > Connection string > **Session pooler** |
-| `DIRECT_URL` | optional, same as above | only if you want migrations on a different URL |
+| `DIRECT_URL` | optional: the Session pooler URI, as above (port 5432) | needed only when `DATABASE_URL` is the transaction pooler (port 6543). Migrations hang on that pooler, so they use this URL instead; the running API keeps using `DATABASE_URL`. Leave it empty otherwise |
 | `JWT_SECRET` | generated | Render generates it from the blueprint |
 | `PROXY_SECRET` | generated | Render generates it; the web service copies it |
 | `GOOGLE_CLIENT_ID` | `…apps.googleusercontent.com` | Google Cloud > APIs & Services > Credentials |
@@ -48,8 +48,11 @@ only the Postgres.
 - A Supabase project. Copy the **Session pooler** connection string (port 5432 on
   the `pooler.supabase.com` host, user `postgres.<ref>`). Do not use the direct
   `db.<ref>.supabase.co` host: it is IPv6-only and Render cannot reach it. The
-  transaction pooler (port 6543) also works, but session mode is the right one for
-  a long-running server.
+  transaction pooler (port 6543) works for the running API but not for migrations:
+  `prisma migrate deploy` needs one Postgres session for its whole run, and that
+  pooler swaps sessions between statements, so the build hangs. If you use it for
+  `DATABASE_URL`, set `DIRECT_URL` to the session pooler string. Session mode is the
+  right one for a long-running server anyway.
 - A Google Cloud project with an OAuth 2.0 **Web application** client. You will add
   the production redirect URI in step 3, once you know the web hostname.
 - The repo pushed to GitHub with `main` containing this code.
@@ -207,5 +210,7 @@ Schema changes ship as new files in `prisma/migrations/` (create them locally wi
 | Build fails in `prisma generate` | the `postinstall` step needs the schema at `prisma/schema.prisma`; do not move it |
 | `Cannot find module 'typescript'` / `Failed to load next.config.ts` in the build | the install dropped devDependencies. `NODE_ENV=production` makes `npm ci` skip them, and both builds need them (`tsc`, `typescript`, `tailwindcss`). The blueprint uses `npm ci --include=dev`; if you overrode the build command in the Render dashboard, add that flag back |
 | `Cannot find module '<package>'` in the API build or at API start, though it works locally | the API build installs only the `api` workspace and the root (`npm ci --workspace api --include-workspace-root`), so a package listed only in `web/package.json` is not there. Add it to `api/package.json` |
+| The API build stops after `Datasource "db": … pooler.supabase.com:6543` and never finishes | the migration step is going through Supabase's **transaction** pooler (port 6543), which cannot keep the one session a migration needs. Set `DIRECT_URL` to the **Session pooler** string (same host, user and password, port `5432`, no `?pgbouncer=true`), cancel the stuck deploy and deploy again. The `Datasource` line should then end in `:5432` |
+| `Timed out trying to acquire a postgres advisory lock (SELECT pg_advisory_lock(72707369))` in the API build | an earlier migration run that hung still holds Prisma's migration lock on a pooled connection. In the Supabase SQL editor run `SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' AND objid = 72707369;`, then deploy again |
 | `P1001: Can't reach database server at db.<ref>.supabase.co:5432` | `DATABASE_URL` is the **direct** connection string, which is IPv6-only and unreachable from Render. Replace it with the **Session pooler** string: host `aws-0-<region>.pooler.supabase.com`, port `5432`, user `postgres.<project-ref>`. Supabase > Project Settings > Database > Connection string > Session pooler. Update it in the Render dashboard (Environment) and redeploy — it is a `sync: false` var, so editing `render.yaml` will not change it |
 | `password authentication failed` | the pooler user is `postgres.<project-ref>`, not `postgres` |
