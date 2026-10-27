@@ -4,3 +4,4 @@ anthropic>=2.3,<3
 openai>=3.39,<4  # the Meta provider: Muse speaks the OpenAI API
 pydantic>=2.13,<3
 pytest>=9
+skia-python>=144.1,<145
