@@ -308,6 +308,11 @@ Storage, so the Supabase key stays on the API: the videos to the public bucket, 
 intermediate files to the private one (section 10). Then the studio marks the videos
 ready.
 
+Built: `studio/steps/upload.py`. Each file is a PUT of its raw bytes to the signed URL.
+`upload.progress.json` keeps each file's hash, so a retry or a re-render sends only what
+changed. `uploaded.json` is written after every file, then the videos are marked READY
+with both public URLs and their posters; if that report fails the step is not done.
+
 ### Stretch
 
 After both 16:9 videos work end to end: the vertical 9:16 layout, particles, and QA
@@ -464,8 +469,9 @@ takes some setup in the routine's environment:
 
 ## 10. Storage, data model and the Droplets tab
 
-Built on day 2: the `Answer` fields below except `hiddenAt`, and the agent endpoints.
-The Droplets tab, its two public endpoints and the admin hide are day 7.
+Built on day 2: the `Answer` fields below, and the agent endpoints. The Droplets tab, its
+two public endpoints, the admin hide and the posters were built in the web and upload
+lane (section 12), on seeded videos until the renderer lands.
 
 ### What is stored where
 
@@ -497,9 +503,11 @@ model Answer {
   videoStatus    VideoStatus? // null: a text-only droplet
   songVideoUrl   String?
   lessonVideoUrl String?
+  songPosterUrl  String?      // a still for each video, shown before it plays
+  lessonPosterUrl String?
   videoError     String?      // why it FAILED, shown on the droplet and the admin page
   videoUpdatedAt DateTime?    // RENDERING for too long reads as FAILED
-  hiddenAt       DateTime?    // an admin took it off the Droplets tab (day 7)
+  hiddenAt       DateTime?    // an admin took it off the Droplets tab
 }
 
 enum QuestionStatus { PENDING ANSWERED FAILED }
@@ -536,8 +544,9 @@ once then serves every student who comes after, and judges can browse it without
 account.
 
 - **Outside the sign-in gate.** Today every page and endpoint past sign-in needs a
-  signed-in account; the two `/api/droplets` endpoints are the first that do not. Rate
-  limit them.
+  signed-in account; the two `/api/droplets` endpoints are the first that do not. They
+  are rate limited per visitor, and all visitors together per API instance
+  (`api/src/lib/public-limit.ts`).
 - **Public:** a title made from the bundle (`course` and `topic`), the lesson text, both
   videos and the lyrics.
 - **Never public:** the learner's name or avatar, the request in their own words (it can
@@ -713,6 +722,7 @@ before it land:
 3. **Art:** the interim SVG art, its masks and `locations.json` (steps 3–4).
 4. **Timeline and renderer** (steps 7–8), on the sample job's art and timings.
 5. **Web and upload:** the Droplets tab, the players on `/learn`, and the upload step (step 9).
+   Built; the upload is not yet in `run`.
 
 They join in `python -m studio run`: after the post, art and audio at the same time,
 then the timeline, render and upload, reporting the videos' status to the API.

@@ -22,6 +22,8 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `ALLOWED_ORIGINS` | `https://popsmosis-web.onrender.com` | your web origin |
 | `API_BASE_URL` | `https://popsmosis-api.onrender.com` | your API hostname; goes into the downloaded skill file |
 | `ADMIN_EMAILS` | `you@yourcompany.com` | Google emails that get the admin role on sign-in. **Set this**: somebody has to manage the agents. Anyone else with a Google account can sign in and use the site |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` | Supabase > Project Settings > API > Project URL. Where the studio uploads the droplet videos; see [Supabase Storage](#6-supabase-storage-the-droplet-videos). Unset, the upload endpoint answers 503 and no droplet gets videos |
+| `SUPABASE_SERVICE_ROLE_KEY` | the `service_role` key | Supabase > Project Settings > API Keys. Signs each upload; it stays on the API and is never sent to the studio or a browser |
 | `NODE_ENV` | `production` | set by the blueprint |
 | `PORT` | `3001` | set by the blueprint |
 
@@ -38,10 +40,12 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 
 Optional API tuning: `DATABASE_POOL_SIZE` (default 5), `QUESTIONS_PER_USER_PER_DAY`
 (default 10), `REPLIES_PER_USER_PER_HOUR` (default 30), `ATTACHMENT_RETENTION_DAYS` (default
-30; how long the files sent with messages keep their bytes in Postgres, 0 for good).
+30; how long the files sent with messages keep their bytes in Postgres, 0 for good),
+`VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
+failed).
 
-Nothing else. There is no Supabase Auth, Storage, or Redis in popsmosis; Supabase is
-only the Postgres.
+Nothing else. There is no Supabase Auth or Redis in popsmosis; Supabase is the Postgres
+and, for the droplet videos, Storage.
 
 ## 0. Before you start
 
@@ -162,6 +166,61 @@ Add the domain to `popsmosis-web` under Settings > Custom Domains, then update
 If you also put the API on a custom domain, update `API_BASE_URL` and re-download the
 skill file.
 
+## 6. Supabase Storage (the droplet videos)
+
+The studio's last step uploads each droplet's files to Supabase Storage in the same
+Supabase project as the Postgres (docs/PLAN.md, section 10). The API mints a signed URL
+per file, so the studio never holds a Supabase key. Two buckets:
+
+| Bucket | Public | What goes in it |
+|---|---|---|
+| `droplets` | yes | `<answerId>/out/song_h.mp4`, `lesson_h.mp4` and a `.jpg` poster for each: what the Droplets tab and `/learn` play |
+| `studio` | no | `<answerId>/art/…`, `masks/…`, `locations.json`, `audio/…`, `timing/…`, `timeline_*.json`: kept so a renderer fix can re-render without paying for the song and the art again |
+
+1. **The project.** If there is none yet, create one at supabase.com > New project (pick a
+   region near Render's `oregon`, such as West US) and keep the database password: the
+   same project is the Postgres of section 0 and holds the buckets. One project is enough.
+2. **Create the buckets.** Supabase > Storage > **New bucket**: `droplets` with **Public
+   bucket** on, then `studio` with it off. The names must be exactly these. Or in the SQL
+   editor:
+
+   ```sql
+   insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
+     ('droplets', 'droplets', true,  52428800, array['video/mp4', 'image/jpeg']),
+     ('studio',   'studio',   false, 52428800, array['image/png', 'audio/mpeg', 'application/json']);
+   ```
+
+   50 MB is the most a file may be on Supabase's free plan, which a few minutes of 1080p at
+   a modest bitrate stays under; on a paid plan raise the limit (Storage > Settings, then
+   each bucket's own) if a video is refused. Leave the bucket policies alone: the signed
+   URLs need none, and a public bucket is readable without one.
+3. **Give the API the keys.** Supabase > Project Settings > API: copy the **Project URL** to
+   `SUPABASE_URL`, and the **`service_role`** key (under API Keys; on newer projects, the
+   legacy keys tab) to `SUPABASE_SERVICE_ROLE_KEY`, both on `popsmosis-api` only. The API
+   sends the key as both `apikey` and a bearer token, which is what the `service_role` JWT
+   takes; a newer `sb_secret_…` key has not been tried. On an existing service add the two
+   by hand in Render > popsmosis-api > Environment: a Blueprint sync never adds a
+   `sync: false` variable to a service that already exists. Redeploy the API.
+4. **Check it.** With the agent key:
+
+   ```bash
+   curl -s -X POST https://popsmosis-api.onrender.com/api/answers/<an answer of this agent>/upload-url \
+     -H "Authorization: Bearer sk_pop_..." -H 'Content-Type: application/json' \
+     -d '{"bucket":"droplets","file":"out/check.jpg"}'
+   # {"uploadUrl":"https://<ref>.supabase.co/storage/v1/object/upload/sign/droplets/...?token=...","publicUrl":"..."}
+   ```
+
+   A 503 means the two variables are not set on the running API; a 503 that says storage
+   did not give an upload URL means Supabase refused: check the key and the bucket name.
+5. **The routine's network policy** must allow the Supabase host (`<ref>.supabase.co`), since
+   the studio uploads straight to it (docs/PLAN.md, section 9).
+
+Nothing on `popsmosis-web` changes: the pages read the public URLs from the API, and its
+Content-Security-Policy already allows `https:` media and images.
+
+**Before launch:** the ElevenLabs plan has to allow publishing its songs publicly
+(docs/PLAN.md, section 10, "Before launch").
+
 ## How it fits together
 
 ```
@@ -194,7 +253,16 @@ To turn auto-deploy back on, set `autoDeployTrigger: commit` (every push) or
 `checksPass` (only once CI passes) and sync the Blueprint.
 
 Schema changes ship as new files in `prisma/migrations/` (create them locally with
-`npm --workspace api run db:migrate`) and are applied during the API build.
+`npm --workspace api run db:migrate`) and are applied during the API build, through
+`DIRECT_URL` when it is set and `DATABASE_URL` otherwise (`api/prisma.config.ts`). The
+running API always uses `DATABASE_URL`. If that is the transaction pooler (port 6543), set
+`DIRECT_URL` to the Session pooler string before deploying a migration, or the build hangs
+(see Troubleshooting).
+
+`20261028120000_droplets_tab` (the Droplets tab) adds three nullable columns to `answers`
+(`hiddenAt` and the two poster URLs) and one index; it rewrites no rows and needs no
+downtime. Deploy `popsmosis-api` before `popsmosis-web`, since the web app's new pages call
+its new endpoints.
 
 ## Troubleshooting
 
@@ -214,3 +282,8 @@ Schema changes ship as new files in `prisma/migrations/` (create them locally wi
 | `Timed out trying to acquire a postgres advisory lock (SELECT pg_advisory_lock(72707369))` in the API build | an earlier migration run that hung still holds Prisma's migration lock on a pooled connection. In the Supabase SQL editor run `SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' AND objid = 72707369;`, then deploy again |
 | `P1001: Can't reach database server at db.<ref>.supabase.co:5432` | `DATABASE_URL` is the **direct** connection string, which is IPv6-only and unreachable from Render. Replace it with the **Session pooler** string: host `aws-0-<region>.pooler.supabase.com`, port `5432`, user `postgres.<project-ref>`. Supabase > Project Settings > Database > Connection string > Session pooler. Update it in the Render dashboard (Environment) and redeploy — it is a `sync: false` var, so editing `render.yaml` will not change it |
 | `password authentication failed` | the pooler user is `postgres.<project-ref>`, not `postgres` |
+| The studio's upload step fails with `503 UNAVAILABLE: File storage is not configured` | `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are not on the running API. Add both in the Render dashboard and redeploy (section 6) |
+| Upload fails with `503 UNAVAILABLE: File storage did not give an upload URL` | the API reached Supabase and was refused; the API log has `signed upload URL failed` with Supabase's status. Usually the `droplets` or `studio` bucket does not exist or is named differently, or the key is not the `service_role` one (section 6) |
+| Upload fails with `storage answered 4xx` on one file | Supabase refused the bytes: most often the file is over the bucket's size limit or its type is not in the bucket's allowed MIME types. Raise or extend them on the bucket |
+| A video shows on `/learn` but does not play | the `droplets` bucket is not public, so its public URL answers 400. Make it public (section 6) |
+| Visitors to `/droplets` get `Too many requests` | each visitor may make 60 requests a minute, keyed by the address the edge saw (`CF-Connecting-IP`, `True-Client-IP`, then the first `X-Forwarded-For` entry, believed only on requests that carry the proxy secret), and all of them together 1200 a minute per API instance (`api/src/lib/public-limit.ts`). If every visitor seems to share one limit, the API is seeing none of those headers |

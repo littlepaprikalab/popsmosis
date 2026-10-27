@@ -15,7 +15,8 @@ The teacher does not write the lessons itself: it runs the **studio**, a Python
 pipeline in this repo, which writes each lesson, fact-checks every line and posts it.
 Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
-in Supabase and shown beside the text. The plan, and where the pipeline stands, is in
+in Supabase and shown beside the text. Once a droplet's videos are done it is listed on the
+public **Droplets** tab (`/droplets`), where anyone can watch it without an account. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
 
 Popsmosis started as a copy of [zoey](https://github.com/Iztera/zoey) (an agent-answered
@@ -27,7 +28,7 @@ advice column), whose architecture and look-and-feel come from
 
 ```
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
-web/     Next.js 15 + Tailwind 4. The /learn page, sign-in, and an admin page for agents.
+web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, sign-in, and the admin pages.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply).
 studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
@@ -73,9 +74,11 @@ does the same, and so does `UPDATE users SET role = 'ADMIN' WHERE email = '…'`
 An address added to `ADMIN_EMAILS` takes effect on a session that is already open, on
 its next request, without a new sign-in.
 
-To fill the page with sample data (two users, one agent, a topic with its lesson and a
-follow-up thread, one topic still waiting), run `npm --workspace api run seed:dev`. It prints
-the agent's key.
+To fill the page with sample data (two users, one agent, a topic with its lesson, its videos
+and a follow-up thread, one topic still waiting, and older lessons whose videos are rendering
+or failed), run `npm --workspace api run seed:dev`. It prints the agent's key. The seeded
+videos are two short clips in `web/public/samples/`, so `/droplets` and the players on
+`/learn` work locally with no Supabase.
 
 Run a heartbeat against the local API with Claude Code CLI, from this checkout (the skill
 file runs the studio, below, from here):
@@ -116,6 +119,15 @@ python -m studio step factcheck <job-id>                               # re-run 
 python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, runs, calls
 ```
 
+Once a job has its rendered videos and a posted lesson (`posted.json`), the upload step
+(step 9) copies them to Supabase and marks them READY, which lists the droplet on the
+Droplets tab. It uses the same two variables, and the API needs Supabase set up
+([docs/DEPLOY.md](docs/DEPLOY.md), "Supabase Storage"):
+
+```bash
+python -m studio step upload <job-id>    # videos and posters public, the rest private; again sends only what changed
+```
+
 `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` set the brain's model and effort (defaults
 `claude-opus-5-5` and `high`; effort is one of `low`, `medium`, `high`, `xhigh`, `max`).
 They apply with `BRAIN_PROVIDER=claude` only. To try a prompt change cheaply, run the brain on
@@ -139,6 +151,17 @@ the browser tests against the real stack, and the studio's offline tests.
 ## API
 
 Errors are always `{ "error": { "code", "message" } }`.
+
+**Anyone** (no sign-in; 60 requests a minute per visitor)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24). Each: `{ id, title, course, topic, excerpt, video, createdAt }` |
+| GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content` and the song's `lyrics`; 404 unless it is on the tab |
+
+Only the title (the bundle's `course` and `topic`), the lesson text, the videos with
+their posters and the lyrics are public. The learner's name and avatar, the request in
+their own words, their files and the follow-ups never leave through these.
 
 **Humans** (session cookie, `X-Requested-With: XMLHttpRequest` on writes)
 
@@ -165,14 +188,15 @@ Errors are always `{ "error": { "code", "message" } }`.
 | POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it; 409 if answered, failed, or leased to another agent |
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck? }`; the two JSON objects go together and `factcheck.status` must be `passed`; 409 once there is one, with `answerId` when it is the caller's own |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, error? }`; a URL left out is kept, so the two videos can report separately |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until `SUPABASE_URL` is set |
 | GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |
 | GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
-both URLs and the error. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
+both URLs, both posters and the error; and `hidden`, true when an admin took it off the
+Droplets tab. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
 
@@ -206,6 +230,7 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 | GET | `/api/agents/:id/skill` | skill file with the real base URL |
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
+| PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
 
 ## Deploy
 
