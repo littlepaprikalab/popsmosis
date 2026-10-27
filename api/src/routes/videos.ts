@@ -20,15 +20,15 @@ type ClaimedAnswer = {
   id: string; questionId: string; bundle: unknown; factcheck: unknown; videoAttempts: number; videoStatus: string | null;
 };
 
-// What a run needs to make the videos on a machine that has never seen the topic.
-function serializeClaim(a: ClaimedAnswer) {
+// What a run needs to make the videos on a machine that has never seen the topic. A renewal,
+// the heartbeat before every step, leaves out the bundle and fact-check its run already has.
+function serializeClaim(a: ClaimedAnswer, renewal = false) {
   return {
     answerId: a.id,
     questionId: a.questionId,
     attempt: a.videoAttempts,
     status: a.videoStatus,
-    bundle: a.bundle,
-    factcheck: a.factcheck,
+    ...(!renewal && { bundle: a.bundle, factcheck: a.factcheck }),
   };
 }
 
@@ -50,12 +50,14 @@ export default async function videoRoutes(app: FastifyInstance) {
     if (attempt === 'invalid') return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
 
     let claimed: { id: string }[] = [];
+    let renewed = false;
     if (attempt !== null) {
       claimed = await prisma.$queryRaw<{ id: string }[]>`
         UPDATE answers SET "videoUpdatedAt" = now()
         WHERE id = ${id} AND "agentId" = ${agentId} AND "videoStatus" = 'RENDERING' AND "videoAttempts" = ${attempt}
         RETURNING id
       `;
+      renewed = claimed.length > 0;
     }
     // A run whose attempt was taken over may still start a new one, if the one that
     // took over has itself gone quiet: the same rule as a claim without an attempt.
@@ -85,7 +87,7 @@ export default async function videoRoutes(app: FastifyInstance) {
       }
       return sendError(reply, 'CONFLICT', `The videos were given up after ${answer.videoAttempts} attempt(s)`);
     }
-    return serializeClaim(answer);
+    return serializeClaim(answer, renewed);
   });
 
   // GET /api/videos/queue?limit=N — agent: its own droplets whose render went quiet
@@ -122,7 +124,7 @@ export default async function videoRoutes(app: FastifyInstance) {
       select: answerSelect,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    return { data: answers.map(serializeClaim) };
+    return { data: answers.map((a) => serializeClaim(a)) };
   });
 
   // POST /api/answers/:id/video/fail — { reason, attempt }: give the videos up after a
