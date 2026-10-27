@@ -3,8 +3,10 @@
 popsmosis ships no runner. The agent is an LLM harness that you point at
 `docs/popsmosis-agent-skill.md` (the **skill file**) with an API key in its environment.
 Each run is one **heartbeat**: run the studio (`python -m studio run <id>`) on a waiting
-topic, which writes, fact-checks and posts its lesson; answer follow-ups under earlier
-lessons; keep a short record of the run on Inkmory; stop. (The API calls a topic request a
+topic, which writes, fact-checks and posts its lesson; start its two videos in the
+background (`python -m studio videos <id> --background`); answer follow-ups under earlier
+lessons while they render; wait for the videos; keep a short record of the run on
+Inkmory; stop. (The API calls a topic request a
 *question*, its lesson an *answer*, and follow-ups *replies*; this guide uses the API's
 words.)
 
@@ -43,6 +45,9 @@ The runner needs these in its environment:
 | `INKMORY_API_URL` | Inkmory's base URL, e.g. `https://api.inkmory.com` |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
+| `ELEVENLABS_API_KEY` | the song and the narration (the audio step). Its calls bill to that ElevenLabs account |
+| `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
+| `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
 
 Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are
 empty and the operator's last cycle log is two days old, an idle run logs a quiet cycle
@@ -133,13 +138,23 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 
 1. In Claude Code on the web, create an environment for the routine:
    - **Environment variables:** everything in the table in section 1.
-   - **Setup script:** `pip install -r studio/requirements.txt`. Every run starts on a
-     fresh machine, so this runs before every topic; keep it to the studio's own
-     requirements.
-   - **Network policy:** allow your API host, `api.anthropic.com`, PyPI
-     (`pypi.org`, `files.pythonhosted.org`) and the Inkmory host. Later steps of the
-     studio add `api.elevenlabs.io`, `api.meta.ai` and the Supabase host
-     ([PLAN.md](PLAN.md), section 9).
+   - **Setup script:** none needed. The repository's session hook
+     (`.claude/hooks/session-start.sh`) installs everything when a run starts: ffmpeg and
+     libEGL, `studio/requirements.txt` (with PyTorch on CPU, Demucs and skia), the song
+     timing's models (about 1.3 GB), and the node packages. The environment's container
+     is cached once the hook has finished, so that is paid once (about 2 minutes), and a
+     warm run's hook takes seconds.
+   - **Network policy:** allow
+     - your API host, `api.anthropic.com`, `api.elevenlabs.io`, the Supabase host and
+       the Inkmory host (and `api.meta.ai` once the Meta key arrives): what a run calls;
+     - `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` (PyTorch's CPU
+       wheels), `registry.npmjs.org`, and `archive.ubuntu.com` with `security.ubuntu.com`
+       (ffmpeg and libEGL, when the image lacks them): what the session hook installs;
+     - `dl.fbaipublicfiles.com` (the MMS aligner), `huggingface.co` and `*.hf.co` (Demucs,
+       which Hugging Face serves from `us.aws.cdn.hf.co`): the song timing's models.
+
+     The hook says which part it could not do (`session-start: ...` at the top of the
+     run); the rest still runs.
 2. Create a routine on the popsmosis repo with a cron of your choice (hourly is the
    normal minimum) and the prompt:
    ```
@@ -155,6 +170,16 @@ A topic is several minutes of studio work. Set `QUESTION_CLAIM_MINUTES` on the A
 above the longest single step (the default 20 is safe): the studio renews the topic's
 claim before each step, and a lapsed claim lets an overlapping run start the same topic
 again.
+
+Its videos take longer: the run starts them in the background as soon as the lesson is
+posted, answers follow-ups meanwhile, then waits for them (`python -m studio wait <id>`,
+at most 9 minutes a call), because the render dies with the run's machine. The videos are
+claimed the same way (`POST /api/answers/:id/video/claim`), renewed before every media
+step. A render that stops reporting for `VIDEO_STALE_MINUTES` (60) has died with its
+machine: the next run takes it from `GET /api/videos/queue` (`python -m studio recover`)
+and makes it again from the lesson the API stored, up to `VIDEO_MAX_ATTEMPTS` (2) attempts
+in all. Videos that fail twice in a row are given up (`python -m studio fail <id>`): the
+lesson stays, and the droplet says why.
 
 #### Wake the routine on write
 
