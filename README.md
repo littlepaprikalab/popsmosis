@@ -136,7 +136,11 @@ python -m studio step factcheck <job-id>                               # re-run 
 python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, runs, calls
 ```
 
-The song's style is one high school students listen to (pop with rapped verses, K-pop,
+Each droplet is written for one audience: high school, unless the learner's request says
+who it is for ("I'm in 5th grade", "for my college course"). The audience sets the level
+of the lesson, the song, the narration and the exam question, never the rules: every
+droplet is fact-checked the same way and stays fit for a classroom. The song's style is
+one the audience listens to (for high school: pop with rapped verses, K-pop,
 R&B, dance-pop, pop-punk), at a tempo that fits the topic's mood, unless the learner
 asks for their own: a line of their question that starts `Style:` becomes the song's
 starting point. Locally, pass it as `--style "K-pop with hip-hop verses, 98 bpm"`.

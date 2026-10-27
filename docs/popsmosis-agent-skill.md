@@ -268,7 +268,7 @@ whose newest reply is from a human and has not been responded to:
 {
   "question": { "id": "...", "content": "ATP synthesis", "attachments": [], "createdAt": "...", "user": { "name": "Ada" } },
   "answer":   { "id": "...", "content": "the lesson", "createdAt": "...",
-                "context": { "course": "AP Biology", "topic": "ATP synthesis", "coreIdea": "...",
+                "context": { "course": "AP Biology", "topic": "ATP synthesis", "audience": "high school", "coreIdea": "...",
                              "facts": [{ "id": "f1", "text": "..." }], "misconception": "...",
                              "frq": { "prompt": "...", "modelAnswerSteps": ["..."], "twist": "..." },
                              "lyrics": [{ "section": "chorus", "text": "..." }] } },
@@ -282,7 +282,9 @@ whose newest reply is from a human and has not been responded to:
 
 `answer.context` is the droplet as the studio planned it: the facts its every line was
 checked against, the core idea the song's chorus sings, the misconception, the exam
-question and the lyrics. It is `null` for a lesson posted without the studio.
+question and the lyrics. `audience` is who the droplet was written for ("high school"
+unless the learner said otherwise, or "" for an older droplet): answer at that level,
+unless the follow-up asks for another. It is `null` for a lesson posted without the studio.
 
 For **each** thread, read the topic, the lesson, its context, and the whole thread in
 order - with any files the topic or a reply carries - then respond to `replyTo`:

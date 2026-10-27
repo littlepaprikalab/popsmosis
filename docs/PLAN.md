@@ -197,20 +197,21 @@ One structured-output call returns everything that can be written from the topic
 The fields are in this order on purpose: the model writes in field order, so the later
 parts build on the facts it has already written.
 
-1. `course`, `topic`, `core_idea`, `facts[3-4]` (`id`, `text`, `source_quote` when a
-   study guide was given), `misconception`, `frq` (`prompt`, `predict_question`,
-   `model_answer_steps[]`, `twist`).
+1. `course`, `topic`, `audience` ("high school" unless the learner's request names
+   someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
+   (`id`, `text`, `source_quote` when a study guide was given), `misconception`, `frq`
+   (`prompt`, `predict_question`, `model_answer_steps[]`, `twist`).
 2. `scenes[3-6]`: hook, overview, one or two zoomed details. Each has `id`,
    `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
    One fixed colour per structure for the whole job.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
-   verse, chorus, bridge, chorus). The style is one high school students listen to (pop
-   with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's mood setting
-   its tempo, or the learner's own when they ask for one: a question line starting
-   `Style:` becomes `song_style` in `request.json`. One tag names the tempo, "<n> bpm"
-   from 80 to 160; the code checks repair a missing or second one.
+   verse, chorus, bridge, chorus). The style is one the audience listens to (for high
+   school: pop with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's
+   mood setting its tempo, or the learner's own when they ask for one: a question line
+   starting `Style:` becomes `song_style` in `request.json`. One tag names the tempo,
+   "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
    and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
    `aliases`, because hearing that word is what reveals the structure on screen.
