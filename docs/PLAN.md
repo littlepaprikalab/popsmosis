@@ -207,9 +207,10 @@ parts build on the facts it has already written.
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
    verse, chorus, bridge, chorus). The style is one high school students listen to (pop
-   with rapped verses, K-pop, pop-punk), or the learner's own when they ask for one: a
-   question line starting `Style:` becomes `song_style` in `request.json`. One tag names
-   the tempo, "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
+   with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's mood setting
+   its tempo, or the learner's own when they ask for one: a question line starting
+   `Style:` becomes `song_style` in `request.json`. One tag names the tempo, "<n> bpm"
+   from 80 to 160; the code checks repair a missing or second one.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
    and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
    `aliases`, because hearing that word is what reveals the structure on screen.

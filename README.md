@@ -129,9 +129,9 @@ python -m studio show <job-id>                                         # facts, 
 ```
 
 The song's style is one high school students listen to (pop with rapped verses, K-pop,
-pop-punk), unless the learner asks for their own: a line of their question that starts
-`Style:` becomes the song's starting point. Locally, pass it as `--style "K-pop with
-hip-hop verses, 98 bpm"`.
+R&B, dance-pop, pop-punk), at a tempo that fits the topic's mood, unless the learner
+asks for their own: a line of their question that starts `Style:` becomes the song's
+starting point. Locally, pass it as `--style "K-pop with hip-hop verses, 98 bpm"`.
 
 Once a job has its rendered videos and a posted lesson (`posted.json`), the upload step
 (step 9) copies them to Supabase and marks them READY, which lists the droplet on the
