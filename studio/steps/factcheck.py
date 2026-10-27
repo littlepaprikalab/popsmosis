@@ -20,7 +20,8 @@ from pydantic import ValidationError
 
 from studio import brain, checks
 from studio.jobs import read, write
-from studio.schemas import Bundle, Check, CheckedLine, Correction, FactCheck, FactCheckReport, Request
+from studio.schemas import (Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
+                            FactCheckReport, Request)
 from studio.sentences import replace_sentences, split_sentences
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
@@ -40,15 +41,18 @@ class Line:
 
 
 def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckReport:
-    bundle = read(job / "bundle.json", Bundle)
+    bundle = checks.load(job / "bundle.json")
     request = read(job / "request.json", Request)
     report, checked = check_bundle(bundle, request.study_guide, ask, max_rounds)
     if report.status == "passed" and checked != bundle:
         draft = job / "bundle.draft.json"
         if not draft.exists():
             draft.write_text((job / "bundle.json").read_text(encoding="utf-8"), encoding="utf-8")
-        # A corrected line can say different names, so the code checks run again.
+        # A corrected line can say different names, so the code checks run again; what
+        # they find joins what the bundle step found.
         checked, problems = checks.review(checked)
+        if (job / "checks.json").exists():
+            problems = checks.merge(read(job / "checks.json", CheckReport), problems)
         write(job / "bundle.json", checked)
         write(job / "checks.json", problems)
     write(job / "factcheck.json", report)

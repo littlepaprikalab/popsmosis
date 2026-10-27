@@ -53,7 +53,9 @@ overview (id "overview"), then one or two zoomed details (short ids such as
   one. For an abstract topic they are the parts of its diagram: the sections of a bar, the
   branches of a tree, the regions of a chart. `name` is the label as it should read on
   screen. `aliases` are the other words the lyrics or narration use for it
-  (for example "medulla" for "medulla oblongata"). `sam_phrase` is a short visual noun
+  (for example "medulla" for "medulla oblongata"). Each name and alias means only that
+  structure in this lesson: a common word ("healthy", "cell") would reveal it every time
+  it is said. `sam_phrase` is a short visual noun
   phrase a segmentation model can find in the image ("the small cauliflower-shaped
   structure at the back, below the cortex"). `color_hex` is its colour as #RRGGBB.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct
