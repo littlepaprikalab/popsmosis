@@ -7,3 +7,8 @@ ALTER TABLE "questions" ALTER COLUMN "userId" DROP NOT NULL;
 -- the cascade reads the whole replies table. The hourly follow-up limit counts by it too.
 -- CreateIndex
 CREATE INDEX "replies_userId_createdAt_idx" ON "replies"("userId", "createdAt");
+
+-- The record of each person agreeing to the Terms of Use and Privacy Policy: which version, and when.
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN     "termsAcceptedAt" TIMESTAMP(3),
+ADD COLUMN     "termsVersion" TEXT;

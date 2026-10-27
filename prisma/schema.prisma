@@ -43,6 +43,11 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // The record of agreeing to the Terms of Use and Privacy Policy (api/src/lib/terms.ts): the version this person last
+  // agreed to and when. Null: never, for an account made before the box existed; the web app asks at the next visit.
+  termsVersion    String?
+  termsAcceptedAt DateTime?
+
   questions       Question[]
   replies         Reply[]
   dropletLikes    DropletLike[]

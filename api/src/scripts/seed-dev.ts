@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { generateApiKey } from '../lib/apikey.js';
+import { termsAccepted } from '../lib/terms.js';
 
 // Local-development seed: three users (Ada is an admin), one agent, one topic with
 // its lesson, its two videos, a follow-up thread, and a like and a comment from Ada on
@@ -73,9 +74,13 @@ const SAMPLE_BREAKDOWN = {
   },
 };
 
-const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: {}, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN' } });
-const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: {}, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben' } });
-const cal = await prisma.user.upsert({ where: { googleId: 'seed-cal' }, update: {}, create: { email: 'cal@example.com', googleId: 'seed-cal', name: 'Cal' } });
+// Ada and Ben have agreed to the current Terms; Cal has no record of it, like an account from before the box, so the
+// web app asks Cal first (components/TermsGate.tsx).
+const agreed = termsAccepted();
+const ada = await prisma.user.upsert({ where: { googleId: 'seed-ada' }, update: agreed, create: { email: 'ada@example.com', googleId: 'seed-ada', name: 'Ada', role: 'ADMIN', ...agreed } });
+const ben = await prisma.user.upsert({ where: { googleId: 'seed-ben' }, update: agreed, create: { email: 'ben@example.com', googleId: 'seed-ben', name: 'Ben', ...agreed } });
+const unagreed = { termsVersion: null, termsAcceptedAt: null };
+const cal = await prisma.user.upsert({ where: { googleId: 'seed-cal' }, update: unagreed, create: { email: 'cal@example.com', googleId: 'seed-cal', name: 'Cal', ...unagreed } });
 const key = generateApiKey();
 const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, update: { apiKeyHash: key.hashed, enabled: true }, create: { name: 'popsmosis-teacher', apiKeyHash: key.hashed } });
 

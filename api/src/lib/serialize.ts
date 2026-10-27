@@ -4,6 +4,7 @@
  */
 import { serializeVideo, type VideoStatus } from './droplet.js';
 import { serializeBreakdown } from './breakdown.js';
+import { termsCurrent } from './terms.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
@@ -155,6 +156,13 @@ export type SerializedReply = ReturnType<typeof serializeReply>;
 export type SerializedAttachment = ReturnType<typeof serializeAttachment>;
 
 /** The signed-in user's own record, and the rows on /admin/users. */
-export function publicUser(u: { id: string; email: string; name: string | null; avatarUrl: string | null; role: string; createdAt: Date }) {
-  return { id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, role: u.role, createdAt: u.createdAt.toISOString() };
+export function publicUser(u: {
+  id: string; email: string; name: string | null; avatarUrl: string | null; role: string; createdAt: Date;
+  termsVersion: string | null; termsAcceptedAt: Date | null;
+}) {
+  return {
+    id: u.id, email: u.email, name: u.name, avatarUrl: u.avatarUrl, role: u.role, createdAt: u.createdAt.toISOString(),
+    termsAcceptedAt: u.termsAcceptedAt?.toISOString() ?? null, // when they last agreed to the Terms (lib/terms.ts)
+    termsCurrent: termsCurrent(u), // false: the web app asks them to agree to the current version first
+  };
 }

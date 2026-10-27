@@ -28,13 +28,15 @@ export default function ConsumerHealthDataPage() {
       <Section id="collect" title="1. The consumer health data we collect, and how we use it">
         <p>
           Popsmosis does not ask for health information. It collects consumer health data only if you choose to include
-          it in what you send: a request for a lesson, a file you attach, or a follow-up question. For example: &ldquo;Explain
-          how insulin works, I was just diagnosed with diabetes.&rdquo;
+          it in what you send: a request for a lesson, a file you attach, a follow-up question, or a comment you post on
+          a droplet. For example: &ldquo;Explain how insulin works, I was just diagnosed with diabetes.&rdquo;
         </p>
         <p>We use it only to provide the lessons you ask for:</p>
         <ul>
           <li>the AI teacher reads it to write your lesson and answer your follow-up questions;</li>
           <li>we store it with your request so you can see it on your Learn page;</li>
+          <li>a comment is published under the droplet you posted it on, because that is what posting a comment
+            does;</li>
           <li>our admins can see it only to fix problems and keep the service safe.</li>
         </ul>
         <p>
@@ -56,7 +58,9 @@ export default function ConsumerHealthDataPage() {
         </p>
         <p>
           The lessons published on the Droplets tab are written for anyone learning the topic and contain nothing that
-          links them to you.
+          links them to you. If you put health information in a comment, it is published with your first name and last
+          initial, because you asked us to post it; you can delete the comment at any time. The AI teacher does not
+          receive comments.
         </p>
       </Section>
 
@@ -69,9 +73,9 @@ export default function ConsumerHealthDataPage() {
           <li><strong>Know and access.</strong> You can confirm whether we collect, share or sell your consumer health
             data, and get a copy of it, with a list of every third party and affiliate we shared it with (there are
             none).</li>
-          <li><strong>Delete.</strong> You can delete a request on your <Link href="/learn">Learn</Link> page, or your
-            whole account on your <Link href="/account">account page</Link>, at any time; either takes it out of
-            Popsmosis at once. You can also ask us to delete it. We then delete it from all of our systems, including the
+          <li><strong>Delete.</strong> You can delete a request on your <Link href="/learn">Learn</Link> page, a comment
+            on its droplet&rsquo;s page, or your whole account on your <Link href="/account">account page</Link>, at any
+            time; each takes it out of Popsmosis at once. You can also ask us to delete it. We then delete it from all of our systems, including the
             AI teacher&rsquo;s working files, and from backups within six months, and we tell our processors to delete
             it too.</li>
           <li><strong>Withdraw consent.</strong> We collect consumer health data only to provide the lessons you ask

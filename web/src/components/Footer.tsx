@@ -36,7 +36,7 @@ export function Footer() {
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: 1 }}>
         <Wordmark size="sm" />
-        {' · droplets for learning. Every lesson is made by AI and shared with everyone; your words stay private.'}
+        {' · droplets for learning. Every lesson is made by AI and shared with everyone; your requests stay private.'}
       </div>
     </footer>
   );

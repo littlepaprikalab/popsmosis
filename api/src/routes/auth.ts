@@ -1,9 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { OAuth2Client } from 'google-auth-library';
 import prisma, { runTransaction } from '../lib/prisma.js';
-import { sendError, AppError, isAppError } from '../lib/errors.js';
+import { sendError, AppError, isAppError, isNotFound } from '../lib/errors.js';
 import { requireUser, invalidateUserCache } from '../middleware/auth.js';
 import { detachQuestions } from '../lib/privacy.js';
+import { termsAccepted } from '../lib/terms.js';
 import { setSessionCookie, clearSessionCookie, SESSION_EXPIRES_IN } from '../lib/session.js';
 import { isAdminEmail } from '../lib/access.js';
 import { publicUser } from '../lib/serialize.js';
@@ -18,11 +19,19 @@ export default async function authRoutes(app: FastifyInstance) {
   // POST /api/auth/google — exchange the OAuth authorization code for a session cookie.
   // Any Google account can complete this and create a user, so the route gets
   // its own tight per-IP limit on top of the global one.
+  //
+  // `acceptTerms: true` is the person ticking "I agree" to the Terms of Use and Privacy Policy on the sign-in page.
+  // Without it nobody is signed in, and the account records which version they agreed to and when (lib/terms.ts):
+  // that record is what shows they agreed. It is checked before the code is spent, so a refusal costs nothing.
   app.post('/api/auth/google', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
-    const { code } = (request.body ?? {}) as { code?: string };
+    const { code, acceptTerms } = (request.body ?? {}) as { code?: string; acceptTerms?: unknown };
     if (!code || typeof code !== 'string') {
       return sendError(reply, 'VALIDATION_ERROR', 'Missing authorization code');
     }
+    if (acceptTerms !== true) {
+      return sendError(reply, 'VALIDATION_ERROR', 'Agree to the Terms of Use and Privacy Policy to sign in');
+    }
+    const agreed = termsAccepted();
     if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
       return sendError(reply, 'SERVER_ERROR', 'Google sign-in is not configured on the server');
     }
@@ -50,9 +59,9 @@ export default async function authRoutes(app: FastifyInstance) {
       try {
         user = await prisma.user.upsert({
           where: { googleId: payload.sub },
-          update: { name: payload.name ?? null, avatarUrl: payload.picture ?? null, ...(role ? { role } : {}) },
+          update: { name: payload.name ?? null, avatarUrl: payload.picture ?? null, ...agreed, ...(role ? { role } : {}) },
           create: {
-            email, googleId: payload.sub, name: payload.name ?? null, avatarUrl: payload.picture ?? null,
+            email, googleId: payload.sub, name: payload.name ?? null, avatarUrl: payload.picture ?? null, ...agreed,
             ...(role ? { role } : {}),
           },
         });
@@ -61,7 +70,7 @@ export default async function authRoutes(app: FastifyInstance) {
         if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'P2002') {
           user = await prisma.user.update({
             where: { email },
-            data: { googleId: payload.sub, name: payload.name ?? null, avatarUrl: payload.picture ?? null, ...(role ? { role } : {}) },
+            data: { googleId: payload.sub, name: payload.name ?? null, avatarUrl: payload.picture ?? null, ...agreed, ...(role ? { role } : {}) },
           });
         } else {
           throw err;
@@ -90,6 +99,20 @@ export default async function authRoutes(app: FastifyInstance) {
     const user = await prisma.user.findUnique({ where: { id: request.viewer!.id } });
     if (!user) return sendError(reply, 'UNAUTHORIZED', 'User not found');
     return publicUser(user);
+  });
+
+  // POST /api/auth/terms — { accept: true }: the signed-in person agrees to the current Terms of Use and Privacy Policy,
+  // when their account has none on record or an older version (the web app's TermsGate asks). Records it as sign-in does.
+  app.post('/api/auth/terms', { preHandler: [requireUser] }, async (request, reply) => {
+    const { accept } = (request.body ?? {}) as { accept?: unknown };
+    if (accept !== true) return sendError(reply, 'VALIDATION_ERROR', 'accept must be true');
+    try {
+      const user = await prisma.user.update({ where: { id: request.viewer!.id }, data: termsAccepted() });
+      return publicUser(user);
+    } catch (err) {
+      if (isNotFound(err)) return sendError(reply, 'UNAUTHORIZED', 'User not found'); // deleted since the cache let it in
+      throw err;
+    }
   });
 
   // POST /api/auth/logout — clear the session cookie

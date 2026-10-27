@@ -231,18 +231,21 @@ Content-Security-Policy already allows `https:` media and images.
 
 `/privacy`, `/consumer-health-data` and `/terms` read their facts from
 `web/src/lib/legal.ts`. `OPERATOR_NAME` (Little Paprika Lab), `OPERATOR_LOCATION`,
-`GOVERNING_LAW` (Washington) and `COURTS` (King County) are set. Before the site is public:
+`GOVERNING_LAW` (Washington), `COURTS` (King County) and `CONTACT_EMAIL` are set. Before
+the site is public:
 
-1. Set `CONTACT_EMAIL` to an address you read (a role address such as `privacy@` your
-   domain keeps a personal inbox off the pages). Until it is set, the pages show
-   "[contact email not set yet]" where it goes. Washington's My Health My Data Act needs it:
-   it is where people send requests about their health data, which have to be answered
-   within 45 days.
-2. If `ATTACHMENT_RETENTION_DAYS` is not the default 30 on the API, set the same number in
+1. Read `CONTACT_EMAIL`'s inbox. Requests about Washington health data have to be answered
+   within 45 days, and a legal claim's first step (Terms, section 17) and copyright notices
+   arrive there too.
+2. Register the copyright agent with the US Copyright Office
+   (copyright.gov/dmca-directory, a small fee, renewed every three years): Little Paprika
+   Lab, at the contact address. The Terms name it (section 12), and the registration is what
+   protects you from liability for what people post in comments.
+3. If `ATTACHMENT_RETENTION_DAYS` is not the default 30 on the API, set the same number in
    `legal.ts`.
-3. Keep the footer's **CONSUMER HEALTH DATA** link: the same Act requires a separate link to
+4. Keep the footer's **CONSUMER HEALTH DATA** link: the same Act requires a separate link to
    that policy on the home page.
-4. Add two of the URLs to Google Cloud Console > APIs & Services > OAuth consent screen
+5. Add two of the URLs to Google Cloud Console > APIs & Services > OAuth consent screen
    (or Branding): the privacy policy link `https://<popsmosis-web host>/privacy` and the
    terms of service link `https://<popsmosis-web host>/terms`.
 
@@ -297,12 +300,15 @@ downtime. Either service can go first: the API before it ignores the studio's `b
 field, and the web app shows no bill for an answer that has none. Deploy `popsmosis-api`
 first anyway, as for any migration.
 
-`20261031120000_learner_privacy` (learners private, lessons public) lets
-`questions."userId"` be null, which Postgres records without touching a row, and adds an
-index on `replies ("userId", "createdAt")`, built while the build runs; on today's table
-that takes moments, and it holds writes to `replies` only while it builds. Deploy
-`popsmosis-api` **first**: until it is live, an old API still shows every learner's topics
-to everyone, and the new web app's account deletion has no endpoint to call. Do not roll
+`20261101120000_learner_privacy` (learners private, lessons public, and the record of
+agreeing to the Terms) lets `questions."userId"` be null, which Postgres records without
+touching a row, adds two nullable columns to `users` (`termsVersion`, `termsAcceptedAt`),
+and adds an index on `replies ("userId", "createdAt")`, built while the build runs; on
+today's table that takes moments, and it holds writes to `replies` only while it builds.
+Deploy `popsmosis-api` **first**, then `popsmosis-web` straight after: until the API is
+live, an old API still shows every learner's topics to everyone and the new web app's
+account deletion has no endpoint to call; and until the web app is live, sign-in is refused,
+since the old sign-in page does not send the Terms box the new API requires. Do not roll
 the API back past this change once anyone has taken back a request or deleted their account:
 the old code expects every request to have a learner and its `/learn` breaks on the ones that
 do not. Roll forward instead.

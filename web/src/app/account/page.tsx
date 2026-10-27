@@ -61,8 +61,8 @@ export default function AccountPage() {
         title="Delete your account"
         message={
           <>
-            <p className="mb-2">This deletes your account, your files, your follow-up questions and any request that has
-              no lesson yet. It can&rsquo;t be undone.</p>
+            <p className="mb-2">This deletes your account, your files, your follow-up questions, your comments and likes,
+              and any request that has no lesson yet. It can&rsquo;t be undone.</p>
             <p>Lessons the teacher already made stay on the public Droplets tab, with nothing linking them to you.</p>
           </>
         }
@@ -91,7 +91,16 @@ export default function AccountPage() {
           Popsmosis holds your name, email address and photo from Google, and the requests, files and follow-ups you can
           see on <Link href="/learn" className="underline hover-text">Learn</Link>. Only you, the AI teacher and our
           admins can see them. The lessons made for you are public on the{' '}
-          <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, without your name or your words.
+          <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, without your name or your requests.
+        </p>
+        <p className="mb-2">
+          Comments you post on a droplet are public, with your first name and last initial. Which droplets you like is
+          not shown to anyone; only the count is.
+        </p>
+        <p className="mb-2" data-testid="terms-record">
+          {user.termsAcceptedAt
+            ? <>You agreed to the Terms of Use and Privacy Policy on {new Date(user.termsAcceptedAt).toLocaleDateString()}.</>
+            : <>You have not agreed to the current Terms of Use and Privacy Policy yet.</>}
         </p>
         <p>
           For a copy of your data, email <Contact /> from this address. Read the{' '}
@@ -103,8 +112,9 @@ export default function AccountPage() {
       <section className="rounded-lg p-4 text-sm" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--accent-red)' }}>
         <h3 className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-red)' }}>Delete my account</h3>
         <p className="mb-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          Deletes your account, your files, your follow-ups and any request without a lesson. Lessons already made stay
-          public, with nothing linking them to you. To delete only one request, use its <em>delete</em> button on Learn.
+          Deletes your account, your files, your follow-ups, your comments and likes, and any request without a lesson.
+          Lessons already made stay public, with nothing linking them to you. To delete only one request, use its{' '}
+          <em>delete</em> button on Learn.
         </p>
         <button onClick={() => setConfirming(true)} disabled={deleting}
           className="px-4 py-2 rounded text-xs font-bold uppercase tracking-wider"

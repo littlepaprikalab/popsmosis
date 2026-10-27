@@ -207,7 +207,8 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/api/auth/google` | `{ code }` from the OAuth redirect; sets the cookie |
+| POST | `/api/auth/google` | `{ code, acceptTerms: true }` from the OAuth redirect; sets the cookie. 400 without `acceptTerms`, the box on the sign-in page; the account records the Terms version and the time |
+| POST | `/api/auth/terms` | `{ accept: true }`: agree to the current Terms when the account's record is older or missing (`termsCurrent: false` on `/api/auth/me`) |
 | GET | `/api/auth/me` | current user |
 | POST | `/api/auth/logout` | clears the cookie |
 | DELETE | `/api/auth/me` | deletes the account: requests with no lesson, files and follow-ups go, requests with a lesson are taken back (below); refused for the only admin |
@@ -335,10 +336,16 @@ they rest on are in `web/src/lib/legal.ts`: who runs Popsmosis and where (Little
 Lab, Washington State), the contact address, the governing law (Washington, King County
 courts), the minimum age (13), the file retention (keep it equal to
 `ATTACHMENT_RETENTION_DAYS`) and the license the droplets are shared under
-(CC BY-NC-SA 4.0). **Set `CONTACT_EMAIL` before
-launch**: until it is set, both pages show a notice in its place. When a change to the code
-changes what the pages promise, change the pages and `LAST_UPDATED` with it. The pages were
-written without a lawyer; have one read them if Popsmosis grows.
+(CC BY-NC-SA 4.0), and the contact address, which is also the copyright (DMCA) agent's.
+
+**Agreeing.** Nobody signs in without ticking a box that names the Terms, the arbitration
+and class action waiver in them, and the Privacy Policy (`AgreeToTerms`); the API refuses
+the sign-in without it and records the version and the time on the account
+(`api/src/lib/terms.ts`). When the pages change in a way people must agree to again, move
+`TERMS_VERSION` there: everyone is then asked once, before anything else, at their next
+visit (`TermsGate`). For any change, move `LAST_UPDATED` in `legal.ts`. When a change to the
+code changes what the pages promise, change the pages with it. The pages were written
+without a lawyer; have one read them if Popsmosis grows.
 
 ## Deploy
 

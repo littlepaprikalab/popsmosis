@@ -152,6 +152,8 @@ export interface User {
   avatarUrl: string | null;
   role: 'USER' | 'ADMIN';
   createdAt: string;
+  termsAcceptedAt: string | null; // when they last agreed to the Terms of Use and Privacy Policy
+  termsCurrent: boolean; // false: they have not agreed to the current version yet (components/TermsGate.tsx)
 }
 
 export interface PublicUser {
@@ -317,7 +319,11 @@ export const api = {
   health: () => request<{ status: string; timestamp: string }>('/health'),
 
   // Auth
-  authGoogle: (code: string) => request<{ user: User }>('/auth/google', { method: 'POST', body: JSON.stringify({ code }) }),
+  // acceptTerms: the person ticked the box agreeing to the Terms of Use and Privacy Policy; the API refuses without it.
+  authGoogle: (code: string, acceptTerms: boolean) =>
+    request<{ user: User }>('/auth/google', { method: 'POST', body: JSON.stringify({ code, acceptTerms }) }),
+  // Agree to the current Terms, when the account's record is older or missing (components/TermsGate.tsx).
+  acceptTerms: () => request<User>('/auth/terms', { method: 'POST', body: JSON.stringify({ accept: true }) }),
   getMe: () => request<User>('/auth/me'),
   logout: () => request<{ ok: boolean }>('/auth/logout', { method: 'POST' }),
   // Deletes the signed-in account (api/src/routes/auth.ts); the lessons already made stay public, naming no one.

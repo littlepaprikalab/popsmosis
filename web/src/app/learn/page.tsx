@@ -458,13 +458,13 @@ function LearnContent() {
           </Link>
           <p className="text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
             The lessons the teacher makes are public, free to watch on the{' '}
-            <Link href="/droplets" className="underline hover-text">Droplets tab</Link> with no sign-in. Your name, your
-            words and your follow-ups stay private.
+            <Link href="/droplets" className="underline hover-text">Droplets tab</Link> with no sign-in. Your requests
+            and your follow-ups stay private.
           </p>
-          <p className="text-[10px] mt-3" style={{ color: 'var(--text-muted)' }} data-testid="consent">
-            By signing in you agree to the <Link href="/terms" className="underline hover-text">Terms of Use</Link> and
-            confirm you have read the <Link href="/privacy" className="underline hover-text">Privacy Policy</Link>. You
-            must be {MIN_AGE} or older.
+          <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }} data-testid="consent">
+            Before you sign in you&rsquo;ll be asked to agree to the{' '}
+            <Link href="/terms" className="underline hover-text">Terms of Use</Link> and the{' '}
+            <Link href="/privacy" className="underline hover-text">Privacy Policy</Link>. You must be {MIN_AGE} or older.
           </p>
         </div>
       </div>
@@ -494,7 +494,7 @@ function LearnContent() {
         </p>
         <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }} data-testid="privacy-note">
           Only you see your requests and follow-ups. Each lesson is shared with everyone on the{' '}
-          <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, without your name or your words.
+          <Link href="/droplets" className="underline hover-text">Droplets tab</Link>, without your name or your request.
         </p>
         {agentLastSeenAt !== undefined && (
           <p className="text-[10px] uppercase tracking-wider mt-2 flex items-center gap-1.5" style={{ color: teacherStale ? 'var(--accent-orange)' : 'var(--text-muted)' }}>

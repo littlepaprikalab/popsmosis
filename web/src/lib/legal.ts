@@ -11,12 +11,11 @@ export const OPERATOR_NAME = 'Little Paprika Lab';
 export const OPERATOR_LOCATION = 'Washington State, USA';
 
 /**
- * Where people write about their data, takedowns, mistakes in a lesson and these terms. Set it before launch: while
- * it is empty the pages say so in place of the address, and Washington's My Health My Data Act requires an address
- * that people can send requests to. A role address (privacy@ or hello@ your domain) keeps a personal inbox off the
- * pages.
+ * Where people write about their data, takedowns, copyright notices, mistakes in a lesson and these terms: the
+ * address Washington's My Health My Data Act requires for requests, and the DMCA agent's (Terms, section 12). Someone
+ * has to read it: health data requests have 45 days, and a lawsuit's first step (Terms, section 17) arrives here.
  */
-export const CONTACT_EMAIL = '';
+export const CONTACT_EMAIL = 'spicy.ginger.labs@gmail.com';
 
 /** The law the Terms are governed by, as it reads after "the laws of". Empty reads as the place the operator is based. */
 export const GOVERNING_LAW = 'the State of Washington, USA';

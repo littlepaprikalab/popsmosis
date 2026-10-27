@@ -28,8 +28,13 @@ d('Google sign-in', () => {
   const tag = `signin-${Date.now()}`;
   const before = { id: process.env.GOOGLE_CLIENT_ID, secret: process.env.GOOGLE_CLIENT_SECRET, admins: process.env.ADMIN_EMAILS };
 
-  const signIn = (payload: { sub: string; email: string; name?: string }) =>
-    app.inject({ method: 'POST', url: '/api/auth/google', payload: { code: JSON.stringify(payload) } });
+  // `omit` leaves acceptTerms out of the body altogether, as an old web app would. `from` is the caller's address:
+  // sign-in allows 10 tries a minute from one, and the refusals below would use up this file's share.
+  const signIn = (payload: { sub: string; email: string; name?: string }, acceptTerms: unknown = true, from?: string) =>
+    app.inject({
+      method: 'POST', url: '/api/auth/google', ...(from && { remoteAddress: from }),
+      payload: { code: JSON.stringify(payload), ...(acceptTerms === 'omit' ? {} : { acceptTerms }) },
+    });
   const asUser = (res: { cookies: { name: string; value: string }[] }) => {
     const session = res.cookies.find((c) => c.name === 'popsmosis_session');
     expect(session).toBeDefined();
@@ -70,6 +75,44 @@ d('Google sign-in', () => {
 
     // Signing in again is the same account, not a second one.
     expect((await signIn({ sub: `${tag}-g-new`, email: `${tag}-new@example.com`, name: 'Newcomer' })).json().user.id).toBe(res.json().user.id);
+  });
+
+  it('signs nobody in without the Terms agreed, and records the version and time for those who agree', async () => {
+    const who = { sub: `${tag}-g-terms`, email: `${tag}-terms@example.com`, name: 'Terms' };
+    for (const acceptTerms of ['omit', null, false, 'yes', 1]) {
+      const refused = await signIn(who, acceptTerms, '203.0.113.7');
+      expect(refused.statusCode).toBe(400);
+      expect(refused.json().error.message).toMatch(/Agree to the Terms of Use/);
+      expect(refused.cookies.find((c) => c.name === 'popsmosis_session')).toBeUndefined();
+    }
+    expect(await prisma.user.count({ where: { email: who.email } })).toBe(0); // no account made without it
+
+    const { TERMS_VERSION } = await import('./../lib/terms.js');
+    const before = Date.now();
+    const res = await signIn(who);
+    expect(res.statusCode).toBe(200);
+    expect(res.json().user).toMatchObject({ termsCurrent: true });
+    const row = await prisma.user.findUniqueOrThrow({ where: { email: who.email } });
+    expect(row.termsVersion).toBe(TERMS_VERSION);
+    expect(row.termsAcceptedAt!.getTime()).toBeGreaterThanOrEqual(before - 1000);
+  });
+
+  it('asks an account with an old or missing record to agree again, and records it', async () => {
+    const res = await signIn({ sub: `${tag}-g-old-terms`, email: `${tag}-old-terms@example.com`, name: 'Old Terms' });
+    const headers = asUser(res);
+    const id = res.json().user.id as string;
+    // The Terms move on: this account's record is now an older version.
+    await prisma.user.update({ where: { id }, data: { termsVersion: '2000-01-01' } });
+    const { invalidateUserCache } = await import('./../middleware/auth.js');
+    invalidateUserCache(id);
+    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers })).json().termsCurrent).toBe(false);
+
+    expect((await app.inject({ method: 'POST', url: '/api/auth/terms', headers, payload: {} })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/auth/terms', payload: { accept: true } })).statusCode).toBe(401);
+    const agreed = await app.inject({ method: 'POST', url: '/api/auth/terms', headers, payload: { accept: true } });
+    expect(agreed.statusCode).toBe(200);
+    expect(agreed.json()).toMatchObject({ id, termsCurrent: true });
+    expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers })).json().termsCurrent).toBe(true);
   });
 
   it('makes an ADMIN_EMAILS address an admin at sign-in', async () => {
