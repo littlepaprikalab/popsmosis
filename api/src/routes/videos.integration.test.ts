@@ -73,7 +73,7 @@ d('video claim and queue', () => {
     const id = await lesson();
     const first = await claim(id);
     expect(first.statusCode).toBe(200);
-    expect(first.json()).toMatchObject({ answerId: id, attempt: 1, bundle: BUNDLE, factcheck: FACTCHECK, video: { status: 'RENDERING' } });
+    expect(first.json()).toMatchObject({ answerId: id, attempt: 1, status: 'RENDERING', bundle: BUNDLE, factcheck: FACTCHECK });
     expect((await row(id)).videoAttempts).toBe(1);
 
     const before = (await row(id)).videoUpdatedAt!;
@@ -109,7 +109,7 @@ d('video claim and queue', () => {
     await goQuiet(id);
     const recovered = (await queue()).json().data;
     expect(recovered).toHaveLength(1);
-    expect(recovered[0]).toMatchObject({ answerId: id, attempt: 2, bundle: BUNDLE, video: { status: 'RENDERING' } });
+    expect(recovered[0]).toMatchObject({ answerId: id, attempt: 2, status: 'RENDERING', bundle: BUNDLE });
     expect((await queue()).json().data).toEqual([]); // just claimed: alive again
 
     // The run that went quiet comes back: its attempt is no longer the current one.
@@ -157,7 +157,8 @@ d('video claim and queue', () => {
     expect((await fail(id, { reason: 'again', attempt: 1 })).statusCode).toBe(409);
 
     const again = await claim(id);
-    expect(again.json()).toMatchObject({ attempt: 2, video: { status: 'RENDERING', error: null } });
+    expect(again.json()).toMatchObject({ attempt: 2, status: 'RENDERING' });
+    expect((await row(id)).videoError).toBeNull();
     await fail(id, { reason: 'still failing', attempt: 2 });
     expect((await claim(id)).json().error.message).toMatch(/given up after 2 attempt/);
   });

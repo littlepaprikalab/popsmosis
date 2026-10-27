@@ -99,7 +99,7 @@ class Api:
     def claim_videos(self, answer_id: str, attempt: int | None = None) -> dict:
         """Start an attempt at the videos (no attempt), or renew the one this run holds.
 
-        Returns {answerId, questionId, attempt, bundle, factcheck, video}; 409 when another
+        Returns {answerId, questionId, attempt, status, bundle, factcheck}; 409 when another
         run holds them, they are made, or their attempts are used up.
         """
         return self.request("POST", f"/api/answers/{answer_id}/video/claim",
