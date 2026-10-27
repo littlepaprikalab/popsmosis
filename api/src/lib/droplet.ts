@@ -127,6 +127,8 @@ export const publicDropletSelect = {
   lessonVideoUrl: true,
   songPosterUrl: true,
   lessonPosterUrl: true,
+  likeCount: true,
+  commentCount: true,
 } as const;
 
 /** What the Droplets tab may list: the videos are READY and no admin hid it. */
@@ -141,6 +143,8 @@ type PublicDropletRow = {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  likeCount: number;
+  commentCount: number;
 };
 
 const EXCERPT_LENGTH = 200;
@@ -176,22 +180,29 @@ function publicVideo(a: PublicDropletRow) {
   };
 }
 
-/** A card on the list: the title, a few lines of the lesson, the videos. */
-export function serializeDropletCard(a: PublicDropletRow) {
+/**
+ * A card on the list: the title, a few lines of the lesson, the videos, and how many
+ * people liked it and commented. `liked` is the viewer's own thumbs-up: false for
+ * anyone not signed in.
+ */
+export function serializeDropletCard(a: PublicDropletRow, liked = false) {
   return {
     id: a.id,
     ...dropletTitle(a.bundle),
     excerpt: excerptOf(a.content),
     video: publicVideo(a),
+    likeCount: a.likeCount,
+    commentCount: a.commentCount,
+    liked,
     createdAt: a.createdAt.toISOString(),
   };
 }
 
 /** One droplet: the card, the whole lesson and the song's lyrics. */
-export function serializeDroplet(a: PublicDropletRow) {
+export function serializeDroplet(a: PublicDropletRow, liked = false) {
   const lyrics = isObject(a.bundle) && Array.isArray(a.bundle.lyrics) ? a.bundle.lyrics.filter(isObject) : [];
   return {
-    ...serializeDropletCard(a),
+    ...serializeDropletCard(a, liked),
     content: a.content,
     lyrics: lyrics
       .map((l) => ({ section: typeof l.section === 'string' ? l.section : '', text: typeof l.text === 'string' ? l.text : '' }))

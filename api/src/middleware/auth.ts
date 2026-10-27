@@ -153,6 +153,23 @@ export async function optionalUser(request: FastifyRequest, reply: FastifyReply)
   if (typeof result !== 'string') request.viewer = result;
 }
 
+/**
+ * Who is asking, on an endpoint anyone may call (the Droplets tab): the session's user id when its cookie verifies,
+ * else null. Only for saying what is the viewer's own (their thumbs-up, their comments), never for deciding what
+ * they may do. It reads no database row and never renews the session, so a public response never sets a cookie.
+ */
+export function sessionSubject(request: FastifyRequest): string | null {
+  if (isAgentToken(bearerToken(request.headers.authorization))) return null;
+  const token = sessionCookieToken(request.cookies);
+  if (!token) return null;
+  try {
+    const { sub } = request.server.jwt.verify<{ sub?: unknown }>(token);
+    return typeof sub === 'string' && sub ? sub : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Admin endpoints: a signed-in ADMIN. */
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   await requireUser(request, reply);

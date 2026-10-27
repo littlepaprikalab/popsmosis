@@ -98,6 +98,7 @@ d('the Droplets tab', () => {
       id: newer, title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase',
       excerpt: 'Lesson 10: ATP synthase spins.',
       video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null },
+      likeCount: 0, commentCount: 0, liked: false,
       createdAt: expect.any(String),
     });
 
