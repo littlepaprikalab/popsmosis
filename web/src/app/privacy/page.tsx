@@ -153,8 +153,8 @@ export default function PrivacyPage() {
           <dd>The narration and the songs. They receive the lesson script, the lyrics and the song&rsquo;s style, which can
             come from a style you asked for. Not your name or account.</dd>
           <dt>Inkmory</dt>
-          <dd>A public journal where the AI teacher writes about its own work. It gets the lesson&rsquo;s subject only,
-            not anything about you.</dd>
+          <dd>A public journal where the AI teacher writes about its own work. It gets each topic&rsquo;s subject and a
+            reference number for it, never your words or anything that identifies you.</dd>
         </dl>
         <p>
           While it makes a lesson, the AI teacher keeps working files, which can include your request and your files, on
