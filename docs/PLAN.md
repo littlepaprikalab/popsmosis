@@ -447,10 +447,11 @@ takes some setup in the routine's environment:
   `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` once
   the Meta key arrives. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
-- **Setup script:** install `studio/requirements.txt` (PyTorch for CPU, torchaudio,
-  demucs, skia-python, anthropic, openai, pydantic). ffmpeg 6.1 and Python 3.13 are
-  already on the image. Every run starts on a fresh machine, so time the first run:
-  installs and model downloads add to every topic's wait.
+- **Setup:** the repository's session hook (`.claude/hooks/session-start.sh`) installs
+  `studio/requirements.txt` (PyTorch for CPU, torchaudio, demucs, skia-python, anthropic,
+  openai, pydantic), ffmpeg and libEGL, and the Demucs and MMS models, before the run
+  starts. The container is cached after the hook, so a cold environment pays about two
+  minutes once and a warm run seconds.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
   `api.elevenlabs.io`, `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI, and
   wherever PyTorch and the Demucs and MMS weights download from (check on the first run).
@@ -719,26 +720,26 @@ before it land:
 4. **Timeline and renderer** (steps 7–8), on the sample job's art and timings.
 5. **Web and upload:** the Droplets tab, the players on `/learn`, and the upload step (step 9).
 
-They join in `python -m studio run`: after the post, art and audio at the same time,
-then the timeline, render and upload, reporting the videos' status to the API. The join
-also has to close these seams, which no lane owns:
+They join in `python -m studio videos` (studio/videos.py), built against stand-in steps
+before the lanes landed: after the post, art and audio at the same time, then the
+timeline, render and upload, reporting the videos' status to the API. It closes these
+seams, which no lane owns:
 
-- **`run` stops at the post today** (a posted job runs no steps), so it has to go on to
-  the media steps, and `fail` after the post gives up the videos (`PATCH .../video`
-  `FAILED` with the reason), not the topic.
-- **Heartbeat.** The API reads a render that has not reported for `VIDEO_STALE_MINUTES`
-  (60) as failed, so mark the videos `RENDERING` before each media step, as `run` renews
-  the claim before each step today.
-- **The tool's time limit.** The skill file gives `run` a 10-minute timeout, which is
-  the Bash tool's maximum, and a run with videos will take longer. Run the media part in
-  the background and poll it, keep the routine alive until it ends, and update the
-  skill file.
-- **The machine goes away.** `jobs/<id>/` dies with the routine's machine, and a posted
-  topic has left the queue, so a run cut off after the post has nothing to resume
-  from. Upload each intermediate file as its step finishes, and give the operator a way
-  to find its droplets whose videos failed or went stale and resume them from the
-  stored bundle and those files (an agent endpoint). Without it, a crash after the post
-  leaves a droplet without videos for good.
+- **After the post.** `run` claims the videos the moment it posts the lesson
+  (`POST /api/answers/:id/video/claim`, attempt 1, RENDERING), and `fail` after the post
+  gives up the videos (`POST /api/answers/:id/video/fail`), never the lesson.
+- **Heartbeat.** `videos` renews its attempt before every media step, so the API can
+  tell a live render from one whose machine died (`VIDEO_STALE_MINUTES`, 60).
+- **The tool's time limit.** `videos <id> --background` returns at once; the skill file
+  answers follow-ups meanwhile, then calls `python -m studio wait <id>` (at most 9
+  minutes a call) until the outcome line, because the render dies with the run.
+- **The machine goes away.** A render that went quiet is handed to the next run by
+  `GET /api/videos/queue` (`python -m studio recover`), which rebuilds the job from the
+  bundle and fact-check the API stored and makes the videos again, up to
+  `VIDEO_MAX_ATTEMPTS` (2). A recovery pays for the song and the art again; uploading
+  each intermediate as its step finishes, so a recovery resumes instead, is the next step.
+- **Installs.** `.claude/hooks/session-start.sh` installs every package, system tool and
+  model before a session starts, the routine's included, so no run installs anything.
 
 ## 13. Risks and fallbacks
 

@@ -66,6 +66,8 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY # signs those uploads; stays on the API, never sent to the studio
         sync: false
+      - key: VIDEO_MAX_ATTEMPTS      # optional: how many times a droplet's videos are started, recoveries included (default 2)
+        sync: false
 
   - type: web
     name: popsmosis-web

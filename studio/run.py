@@ -257,9 +257,21 @@ def post_lesson(job: Path, api: Api, question: dict | None, ask) -> str:
         if e.status != 409 or not e.details.get("answerId"):
             raise
         jobs.write(job / "posted.json", {"id": e.details["answerId"], "questionId": job.name, "recovered": True})
+        _claim_videos(job, api)
         return f"lesson was already posted as answer {e.details['answerId']}"
     jobs.write(job / "posted.json", answer)
+    _claim_videos(job, api)
     return f"lesson posted as answer {answer.get('id')}"
+
+
+def _claim_videos(job: Path, api: Api) -> None:
+    """Start the videos' first attempt the moment the lesson is posted (studio/videos.py)."""
+    from studio import videos  # it imports this module
+
+    try:
+        print(f"post: {videos.start_after_post(job, api)}", file=sys.stderr)
+    except Exception as e:  # never the lesson's outcome: `videos` claims again, and `recover` finds it
+        print(f"post: videos not claimed: {type(e).__name__}: {e}", file=sys.stderr)
 
 
 STEP_RUNNERS = {"request": make_request, "bundle": make_bundle, "factcheck": make_factcheck, "post": post_lesson}
@@ -285,7 +297,9 @@ def mark_failed(question_id: str, api: Api | None = None) -> tuple[str, str]:
         record_interrupted(job)
     runs = read_jsonl(job / "runs.jsonl")
     if (job / "posted.json").exists():
-        return STOPPED, "the lesson is posted; there is nothing to give up"
+        from studio import videos  # it imports this module
+
+        return videos.give_up(job, runs, api)  # the lesson stays; its videos are what failed
     if not runs or runs[-1]["result"] != FAILED:
         return STOPPED, "the last run did not fail"
     reason = f"{runs[-1]['step']} failed: {runs[-1]['reason']}"
@@ -326,14 +340,22 @@ def summary(question_id: str) -> str:
             for s in r["steps"]:
                 if s["result"] == DONE:
                     took[s["step"]] = s["seconds"]
-        timed = [f"{name} {took[name] / 60:.1f} min" for name in ("bundle", "factcheck") if name in took]
+        timed = [f"{name} {took[name] / 60:.1f} min"
+                 for name in ("bundle", "factcheck", "install", "art", "audio", "timing", "render", "upload") if name in took]
         if timed:
             parts.append(", ".join(timed) + ".")
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
         parts.append(f"Fact-check {report.status} in {report.rounds} round(s), {len(report.corrections)} correction(s).")
-    parts.append("Lesson posted." if (job / "posted.json").exists() else
-                 "A run is still going." if running else "No lesson posted.")
+    posted = (job / "posted.json").exists()
+    parts.append("Lesson posted." if posted else "A run is still going." if running else "No lesson posted.")
+    video_runs = [r for r in runs if r.get("part") == "videos"]
+    if posted and running:
+        parts.append("Videos still being made.")
+    elif video_runs:
+        last = video_runs[-1]
+        parts.append({DONE: "Videos made.", FAILED: f"Videos failed at {last['step']}.",
+                      STOPPED: f"Videos stopped at {last['step']}."}[last["result"]])
     calls = read_jsonl(job / "calls.jsonl")
     if calls:
         costs = [c.get("cost_usd") for c in calls]

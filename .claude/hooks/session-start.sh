@@ -1,4 +1,9 @@
 #!/bin/bash
+# Every tool this repo uses, installed when a cloud session starts: a developer's session,
+# or the teacher routine's run (docs/agent-runbook.md). Nothing then stops mid-task to
+# install a package. The container is cached once this finishes, so the heavy parts
+# (PyTorch, the timing models, node_modules) are paid once per environment, not per session.
+# Each part is idempotent, and a part that cannot be done says so and lets the rest run.
 set -euo pipefail
 
 # Only for Claude Code cloud sessions.
@@ -7,20 +12,80 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 cd "$CLAUDE_PROJECT_DIR"
+log() { echo "session-start: $*" >&2; }
+export PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_ROOT_USER_ACTION=ignore
 
-# The renderer (studio/render) encodes with ffmpeg; its tests skip without it.
-if ! command -v ffmpeg >/dev/null; then
-  { apt-get install -y -q --no-install-recommends ffmpeg \
-    || { apt-get update -q && apt-get install -y -q --no-install-recommends ffmpeg; }; } >/dev/null 2>&1 \
-    || echo "session-start: could not install ffmpeg; the render tests will skip" >&2
+# A part is skipped when the files it installs from are unchanged since it last succeeded,
+# so a warm session starts in seconds; a branch that changes them installs again.
+STAMPS="$HOME/.cache/popsmosis-session-start"
+mkdir -p "$STAMPS"
+digest() { cat "$@" 2>/dev/null | sha256sum | cut -d' ' -f1; }
+changed() { local name=$1; shift; [ "$(cat "$STAMPS/$name" 2>/dev/null)" != "$(digest "$@")" ]; }
+mark() { local name=$1; shift; digest "$@" > "$STAMPS/$name"; }
+
+# 1. System tools: ffmpeg encodes the videos and the karaoke fallback; skia-python (the
+#    art and the renderer) loads libEGL.so.1.
+missing=()
+command -v ffmpeg >/dev/null 2>&1 || missing+=(ffmpeg)
+ldconfig -p | grep -q 'libEGL\.so\.1' || missing+=(libegl1)
+if [ ${#missing[@]} -gt 0 ]; then
+  apt_install() { DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends "${missing[@]}" >/dev/null 2>&1; }
+  apt_install || { apt-get update -q >/dev/null 2>&1 && apt_install; } \
+    || log "could not install ${missing[*]}; the render and art steps (and their tests) need them"
 fi
 
-# The studio (python -m studio) and its tests need these; pip is idempotent.
-python -m pip install -q -r studio/requirements.txt
+# 2. Python: the studio, with the media steps' PyTorch (CPU), torchaudio, Demucs and skia.
+if changed pip studio/requirements.txt; then
+  if python -m pip install -q -r studio/requirements.txt; then mark pip studio/requirements.txt
+  else log "pip could not install studio/requirements.txt; the studio will not run"
+  fi
+fi
 
-# skia-python (the art and the renderer) loads libEGL.so.1, which a bare container may
-# not have. Best effort: without apt the hook still succeeds, and `import skia` says why.
-if ! ldconfig -p | grep -q libEGL.so.1; then
-  { apt-get install -y -q libegl1 || { apt-get update -q && apt-get install -y -q libegl1; }; } >/dev/null 2>&1 \
-    || echo "session-start: could not install libegl1; skia will not import" >&2
+# 3. The models the song's timing loads (Demucs, the MMS forced aligner; about 1.5 GB), so a
+#    render never stops to download them. They land in the torch cache the container keeps.
+if [ ! -f "$STAMPS/models" ]; then
+  if python - >/dev/null 2>&1 <<'PY'
+import importlib.util
+if importlib.util.find_spec("demucs") and importlib.util.find_spec("torchaudio"):
+    from demucs.pretrained import get_model
+    get_model("htdemucs")
+    from torchaudio.pipelines import MMS_FA
+    MMS_FA.get_model(with_star=True)
+PY
+  then touch "$STAMPS/models"
+  else log "could not fetch the timing models; the first song timing will download them"
+  fi
+fi
+
+# 4. Node: the API, the web app and their tests. `install` (not `ci`) keeps what the cached
+#    container already has. The Prisma client is generated again whenever the schema changes.
+NODE_FILES=(package.json package-lock.json api/package.json web/package.json)
+if [ ! -d node_modules ] || changed npm "${NODE_FILES[@]}"; then
+  if npm install --no-audit --no-fund --loglevel=error >/dev/null; then mark npm "${NODE_FILES[@]}"
+  else log "npm install failed"
+  fi
+fi
+if [ -d node_modules ] && changed prisma prisma/schema.prisma; then
+  if npm --workspace api run -s db:generate >/dev/null 2>&1; then mark prisma prisma/schema.prisma
+  else log "could not generate the Prisma client; run npm --workspace api run db:generate"
+  fi
+fi
+
+# 5. Postgres for the API's integration tests (INTEGRATION=1), with the database CI uses.
+DB_URL=postgresql://postgres:postgres@localhost:5432/popsmosis
+if command -v pg_ctlcluster >/dev/null 2>&1; then
+  if service postgresql start >/dev/null 2>&1; then
+    su postgres -c "psql -qtAc \"ALTER USER postgres PASSWORD 'postgres'\"" >/dev/null 2>&1 || true
+    su postgres -c "psql -qtAc \"SELECT 1 FROM pg_database WHERE datname = 'popsmosis'\"" 2>/dev/null | grep -q 1 \
+      || su postgres -c "createdb popsmosis" >/dev/null 2>&1 || log "could not create the popsmosis database"
+    # Both set to the local database on purpose: Prisma migrates DIRECT_URL first, and reads a
+    # .env too, so an inherited value could point this at a real database.
+    DIRECT_URL=$DB_URL DATABASE_URL=$DB_URL npm --workspace api run -s db:deploy >/dev/null 2>&1 \
+      || log "could not apply the migrations; run npm --workspace api run db:deploy"
+    if [ -n "${CLAUDE_ENV_FILE:-}" ] && [ -z "${DATABASE_URL:-}" ]; then
+      echo "export DATABASE_URL=$DB_URL" >> "$CLAUDE_ENV_FILE"
+    fi
+  else
+    log "could not start Postgres; the API's integration tests need it"
+  fi
 fi

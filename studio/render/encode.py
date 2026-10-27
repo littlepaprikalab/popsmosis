@@ -22,6 +22,7 @@ from pathlib import Path
 from studio.render.layouts import LAYOUTS
 from studio.schemas import Timeline
 
+PARENT_ENV = "POPSMOSIS_RENDER_PARENT"  # the render's pid, so a worker started as it died can tell
 ROOT = Path(__file__).resolve().parent.parent.parent  # the folder that holds studio/, for the workers
 PRESET = "veryfast"
 CRF = "20"
@@ -83,6 +84,22 @@ def render_range(job: Path, timeline: Timeline, layout: str, first: int, last: i
         raise EncodeError(f"ffmpeg failed on frames {first}-{last}: {error[-800:]}")
 
 
+def _die_with_parent() -> bool:
+    """In a worker, first thing: end when the render that started it is killed (Linux only).
+
+    Set in the worker rather than with preexec_fn, which can deadlock when the caller
+    has threads. False if the render is already gone."""
+    try:
+        import ctypes
+        import signal
+
+        ctypes.CDLL("libc.so.6", use_errno=True).prctl(1, signal.SIGKILL)  # PR_SET_PDEATHSIG
+    except (OSError, AttributeError):
+        pass  # not Linux: a killed render leaves its workers to finish on their own
+    parent = os.environ.get(PARENT_ENV)
+    return parent is None or os.getppid() == int(parent)
+
+
 def _render_ranges(job: Path, timeline: Timeline, layout: str, chunks: list[tuple[int, int]], paths: list[Path],
                    n_workers: int, tmp_dir: Path) -> None:
     """Run render_range for each range in its own `python -m studio.render.encode` process, n at a time.
@@ -92,7 +109,8 @@ def _render_ranges(job: Path, timeline: Timeline, layout: str, chunks: list[tupl
     """
     timeline_file = tmp_dir / "timeline.json"
     timeline_file.write_text(timeline.model_dump_json(), encoding="utf-8")
-    env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")])))
+    env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")])),
+               **{PARENT_ENV: str(os.getpid())})
     waiting = list(zip(chunks, paths))
     running: list[tuple[subprocess.Popen, Path, tuple[int, int]]] = []
     try:
@@ -204,6 +222,8 @@ def poster_time(timeline: Timeline) -> float:
 def _worker(argv: list[str]) -> int:
     """python -m studio.render.encode <job> <timeline.json> <layout> <first> <last> <out.mp4>"""
     job, timeline_file, layout, first, last, out = argv
+    if not _die_with_parent():
+        return 1
     timeline = Timeline.model_validate_json(Path(timeline_file).read_text(encoding="utf-8"))
     try:
         render_range(Path(job), timeline, layout, int(first), int(last), Path(out))
