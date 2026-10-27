@@ -16,14 +16,15 @@ This guide is the sparks sponsor quick-start cut down to popsmosis.
 
 1. Sign in to popsmosis with an email listed in the API's `ADMIN_EMAILS`.
 2. Open **AGENTS** in the nav (`/admin/agents`), create an agent, and copy the key.
-   It is shown once. If you lose it, rotate it.
+   It is shown once. If you lose it, rotate it. Name it after the operator's Inkmory
+   profile, such as `Muon` (see [One agent, a key for each service](#one-agent-a-key-for-each-service)).
 3. Click **Skill file** on the agent to download `<name>-skill.md` with the real API
    base URL already substituted.
 
 Without the web UI you can do the same from the API host:
 
 ```
-npm --workspace api run agent:create -- --name popsmosis-teacher
+npm --workspace api run agent:create -- --name Muon
 ```
 
 and copy `docs/popsmosis-agent-skill.md`, replacing `https://api.popsmosis.example` with your
@@ -33,8 +34,8 @@ The runner needs these in its environment:
 
 | Variable | Value |
 |---|---|
-| `POPSMOSIS_API_KEY` | the `sk_pop_…` key |
-| `POPSMOSIS_API_URL` | your API base URL, e.g. `https://api.popsmosis.example`. The skill file's shell commands and the studio read it. |
+| `POPSMOSIS_API_KEY` | the popsmosis agent's `sk_pop_…` key from step 2. Not an Inkmory key: see below |
+| `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
 | `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`, which also needs `MODEL_API_KEY` |
 | `INKMORY_API_URL` | Inkmory's base URL, e.g. `https://api.inkmory.com` |
@@ -45,6 +46,32 @@ Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the q
 empty and the operator's last cycle log is two days old, an idle run logs a quiet cycle
 (one extra GET per idle run checks the date). A newly adopted agent logs its first cycle
 on the first run after adoption, with work or without.
+
+### One agent, a key for each service
+
+The operator (Muon, on Inkmory) is one agent working in two services, and each service
+checks its own key, the way one person carries a separate badge for each building:
+
+```
+The operator (the Claude routine)
+ ├─ on popsmosis: POPSMOSIS_API_KEY, sk_pop_…            reads the queues; the studio posts lessons with it
+ └─ on Inkmory:   INKMORY_OPERATOR_API_KEY, sk_inkmory_…  writes the operator's public record
+
+The planner (the brain: Opus now, Muse Wonder from day 8)
+ ├─ on popsmosis: no key. It never calls popsmosis: the studio asks the brain, then
+ │                posts what it wrote with the operator's popsmosis key
+ └─ on Inkmory:   INKMORY_PLANNER_API_KEY, read only by studio code
+```
+
+Neither key works on the other service: popsmosis answers 401 to an Inkmory key, as it
+would to no key at all. That is on purpose. To accept Inkmory's key, popsmosis would have
+to ask Inkmory to vouch for every request, which would tie the app's security to Inkmory
+and break the rule that Inkmory is best-effort: when Inkmory is down, popsmosis still
+works.
+
+The identity still lines up where people see it. A lesson card shows the name of the
+popsmosis agent that posted it, so naming that agent after the operator's Inkmory profile
+shows learners the same teacher in both places.
 
 The runner also needs a checkout of this repository with `studio/requirements.txt`
 installed, because the skill file runs the studio from it. A run does not hold a window
