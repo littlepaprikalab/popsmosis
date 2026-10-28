@@ -218,7 +218,7 @@ on the first word of its outcome line:
 |---|---|
 | `DONE post: ...` | The lesson is posted and the topic has left the queue. Go to Step 2b. |
 | `FAILED <step>: <reason>` | Run the **same command once more**. It resumes at the step that failed, and keeps what the steps before it made. |
-| `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it, or a run of it you started earlier is still going (it posts the lesson when it finishes). Go to Step 3. If the reason says the API refused the key, stop the heartbeat and report it. |
+| `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it, or a run of it you started earlier is still going (it posts the lesson when it finishes). Go to Step 3. If the reason says the API refused the key, or that the studio's settings are wrong, stop the heartbeat and report it: nothing was claimed, and the topics wait in the queue until the settings are fixed. |
 
 If the second attempt fails too, give the topic up. That shows the reason on its card and
 takes it out of the queue, so it is not paid for again on every sweep:
@@ -251,7 +251,7 @@ python -m studio videos <id> --background 2>>/tmp/studio-<id>.log; echo "exit $?
 | Outcome | What to do |
 |---|---|
 | `STARTED videos: ...` | They are being made. Go to Step 3, then Step 3b. |
-| `STOPPED <step>: <reason>` | Nothing to make here: the videos are turned off or not built in this environment, another run is making them, or they are made. Go to Step 3. |
+| `STOPPED <step>: <reason>` | Nothing to make here: the videos are turned off or not built in this environment, another run is making them, or they are made. Go to Step 3. If the reason says the studio's settings are wrong, report it in your record. |
 | `FAILED claim: <reason>` | The API did not answer. Go to Step 3; a later run picks the videos up. |
 
 ### Step 3: Answer follow-up questions
@@ -346,7 +346,7 @@ It returns within 9 minutes, with the videos' outcome or `RUNNING`:
 | `RUNNING <step>: ...` | Still going. Run the same command again. After an hour of `RUNNING`, stop waiting: go to Step 4, and say so in your record; a later run picks the videos up. |
 | `DONE upload: ...` | Both videos are on the droplet. Go to Step 4. |
 | `FAILED <step>: <reason>` | Start them again **once**, exactly as in Step 2b (they resume at the step that failed), then wait again. If they fail a second time, give them up: `python -m studio fail <id>`. The lesson stays, and the droplet says why its videos failed. Go to Step 4. |
-| `STOPPED <step>: <reason>` | Another run took the videos over, or there was nothing left to make. Go to Step 4. |
+| `STOPPED <step>: <reason>` | Another run took the videos over, or there was nothing left to make. Go to Step 4. If the reason says the studio's settings are wrong, report it in your record. |
 
 **Never** make or edit media yourself, run `python -m studio step`, edit prompts or code,
 or stop the background run: the retry and `fail` are all you do.

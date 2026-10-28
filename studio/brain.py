@@ -80,7 +80,7 @@ PRICES = {
     "muse-spark-1.2-contributor": (0.10, 0.20),
 }
 # What each provider's model ids start with, so a STUDIO_BRAIN_MODEL left over from the
-# other provider fails at once, before anything is sent.
+# other provider is caught before anything is claimed or sent (settings_problem()).
 MODEL_PREFIXES = {"claude": "claude-", "meta": "muse-"}
 
 MEDIA_TYPES = {
@@ -201,6 +201,23 @@ def meta_key() -> str:
     if not key:
         raise BrainError(f"BRAIN_PROVIDER=meta needs {META_KEY_VAR}")
     return key
+
+
+def settings_problem() -> str | None:
+    """What is wrong with the brain's settings (BRAIN_PROVIDER, its key, STUDIO_BRAIN_MODEL and
+    STUDIO_BRAIN_EFFORT), or None. The runners ask before they claim anything, so a setting
+    left wrong stops the run instead of failing, and giving up, one topic after another."""
+    try:
+        if provider() == "meta":
+            brain_model("meta")
+            meta_key()
+        else:
+            claude_brain()
+            if not claude_key():
+                raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
+    except (ValueError, BrainError) as e:
+        return str(e)
+    return None
 
 
 def parse(schema: type[BaseModel], texts: Sequence[str]) -> dict:

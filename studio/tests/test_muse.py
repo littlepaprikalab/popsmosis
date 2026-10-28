@@ -2,6 +2,7 @@
 
 import base64
 import json
+import time
 
 import numpy as np
 import pytest
@@ -49,7 +50,8 @@ def disc(x: int, y: int, r: int) -> np.ndarray:
 
 
 class FakeMuse:
-    """Stands in for muse.paint and muse.segment, and records what each was asked."""
+    """Stands in for muse.paint and muse.segment, records what each was asked, and logs each call
+    made as they do (muse._log), at Meta's price."""
 
     def __init__(self, pictures=None, spots=None, sure=0.9):
         self.pictures = pictures or {}  # scene -> a list of picture bytes (or exceptions), one per try
@@ -66,12 +68,14 @@ class FakeMuse:
         answer = answers[min(tries, len(answers)) - 1]
         if isinstance(answer, Exception):
             raise answer
+        muse._log(job, label, muse.IMAGE_MODEL, time.monotonic(), muse.IMAGE_PRICE_USD)
         return answer
 
     def segment(self, job, label, art_path, *, phrase=None, box=None):
         assert art_path.exists()
         name = next(n for n in SPOTS if label.removesuffix(" box").endswith(" " + n))
         self.segmented.append((label, phrase, box))
+        muse._log(job, label, muse.SAM_MODEL, time.monotonic(), muse.SAM_PRICE_USD)
         if name not in self.spots:
             return []
         x, y, r = self.spots[name]
@@ -304,8 +308,13 @@ def media_path():
     return Path(__file__)  # any file: the stand-in helper does not look
 
 
-def test_locate_without_muse_art_says_what_to_do(job):
+def test_locate_without_muse_art_says_what_to_do(job, monkeypatch):
     with pytest.raises(media.StepFailed, match="no Muse Image art for this bundle; run the art step first"):
+        locate.run(job, FakeHelper())
+    painted(job, monkeypatch)
+    locate.run(job, FakeHelper())
+    monkeypatch.setenv("BRAIN_PROVIDER", "claude")  # Muse Image's art is not the SVG art the brain would draw
+    with pytest.raises(media.StepFailed, match="no SVG art and locations.json for this bundle; run the art step"):
         locate.run(job, FakeHelper())
 
 

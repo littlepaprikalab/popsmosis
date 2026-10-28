@@ -171,7 +171,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 | `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson, and who makes its art (the next table) |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | none | Needed with `claude`. `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
 | `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`. Every Meta model the studio calls bills to it |
-| `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. A model from the other provider fails the call before anything is sent, so change it when you change `BRAIN_PROVIDER` |
+| `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. Change it when you change `BRAIN_PROVIDER`: a model from the other provider stops the run (below) |
 | `STUDIO_BRAIN_EFFORT` | `low`, `medium`, `high`, `xhigh`, `max` | `high` | How hard the brain thinks, with `claude` only; `meta` ignores it |
 
 What each `BRAIN_PROVIDER` runs:
@@ -185,6 +185,12 @@ What each `BRAIN_PROVIDER` runs:
 
 Switching `BRAIN_PROVIDER` makes a job's art again on its next run; a lesson already
 written stays as it is.
+
+`run`, `videos` and `recover` check these settings before they claim anything. A wrong one
+(an unknown provider, its key missing, a model from the other provider, a misspelled
+effort) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
+`videos`), and the teacher stops and reports it, so no topic is failed or given up over a
+setting.
 
 The brain's models, for `STUDIO_BRAIN_MODEL`:
 

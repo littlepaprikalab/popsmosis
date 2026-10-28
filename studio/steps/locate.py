@@ -52,10 +52,10 @@ class Spot(Strict):
 
 def run(job: Path, ask=brain.ask) -> str:
     if brain.provider() != "meta":
-        if art.located(job) is not None:
+        if is_done(job):
             return "nothing to do: the art step located every structure"
-        raise media.StepFailed("no locations.json for this bundle; run the art step first (its SVG art locates "
-                               "every structure)")
+        raise media.StepFailed("no SVG art and locations.json for this bundle; run the art step first (its SVG "
+                               "art locates every structure)")
     bundle = checks.load(job / "bundle.json")
     if not art.is_done(job):
         raise media.StepFailed("no Muse Image art for this bundle; run the art step first")

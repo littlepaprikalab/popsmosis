@@ -216,6 +216,27 @@ def test_a_meta_answer_naming_its_model_another_way_is_priced_as_asked(monkeypat
     assert brain.calls[-1].model == "muse-spark-1.3-20261001" and brain.calls[-1].cost_usd == pytest.approx(1.25)
 
 
+@pytest.mark.parametrize("settings, problem", [
+    ({"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k"}, None),
+    ({"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k", "STUDIO_BRAIN_MODEL": "muse-spark-1.3"}, None),
+    ({"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_MODEL": "claude-haiku-5-5"}, None),
+    ({"BRAIN_PROVIDER": "meta"}, "BRAIN_PROVIDER=meta needs MODEL_API_KEY"),
+    ({"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k", "STUDIO_BRAIN_MODEL": "claude-haiku-5-5"},
+     "STUDIO_BRAIN_MODEL=claude-haiku-5-5 is not a Muse model"),
+    ({"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_MODEL": "muse-spark-1.3"}, "is not a Claude model"),
+    ({"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_EFFORT": "hihg"}, "STUDIO_BRAIN_EFFORT must be one of"),
+    ({}, "BRAIN_PROVIDER=claude needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY"),
+    ({"BRAIN_PROVIDER": "Meta", "MODEL_API_KEY": "k"}, "BRAIN_PROVIDER must be claude or meta, not 'Meta'"),
+])
+def test_the_brains_settings_are_checked_in_one_place(monkeypatch, settings, problem):
+    for name in (*brain.CLAUDE_KEY_VARS, "MODEL_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in settings.items():
+        monkeypatch.setenv(name, value)
+    found = brain.settings_problem()
+    assert found is None if problem is None else problem in found
+
+
 def test_each_provider_needs_its_own_key(monkeypatch):
     for name in (*brain.CLAUDE_KEY_VARS, "MODEL_API_KEY"):
         monkeypatch.delenv(name, raising=False)

@@ -423,3 +423,16 @@ def test_the_default_sender_does_not_use_urllibs_blocked_user_agent(monkeypatch)
     monkeypatch.setattr(api_module.urllib.request, "urlopen", lambda request, timeout: seen.append(request) or Response())
     api_module._urllib_send("GET", "http://x/api", {"Authorization": "Bearer k"}, None)
     assert seen[0].get_header("User-agent") == api_module.USER_AGENT
+
+
+def test_wrong_brain_settings_stop_the_run_before_the_topic_is_claimed(jobs_root, monkeypatch):
+    """A setting left wrong (here, a Claude model after switching to Meta) would fail every topic, and the
+    teacher gives a topic up after two failures: so the run stops before it claims, and nothing is spent."""
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setenv("MODEL_API_KEY", "k")
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "claude-haiku-5-5")
+    api = FakeApi()
+    result, step, reason = operator_run.run("q1", api=api)
+    assert (result, step) == ("STOPPED", "run")
+    assert reason.startswith("the studio's settings are wrong: STUDIO_BRAIN_MODEL=claude-haiku-5-5 is not a Muse")
+    assert api.calls == [] and not (jobs_root / "q1").exists()

@@ -124,6 +124,10 @@ def record_interrupted(job: Path) -> None:
 
 def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
+    if ask is None:  # the real brain: its settings are checked before the topic is claimed
+        problem = brain.settings_problem()
+        if problem:
+            return STOPPED, "run", f"the studio's settings are wrong: {problem}"
     job = job_dir(question_id)
     job.mkdir(parents=True, exist_ok=True)
     with only_run(job) as mine:
