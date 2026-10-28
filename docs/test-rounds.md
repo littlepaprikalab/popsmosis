@@ -682,6 +682,40 @@ the result. Two repairs, run in the locate step (`studio/repair.py`); tried live
   spheres in that picture sit on the background below it, which is left alone, since a
   small thing on the background may be a structure SAM did not find.
 
+## Round 15: mitosis, end to end under every new rule
+
+A new topic written from scratch ("Can you teach me mitosis for my AP Bio exam?"), through
+every step but the upload: Claude's bundle and fact-check, Muse Image pictures with the
+scene-aware checker and repair, SAM, the Eleven Music song and ElevenLabs narration,
+Demucs and MMS timing, and both videos. $1.72 (Claude $1.54, Muse Image $0.08, SAM $0.10)
+and about 1,500 ElevenLabs credits for the narration; 20 minutes.
+
+| | |
+|---|---|
+| Fact-check | passed in 2 rounds, 1 fix: "Every copied chromosome's an X" became "A copied, condensed chromosome's an X" |
+| Pictures | 9 for 5 scenes; 17 of 18 structures located (the metaphase close-up's centrosomes missed) |
+| Song | pop-punk, 144 bpm, 150 s; all 45 lines timed, chorus drift at most 0.38 s |
+| Videos | song 152 s, lesson 229 s |
+
+- **The pictures are mostly strong.** The metaphase close-up is a clean textbook figure,
+  chromosomes in a line with the spindle fibres meeting each one; the drug close-up and
+  the hook (a scraped knee, its skin cells dividing under a magnifier) work too.
+- **The overview's anaphase is wrong**: its fourth cell carries X-shaped chromosomes to the
+  poles, where separated single chromatids are the point of the stage. The checker flagged
+  it on both pictures, and two was the limit. Its cells' outer membranes are also painted
+  the yellow the bundle gave the nuclear envelope.
+- **The motion engine has nothing for parts that move.** Mitosis is chromosomes condensing,
+  lining up, splitting and travelling to the poles; the engine moves dots between parts.
+  So "the microtubules shorten, reeling sisters to opposite poles" shows dots hopping from
+  a chromosome to a centrosome in the telophase picture, and the split itself is never
+  seen. The drug scene's blocked pull (dots stopping at the drug under a cross) reads well.
+  Topics in stages (mitosis, meiosis, the cell cycle, the moon's phases, a life cycle)
+  need either a picture per stage the video moves through, or parts that move.
+- **Labels carry across scenes as intended**: the drug close-up opens with "Centrosomes",
+  "Spindle" and "Chromosomes" already labelled. A structure the overview draws five times
+  over (one per cell) is labelled once, on one of them.
+- **Nothing to repair**: the faults left were shapes and places, not a part upside down.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
