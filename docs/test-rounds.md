@@ -610,6 +610,11 @@ the chain close-up's second go, $0.11, checks $0.09), and only those five were l
   drew its mushroom head up in the intermembrane space, though every request put it in the
   matrix. Muse Image draws the mushroom upright; the rotor ring in the light reactions'
   close-up moved up into the membrane's lower edge, not into it.
+- **"Hanging upside down" turned it over.** Asked for ATP synthase "as a mushroom hanging
+  upside down from the membrane, its round cap below it in the matrix", both of two pictures
+  drew it the right way up for the matrix, and the checker found nothing out of place
+  ($0.04). The scene rules now say so in general: the illustrator draws a thing the way up
+  it is usually pictured, so a scene that needs it the other way says it hangs upside down.
 - **The checker listed a non-problem as misplaced** ("ATP synthase head in lumen side? no:
   head is in stroma, correct") and so painted the herbicide close-up a second time for
   nothing.

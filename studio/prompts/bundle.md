@@ -127,7 +127,11 @@ together they go from what the learner already knows to the parts they are learn
   folded inner membrane, ATP synthase among them." Wherever the request leaves the layout
   out, the illustrator invents one, and an invented one is often wrong (the Krebs cycle
   drawn in the cytoplasm, the chain along the cell's outer membrane, ATP synthase with
-  its head on the wrong side). Put every part inside what holds it (a mitochondrion
+  its head on the wrong side). The illustrator draws a thing the way up it is usually
+  pictured, whatever the request says about its head or its base: when the scene needs it
+  the other way up, say it hangs upside down, and where its cap is ("ATP synthase as a
+  mushroom hanging upside down from the membrane, its round cap below it in the matrix").
+  Asked for "its round head in the matrix below", four pictures in a row drew it upright. Put every part inside what holds it (a mitochondrion
   inside its cell, not beside it). Say only what is true and what the scene needs.
 - Pick the kind that fits the subject, and end the request with the look that kind of
   textbook gives it, in these words:
