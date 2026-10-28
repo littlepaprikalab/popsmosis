@@ -108,12 +108,17 @@ class Direction(Strict):
     particles: list[str] = Field(description="Structure names the particles travel between, in order; [] for none")
     carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
                                      '"" for none')
+    glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
 
 
 class BuildUp(Strict):
     carries: str = Field(description='What piles up, as `carries` writes it ("H⁺")')
     region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
+
+
+class Block(Strict):
+    structure: str = Field(description="The structure that stops the particles reaching it (a poison, a drug), by its name")
 
 
 class Spin(Strict):
@@ -176,6 +181,8 @@ class Bundle(Strict):
     builds_up: list[BuildUp] = Field(default_factory=list, description="What piles up in which space; [] for none")
     # What turns while particles drive it. A bundle written before Oct 28 has none.
     spins: list[Spin] = Field(default_factory=list, description="What turns while particles flow through it; [] for none")
+    # What stops the particles that reach it. A bundle written before Oct 28 has none.
+    blocks: list[Block] = Field(default_factory=list, description="What stops the particles reaching it; [] for none")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -190,9 +197,9 @@ class Bundle(Strict):
             data = {**data, "audience": "high school"}
         # The exam question (`frq`) left both videos on Oct 28; a bundle written before still has one.
         data = {k: v for k, v in data.items() if k != "frq"}
-        # What the particles carry was added on Oct 28: before, they were unmarked.
+        # What the particles carry, and what lights up, were added on Oct 28: before, nothing did.
         if isinstance(data.get("direction"), list):
-            data["direction"] = [{**d, "carries": ""} if isinstance(d, dict) and "carries" not in d else d
+            data["direction"] = [{"carries": "", "glow": "", **d} if isinstance(d, dict) else d
                                  for d in data["direction"]]
         return data
 
@@ -268,7 +275,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "tempo"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "glow", "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -540,6 +547,7 @@ class Particles(Strict):
     color: str
     trail: bool
     label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
+    blocked: bool = False  # the last stop stops them (Bundle.blocks): they pile up there, not go round again
 
     @field_validator("color")
     @classmethod
@@ -596,6 +604,7 @@ class Beat(Strict):
     particles: list[Particles]
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
+    glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
@@ -684,7 +693,7 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
         named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path] + [
-            c.region for c in beat.crowds] + [s.structure for s in beat.turning]
+            c.region for c in beat.crowds] + [s.structure for s in beat.turning] + [beat.glow]
         for crowd in beat.crowds:
             if not (0 <= crowd.start <= 1 and 0 <= crowd.end <= 1):
                 problems.append(f"{where} fills {crowd.region} to {crowd.start}-{crowd.end}, outside 0-1")

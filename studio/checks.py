@@ -59,8 +59,25 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     _check_spins(data, canon, problems)
+    _check_blocks(data, canon, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
+    """Each block names a structure, as its name, that particles end at: they pile up there in the video.
+    Any other is left out."""
+    ends = {canon.get(fold(d["particles"][-1])) for d in data["direction"] if d["particles"]}
+    kept = []
+    for block in data["blocks"]:
+        name = canon.get(fold(block["structure"]))
+        why = "names no structure" if not name else "is not where any particles end" if name not in ends else ""
+        if why:
+            problems.append(Problem(line_id="blocks", rule="blocks", repaired=True,
+                                    detail=f"{block['structure']} blocking {why}; left out"))
+            continue
+        kept.append({"structure": name})
+    data["blocks"] = kept
 
 
 def _check_spins(data: dict, canon: dict[str, str], problems: list) -> None:
@@ -230,6 +247,10 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
             return "has not been named yet"
         return None
 
+    if direction["glow"] and (why := misplaced(direction["glow"])):
+        problems.append(Problem(line_id=line_id, rule="glow", repaired=True,
+                                detail=f"glow on {direction['glow']} {why}; none instead"))
+        direction["glow"] = ""
     if direction["spotlight"] and (why := misplaced(direction["spotlight"])):
         problems.append(Problem(line_id=line_id, rule="spotlight", repaired=True,
                                 detail=f"spotlight {direction['spotlight']} {why}; no spotlight instead"))

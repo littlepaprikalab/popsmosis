@@ -230,6 +230,18 @@ def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job
     assert any(b.turning and b.turning[0].turns > 0 for b in song.beats)
 
 
+def test_particles_that_end_at_a_blocker_are_blocked_and_a_glow_shows_once_named(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺", glow="ATP synthase")  # not drawn here
+    data["blocks"] = [{"structure": "Cytochrome b6f"}]
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    assert [(f.path, f.blocked) for f in song["v1-2"].particles] == [(["Thylakoid", "Cytochrome b6f"], True)]
+    assert [f.blocked for f in song["v2-1"].particles] == [False]  # it ends at the thylakoid, which blocks nothing
+    assert (song["v1-2"].glow, song["v2-1"].glow) == ("Thylakoid", None)
+
+
 def test_what_particles_carry_is_written_as_a_textbook_prints_it():
     printed = {"H+": "H⁺", "e-": "e⁻", "O2": "O₂", "H2O": "H₂O", "CO2": "CO₂", "Ca2+": "Ca²⁺", "Cl-": "Cl⁻",
                "NAD+": "NAD⁺", "2H+": "2H⁺", "H +": "H⁺", "H⁺": "H⁺", "HCO₃⁻": "HCO₃⁻", "glucose": "glucose", "": ""}

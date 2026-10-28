@@ -28,6 +28,9 @@ No model calls, so it is free to run again:
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
   through it, and eases to a stop when they stop; how far round it is runs on from beat
   to beat, so it never jumps.
+- Particles whose last stop is a blocker (Bundle.blocks) are marked blocked: the renderer
+  piles them up there. A line's glow, like its spotlight, needs its structure located on
+  the scene and named by then.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
@@ -222,6 +225,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     located = {s.scene: {loc.name for loc in s.structures} for s in locations.scenes}
     names = {scene.id: Names.for_scene(bundle, scene.id, located.get(scene.id, set())) for scene in bundle.scenes}
     hook = hook_scene(bundle)
+    blockers = {b.structure for b in bundle.blocks}
 
     beats: list[dict] = []
     revealed: dict[str, list[str]] = {}  # per scene, in order
@@ -279,10 +283,12 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         stops = [s for s in (scene_names.canonical(p) for p in (direction.particles if direction else [])) if s]
         stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
         label = notation(direction.carries) if direction else ""
-        particles = [Particles(path=stops, color=marker_colour(label), trail=True, label=label)] if len(stops) >= 2 else []
+        particles = [Particles(path=stops, color=marker_colour(label), trail=True, label=label,
+                               blocked=stops[-1] in blockers)] if len(stops) >= 2 else []
+        glow = _shown(direction.glow, scene_names, labels) if direction else None
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
-                      "reveal": reveals, "spotlight": spotlight, "labels": list(labels), "particles": particles,
+                      "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels), "particles": particles,
                       "caption": None, "line_id": timed_line.line_id, "line": texts.get(timed_line.line_id, ""),
                       "words": words})
         captions.append((direction.caption.strip() or None) if direction else None)

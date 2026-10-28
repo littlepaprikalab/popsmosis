@@ -75,7 +75,7 @@ def bundle_data() -> dict:
         "narration": [{"id": i, "text": t, "names": n, "fact_id": f} for i, t, n, f in NARRATION],
         "direction": [
             {"line_id": i, "scene": scenes.get(i, "overview"), "camera": {"target": "", "zoom": 1.0},
-             "spotlight": "", "particles": [], "carries": "", "caption": ""}
+             "spotlight": "", "particles": [], "carries": "", "glow": "", "caption": ""}
             for i in line_ids
         ],
         "tags": {

@@ -125,4 +125,8 @@ through it") is the video turning that part while they pass: SUPPORTED when the 
 that flow turns it (an analogy's part by what the facts say of the analogy), UNSUPPORTED
 otherwise.
 
+A motion that says a flow "is stopped at" something ("e⁻ flow from Photosystem II is
+stopped at Herbicide") is the video showing the particles pile up there and go no further:
+SUPPORTED when the facts say that thing blocks or stops that flow, UNSUPPORTED otherwise.
+
 A motion is never FILLER.

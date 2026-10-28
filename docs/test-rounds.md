@@ -642,6 +642,27 @@ asked on its own, named ATP synthase and the turbine or water wheel in each less
   arrow; in the chain close-up "ATP synthase" is said at the end of the line about it, so
   its arrow shows only then. The particles wait for their stops the same way.
 
+## Round 13: blocked flows and parts that light up
+
+The motion engine's last two pieces, on the same lessons. A failure scene's particles now
+run to the blocker and pile up there under a red cross (`blocks`); a line can light a part
+up (`glow`). Claude set both for the two lessons without writing them again ($0.25 for the
+blocks and a first try at glows, $0.07 for the glows again).
+
+- **The blocked flows are right**: "e⁻ flow from electron transport chain is stopped at
+  cyanide" and "e⁻ flow from Photosystem II is stopped at Herbicide", both passed by the
+  fact-check; in the cyanide close-up the electrons queue up behind the cyanide. The
+  herbicide's route is short, so only two or three queue.
+- **Asked first, Claude lit up a part on nearly every line**, as if the glow were the
+  spotlight. The rule now says a glow is rare and only for an outside cause switching a
+  part on. Asked again, it lit photosystem II where light excites it and photosystem I
+  where light excites the electrons again (and four lines in respiration, two of them a
+  stretch).
+- **The fact-check caught a wrong sentence of the code's own**: a spin on a path "water pump
+  -> reservoir -> turbine" read "turbine spins as particles flow into it from reservoir and
+  water pump"; it is the reservoir's water that turns it. The sentence now names the stop
+  just before the part.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

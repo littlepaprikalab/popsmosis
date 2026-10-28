@@ -246,7 +246,7 @@ def test_timings_are_not_done_once_the_audio_or_the_lines_change(made, monkeypat
     data = sample_media.bundle().model_dump()
     data["narration"].append({"id": "n3", "text": "The flow drives the synthase.", "names": [], "fact_id": "f3"})
     data["direction"].append({"line_id": "n3", "scene": "synthase", "camera": {"target": "", "zoom": 1.0},
-                              "spotlight": "", "particles": [], "carries": "", "caption": ""})
+                              "spotlight": "", "particles": [], "carries": "", "glow": "", "caption": ""})
     jobs.write(made / "bundle.json", sample_media.bundle().model_validate(data))
     assert not timing.is_done(made)  # a line to time that has no timing yet
 

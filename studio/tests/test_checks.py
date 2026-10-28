@@ -145,6 +145,18 @@ def test_what_turns_is_where_particles_flow_in_or_through():
     assert turning("the rotor") == ([], [("spins", "spins", True)])  # no such structure
 
 
+def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
+    def change(data):
+        direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
+        direction(data, "c1-1").update(glow="Cytochrome b6f")  # not named yet on the overview
+        data["blocks"] = [{"structure": "cytochrome B6F"}, {"structure": "Thylakoid"}]
+    bundle, found, _ = review(change)
+    assert [b.structure for b in bundle.blocks] == ["Cytochrome b6f"]  # particles end there; none end at the other
+    glows = {d.line_id: d.glow for d in bundle.direction if d.line_id in ("v1-2", "c1-1")}
+    assert glows == {"v1-2": "Thylakoid", "c1-1": ""}
+    assert sorted(found) == [("blocks", "blocks", True), ("c1-1", "glow", True)]
+
+
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
     data = bundle_data()
     for item in [*data["lyrics"], *data["narration"]]:

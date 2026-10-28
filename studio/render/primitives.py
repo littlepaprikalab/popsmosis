@@ -357,6 +357,23 @@ def draw_turning_arrow(canvas: skia.Canvas, centre: tuple[float, float], rx: flo
     canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * shade)))
 
 
+BLOCK_R = 17.0  # the cross on a blocker, in frame pixels
+
+
+def draw_block(canvas: skia.Canvas, at: tuple[float, float], alpha: float) -> None:
+    """A red disc with a white cross, where blocked particles stop."""
+    if alpha <= 0.01:
+        return
+    x, y = at
+    canvas.drawCircle(x, y, BLOCK_R + HALO, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawCircle(x, y, BLOCK_R, skia.Paint(AntiAlias=True, Color=argb("#E5484D", alpha)))
+    arm = BLOCK_R * 0.5
+    cross = skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha), StrokeWidth=4.5,
+                       Style=skia.Paint.kStroke_Style, StrokeCap=skia.Paint.kRound_Cap)
+    canvas.drawLine(x - arm, y - arm, x + arm, y + arm, cross)
+    canvas.drawLine(x - arm, y + arm, x + arm, y - arm, cross)
+
+
 CROWD_R = 8.5  # a crowd's unmarked dots, in frame pixels: bigger than the stream's, smaller than the lead's
 
 

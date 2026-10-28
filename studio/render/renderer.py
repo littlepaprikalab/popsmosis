@@ -71,6 +71,17 @@ CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 # The picture decides, not the bundle: its writer never sees the picture.
 SPIN_ROUND = 1.45
 SPIN_SAME = 0.6
+# Blocked particles (Particles.blocked) queue up behind their last stop PILE_SPACING art pixels apart, at most
+# PILE_MAX of them, under a cross that shows once the first arrives.
+PILE_SPACING = 26.0
+PILE_MAX = 12
+# A line's glow (Beat.glow): its part lit with GLOW_COLOR, blurred GLOW_BLUR art pixels past its edge, pulsing
+# GLOW_HZ times a second between half and full GLOW_ALPHA.
+GLOW_COLOR = "#FFF3B0"
+GLOW_BLUR = 18.0
+GLOW_ALPHA = 0.75
+GLOW_HZ = 1.2
+GLOW_IN_S = 0.4
 ARROW_WIDTH = 1.2
 ARROW_TILT = 0.28
 
@@ -122,6 +133,7 @@ class SceneArt:
         self._mask_files: dict[str, Path] = {}
         self._crowd_points: dict[str, list[Point]] = {}
         self._discs: dict[str, tuple[float, float, float] | None] = {}
+        self._glows: dict[str, skia.Image] = {}
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -194,6 +206,17 @@ class SceneArt:
                     break
             self._crowd_points[name] = picked
         return self._crowd_points[name]
+
+    def glow(self, name: str) -> skia.Image:
+        """The structure's light: its mask blurred well past its edge, alpha only."""
+        if name not in self._glows:
+            surface = self._surface(alpha_only=True)
+            canvas = surface.getCanvas()
+            canvas.clear(skia.ColorTRANSPARENT)
+            canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
+                             skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(GLOW_BLUR, GLOW_BLUR)))
+            self._glows[name] = surface.makeImageSnapshot()
+        return self._glows[name]
 
     def spin_disc(self, name: str) -> tuple[float, float, float] | None:
         """The disc a face-on part turns in: its centre and a radius taking in all of it but stray
@@ -310,6 +333,38 @@ def lead_at(points: list[Point], t: float) -> tuple[Point, int]:
             return (p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)), int(trip)
         t -= leg
     return points[-1], int(trip)
+
+
+def trip_s(points: list[Point]) -> float:
+    """How long the lead particle takes from its first stop to holding at its last."""
+    legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+    return FLOW_PAUSE_S * (len(points) - 1) + sum(legs)
+
+
+def _along(points: list[Point], d: float) -> Point:
+    """The point d art pixels along the path."""
+    for a, b in zip(points, points[1:]):
+        length = math.dist(a, b)
+        if d <= length:
+            x = d / length if length else 0.0
+            return p.lerp(a[0], b[0], x), p.lerp(a[1], b[1], x)
+        d -= length
+    return points[-1]
+
+
+def pile_at(points: list[Point], t: float) -> list[tuple[Point, float]]:
+    """Blocked particles: the stream's dots, each stopping where the queue behind the last stop has got to,
+    PILE_SPACING apart (the first just behind the lead), until PILE_MAX have arrived."""
+    total = sum(math.dist(a, b) for a, b in zip(points, points[1:]))
+    speed, gap = FLOW_SPEED / 2, STREAM_GAP
+    dots = []
+    for j in range(PILE_MAX):
+        free = max(t, 0.0) * speed - j * gap
+        stop = total - (j + 1) * PILE_SPACING
+        if free < 0 or stop < 0:
+            break
+        dots.append((_along(points, min(free, stop)), p.clamp01(free / (gap / 2))))
+    return dots
 
 
 def stream_at(points: list[Point], t: float) -> list[tuple[Point, float]]:
@@ -554,6 +609,8 @@ class Renderer:
             self._crowds(canvas, beat, cam, view, t, ghosts, spots)
         if beat.turning:
             self._turning(canvas, beat, cam, view, t, ghosts, spots, face=False)
+        if beat.glow:
+            self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
 
@@ -608,6 +665,24 @@ class Renderer:
                 canvas.clipRect(skia.Rect.MakeLTRB(*view))
                 p.draw_turning_arrow(canvas, at, rx, ARROW_TILT * rx, turns, alpha)
                 canvas.restore()
+
+    def _glow(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float, ghosts: dict[str, float]) -> None:
+        """The line's glowing part: lit with a warm light past its edge, pulsing, from the line's start."""
+        art = self.scene(beat.scene)
+        if beat.glow not in art.masks:
+            return
+        pulse = 0.5 + 0.5 * (0.5 + 0.5 * math.sin(2 * math.pi * GLOW_HZ * (t - beat.t0) - math.pi / 2))
+        alpha = GLOW_ALPHA * pulse * p.ease((t - beat.t0) / GLOW_IN_S) * (1 - ghosts.get(beat.glow, 0.0))
+        if alpha <= 0.01:
+            return
+        scale, dx, dy = to_frame(cam, view, art)
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        canvas.translate(dx, dy)
+        canvas.scale(scale, scale)
+        canvas.drawImage(art.glow(beat.glow), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
+                         skia.Paint(Color=p.argb(GLOW_COLOR), Alphaf=alpha, BlendMode=skia.BlendMode.kScreen))
+        canvas.restore()
 
     def _crowds(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
                 ghosts: dict[str, float], spots: dict[str, float]) -> None:
@@ -668,16 +743,32 @@ class Renderer:
             points = stop_points([(s.label_anchor.x, s.label_anchor.y) for s in stops if s is not None])
             if len(points) < 2:
                 continue
-            lead, trip = lead_at(points, elapsed)
-            trail = []
-            for k in range(1, TRAIL + 1 if flow.trail else 1):
-                then = elapsed - k * TRAIL_DT
-                earlier, earlier_trip = lead_at(points, then)
-                if then < 0 or earlier_trip != trip:  # no trail from before it set off, or from the last trip
-                    break
-                trail.append(on_frame(earlier))
-            p.draw_particles(canvas, flow.color, [(on_frame(q), fade) for q, fade in stream_at(points, elapsed)],
+            if flow.blocked:
+                # It goes once, and holds at the blocker; the stream queues up behind it under a cross.
+                arrived = trip_s(points)
+                lead = lead_at(points, min(elapsed, arrived))[0]
+                trail = [on_frame(lead_at(points, then)[0]) for k in range(1, TRAIL + 1 if flow.trail else 1)
+                         if 0 <= (then := elapsed - k * TRAIL_DT) < arrived]
+                stream = pile_at(points, elapsed)
+            else:
+                lead, trip = lead_at(points, elapsed)
+                trail = []
+                for k in range(1, TRAIL + 1 if flow.trail else 1):
+                    then = elapsed - k * TRAIL_DT
+                    earlier, earlier_trip = lead_at(points, then)
+                    if then < 0 or earlier_trip != trip:  # no trail from before it set off, or from the last trip
+                        break
+                    trail.append(on_frame(earlier))
+                stream = stream_at(points, elapsed)
+            p.draw_particles(canvas, flow.color, [(on_frame(q), fade) for q, fade in stream],
                              on_frame(lead), trail, alpha, flow.label)
+            if flow.blocked and elapsed >= trip_s(points):
+                (x0, y0), (x1, y1) = on_frame(points[-2]), on_frame(points[-1])
+                length = math.hypot(x1 - x0, y1 - y0) or 1.0
+                ahead = p.MARKER_R + p.BLOCK_R + 8  # just past the lead, on the far side of the blocker
+                pulse = 0.8 + 0.2 * math.sin(2 * math.pi * 1.5 * t)
+                p.draw_block(canvas, (x1 + (x1 - x0) / length * ahead, y1 + (y1 - y0) / length * ahead),
+                             alpha * pulse * p.ease((elapsed - trip_s(points)) / FLOW_IN_S))
         canvas.restore()
 
     def _band_beat(self, i: int, t: float):

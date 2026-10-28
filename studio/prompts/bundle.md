@@ -87,7 +87,7 @@ together they go from what the learner already knows to the parts they are learn
   analogy scene; other lines can still use the analogy in other words.
 - When the bridge sings what happens when something fails, a detail scene can show
   it: the same view as another scene with that one change drawn in (what blocks it as a
-  structure of its own, the flow that stopped left out).
+  structure of its own, the flow that stopped left out: the video shows it stopping).
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
 
@@ -422,7 +422,14 @@ order, keyed by `line_id`:
   stands for the protons, so marking it "H₂O" would mislead). The fact-check holds each
   marked motion to the facts, as it does a line, and leaves out one they do not support:
   every route a marked particle takes must follow from the facts.
-  Where a failure scene shows the flow stopped, it has none.
+  Where a failure scene shows a flow stopped, its particles run to what stops it, the
+  blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
+  shows them piling up there, going no further.
+- `glow`: a structure that lights up on this line because an outside cause switches it on:
+  light excites photosystem II, a signal makes a neuron fire, a hormone reaches its
+  receptor. Rare: only the lines where that happens, a handful in a whole lesson, and ""
+  on every other line. Never to point at what the line is about: that is `spotlight`. Like
+  a spotlight, it is a structure the line names or one named earlier in the video.
 - `caption`: almost always "". At most one short caption (a few words) per song section,
   for a term worth seeing written.
 
@@ -447,6 +454,13 @@ particles flow into or through it, and lets it stop when they stop, so the flow 
 drive it: a round part (a wheel seen face-on) turns in place, any other gets a curved arrow
 going round it. List only what the facts say turns; the fact-check
 holds each one to them. [] when nothing does.
+
+## What blocks
+
+`blocks` lists what stops the particles that reach it, on a failure scene: a poison, a
+drug, a herbicide (`[{"structure": "Herbicide"}]`). Particles whose last stop is a blocker
+pile up there in the video, under a cross, instead of going on. List only what the facts
+say blocks that flow; the fact-check holds each to them. [] when nothing does.
 
 ## Tags
 

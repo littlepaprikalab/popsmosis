@@ -81,9 +81,18 @@ def lines_of(bundle: Bundle) -> list[Line]:
     return lines + tag_lines(bundle) + motion_lines(bundle)
 
 
-def motion_text(carries: str, particles: list[str]) -> str:
-    """A marked motion as the checker reads it: "H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"."""
+def motion_text(carries: str, particles: list[str], blocked: bool = False) -> str:
+    """A marked motion as the checker reads it: "H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen", or,
+    when its last stop blocks it, "e⁻ flow from Photosystem II is stopped at Herbicide"."""
+    if blocked:
+        through = f" through {' and '.join(particles[1:-1])}" if len(particles) > 2 else ""
+        return f"{carries} flow from {particles[0]}{through} is stopped at {particles[-1]}"
     return f"{carries} travels from " + " to ".join(particles)
+
+
+def _motion(bundle: Bundle, d) -> str:
+    blockers = {b.structure for b in bundle.blocks}
+    return motion_text(d.carries, d.particles, d.particles[-1] in blockers)
 
 
 def build_up_text(carries: str, region: str) -> str:
@@ -97,14 +106,16 @@ def spin_text(bundle: Bundle, structure: str) -> str:
     marked = sorted({d.carries for d in flows if d.carries})
     if marked:
         return f"{structure} spins as {' and '.join(marked)} flows through it"
-    sources = sorted({d.particles[0] for d in flows})
+    # What flows into it comes from the stop just before it, not where its path began ("water pump -> reservoir
+    # -> turbine": the reservoir's water turns the turbine; naming the pump was refused as wrong).
+    sources = sorted({d.particles[d.particles.index(structure, 1) - 1] for d in flows})
     return f"{structure} spins as particles flow into it from {' and '.join(sources)}"
 
 
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving, when they are marked with what they carry, and what the
     video shows piling up and turning."""
-    return [Line(MOTION, d.line_id, motion_text(d.carries, d.particles))
+    return [Line(MOTION, d.line_id, _motion(bundle, d))
             for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
         Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)]
@@ -217,7 +228,9 @@ def check_bundle(
     if any(line.text not in passed_motions for line in motion_lines(bundle)):
         data = bundle.model_dump()
         for d in data["direction"]:
-            if d["carries"] and len(d["particles"]) >= 2 and motion_text(d["carries"], d["particles"]) not in passed_motions:
+            blocked = bool(d["particles"]) and d["particles"][-1] in {b["structure"] for b in data["blocks"]}
+            if (d["carries"] and len(d["particles"]) >= 2
+                    and motion_text(d["carries"], d["particles"], blocked) not in passed_motions):
                 d["particles"], d["carries"] = [], ""
         data["builds_up"] = [b for b in data["builds_up"]
                              if build_up_text(b["carries"], b["region"]) in passed_motions]

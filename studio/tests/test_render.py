@@ -382,6 +382,31 @@ def test_a_part_that_is_not_round_gets_an_arrow_round_it_while_it_turns(job):
     assert drawn(turning(0.0)) == 0  # stopped: no arrow
 
 
+def test_blocked_particles_pile_up_at_their_last_stop_under_a_cross(job):
+    blocked = flowing([flow_beat(0, 20, label="e⁻", color="#4CC9F0").model_copy(update={"particles": [
+        Particles(path=FLOW, color="#4CC9F0", trail=True, label="e⁻", blocked=True)]})])
+    free = Renderer(job, flowing([flow_beat(0, 20, label="e⁻", color="#4CC9F0")]))
+    stuck = Renderer(job, blocked)
+    red = lambda frame: int((np.abs(frame[..., 2::-1].astype(int) - p.rgb("#E5484D")).max(-1) < 25).sum())
+    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    arrived = renderer_module.trip_s(stops)
+    assert red(stuck.frame(arrived - 0.2).copy()) < 30  # no cross before the first one gets there
+    assert red(stuck.frame(arrived + 6).copy()) > 400 and red(free.frame(arrived + 6).copy()) < 30
+    # The dots queue up behind the last stop, and stay: the queue is the same a little later.
+    late = renderer_module.pile_at(stops, 60.0)
+    assert len(late) == renderer_module.PILE_MAX or len(late) > 3
+    assert renderer_module.pile_at(stops, 60.0) == renderer_module.pile_at(stops, 61.0)
+    end = stops[-1]
+    assert all(math.dist(q, end) <= renderer_module.PILE_SPACING * (j + 1) + 1 for j, (q, _) in enumerate(late))
+
+
+def test_a_glowing_part_is_lit_and_pulses(job):
+    lit = Renderer(job, flowing([flow_beat(0, 8, path=[]).model_copy(update={"glow": "Cytochrome b6f"})]))
+    plain = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
+    changed = [int((lit.frame(t).copy() != plain.frame(t)).any(-1).sum()) for t in (1.0, 1.4, 1.8)]
+    assert all(c > 500 for c in changed) and len(set(changed)) > 1  # lit throughout, and pulsing
+
+
 def test_label_text_is_dark_enough_to_read_on_white():
     for color in ("#F2C230", "#2E8B57", "#E07A2F", "#3366CC", "#FFFFFF"):
         r, g, b = p.rgb(p.darken(color))

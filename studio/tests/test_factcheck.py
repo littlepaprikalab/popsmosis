@@ -336,6 +336,31 @@ def test_what_turns_is_checked_with_what_drives_it():
     assert [s.structure for s in checked.spins] == ["Cytochrome b6f"]
 
 
+def test_what_turns_an_unmarked_part_is_the_stop_just_before_it():
+    def dam(data):
+        for d in data["direction"]:
+            if d["line_id"] == "v1-2":  # pump -> reservoir -> turbine, as an analogy's water runs
+                d.update(particles=["Thylakoid", "Cytochrome b6f", "Thylakoid"], carries="")
+        data["spins"] = [{"structure": "Thylakoid"}]
+
+    fake = FakeChecker(supported)
+    check_bundle(bundle(dam), "", fake)
+    assert [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:spins")] == [
+        "Thylakoid spins as particles flow into it from Cytochrome b6f"]
+
+
+def test_a_blocked_flow_is_checked_as_stopped_there():
+    def stopping(data):
+        moving(data)
+        data["blocks"] = [{"structure": "Cytochrome b6f"}]
+
+    fake = FakeChecker(supported)
+    check_bundle(bundle(stopping), "", fake)
+    motions = [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")]
+    assert "e⁻ flow from Thylakoid is stopped at Cytochrome b6f" in motions
+    assert "H⁺ travels from Cytochrome b6f to Thylakoid" in motions  # not blocked: it ends elsewhere
+
+
 def test_a_tag_never_rides_along_with_a_corrected_line():
     fake = FakeChecker(seeded_is_wrong)
     report, _ = check_bundle(bundle(), "", fake)

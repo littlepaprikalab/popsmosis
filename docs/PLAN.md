@@ -236,7 +236,9 @@ parts build on the facts it has already written.
    "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
    from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
    (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties,
-   and `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`).
+   `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
+   `blocks`: what stops the particles reaching it (`[{"structure": "Herbicide"}]`). Each
+   direction line may also name a `glow`: a part an outside cause switches on.
 8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
@@ -525,6 +527,13 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     face-on) turns in place, the disc of the picture around it; any other (a rotor seen
     edge-on, a mushroom-shaped ATP synthase, which turned in place would stand on its head)
     gets a white curved arrow going round it, its far half faint, as textbooks draw one.
+  - **Blocked flows:** particles whose last stop is a blocker (the bundle's `blocks`: a
+    poison, a drug, a herbicide) go once and hold there; the stream queues up behind them,
+    and a red cross shows at the blocker once the first arrives. The fact-check reads such
+    a motion as "e⁻ flow from Photosystem II is stopped at Herbicide".
+  - **Glow:** a line's `glow` lights its part with a warm light past its edge, pulsing,
+    for the line: light exciting photosystem II, a neuron firing. Rare, and like the
+    spotlight, never on a part not yet named.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
