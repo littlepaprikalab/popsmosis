@@ -5,6 +5,7 @@ anthropic>=2.3,<3
 openai>=3.39,<4  # the Meta provider: Muse speaks the OpenAI API
 pydantic>=2.13,<3
 pytest>=9
+gemmi>=0.7.5,<1  # reads structure files for the 3D schematics' shapes (studio/schematic3d/fit.py)
 
 # The media steps: skia draws the art and the videos; PyTorch on CPU (its own index),
 # torchaudio's MMS aligner and Demucs time the song. Pinned where the audio lane tested.
