@@ -8,7 +8,7 @@ the runners put the one in force with chosen() and choose(). With none in force,
 provider has its helper (docs/PLAN.md, section 3):
 
     brain          provider   model              helper
-    claude         claude     claude-opus-5-5    claude-haiku-5-5, effort low
+    claude         claude     claude-opus-5-5    claude-sonnet-5-5, effort low
     muse-wonder    meta       muse-wonder-1.0    muse-spark-1.3
     muse-spark     meta       muse-spark-1.3     muse-spark-1.3
 
@@ -47,7 +47,9 @@ CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
     # thinking is billed as output, so max_tokens leaves room for it.
     "brain": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 64000},
-    "helper": {"model": "claude-haiku-5-5", "effort": "low", "max_tokens": 16000},
+    # Sonnet, not Haiku, since Oct 28: the helper judges each picture's science, and finds the
+    # parts SAM missed.
+    "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
 }
 META = {
     "brain": {"model": "muse-wonder-1.0"},
@@ -96,6 +98,7 @@ PRICES = {
     "claude-opus-5-5": (4.00, 20.00),
     "claude-opus-5": (5.00, 25.00),
     "claude-opus-4-8": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
     "claude-haiku-5-5": (0.10, 0.50),
     "muse-wonder-1.0": (4.00, 20.00),
     "muse-spark-1.3": (1.25, 4.25),

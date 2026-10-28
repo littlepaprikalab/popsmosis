@@ -107,7 +107,7 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 | Role | Claude (default for now) | Muse |
 |---|---|---|
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` (set on `/admin/studio`) | Muse Wonder (`muse-wonder-1.0`) or Muse Spark (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to vet a change) |
-| **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
+| **Helper**: image checks, SAM boxes, QA stills | Claude Sonnet 5.5 (`claude-sonnet-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
 The helper's models are set in `studio/brain.py`. An admin can also send one topic to its own
 brain on `/learn` (Claude, Muse Wonder or Muse Spark), which wins over the default for that

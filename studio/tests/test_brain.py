@@ -41,9 +41,9 @@ def test_the_brain_is_opus_at_high_effort_with_the_refusal_fallback(tmp_path):
     assert content["content"][0]["source"]["media_type"] == "image/png"
 
 
-def test_the_helper_is_haiku_at_low_effort_without_a_fallback():
+def test_the_helper_is_sonnet_at_low_effort_without_a_fallback():
     request = brain.claude_request("helper", "Any text in this image?", None, [], None)
-    assert request["model"] == "claude-haiku-5-5"
+    assert request["model"] == "claude-sonnet-5-5"
     assert request["output_config"] == {"effort": "low"}
     assert "fallbacks" not in request and "betas" not in request and "system" not in request
 
@@ -54,7 +54,7 @@ def test_the_brains_effort_is_the_one_set_on_the_studio_page(monkeypatch):
         assert request["model"] == "claude-opus-5-5" and request["output_config"] == {"effort": "medium"}
         assert request["fallbacks"] == "default"
         helper = brain.claude_request("helper", "Look.", None, [], None)
-        assert helper["model"] == "claude-haiku-5-5" and helper["output_config"] == {"effort": "low"}
+        assert helper["model"] == "claude-sonnet-5-5" and helper["output_config"] == {"effort": "low"}
     assert brain.claude_request("brain", "Write.", None, [], None)["output_config"] == {"effort": "high"}
 
 

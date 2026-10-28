@@ -177,7 +177,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 
 | Variable | Value | Needed for |
 |---|---|---|
-| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Haiku 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Sonnet 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
 | `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | a Muse brain and its picture checks (Muse Spark 1.3), Muse Image, and SAM 3.1 with any painter but the SVG |
 | `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
 
