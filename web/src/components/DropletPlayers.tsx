@@ -54,7 +54,7 @@ export function LessonVideos({ video, tags }: { video: Video | null; tags?: Drop
   return (
     <p className="text-xs mt-3" style={{ color: 'var(--text-muted)' }} data-testid="videos-failed">
       <span className="font-bold" style={{ color: 'var(--accent-red)' }}>The videos could not be made</span>
-      {video.error ? `: ${video.error.replace(/[.!?\s]+$/, '')}.` : '.'} The lesson above is complete without them.
+      {video.error ? `: ${video.error.replace(/[.!?\s]+$/, '')}.` : '.'} The lesson below is complete without them.
     </p>
   );
 }

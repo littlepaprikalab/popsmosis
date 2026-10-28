@@ -114,8 +114,98 @@ test.describe('the Droplets tab, signed out', () => {
   });
 });
 
+// A studio's bill as it sends one (studio/ledger.py), small enough to read in a test.
+const studioBill = (steps: [string, number, number][]) => ({
+  steps: steps.map(([step, seconds, costUsd]) => ({
+    step, seconds, tries: 1,
+    models: costUsd ? [{ model: step === 'art' ? 'claude-haiku-5-5' : 'claude-opus-5-5', calls: 1, costUsd, credits: null }] : [],
+    tools: [],
+  })),
+  seconds: steps.reduce((sum, [, seconds]) => sum + seconds, 0),
+});
+
 test.describe('videos on /learn', () => {
-  test('a lesson shows its videos rendering, then the players, without a reload; an admin can hide it from the tab', async ({ page, context, request }) => {
+  test('a droplet being made shows its bill filling in, step by step, and its lesson only with its videos', async ({ page, context, request }) => {
+    test.setTimeout(150_000); // four rounds of the card's own 15-second poll
+    const text = `E2E ${Date.now()}: the light reactions, step by step`;
+    const asked = await request.post(apiUrl('/api/questions'), {
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' },
+      data: { content: text },
+    });
+    expect(asked.status()).toBe(201);
+    const questionId = (await asked.json()).id;
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    const bill = card.getByTestId('breakdown');
+    const step = (label: string) => bill.locator('table').getByTestId('breakdown-step').filter({ hasText: label });
+
+    // Nobody has picked it up: the whole droplet to make, folded to one line.
+    await expect(card.getByTestId('waiting')).toBeVisible();
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('10 steps to go');
+    await expect(bill.locator('table')).toBeHidden();
+
+    // The studio claims it and starts the lesson: the bill opens by itself and fills in on the card's poll.
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    const lessonBill = studioBill([['request', 0.4, 0], ['bundle', 196, 0.53]]);
+    expect((await bot.progress(questionId, { running: [{ step: 'factcheck', seconds: 20 }], breakdown: lessonBill, videos: true })).status()).toBe(204);
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 2 of 10 steps done · $0.53 so far', { timeout: 25_000 });
+    await expect(step('Read the request')).toHaveAttribute('data-status', 'done');
+    await expect(step('Write the lesson')).toHaveAttribute('data-status', 'done');
+    await expect(step('Write the lesson')).toContainText('$0.53');
+    await expect(step('Fact-check')).toHaveAttribute('data-status', 'running');
+    await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'waiting');
+
+    // The lesson is posted and the videos started: the card still shows the bill, never the text, and is not READY.
+    const lesson = 'The light reactions **pump protons** across the thylakoid membrane.';
+    const posted = await bot.answer(questionId, lesson, {
+      bundle: { course: 'AP Biology', topic: 'the light reactions' },
+      factcheck: { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] },
+      breakdown: studioBill([['request', 0.4, 0], ['bundle', 196, 0.53], ['factcheck', 80, 0.18]]),
+    });
+    expect(posted.status()).toBe(201);
+    const answerId = (await posted.json()).id;
+    expect((await bot.videoClaim(answerId)).status()).toBe(200);
+    expect((await bot.videoProgress(answerId, {
+      attempt: 1, running: [{ step: 'art', seconds: 40 }, { step: 'audio', seconds: 40 }], breakdown: studioBill([]),
+    })).status()).toBe(204);
+    await expect(card.getByTestId('awaiting-videos')).toBeVisible({ timeout: 25_000 });
+    await expect(step('Fact-check')).toHaveAttribute('data-status', 'done');
+    await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'running');
+    await expect(step('Song and voice')).toHaveAttribute('data-status', 'running');
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 3 of 10 steps done · $0.71 so far');
+    await expect(card.locator('.md', { hasText: 'pump protons' })).toHaveCount(0);
+    await expect(card.getByText('BREWING', { exact: true })).toBeVisible();
+    await expect(card.getByPlaceholder(/Ask a follow-up/)).toHaveCount(0);
+
+    // Folded, the card says how far the videos have got.
+    await card.getByRole('button', { name: 'Collapse card' }).click();
+    await expect(card.getByTestId('making-preview')).toHaveText(/Making the videos: 3 of 10 steps done/);
+    await card.getByRole('button', { name: 'Expand card' }).click();
+
+    // The art is done and the diagrams' labels found while the audio goes on.
+    expect((await bot.videoProgress(answerId, {
+      attempt: 1, running: [{ step: 'audio', seconds: 100 }], breakdown: studioBill([['art', 76, 0.008], ['locate', 0.2, 0]]),
+    })).status()).toBe(204);
+    await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'done', { timeout: 25_000 });
+    await expect(step('Find the labels')).toHaveAttribute('data-status', 'done');
+    await expect(step('Song and voice')).toHaveAttribute('data-status', 'running');
+
+    // Done: the videos, then the lesson under them, and the bill folded to its totals.
+    expect((await bot.video(answerId, { status: 'READY', attempt: 1, songVideoUrl: SONG, lessonVideoUrl: LESSON })).status()).toBe(200);
+    await expect(card.getByTestId('droplet-players')).toBeVisible({ timeout: 25_000 });
+    await expect(card.locator('.md strong', { hasText: 'pump protons' })).toBeVisible();
+    await expect(card.getByTestId('awaiting-videos')).toHaveCount(0);
+    await expect(card.getByText('READY', { exact: true })).toBeVisible();
+    const playersBox = await card.getByTestId('droplet-players').boundingBox();
+    const lessonBox = await card.locator('.md').boundingBox();
+    expect(playersBox!.y).toBeLessThan(lessonBox!.y); // the videos come first
+    await expect(bill.getByTestId('breakdown-total')).toBeVisible();
+    await expect(bill.locator('table')).toBeHidden();
+  });
+
+  test('a lesson waits for its videos, then shows with the players, without a reload; an admin can hide it from the tab', async ({ page, context, request }) => {
     // Ada asks, the teacher answers and starts the render, all through the API.
     const text = `E2E ${Date.now()}: the Calvin cycle`;
     const asked = await request.post(apiUrl('/api/questions'), {
@@ -134,12 +224,15 @@ test.describe('videos on /learn', () => {
     await signIn(context, S.users.ada);
     await page.goto('/learn');
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
-    await expect(card.getByTestId('videos-rendering')).toBeVisible();
+    // While they render, the lesson waits for them: the card shows how far the droplet has got instead.
+    await expect(card.getByTestId('awaiting-videos')).toBeVisible();
+    await expect(card.locator('.md', { hasText: 'fixes carbon' })).toHaveCount(0);
 
-    // Done: the card swaps in the players on its own poll.
+    // Done: the card swaps in the players and the lesson on its own poll.
     expect((await bot.video(answerId, { status: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON })).status()).toBe(200);
     await expect(card.getByTestId('droplet-players')).toBeVisible({ timeout: 25_000 });
-    await expect(card.getByTestId('videos-rendering')).toHaveCount(0);
+    await expect(card.getByTestId('awaiting-videos')).toHaveCount(0);
+    await expect(card.locator('.md strong', { hasText: 'fixes carbon' })).toBeVisible();
     await expect(card.getByLabel('song video')).toHaveAttribute('src', SONG);
 
     // It is on the public tab, until Ada (an admin) hides it.

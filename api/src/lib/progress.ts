@@ -1,0 +1,142 @@
+/**
+ * Where the studio is while it makes a droplet, and whether the page holds the lesson text back for its videos.
+ *
+ * The studio reports at the start and the end of each step: the steps running now with how long each has run,
+ * the steps whose last try failed, and the bill so far (lib/breakdown.ts). While it writes the lesson the report
+ * goes on the question (PUT /api/questions/:id/progress), with whether the videos' steps come after; while it
+ * makes the videos it goes on the answer (PUT /api/answers/:id/video/progress), and its bill is the videos' bill
+ * so far. The page shows it as the bill of materials filling in, one line per step: done, running or waiting.
+ *
+ * The page holds the lesson text back while the videos are made, so a learner meets the droplet through its
+ * videos, not through a text the videos then repeat. Not for ever: the text shows once the videos are READY or
+ * FAILED, once a second attempt starts (the first went quiet or was given up), and LESSON_HOLD_MINUTES after the
+ * lesson was posted, whichever comes first. Each of these only ever becomes true, so a lesson once shown is never
+ * hidden again.
+ */
+import { breakdownError, serializeBreakdown, type Breakdown } from './breakdown.js';
+
+// The studio's step names are short (bundle, factcheck, timeline...); a bill caps them the same.
+const STEP_MAX_LENGTH = 40;
+// Two at a time in practice (the art and the audio run side by side); the cap keeps a report small.
+const STEPS_MAX = 12;
+
+const DEFAULT_LESSON_HOLD_MINUTES = 20;
+
+/** How long after the lesson is posted the page waits for its videos before it shows the text anyway. */
+export function lessonHoldMinutes(): number {
+  const n = parseInt(process.env.LESSON_HOLD_MINUTES ?? '', 10);
+  return Number.isNaN(n) || n < 0 ? DEFAULT_LESSON_HOLD_MINUTES : n;
+}
+
+/** A step running now, and when it started by this server's clock. */
+export interface RunningStep {
+  step: string;
+  startedAt: string;
+}
+
+/** What the page shows while a droplet is made: every step so far, and the ones running now. */
+export interface Progress {
+  running: RunningStep[];
+  failed: string[]; // steps whose last try failed and that are not running again yet
+  videos: boolean; // whether the videos' steps are part of this droplet
+  breakdown: Breakdown | null; // the bill so far: the lesson's, then the videos'
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+const isStep = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.length <= STEP_MAX_LENGTH;
+
+/**
+ * Null when a progress report can be stored, else why not: { running: [{ step, seconds }], failed?: [step],
+ * breakdown?, videos? }. `videos` is the lesson's report only: the videos' own report is sent by them.
+ */
+export function progressError(value: unknown, part: 'lesson' | 'videos'): string | null {
+  if (!isObject(value)) return 'the progress must be an object';
+  const { running, failed, videos, breakdown } = value;
+  if (!Array.isArray(running) || running.length > STEPS_MAX) return `running must be a list of at most ${STEPS_MAX} steps`;
+  for (const r of running) {
+    if (!isObject(r) || !isStep(r.step)) return `each running step must have a step name of 1 to ${STEP_MAX_LENGTH} characters`;
+    if (typeof r.seconds !== 'number' || !Number.isFinite(r.seconds) || r.seconds < 0) {
+      return 'each running step must say how many seconds it has run';
+    }
+  }
+  if (failed !== undefined && (!Array.isArray(failed) || failed.length > STEPS_MAX || !failed.every(isStep))) {
+    return `failed must be a list of at most ${STEPS_MAX} step names`;
+  }
+  if (videos !== undefined && (part !== 'lesson' || typeof videos !== 'boolean')) {
+    return part === 'lesson' ? 'videos must be true or false' : 'videos is only for the lesson\'s progress';
+  }
+  return breakdownError(breakdown);
+}
+
+/** A report as it is stored: each running step with when it started, so the page can count on from there. */
+export function storedProgress(value: Record<string, unknown>, now = new Date()) {
+  const running = (value.running as { step: string; seconds: number }[]).map((r) => ({
+    step: r.step,
+    startedAt: new Date(now.getTime() - r.seconds * 1000).toISOString(),
+  }));
+  return {
+    running,
+    failed: Array.isArray(value.failed) ? (value.failed as string[]) : [],
+    ...(typeof value.videos === 'boolean' && { videos: value.videos }),
+  };
+}
+
+function readRunning(raw: unknown): RunningStep[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((r): r is { step: string; startedAt: string } => isObject(r) && isStep(r.step) && typeof r.startedAt === 'string'
+      && !Number.isNaN(Date.parse(r.startedAt)))
+    .map((r) => ({ step: r.step, startedAt: new Date(r.startedAt).toISOString() }));
+}
+
+/** A stored report read back, keeping only the fields it knows. */
+export function readProgress(raw: unknown) {
+  const p = isObject(raw) ? raw : {};
+  return {
+    running: readRunning(p.running),
+    failed: Array.isArray(p.failed) ? p.failed.filter(isStep) : [],
+    videos: typeof p.videos === 'boolean' ? p.videos : null, // null: the studio did not say
+    breakdown: p.breakdown, // the lesson's bill so far, on the question's report
+  };
+}
+
+/**
+ * Whether the page holds the lesson text back for its videos, `now`. `video` is the answer's videos as the page
+ * reads them (a render gone quiet already reads as FAILED); `videosPlanned`, whether the studio said the videos
+ * come after the lesson, for the moment between the post and their first claim.
+ */
+export function awaitingVideos(
+  answer: { createdAt: Date; videoAttempts: number },
+  video: { status: string } | null,
+  videosPlanned: boolean,
+  now = new Date(),
+): boolean {
+  if (now.getTime() - answer.createdAt.getTime() >= lessonHoldMinutes() * 60_000) return false;
+  if (!video) return videosPlanned;
+  return video.status === 'RENDERING' && answer.videoAttempts <= 1;
+}
+
+/** The page's view of a topic still being written: its report, if the lease that sent it is still held. */
+export function lessonProgress(raw: unknown, leaseLive: boolean): Progress {
+  const p = readProgress(raw);
+  return {
+    running: leaseLive ? p.running : [], // a run that let its lease lapse has died: nothing of it is running
+    failed: p.failed,
+    videos: p.videos ?? true, // nothing said yet: the whole droplet, as the studio makes it by default
+    breakdown: serializeBreakdown(p.breakdown, undefined),
+  };
+}
+
+/** The page's view of a droplet whose lesson is posted and whose videos are still to come or being made. */
+export function videoProgress(raw: unknown, rendering: boolean, lessonBreakdown: unknown, videoBreakdown: unknown): Progress {
+  const p = readProgress(raw);
+  return {
+    running: rendering ? p.running : [],
+    failed: rendering ? p.failed : [],
+    videos: true,
+    breakdown: serializeBreakdown(lessonBreakdown, videoBreakdown),
+  };
+}

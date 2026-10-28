@@ -11,6 +11,7 @@ import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 import { breakdownError } from '../lib/breakdown.js';
+import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 
@@ -258,6 +259,33 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
     }
     return serializeQuestion(question);
+  });
+
+  // PUT /api/questions/:id/progress — agent: where the studio is while it writes the lesson (lib/progress.ts):
+  // { running: [{ step, seconds }], failed?, breakdown?, videos? }, sent at the start and the end of each step.
+  // The topic's card shows it as the bill of materials filling in. Only the agent holding the claim, while the
+  // topic has no lesson; it is not the lease, which only the claim renews.
+  app.put('/api/questions/:id/progress', { preHandler: [requireAgent] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const agentId = request.agent!.id;
+    const problem = progressError(request.body, 'lesson');
+    if (problem) return sendError(reply, 'VALIDATION_ERROR', problem);
+    const report = request.body as Record<string, unknown>;
+    const stored = { ...storedProgress(report), ...(report.breakdown !== undefined && { breakdown: report.breakdown }) };
+    const updated = await prisma.$queryRaw<{ id: string }[]>`
+      UPDATE questions SET progress = ${JSON.stringify(stored)}::jsonb
+      WHERE id = ${id} AND status = 'PENDING' AND "claimedById" = ${agentId}
+      RETURNING id
+    `;
+    await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+    if (updated.length === 0) {
+      const question = await prisma.question.findUnique({ where: { id }, select: { status: true } });
+      if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
+      if (question.status === 'ANSWERED') return sendError(reply, 'CONFLICT', 'Question already has an answer');
+      if (question.status === 'FAILED') return sendError(reply, 'CONFLICT', 'Question was marked failed');
+      return sendError(reply, 'CONFLICT', 'Only the agent holding the claim on this question can report its progress');
+    }
+    return reply.status(204).send();
   });
 
   // POST /api/questions/:id/fail — agent: give up on a question before it has a

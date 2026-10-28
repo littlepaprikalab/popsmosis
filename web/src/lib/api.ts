@@ -237,6 +237,20 @@ export interface Breakdown {
   complete: boolean; // every call priced
 }
 
+/** A step the studio is running now, and when it started by the API's clock. */
+export interface RunningStep {
+  step: string;
+  startedAt: string;
+}
+
+/** Where the studio is while it makes a droplet (api/src/lib/progress.ts): its bill filling in. */
+export interface Progress {
+  running: RunningStep[];
+  failed: string[]; // steps whose last try failed and that are not running again yet
+  videos: boolean; // whether the videos' steps are part of this droplet
+  breakdown: Breakdown | null; // the bill so far: the lesson's steps, then the videos'
+}
+
 export interface Answer {
   id: string;
   questionId: string;
@@ -250,6 +264,9 @@ export interface Answer {
   hidden: boolean; // an admin took it off the public Droplets tab
   replies: Reply[];
   awaitingAgent: boolean;
+  // True while the page holds the lesson text back until its videos are done (at most 20 minutes after the
+  // lesson was posted); absent from an API older than this page, which shows the text at once.
+  awaitingVideos?: boolean;
 }
 
 export interface Question {
@@ -261,6 +278,9 @@ export interface Question {
   createdAt: string;
   user: PublicUser | null; // null once the learner took it back: only an admin still sees it, with content ''
   answer: Answer | null;
+  // While the droplet is being made: the steps running and the bill so far. Null once there is nothing left
+  // to make; absent from an API older than this page.
+  progress?: Progress | null;
   isOwner: boolean;
   canDelete: boolean;
 }

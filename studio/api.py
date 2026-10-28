@@ -107,6 +107,12 @@ class Api:
     def fail(self, question_id: str, reason: str) -> dict:
         return self.request("POST", f"/api/questions/{question_id}/fail", {"reason": reason})
 
+    def report_progress(self, question_id: str, progress: dict) -> None:
+        """Where the lesson is, for the page (studio/ledger.py's progress()): the steps running now, the ones
+        whose last try failed, the bill so far, and whether the videos come after. 409 unless this agent holds
+        the claim and the topic has no lesson yet."""
+        self.request("PUT", f"/api/questions/{question_id}/progress", progress)
+
     # --- the videos (docs/PLAN.md, section 10) ----------------------------------
 
     def upload_url(self, answer_id: str, bucket: str, file: str) -> dict:
@@ -155,6 +161,12 @@ class Api:
         """
         return self.request("POST", f"/api/answers/{answer_id}/video/claim",
                             {"attempt": attempt} if attempt is not None else {})
+
+    def report_video_progress(self, answer_id: str, attempt: int | None, progress: dict) -> None:
+        """Where the render is, for the page: as report_progress, its bill the videos' so far. 409 unless the
+        videos are rendering under this attempt."""
+        body = {**progress, **({"attempt": attempt} if attempt is not None else {})}
+        self.request("PUT", f"/api/answers/{answer_id}/video/progress", body)
 
     def videos_queue(self, limit: int = 1) -> list[dict]:
         """This agent's droplets whose render died with its machine, each claimed as its next attempt."""

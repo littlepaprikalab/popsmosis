@@ -44,7 +44,8 @@ Optional API tuning: `DATABASE_POOL_SIZE` (default 5), `QUESTIONS_PER_USER_PER_D
 (default 30; comments on the Droplets tab), `ATTACHMENT_RETENTION_DAYS` (default
 30; how long the files sent with messages keep their bytes in Postgres, 0 for good),
 `VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
-failed).
+failed), `LESSON_HOLD_MINUTES` (default 20; how long after a lesson is posted `/learn` waits
+for its videos before it shows the text anyway, 0 never waits).
 
 Nothing else. There is no Supabase Auth or Redis in popsmosis; Supabase is the Postgres
 and, for the droplet videos, Storage.
@@ -319,6 +320,12 @@ since the old sign-in page does not send the Terms box the new API requires. Do 
 the API back past this change once anyone has taken back a request or deleted their account:
 the old code expects every request to have a learner and its `/learn` breaks on the ones that
 do not. Roll forward instead.
+
+`20261103120000_progress` (the bill filling in while a droplet is made, and the lesson text
+waiting for its videos) adds a nullable `JSONB` column to `questions` (`progress`) and one to
+`answers` (`videoProgress`); it rewrites no rows and needs no downtime. Deploy
+`popsmosis-api` first: the web app before it shows every lesson at once, as it did, and a
+studio before it has its progress reports refused (404), prints that, and goes on.
 
 ## Troubleshooting
 

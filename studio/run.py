@@ -151,6 +151,8 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
             api = api or Api.from_env()
             with ledger.at_step(step):
                 question = claim(api, question_id) if step != "post" else None
+                if step != "post":  # the post makes the answer, which the videos' reports go on
+                    report_progress(job, api, {step: step_clock})
                 reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
         except Stop as e:
@@ -165,6 +167,9 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
         seconds = round(time.monotonic() - step_clock, 1)
         done_steps.append({"step": step, "seconds": seconds, "result": result})
         print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
+        if result == FAILED and step != "post" and api is not None:
+            # The page says so until the retry starts it again, and bills the try that failed.
+            report_progress(job, api, {}, failed=(step,), ending=(step, seconds))
         if result != DONE:
             break
     reason = one_line(reason)
@@ -183,6 +188,20 @@ def claim(api: Api, question_id: str) -> dict:
     except ApiError as e:
         result, reason = api_outcome(e)
         raise (Stop if result == STOPPED else StepFailed)(f"claim: {reason}") from e
+
+
+def report_progress(job: Path, api: Api, running: dict[str, float], failed: tuple[str, ...] = (),
+                    ending: tuple[str, float] | None = None) -> None:
+    """Tell the page where the lesson is (studio/ledger.py's progress()), and whether the videos come after it.
+    Best effort: a report that does not get through is never a step's outcome."""
+    from studio import videos  # it imports this module
+
+    try:
+        report = ledger.progress(job, "lesson", running, failed, ending)
+        report["videos"] = videos.unavailable() is None
+        api.report_progress(job.name, report)
+    except Exception as e:
+        print(f"progress not reported: {type(e).__name__}: {e}", file=sys.stderr)
 
 
 def api_outcome(e: ApiError) -> tuple[str, str]:

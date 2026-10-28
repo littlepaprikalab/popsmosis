@@ -127,8 +127,10 @@ class Record:
         self.job = job
         self.started, self.clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
         self.steps: list[dict] = []
-        self.running: list[str] = []
+        self.running: dict[str, float] = {}  # step -> the time.monotonic() it started at
+        self.failed: set[str] = set()  # steps whose last try in this run failed
         self.lock = threading.Lock()
+        self.reporting = threading.Lock()  # one report at a time, so an older one never lands after a newer
 
     def _save(self) -> None:
         step = min(self.running, key=media.MEDIA_STEPS.index) if self.running else "videos"
@@ -138,15 +140,33 @@ class Record:
     def begin(self, step: str) -> None:
         print(f"{step}: running", file=sys.stderr)
         with self.lock:
-            self.running.append(step)
+            self.running[step] = time.monotonic()
+            self.failed.discard(step)
             self._save()
 
     def end(self, step: str, seconds: float, result: str) -> None:
         print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
         with self.lock:
-            self.running.remove(step)
+            del self.running[step]
+            if result == FAILED:
+                self.failed.add(step)
             self.steps.append({"step": step, "seconds": seconds, "result": result})
             self._save()
+
+    def report(self, api: Api) -> None:
+        """Tell the page where the render is: the steps running now, the failed ones and the videos' bill so
+        far (studio/ledger.py's progress()). Best effort: a report that does not get through is never a step's
+        outcome, and one from a run that was taken over is refused by the API."""
+        answer = answer_of(self.job)
+        if not answer:
+            return
+        with self.reporting:
+            with self.lock:
+                running, failed = dict(self.running), tuple(self.failed)
+            try:
+                api.report_video_progress(answer, held_attempt(self.job), ledger.progress(self.job, "videos", running, failed))
+            except Exception as e:
+                print(f"progress not reported: {type(e).__name__}: {e}", file=sys.stderr)
 
     def finish(self, result: str, step: str, reason: str) -> tuple[str, str, str]:
         reason = one_line(reason)
@@ -218,6 +238,7 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api, ask, record: Record,
         try:
             with ledger.at_step(step):
                 claim(api, job)  # the heartbeat: a render that stops renewing is recovered by a later run
+                record.report(api)
                 reason = media.step_module(step).run(job, ask=ask) or f"{step} done"
             result = DONE
         except Stop as e:
@@ -231,6 +252,10 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api, ask, record: Record,
             result, reason = FAILED, f"{type(e).__name__}: {e}"
         ran = True
         record.end(step, round(time.monotonic() - clock, 1), result)
+        # Done or failed, the page hears it now: the other branch may run on for minutes. The upload's READY
+        # already carried the last bill, and a run that was stopped has nothing to report.
+        if result == FAILED or (result == DONE and step != "upload"):
+            record.report(api)
         if result != DONE:
             break
     return result, step, reason, ran

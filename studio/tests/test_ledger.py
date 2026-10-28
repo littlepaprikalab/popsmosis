@@ -143,6 +143,22 @@ def test_a_breakdown_bigger_than_the_api_takes_is_left_out_rather_than_refused(t
     assert ledger.try_breakdown(tmp_path, "lesson") is None
 
 
+def test_progress_is_the_steps_running_the_failed_ones_and_the_bill_so_far(tmp_path, monkeypatch):
+    monkeypatch.setattr(ledger.time, "monotonic", lambda: 100.0)
+    write_runs(tmp_path, {"part": "videos", "seconds": 50.0, "result": "FAILED", "step": "art",
+                          "steps": [{"step": "art", "seconds": 50.0, "result": "FAILED"}]})
+    with ledger.at_step("audio"):
+        ledger.log(tmp_path, [call("song", model="music_v1", cost=None, credits=2000)])
+    report = ledger.progress(tmp_path, "videos", {"timing": 98.0, "art": 90.0}, failed=("art", "locate"))
+    # In the order the steps run, with how long each has run; a failed step running again is running, not failed.
+    assert report["running"] == [{"step": "art", "seconds": 10.0}, {"step": "timing", "seconds": 2.0}]
+    assert report["failed"] == ["locate"]
+    # The running audio's call is billed already; the step has no time of its own until it ends.
+    assert [(s["step"], s["tries"]) for s in report["breakdown"]["steps"]] == [("art", 1), ("audio", 0)]
+    ended = ledger.progress(tmp_path, "videos", {}, ending=("audio", 30.0))
+    assert [(s["step"], s["tries"], s["seconds"]) for s in ended["breakdown"]["steps"]] == [("art", 1, 50.0), ("audio", 1, 30.0)]
+
+
 def test_a_job_with_nothing_done_has_an_empty_breakdown(tmp_path):
     assert ledger.breakdown(tmp_path, "videos") == {"steps": [], "seconds": None}
 

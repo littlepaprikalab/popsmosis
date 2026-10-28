@@ -6,6 +6,7 @@ import { FAILED_REASON_MAX_LENGTH, videoStaleMinutes } from '../lib/droplet.js';
 import { videoMaxAttempts } from '../lib/video-claim.js';
 import { parseLimit, validateString } from '../lib/validation.js';
 import { breakdownError } from '../lib/breakdown.js';
+import { progressError, storedProgress } from '../lib/progress.js';
 
 // The claim on a droplet's videos (lib/video-claim.ts): who is rendering them, which
 // attempt this is, and the queue that hands a render whose machine died to a later run.
@@ -65,7 +66,7 @@ export default async function videoRoutes(app: FastifyInstance) {
     if (claimed.length === 0) {
       claimed = await prisma.$queryRaw<{ id: string }[]>`
         UPDATE answers
-        SET "videoStatus" = 'RENDERING', "videoUpdatedAt" = now(), "videoError" = NULL,
+        SET "videoStatus" = 'RENDERING', "videoUpdatedAt" = now(), "videoError" = NULL, "videoProgress" = NULL,
             "videoAttempts" = "videoAttempts" + 1
         WHERE id = ${id} AND "agentId" = ${agentId} AND bundle IS NOT NULL
           AND "videoAttempts" < ${videoMaxAttempts()}
@@ -104,7 +105,7 @@ export default async function videoRoutes(app: FastifyInstance) {
     // runs different droplets.
     const claimed = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE answers
-      SET "videoStatus" = 'RENDERING', "videoUpdatedAt" = now(), "videoError" = NULL,
+      SET "videoStatus" = 'RENDERING', "videoUpdatedAt" = now(), "videoError" = NULL, "videoProgress" = NULL,
           "videoAttempts" = "videoAttempts" + 1
       WHERE id IN (
         SELECT id FROM answers
@@ -126,6 +127,40 @@ export default async function videoRoutes(app: FastifyInstance) {
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
     return { data: answers.map((a) => serializeClaim(a)) };
+  });
+
+  // PUT /api/answers/:id/video/progress — { attempt?, running: [{ step, seconds }], failed?, breakdown? }: where
+  // the render is (lib/progress.ts), sent at the start and the end of each media step. Its breakdown is the
+  // videos' bill so far, until READY or the give-up sends the last one. Only while the videos are RENDERING, and
+  // with an attempt, only for that attempt, so a run that was taken over cannot write over the one that replaced
+  // it. It is not the heartbeat: the claim before each step is.
+  app.put('/api/answers/:id/video/progress', { preHandler: [requireAgent] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const agentId = request.agent!.id;
+    const problem = progressError(request.body, 'videos');
+    if (problem) return sendError(reply, 'VALIDATION_ERROR', problem);
+    const report = request.body as Record<string, unknown>;
+    const attempt = attemptOf(report.attempt);
+    if (attempt === 'invalid') return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
+    const breakdown = report.breakdown === undefined ? null : JSON.stringify(report.breakdown);
+
+    const updated = await prisma.$queryRaw<{ id: string }[]>`
+      UPDATE answers
+      SET "videoProgress" = ${JSON.stringify(storedProgress(report))}::jsonb,
+          "videoBreakdown" = COALESCE(${breakdown}::jsonb, "videoBreakdown")
+      WHERE id = ${id} AND "agentId" = ${agentId} AND "videoStatus" = 'RENDERING'
+        AND (${attempt}::int IS NULL OR "videoAttempts" = ${attempt}::int)
+      RETURNING id
+    `;
+    await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+    if (updated.length === 0) {
+      const answer = await prisma.answer.findUnique({ where: { id }, select: answerSelect });
+      if (!answer) return sendError(reply, 'NOT_FOUND', 'Answer not found');
+      if (answer.agentId !== agentId) return sendError(reply, 'FORBIDDEN', 'You can only report on your own answers');
+      return sendError(reply, 'CONFLICT', answer.videoStatus === 'RENDERING'
+        ? 'Another run has taken over these videos' : `The videos are ${answer.videoStatus ?? 'not started'}, not rendering`);
+    }
+    return reply.status(204).send();
   });
 
   // POST /api/answers/:id/video/fail — { reason, attempt, breakdown? }: give the videos up

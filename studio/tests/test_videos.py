@@ -28,6 +28,8 @@ class VideoApi(FakeApi):
         self.taken = False
         self.queue = []
         self.given_up = None
+        self.video_reports = []  # (attempt, progress) for each report, as sent
+        self.lock = threading.Lock()
 
     def claim_videos(self, answer_id, attempt=None):
         self._call("claim_videos", answer_id, attempt)
@@ -36,6 +38,11 @@ class VideoApi(FakeApi):
         if attempt is None or attempt != self.attempt:
             self.attempt += 1
         return {"answerId": answer_id, "attempt": self.attempt}
+
+    def report_video_progress(self, answer_id, attempt, progress):
+        with self.lock:
+            self._call("report_video_progress", answer_id, attempt)
+            self.video_reports.append((attempt, progress))
 
     def videos_queue(self, limit=1):
         self._call("videos_queue", limit)
@@ -100,6 +107,46 @@ def test_a_fresh_run_makes_art_and_audio_at_once_then_the_rest_in_order(setup):
     record = operator_run.read_jsonl(jobs.ROOT / "q1" / "runs.jsonl")[-1]
     assert record["part"] == "videos" and record["result"] == "DONE"
     assert not (jobs.ROOT / "q1" / "run.current.json").exists()
+
+
+def running(api):
+    return [sorted(r["step"] for r in progress["running"]) for _, progress in api.video_reports]
+
+
+def test_each_step_tells_the_page_when_it_starts_and_ends_with_the_bill_so_far(setup):
+    api = VideoApi()
+    posted()
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert all(attempt == 1 for attempt, _ in api.video_reports)
+    seen = running(api)
+    # The art and the audio run side by side, and the page sees both running at once.
+    assert ["art", "audio"] in seen
+    # Every step is reported running, and the last report before the upload's READY has it running alone.
+    assert all(any(step in r for r in seen) for step in media.MEDIA_STEPS)
+    assert seen[-1] == ["upload"]
+    # A start and an end for each step, but none after the upload: its READY carried the last bill.
+    assert len(seen) == 2 * len(media.MEDIA_STEPS) - 1
+    last_bill = api.video_reports[-1][1]["breakdown"]
+    assert [s["step"] for s in last_bill["steps"]] == ["art", "locate", "audio", "timing", "timeline", "render"]
+    assert all(progress["failed"] == [] for _, progress in api.video_reports)
+
+
+def test_a_failed_step_is_reported_failed_while_the_other_branch_goes_on(setup):
+    api = VideoApi()
+    posted()
+    setup.fail["art"] = 1
+    assert videos.videos("q1", api=api)[:2] == ("FAILED", "art")
+    after = [progress for _, progress in api.video_reports if "art" in progress["failed"]]
+    assert after and all(not any(r["step"] == "art" for r in p["running"]) for p in after)
+    assert [s for s in after[-1]["breakdown"]["steps"] if s["step"] == "art"][0]["tries"] == 1
+
+
+def test_a_report_the_api_refuses_never_fails_the_render(setup, capsys):
+    api = VideoApi()
+    api.errors["report_video_progress"] = ApiError(409, "CONFLICT", "Another run has taken over these videos")
+    posted()
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert "progress not reported" in capsys.readouterr().err
 
 
 def test_a_failed_step_lets_the_other_branch_finish_and_the_retry_resumes_there(setup):

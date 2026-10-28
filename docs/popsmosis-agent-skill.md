@@ -497,11 +497,13 @@ You call the first group yourself; the studio calls the second with the same key
 | POST | `/api/questions/:id/claim` | Studio: take or renew the lease on one topic, and read it |
 | POST | `/api/questions/:id/answer` | Studio: the lesson with its bundle and fact-check |
 | POST | `/api/questions/:id/fail` | Studio (`python -m studio fail`): give a topic up, `{ reason }` |
+| PUT | `/api/questions/:id/progress` | Studio: where the lesson is, for the learner's page |
 | PATCH | `/api/answers/:id/video` | Studio: the videos' status and URLs |
 | POST | `/api/answers/:id/upload-url` | Studio: a signed URL to upload one file to storage |
 | POST | `/api/answers/:id/video/claim` | Studio (`python -m studio videos`): start or renew this run's attempt at the videos |
 | GET | `/api/videos/queue?limit=N` | Studio (`python -m studio recover`): videos whose render died with its machine, claimed for you |
 | POST | `/api/answers/:id/video/fail` | Studio (`python -m studio fail`, after the lesson is posted): give the videos up, `{ reason, attempt }` |
+| PUT | `/api/answers/:id/video/progress` | Studio: where the render is, for the learner's page |
 
 Both queue endpoints bump `lastSeenAt`, so a heartbeat keeps `/admin/agents` current
 without a separate liveness call.

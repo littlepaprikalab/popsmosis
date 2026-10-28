@@ -19,8 +19,10 @@ code wins; the README lists the endpoints as built.
    - **Lesson video**: narrated, ending with a worked exam question (FRQ).
    - **Song video**: the same content sung, the diagram labels synced to the vocals, the
      same FRQ at the end.
-5. The page shows the droplet: the lesson text as soon as it passes the fact-check, then
-   both videos when they finish rendering, updating in place without a reload.
+5. The page shows the droplet: both videos when they finish rendering, with the lesson
+   text under them, updating in place without a reload. Until then the card shows the
+   droplet's bill of materials filling in, step by step, as its progress; the text waits
+   for the videos at most 20 minutes after it is posted (README, "While a droplet is made").
 6. The learner asks **follow-ups** under the droplet, and the teacher answers them on its
    next pass.
 7. Every finished droplet also appears on a public **Droplets** tab, where anyone can
@@ -602,6 +604,8 @@ the videos' (`videoStatus`).
 | Agent | POST | `/api/questions/:id/claim` | Take or renew the lease on one topic, and read it with its attachments |
 | Agent | POST | `/api/questions/:id/answer` | As today, plus `bundle` and `factcheck`, together; refused unless the fact-check passed |
 | Agent | POST | `/api/questions/:id/fail` | `{ reason }`; the agent that last claimed it only |
+| Agent | PUT | `/api/questions/:id/progress` | Where the studio is while it writes the lesson: the steps running, the bill so far, whether videos follow |
+| Agent | PUT | `/api/answers/:id/video/progress` | Where the render is: the media steps running and the videos' bill so far; the current attempt only |
 | Agent | PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, error? }`; the agent's own answers only |
 | Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` on the API) |
 | Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=`; `?tag=` those tagged with it |
@@ -848,6 +852,9 @@ seams, which no lane owns:
   gives up the videos (`POST /api/answers/:id/video/fail`), never the lesson.
 - **Heartbeat.** `videos` renews its attempt before every media step, so the API can
   tell a live render from one whose machine died (`VIDEO_STALE_MINUTES`, 60).
+- **Progress.** `run` and `videos` report the steps running and the bill so far at the
+  start and end of every step, so the page shows the droplet being made while the lesson
+  text waits for the videos (README, "While a droplet is made").
 - **The tool's time limit.** `videos <id> --background` returns at once; the skill file
   answers follow-ups meanwhile, then calls `python -m studio wait <id>` (at most 9
   minutes a call) until the outcome line, because the render dies with the run.
