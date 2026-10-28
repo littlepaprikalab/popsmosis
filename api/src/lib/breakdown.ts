@@ -74,7 +74,8 @@ const round = (v: number, places: number) => Math.round(v * 10 ** places) / 10 *
  */
 const MAKERS: [prefix: string, maker: string][] = [
   ['claude-', 'Anthropic'],
-  ['muse-', 'Meta'], // the brain with BRAIN_PROVIDER=meta (studio/brain.py)
+  ['muse-', 'Meta'], // with BRAIN_PROVIDER=meta: the brain, the helper and Muse Image (studio/brain.py, studio/muse.py)
+  ['sam-', 'Meta'], // SAM 3.1, which finds the structures in Muse Image's art (studio/steps/locate.py)
   ['htdemucs', 'Meta'], // Demucs, the model and its package, from Meta AI Research (facebookresearch/demucs)
   ['demucs', 'Meta'],
   ['mms-', 'Meta'], // the forced aligner from Meta's Massively Multilingual Speech

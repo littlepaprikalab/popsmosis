@@ -117,7 +117,9 @@ def test_usage_and_cost():
     call = brain.claude_call(fell_back, "claude-opus-5-5", "brain", "bundle", 1.0)
     assert (call.input_tokens, call.output_tokens, call.model, call.fell_back) == (2_000, 3_000, "claude-opus-5", True)
     assert call.cost_usd == pytest.approx(1_000 * 4e-6 + 1_000 * 5e-6 + 3_000 * 25e-6)
-    assert brain.cost("muse-spark-1.3", 1, 1) is None
+    assert brain.cost("muse-spark-1.3", 1_000_000, 1_000_000) == pytest.approx(5.50)
+    assert brain.cost("muse-spark-1.3-contributor", 1_000_000, 1_000_000) == pytest.approx(0.30)
+    assert brain.cost("muse-glimmer", 1, 1) is None  # not on Meta's API: no price
 
 
 class FakeStream:
@@ -176,6 +178,63 @@ def test_meta_request_shape(tmp_path):
     assert brain.meta_request("helper", "Hi", None, [], None) == {
         "model": "muse-spark-1.3", "messages": [{"role": "user", "content": [{"type": "text", "text": "Hi"}]}],
     }
+
+
+def test_the_meta_brains_model_comes_from_the_environment_and_the_helper_stays(monkeypatch):
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", " muse-spark-1.3\n")  # pasted with stray whitespace
+    assert brain.meta_request("brain", "Write.", None, [], None)["model"] == "muse-spark-1.3"
+    assert brain.meta_request("helper", "Look.", None, [], None)["model"] == "muse-spark-1.3"
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "muse-spark-1.3-contributor")
+    assert brain.meta_request("brain", "Write.", None, [], None)["model"] == "muse-spark-1.3-contributor"
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "")
+    assert brain.meta_request("brain", "Write.", None, [], None)["model"] == "muse-wonder-1.0"
+
+
+def test_a_brain_model_left_over_from_the_other_provider_fails_before_anything_is_sent(monkeypatch):
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "claude-haiku-5-5")
+    with pytest.raises(brain.BrainError, match="claude-haiku-5-5 is not a Muse model, and BRAIN_PROVIDER is meta"):
+        brain.meta_request("brain", "Write.", None, [], None)
+    assert brain.meta_request("helper", "Look.", None, [], None)["model"] == "muse-spark-1.3"
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "muse-spark-1.3")
+    with pytest.raises(brain.BrainError, match="muse-spark-1.3 is not a Claude model, and BRAIN_PROVIDER is claude"):
+        brain.claude_request("brain", "Write.", None, [], None)
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setenv("MODEL_API_KEY", "x")
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "claude-opus-5-5")
+    with pytest.raises(brain.BrainError, match="not a Muse model"):
+        brain.ask("brain", "Hi")  # before any client or request is made
+
+
+def test_a_meta_answer_naming_its_model_another_way_is_priced_as_asked(monkeypatch):
+    answer = NS(model="muse-spark-1.3-20261001", usage=NS(prompt_tokens=1_000_000, completion_tokens=0),
+                choices=[NS(finish_reason="stop", message=NS(content="{}", refusal=None))])
+    monkeypatch.setitem(brain._clients, "meta", NS(chat=NS(completions=NS(create=lambda **request: answer))))
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "muse-spark-1.3")
+    monkeypatch.setattr(brain, "calls", [])
+    brain.ask("brain", "Hi")
+    assert brain.calls[-1].model == "muse-spark-1.3-20261001" and brain.calls[-1].cost_usd == pytest.approx(1.25)
+
+
+@pytest.mark.parametrize("settings, problem", [
+    ({"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k"}, None),
+    ({"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k", "STUDIO_BRAIN_MODEL": "muse-spark-1.3"}, None),
+    ({"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_MODEL": "claude-haiku-5-5"}, None),
+    ({"BRAIN_PROVIDER": "meta"}, "BRAIN_PROVIDER=meta needs MODEL_API_KEY"),
+    ({"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k", "STUDIO_BRAIN_MODEL": "claude-haiku-5-5"},
+     "STUDIO_BRAIN_MODEL=claude-haiku-5-5 is not a Muse model"),
+    ({"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_MODEL": "muse-spark-1.3"}, "is not a Claude model"),
+    ({"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_EFFORT": "hihg"}, "STUDIO_BRAIN_EFFORT must be one of"),
+    ({}, "BRAIN_PROVIDER=claude needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY"),
+    ({"BRAIN_PROVIDER": "Meta", "MODEL_API_KEY": "k"}, "BRAIN_PROVIDER must be claude or meta, not 'Meta'"),
+])
+def test_the_brains_settings_are_checked_in_one_place(monkeypatch, settings, problem):
+    for name in (*brain.CLAUDE_KEY_VARS, "MODEL_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in settings.items():
+        monkeypatch.setenv(name, value)
+    found = brain.settings_problem()
+    assert found is None if problem is None else problem in found
 
 
 def test_each_provider_needs_its_own_key(monkeypatch):

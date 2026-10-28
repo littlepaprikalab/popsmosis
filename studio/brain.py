@@ -6,9 +6,12 @@ BRAIN_PROVIDER picks the models behind the two thinking roles (docs/PLAN.md, sec
     brain    claude-opus-5-5, effort high      muse-wonder-1.0
     helper   claude-haiku-5-5, effort low      muse-spark-1.3
 
-On the Claude provider, STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's
-model and effort; unset or empty, each keeps the default above. The meta provider
-ignores both, and the helper has no such setting.
+STUDIO_BRAIN_MODEL sets the brain's model on either provider: a Claude model on claude, a
+Muse model on meta (muse-spark-1.3 vets a change for about a quarter of Muse Wonder's
+price). STUDIO_BRAIN_EFFORT sets its effort, on claude only. Unset or empty, each keeps
+the default above, and the helper has no such setting. BRAIN_PROVIDER also picks who
+makes the art: the brain draws SVG on claude, Muse Image paints it on meta
+(studio/steps/art.py).
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -32,6 +35,7 @@ from typing import Sequence
 from pydantic import BaseModel, ValidationError
 
 ROLES = ("brain", "helper")
+PROVIDERS = ("claude", "meta")
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
@@ -44,6 +48,7 @@ META = {
     "helper": {"model": "muse-spark-1.3"},
 }
 META_BASE_URL = "https://api.meta.ai/v1"
+META_KEY_VAR = "MODEL_API_KEY"
 
 # The effort levels Claude accepts (output_config.effort).
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
@@ -59,15 +64,24 @@ CLAUDE_KEY_VARS = ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
 # fallback, so only the brain asks for one, and not when it runs on Haiku.
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-# USD per million tokens (input, output). Opus 5 and Opus 4.8 are fallback targets.
-# Muse Spark's price is not known yet, so its calls report no cost.
+# USD per million tokens (input, output). Opus 5 and Opus 4.8 are fallback targets. A Muse
+# Spark Contributor model is Muse Spark at a discount for letting Meta train on all it is
+# sent (dev.meta.ai/docs/pricing-rate-limits).
 PRICES = {
     "claude-opus-5-5": (4.00, 20.00),
     "claude-opus-5": (5.00, 25.00),
     "claude-opus-4-8": (5.00, 25.00),
     "claude-haiku-5-5": (0.10, 0.50),
     "muse-wonder-1.0": (4.00, 20.00),
+    "muse-spark-1.3": (1.25, 4.25),
+    "muse-spark-1.2": (1.25, 4.25),
+    "muse-spark-1.1": (1.25, 4.25),
+    "muse-spark-1.3-contributor": (0.10, 0.20),
+    "muse-spark-1.2-contributor": (0.10, 0.20),
 }
+# What each provider's model ids start with, so a STUDIO_BRAIN_MODEL left over from the
+# other provider is caught before anything is claimed or sent (settings_problem()).
+MODEL_PREFIXES = {"claude": "claude-", "meta": "muse-"}
 
 MEDIA_TYPES = {
     ".png": "image/png",
@@ -164,16 +178,46 @@ def ask(
     """
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}, not {role!r}")
-    provider = os.environ.get("BRAIN_PROVIDER", "claude")
-    if provider == "claude":
+    if provider() == "claude":
         texts = _ask_claude(role, prompt, schema, images, system, label or role)
-    elif provider == "meta":
-        texts = _ask_meta(role, prompt, schema, images, system, label or role)
     else:
-        raise ValueError(f"BRAIN_PROVIDER must be claude or meta, not {provider!r}")
+        texts = _ask_meta(role, prompt, schema, images, system, label or role)
     if schema is None:
         return {"text": texts[0]}
     return parse(schema, texts)
+
+
+def provider() -> str:
+    """BRAIN_PROVIDER: claude (the default) or meta. It also picks who makes the art (studio/steps/art.py)."""
+    name = os.environ.get("BRAIN_PROVIDER", "claude")
+    if name not in PROVIDERS:
+        raise ValueError(f"BRAIN_PROVIDER must be claude or meta, not {name!r}")
+    return name
+
+
+def meta_key() -> str:
+    """The Meta API key every Meta model here takes: the brain's, Muse Image's and SAM's."""
+    key = os.environ.get(META_KEY_VAR)
+    if not key:
+        raise BrainError(f"BRAIN_PROVIDER=meta needs {META_KEY_VAR}")
+    return key
+
+
+def settings_problem() -> str | None:
+    """What is wrong with the brain's settings (BRAIN_PROVIDER, its key, STUDIO_BRAIN_MODEL and
+    STUDIO_BRAIN_EFFORT), or None. The runners ask before they claim anything, so a setting
+    left wrong stops the run instead of failing, and giving up, one topic after another."""
+    try:
+        if provider() == "meta":
+            brain_model("meta")
+            meta_key()
+        else:
+            claude_brain()
+            if not claude_key():
+                raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
+    except (ValueError, BrainError) as e:
+        return str(e)
+    return None
 
 
 def parse(schema: type[BaseModel], texts: Sequence[str]) -> dict:
@@ -249,9 +293,19 @@ def claude_key() -> str | None:
     return next((os.environ[name] for name in CLAUDE_KEY_VARS if os.environ.get(name)), None)
 
 
+def brain_model(provider_name: str) -> str:
+    """The brain's model on a provider: STUDIO_BRAIN_MODEL, else that provider's default."""
+    defaults = {"claude": CLAUDE, "meta": META}[provider_name]
+    model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or defaults["brain"]["model"]
+    if not model.startswith(MODEL_PREFIXES[provider_name]):
+        raise BrainError(f"STUDIO_BRAIN_MODEL={model} is not a {'Claude' if provider_name == 'claude' else 'Muse'} "
+                         f"model, and BRAIN_PROVIDER is {provider_name}: change one or unset STUDIO_BRAIN_MODEL")
+    return model
+
+
 def claude_brain() -> tuple[str, str]:
     """The brain's model and effort: STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT, else the defaults."""
-    model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or CLAUDE["brain"]["model"]
+    model = brain_model("claude")
     effort = os.environ.get("STUDIO_BRAIN_EFFORT", "").strip() or CLAUDE["brain"]["effort"]
     if effort not in EFFORTS:
         raise BrainError(f"STUDIO_BRAIN_EFFORT must be one of {', '.join(EFFORTS)}, not {effort!r}")
@@ -363,8 +417,8 @@ def claude_texts(message) -> list[str]:
 
 
 # --- Meta ---------------------------------------------------------------------
-# Untested until MODEL_API_KEY exists. Muse takes OpenAI-style chat completions;
-# whether it accepts an effort setting is not known yet, so none is sent.
+# Untested until MODEL_API_KEY exists. Muse takes OpenAI-style chat completions. No
+# effort is sent: STUDIO_BRAIN_EFFORT is Claude's, and Muse keeps its own default.
 
 
 def meta_request(
@@ -378,7 +432,8 @@ def meta_request(
     content.append({"type": "text", "text": prompt})
     messages = [{"role": "system", "content": system}] if system else []
     messages.append({"role": "user", "content": content})
-    request = {"model": META[role]["model"], "messages": messages}
+    model = brain_model("meta") if role == "brain" else META[role]["model"]
+    request = {"model": model, "messages": messages}
     if schema is not None:
         request["response_format"] = {
             "type": "json_schema",
@@ -392,10 +447,7 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
 
     request = meta_request(role, prompt, schema, images, system)
     if "meta" not in _clients:
-        key = os.environ.get("MODEL_API_KEY")
-        if not key:
-            raise BrainError("BRAIN_PROVIDER=meta needs MODEL_API_KEY")
-        _clients["meta"] = openai.OpenAI(api_key=key, base_url=META_BASE_URL)
+        _clients["meta"] = openai.OpenAI(api_key=meta_key(), base_url=META_BASE_URL)
     started = time.monotonic()
     try:
         response = _clients["meta"].chat.completions.create(**request)
@@ -407,8 +459,11 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
     usage = response.usage
     input_tokens = usage.prompt_tokens if usage else 0
     output_tokens = usage.completion_tokens if usage else 0
-    _record(Call(label, role, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens),
-                      round(seconds, 1), choice.finish_reason or ""))
+    # Priced as answered, or as asked if Meta names the model some other way (a dated id).
+    price = cost(model, input_tokens, output_tokens)
+    if price is None:
+        price = cost(request["model"], input_tokens, output_tokens)
+    _record(Call(label, role, model, input_tokens, output_tokens, price, round(seconds, 1), choice.finish_reason or ""))
     if choice.message.refusal or choice.finish_reason == "content_filter":
         raise Refused(model, explanation=choice.message.refusal)
     if choice.finish_reason == "length":

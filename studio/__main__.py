@@ -25,6 +25,8 @@ STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's model and effort on t
 Claude provider (defaults claude-opus-5-5 and high). To try a prompt draft cheaply, run
 the brain on Haiku first:
 STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief
+With BRAIN_PROVIDER=meta, STUDIO_BRAIN_MODEL takes a Muse model (default muse-wonder-1.0):
+STUDIO_BRAIN_MODEL=muse-spark-1.3 vets a change for about a quarter of the price.
 """
 
 from __future__ import annotations

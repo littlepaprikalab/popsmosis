@@ -92,25 +92,27 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 - **Two agents keep a public record on Inkmory.** Claude, the operator, and Muse Wonder,
   the planner, each read who they are before a run and write down what happened after it
   (section 11).
-- **The brain is swappable.** `BRAIN_PROVIDER` picks the models for the thinking roles.
-  It defaults to `claude` because we do not have the Meta API key yet. Switch to `meta`
-  as soon as the key arrives: this is a Meta hackathon, so the submission runs on Meta.
+- **The brain is swappable.** `BRAIN_PROVIDER` picks the models for the thinking roles,
+  and who makes the art (step 3). It defaults to `claude`. Switch to `meta` once the key
+  is in the routine's environment: this is a Meta hackathon, so the submission runs on Meta.
 
 | Role | `BRAIN_PROVIDER=claude` (default for now) | `BRAIN_PROVIDER=meta` |
 |---|---|---|
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` | Muse Wonder (`muse-wonder-1.0`) |
 | **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
-With `BRAIN_PROVIDER=claude`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` change the
-brain's model and effort; unset, they are the defaults above. The helper and the Meta
-models are set in `studio/brain.py`.
+`STUDIO_BRAIN_MODEL` changes the brain's model on either provider: a Claude model with
+`claude`, a Muse model with `meta` (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to
+vet a change; its Contributor version is cheaper still, but Meta may train on what it is
+sent, so test topics only). `STUDIO_BRAIN_EFFORT` changes the effort with `claude`.
+Unset, they are the defaults above. The helper's models are set in `studio/brain.py`.
 
-Every other job has one provider, whatever the brain:
+The other jobs:
 
 | Job | Made by |
 |---|---|
-| Diagrams | Muse Image (`muse-image-1.0`); brain-drawn SVG until the Meta key arrives (step 3) |
-| Structure masks | SAM 3.1 (`sam-3.1`), with a helper box as the fallback |
+| Diagrams | Muse Image (`muse-image-1.0`) with `BRAIN_PROVIDER=meta`; brain-drawn SVG with `claude` (step 3) |
+| Structure masks | SAM 3.1 (`sam-3.1`) on Muse Image's art, with a helper box as the fallback; the SVG art's own groups with `claude` |
 | Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API with `SONG_PROVIDER=gemini` |
 | Narration | ElevenLabs text-to-speech with timestamps |
 | Word timing (song) | Demucs (vocals) + Meta's MMS forced aligner, both open source, run locally |
@@ -118,7 +120,7 @@ Every other job has one provider, whatever the brain:
 | Video | Code: skia-python draws, ffmpeg encodes |
 
 Prices per million tokens (input / output): Opus 5.5 $4 / $20, the same as Muse Wonder;
-Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image.
+Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
 
 ## 4. The brain interface
 
@@ -166,8 +168,8 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | 1 | Bundle | Brain, one call | `bundle.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
-| 3 | Art | Muse Image + helper | `art/<scene>.png` |
-| 4 | Locate | SAM 3.1 + helper | `masks/<scene>/<structure>.png`, `locations.json` |
+| 3 | Art | Muse Image + helper (`meta`); the brain's SVG (`claude`) | `art/<scene>.png` |
+| 4 | Locate | SAM 3.1 + helper (`meta`); nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
 | 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
 | 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
@@ -188,8 +190,8 @@ The planner's Inkmory context is read before step 1, and its record is written a
 step 2 (section 11).
 
 That is two or three brain calls per topic: the bundle, the fact-check, and a re-check of
-any lines the fact-check changed (plus one per scene for the interim art, until the Meta
-key arrives). The helper is called per image and per fallback.
+any lines the fact-check changed (plus one per scene for the SVG art, with the Claude
+brain). The helper is called per image and per fallback.
 
 ### Step 1: bundle
 
@@ -266,25 +268,33 @@ cytochrome b6f pumps).
 
 ### Step 3: art
 
-Muse Image (`/v1/images/generations`), size `1792x1024`. The prompt suffix is always:
+**With `BRAIN_PROVIDER=meta`:** Muse Image (`/v1/images/generations`), size `1792x1024`
+(an aspect ratio: the picture is fitted to the art on white). The prompt suffix is always:
 "textbook illustration in the style of OpenStax/Campbell, shaded vector, soft gradients,
 clean outlines, white background, scientifically accurate, absolutely no text, no labels,
 no letters, no numbers." Disable web search and shell (`tool_enablement`). Keep
 structures away from the edges so vertical crops work later. The helper looks at each
-image; if any text is visible or the anatomy is wrong, regenerate (max 3).
+image; if any text is visible or the anatomy is wrong, regenerate (max 3) with what was
+wrong. A picture with text is never used; after the third, the scene keeps the text-free
+picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`), not
+yet run against the live API.
 
-**Until the Meta key arrives**, the brain draws each scene as SVG, with every structure
+**With `BRAIN_PROVIDER=claude`**, the brain draws each scene as SVG, with every structure
 as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
 time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
 Image, but it writes the same files, so everything downstream is built and tested against
-it unchanged.
+it unchanged. Switching the provider makes a job's art again on its next run.
 
 ### Step 4: locate
 
-SAM 3.1 via `/v1/responses`, one noun phrase per request. If SAM finds nothing for a
-structure, the helper proposes a box and SAM is called again with that box; the last
-resort is the helper giving the label anchor point directly. `locations.json` holds
-`box`, `centroid` and `label_anchor` per structure, all in art pixel coordinates.
+SAM 3.1 via `/v1/responses`, one noun phrase per request (the structure's `sam_phrase`:
+its colour and shape in a few words). Every match at least 0.5 sure makes up its mask. If
+SAM finds nothing that sure for a structure, the helper proposes a box and SAM is called
+again with that box. A structure neither finds is left out, like one the SVG art leaves
+out (no spotlight, no camera move), and a scene with fewer than half its structures found
+fails the step. `locations.json` holds `box`, `centroid` and `label_anchor` per
+structure, all in art pixel coordinates. Built (`studio/steps/locate.py`), not yet run
+against the live API.
 
 ### Step 5: audio
 
@@ -499,12 +509,12 @@ takes some setup in the routine's environment:
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
   `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SONG_PROVIDER` (with
   `GEMINI_API_KEY` for `gemini`), `BRAIN_PROVIDER` (with
-  `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` once
-  the Meta key arrives. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
+  `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` with
+  `BRAIN_PROVIDER=meta`. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
 - **Setup:** the repository's session hook (`.claude/hooks/session-start.sh`) installs
   `studio/requirements.txt` (PyTorch for CPU, torchaudio, demucs, skia-python, anthropic,
-  openai, pydantic), ffmpeg and libEGL, and the Demucs and MMS models, before the run
+  openai, meta-sam-parser, pydantic), ffmpeg and libEGL, and the Demucs and MMS models, before the run
   starts. The container is cached after the hook, so a cold environment pays about two
   minutes once and a warm run seconds.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
@@ -807,7 +817,7 @@ Rules that follow from Inkmory's code:
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days, the planner's beat against a local Inkmory |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
-| 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Left: Muse Image + SAM when the Meta key arrives; matching Fire or Don't |
+| 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
 | 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; the upload in `run`; agent credits |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them |
@@ -851,11 +861,10 @@ seams, which no lane owns:
 
 ## 13. Risks and fallbacks
 
-- **No Meta key in time:** the Claude brain and the SVG art run the whole pipeline, and
-  Muse Image, SAM and Muse Wonder slot in when the key arrives. Nothing downstream
-  changes.
-- **SAM misses illustrated anatomy:** a helper box plus a SAM box prompt; the last resort
-  is the helper giving label anchor points directly.
+- **No Meta key in time, or Meta's API misbehaves:** `BRAIN_PROVIDER=claude` runs the
+  whole pipeline on the Claude brain and the SVG art. Nothing downstream changes.
+- **SAM misses illustrated anatomy:** a helper box plus a SAM box prompt; a structure
+  neither finds goes unlabelled.
 - **Muse Image puts text in the art:** a stronger negative prompt, the helper check,
   regenerate; or an image edit, "remove all text".
 - **Song timing drifts on choruses:** align section by section; reuse the first chorus's

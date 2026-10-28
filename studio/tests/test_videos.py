@@ -16,6 +16,7 @@ from studio.tests.sample import bundle_data
 from studio.tests.test_run import FakeApi, FakeBrain
 
 FACTCHECK = {"status": "passed", "reason": "", "rounds": 1, "lines": [], "corrections": []}
+REAL_UNAVAILABLE = videos.unavailable  # the setup fixture stands in for it
 
 
 class VideoApi(FakeApi):
@@ -307,3 +308,106 @@ def test_two_branches_asking_at_once_each_log_only_their_own_calls(tmp_path, mon
         t.join()
     logged = sorted(json.loads(row)["label"] for row in (tmp_path / "calls.jsonl").read_text().splitlines())
     assert logged == ["art", "audio"]
+
+
+# --- the real art and locate steps inside the run, on Meta's models (stood in for) -----------
+
+
+@pytest.fixture
+def meta_job(setup, monkeypatch):
+    """A posted sample job whose art and locate steps are the real ones, with Meta's API, the helper
+    and the brain stood in for; the other media steps stay stand-ins."""
+    from studio import brain, muse
+    from studio.steps import art, locate
+    from studio.tests import sample_media
+    from studio.tests.test_art import FakeArtist
+    from studio.tests.test_muse import FakeHelper, FakeMuse
+
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setenv("MODEL_API_KEY", "meta-test-key")
+    monkeypatch.delenv("STUDIO_BRAIN_MODEL", raising=False)
+    setup.barrier = threading.Barrier(1)  # the real art step does not wait for the audio
+    real = {"art": art, "locate": locate}
+    stand_ins = setup.module
+    monkeypatch.setattr(media, "step_module", lambda name: real.get(name) or stand_ins(name))
+
+    fake = SimpleNamespace(muse=FakeMuse().install(monkeypatch), helper=FakeHelper(), artist=FakeArtist())
+
+    def ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        """brain.ask: answers as the helper or the SVG artist, and records the call as brain.ask does."""
+        answer = (fake.helper if role == "helper" else fake.artist)(role, prompt, schema, images,
+                                                                      system=system, label=label)
+        model = "muse-spark-1.3" if role == "helper" else "claude-opus-5-5"
+        brain._record(brain.Call(label, role, model, 1000, 100, brain.cost(model, 1000, 100), 0.1, "stop"))
+        return answer
+
+    monkeypatch.setattr(brain, "ask", ask)
+    job = sample_media.write_job(jobs.ROOT / "q1")
+    (job / media.LOCATIONS).unlink()  # the sample's own, made of ellipses
+    jobs.write(job / "posted.json", {"id": "ans1", "questionId": "q1"})
+    fake.job = job
+    return fake
+
+
+def test_on_meta_the_run_paints_the_art_then_sam_locates_it_and_bills_both(meta_job):
+    from studio import ledger
+    from studio.schemas import Locations
+
+    job = meta_job.job
+    assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "upload made")
+    assert len(meta_job.muse.painted) == 3 and len(meta_job.muse.segmented) == 4
+    assert len(jobs.read(job / media.LOCATIONS, Locations).scenes) == 3
+
+    steps = {s["step"]: s for s in ledger.breakdown(job, "videos")["steps"]}
+    art_models = {m["model"]: m for m in steps["art"]["models"]}
+    assert art_models["muse-image-1.0"]["calls"] == 3 and art_models["muse-image-1.0"]["costUsd"] == pytest.approx(0.03)
+    assert art_models["muse-spark-1.3"]["calls"] == 3 and art_models["muse-spark-1.3"]["costUsd"] > 0
+    locate_models = {m["model"]: m for m in steps["locate"]["models"]}
+    assert locate_models == {"sam-3.1": {**locate_models["sam-3.1"], "calls": 4, "costUsd": pytest.approx(0.01)}}
+
+
+def test_on_meta_a_failed_locate_keeps_the_pictures_and_the_retry_only_locates(meta_job):
+    job = meta_job.job
+    meta_job.muse.spots = {}  # SAM finds nothing, and the helper sees nothing to box
+    assert videos.videos("q1", api=VideoApi())[:2] == ("FAILED", "locate")
+    assert len(meta_job.muse.painted) == 3 and (job / "art" / "hook.json").exists()
+
+    from studio.tests.test_muse import SPOTS
+
+    meta_job.muse.spots = SPOTS
+    meta_job.muse.painted.clear()
+    assert videos.videos("q1", api=VideoApi())[0] == "DONE"
+    assert meta_job.muse.painted == []  # the pictures were paid for once
+
+
+def test_switching_the_provider_between_runs_remakes_the_art_and_everything_after_it(meta_job, monkeypatch):
+    setup = meta_job
+    job = meta_job.job
+    videos.videos("q1", api=VideoApi())
+    assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "the videos were already made")
+
+    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    assert videos.videos("q1", api=VideoApi())[0] == "DONE"
+    assert [label for label in meta_job.artist.labels()] == ["art hook", "art overview", "art synthase"]
+    assert not (job / "art" / "hook.json").exists() and (job / "art" / "hook.svg").exists()
+
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    meta_job.muse.painted.clear()
+    assert videos.videos("q1", api=VideoApi())[0] == "DONE"
+    assert len(meta_job.muse.painted) == 3 and not (job / "art" / "hook.svg").exists()
+    del setup
+
+
+def test_wrong_brain_settings_stop_the_videos_before_anything_is_claimed(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    for name in ("MODEL_API_KEY", "STUDIO_BRAIN_MODEL", "STUDIO_VIDEOS"):
+        monkeypatch.delenv(name, raising=False)
+    api = VideoApi()
+    api.queue = [{"questionId": "q2", "answerId": "ans2", "attempt": 2}]
+    posted()
+    wrong = "the studio's settings are wrong: BRAIN_PROVIDER=meta needs MODEL_API_KEY"
+    assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert videos.recover(api=api) == ("NONE", "recover", wrong)
+    assert api.calls == [] and setup.ran == []  # no claim, no attempt taken from the queue, no step

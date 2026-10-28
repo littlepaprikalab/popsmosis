@@ -71,6 +71,9 @@ def unavailable() -> str | None:
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
+    problem = brain.settings_problem()  # the art is the brain's, or Meta's on its key
+    if problem:
+        return f"the studio's settings are wrong: {problem}"
     return None
 
 
