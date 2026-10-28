@@ -114,20 +114,21 @@ together they go from what the learner already knows to the parts they are learn
   look like, and is best at drawing one it knows.
 - Then say where everything is and where each step happens, in the order the process
   runs: "Glycolysis in the cytoplasm on the left, glucose split into two pyruvate; the
-  pyruvate passing into a mitochondrion cut open in the middle; the Krebs cycle as a ring
+  pyruvate passing into a mitochondrion inside the cell, cut open on the right; the Krebs cycle as a ring
   of arrows in its matrix; the electron transport chain as a row of protein complexes
   along its folded inner membrane, ATP synthase among them." Wherever the request leaves
   the layout out, the illustrator invents one, and an invented one is often wrong (the
-  Krebs cycle drawn in the cytoplasm, the chain along the cell's outer membrane). Say only
+  Krebs cycle drawn in the cytoplasm, the chain along the cell's outer membrane). Put
+  every part inside what holds it (a mitochondrion inside its cell, not beside it). Say only
   what is true and what the scene needs.
 - Pick the kind that fits the subject, and end the request with the look that kind of
   textbook gives it, in these words:
   - A cell or molecular process (membranes, organelles, proteins, molecules): "a clean,
-    modern biology textbook illustration: semi-realistic organelles and proteins, soft
-    gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid
-    bilayer; ions and small molecules as small glossy spheres." This is the figure
-    students know from a modern textbook or study guide, not a detailed molecular
-    rendering.
+    modern biology textbook illustration: semi-realistic organelles, each protein complex a
+    smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the
+    membrane a phospholipid bilayer; ions and small molecules as small glossy spheres."
+    This is the figure students know from a modern textbook or study guide, not a
+    detailed molecular rendering: "semi-realistic proteins" came back as ribbon models.
   - Anatomy (the brain, organs, body systems): "a softly shaded medical textbook
     illustration."
   - Astronomy, Earth science, physics or chemistry: "a clean textbook schematic, each

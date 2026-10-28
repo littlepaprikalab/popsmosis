@@ -407,6 +407,45 @@ So the look needs a style picture of our own, made once per kind of diagram and 
 eye (never a Campbell figure itself, which is copyrighted), passed with each scene's layout
 reference, two tries a scene and the better kept.
 
+## Round 6: Claude writes, Muse Image paints, on dark slate
+
+The brain back on Claude (`BRAIN_PROVIDER=claude ART_PROVIDER=muse`) to save Muse tokens,
+the art prompt rebuilt from a study-guide look (soft gradients, semi-realistic organelles,
+colour coding, a plain dark slate blue background, space left for labels) plus a sentence on
+where each step happens, art only, on AP Bio cellular respiration and the light reactions.
+
+| | Cellular respiration | Light reactions |
+|---|---|---|
+| Scenes | 5 | 6 |
+| Located | 14 of 18; after the repaint below, 16 of 18 | 20 of 21; after, 20 of 21 |
+| Cost | $1.71: Claude $1.49 (bundle, fact-check), Muse Image $0.13, SAM $0.08, Haiku's checks $0.01 | $1.71 |
+
+- **Claude could not write a bundle at all.** Its structured outputs refused the bundle's
+  schema: "The compiled grammar is too large". Every field compiles alone and the first 12
+  together; with `direction` and `tags` the whole does not. No round had run Claude as the
+  brain since those were added. A schema refused for that is now asked for in the prompt
+  and validated as before.
+- **An extra chorus failed a $1.25 bundle.** Claude sang the chorus once more than the
+  prompt's order, and `music.sections` did not list it. The song is timed from the lyrics,
+  so the list now follows them; that bundle was validated again and used, not rewritten.
+- **The overviews are right now.** Respiration: glycolysis in the cytoplasm, the Krebs cycle
+  a ring in the matrix, the chain and ATP synthase on the cristae. Light reactions: grana
+  stacks and the Calvin cycle in the stroma. Rounds 1 to 4 drew neither reliably.
+- **The dark background works in the video.** Parts not yet sung fade into the slate, the
+  spotlight dims the rest to it, and the white labels read well.
+- **"Semi-realistic proteins" came back as ribbon models** in every close-up. Repainted
+  with "proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons,
+  coils or clusters of atoms" in the art step's style line: 5 of 6 close-ups came back
+  smooth and textbook-like; the ATP synthase close-up turned into a lumpy cluster.
+- **The mitochondrion sits beside its cell**, a dumbbell, in both paintings: the scene's
+  own prompt put "the cytoplasm on the left" and "a mitochondrion in the middle and on the
+  right", and a style line saying parts sit inside what holds them did not override it. The
+  bundle prompt now asks for that in the scene's own words.
+- **Compartments and small markers are hard to find**: the matrix and the intermembrane
+  space (whole regions) and the cyanide and herbicide markers went unlocated.
+- **Claude's chorus, too, was "Split the water, catch the light"**: three brains of three
+  have now written Split the Water's title line.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

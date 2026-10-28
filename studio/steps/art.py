@@ -321,7 +321,9 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
 # has: the colours stand out on it, and so do the renderer's white label pills. Code reads the
 # background's colour off each picture's edge (media.paper), so any plain colour works.
 STYLE = ("On a plain, flat dark slate blue background, every part well inside the frame, with clear space "
-         "around each part for its label. No text, labels, letters or numbers anywhere in the picture.")
+         "around each part for its label. Every part sits inside whatever holds it in life, as an organelle sits "
+         "inside its cell. Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, "
+         "coils or clusters of atoms. No text, labels, letters or numbers anywhere in the picture.")
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The video's \
