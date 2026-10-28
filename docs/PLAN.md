@@ -382,7 +382,9 @@ Output is a `Timing` per audio file: each line by id, with its start, end and
 
 Code merges `bundle.direction`, the word timings and `locations.json` into the timeline
 (section 6). Reveals are mechanical: a structure reveals when its name or an alias is
-sung, and the labels shown are everything revealed so far. A direction that names a
+first sung, and the labels shown are everything revealed so far. Once named, a structure
+stays labelled: a later scene that draws it shows its label from that scene's first line,
+so a learner never loses the name of a part they have already heard. A direction that names a
 structure not in its scene, or one SAM could not find, falls back to no spotlight and
 the camera on the whole scene, rather than another model call.
 
@@ -455,7 +457,7 @@ come from step 6.
       "camera": {"target": "Broca's area", "zoom": 1.6, "ease": "inOut"},   // target null: the whole scene
       "reveal": [{"name": "Broca's area", "t": 12.6}],   // fades from ghost to full when the word is sung
       "spotlight": "Broca's area",         // others washed pale; null = none
-      "labels": ["Broca's area", "Wernicke's area"],  // everything revealed on this scene so far
+      "labels": ["Broca's area", "Wernicke's area"],  // everything named so far that this scene draws
       "particles": [{"path": ["Wernicke's area", "Broca's area"], "color": "#F2C230", "trail": true, "label": ""}],
       "caption": null,                     // at most ~1 per section, held >= 4 s
       "line_id": "v1-2",                   // null in an instrumental gap

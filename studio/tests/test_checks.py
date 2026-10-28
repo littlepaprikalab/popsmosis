@@ -96,6 +96,14 @@ def test_particles_stay_on_the_scene():
     assert found == [("v1-1", "particles", True)]
 
 
+def test_a_structure_named_on_an_earlier_scene_can_be_spotlit_on_a_later_one():
+    # "Light lands on the thylakoid" is sung over the hook; the overview, next, draws it labelled.
+    bundle, found, _ = review(lambda d: direction(d, "v1-2").update(spotlight="Thylakoid"))
+    assert found == [] and next(d.spotlight for d in bundle.direction if d.line_id == "v1-2") == "Thylakoid"
+    _, found, report = review(lambda d: direction(d, "v1-2").update(spotlight="Cytochrome b6f"))  # not named yet
+    assert found == [("v1-2", "spotlight", True)] and "has not been named yet" in report.problems[0].detail
+
+
 def test_what_particles_carry_needs_particles_and_fits_on_the_dot():
     def carrying(particles, carries):
         def change(data):

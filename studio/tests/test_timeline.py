@@ -56,8 +56,9 @@ def test_the_sample_job_gives_two_valid_timelines_that_open_on_the_hook(job):
     word = next(w for w in song["v1-1"].words if w.word == "thylakoid")
     assert [(r.name, r.t) for r in song["v1-1"].reveal] == [("Thylakoid", word.start)]
     assert song["v1-1"].labels == ["Thylakoid"]
-    # The overview has not heard "thylakoid" yet, so nothing is revealed or labelled there.
-    assert song["v1-2"].scene == "overview" and song["v1-2"].labels == []
+    # The overview draws the thylakoid, named on the hook: its label stays on, from the overview's first line.
+    assert song["v1-2"].scene == "overview" and song["v1-2"].labels == ["Thylakoid"]
+    assert [(r.name, r.t) for r in song["v1-2"].reveal] == [("Thylakoid", song["v1-2"].t0)]
 
 
 def test_names_match_whatever_the_case_punctuation_or_alias_and_longer_names_win(job):
@@ -65,6 +66,8 @@ def test_names_match_whatever_the_case_punctuation_or_alias_and_longer_names_win
     data["scenes"][1]["structures"][1]["aliases"] = ["b6f"]
     data["scenes"][2]["structures"][0]["aliases"] = ["synthase"]
     for lyric in data["lyrics"]:
+        if lyric["id"] == "v1-1":
+            lyric.update(text="Light lands on the leaf", names=[])  # so the overview first hears the thylakoid
         if lyric["id"] == "v2-1":
             lyric["text"] = "Only B6F, the pump, pushes thylakoids full"  # an alias in capitals; a plural
         if lyric["id"] == "b-1":

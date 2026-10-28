@@ -6,8 +6,10 @@ No model calls, so it is free to run again:
 - A beat per line, from where the line before it ends to where the next one starts. A
   silence of GAP_S or more between lines is a beat of its own (an instrumental gap) that
   holds the scene and the camera.
-- A structure is revealed on a scene the first time its name or an alias is heard there,
-  at that word's start. Words match whatever their case and punctuation, so "Broca's"
+- A structure is revealed the first time its name or an alias is heard in the video, at
+  that word's start, and its label stays on from then: a later scene that draws it shows
+  it labelled from that scene's first line (a reveal at the line's start), rather than
+  pale and unlabelled until it is named again. A learner keeps seeing what each part is. Words match whatever their case and punctuation, so "Broca's"
   matches "Broca’s area"'s first word, and a name of several words needs them all in
   a row. Longer names win, so "motor cortex" is not also read as "cortex".
 - A spotlight or camera target that is not located on its scene, or not revealed there
@@ -218,6 +220,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
 
     beats: list[dict] = []
     revealed: dict[str, list[str]] = {}  # per scene, in order
+    heard: list[str] = []  # every structure named in this video so far, in order
     captions: list[str | None] = []
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
@@ -254,11 +257,16 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         # beats after them a little late: keep each word inside its own beat.
         words = [Word(word=w.word, start=min(max(w.start, cursor), t1), end=min(max(w.end, cursor), t1))
                  for w in words]
-        reveals = []
+        # What was named on an earlier scene, and is drawn on this one, is labelled from the start.
+        reveals = [Reveal(name=name, t=cursor) for name in heard
+                   if name in located.get(scene, set()) and name not in labels]
+        labels += [r.name for r in reveals]
         for name, index in sorted(scene_names.heard([w.word for w in words]).items(), key=lambda e: e[1]):
             if name not in labels:
                 labels.append(name)
                 reveals.append(Reveal(name=name, t=min(max(words[index].start, cursor), t1)))
+            if name not in heard:
+                heard.append(name)
 
         spotlight = _shown(direction.spotlight, scene_names, labels) if direction else None
         target = _shown(direction.camera.target, scene_names, labels) if direction else None

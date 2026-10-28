@@ -398,8 +398,8 @@ order, keyed by `line_id`:
 - `spotlight`: the structure the line is about, which stays bright while the others fade
   back, or "".
 - A `spotlight` or camera `target` is a structure the line names, or one already named
-  while this scene has been on screen; never one not yet sung or spoken, since it is
-  still a pale ghost. A line about no particular structure holds the whole scene ("" and
+  earlier in the video (once named, a structure stays labelled on every scene that draws
+  it); never one not yet sung or spoken, since it is still a pale ghost. A line about no particular structure holds the whole scene ("" and
   zoom 1.0).
 - On the line that corrects the misconception, spotlight the structure it is about, so
   the correction lands on it.

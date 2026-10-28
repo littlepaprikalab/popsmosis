@@ -49,14 +49,14 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
         for word, owners in shared_names(data["scenes"]).items()
     ]
     # The song and the lesson video are separate videos, so each reveals from scratch.
+    # A structure named once stays labelled on every later scene that draws it (studio/steps/timeline.py).
     for stream in (data["lyrics"], data["narration"]):
-        revealed: dict[str, set[str]] = {scene: set() for scene in drawn}
+        heard: set[str] = set()
         for line in stream:
             direction = directions[line["id"]]
             scene = direction["scene"]
-            named = _check_names(line, canon, scene, drawn[scene], problems)
-            revealed[scene] |= named & drawn[scene]
-            _check_direction(line["id"], direction, canon, scene, drawn[scene], revealed[scene], problems)
+            heard |= _check_names(line, canon, scene, drawn[scene], problems) & drawn[scene]  # heard where drawn
+            _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
@@ -210,7 +210,7 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         if structure not in drawn:
             return f'is not drawn in scene "{scene}"'
         if structure not in revealed:
-            return f'has not been named on scene "{scene}" yet'
+            return "has not been named yet"
         return None
 
     if direction["spotlight"] and (why := misplaced(direction["spotlight"])):

@@ -577,6 +577,15 @@ exactly H⁺ in the intermembrane space and H⁺ in the thylakoid lumen ($0.02 f
   a tint), so new pictures will not have them; these two lessons keep theirs until their
   close-ups are painted again.
 - **A gold tint turns a blue space olive** at 0.35; it is 0.18 now.
+- **Labels stay on** (asked for after this round): a structure named once in a video is
+  labelled on every later scene that draws it, from that scene's first line, where before
+  each scene started pale and unlabelled until its parts were named again. The light
+  reactions' herbicide close-up now opens with photosystem II, cytochrome b6f, photosystem I
+  and ATP synthase labelled. A spotlight may fall on anything named earlier in the video.
+- **"White spheres" found the membrane**: in the cyanide close-up the oxygen's label points
+  at the bilayer, whose lipid heads are white spheres too, so the colour check passes it.
+  Open: a `sam_phrase` that also describes the membrane needs a check, or the oxygen a
+  colour of its own.
 
 ## Not tested
 
