@@ -332,6 +332,8 @@ export interface DropletCard {
   commentCount?: number;
   liked?: boolean; // the viewer's own thumbs-up; false when signed out
   createdAt: string;
+  // Its newest comments: two on a card on the list, the first page on its own page. Absent from an older API.
+  comments?: DropletCommentPage;
 }
 
 /** The viewer's thumbs-up on one droplet, as the API last confirmed it. */
@@ -358,7 +360,6 @@ export interface DropletCommentPage {
 export interface Droplet extends DropletCard {
   content: string; // the lesson, markdown
   lyrics: { section: string; text: string }[];
-  comments?: DropletCommentPage; // the first page, so the page needs one request; absent from an older API
 }
 
 export interface Agent {

@@ -11,6 +11,8 @@
 export const COMMENT_MAX_LENGTH = 1000;
 export const COMMENTS_PAGE_SIZE = 20;
 export const COMMENTS_PAGE_MAX = 50;
+// How many of its newest comments a card on the list shows; the rest follow its cursor.
+export const COMMENTS_ON_CARD = 2;
 
 export function commentsPerUserPerHour(): number {
   const n = parseInt(process.env.DROPLET_COMMENTS_PER_USER_PER_HOUR ?? '', 10);

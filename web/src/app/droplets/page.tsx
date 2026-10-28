@@ -12,16 +12,22 @@ import { timeAgo } from '@/lib/time';
 import { allTags, tagHref, tagOf } from '@/lib/tags';
 import { LikeButton, formatCount } from '@/components/LikeButton';
 import { TagList } from '@/components/TagList';
+import { DropletComments } from '@/components/DropletComments';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { PlayIcon } from '@heroicons/react/24/solid';
 
 // How many of a droplet's hashtags its card shows; its page shows them all, under each video.
 const CARD_TAGS = 4;
+// How many of its newest comments a card shows folded (api/src/lib/engagement.ts, COMMENTS_ON_CARD).
+const CARD_COMMENTS = 2;
 
 /**
  * The public Droplets tab (docs/PLAN.md, section 10): every finished droplet, for
- * anyone, signed in or not. A card shows the title the studio gave it, a few lines of
- * the lesson and its first hashtags; never who asked, or how they asked it. `?tag=`
- * lists only the droplets tagged with it, as a hashtag search does.
+ * anyone, signed in or not. A card plays its song (or its lesson) in place, shows the
+ * title the studio gave it, a few lines of the lesson, its first hashtags and its newest
+ * comments, which open in place to all of them; never who asked, or how they asked it.
+ * Its page has both videos, the whole lesson and the lyrics. `?tag=` lists only the
+ * droplets tagged with it, as a hashtag search does.
  */
 export default function DropletsPage() {
   // useSearchParams needs a boundary, or the page cannot be prerendered.
@@ -74,6 +80,16 @@ function Droplets() {
   useEffect(() => { load(); }, [load]);
   // A tag clicked on a card changes the search without a new page: show it in the box too.
   useEffect(() => { setQuery(tag ? `#${tag}` : ''); }, [tag]);
+
+  // One card plays at a time: starting one pauses whichever was playing. A media event does
+  // not bubble, so this listens on the way down.
+  useEffect(() => {
+    const onPlay = (e: Event) => {
+      for (const video of document.querySelectorAll('video')) if (video !== e.target) video.pause();
+    };
+    document.addEventListener('play', onPlay, true);
+    return () => document.removeEventListener('play', onPlay, true);
+  }, []);
 
   const loadMore = async () => {
     if (!cursor || loadingMore) return;
@@ -158,46 +174,9 @@ function Droplets() {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {droplets.map((d, i) => {
-            const poster = d.video.songPosterUrl || d.video.lessonPosterUrl;
-            // The like button and the tags sit beside the link, not inside it: a button or a
-            // link within a link is not valid HTML, and a click on it would open the droplet too.
-            return (
-              <article key={d.id} data-testid="droplet-card"
-                className="flex flex-col rounded-lg overflow-hidden animate-fade-in"
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', animationDelay: `${Math.min(i, 12) * 60}ms` }}>
-                <Link href={`/droplets/${d.id}`} className="block flex-1 transition-colors hover:brightness-110">
-                  <div className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
-                    {poster ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- a remote Supabase still, no optimizer in front
-                      <img src={poster} alt="" loading="lazy" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    {d.course && d.topic && (
-                      <p className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: 'var(--accent-purple)' }}>{d.course}</p>
-                    )}
-                    <h3 className="text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{d.course && d.topic ? d.topic : d.title}</h3>
-                    <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{d.excerpt}</p>
-                    <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>{timeAgo(d.createdAt)}</p>
-                  </div>
-                </Link>
-                <TagList tags={allTags(d.tags)} max={CARD_TAGS} className="px-4 pb-3 -mt-1" />
-                {d.likeCount !== undefined && (
-                  <div className="px-4 pb-3 flex items-center gap-3">
-                    <LikeButton dropletId={d.id} liked={!!d.liked} likeCount={d.likeCount} />
-                    <Link href={`/droplets/${d.id}#comments`} className="inline-flex items-center gap-1 text-xs hover-text" style={{ color: 'var(--text-secondary)' }}
-                      aria-label={`${d.commentCount ?? 0} ${d.commentCount === 1 ? 'comment' : 'comments'}`} data-testid="card-comments">
-                      <ChatBubbleLeftIcon className="w-4 h-4" aria-hidden /> {formatCount(d.commentCount ?? 0)}
-                    </Link>
-                  </div>
-                )}
-              </article>
-            );
-          })}
+        // Each card is as tall as it is: one opening its comments grows alone, and its row does not stretch the rest.
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
+          {droplets.map((d, i) => <Card key={d.id} droplet={d} index={i} />)}
         </div>
       )}
 
@@ -236,5 +215,110 @@ function DropO() {
       </svg>
       <span className="text-transparent">O</span>
     </>
+  );
+}
+
+/**
+ * One droplet on the list. The video plays here, so watching takes no trip to its page;
+ * the title and "Full page" go there. The like button, the tags and the comments sit
+ * beside the links, not inside them: a button or a link within a link is not valid HTML,
+ * and a click on it would open the droplet too.
+ */
+function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
+  const [commentCount, setCommentCount] = useState(d.commentCount ?? 0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const href = `/droplets/${d.id}`;
+  const heading = d.course && d.topic ? d.topic : d.title;
+  // The song if it has one: it is the hook. Its own still, else the other video's.
+  const song = !!d.video.songVideoUrl;
+  const src = d.video.songVideoUrl || d.video.lessonVideoUrl;
+  const poster = (song ? d.video.songPosterUrl : d.video.lessonPosterUrl) || d.video.songPosterUrl || d.video.lessonPosterUrl;
+  return (
+    <article data-testid="droplet-card"
+      className="flex flex-col rounded-lg overflow-hidden animate-fade-in"
+      style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', animationDelay: `${Math.min(index, 12) * 60}ms` }}>
+      {src ? (
+        <CardVideo src={src} poster={poster} kind={song ? 'song' : 'lesson'} heading={heading} />
+      ) : (
+        <Link href={href} className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
+          <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
+        </Link>
+      )}
+      <Link href={href} className="block p-4 transition-colors hover:brightness-110">
+        {d.course && d.topic && (
+          <p className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: 'var(--accent-purple)' }}>{d.course}</p>
+        )}
+        <h3 className="text-sm font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{heading}</h3>
+        <p className="text-xs line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{d.excerpt}</p>
+        <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>{timeAgo(d.createdAt)}</p>
+      </Link>
+      <TagList tags={allTags(d.tags)} max={CARD_TAGS} className="px-4 pb-3 -mt-1" />
+      <div className="px-4 pb-3 flex items-center gap-3">
+        {/* An API older than likes and comments sends neither count: leave both out rather than show zeros. */}
+        {d.likeCount !== undefined && (
+          <>
+            <LikeButton dropletId={d.id} liked={!!d.liked} likeCount={d.likeCount} />
+            <button type="button" onClick={() => setCommentsOpen((open) => !open)} aria-expanded={commentsOpen}
+              className="inline-flex items-center gap-1 text-xs hover-text" style={{ color: 'var(--text-secondary)' }}
+              aria-label={`${commentCount} ${commentCount === 1 ? 'comment' : 'comments'}`} data-testid="card-comments">
+              <ChatBubbleLeftIcon className="w-4 h-4" aria-hidden /> {formatCount(commentCount)}
+            </button>
+          </>
+        )}
+        <Link href={href} className="ml-auto text-[10px] uppercase tracking-wider font-bold hover-text" style={{ color: 'var(--accent-blue)' }}
+          aria-label={`Full page: ${heading}`} data-testid="card-full-page">
+          Full page →
+        </Link>
+      </div>
+      {d.commentCount !== undefined && (
+        <DropletComments dropletId={d.id} count={commentCount} setCount={setCommentCount} initial={d.comments}
+          card={{ preview: CARD_COMMENTS, open: commentsOpen, setOpen: setCommentsOpen }} />
+      )}
+    </article>
+  );
+}
+
+/**
+ * A card's video: its still with a big play button, which plays it right there; the
+ * player's own controls take over once it starts. A click on a <video> that has not
+ * loaded yet does nothing in Chrome, and its own play button is small, so the still
+ * is the button. Until then the still is a lazy <img>: a <video>'s poster loads at once,
+ * for every card on the page, and preload="none" keeps the video itself from loading.
+ */
+function CardVideo({ src, poster, kind, heading }: { src: string; poster: string | null; kind: 'song' | 'lesson'; heading: string }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [started, setStarted] = useState(false);
+  const pressed = useRef(false);
+  // The button goes once it is pressed: hand the keyboard to the player, to pause it with.
+  useEffect(() => { if (started && pressed.current) video.current?.focus(); }, [started]);
+  return (
+    <div className="relative aspect-video" style={{ background: '#000' }}>
+      <video
+        ref={video}
+        controls={started}
+        playsInline
+        preload="none"
+        poster={started ? poster ?? undefined : undefined}
+        src={src}
+        onPlay={() => setStarted(true)}
+        aria-label={`${heading}: ${kind} video`}
+        className="block w-full h-full"
+      />
+      {!started && (
+        <button type="button" aria-label={`Play the ${kind} video: ${heading}`} data-testid="card-play"
+          // A play that fails still shows the controls, to try again with.
+          onClick={() => { pressed.current = true; setStarted(true); video.current?.play().catch(() => {}); }}
+          className="group absolute inset-0 flex items-center justify-center">
+          {poster && (
+            // eslint-disable-next-line @next/next/no-img-element -- a remote Supabase still, no optimizer in front
+            <img src={poster} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+          )}
+          <span className="relative w-14 h-14 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 group-focus-visible:ring-2"
+            style={{ background: 'rgba(0, 0, 0, 0.6)', color: '#fff' }}>
+            <PlayIcon className="w-7 h-7 ml-0.5" aria-hidden />
+          </span>
+        </button>
+      )}
+    </div>
   );
 }

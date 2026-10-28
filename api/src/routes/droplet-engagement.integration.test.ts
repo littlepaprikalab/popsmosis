@@ -8,7 +8,7 @@
  * pages by cursor, the Idempotency-Key replay, who may delete a comment, the hourly
  * limit, and that a comment says nothing about its author beyond a first name.
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 const RUN = process.env.INTEGRATION === '1';
@@ -230,6 +230,58 @@ d('likes and comments on the Droplets tab', () => {
       expect(rest.nextCursor).toBeNull();
       // Signed out, the same page says nothing is theirs.
       expect((await get(`/api/droplets/${id}`)).json().comments.data.every((c: { mine: boolean }) => !c.mine)).toBe(true);
+    });
+
+    it('shows its newest two on its card on the list, and the card’s cursor carries on to the rest', async () => {
+      const many = await droplet(10);
+      const two = await droplet(20);
+      const none = await droplet(30);
+      const at = Date.now() - 60_000;
+      await prisma.dropletComment.createMany({ data: Array.from({ length: 5 }, (_, i) => ({ answerId: many, userId: i % 2 ? alan.id : grace.id, content: `m${i}`, createdAt: new Date(at + i * 1000) })) });
+      await comment(two, grace.cookie, 'first');
+      await comment(two, alan.cookie, 'second');
+
+      const card = async (id: string, cookie?: string) => (await get('/api/droplets', cookie)).json().data.find((x: { id: string }) => x.id === id);
+      const busy = await card(many, alan.cookie);
+      expect(busy.commentCount).toBe(5);
+      expect(busy.comments.data).toEqual([
+        { id: expect.any(String), content: 'm4', createdAt: expect.any(String), author: { name: 'Grace H.' }, mine: false },
+        { id: expect.any(String), content: 'm3', createdAt: expect.any(String), author: { name: 'Alan T.' }, mine: true },
+      ]);
+      const rest = (await get(`/api/droplets/${many}/comments?cursor=${busy.comments.nextCursor}`)).json();
+      expect(rest.data.map((c: { content: string }) => c.content)).toEqual(['m2', 'm1', 'm0']);
+
+      // All of them on the card: nothing to carry on to.
+      expect((await card(two)).comments).toEqual({ data: [expect.objectContaining({ content: 'second', mine: false }), expect.objectContaining({ content: 'first' })], nextCursor: null });
+      expect((await card(none)).comments).toEqual({ data: [], nextCursor: null });
+      // Signed out, none is theirs; and nothing about the authors beyond their first names.
+      const body = (await get('/api/droplets')).body;
+      expect(JSON.parse(body).data.flatMap((d: { comments: { data: { mine: boolean }[] } }) => d.comments.data).some((c: { mine: boolean }) => c.mine)).toBe(false);
+      for (const secret of ['Hopper', 'Brewster', 'Turing', '@example.com', 'avatars.example', grace.id, alan.id]) expect(body).not.toContain(secret);
+    });
+
+    it('leaves the list standing when the cards’ comments cannot be read', async () => {
+      const id = await droplet();
+      await comment(id, grace.cookie, 'still here');
+      // The list's own read goes through; the comments' read after it fails.
+      const real = prisma.$queryRaw.bind(prisma);
+      let reads = 0;
+      const spy = vi.spyOn(prisma, '$queryRaw').mockImplementation(((...args: Parameters<typeof real>) => {
+        reads += 1;
+        return reads === 2 ? Promise.reject(new Error('statement timeout')) : real(...args);
+      }) as typeof prisma.$queryRaw);
+      try {
+        const res = await get('/api/droplets');
+        expect(res.statusCode).toBe(200);
+        const card = res.json().data.find((x: { id: string }) => x.id === id);
+        expect(card).toMatchObject({ id, commentCount: 1 });
+        expect(card).not.toHaveProperty('comments');
+        expect(reads).toBe(2);
+      } finally {
+        spy.mockRestore();
+      }
+      // The comments route still has them, for the card to read when it opens.
+      expect((await get(`/api/droplets/${id}/comments`)).json().data).toEqual([expect.objectContaining({ content: 'still here' })]);
     });
 
     it('needs something a reader can see', async () => {
