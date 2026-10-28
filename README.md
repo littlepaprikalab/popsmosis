@@ -171,7 +171,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 
 | Variable | Value | Needed for |
 |---|---|---|
-| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Haiku 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, its picture checks (Claude Haiku 5.5) and its SVG art (Claude Sonnet 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
 | `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | a Muse brain and its picture checks (Muse Spark 1.3), Muse Image, and SAM 3.1 with any painter but the SVG |
 | `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
 
@@ -189,7 +189,7 @@ page and remove it, so nothing changes without anyone seeing why.
 | Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
 | Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
-| Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
+| Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude Sonnet 5.5 draws them as SVG ($2 / $10 per million tokens) | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 
 What runs, by the brain's provider:
@@ -197,7 +197,7 @@ What runs, by the brain's provider:
 | Job | Claude's brain | Muse's brain |
 |---|---|---|
 | Brain: writes and fact-checks the lesson | Claude Opus 5.5 | Muse Wonder 1.0 or Muse Spark 1.3 |
-| Art: paints each scene, up to three tries | the painter set for Claude topics | the painter set for Muse topics |
+| Art: paints each scene, up to three tries | the painter set for Claude topics; the SVG is Claude Sonnet 5.5's at effort `high` (Opus draws a scene Sonnet declines) | the painter set for Muse topics |
 | Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
 | Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images (none for the SVG, which says where each one is) | SAM 3.1 |
 

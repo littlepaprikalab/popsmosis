@@ -1,6 +1,6 @@
-"""Brain-drawn SVG art (docs/PLAN.md, step 3, until the Meta key arrives).
+"""Claude-drawn SVG art (docs/PLAN.md, step 3), when an admin has Claude draw the art on /admin/studio.
 
-The brain draws each scene as one SVG, every structure as one element marked
+Claude Sonnet 5.5 draws each scene as one SVG, every structure as one element marked
 data-structure="<name>". This module checks such a drawing, rasterises it, and finds
 each structure in it, so the art step can write the art, the masks and locations.json
 without a locate step.

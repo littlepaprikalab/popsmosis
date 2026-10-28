@@ -48,6 +48,19 @@ def test_the_helper_is_haiku_at_low_effort_without_a_fallback():
     assert "fallbacks" not in request and "betas" not in request and "system" not in request
 
 
+def test_the_artist_is_sonnet_at_high_effort_with_a_fallback_whatever_the_brains_effort():
+    with brain.chosen("claude", "low"):
+        request = brain.claude_request("artist", "Draw.", None, [], "You draw.")
+    assert request["model"] == "claude-sonnet-5-5" and request["output_config"] == {"effort": "high"}
+    assert request["max_tokens"] == 64000 and request["system"] == "You draw."
+    assert request["fallbacks"] == "default" and request["betas"] == ["server-side-fallback-2026-07-01"]
+    # Priced, and so is Sonnet 5, where Sonnet 5.5's fallback runs.
+    assert brain.cost("claude-sonnet-5-5", 1_000_000, 1_000_000) == brain.cost("claude-sonnet-5", 1_000_000, 1_000_000) == 12.0
+    # Muse has no artist: the SVG art is Claude's only, so were Muse asked, its brain would draw.
+    with brain.chosen("muse-spark"):
+        assert brain.meta_request("artist", "Draw.", None, [], None)["model"] == "muse-spark-1.3"
+
+
 def test_the_brains_effort_is_the_one_set_on_the_studio_page(monkeypatch):
     with brain.chosen("claude", "medium"):
         request = brain.claude_request("brain", "Write.", None, [], None)

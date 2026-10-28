@@ -3,17 +3,18 @@
 
     gemini   Gemini 3.1 Flash Image paints each scene (studio/gemini.py), the default for Claude's brain
     muse     Muse Image paints each scene (studio/muse.py), the default for Muse's
-    svg      the brain draws each scene as SVG, every structure a named group, so the
-             drawing says where each one is and this step writes the masks too. Claude's only
+    svg      Claude Sonnet 5.5 draws each scene as SVG, every structure a named group, so the
+             drawing says where each one is and this step writes the masks too. Claude's brain only
 
 A painted picture is checked by the helper, and the locate step then finds the structures in it
 with SAM 3.1 (studio/steps/locate.py), whoever painted it.
 
 Switching makes the art again on the next run, as switching who sings does the song.
 
-The SVG art. One brain call per scene draws it (studio/prompts/art.md), every structure in one group
-marked with its name. Code checks the drawing (studio/svg.py); if anything is wrong it
-asks again with the problems and the drawing, up to MAX_TRIES times in all.
+The SVG art. One call per scene to the artist, Claude Sonnet 5.5, draws it (studio/prompts/art.md), every
+structure in one group marked with its name; a drawing Sonnet declines, the brain draws instead (sketch()).
+Code checks the drawing (studio/svg.py); if anything is wrong it asks again with the problems and the drawing,
+up to MAX_TRIES times in all.
 
 Writes, per scene (paths from studio/media.py), art/<scene>.svg (the drawing, kept for debugging and for resuming),
 art/<scene>.png and masks/<scene>/<slug>.png; then locations.json, last. A refused
@@ -222,8 +223,17 @@ def judge(text: str, scene: Scene) -> Drawing:
     return drawing
 
 
+def sketch(ask, prompt: str, label: str) -> dict:
+    """One drawing, by the artist (Claude Sonnet 5.5). If Sonnet declines it, the brain (Claude Opus 5.5) draws it:
+    Sonnet's server-side fallback retries only some kinds of refusal, and not a biology one."""
+    try:
+        return ask("artist", prompt, system=PROMPT, label=label)
+    except brain.Refused:
+        return ask("brain", prompt, system=PROMPT, label=f"{label} by the brain")
+
+
 def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
-    """The scene's drawing: the saved one when resuming, else the brain's best of MAX_TRIES."""
+    """The scene's drawing: the saved one when resuming, else the artist's best of MAX_TRIES."""
     marker = _marker(bundle, scene)
     text = _saved(job, bundle, scene) if resume else None
     if text is not None:
@@ -236,8 +246,8 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
     best, previous = None, None
     for n in range(1, MAX_TRIES + 1):
         try:
-            answer = ask("brain", user_prompt(bundle, scene, previous), system=PROMPT,
-                         label=f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
+            answer = sketch(ask, user_prompt(bundle, scene, previous),
+                            f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
             drawing = judge(svg.extract(answer["text"]), scene)
         except brain.Truncated:
             drawing = Drawing("", ["the answer was cut off before </svg>; draw it simpler, under 40 KB"])

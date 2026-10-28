@@ -389,7 +389,7 @@ def meta_job(setup, monkeypatch):
         """brain.ask: answers as the helper or the SVG artist, and records the call as brain.ask does."""
         answer = (fake.helper if role == "helper" else fake.artist)(role, prompt, schema, images,
                                                                       system=system, label=label)
-        model = "muse-spark-1.3" if role == "helper" else "claude-opus-5-5"
+        model = {"helper": "muse-spark-1.3", "artist": "claude-sonnet-5-5"}.get(role, "claude-opus-5-5")
         brain._record(brain.Call(label, role, model, 1000, 100, brain.cost(model, 1000, 100), 0.1, "stop"))
         return answer
 

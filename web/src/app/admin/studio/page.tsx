@@ -14,7 +14,7 @@ import { timeAgo } from '@/lib/time';
 const PAINTERS: Record<Painter, { label: string; note: string }> = {
   gemini: { label: 'Gemini 3.1 Flash Image', note: 'About 7¢ a picture, on the Gemini key (GEMINI_API_KEY). SAM 3.1 then finds the parts to label, on the Meta key.' },
   muse: { label: 'Muse Image', note: '1¢ a picture, on the Meta key (MODEL_API_KEY). SAM 3.1 then finds the parts to label, on the same key.' },
-  svg: { label: 'Claude draws it (SVG)', note: 'The brain draws each scene and says where each part is, on the Anthropic key: no Gemini or Meta key needed. Plainer pictures.' },
+  svg: { label: 'Claude draws it (SVG)', note: 'Claude Sonnet 5.5 draws each scene and says where each part is, at $2 / $10 per million tokens on the Anthropic key: no Gemini or Meta key needed. Plainer pictures.' },
 };
 
 // A painter or brain an API newer than this page offers: shown by its name rather than breaking the page.

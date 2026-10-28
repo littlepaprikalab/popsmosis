@@ -100,14 +100,15 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
   the key is in the routine's environment: this is a Meta hackathon, so the submission runs
   on Meta. The environment holds only the keys. Who paints the art goes by the brain's
   provider, set there too: by default Gemini 3.1 Flash Image for Claude and Muse Image for
-  Muse, SAM 3.1 finding the structures in either; Claude can instead draw it as SVG.
+  Muse, SAM 3.1 finding the structures in either; Claude Sonnet 5.5 can instead draw it as SVG.
 
 | Role | Claude (default for now) | Muse |
 |---|---|---|
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` (set on `/admin/studio`) | Muse Wonder (`muse-wonder-1.0`) or Muse Spark (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to vet a change) |
+| **Artist**: the SVG art, when an admin has Claude draw it | Claude Sonnet 5.5 (`claude-sonnet-5-5`), effort `high`; a scene it declines, the brain draws | none: the SVG is Claude's only |
 | **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
-The helper's models are set in `studio/brain.py`. An admin can also send one topic to its own
+The artist's and the helper's models are set in `studio/brain.py`. An admin can also send one topic to its own
 brain on `/learn` (Claude, Muse Wonder or Muse Spark), which wins over the default for that
 topic, the painter its provider's: README, "One topic on another brain".
 
@@ -124,7 +125,7 @@ The other jobs:
 | Video | Code: skia-python draws, ffmpeg encodes |
 
 Prices per million tokens (input / output): Opus 5.5 $4 / $20, the same as Muse Wonder;
-Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
+Sonnet 5.5 $2 / $10; Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
 
 ## 4. The brain interface
 
@@ -283,10 +284,10 @@ wrong. A picture with text is never used; after the third, the scene keeps the t
 picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`), not
 yet run against the live API.
 
-**Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure
-as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
-time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
-Image, but it writes the same files, so everything downstream is built and tested against
+**Drawn by Claude as SVG** (`/admin/studio`), Claude Sonnet 5.5 draws each scene as SVG (the
+brain, if Sonnet declines one), with every structure as its own named group. Rasterising the
+SVG gives the art, and rasterising one group at a time gives each structure's mask, so
+step 4 is not needed. It looks plainer than Muse Image, but it writes the same files, so everything downstream is built and tested against
 it unchanged. Switching the painter makes a job's art again on its next run.
 
 ### Step 4: locate

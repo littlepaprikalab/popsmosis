@@ -21,16 +21,19 @@ def drawing(scene: str) -> str:
 
 
 class FakeArtist:
-    """Stands in for brain.ask: answers each scene with `answers[scene]`, one per try."""
+    """Stands in for brain.ask as the artist, Claude Sonnet 5.5: answers each scene with `answers[scene]`, one per
+    try. `roles` are who drew each call: the artist, or the brain after Sonnet declined."""
 
     def __init__(self, answers=None):
         self.answers = answers or {}
         self.prompts: list[tuple[str, str]] = []
+        self.roles: list[str] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
-        assert role == "brain" and schema is None and system == art.PROMPT
+        assert role in ("artist", "brain") and schema is None and system == art.PROMPT
         scene = label.split()[1]
         self.prompts.append((label, prompt))
+        self.roles.append(role)
         tries = sum(1 for lab, _ in self.prompts if lab.split()[1] == scene)
         answers = self.answers.get(scene, [drawing(scene)])
         return {"text": f"Here is the scene:\n```svg\n{answers[min(tries, len(answers)) - 1]}\n```"}
@@ -79,6 +82,7 @@ def test_the_art_step_writes_the_art_the_masks_and_the_locations(job):
     result = art.run(job, artist)
     assert result == "drew 3 scenes, located 4 of 4 structures"
     assert artist.labels() == ["art hook", "art overview", "art synthase"]
+    assert set(artist.roles) == {"artist"}  # Claude Sonnet 5.5 drew them all
 
     bundle = sample_media.bundle()
     locations = jobs.read(job / media.LOCATIONS, Locations)
@@ -342,6 +346,22 @@ def test_an_answer_cut_off_is_a_refused_try_and_other_brain_errors_fail_the_step
 
     with pytest.raises(brain.Refused):
         art.run(job, refuses)
+
+
+def test_a_drawing_sonnet_declines_goes_to_the_brain(job):
+    from studio import brain
+
+    class DeclinesTheHook(FakeArtist):
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if role == "artist" and label == "art hook":
+                raise brain.Refused("claude-sonnet-5-5", "bio", "declined")
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    artist = DeclinesTheHook()
+    assert art.run(job, artist) == "drew 3 scenes, located 4 of 4 structures"
+    assert list(zip(artist.labels(), artist.roles)) == [
+        ("art hook by the brain", "brain"), ("art overview", "artist"), ("art synthase", "artist"),
+    ]
 
 
 def test_names_in_another_case_and_rgb_colours_count():

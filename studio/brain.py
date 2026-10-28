@@ -14,8 +14,9 @@ provider has its helper (docs/PLAN.md, section 3):
 
 Who paints the art goes by the brain's provider, as an admin sets it on /admin/studio too
 (painter()): by default Gemini 3.1 Flash Image for Claude's brain and Muse Image for Muse's,
-and SAM 3.1 then finds the structures in either. Claude's brain may instead draw the art as
-SVG. The helper, which checks each picture and boxes a structure SAM missed, is the brain's.
+and SAM 3.1 then finds the structures in either. Claude's brain may instead have the art drawn
+as SVG, by the artist: Claude Sonnet 5.5 at high effort, whatever effort the brain thinks at.
+The helper, which checks each picture and boxes a structure SAM missed, is the brain's.
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -38,13 +39,16 @@ from typing import Sequence
 
 from pydantic import BaseModel, ValidationError
 
-ROLES = ("brain", "helper")
+ROLES = ("brain", "artist", "helper")
 PROVIDERS = ("claude", "meta")
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
     # thinking is billed as output, so max_tokens leaves room for it.
     "brain": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 64000},
+    # Draws the SVG art (studio/steps/art.py). Sonnet 5.5 defaults to high effort too, and its thinking cannot be
+    # turned off either; the effort on /admin/studio is the brain's, so the artist keeps its own, like the helper.
+    "artist": {"model": "claude-sonnet-5-5", "effort": "high", "max_tokens": 64000},
     "helper": {"model": "claude-haiku-5-5", "effort": "low", "max_tokens": 16000},
 }
 META = {
@@ -56,7 +60,7 @@ META_KEY_VAR = "MODEL_API_KEY"
 # Who paints the art, by the brain's provider (painter()). An admin changes it on /admin/studio, and the API keeps
 # the same lists (api/src/lib/studio-settings.ts): each provider's default is first.
 ART_CHOICES = {"claude": ("gemini", "muse", "svg"), "meta": ("muse", "gemini")}
-PAINTER_NAMES = {"gemini": "Gemini 3.1 Flash Image", "muse": "Muse Image", "svg": "the brain, as SVG"}
+PAINTER_NAMES = {"gemini": "Gemini 3.1 Flash Image", "muse": "Muse Image", "svg": "Claude Sonnet 5.5, as SVG"}
 # The keys each painter's art needs: SAM 3.1 finds the structures in a painted picture, on Meta's key.
 PAINTER_KEYS = {"gemini": ("GEMINI_API_KEY", META_KEY_VAR), "muse": (META_KEY_VAR,), "svg": ()}
 
@@ -84,16 +88,20 @@ CLAUDE_KEY_VARS = ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
 
 # Server-side refusal fallback: a declined request is re-run, inside the same call,
 # on the model Anthropic recommends for that refusal category. Haiku 5.5 has no
-# fallback, so only the brain asks for one, and not when it runs on Haiku.
+# fallback, so every call asks for one but the helper's. Sonnet 5.5's retries only
+# some categories (on Sonnet 5), so a drawing Sonnet declines goes to the brain
+# (studio/steps/art.py).
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-# USD per million tokens (input, output). Opus 5 and Opus 4.8 are fallback targets. A Muse
+# USD per million tokens (input, output). Opus 5, Opus 4.8 and Sonnet 5 are fallback targets. A Muse
 # Spark Contributor model is Muse Spark at a discount for letting Meta train on all it is
 # sent (dev.meta.ai/docs/pricing-rate-limits).
 PRICES = {
     "claude-opus-5-5": (4.00, 20.00),
     "claude-opus-5": (5.00, 25.00),
     "claude-opus-4-8": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-5": (2.00, 10.00),
     "claude-haiku-5-5": (0.10, 0.50),
     "muse-wonder-1.0": (4.00, 20.00),
     "muse-spark-1.3": (1.25, 4.25),
@@ -260,7 +268,7 @@ def ask(
 ) -> dict:
     """Ask one question; return the answer as a dict.
 
-    role is "brain" or "helper". With a schema the answer is that model's fields;
+    role is "brain", "artist" or "helper". With a schema the answer is that model's fields;
     without one it is {"text": ...}. images are PNG, JPEG, GIF or WebP files shown
     before the prompt. label names the call in `calls`.
     """
@@ -438,7 +446,7 @@ def claude_request(
     }
     if system:
         request["system"] = system
-    if role == "brain" and not model.startswith("claude-haiku"):
+    if not model.startswith("claude-haiku"):
         request["fallbacks"] = "default"
         request["betas"] = [FALLBACK_BETA]
     return request
@@ -534,7 +542,8 @@ def meta_request(
     content.append({"type": "text", "text": prompt})
     messages = [{"role": "system", "content": system}] if system else []
     messages.append({"role": "user", "content": content})
-    model = brain_model() if role == "brain" else META[role]["model"]
+    # The artist draws Claude's SVG art only; were Muse ever asked to draw, its brain would.
+    model = brain_model() if role in ("brain", "artist") else META[role]["model"]
     request = {"model": model, "messages": messages}
     if schema is not None:
         request["response_format"] = {

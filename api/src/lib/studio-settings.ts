@@ -11,12 +11,12 @@
  * The narration and the exam question are ElevenLabs' either way.
  *
  * `art`: who paints the droplet's pictures, by the provider of the brain that wrote the lesson. Whoever paints,
- * SAM 3.1 on Meta's API finds each structure in the picture (studio/steps/locate.py), except in the brain's own
- * SVG, which says where each one is.
+ * SAM 3.1 on Meta's API finds each structure in the picture (studio/steps/locate.py), except in Claude's SVG,
+ * which says where each one is.
  *
  *   gemini   Gemini 3.1 Flash Image, on GEMINI_API_KEY
  *   muse     Muse Image, on MODEL_API_KEY
- *   svg      the brain draws it; Claude's only
+ *   svg      Claude Sonnet 5.5 draws it, on the Anthropic key; Claude's brain only
  */
 import prisma from './prisma.js';
 import { BRAINS, type Brain } from './brains.js';

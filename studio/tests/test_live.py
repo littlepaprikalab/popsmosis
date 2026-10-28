@@ -47,8 +47,8 @@ def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
     assert checks["lyric:v1-3"].verdict == "SUPPORTED"
 
 
-def test_the_brain_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
-    """One scene of the sample bundle, drawn live by Claude Opus 5.5, as when an admin has Claude draw the art."""
+def test_claude_sonnet_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
+    """One scene of the sample bundle, drawn live by Claude Sonnet 5.5, as when an admin has Claude draw the art."""
     from studio.steps import art
     from studio.tests import sample_media
 
@@ -61,6 +61,7 @@ def test_the_brain_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
         print(f"{call.label}: {call.model} {call.input_tokens} in, {call.output_tokens} out, "
               f"${call.cost_usd or 0:.4f}, {call.seconds}s")
     print("problems on the kept drawing:", drawing.problems)
+    assert brain.calls[before].role == "artist"
     art.save(tmp_path, scene, drawing)
     print("art:", tmp_path / "art" / "overview.png")
     assert drawing.enough(scene)
