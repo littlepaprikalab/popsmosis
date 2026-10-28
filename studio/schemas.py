@@ -180,10 +180,19 @@ class Bundle(Strict):
 
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:
+        # The song is timed and sung from the lyrics' own sections (studio/steps/audio.py); music.sections
+        # only names them, so it follows the lyrics. A writer may sing the chorus once more than the
+        # prompt's order has it, as songs do: on Oct 28 Claude wrote one, and the whole bundle was refused.
+        self.music.sections = sung_sections(self.lyrics)
         problems = bundle_problems(self)
         if problems:
             raise ValueError("; ".join(problems))
         return self
+
+
+def sung_sections(lyrics: list[Lyric]) -> list[str]:
+    """The sections as the lyrics run: a section each time the next line's differs."""
+    return [line.section for i, line in enumerate(lyrics) if i == 0 or line.section != lyrics[i - 1].section]
 
 
 def bundle_problems(bundle: Bundle) -> list[str]:
@@ -215,10 +224,6 @@ def bundle_problems(bundle: Bundle) -> list[str]:
         for structure in scene.structures:
             if colors.setdefault(structure.name, structure.color_hex) != structure.color_hex:
                 problems.append(f"{structure.name} has two colours")
-
-    sung = [line.section for i, line in enumerate(bundle.lyrics) if i == 0 or line.section != bundle.lyrics[i - 1].section]
-    if sung != bundle.music.sections:
-        problems.append(f"lyrics run {'/'.join(sung)} but music.sections is {'/'.join(bundle.music.sections)}")
 
     line_ids = [line.id for line in bundle.lyrics] + [n.id for n in bundle.narration]
     directed = [d.line_id for d in bundle.direction]

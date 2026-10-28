@@ -98,7 +98,6 @@ def broken(change):
         (lambda d: d["lyrics"][0].update(fact_id="f9"), "unknown fact 'f9'"),
         (lambda d: d["scenes"][1]["structures"][0].update(color_hex="#000000"), "Thylakoid has two colours"),
         (lambda d: d["scenes"][0]["structures"][0].update(color_hex="green"), "not #RRGGBB"),
-        (lambda d: d["lyrics"][5].update(section="verse"), "lyrics run"),
         (lambda d: d["direction"].pop(), "no direction for n2"),
         (lambda d: d["direction"][0].update(scene="nowhere"), "unknown scene 'nowhere'"),
         (lambda d: d["narration"][0].update(id="v1-1"), "duplicate line ids: v1-1"),
@@ -109,3 +108,12 @@ def broken(change):
 def test_bundle_problems_are_caught(change, message):
     with pytest.raises(ValidationError, match=message):
         Bundle.model_validate(broken(change))
+
+
+def test_the_song_sections_follow_the_lyrics():
+    # A chorus sung once more than music.sections lists (as Claude wrote one on Oct 28) is the song as sung.
+    data = bundle_data()
+    data["lyrics"][5]["section"] = "verse"
+    bundle = Bundle.model_validate(data)
+    assert bundle.music.sections == [line.section for i, line in enumerate(bundle.lyrics)
+                                     if i == 0 or line.section != bundle.lyrics[i - 1].section]
