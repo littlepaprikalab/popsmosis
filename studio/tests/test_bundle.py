@@ -18,7 +18,7 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
 
     bundle = bundle_step.run(tmp_path, ask=fake_ask)
     assert seen["role"] == "brain" and seen["schema"] is Bundle and seen["label"] == "bundle"
-    assert seen["system"] == bundle_step.PROMPT and "Big picture first" in seen["system"]
+    assert seen["system"] == bundle_step.prompt() and "Big picture first" in seen["system"]
     assert seen["prompt"] == "Topic: the light reactions\n\nCourse: AP Bio"
     assert read(tmp_path / "bundle.json", Bundle) == bundle
     assert not (tmp_path / "factcheck.json").exists()

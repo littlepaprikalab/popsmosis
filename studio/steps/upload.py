@@ -150,7 +150,7 @@ def public_files(job: Path) -> list[str]:
 
 def private_files(job: Path) -> tuple[list[str], list[str]]:
     """What a re-render needs, as (there, missing): the art of every scene in the bundle,
-    every mask locations.json names, and the fixed files of steps 4-7."""
+    every mask and schematic snapshot locations.json names, and the fixed files of steps 4-7."""
     named = [media.LOCATIONS]
     try:
         named += [media.art_path(scene.id) for scene in jobs.read(job / "bundle.json", Bundle).scenes]
@@ -159,6 +159,7 @@ def private_files(job: Path) -> tuple[list[str], list[str]]:
     try:
         locations = jobs.read(job / media.LOCATIONS, Locations)
         named += [s.art for s in locations.scenes] + [m.mask for s in locations.scenes for m in s.structures]
+        named += [s.schematic for s in locations.scenes if s.schematic]  # what a schematic scene is drawn from
     except (OSError, ValueError, ValidationError):
         pass  # locations.json itself is reported missing
     named += ([media.audio_path(k) for k in media.TIMED]

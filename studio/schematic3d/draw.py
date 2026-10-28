@@ -1,33 +1,53 @@
-"""Draw a textbook-style 3D schematic: real 3D positions, projected and painted back to front.
+"""Draw a machine from its recipe and fitted shapes: real 3D positions, projected and painted far to near.
 
-    python -m studio.schematic3d.draw RECIPE SHAPES OUT_DIR [--fps 24] [--seconds 7.2] [--still T]
+    python -m studio.schematic3d.draw NAME OUT_DIR [--still T] [--seconds 7.2] [--fps 24] [--motion rotor=-1 ...]
 
-The camera is orthographic and looks along +y, a little down, so a capsule is drawn as a rounded
-bar, a sphere as a circle and a tube as a thick curve. Every frame turns the recipe's spinning
-parts about the axle (the z axis) in 3D, projects everything and paints the shapes far to near,
-shaded like the book's: an outline, a darker side, a soft lit side and a shine. The compartments
-and the membrane never move, so they are drawn once. Labels and the lyric band are popsmosis's
-(studio/render/primitives.py).
+A Machine draws in the art's pixels (media.ART_WIDTH x ART_HEIGHT), which are the world the
+renderer's camera moves over, so the renderer draws it under its camera on every frame and
+the art step draws its still and its masks from it (studio/steps/art.py). Nothing here
+depends on the machine: everything about it comes from its recipe (library.py).
+
+The camera is orthographic and looks along +y, a little down, so a capsule is drawn as a
+rounded bar, a sphere as a circle and a tube as a thick curve. At time t the parts a spin
+turns are turned about the axle (the z axis) in 3D, everything is projected and the shapes
+are painted far to near, shaded like the book's: an outline, a darker side, a soft lit side
+and a shine. A part `inside` another (the rod inside the knob) goes behind all of it. The
+compartments are flat colour and the membrane, which never moves, is drawn once at each
+scale it is needed and kept. A frame depends only on t.
+
+Each structure (a group of parts the scene reveals and labels) is drawn washed toward white
+by its own amount, for the renderer's ghosts and spotlight; the rest (the page, the arrows,
+the particles) by one amount of its own.
+
+The motions are the ones the fact-check supported, each with its way (+1 or -1, see
+library.resolve); a motion not given is not drawn at all, arrows included.
 """
 
 from __future__ import annotations
 
-import json
 import math
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import skia
 
+from studio import media
 from studio.render import primitives as p
-from studio.render.layouts import H as LAYOUT
+from studio.schematic3d.library import Flow, Recipe, Spin, load
 
 INK = "#4E4887"  # the book's outline: a dark lavender
 LIGHT = np.array([-0.55, -0.83])  # on screen, from the upper left
-OUTLINE = 2.6  # px
+OUTLINE_NM = 0.095
+RED = "#D9302A"
+ARROW_NM, HEAD_NM = 0.3, 0.75
+TAIL_COLOR, HEAD_COLORS = "#DDB240", ("#E9EBEE", "#B9BDC3", "#8C9199", "#9A9EA6")
+PARTICLE_COLORS = ("#F2F3F5", "#C9CCD1", "#9EA3AA")
+LABEL_INK = "#3D4046"
+WHITE = (255, 255, 255)
 
 
 def catmull(path, per: int = 5) -> np.ndarray:
@@ -47,23 +67,20 @@ def catmull(path, per: int = 5) -> np.ndarray:
 
 
 def turned(points: np.ndarray, angle: float) -> np.ndarray:
-    """The points turned about the z axis (the axle) by `angle` radians, counterclockwise seen from above."""
+    """The points turned about the z axis (the axle) by `angle` radians, counterclockwise seen from +z."""
     c, s = math.cos(angle), math.sin(angle)
     return points @ np.array([[c, s, 0], [-s, c, 0], [0, 0, 1]])
 
 
-def spin_angle(t: float, turn_s: float, start_s: float, ramp_s: float) -> float:
-    """How far the spinning parts have turned at t: still until start_s, up to speed over ramp_s."""
-    t -= start_s
-    if t <= 0:
-        return 0.0
-    speed = 2 * math.pi / turn_s
-    return speed * (t * t / (2 * ramp_s) if t < ramp_s else t - ramp_s / 2)
-
-
-def mix(hex_color: str, toward: tuple[int, int, int], amount: float, alpha: float = 1.0) -> int:
+def mix(hex_color: str, toward: tuple[int, int, int], amount: float, alpha: float = 1.0) -> tuple[float, float, float, float]:
     r, g, b = p.rgb(hex_color)
-    return skia.ColorSetARGB(round(255 * alpha), *(round(c + (t - c) * amount) for c, t in zip((r, g, b), toward)))
+    return (alpha, *(c + (t - c) * amount for c, t in zip((r, g, b), toward)))
+
+
+def argb(color: tuple[float, float, float, float], wash: float = 0.0) -> int:
+    """A mixed colour as skia's, washed toward white by `wash`."""
+    alpha, *rgb = color
+    return skia.ColorSetARGB(round(255 * alpha), *(round(c + (255 - c) * wash) for c in rgb))
 
 
 def stroke(width: float, color: int, blur: float = 0.0) -> skia.Paint:
@@ -82,31 +99,33 @@ def polyline(xs, ys) -> skia.Path:
     return path
 
 
-def body(canvas: skia.Canvas, path: skia.Path, r: float, color: str) -> None:
+def body(canvas: skia.Canvas, path: skia.Path, r: float, color: str, outline: float, wash: float = 0.0) -> None:
     """A rounded shape along the path, shaded like the book's: a darker side, a soft lit side and a shine."""
-    canvas.drawPath(path, stroke(2 * r + 2 * OUTLINE, p.argb(INK)))
+    canvas.drawPath(path, stroke(2 * r + 2 * outline, argb(mix(INK, WHITE, 0), wash)))
     shape = skia.Path()
     stroke(2 * r, 0).getFillPath(path, shape)
     canvas.save()
     canvas.clipPath(shape, doAntiAlias=True)
-    canvas.drawPath(path, stroke(2 * r, mix(color, (40, 34, 90), 0.28)))
-    for offset, width, paint_color, blur in ((0.22, 1.55, mix(color, (0, 0, 0), 0.0), 0.32),
-                                             (0.45, 0.95, mix(color, (255, 255, 255), 0.38), 0.32),
-                                             (0.62, 0.32, mix(color, (255, 255, 255), 0.85, 0.75), 0.22)):
+    canvas.drawPath(path, stroke(2 * r, argb(mix(color, (40, 34, 90), 0.28), wash)))
+    for offset, width, shade, blur in ((0.22, 1.55, mix(color, WHITE, 0.0), 0.32),
+                                       (0.45, 0.95, mix(color, WHITE, 0.38), 0.32),
+                                       (0.62, 0.32, mix(color, WHITE, 0.85, 0.75), 0.22)):
         canvas.save()
         canvas.translate(LIGHT[0] * offset * r, LIGHT[1] * offset * r)
-        canvas.drawPath(path, stroke(width * r, paint_color, blur * r))
+        canvas.drawPath(path, stroke(width * r, argb(shade, wash), blur * r))
         canvas.restore()
     canvas.restore()
 
 
-def ball(canvas: skia.Canvas, x: float, y: float, r: float, light: str, base: str, dark: str, edge: str | None) -> None:
+def ball(canvas: skia.Canvas, x: float, y: float, r: float, colors: tuple[str, ...], edge: str | None, outline: float,
+         wash: float = 0.0) -> None:
+    light, base, dark = (argb(mix(c, WHITE, 0), wash) for c in colors[:3])
     shader = skia.GradientShader.MakeRadial(skia.Point(x + LIGHT[0] * 0.45 * r, y + LIGHT[1] * 0.45 * r), 1.45 * r,
-                                            [p.argb(light), p.argb(base), p.argb(dark)], [0.0, 0.5, 1.0])
+                                            [light, base, dark], [0.0, 0.5, 1.0])
     canvas.drawCircle(x, y, r, skia.Paint(AntiAlias=True, Shader=shader))
     if edge:
-        canvas.drawCircle(x, y, r, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=OUTLINE * 0.8,
-                                              Color=p.argb(edge)))
+        canvas.drawCircle(x, y, r, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=outline * 0.8,
+                                              Color=argb(mix(edge, WHITE, 0), wash)))
 
 
 def arc(radius: float, z: float, from_deg: float, to_deg: float, n: int = 28) -> np.ndarray:
@@ -114,224 +133,324 @@ def arc(radius: float, z: float, from_deg: float, to_deg: float, n: int = 28) ->
     return np.stack([radius * np.cos(a), radius * np.sin(a), np.full(n, z)], axis=1)
 
 
-class Scene:
-    """One recipe's fitted shapes, ready to draw at any time t. A frame depends only on t."""
+@dataclass
+class Shape:
+    points: np.ndarray  # nm: a capsule's two cap centres, or a tube's smoothed path
+    r: float  # nm
+    part: str
+    chain: str
+    structure: str | None  # the structure it belongs to, None for a part in none
+    color: str
+    spin: str | None  # the spin that turns it, if that spin is drawn
+    inside: str | None
 
-    def __init__(self, recipe: dict, fitted: dict, width: int = LAYOUT.width, height: int = LAYOUT.height):
+
+@dataclass
+class Moving:
+    """A flow as drawn: its path the way it goes (nm), and whether its particles move."""
+
+    flow: Flow
+    path: np.ndarray
+    lengths: np.ndarray
+    moves: bool
+
+
+class Machine:
+    """One recipe's fitted shapes, ready to draw at any time t, in the art's pixels."""
+
+    def __init__(self, recipe: Recipe, fitted: dict, motions: dict[str, int] | None = None,
+                 width: int = media.ART_WIDTH, height: int = media.ART_HEIGHT):
         self.recipe, self.fitted = recipe, fitted
         self.W, self.H = width, height
-        self.band_top = height - round(LAYOUT.band_h * height / LAYOUT.height)
-        cam = recipe["camera"]
-        elev = math.radians(cam["elevation_deg"])
+        cam = recipe.camera
+        elev = math.radians(cam.elevation_deg)
         self.right = np.array([1.0, 0, 0])
         self.up = np.array([0, math.sin(elev), math.cos(elev)])
         self.away = np.array([0, math.cos(elev), -math.sin(elev)])  # depth: larger is farther
-        span = (cam["top"] - cam["bottom"]) / 0.86  # the lyric band takes the bottom tenth
-        self.scale = height / span  # pixels per nm
-        self.target = np.array([cam["centre_x"], 0, cam["top"] - span / 2])
-        parts = recipe["parts"]
-        spinning = set(recipe.get("spin", {}).get("parts", []))
-        self.shapes = []
+        self.scale = height / ((cam.top - cam.bottom) * math.cos(elev))  # art pixels per nm
+        self.target = np.array([cam.centre_x, 0, (cam.top + cam.bottom) / 2])
+        self.outline = OUTLINE_NM * self.scale
+        self.motions = {m: s for m, s in (motions or {}).items() if recipe.motion(m) is not None}
+        self.spins: dict[str, tuple[Spin, int]] = {
+            m.id: (m, self.motions[m.id]) for m in recipe.motions if m.kind == "spin" and m.id in self.motions}
+        turning = {part: spin_id for spin_id, (spin, _) in self.spins.items() for part in spin.parts}
+        self.names = [s.name for s in recipe.structures]
+        self.shapes: list[Shape] = []
         for s in fitted["shapes"]:
+            part = recipe.parts[s["part"]]
+            owner = recipe.structure_of(s["part"])
             pts = catmull(s["path"]) if s["kind"] == "tube" else np.array([s["a"], s["b"]], float)
-            self.shapes.append({"points": pts, "r": s["radius"], "part": s["part"], "chain": s["chain"],
-                                "color": parts[s["part"]]["color"], "turns": s["part"] in spinning,
-                                "inside": parts[s["part"]].get("inside")})
-        self.arrows = [catmull(recipe["flow"]["path"])] + [arc(**a) for a in recipe.get("arcs", [])]
-        self.ions = np.array(recipe["ions"]["at"], float)
-        self.labels = self._label_points()
-        self.lines = self._lines()
-        self._page: skia.Image | None = None
-        self._ion_font = p.font("Bold", round(26 * height / 1080))
-        self._title = p.font("SemiBold", round(34 * height / 1080))
+            self.shapes.append(Shape(points=pts, r=s["radius"], part=s["part"], chain=s["chain"],
+                                     structure=owner.name if owner else None,
+                                     color=owner.color if owner else part.color, spin=turning.get(s["part"]),
+                                     inside=part.inside))
+        self.flows: list[Moving] = []
+        self.arrows: list[np.ndarray] = []  # 3D polylines, each ending where its head points
+        for motion in recipe.motions:
+            sense = self.motions.get(motion.id)
+            if sense is None:
+                continue
+            if motion.kind == "spin":
+                for a in motion.arcs:
+                    half = sense * a.sweep_deg / 2
+                    self.arrows.append(arc(a.radius, a.z, a.around_deg - half, a.around_deg + half))
+            else:
+                path = catmull(motion.path)
+                path = path if sense > 0 else path[::-1]
+                lengths = np.r_[0, np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
+                moves = motion.moves_with is None or motion.moves_with in self.spins
+                self.flows.append(Moving(motion, path, lengths, moves))
+                self.arrows.append(path)
+        self.moving = bool(self.spins) or any(f.moves for f in self.flows)
+        self._labels = self._label_points()
+        self._membranes: dict[float, tuple[skia.Image, float, float]] = {}
+        self._fonts = {id(f.flow): p.font("Bold", 1.15 * f.flow.particle.radius * self.scale) for f in self.flows}
 
-    # --- geometry ---------------------------------------------------------------------------------
+    # --- geometry ---------------------------------------------------------------------------
 
     def project(self, points) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Screen x, y (px) and depth of 3D points (nm)."""
+        """Art x, y (px) and depth (nm) of 3D points (nm)."""
         pts = np.atleast_2d(np.asarray(points, float)) - self.target
         return self.W / 2 + pts @ self.right * self.scale, self.H / 2 - pts @ self.up * self.scale, pts @ self.away
 
-    def angle(self, t: float) -> float:
-        spin = self.recipe.get("spin")
-        if not spin:
+    def angle(self, spin_id: str | None, t: float) -> float:
+        """How far a spin has turned at t: it turns from the first frame, at full speed, its way."""
+        if spin_id is None or spin_id not in self.spins:
             return 0.0
-        a = spin_angle(t, spin["turn_s"], spin["start_s"], spin["ramp_s"])
-        return -a if spin.get("clockwise_from_above") else a
+        spin, sense = self.spins[spin_id]
+        return sense * 2 * math.pi * t / spin.turn_s
 
-    def _label_points(self) -> dict[str, np.ndarray]:
+    def placed(self, shape: Shape, t: float) -> np.ndarray:
+        return turned(shape.points, self.angle(shape.spin, t)) if shape.spin else shape.points
+
+    def _label_points(self) -> dict[str, tuple[np.ndarray, str | None]]:
+        """Each structure's label point (nm, at t = 0) and the spin it turns with, if any."""
         out = {}
-        for name, where in self.recipe.get("labels", {}).items():
-            if name == "color":
-                continue
-            if "at" in where:
-                point = np.array(where["at"], float)
-            elif "chain" in where:
-                shape = next(s for s in self.fitted["shapes"] if s["chain"] == where["chain"])
-                if shape["kind"] == "tube":
-                    path = np.array(shape["path"])
-                    point = path[int(len(path) * where.get("along", 0.5))]
+        for s in self.recipe.structures:
+            where, spin = s.label, None
+            if where.at is not None:
+                point = np.array(where.at, float)
+            elif where.chain is not None:
+                shape = next(sh for sh in self.shapes if sh.chain == where.chain and sh.part in s.parts)
+                path = shape.points
+                if len(path) == 2:
+                    point = path[0] + (path[1] - path[0]) * where.along
                 else:
-                    point = (np.array(shape["a"]) + np.array(shape["b"])) / 2
+                    point = path[min(int(len(path) * where.along), len(path) - 1)]
+                spin = shape.spin
             else:
-                point = np.mean([(np.array(s["a"]) + np.array(s["b"])) / 2 for s in self.fitted["shapes"]
-                                 if s["part"] == where["part"] and s["kind"] == "capsule"], axis=0)
-            out[name] = point + np.array(where.get("offset", [0, 0, 0]), float)
+                shapes = [sh for sh in self.shapes if sh.part == where.part]
+                point = np.mean([sh.points.mean(axis=0) for sh in shapes], axis=0)
+                spin = shapes[0].spin
+            out[s.name] = (point + np.array(where.offset, float), spin)
         return out
 
-    def _lines(self) -> list[tuple[float, float, list[p.BandWord]]]:
-        color = self.recipe.get("labels", {}).get("color", "#6C63C9")
-        lines, self.reveals = [], {}
-        for line in self.recipe.get("demo_lines", []):
-            words = line["text"].split()
-            each = (line["to"] - line["from"] - 0.35) / len(words)
-            timed = [p.BandWord(text=w, start=line["from"] + 0.15 + i * each, end=line["from"] + 0.15 + (i + 1) * each)
-                     for i, w in enumerate(words)]
-            for bw in timed:
-                if bw.text in line.get("reveals", {}):
-                    self.reveals[line["reveals"][bw.text]] = bw.start
-                    bw.color = color
-            lines.append((line["from"], line["to"], timed))
-        return lines
+    def label_point(self, name: str, t: float) -> tuple[float, float]:
+        """Where the structure's label points at t, in art pixels: it rides along with a turning part."""
+        point, spin = self._labels[name]
+        if spin:
+            point = turned(point[None, :], self.angle(spin, t))[0]
+        xs, ys, _ = self.project(point)
+        return float(xs[0]), float(ys[0])
 
-    # --- drawing ----------------------------------------------------------------------------------
+    def silhouette(self, every: float = 1.6) -> list[tuple[float, float]]:
+        """Points spread over the machine as drawn at t = 0 (art pixels), about `every` nm apart along each
+        shape and across its width: what labels keep clear of, so a pill does not sit on the machine."""
+        points = []
+        for _, xs, ys, shape in self.paint_order(0.0):
+            r = shape.r * self.scale
+            line = np.stack([xs, ys], axis=1)
+            for a, b in zip(line, line[1:]):
+                d = b - a
+                n = max(int(np.linalg.norm(d) / (every * self.scale)), 1)
+                normal = np.array([-d[1], d[0]]) / (np.linalg.norm(d) or 1)
+                for k in range(n + 1):
+                    c = a + d * k / n
+                    points += [tuple(c), tuple(c + normal * 0.6 * r), tuple(c - normal * 0.6 * r)]
+        return [(float(x), float(y)) for x, y in dict.fromkeys(points)]
 
-    def page(self) -> skia.Image:
-        """The part that never moves: the compartments and the membrane, cut away around the machine."""
-        if self._page is not None:
-            return self._page
-        surface = skia.Surface(self.W, self.H)
+    def split_y(self) -> float:
+        """Where the line between the compartments above and below the membrane falls, in art pixels."""
+        _, ys, _ = self.project([(0, self.recipe.page.split_depth, 0)])
+        return float(ys[0])
+
+    def paint_order(self, t: float) -> list[tuple[float, np.ndarray, np.ndarray, Shape]]:
+        """Every shape at time t, far to near. A part `inside` another goes behind all of it, as the
+        book draws a rod inside a knob, rather than between its lobes."""
+        items = []
+        for shape in self.shapes:
+            xs, ys, depth = self.project(self.placed(shape, t))
+            items.append([float(depth.mean()), xs, ys, shape])
+        farthest: dict[str, float] = {}
+        for depth, _, _, shape in items:
+            farthest[shape.part] = max(farthest.get(shape.part, -1e9), depth)
+        for item in items:
+            inside = item[3].inside
+            if inside in farthest:
+                item[0] = max(item[0], farthest[inside] + 0.01)
+        return [tuple(item) for item in sorted(items, key=lambda item: -item[0])]
+
+    def particles(self, t: float) -> list[tuple[np.ndarray, Moving]]:
+        """Every particle at t (nm): the crowd waiting where each flow comes from, and the ones on their way."""
+        out = []
+        for f in self.flows:
+            crowd = f.flow.crowd.forward if self.motions[f.flow.id] > 0 else f.flow.crowd.backward
+            out += [(np.array(q, float), f) for q in crowd]
+            if not f.moves:
+                continue
+            front = np.array(f.flow.front, float)
+            total = f.lengths[-1]
+            first = math.floor((t - f.flow.travel_s) / f.flow.every_s) + 1
+            for k in range(first, math.floor(t / f.flow.every_s) + 1):
+                u = (t - k * f.flow.every_s) / f.flow.travel_s
+                if 0 <= u <= 1:
+                    at = np.interp(u * total, f.lengths, np.arange(len(f.path)))
+                    i0 = min(int(at), len(f.path) - 2)
+                    out.append((f.path[i0] + (f.path[i0 + 1] - f.path[i0]) * (at - i0) + front, f))
+        return out
+
+    # --- the page: compartments and membrane ------------------------------------------------
+
+    def draw_page(self, canvas: skia.Canvas, bounds: tuple[float, float, float, float], wash: float = 0.0,
+                  resolution: float = 1.0) -> None:
+        """The compartments over `bounds` (art pixels: the part of the world in view, which can reach
+        past the art), and the membrane drawn at `resolution` image pixels per art pixel."""
+        page = self.recipe.page
+        x0, y0, x1, y1 = bounds
+        if page.below is None:
+            canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(mix(page.above.color, WHITE, 0), wash)))
+        else:
+            split = min(max(self.split_y(), y0), y1)
+            canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, split), skia.Paint(Color=argb(mix(page.above.color, WHITE, 0), wash)))
+            canvas.drawRect(skia.Rect.MakeLTRB(x0, split, x1, y1), skia.Paint(Color=argb(mix(page.below.color, WHITE, 0), wash)))
+        if self.recipe.membrane:
+            image, mx, my = self.membrane(resolution)
+            canvas.save()
+            canvas.translate(mx, my)
+            canvas.scale(1 / resolution, 1 / resolution)
+            paint = skia.Paint(AntiAlias=True)
+            if wash > 0.002:  # white laid over the membrane's own pixels only, as the compartments are washed
+                paint.setColorFilter(skia.ColorFilters.Blend(skia.ColorSetARGB(round(255 * wash), 255, 255, 255),
+                                                             skia.BlendMode.kSrcATop))
+            canvas.drawImage(image, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear, skia.MipmapMode.kLinear), paint)
+            canvas.restore()
+
+    def membrane(self, resolution: float = 1.0) -> tuple[skia.Image, float, float]:
+        """The membrane as an image at `resolution` image pixels per art pixel, and where its top left is
+        (art pixels): heads and tails in rows, cut away around the parts that sit in it. Kept per resolution."""
+        if resolution in self._membranes:
+            return self._membranes[resolution]
+        mem = self.recipe.membrane
+        reach = (mem.half_width + 1) * mem.spacing
+        depth = 0.4 + mem.rows * mem.spacing * 0.87
+        corners = [(x, y, z) for x in (-reach, reach) for y in (0, depth) for z in (-mem.head_z - 1, mem.head_z + 1)]
+        xs, ys, _ = self.project(corners)
+        pad = mem.head_radius * self.scale * 2
+        x0, y0 = float(xs.min() - pad), float(ys.min() - pad)
+        width, height = math.ceil((xs.max() + pad - x0) * resolution), math.ceil((ys.max() + pad - y0) * resolution)
+        surface = skia.Surface(width, height)
         canvas = surface.getCanvas()
-        page, mem = self.recipe["page"], self.recipe["membrane"]
-        _, split, _ = self.project([(0, 3.0, 0)])
-        canvas.drawRect(skia.Rect.MakeLTRB(0, 0, self.W, float(split[0])), skia.Paint(Color=p.argb(page["above"]["color"])))
-        canvas.drawRect(skia.Rect.MakeLTRB(0, float(split[0]), self.W, self.H), skia.Paint(Color=p.argb(page["below"]["color"])))
-        foot = np.array(self.fitted["membrane_footprint"])
+        canvas.clear(skia.ColorTRANSPARENT)
+        canvas.scale(resolution, resolution)
+        canvas.translate(-x0, -y0)
+        foot = np.array(self.fitted.get("membrane_footprint", []))
         rng = np.random.default_rng(3)
-        tail = stroke(2 * 0.085 * self.scale, p.argb("#DDB240"))
-        z, spacing = mem["head_z"], mem["spacing"]
-        for row in range(mem["rows"] - 1, -1, -1):  # far rows first
+        tail = stroke(2 * 0.085 * self.scale, argb(mix(TAIL_COLOR, WHITE, 0)))
+        z, spacing = mem.head_z, mem.spacing
+        for row in range(mem.rows - 1, -1, -1):  # far rows first
             y = 0.4 + row * spacing * 0.87
             heads = []
-            for col in range(-mem["half_width"], mem["half_width"] + 1):
+            for col in range(-mem.half_width, mem.half_width + 1):
                 x = col * spacing + (0.5 * spacing if row % 2 else 0)
-                if len(foot) and np.min(np.hypot(foot[:, 0] - x, foot[:, 1] - y)) < mem["cut"]:
+                if len(foot) and np.min(np.hypot(foot[:, 0] - x, foot[:, 1] - y)) < mem.cut:
                     continue
                 for side in (1, -1):
                     for dx in (-0.16, 0.16):
                         phase = rng.uniform(0, 2 * math.pi)
                         wavy = [(x + dx + 0.07 * math.sin(phase + k * 1.7), y, side * (z - 0.35 - 0.36 * k)) for k in range(6)]
-                        xs, ys, _ = self.project(wavy)
-                        canvas.drawPath(polyline(xs, ys), tail)
+                        txs, tys, _ = self.project(wavy)
+                        canvas.drawPath(polyline(txs, tys), tail)
                     heads.append((x, y, side * z))
             if heads:
-                xs, ys, _ = self.project(heads)
-                for hx, hy in zip(xs, ys):
-                    ball(canvas, hx, hy, mem["head_radius"] * self.scale, "#E9EBEE", "#B9BDC3", "#8C9199", "#9A9EA6")
-        self._page = surface.makeImageSnapshot()
-        return self._page
+                hxs, hys, _ = self.project(heads)
+                for hx, hy in zip(hxs, hys):
+                    ball(canvas, hx, hy, mem.head_radius * self.scale, HEAD_COLORS[:3], HEAD_COLORS[3], self.outline)
+        self._membranes[resolution] = (surface.makeImageSnapshot(), x0, y0)
+        return self._membranes[resolution]
 
-    def paint_order(self, t: float) -> list[tuple[float, np.ndarray, np.ndarray, dict]]:
-        """Every shape at time t, far to near. A part `inside` another goes behind all of it, as the
-        book draws a rod inside a knob, rather than between its lobes."""
-        angle = self.angle(t)
-        items = []
-        for shape in self.shapes:
-            pts = turned(shape["points"], angle) if shape["turns"] else shape["points"]
-            xs, ys, depth = self.project(pts)
-            items.append([float(depth.mean()), xs, ys, shape])
-        farthest = {}
-        for depth, _, _, shape in items:
-            farthest[shape["part"]] = max(farthest.get(shape["part"], -1e9), depth)
-        for item in items:
-            inside = item[3]["inside"]
-            if inside in farthest:
-                item[0] = max(item[0], farthest[inside] + 0.01)
-        return [tuple(item) for item in sorted(items, key=lambda item: -item[0])]
+    # --- the machine ------------------------------------------------------------------------
 
-    def flowing(self, t: float) -> np.ndarray:
-        """Where the ions flowing down the path are at t: one sets off every `every_s` once the parts turn."""
-        flow = self.recipe["flow"]
-        start = self.recipe.get("spin", {}).get("start_s", 0.0)
-        path = self.arrows[0]
-        lengths = np.r_[0, np.cumsum(np.linalg.norm(np.diff(path, axis=0), axis=1))]
-        out = []
-        for k in range(4):
-            u = (t - start) / flow["every_s"] - k
-            if t > start and 0 <= u <= 1:
-                at = np.interp(u * lengths[-1], lengths, np.arange(len(path)))
-                i0 = min(int(at), len(path) - 2)
-                out.append(path[i0] + (path[i0 + 1] - path[i0]) * (at - i0) + np.array(flow.get("front", [0, 0, 0])))
-        return np.array(out).reshape(-1, 3)
-
-    def draw(self, canvas: skia.Canvas, t: float, text: bool = True) -> None:
-        canvas.drawImage(self.page(), 0, 0)
+    def draw_machine(self, canvas: skia.Canvas, t: float, washes: dict[str, float] | None = None,
+                     other_wash: float = 0.0, text: bool = True) -> None:
+        """The parts at t, far to near, each structure washed by its amount; then the arrows and particles."""
+        washes = washes or {}
         for _, xs, ys, shape in self.paint_order(t):
-            body(canvas, polyline(xs, ys), shape["r"] * self.scale, shape["color"])
-        red = p.argb("#D9302A")
+            wash = washes.get(shape.structure, 0.0) if shape.structure else other_wash
+            body(canvas, polyline(xs, ys), shape.r * self.scale, shape.color, self.outline, wash)
+        red = argb(mix(RED, WHITE, 0), other_wash)
         for arrow in self.arrows:
             xs, ys, _ = self.project(arrow)
-            canvas.drawPath(polyline(xs, ys), stroke(0.3 * self.scale, red))
+            canvas.drawPath(polyline(xs, ys), stroke(ARROW_NM * self.scale, red))
             dx, dy = xs[-1] - xs[-2], ys[-1] - ys[-2]
             n = math.hypot(dx, dy) or 1
             dx, dy = dx / n, dy / n
             tip = (xs[-1] + dx * 0.55 * self.scale, ys[-1] + dy * 0.55 * self.scale)
-            size = 0.75 * self.scale
+            size = HEAD_NM * self.scale
             head = skia.Path()
             head.moveTo(*tip)
             head.lineTo(tip[0] - dx * size - dy * size * 0.55, tip[1] - dy * size + dx * size * 0.55)
             head.lineTo(tip[0] - dx * size + dy * size * 0.55, tip[1] - dy * size - dx * size * 0.55)
             head.close()
             canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=red))
-        ion = self.recipe["ions"]
-        xs, ys, _ = self.project(np.vstack([self.ions, self.flowing(t)]))
-        for x, y in zip(xs, ys):
-            ball(canvas, x, y, ion["radius"] * self.scale, "#F2F3F5", "#C9CCD1", "#9EA3AA", INK)
-            tw = p.text_width(self._ion_font, ion["label"])
-            p.draw_text(canvas, ion["label"], x - tw / 2, y + p.cap_height(self._ion_font) / 2, self._ion_font,
-                        p.argb("#3D4046"))
-        if text:
-            self.draw_text(canvas, t)
+        for point, f in self.particles(t):
+            xs, ys, _ = self.project(point)
+            x, y = float(xs[0]), float(ys[0])
+            ball(canvas, x, y, f.flow.particle.radius * self.scale, PARTICLE_COLORS, INK, self.outline, other_wash)
+            if text and f.flow.particle.label:
+                font = self._fonts[id(f.flow)]
+                p.draw_text(canvas, f.flow.particle.label, x - p.text_width(font, f.flow.particle.label) / 2,
+                            y + p.cap_height(font) / 2, font, argb(mix(LABEL_INK, WHITE, 0), other_wash))
 
-    def draw_text(self, canvas: skia.Canvas, t: float) -> None:
-        page = self.recipe["page"]
-        p.draw_text(canvas, page["above"]["name"], 40, 40 + p.cap_height(self._title), self._title, p.argb("#3B2A17", 0.85))
-        p.draw_text(canvas, page["below"]["name"], 40, self.band_top - 32, self._title, p.argb("#3B3317", 0.85))
-        color = self.recipe.get("labels", {}).get("color", "#6C63C9")
-        labels = []
-        for name, at in self.reveals.items():
-            if t >= at and name in self.labels:
-                xs, ys, _ = self.project([self.labels[name]])
-                x, y = float(xs[0]), float(ys[0])
-                labels.append(p.Label(name=name, color=color, anchor=(x, y), box=(x - 30, y - 30, x + 30, y + 30),
-                                      alpha=p.ease((t - at) / 0.35)))
-        _, membrane, _ = self.project([(0, 0, 0)])
-        ions = list(zip(*self.project(self.ions)[:2]))
-        p.place_labels(labels, (LAYOUT.margin, LAYOUT.margin + 60, self.W - LAYOUT.margin, self.band_top - LAYOUT.margin),
-                       (self.W / 2, float(membrane[0]) + 120), LAYOUT.label_font, avoid=ions)
-        for lb in labels:
-            p.draw_label(canvas, lb, LAYOUT.label_font)
-        if self.lines:
-            line = next((ws for t0, t1, ws in self.lines if t0 <= t < t1), self.lines[-1][2])
-            p.draw_band(canvas, (0, self.band_top, self.W, self.H), line, t, LAYOUT.band_font)
+    def draw(self, canvas: skia.Canvas, t: float, washes: dict[str, float] | None = None, other_wash: float = 0.0,
+             text: bool = True, bounds: tuple[float, float, float, float] | None = None, resolution: float = 1.0) -> None:
+        self.draw_page(canvas, bounds or (0, 0, self.W, self.H), other_wash, resolution)
+        self.draw_machine(canvas, t, washes, other_wash, text)
 
-    def image(self, t: float, text: bool = True) -> skia.Image:
+    # --- for the art step -------------------------------------------------------------------
+
+    def still(self) -> np.ndarray:
+        """The machine at t = 0 without any text: art.png's pixels, H x W x 3 RGB."""
         surface = skia.Surface(self.W, self.H)
-        self.draw(surface.getCanvas(), t, text)
-        return surface.makeImageSnapshot()
+        self.draw(surface.getCanvas(), 0.0, text=False)
+        return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
+
+    def masks(self) -> dict[str, np.ndarray]:
+        """Per structure, where it shows at t = 0 (bool, H x W): what nearer parts cover is left out."""
+        surface = skia.Surface(self.W, self.H)
+        canvas = surface.getCanvas()
+        canvas.clear(skia.ColorBLACK)
+        ids = {name: i + 1 for i, name in enumerate(self.names)}
+        for _, xs, ys, shape in self.paint_order(0.0):
+            paint = skia.Paint(AntiAlias=False, Style=skia.Paint.kStroke_Style,
+                               StrokeWidth=2 * (shape.r * self.scale + self.outline), StrokeCap=skia.Paint.kRound_Cap,
+                               StrokeJoin=skia.Paint.kRound_Join,
+                               Color=skia.ColorSetARGB(255, ids.get(shape.structure, 0), 0, 0))
+            canvas.drawPath(polyline(xs, ys), paint)
+        red = surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, 0]
+        return {name: red == i for name, i in ids.items()}
 
 
-def render_video(scene: Scene, out: Path, fps: int, seconds: float) -> float:
-    """Encode the scene from 0 to `seconds`; returns the average drawing time per frame, in seconds."""
+def render_video(machine: Machine, out: Path, fps: int, seconds: float) -> float:
+    """Encode the machine from 0 to `seconds`; returns the average drawing time per frame, in seconds."""
     ffmpeg = subprocess.Popen(["ffmpeg", "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgba",
-                               "-s", f"{scene.W}x{scene.H}", "-r", str(fps), "-i", "-", "-c:v", "libx264",
+                               "-s", f"{machine.W}x{machine.H}", "-r", str(fps), "-i", "-", "-c:v", "libx264",
                                "-pix_fmt", "yuv420p", "-crf", "18", str(out)], stdin=subprocess.PIPE)
-    surface = skia.Surface(scene.W, scene.H)
+    surface = skia.Surface(machine.W, machine.H)
     frames = int(seconds * fps)
     drawing = 0.0
     for i in range(frames):
         t0 = time.time()
-        scene.draw(surface.getCanvas(), i / fps)
+        machine.draw(surface.getCanvas(), i / fps)
         pixels = surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)
         drawing += time.time() - t0
         ffmpeg.stdin.write(pixels.tobytes())
@@ -343,20 +462,30 @@ def render_video(scene: Scene, out: Path, fps: int, seconds: float) -> float:
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    if len(argv) < 3:
+    if len(argv) < 2:
         sys.exit(__doc__.split("\n\n")[1])
-    recipe, fitted, out = json.loads(Path(argv[0]).read_text()), json.loads(Path(argv[1]).read_text()), Path(argv[2])
-    opt = {argv[i]: argv[i + 1] for i in range(3, len(argv) - 1) if argv[i].startswith("--")}
+    entry, out = load(argv[0]), Path(argv[1])
+    opt: dict[str, str] = {}
+    motions: dict[str, int] = {}
+    i = 2
+    while i < len(argv) - 1:
+        if argv[i] == "--motion":
+            motion, sense = argv[i + 1].split("=")
+            motions[motion] = 1 if int(sense) > 0 else -1
+        elif argv[i].startswith("--"):
+            opt[argv[i]] = argv[i + 1]
+        i += 2
     out.mkdir(parents=True, exist_ok=True)
-    scene = Scene(recipe, fitted)
+    machine = Machine(entry.recipe, entry.shapes, motions)
     started = time.time()
-    scene.page()
     if "--still" in opt:
         t = float(opt["--still"])
-        scene.image(t).save(str(out / f"{recipe['name']}_{t:.2f}s.png"), skia.kPNG)
+        surface = skia.Surface(machine.W, machine.H)
+        machine.draw(surface.getCanvas(), t)
+        surface.makeImageSnapshot().save(str(out / f"{entry.recipe.name}_{t:.2f}s.png"), skia.kPNG)
         print(f"still at {t}s -> {out}")
     else:
         fps, seconds = int(opt.get("--fps", 24)), float(opt.get("--seconds", 7.2))
-        video = out / f"{recipe['name']}_{fps}fps.mp4"
-        per_frame = render_video(scene, video, fps, seconds)
+        video = out / f"{entry.recipe.name}_{fps}fps.mp4"
+        per_frame = render_video(machine, video, fps, seconds)
         print(f"{int(seconds * fps)} frames, {per_frame * 1000:.0f} ms a frame, {time.time() - started:.1f}s in all -> {video}")

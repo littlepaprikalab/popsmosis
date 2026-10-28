@@ -1,0 +1,178 @@
+{
+ "name": "toy_pump",
+ "title": "A made-up pump (for tests)",
+ "shows": "A made-up machine with no membrane: a barrel of three subunits, a plug that turns inside it, and a lid.",
+ "use_for": "nothing: it only exists to keep the pipeline free of anything one machine needs.",
+ "checked": {
+  "by": "the tests",
+  "on": "2026-10-28",
+  "notes": "Made up."
+ },
+ "structure": {
+  "pdb": "0TOY",
+  "title": "No such entry",
+  "url": "https://example.invalid/0TOY.cif",
+  "citation": "None.",
+  "entities": {
+   "A": "Barrel protein",
+   "B": "Barrel protein",
+   "C": "Barrel protein",
+   "D": "Plug protein",
+   "E": "Lid protein"
+  }
+ },
+ "parts": {
+  "barrel": {
+   "chains": [
+    "A",
+    "B",
+    "C"
+   ],
+   "entities": [
+    "Barrel protein"
+   ],
+   "kind": "capsule"
+  },
+  "plug": {
+   "chains": [
+    "D"
+   ],
+   "entities": [
+    "Plug protein"
+   ],
+   "kind": "capsule",
+   "inside": "barrel"
+  },
+  "lid": {
+   "chains": [
+    "E"
+   ],
+   "entities": [
+    "Lid protein"
+   ],
+   "kind": "tube",
+   "radius": 0.5,
+   "color": "#9CC9A4"
+  }
+ },
+ "axle": {
+  "ring": "barrel",
+  "down": "plug",
+  "toward_x": "lid",
+  "up_end": "the top",
+  "down_end": "the bottom"
+ },
+ "structures": [
+  {
+   "name": "Barrel",
+   "aliases": [
+    "drum"
+   ],
+   "parts": [
+    "barrel"
+   ],
+   "color": "#E3A869",
+   "looks": "the three tall lobes",
+   "label": {
+    "part": "barrel",
+    "offset": [
+     -2.0,
+     -1.0,
+     1.0
+    ]
+   }
+  },
+  {
+   "name": "Plug",
+   "aliases": [],
+   "parts": [
+    "plug"
+   ],
+   "color": "#C0504D",
+   "looks": "the short plug in the middle",
+   "label": {
+    "chain": "D",
+    "along": 0.2
+   }
+  }
+ ],
+ "page": {
+  "above": {
+   "name": "CYTOSOL",
+   "color": "#DCEBF7"
+  }
+ },
+ "camera": {
+  "elevation_deg": 15,
+  "top": 8.0,
+  "bottom": -8.0,
+  "centre_x": 0.0
+ },
+ "motions": [
+  {
+   "kind": "spin",
+   "id": "plug",
+   "parts": [
+    "plug"
+   ],
+   "turn_s": 4.0,
+   "claim": "The plug turns {direction} as seen from {end}.",
+   "arcs": [
+    {
+     "radius": 1.6,
+     "z": -3.5,
+     "around_deg": 270,
+     "sweep_deg": 90
+    }
+   ]
+  },
+  {
+   "kind": "flow",
+   "id": "ions",
+   "path": [
+    [
+     4.0,
+     -1.0,
+     6.0
+    ],
+    [
+     1.5,
+     -1.0,
+     1.0
+    ],
+    [
+     1.5,
+     -1.0,
+     -3.0
+    ],
+    [
+     4.0,
+     -1.0,
+     -6.0
+    ]
+   ],
+   "forward": "Sodium ions pass through the pump from the top to the bottom.",
+   "backward": "Sodium ions pass through the pump from the bottom to the top.",
+   "particle": {
+    "label": "Na⁺",
+    "radius": 0.5
+   },
+   "crowd": {
+    "forward": [
+     [
+      -4,
+      -1,
+      6
+     ],
+     [
+      5,
+      -1,
+      6.5
+     ]
+    ]
+   },
+   "every_s": 1.0,
+   "travel_s": 2.5
+  }
+ ]
+}

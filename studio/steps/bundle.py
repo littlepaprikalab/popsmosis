@@ -2,24 +2,34 @@
 
 Writes bundle.json, after the code checks (studio/checks.py) have repaired what they
 can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
-removes it.
+removes it. The prompt lists the machines the schematic library offers
+(studio/schematic3d/library.py), or leaves the schematic part out when it offers none.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from studio import brain, checks
 from studio.jobs import read, write
+from studio.schematic3d import library
 from studio.schemas import Bundle, Request
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
+SCHEMATICS = re.compile(r"<!-- schematics -->\n(.*?)<!-- /schematics -->\n", re.DOTALL)
+
+
+def prompt() -> str:
+    """The writer's prompt, with the schematic library's machines listed, or no schematic part when it offers none."""
+    machines = library.writer_section()
+    return SCHEMATICS.sub(lambda found: found[1].replace("{library}", machines) if machines else "", PROMPT)
 
 
 def run(job: Path, ask=brain.ask) -> Bundle:
     request = read(job / "request.json", Request)
     try:
-        answer = ask("brain", user_prompt(request), Bundle, request.images, system=PROMPT, label="bundle")
+        answer = ask("brain", user_prompt(request), Bundle, request.images, system=prompt(), label="bundle")
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise

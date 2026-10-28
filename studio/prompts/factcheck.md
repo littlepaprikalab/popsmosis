@@ -10,7 +10,12 @@ You get JSON with:
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
   row's cells are separated by " | "), and "frq:..." a line of the exam question both
   videos read aloud at the end: its prompt, the predict question, or a step of the model
-  answer. Lines come in order, so read each one in the
+  answer. "motion:..." is a claim a moving diagram would make on screen: which way a part
+  turns, or which way something flows. The motion lines give every way, some seen from each
+  end of a machine, so several contradict each other. Judge each on its own: SUPPORTED only
+  when the facts say that way, in the line's own view or in one the facts let you convert
+  exactly (seen from the other end, a turn goes the other way round). Never correct a
+  motion line: its `corrected` is "". Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only.
 

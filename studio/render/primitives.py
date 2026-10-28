@@ -12,6 +12,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import skia
 
 from studio.render.layouts import Rect
@@ -161,8 +162,12 @@ class Label:
 
 
 def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float], font_size: float,
-                 avoid: list[tuple[float, float]] = ()) -> None:
+                 avoid: list[tuple[float, float]] = (), beside: list[tuple[float, float]] = ()) -> None:
     """Put each pill near its dot, away from the diagram's centre, inside `bounds` and off the others.
+
+    `beside` is a cloud of points over a drawing the pills must not cover (a schematic's machine):
+    a pill on it slides sideways, away from its middle, until it is beside it, as a textbook
+    labels a figure from the side.
 
     A fixed number of push-apart rounds from the same start, so the same input always
     gives the same places (a frame depends only on its time).
@@ -195,6 +200,8 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
     for i in range(len(labels)):
         clamp(i)
     dots = [lb.anchor for lb in labels] + list(avoid)
+    cloud = np.array(beside, float).reshape(-1, 2)
+    middle = float(cloud[:, 0].mean()) if len(cloud) else 0.0
     for _ in range(40):
         moved = False
         for i in range(len(labels)):
@@ -223,6 +230,16 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
                         pos[i][1] += oy if pos[i][1] >= dot[1] else -oy
                     else:
                         pos[i][0] += ox if pos[i][0] >= dot[0] else -ox
+            if len(cloud):
+                near = np.abs(cloud[:, 1] - pos[i][1]) < h / 2 + GAP
+                xs = cloud[near, 0]
+                over = xs[np.abs(xs - pos[i][0]) < w / 2 + GAP]
+                if len(over):
+                    moved = True
+                    if pos[i][0] >= middle:
+                        pos[i][0] = float(over.max()) + w / 2 + GAP
+                    else:
+                        pos[i][0] = float(over.min()) - w / 2 - GAP
             clamp(i)
         if not moved:
             break

@@ -1,40 +1,365 @@
 {
-  "name": "atp_synthase",
-  "title": "ATP synthase (chloroplast)",
-  "structure": {"pdb": "6FKF", "title": "Chloroplast F1Fo conformation 1", "url": "https://files.rcsb.org/download/6FKF.cif"},
-  "parts": {
-    "rotor": {"chains": ["G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"], "kind": "capsule",
-              "max_radius": 0.78, "color": "#A9A4E4", "turns": true},
-    "rod": {"chains": ["g", "e"], "kind": "capsule", "color": "#9B92DD", "turns": true, "inside": "knob"},
-    "knob": {"chains": ["A", "B", "C", "D", "E", "F"], "kind": "capsule", "color": "#BEB8EE"},
-    "stator": {"chains": ["a", "d"], "kind": "capsule", "color": "#C8C2F1"},
-    "stalk": {"chains": ["b", "p"], "kind": "tube", "radius": 0.55, "color": "#C8C2F1"}
+ "name": "atp_synthase",
+ "title": "ATP synthase (chloroplast)",
+ "shows": "ATP synthase in the thylakoid membrane, drawn from its real structure: a ring of subunits in the membrane (the rotor), a rod rising from the ring into the catalytic knob in the stroma, and the stator, a stalk beside them anchored in the membrane that holds the knob still. Protons wait in the thylakoid space above the membrane.",
+ "use_for": "lessons on how chloroplasts make ATP: the light reactions, chemiosmosis, the proton gradient across the thylakoid membrane. It is the chloroplast's enzyme and its compartments are the thylakoid space and the stroma, so it does not fit a lesson set in mitochondria.",
+ "checked": {
+  "by": "",
+  "on": "",
+  "notes": "To check: each part's chains are the entities its `entities` name (the entry's own names, in structure.entities); the structure names and what they cover are the textbook's (Campbell Biology's figure labels Rotor, Internal rod, Catalytic knob, Stator); the compartments are right for the chloroplast; each motion's sentences say what the picture would show. Then fill in `by` and `on`."
+ },
+ "structure": {
+  "pdb": "6FKF",
+  "title": "Chloroplast F1Fo conformation 1",
+  "url": "https://files.rcsb.org/download/6FKF.cif",
+  "citation": "Hahn A, Vonck J, Mills DJ, Meier T, Kühlbrandt W (2018). Structure, mechanism, and regulation of the chloroplast ATP synthase. Science.",
+  "entities": {
+   "A": "ATP synthase subunit alpha, chloroplastic",
+   "B": "ATP synthase subunit beta, chloroplastic",
+   "C": "ATP synthase subunit alpha, chloroplastic",
+   "D": "ATP synthase subunit beta, chloroplastic",
+   "E": "ATP synthase subunit alpha, chloroplastic",
+   "F": "ATP synthase subunit beta, chloroplastic",
+   "G": "ATP synthase subunit c, chloroplastic",
+   "H": "ATP synthase subunit c, chloroplastic",
+   "I": "ATP synthase subunit c, chloroplastic",
+   "J": "ATP synthase subunit c, chloroplastic",
+   "K": "ATP synthase subunit c, chloroplastic",
+   "L": "ATP synthase subunit c, chloroplastic",
+   "M": "ATP synthase subunit c, chloroplastic",
+   "N": "ATP synthase subunit c, chloroplastic",
+   "O": "ATP synthase subunit c, chloroplastic",
+   "P": "ATP synthase subunit c, chloroplastic",
+   "Q": "ATP synthase subunit c, chloroplastic",
+   "R": "ATP synthase subunit c, chloroplastic",
+   "S": "ATP synthase subunit c, chloroplastic",
+   "T": "ATP synthase subunit c, chloroplastic",
+   "a": "ATP synthase subunit a, chloroplastic",
+   "b": "ATP synthase subunit b, chloroplastic",
+   "d": "ATP synthase delta chain, chloroplastic",
+   "e": "ATP synthase epsilon chain, chloroplastic",
+   "g": "ATP synthase gamma chain, chloroplastic",
+   "p": "ATP synthase subunit b', chloroplastic"
+  }
+ },
+ "parts": {
+  "rotor": {
+   "chains": [
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T"
+   ],
+   "entities": [
+    "ATP synthase subunit c, chloroplastic"
+   ],
+   "kind": "capsule",
+   "max_radius": 0.78
   },
-  "axle": {"ring": "rotor", "down": "knob", "toward_x": "stalk"},
-  "membrane": {"parts": ["rotor", "stator", "stalk"], "head_z": 2.45, "head_radius": 0.44, "spacing": 0.95,
-               "rows": 9, "half_width": 44, "cut": 0.95},
-  "page": {"above": {"name": "THYLAKOID SPACE", "color": "#F39A3E"}, "below": {"name": "STROMA", "color": "#FCE7A2"}},
-  "camera": {"elevation_deg": 13, "top": 14.8, "bottom": -19.4, "centre_x": 1.5},
-  "spin": {"parts": ["rotor", "rod"], "turn_s": 6.0, "start_s": 0.5, "ramp_s": 1.0, "clockwise_from_above": true,
-           "why": "Clockwise seen from the membrane's top is counterclockwise seen from the knob, as when it makes ATP. Check this against the lesson's facts."},
-  "ions": {"label": "H⁺", "radius": 0.85,
-           "at": [[-15, -6, 9], [-9, -6, 13.5], [-4.5, -6, 7.5], [8.5, -6, 12], [14, -6, 8.5], [18.5, -6, 13],
-                  [-20, -6, 5.6], [1.8, -6, 11.8], [15.0, -4, -8.4]]},
-  "flow": {"path": [[3.1, -2.6, 9.4], [3.15, -2.65, 5.0], [3.2, -2.7, 1.5], [3.25, -2.7, -1.8], [3.8, -2.7, -3.7],
-                    [6.0, -2.7, -5.2], [12.6, -3.7, -7.7]],
-           "every_s": 2.0, "front": [0, -1.2, 0]},
-  "arcs": [{"radius": 3.49, "z": 0.9, "from_deg": 330, "to_deg": 215},
-           {"radius": 2.1, "z": -6.6, "from_deg": 330, "to_deg": 215}],
-  "labels": {
-    "color": "#6C63C9",
-    "Rotor": {"at": [-1.62, -2.35, 0.0]},
-    "Internal rod": {"chain": "g", "offset": [0, -1.2, 2.2]},
-    "Catalytic knob": {"part": "knob", "offset": [-2.5, -3.0, -1.0]},
-    "Stator": {"chain": "b", "along": 0.68, "offset": [0.4, -0.5, 0]}
+  "rod": {
+   "chains": [
+    "g",
+    "e"
+   ],
+   "entities": [
+    "ATP synthase epsilon chain, chloroplastic",
+    "ATP synthase gamma chain, chloroplastic"
+   ],
+   "kind": "capsule",
+   "inside": "knob"
   },
-  "demo_lines": [
-    {"from": 0.0, "to": 2.4, "text": "Protons turn a ring in the membrane", "reveals": {"ring": "Rotor"}},
-    {"from": 2.4, "to": 4.8, "text": "a rod spins down inside the knob", "reveals": {"rod": "Internal rod", "knob": "Catalytic knob"}},
-    {"from": 4.8, "to": 7.2, "text": "while the stator holds the knob still", "reveals": {"stator": "Stator"}}
-  ]
+  "knob": {
+   "chains": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F"
+   ],
+   "entities": [
+    "ATP synthase subunit alpha, chloroplastic",
+    "ATP synthase subunit beta, chloroplastic"
+   ],
+   "kind": "capsule"
+  },
+  "stator": {
+   "chains": [
+    "a",
+    "d"
+   ],
+   "entities": [
+    "ATP synthase delta chain, chloroplastic",
+    "ATP synthase subunit a, chloroplastic"
+   ],
+   "kind": "capsule"
+  },
+  "stalk": {
+   "chains": [
+    "b",
+    "p"
+   ],
+   "entities": [
+    "ATP synthase subunit b', chloroplastic",
+    "ATP synthase subunit b, chloroplastic"
+   ],
+   "kind": "tube",
+   "radius": 0.55
+  }
+ },
+ "axle": {
+  "ring": "rotor",
+  "down": "knob",
+  "toward_x": "stalk",
+  "up_end": "the thylakoid space",
+  "down_end": "the stroma"
+ },
+ "structures": [
+  {
+   "name": "Rotor",
+   "aliases": [
+    "rotor ring",
+    "c-ring"
+   ],
+   "parts": [
+    "rotor"
+   ],
+   "color": "#9AA3E8",
+   "looks": "the ring of fourteen capsules standing in the membrane",
+   "label": {
+    "at": [
+     -1.62,
+     -2.35,
+     0.0
+    ]
+   }
+  },
+  {
+   "name": "Internal rod",
+   "aliases": [
+    "rod"
+   ],
+   "parts": [
+    "rod"
+   ],
+   "color": "#8576D6",
+   "looks": "the rod rising from the middle of the ring up into the knob",
+   "label": {
+    "chain": "g",
+    "offset": [
+     0,
+     -1.2,
+     2.2
+    ]
+   }
+  },
+  {
+   "name": "Catalytic knob",
+   "aliases": [
+    "knob"
+   ],
+   "parts": [
+    "knob"
+   ],
+   "color": "#C7AEEA",
+   "looks": "the big knob of six lobes hanging below the membrane, in the stroma",
+   "label": {
+    "part": "knob",
+    "offset": [
+     -2.5,
+     -3.0,
+     -1.0
+    ]
+   }
+  },
+  {
+   "name": "Stator",
+   "aliases": [],
+   "parts": [
+    "stator",
+    "stalk"
+   ],
+   "color": "#B4B1D8",
+   "looks": "the stalk beside the knob, anchored in the membrane, that holds the knob still",
+   "label": {
+    "chain": "b",
+    "along": 0.68,
+    "offset": [
+     0.4,
+     -0.5,
+     0
+    ]
+   }
+  }
+ ],
+ "page": {
+  "above": {
+   "name": "THYLAKOID SPACE",
+   "color": "#F39A3E"
+  },
+  "below": {
+   "name": "STROMA",
+   "color": "#FCE7A2"
+  },
+  "split_depth": 3.0
+ },
+ "membrane": {
+  "parts": [
+   "rotor",
+   "stator",
+   "stalk"
+  ],
+  "head_z": 2.45,
+  "head_radius": 0.44,
+  "spacing": 0.95,
+  "rows": 9,
+  "half_width": 44,
+  "cut": 0.95
+ },
+ "camera": {
+  "elevation_deg": 13,
+  "top": 14.8,
+  "bottom": -19.4,
+  "centre_x": 1.5
+ },
+ "motions": [
+  {
+   "kind": "spin",
+   "id": "rotor",
+   "parts": [
+    "rotor",
+    "rod"
+   ],
+   "turn_s": 6.0,
+   "claim": "While ATP synthase makes ATP, its rotor and internal rod turn {direction} as seen from {end}.",
+   "arcs": [
+    {
+     "radius": 3.49,
+     "z": 0.9,
+     "around_deg": 272.5,
+     "sweep_deg": 115
+    },
+    {
+     "radius": 2.1,
+     "z": -6.6,
+     "around_deg": 272.5,
+     "sweep_deg": 115
+    }
+   ]
+  },
+  {
+   "kind": "flow",
+   "id": "protons",
+   "path": [
+    [
+     3.1,
+     -2.6,
+     9.4
+    ],
+    [
+     3.15,
+     -2.65,
+     5.0
+    ],
+    [
+     3.2,
+     -2.7,
+     1.5
+    ],
+    [
+     3.25,
+     -2.7,
+     -1.8
+    ],
+    [
+     3.8,
+     -2.7,
+     -3.7
+    ],
+    [
+     6.0,
+     -2.7,
+     -5.2
+    ],
+    [
+     12.6,
+     -3.7,
+     -7.7
+    ]
+   ],
+   "forward": "Protons flow through ATP synthase from the thylakoid space into the stroma.",
+   "backward": "Protons flow through ATP synthase from the stroma into the thylakoid space.",
+   "particle": {
+    "label": "H⁺",
+    "radius": 0.85
+   },
+   "crowd": {
+    "forward": [
+     [
+      -15,
+      -6,
+      9
+     ],
+     [
+      -9,
+      -6,
+      13.5
+     ],
+     [
+      -4.5,
+      -6,
+      7.5
+     ],
+     [
+      8.5,
+      -6,
+      12
+     ],
+     [
+      14,
+      -6,
+      8.5
+     ],
+     [
+      18.5,
+      -6,
+      13
+     ],
+     [
+      -20,
+      -6,
+      5.6
+     ],
+     [
+      1.8,
+      -6,
+      11.8
+     ],
+     [
+      15.0,
+      -4,
+      -8.4
+     ]
+    ]
+   },
+   "every_s": 2.0,
+   "travel_s": 2.0,
+   "front": [
+    0,
+    -1.2,
+    0
+   ],
+   "moves_with": "rotor"
+  }
+ ]
 }

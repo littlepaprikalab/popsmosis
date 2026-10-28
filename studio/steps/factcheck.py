@@ -5,6 +5,11 @@ the lines: every lyric line, every narration sentence, every sentence of the
 lesson and every line of the exam question the videos read aloud (media.frq_lines). Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
+A scene drawn from the schematic library adds its machine's motion claims (kind
+"motion": each way a part could turn, each way particles could flow; see
+studio/schematic3d/library.py). They are judged like any line but never corrected and
+never fail the job: the art step draws a motion only in the one way the facts support.
+
 Writes factcheck.json. When the check passes after corrections, bundle.json is
 rewritten with them and the writer's version is kept as bundle.draft.json.
 """
@@ -20,13 +25,14 @@ from pydantic import ValidationError
 
 from studio import brain, checks, media
 from studio.jobs import read, write
+from studio.schematic3d import library
 from studio.schemas import (Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
 from studio.sentences import replace_sentences, split_sentences
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KINDS = ("lyric", "narration", "lesson", "frq")
+KINDS = ("lyric", "narration", "lesson", "frq")  # the lines the job's text is made of; "motion" lines are not
 
 
 @dataclass(frozen=True)
@@ -64,7 +70,19 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
     lines += [Line("frq", line_id, text) for line_id, text in media.frq_lines(bundle)]
+    lines += [Line("motion", probe_id, text) for name in schematics_of(bundle)
+              for probe_id, text in library.probes(library.load(name).recipe)]
     return lines
+
+
+def schematics_of(bundle: Bundle) -> list[str]:
+    """The schematic recipes the bundle's scenes draw, each once, in order."""
+    return list(dict.fromkeys(scene.schematic for scene in bundle.scenes if scene.schematic))
+
+
+def motion_verdicts(report: FactCheckReport) -> dict[str, str]:
+    """Each motion claim's verdict, by probe id: what library.resolve reads."""
+    return {line.id: line.verdict for line in report.lines if line.kind == "motion" and line.verdict}
 
 
 def check_bundle(
@@ -97,7 +115,7 @@ def check_bundle(
             # A missing verdict, or SUPPORTED without a real source, is asked again next round.
             if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)):
                 verdicts[(line.kind, line.text)] = (check, round_no)
-        wrong = [line for line in pending if _verdict(verdicts, line) == "UNSUPPORTED"]
+        wrong = [line for line in pending if line.kind in KINDS and _verdict(verdicts, line) == "UNSUPPORTED"]
         if not wrong or round_no == max_rounds:
             continue
 
@@ -128,7 +146,7 @@ def check_bundle(
         checked.append(CheckedLine(kind=line.kind, id=line.id, text=line.text,
                                    verdict=check.verdict if check else None,
                                    source=check.source if check else "", round=round_no))
-    failing = [c for c in checked if c.verdict not in ("SUPPORTED", "FILLER")]
+    failing = [c for c in checked if c.kind in KINDS and c.verdict not in ("SUPPORTED", "FILLER")]
     if failing and not reason:
         reason = f"after {rounds} round(s), {len(failing)} line(s) still fail: " + "; ".join(
             _describe(c, verdicts) for c in failing[:3]

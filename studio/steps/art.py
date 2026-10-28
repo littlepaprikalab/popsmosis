@@ -16,6 +16,13 @@ last try the scene keeps its best drawing and leaves those structures out of
 locations.json (the timeline then skips them), as long as at least half of the scene's
 structures are located. Fewer than that and the scene could not teach, so the step fails.
 
+A scene drawn from the schematic library (scene.schematic) needs no brain call: its machine
+is drawn from its recipe and fitted shapes (studio/schematic3d). The step keeps a snapshot
+of them with the motions the fact-check supported (art/<scene>.schematic.json), writes the
+machine's still as the art and a mask per structure from it, and locates each structure
+there, its label anchor being the recipe's label point. The renderer draws the scene live
+from the snapshot; the still serves the karaoke fallback and the stored copy.
+
 Each kept drawing starts with a key made from the topic and its scene, so art drawn for
 an earlier bundle never counts as done: if the bundle is written again, the art is too.
 Running the step again redraws every scene. A run that stopped partway (no
@@ -37,7 +44,9 @@ import numpy as np
 
 from studio import brain, checks, media, svg
 from studio.jobs import read, write
-from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, locations_problems
+from studio.schematic3d import library
+from studio.schemas import (Bundle, FactCheckReport, Location, Locations, Point, Scene, SceneLocations,
+                            locations_problems)
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
 MAX_TRIES = 3
@@ -50,6 +59,12 @@ def run(job: Path, ask=brain.ask) -> str:
     (job / "art").mkdir(exist_ok=True)
     scenes, left_out = [], []
     for scene in bundle.scenes:
+        if scene.schematic:
+            located_scene = draw_schematic(job, bundle, scene)
+            found = {s.name for s in located_scene.structures}
+            scenes.append(located_scene)
+            left_out += [f"{s.name} on {scene.id}" for s in scene.structures if s.name not in found]
+            continue
         drawing = draw(job, bundle, scene, ask, resume)
         scenes.append(save(job, scene, drawing))
         left_out += [f"{name} on {scene.id}" for name in drawing.left_out(scene)]
@@ -79,11 +94,17 @@ def located(job: Path) -> Locations | None:
     if locations_problems(locations, bundle):
         return None
     files = [s.art for s in locations.scenes] + [s.mask for scene in locations.scenes for s in scene.structures]
+    files += [s.schematic for s in locations.scenes if s.schematic]
     if not all((job / f).exists() for f in files):
         return None
     for scene in bundle.scenes:
         drawn = locations.scene(scene.id)
-        if any(s.found_by == "svg" for s in drawn.structures) and not _saved(job, bundle, scene):
+        if scene.schematic:
+            if drawn.schematic is None or not _schematic_current(job, bundle, scene):
+                return None
+        elif drawn.schematic is not None:
+            return None
+        elif any(s.found_by == "svg" for s in drawn.structures) and not _saved(job, bundle, scene):
             return None
     return locations
 
@@ -212,12 +233,76 @@ def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
                           height=media.ART_HEIGHT, structures=structures)
 
 
+# --- a scene from the schematic library -----------------------------------------------------
+
+
+def motions(job: Path, recipe: library.Recipe) -> tuple[dict[str, int], list[str]]:
+    """The recipe's motions the fact-check supported, each with its way, and the claims that say so."""
+    try:
+        report = read(job / "factcheck.json", FactCheckReport)
+    except (OSError, ValueError):
+        return {}, []
+    verdicts = {line.id: line.verdict for line in report.lines if line.kind == "motion" and line.verdict}
+    drawn = library.resolve(recipe, verdicts)
+    claims = [line.text for line in report.lines if line.kind == "motion" and line.verdict == "SUPPORTED"
+              and line.id.startswith(recipe.name + ".") and line.id.split(".")[1] in drawn]
+    return drawn, claims
+
+
+def schematic_key(bundle: Bundle, scene: Scene, entry: library.Entry, drawn: dict[str, int]) -> str:
+    data = json.dumps([bundle.topic, scene.model_dump(), entry.digest, drawn], sort_keys=True)
+    return hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]
+
+
+def _schematic_current(job: Path, bundle: Bundle, scene: Scene) -> bool:
+    """The scene's snapshot was made for this scene, recipe, shapes and fact-check."""
+    try:
+        entry = library.load(scene.schematic)
+        snapshot = read(job / media.schematic_path(scene.id), library.Snapshot)
+    except (OSError, ValueError, KeyError):
+        return False
+    return snapshot.key == schematic_key(bundle, scene, entry, motions(job, entry.recipe)[0])
+
+
+def draw_schematic(job: Path, bundle: Bundle, scene: Scene) -> SceneLocations:
+    """Write the scene's snapshot, its still as the art, and its masks; return its locations."""
+    from studio.schematic3d.draw import Machine  # skia loads with the step
+
+    entry = library.load(scene.schematic)
+    drawn, claims = motions(job, entry.recipe)
+    machine = Machine(entry.recipe, entry.shapes, drawn, media.ART_WIDTH, media.ART_HEIGHT)
+    (job / media.art_path(scene.id)).write_bytes(svg.png(machine.still()))
+    folder = (job / media.mask_path(scene.id, "-")).parent
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True)
+    masks = machine.masks()
+    structures = []
+    for s in scene.structures:
+        found = svg.locate(masks[s.name]) if s.name in masks else None
+        if found is None:
+            continue
+        x, y = machine.label_point(s.name, 0.0)
+        anchor = Point(x=round(x, 1), y=round(y, 1))
+        if not found.box.holds(anchor):  # a label point the recipe put outside the part: the mask's own
+            anchor = found.label_anchor
+        (job / media.mask_path(scene.id, s.name)).write_bytes(svg.png(masks[s.name]))
+        structures.append(Location(name=s.name, mask=media.mask_path(scene.id, s.name), box=found.box,
+                                   centroid=found.centroid, label_anchor=anchor, found_by="schematic3d"))
+    snapshot = library.Snapshot(key=schematic_key(bundle, scene, entry, drawn), recipe=entry.recipe,
+                                shapes=entry.shapes, motions=drawn, claims=claims)
+    write(job / media.schematic_path(scene.id), snapshot)
+    return SceneLocations(scene=scene.id, art=media.art_path(scene.id), width=media.ART_WIDTH,
+                          height=media.ART_HEIGHT, structures=structures, schematic=media.schematic_path(scene.id))
+
+
 def key(bundle: Bundle, scene: Scene) -> str:
     """Changes when the topic or the scene does (its prompt, structures, colours).
 
     Not when the art prompt does: a prompt change should not redraw finished jobs.
     """
-    data = json.dumps([bundle.topic, scene.model_dump()], sort_keys=True)
+    # An illustration's key leaves out the empty `schematic`, so art drawn before it existed still counts.
+    data = json.dumps([bundle.topic, scene.model_dump(exclude=None if scene.schematic else {"schematic"})],
+                      sort_keys=True)
     return hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]
 
 

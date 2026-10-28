@@ -7,6 +7,10 @@ tube along its smoothed path. Coordinates are in nm, in the machine's own frame:
 axis through the middle of the ring the recipe names, the part it names `down` is below (-z), and
 the part it names `toward_x` is toward +x. The recipe's `membrane.parts` are the ones that sit in
 the membrane; their footprint is kept so the drawing can cut the membrane away around them.
+
+Before fitting, the recipe's record of the entry's entity names (structure.entities, which the
+library checks each part's chains against) is compared with the file's own: a recipe that
+names a chain as something the entry does not call it is refused.
 """
 
 from __future__ import annotations
@@ -101,10 +105,35 @@ def fit_structure(structure, recipe: dict) -> dict:
     }
 
 
+def entity_names(structure_path: Path) -> dict[str, str]:
+    """Each polymer chain's entity name in an mmCIF file (_entity.pdbx_description), by its author chain id."""
+    import gemmi
+
+    block = gemmi.cif.read(str(structure_path)).sole_block()
+    names = {row.str(0): row.str(1) for row in block.find("_entity.", ["id", "pdbx_description"])}
+    chains = {}
+    for row in block.find("_entity_poly.", ["entity_id", "pdbx_strand_id"]):
+        for chain in row.str(1).split(","):
+            chains[chain.strip()] = names.get(row.str(0), "")
+    return chains
+
+
+def entity_problems(recipe: dict, structure_path: Path) -> list[str]:
+    """Where the recipe's record of the entry's entity names (structure.entities) differs from the file."""
+    recorded = recipe.get("structure", {}).get("entities", {})
+    found = entity_names(structure_path)
+    return [f"chain {chain} is {found.get(chain, 'missing')!r} in the file, not {name!r}"
+            for chain, name in sorted(recorded.items()) if found.get(chain) != name]
+
+
 def fit_file(recipe_path: Path, structure_path: Path) -> dict:
     import gemmi
 
-    return fit_structure(gemmi.read_structure(str(structure_path)), json.loads(recipe_path.read_text()))
+    recipe = json.loads(recipe_path.read_text())
+    problems = entity_problems(recipe, structure_path)
+    if problems:
+        raise ValueError("the recipe's entity names do not match the structure: " + "; ".join(problems))
+    return fit_structure(gemmi.read_structure(str(structure_path)), recipe)
 
 
 if __name__ == "__main__":

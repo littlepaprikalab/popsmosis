@@ -1,7 +1,8 @@
 """Code checks on the bundle's names and direction: free, so they run on every bundle.
 
 A structure is revealed when its name is sung or spoken, and its label then stays on
-that diagram (docs/PLAN.md, step 7). Each line lists the structures it names; these
+that diagram (docs/PLAN.md, step 7). A scene drawn from the schematic library has the
+structures its recipe gives, so code sets them first (docs/SCHEMATIC3D.md). Each line lists the structures it names; these
 checks hold the lines and their direction to that list. What code can safely repair,
 it does: a spotlight on a structure not yet named falls back to none, as the
 timeline would. What it cannot, such as a line naming something no scene draws, is
@@ -31,10 +32,11 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
+    schematic_problems = apply_schematics(data["scenes"])
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
-    problems = [
+    problems = schematic_problems + [
         Problem(line_id=f"scene:{scene}", rule="empty-scene", repaired=False,
                 detail=f'scene "{scene}" draws no structures, so nothing on it can be revealed or spotlit')
         for scene, structures in drawn.items() if not structures
@@ -55,6 +57,50 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], revealed[scene], problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+def apply_schematics(scenes: list[dict]) -> list[Problem]:
+    """Give each schematic scene exactly its recipe's structures, with the recipe's names, colours and
+    aliases (and any the writer added), and give the same structure on any other scene the same colour.
+
+    A structure the writer listed under another name the recipe also knows ("knob" for "Catalytic
+    knob") keeps that name as an alias; one the recipe does not have is dropped, since it is not drawn."""
+    from studio.schematic3d import library
+
+    problems: list[Problem] = []
+    colors: dict[str, str] = {}
+    for scene in scenes:
+        if not scene.get("schematic"):
+            continue
+        recipe = library.load(scene["schematic"]).recipe
+        given = list(scene["structures"])
+        structures = []
+        for wanted in recipe.structures:
+            words = {fold(w) for w in (wanted.name, *wanted.aliases)}
+            mine = [g for g in given if fold(g["name"]) in words or words & {fold(a) for a in g["aliases"]}]
+            extra = [w for g in mine for w in (g["name"], *g["aliases"])]
+            unique: dict[str, str] = {}
+            for alias in (*wanted.aliases, *extra):
+                if fold(alias) != fold(wanted.name):
+                    unique.setdefault(fold(alias), alias)
+            aliases = list(unique.values())
+            color = colors.setdefault(wanted.name, wanted.color)
+            structures.append({"name": wanted.name, "aliases": aliases, "sam_phrase": wanted.looks, "color_hex": color})
+            given = [g for g in given if g not in mine]
+        if structures != scene["structures"]:
+            dropped = f"; dropped {', '.join(g['name'] for g in given)}, which it does not draw" if given else ""
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="schematic", repaired=True,
+                                    detail=f'structures set from the schematic "{recipe.name}": '
+                                           f'{", ".join(s["name"] for s in structures)}{dropped}'))
+        scene["structures"] = structures
+    for scene in scenes:
+        for structure in scene["structures"]:
+            color = colors.get(structure["name"])
+            if color and structure["color_hex"].upper() != color:
+                problems.append(Problem(line_id=f"scene:{scene['id']}", rule="schematic", repaired=True,
+                                        detail=f"{structure['name']} takes the schematic's colour {color}"))
+                structure["color_hex"] = color
+    return problems
 
 
 def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:

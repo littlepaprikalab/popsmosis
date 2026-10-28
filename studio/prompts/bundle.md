@@ -98,6 +98,26 @@ together they go from what the learner already knows to the parts they are learn
   structure of its own, the flow that stopped left out).
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
+<!-- schematics -->
+- Some molecular machines can be drawn as a schematic instead of an illustration: smooth
+  shapes in the textbook's style, placed where the real machine's parts are in its
+  published structure, and moving as it works. When a scene shows one of these machines
+  up close, set its `schematic` to the machine's name; every other scene's `schematic` is
+  "". The machines:
+
+{library}
+
+  A schematic scene lists exactly the structures given for its machine, with their names
+  and aliases as written (code sets their colours), and the lines that play over it name
+  them that way. Its `image_prompt` says what the scene is for; nobody draws it.
+- A schematic moves only as the facts say. A part turns only if a fact says which way,
+  seen from one of the ends named above; particles flow only if a fact says which way.
+  Say it in a fact only if you are sure of it. Otherwise leave it out: the machine is
+  then drawn standing still.
+- When the droplet is about one of these machines, open on it: the hook scene (id
+  "hook") can be its schematic, already moving in the first frame, with a hook line that
+  makes a surprising true claim about it.
+<!-- /schematics -->
 
 - `image_prompt` describes the diagram's content for an illustrator: what is shown, from
   which view, and which structures must be visible and roughly where. Describe content
