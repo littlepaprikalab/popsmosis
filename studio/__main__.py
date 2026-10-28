@@ -182,7 +182,7 @@ def print_job(job: Path, brief: bool = False) -> None:
     print(f"\n# {request.topic}" + (f" ({request.course})" if request.course else "") + f"  [{job.name}]")
     if (job / "bundle.json").exists():
         bundle = checks.load(job / "bundle.json")
-        print(f"\nCore idea: {bundle.core_idea}\n\n## Facts\n")
+        print(f"\nAudience: {bundle.audience}\nCore idea: {bundle.core_idea}\n\n## Facts\n")
         for fact in bundle.facts:
             print(_wrap(f"{fact.id}  {fact.text}", indent=4) + "\n")
         print("## Scenes\n")

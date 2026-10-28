@@ -8,9 +8,10 @@ import pytest
 import skia
 
 from studio import jobs, media, svg
-from studio.schemas import Locations, Structure, locations_problems
+from studio.schemas import Bundle, Locations, Structure, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
+from studio.tests.sample import bundle_data
 
 DRAWINGS = Path(__file__).resolve().parent / "art"
 
@@ -378,3 +379,8 @@ def test_model_written_names_stay_inside_the_job_and_apart(job):
     for path in [located.art, *masks]:
         assert (job / path).resolve().is_relative_to(job.resolve()) and (job / path).exists()
     assert list((job / "art").glob("*.svg")) == [job / "art" / f"{media.file_name(scene.id)}.svg"]
+
+
+def test_the_illustrator_is_told_who_the_video_is_for():
+    bundle = Bundle.model_validate({**bundle_data(), "audience": "about age 10"})
+    assert "\nAudience: about age 10\n" in art.user_prompt(bundle, bundle.scenes[0])

@@ -52,6 +52,7 @@ def bundle_data() -> dict:
     return copy.deepcopy({
         "course": "AP Biology",
         "topic": "the light reactions",
+        "audience": "high school",
         "core_idea": "Light energy pumps protons, and their flow back makes ATP.",
         "facts": FACTS,
         "misconception": "Not every carrier pumps protons; only cytochrome b6f does.",
