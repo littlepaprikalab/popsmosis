@@ -39,7 +39,8 @@ The runner needs these in its environment:
 | `POPSMOSIS_API_KEY` | the popsmosis agent's `sk_pop_…` key from step 2. Not an Inkmory key: see below |
 | `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
-| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`, which also needs `MODEL_API_KEY` |
+| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`: Meta's models write and check each lesson, Muse Image paints its art and SAM 3.1 finds the structures in it |
+| `MODEL_API_KEY` | with `BRAIN_PROVIDER=meta`: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
 | `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson, with `BRAIN_PROVIDER=claude`. Default `claude-opus-5-5` |
 | `STUDIO_BRAIN_EFFORT` | optional: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
@@ -150,7 +151,7 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
      warm run's hook takes seconds.
    - **Network policy:** allow
      - your API host, `api.anthropic.com`, `api.elevenlabs.io`, the Supabase host and
-       the Inkmory host (and `api.meta.ai` once the Meta key arrives, and
+       the Inkmory host (and `api.meta.ai` with `BRAIN_PROVIDER=meta`, and
        `generativelanguage.googleapis.com` with `SONG_PROVIDER=gemini`): what a run calls;
      - `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` (PyTorch's CPU
        wheels), `registry.npmjs.org`, and `archive.ubuntu.com` with `security.ubuntu.com`

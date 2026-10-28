@@ -39,6 +39,12 @@ class FakeArtist:
         return [label for label, _ in self.prompts]
 
 
+@pytest.fixture(autouse=True)
+def svg_art(monkeypatch):
+    """These are the brain's SVG art; studio/tests/test_muse.py has Muse Image's."""
+    monkeypatch.delenv("BRAIN_PROVIDER", raising=False)
+
+
 @pytest.fixture
 def job(tmp_path):
     path = sample_media.write_job(tmp_path / "sample")

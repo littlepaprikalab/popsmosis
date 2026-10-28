@@ -47,7 +47,7 @@ PARTS = {"lesson": LESSON_STEPS, "videos": media.MEDIA_STEPS}
 # installed under. The bill lists each with the version installed here (version()); the API
 # adds who made it. Steps that are the studio's own code alone have none.
 TOOLS = {
-    "art": ("skia-python",),  # draws the SVG art (studio/svg.py)
+    "art": ("skia-python",),  # draws the SVG art (studio/svg.py), or fits Muse Image's picture to the art
     "audio": ("ffmpeg",),  # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
     "timing": ("demucs", "torchaudio", "torch", "ffmpeg"),  # Demucs, the MMS aligner, ffmpeg decoding the song
     "render": ("skia-python", "ffmpeg"),  # draws the frames, encodes the videos (studio/render/)

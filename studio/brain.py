@@ -8,7 +8,8 @@ BRAIN_PROVIDER picks the models behind the two thinking roles (docs/PLAN.md, sec
 
 On the Claude provider, STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's
 model and effort; unset or empty, each keeps the default above. The meta provider
-ignores both, and the helper has no such setting.
+ignores both, and the helper has no such setting. BRAIN_PROVIDER also picks who makes
+the art: the brain draws SVG on claude, Muse Image paints it on meta (studio/steps/art.py).
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -32,6 +33,7 @@ from typing import Sequence
 from pydantic import BaseModel, ValidationError
 
 ROLES = ("brain", "helper")
+PROVIDERS = ("claude", "meta")
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
@@ -44,6 +46,7 @@ META = {
     "helper": {"model": "muse-spark-1.3"},
 }
 META_BASE_URL = "https://api.meta.ai/v1"
+META_KEY_VAR = "MODEL_API_KEY"
 
 # The effort levels Claude accepts (output_config.effort).
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
@@ -164,16 +167,29 @@ def ask(
     """
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}, not {role!r}")
-    provider = os.environ.get("BRAIN_PROVIDER", "claude")
-    if provider == "claude":
+    if provider() == "claude":
         texts = _ask_claude(role, prompt, schema, images, system, label or role)
-    elif provider == "meta":
-        texts = _ask_meta(role, prompt, schema, images, system, label or role)
     else:
-        raise ValueError(f"BRAIN_PROVIDER must be claude or meta, not {provider!r}")
+        texts = _ask_meta(role, prompt, schema, images, system, label or role)
     if schema is None:
         return {"text": texts[0]}
     return parse(schema, texts)
+
+
+def provider() -> str:
+    """BRAIN_PROVIDER: claude (the default) or meta. It also picks who makes the art (studio/steps/art.py)."""
+    name = os.environ.get("BRAIN_PROVIDER", "claude")
+    if name not in PROVIDERS:
+        raise ValueError(f"BRAIN_PROVIDER must be claude or meta, not {name!r}")
+    return name
+
+
+def meta_key() -> str:
+    """The Meta API key every Meta model here takes: the brain's, Muse Image's and SAM's."""
+    key = os.environ.get(META_KEY_VAR)
+    if not key:
+        raise BrainError(f"BRAIN_PROVIDER=meta needs {META_KEY_VAR}")
+    return key
 
 
 def parse(schema: type[BaseModel], texts: Sequence[str]) -> dict:
@@ -392,10 +408,7 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
 
     request = meta_request(role, prompt, schema, images, system)
     if "meta" not in _clients:
-        key = os.environ.get("MODEL_API_KEY")
-        if not key:
-            raise BrainError("BRAIN_PROVIDER=meta needs MODEL_API_KEY")
-        _clients["meta"] = openai.OpenAI(api_key=key, base_url=META_BASE_URL)
+        _clients["meta"] = openai.OpenAI(api_key=meta_key(), base_url=META_BASE_URL)
     started = time.monotonic()
     try:
         response = _clients["meta"].chat.completions.create(**request)

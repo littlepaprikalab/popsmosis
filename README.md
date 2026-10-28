@@ -166,6 +166,16 @@ They apply with `BRAIN_PROVIDER=claude` only. To try a prompt change cheaply, ru
 Haiku first (about 2 cents a topic instead of 70):
 `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
 
+`BRAIN_PROVIDER=meta` moves the studio onto Meta's models, all on `MODEL_API_KEY`: Muse
+Wonder writes and fact-checks the lesson, Muse Spark is the helper, Muse Image paints each
+scene's art ($0.01 a picture; the helper checks it for text and mistakes, up to three
+pictures a scene), and SAM 3.1 finds each structure in it for the labels and the camera
+(the locate step, with the helper's box as a fallback). With `claude`, the default, the
+brain draws the art as SVG and no Meta model is called. Switching makes a job's art again
+on its next run. The Meta calls follow Meta's docs but have not run against the live API
+yet: check them first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s`
+(one scene, a few cents).
+
 ## Tests
 
 ```bash
@@ -174,7 +184,8 @@ npm --workspace api test                  # unit tests, no database
 INTEGRATION=1 npm --workspace api test    # plus the end-to-end flow against DATABASE_URL
 npm --workspace web run build
 npm run e2e                               # Playwright browser tests; needs api + web running (see web/e2e/README.md)
-python -m pytest studio                   # the studio, offline; test_live.py also runs when POPSMOSIS_ANTHROPIC_API_KEY is set
+python -m pytest studio                   # the studio, offline; test_live.py also runs when POPSMOSIS_ANTHROPIC_API_KEY is set,
+                                          # and test_live_meta.py when MODEL_API_KEY is
 ```
 
 CI runs all of it: API typecheck and tests against a Postgres service, the web build,
