@@ -33,10 +33,14 @@ class Structure(Model):
     color: str  # #RRGGBB, the bundle's
     chains: list[str]
     subunits: list[str]  # what the entry calls those chains
+    # A part of the machine, or a compartment beside its membrane ("cytoplasm"), which the
+    # scene labels and the particles can travel through; it has no chains.
+    kind: Literal["part", "compartment"] = "part"
+    side: Literal["above", "below"] | None = None  # a compartment's side of the membrane
 
 
 class Compartment(Model):
-    name: str  # written on the page; "" for none
+    name: str  # written on the page; "" for none, or when the scene labels it as a structure
     color: str
 
 

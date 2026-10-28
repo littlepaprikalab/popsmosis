@@ -84,7 +84,8 @@ together they go from what the learner already knows to the parts they are learn
 
 - The hook first (id "hook"). Where it can, it shows where the topic turns up in the
   learner's world, at a scale they know, from the everyday detail in the facts (a
-  sprinter's leg muscle for ATP synthesis). The hook line is about what it shows.
+  sprinter's leg muscle for ATP synthesis). The hook line is about what it shows. When
+  the droplet is about one molecular machine, the hook is its schematic instead (below).
 - Then an overview (id "overview"), then one or two zoomed details (short ids such as
   "limbic-detail").
 - The droplet's analogy can have a scene of its own (id "analogy"), just before the
@@ -106,14 +107,21 @@ together they go from what the learner already knows to the parts they are learn
   ("chloroplast ATP synthase", "human hemoglobin", "the sodium-potassium pump"); every
   other scene's `schematic` is "". If no structure can be found, the scene is drawn as an
   illustration from its `image_prompt`, so write that as for any scene.
-- A schematic shows only the machine, standing still: not what flows through it or binds
-  to it, not the cell or organelle around it, and not a failure. A scene about those is
-  an illustration.
+- A schematic draws the machine standing still; what travels through it (ions, protons,
+  molecules) is shown by the `particles`. So the lines that tell how the machine works stay
+  on its schematic, each with its `particles` path: from the compartment it comes from,
+  through the part, to the compartment it goes to (["cytoplasm", "alpha subunit",
+  "extracellular fluid"] for sodium leaving the cell, the other way for potassium coming
+  in). The cell or organelle around the machine, and a failure, are illustrations.
 - A schematic scene's structures are the machine's parts as the course names them, each
   one or more of its subunits ("Rotor", "Catalytic knob", "Alpha subunit"), two to five
-  of them. Their colours follow the usual rules. The facts describe the machine as the
-  course does: its smooth shapes are only a drawing style.
-- When the droplet is about one machine, the hook can be its schematic.
+  of them; and, for a machine in a membrane, the compartment on each side when its lines
+  name it or its particles pass through it ("cytoplasm", "extracellular fluid"). Never an
+  ion or a molecule: those are what the particles show. Colours follow the usual rules.
+  The facts describe the machine as the course does: its smooth shapes are only a drawing
+  style.
+- When the droplet is about one molecular machine, make its schematic the hook, with a
+  hook line that makes a surprising true claim about the machine itself.
 
 - `image_prompt` describes the diagram's content for an illustrator: what is shown, from
   which view, and which structures must be visible and roughly where. Describe content

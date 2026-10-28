@@ -11,9 +11,10 @@ draws one without a job, with the brain and the network, into OUT_DIR (schematic
    as the lesson's facts describe them (prompts/schematic_choose.md).
 3. Fit. Code downloads the coordinates (OPM's, oriented in the membrane, when OPM placed the
    entry) and fits shapes to them (fit.py).
-4. Review. A fresh brain call judges the entry and each match against the lesson's facts, and
-   names the compartments above and below the membrane from where the parts ended up
-   (prompts/schematic_review.md). When it finds something wrong, the choice is made once more
+4. Review. A fresh brain call judges the entry and each match against the lesson's facts, names
+   the compartments above and below the membrane from where the parts ended up, and says which
+   of them the scene's other structures are ("cytoplasm": below): those are labelled on the page,
+   and the particles can travel through them (prompts/schematic_review.md). When it finds something wrong, the choice is made once more
    with its objections, and reviewed again; a part still wrong is drawn but never labelled.
 5. Frame. The camera fits the machine with room around it for the labels.
 
@@ -80,12 +81,19 @@ class Verdict(Strict):
     problem: str = Field(description='WRONG: what is wrong, in one sentence. Otherwise ""')
 
 
+class Place(Strict):
+    structure: str
+    side: Literal["above", "below", "neither"]
+
+
 class Review(Strict):
     entry: Literal["RIGHT", "WRONG"]
     entry_problem: str = Field(description='WRONG: what is wrong, in one sentence. Otherwise ""')
     structures: list[Verdict]
     above: str = Field(description='The compartment above the membrane, in capitals; "" for none')
     below: str = Field(description='The compartment below the membrane, in capitals; "" for none')
+    places: list[Place] = Field(description="Each of the other structures: the compartment above the membrane, "
+                                            "the one below, or neither")
 
 
 # --- the build -------------------------------------------------------------------------------
@@ -114,11 +122,13 @@ def build(lesson: dict, machine: str, structures: list[tuple[str, str]], ask, fo
         placement = placements.get(entry.id)
         owners, subunits, fitted = _fitted(entry, placement, _picked(choice, entry, names), folder)
         found = [name for name in names if name in subunits]
+        others = [name for name in names if name not in subunits]
         review = Review.model_validate(ask("brain", json.dumps({
             "lesson": lesson, "machine": machine,
             "entry": {"id": entry.id, "title": entry.title, "organisms": entry.organisms},
             "membrane": bool(placement),
             "parts": [{"name": name, "subunits": subunits[name], "where": fitted.sides.get(name, "")} for name in found],
+            "others": others if placement else [],
         }, ensure_ascii=False), Review, system=REVIEW, label=f"{label} review{again}"))
         wrong = {v.structure: v.problem for v in review.structures if v.verdict == "WRONG" and v.structure in found}
         if attempt == ROUNDS or (review.entry == "RIGHT" and not wrong):
@@ -129,29 +139,40 @@ def build(lesson: dict, machine: str, structures: list[tuple[str, str]], ask, fo
     if review.entry == "WRONG":
         raise BuildFailed(f"{entry.id} is not {machine}: {review.entry_problem}")
     kept = [name for name in found if name not in wrong]
+    by_name = {checks.fold(name): name for name in others}
+    sides: dict[str, str] = {}  # a compartment structure -> its side, one structure a side
+    if placement:
+        for place in review.places:
+            name = by_name.get(checks.fold(place.structure.strip()))
+            if name and place.side in ("above", "below") and place.side not in sides.values():
+                sides[name] = place.side
     notes = [f"{entry.id}, {entry.title}: {choice.why}"]
     notes += [f"{name} left unlabelled: {problem}" for name, problem in wrong.items()]
-    notes += [f"{name} not found in {entry.id}" for name in names if name not in found]
-    if len(kept) < max(1, math.ceil(len(names) / 2)):
+    notes += [f"{name} is the compartment {side} the membrane" for name, side in sides.items()]
+    notes += [f"{name} not found in {entry.id}" for name in names if name not in found and name not in sides]
+    if len(kept) + len(sides) < max(1, math.ceil(len(names) / 2)):
         raise BuildFailed(f"only {len(kept)} of {len(names)} structures found in {entry.id} and judged right; "
                           + "; ".join(notes[1:]))
 
     colors = dict(structures)
     shapes = [Shape(chain=s["chain"], structure=s["structure"] if s["structure"] in kept else None, kind=s["kind"],
                     points=s["points"], radius=s["radius"]) for s in fitted.shapes]
-    if placement:
-        page = Page(above=Compartment(name=review.above.strip().upper(), color=ABOVE),
-                    below=Compartment(name=review.below.strip().upper(), color=BELOW))
+    if placement:  # a compartment the scene labels is named by its label, not on the page
+        labelled = set(sides.values())
+        page = Page(above=Compartment(name="" if "above" in labelled else review.above.strip().upper(), color=ABOVE),
+                    below=Compartment(name="" if "below" in labelled else review.below.strip().upper(), color=BELOW))
     else:
         page = Page(above=Compartment(name="", color=AROUND))
-    camera, half_width = frame(shapes, placement.half_thickness if placement else None)
+    camera, half_width = frame(shapes, placement.half_thickness if placement else None, set(sides.values()))
     membrane = (Membrane(name=placement.membrane, half_thickness=placement.half_thickness,
                          footprint=fitted.footprint, half_width=half_width) if placement else None)
     return Built(key=key, machine=machine,
                  source=Source(pdb=entry.id, title=entry.title, organisms=entry.organisms, method=entry.method,
                                resolution=entry.resolution, oriented_by="OPM" if placement else "principal axes"),
                  structures=[Structure(name=name, color=colors[name], chains=sorted(c for c, o in owners.items() if o == name),
-                                       subunits=subunits[name]) for name in kept],
+                                       subunits=subunits[name]) for name in kept]
+                 + [Structure(name=name, color=colors[name], chains=[], subunits=[], kind="compartment", side=side)
+                    for name, side in sides.items()],
                  shapes=shapes, page=page, membrane=membrane, camera=camera, notes=notes)
 
 
@@ -238,9 +259,13 @@ def _picked(choice: Choice, entry: sources.Entry, names: list[str]) -> dict[str,
     return out
 
 
-def frame(shapes: list[Shape], half_thickness: float | None) -> tuple[Camera, int]:
+COMPARTMENT_ROOM = 6.0  # nm of a labelled compartment kept in view beyond the membrane: room for its label and the particles
+
+
+def frame(shapes: list[Shape], half_thickness: float | None, labelled: set[str] = frozenset()) -> tuple[Camera, int]:
     """The camera that shows the whole machine with room for labels around it, and how far (in heads)
-    the membrane must reach to the sides to fill the view."""
+    the membrane must reach to the sides to fill the view. `labelled` holds the sides ("above", "below")
+    whose compartment the scene labels: more of each of those stays in view."""
     elev = math.radians(ELEVATION_DEG)
     xs, us = [], []
     for shape in shapes:
@@ -249,8 +274,8 @@ def frame(shapes: list[Shape], half_thickness: float | None) -> tuple[Camera, in
         xs += [pts[:, 0].min() - shape.radius, pts[:, 0].max() + shape.radius]
         us += [u.min() - shape.radius, u.max() + shape.radius]
     if half_thickness is not None:  # some of each compartment shows above and below the membrane
-        reach = (half_thickness + 2.5) * math.cos(elev)
-        us += [-reach, reach]
+        room = {side: COMPARTMENT_ROOM if side in labelled else 2.5 for side in ("above", "below")}
+        us += [-(half_thickness + room["below"]) * math.cos(elev), (half_thickness + room["above"]) * math.cos(elev)]
     aspect = media.ART_WIDTH / media.ART_HEIGHT
     span = max((max(us) - min(us)) / FILL_HEIGHT, (max(xs) - min(xs)) / (FILL_WIDTH * aspect))
     middle = (max(us) + min(us)) / 2 / math.cos(elev)

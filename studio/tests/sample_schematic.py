@@ -13,6 +13,7 @@ step and timed by the real timeline step.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 from pathlib import Path
 
@@ -31,7 +32,9 @@ RING = "GHIJKLMN"
 KNOB = "ABCDEF"
 PARTS = {"Rotor": ("1", "Toy subunit c"), "Internal rod": ("2", "Toy gamma chain"),
          "Catalytic knob": ("3", "Toy subunit alpha"), "Stator": ("4", "Toy subunit b")}
-COLORS = {"Rotor": "#E07A2F", "Internal rod": "#3366CC", "Catalytic knob": "#2E8B57", "Stator": "#B5487A"}
+COLORS = {"Rotor": "#E07A2F", "Internal rod": "#3366CC", "Catalytic knob": "#2E8B57", "Stator": "#B5487A",
+          "Lumen": "#C9A227", "Stroma": "#3FA7A0"}
+COMPARTMENTS = ["Lumen", "Stroma"]  # the hook also labels the compartments its protons pass through
 
 
 def toy_chains() -> dict[str, list[tuple[float, float, float]]]:
@@ -123,6 +126,7 @@ class FakeBrain:
                                  "structures": [{"structure": name, "verdict": "RIGHT", "problem": ""} for name in PARTS],
                                  "above": "LUMEN", "below": "STROMA"}
         self.then = then
+        self.places = {"Lumen": "above", "Stroma": "below"}  # the compartments, when the scene names them
         self.labels: list[str] = []
         self.prompts: dict[str, str] = {}
 
@@ -136,7 +140,9 @@ class FakeBrain:
         if task == "choose":
             return self.choose(label) if callable(self.choose) else self.choose
         if task == "review":
-            return self.review(label) if callable(self.review) else self.review
+            review = self.review(label) if callable(self.review) else self.review
+            others = json.loads(prompt).get("others", [])
+            return {"places": [{"structure": name, "side": self.places.get(name, "neither")} for name in others], **review}
         return self.then(role, prompt, schema, images, system=system, label=label)
 
 
@@ -146,8 +152,8 @@ def bundle() -> Bundle:
     hook = next(s for s in data["scenes"] if s["id"] == "hook")
     hook.update(schematic=MACHINE, image_prompt="The toy machine in its membrane.",
                 structures=[{"name": name, "aliases": [], "sam_phrase": name.lower(), "color_hex": COLORS[name]}
-                            for name in PARTS])
-    lines = {"v1-1": ("Protons turn the rotor", ["rotor"]),
+                            for name in [*PARTS, *COMPARTMENTS]])
+    lines = {"v1-1": ("Protons flow from the lumen through the rotor to the stroma", ["lumen", "rotor", "stroma"]),
              "v1-2": ("The internal rod spins inside the catalytic knob", ["internal rod", "catalytic knob"])}
     for line in data["lyrics"]:
         if line["id"] in lines:
@@ -159,6 +165,8 @@ def bundle() -> Bundle:
     for d in data["direction"]:
         if d["line_id"] in ("v1-1", "n1"):
             d["scene"] = "hook"
+        if d["line_id"] == "v1-1":  # what travels through the machine, as the line sings it
+            d["particles"] = ["Lumen", "Rotor", "Stroma"]
         if d["line_id"] == "v1-2":
             d.update(scene="hook", camera={"target": "rotor", "zoom": 2.0}, spotlight="internal rod")
     the_bundle, _ = checks.review(Bundle.model_validate(data))

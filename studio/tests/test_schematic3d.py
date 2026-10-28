@@ -226,7 +226,8 @@ def test_the_writer_names_any_machine_and_older_bundles_read_as_illustrations():
 def test_the_art_step_builds_the_scenes_machine_and_keeps_it(job):
     located = jobs.read(job / media.LOCATIONS, Locations).scene("hook")
     assert located.schematic == media.schematic_path("hook") == "art/hook.schematic.json"
-    assert [(s.name, s.found_by) for s in located.structures] == [(name, "schematic3d") for name in toy.PARTS]
+    assert [(s.name, s.found_by) for s in located.structures] == [(name, "schematic3d")
+                                                                  for name in [*toy.PARTS, *toy.COMPARTMENTS]]
     assert skia.Image.open(str(job / located.art)).dimensions() == skia.ISize(media.ART_WIDTH, media.ART_HEIGHT)
     bundle = toy.bundle()
     hook = next(s for s in bundle.scenes if s.id == "hook")
@@ -255,7 +256,8 @@ def test_the_timeline_reveals_the_machines_parts_by_the_words_sung(job):
     song = jobs.read(job / media.timeline_path("song"), Timeline)
     first, second = song.beats[0], song.beats[1]
     assert first.scene == second.scene == "hook"
-    assert [r.name for r in first.reveal] == ["Rotor"]
+    assert [r.name for r in first.reveal] == ["Lumen", "Rotor", "Stroma"]
+    assert [p.path for p in first.particles] == [["Lumen", "Rotor", "Stroma"]]  # through the machine, as sung
     assert [r.name for r in second.reveal] == ["Internal rod", "Catalytic knob"]
     assert second.spotlight == "Internal rod" and second.camera.target == "Rotor"
 
@@ -278,6 +280,40 @@ def test_the_renderer_draws_the_machine_live_and_a_frame_depends_only_on_its_tim
     x, y = (int(v) for v in renderer.art_to_frame(4.2, centroid.x, centroid.y))
     gx, gy = (int(v) for v in renderer.art_to_frame(0.5, centroid.x, centroid.y))
     assert revealed[y, x, :3].astype(int).sum() < ghost[gy, gx, :3].astype(int).sum()  # the ghost was paler
+
+
+def test_the_particles_travel_through_the_machine_from_one_compartment_to_the_other(job):
+    from studio.render.renderer import Renderer
+
+    song = jobs.read(job / media.timeline_path("song"), Timeline)
+    first = song.beats[0]
+    t = first.t1 - 0.3  # every stop revealed by now
+    with_dots = Renderer(job, song).frame(t).copy()
+    without = song.model_copy(update={"beats": [first.model_copy(update={"particles": []}), *song.beats[1:]]})
+    assert (Renderer(job, without).frame(t) != with_dots).any()
+    located = jobs.read(job / media.LOCATIONS, Locations).scene("hook")
+    lumen, rotor, stroma = (located.get(n).label_anchor.y for n in ("Lumen", "Rotor", "Stroma"))
+    assert lumen < rotor < stroma  # the stops run from above the membrane to below it
+
+
+def test_a_compartment_the_scene_names_is_labelled_washed_and_masked_like_a_part(monkeypatch, tmp_path):
+    toy.FakeSources().install(monkeypatch)
+    parts = PARTS + [("Stroma", toy.COLORS["Stroma"]), ("Protons", "#999999")]
+    machine = building.build(LESSON, toy.MACHINE, parts, toy.FakeBrain(), tmp_path, key="k")
+    stroma = next(s for s in machine.structures if s.name == "Stroma")
+    assert stroma.kind == "compartment" and stroma.side == "below" and not stroma.chains
+    assert machine.page.below.name == "" and machine.page.above.name == "LUMEN"  # its label names it, not the page
+    assert "Protons not found in 1TOY" in machine.notes and "Stroma is the compartment below the membrane" in machine.notes
+    drawn = Machine(machine)
+    masks = drawn.masks()
+    below = masks["Stroma"]
+    assert below.sum() > 100_000 and not (below & masks["Catalytic knob"]).any()
+    top, bottom = drawn.membrane_band()
+    assert not below[int(top) + 1:int(bottom) - 1].any()  # not the membrane
+    ghost = _pixels(drawn, washes={"Stroma": 0.55})[..., :3].astype(int)
+    plain = _pixels(drawn)[..., :3].astype(int)
+    assert ghost[below].mean() > plain[below].mean() + 10
+    assert abs(ghost[masks["Rotor"]].mean() - plain[masks["Rotor"]].mean()) < 1  # only its edge meets the page
 
 
 def test_on_the_exam_question_the_schematic_stays_in_its_panel(job):

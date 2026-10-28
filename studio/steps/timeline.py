@@ -56,6 +56,7 @@ LINGER_S = 0.4  # how long a line stays in the lyric band after its last word, b
 CAPTION_HOLD_S = 4.0
 LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions are spaced instead
 PARTICLE_COLOR = "#F2C230"
+SCHEMATIC_PARTICLE_COLOR = "#D9302A"  # the textbook's red, which reads on a schematic's coloured compartments
 MAX_ZOOM = 3.0
 TAIL_S = 1.5  # the last exam step stays on screen this long after its line is read
 
@@ -189,6 +190,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     directions = {d.line_id: d for d in bundle.direction}
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
     located = {s.scene: {loc.name for loc in s.structures} for s in locations.scenes}
+    schematic = {s.scene for s in locations.scenes if s.schematic}
     names = {scene.id: Names.for_scene(bundle, scene.id, located.get(scene.id, set())) for scene in bundle.scenes}
     hook = hook_scene(bundle)
 
@@ -241,7 +243,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
         stops = [s for s in (scene_names.canonical(p) for p in (direction.particles if direction else [])) if s]
         stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
-        particles = [Particles(path=stops, color=PARTICLE_COLOR, trail=True)] if len(stops) >= 2 else []
+        color = SCHEMATIC_PARTICLE_COLOR if scene in schematic else PARTICLE_COLOR
+        particles = [Particles(path=stops, color=color, trail=True)] if len(stops) >= 2 else []
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
                       "reveal": reveals, "spotlight": spotlight, "labels": list(labels), "particles": particles,

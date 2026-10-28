@@ -15,7 +15,7 @@ flat colour, and the membrane (rows of grey heads and yellow tails, cut away aro
 machine) is drawn once at each scale it is needed and kept. The machine does not move.
 
 Each structure is drawn washed toward white by its own amount, for the renderer's ghosts and
-spotlight; the page by one amount of its own.
+spotlight, a compartment the scene labels included; the rest of the page by one amount of its own.
 """
 
 from __future__ import annotations
@@ -136,6 +136,7 @@ class Machine:
         self.outline = OUTLINE_NM * self.scale
         colors = {s.name: p.rgb(s.color) for s in built.structures}
         self.names = [s.name for s in built.structures]
+        self.sides = {s.side: s.name for s in built.structures if s.kind == "compartment" and s.side}
         self.pieces = []
         for shape in built.shapes:
             owner = shape.structure if shape.structure in colors else None
@@ -183,17 +184,25 @@ class Machine:
     # --- the page: compartments and membrane ------------------------------------------------
 
     def draw_page(self, canvas: skia.Canvas, bounds: tuple[float, float, float, float], wash: float = 0.0,
-                  resolution: float = 1.0) -> None:
+                  resolution: float = 1.0, washes: dict[str, float] | None = None) -> None:
         """The compartments over `bounds` (art pixels: the part of the world in view, which can reach
-        past the art), and the membrane drawn at `resolution` image pixels per art pixel."""
-        page = self.built.page
+        past the art), and the membrane drawn at `resolution` image pixels per art pixel. A compartment the
+        scene labels is washed by its own amount in `washes`, the rest by `wash`."""
+        page, washes = self.built.page, washes or {}
+
+        def side_wash(side: str) -> float:
+            name = self.sides.get(side)
+            return washes.get(name, 0.0) if name else wash
+
         x0, y0, x1, y1 = bounds
         if page.below is None:
             canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(mix(page.above.color, WHITE, 0), wash)))
         else:
             split = min(max(self.split_y(), y0), y1)
-            canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, split), skia.Paint(Color=argb(mix(page.above.color, WHITE, 0), wash)))
-            canvas.drawRect(skia.Rect.MakeLTRB(x0, split, x1, y1), skia.Paint(Color=argb(mix(page.below.color, WHITE, 0), wash)))
+            canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, split),
+                            skia.Paint(Color=argb(mix(page.above.color, WHITE, 0), side_wash("above"))))
+            canvas.drawRect(skia.Rect.MakeLTRB(x0, split, x1, y1),
+                            skia.Paint(Color=argb(mix(page.below.color, WHITE, 0), side_wash("below"))))
         if self.built.membrane:
             image, mx, my = self.membrane(resolution)
             canvas.save()
@@ -262,7 +271,7 @@ class Machine:
 
     def draw(self, canvas: skia.Canvas, washes: dict[str, float] | None = None, other_wash: float = 0.0,
              bounds: tuple[float, float, float, float] | None = None, resolution: float = 1.0) -> None:
-        self.draw_page(canvas, bounds or (0, 0, self.W, self.H), other_wash, resolution)
+        self.draw_page(canvas, bounds or (0, 0, self.W, self.H), other_wash, resolution, washes)
         self.draw_machine(canvas, washes, other_wash)
 
     # --- for the art step -------------------------------------------------------------------
@@ -273,12 +282,29 @@ class Machine:
         self.draw(surface.getCanvas())
         return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
 
+    def membrane_band(self) -> tuple[float, float]:
+        """The top and bottom (art y) of the membrane as drawn, heads included."""
+        mem = self.built.membrane
+        reach = mem.half_thickness + 2 * mem.head_radius
+        depth = 0.4 + mem.rows * mem.spacing * 0.87
+        _, ys, _ = self.project([(0, depth, reach), (0, 0, -reach)])
+        return float(ys.min()), float(ys.max())
+
     def masks(self) -> dict[str, np.ndarray]:
-        """Per structure, where it shows (bool, H x W): what nearer pieces cover is left out."""
+        """Per structure, where it shows (bool, H x W): what nearer pieces cover is left out. A compartment's is
+        its side of the page, less the membrane and the machine."""
         surface = skia.Surface(self.W, self.H)
         canvas = surface.getCanvas()
         canvas.clear(skia.ColorBLACK)
         ids = {name: i + 1 for i, name in enumerate(self.names)}
+        if self.sides and self.built.membrane:
+            split = self.split_y()
+            for side, (top, bottom) in (("above", (0, split)), ("below", (split, self.H))):
+                if side in self.sides:
+                    canvas.drawRect(skia.Rect.MakeLTRB(0, top, self.W, bottom),
+                                    skia.Paint(Color=skia.ColorSetARGB(255, ids[self.sides[side]], 0, 0)))
+            band = self.membrane_band()
+            canvas.drawRect(skia.Rect.MakeLTRB(0, band[0], self.W, band[1]), skia.Paint(Color=skia.ColorBLACK))
         for xs, ys, piece in self._order:
             paint = skia.Paint(AntiAlias=False, Style=skia.Paint.kStroke_Style,
                                StrokeWidth=2 * (piece.r * self.scale + self.outline), StrokeCap=skia.Paint.kRound_Cap,

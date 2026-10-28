@@ -18,6 +18,10 @@ the membrane, in it, or below it.
   course calls it, from where the parts are ("STROMA" below when the catalytic knob is below
   the membrane), in capitals; "" for a machine in no membrane. Say "" for a side you cannot
   tell.
+- `places`: for a machine in a membrane, each of the diagram's other structures (`others`):
+  "above" when it is the compartment above the membrane, "below" when it is the one below
+  (the lesson's "cytoplasm" when the cytoplasm is below), "neither" for anything else (an
+  ion, a molecule, a part the entry does not have). [] when there are none.
 
 Use your knowledge of the machine: the subunit names in the entry, and what the course calls
 its parts.

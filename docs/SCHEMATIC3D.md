@@ -54,8 +54,11 @@ Nothing is written for one machine or one topic, and nothing is kept between les
 1. **Bundle.** A scene's `schematic` names the one machine it shows up close, in the course's
    words ("chloroplast ATP synthase", "human hemoglobin"), or is "" for an illustration. Its
    structures are the machine's parts as the course names them, with their colours, written by
-   the writer like any scene's. The prompt keeps a schematic for the machine alone: what flows
-   through it, the cell around it and failures stay illustrations.
+   the writer like any scene's, and for a machine in a membrane the compartments on either side
+   when the lines name them. The lines that tell how the machine works stay on its schematic,
+   with the particles showing what travels through it (from one compartment, through a part, to
+   the other), drawn in red there; the cell around it and failures stay illustrations. When the
+   lesson is about one machine, its schematic is the hook.
 2. **Art step: build the machine** (`build.py`), per scene:
    - *Find.* The brain gives search phrases in the words of entry titles and entries it knows.
      RCSB's search returns candidates; their details give each entity's name and chains, limited
