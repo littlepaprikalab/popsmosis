@@ -122,6 +122,27 @@ html {
   animation: slideDown 0.35s ease-out forwards;
 }
 
+/* The drop in the Droplets heading: it speeds up as it falls into the gap between R and
+   P, squashes a little where it lands, and settles. Bottom-anchored so the squash sits on
+   its landing spot. For people who turn motion off, it is just there. */
+@keyframes dropFall {
+  0% { opacity: 0; transform: translateY(-1.2em) scale(0.85, 1.15); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  15% { opacity: 1; }
+  55% { transform: translateY(0) scale(0.9, 1.1); animation-timing-function: ease-out; }
+  72% { transform: translateY(0) scale(1.15, 0.85); animation-timing-function: ease-in-out; }
+  87% { transform: translateY(0) scale(0.96, 1.04); animation-timing-function: ease-in-out; }
+  100% { opacity: 1; transform: none; }
+}
+
+.animate-drop-fall {
+  transform-origin: 50% 100%;
+  animation: dropFall 0.8s 0.2s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drop-fall { animation: none; }
+}
+
 @keyframes loadingPulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }
