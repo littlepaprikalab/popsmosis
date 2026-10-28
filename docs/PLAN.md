@@ -428,8 +428,12 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     darkened version of that colour, Inter Bold, a leader line and a 6 px dot at the
     mask's `label_anchor`. Pills stay inside the frame and avoid each other (a simple
     repulsion pass). Once introduced, a label stays on every shot of that diagram.
-  - **Particles** (stretch): dots moving slowly along a polyline between structure
-    centroids, one highlighted particle with a fading trail, pausing at each stop.
+  - **Particles:** for a line whose direction names `particles`, dots stream slowly along
+    a polyline between the structures' label anchors (always inside them), and one lead
+    particle with a trail eases from stop to stop, holding at each one beside the label's
+    dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
+    have, keeps them readable on any colour. Lines in a row with the same path are one
+    run, so the motion carries on across them, and it waits for its stops to be revealed.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
