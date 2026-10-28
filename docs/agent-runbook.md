@@ -40,15 +40,6 @@ The runner needs these in its environment:
 | `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | Claude's brain and its picture checks. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
 | `MODEL_API_KEY` | a Muse brain and its picture checks, Muse Image, and SAM 3.1, which finds the structures in any painted picture: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
-| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria songs: a Gemini API key |
-
-These are keys only. Which brain writes the lessons, Claude's effort and who paints each
-brain's pictures are set by an admin on **STUDIO** in the web app (`/admin/studio`), and the
-studio reads them from the API: README, [Choosing the models](../README.md#choosing-the-models).
-`BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` are no longer read, so remove
-them from the environment. Give it the key of every brain and painter picked there: a default
-brain or painter whose key is missing stops each run with `the studio's settings are wrong`,
-and a topic an admin sent to a brain whose key is missing is given up with that reason.
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
@@ -56,9 +47,20 @@ and a topic an admin sent to a brain whose key is missing is given up with that 
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
 | `SONG_PROVIDER` | optional: who sings the song, `elevenlabs` (the default) or `gemini` (Lyria 3.5 on the Gemini API) |
-| `GEMINI_API_KEY` | with `SONG_PROVIDER=gemini`: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
+| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria with `SONG_PROVIDER=gemini`: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, with `SONG_PROVIDER=gemini`. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
+
+The brain and the painters are not set here. Which brain writes the lessons, Claude's effort
+and who paints each brain's pictures are set by an admin on **STUDIO** in the web app
+(`/admin/studio`), and the studio reads them from the API: README, [Choosing the
+models](../README.md#choosing-the-models). `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and
+`STUDIO_BRAIN_EFFORT` are no longer read: while one is still set, each run stops with `the
+studio's settings are wrong` and says to set the brain there and remove them, so the brain
+never changes without you seeing why. Give the environment the key of every brain and
+painter picked there: a default brain or painter whose key is missing stops each run the
+same way, and a topic an admin sent to a brain whose key is missing is given up with that
+reason.
 
 Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are
 empty and the operator's last cycle log is two days old, an idle run logs a quiet cycle

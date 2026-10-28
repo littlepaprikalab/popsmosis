@@ -72,7 +72,8 @@ CHOICES = {
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 # With none set: the API's defaults too (api/src/lib/studio-settings.ts).
 DEFAULT_BRAIN, DEFAULT_EFFORT = "claude", "high"
-# What picked the brain before /admin/studio did. Set, they are ignored, and the commands say so (retired_note()).
+# What picked the brain before /admin/studio did. Still set, they stop `run`, `videos` and `recover` until they are
+# removed (retired_problem()), so a brain or painter never changes without the admin seeing why.
 RETIRED_VARS = ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT")
 
 # Where the studio finds its Anthropic key, first match wins. In a Claude Code cloud
@@ -202,13 +203,28 @@ def _who() -> str:
     return current()["name"]
 
 
-def retired_note() -> str | None:
-    """What to say when a variable that used to pick the brain is still set in the environment, or None."""
+def retired_problem() -> str | None:
+    """Why a variable that used to pick the brain, still set in the environment, must go first; or None. The
+    studio no longer reads them, so a run that went on would quietly change from the brain they named to the one
+    on /admin/studio."""
     left = [name for name in RETIRED_VARS if os.environ.get(name, "").strip()]
     if not left:
         return None
-    return (f"note: {', '.join(left)} {'is' if len(left) == 1 else 'are'} no longer read: the brain is set on "
-            "/admin/studio, and the environment needs only the keys")
+    them = "it" if len(left) == 1 else "them"
+    return (f"{', '.join(left)} {'is' if len(left) == 1 else 'are'} still set, but the studio no longer reads {them}: "
+            f"the brain is set on /admin/studio now. Set it there, then remove {them} from the environment")
+
+
+def choice_for_model(model: str | None) -> str | None:
+    """The brain (a key of CHOICES) a model id belongs to: the one that wrote a lesson, as the answer records it.
+    A fallback model or a dated id goes by its family; None for a model none of them is."""
+    if not model:
+        return None
+    for name, picked in CHOICES.items():
+        if model == picked["model"]:
+            return name
+    families = {"claude-": "claude", "muse-wonder": "muse-wonder", "muse-spark": "muse-spark"}
+    return next((name for prefix, name in families.items() if model.startswith(prefix)), None)
 
 
 def _record(call: Call) -> None:

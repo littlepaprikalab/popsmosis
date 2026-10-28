@@ -55,8 +55,8 @@ from pydantic import ValidationError
 
 from studio import brain, jobs, ledger, media
 from studio.api import Api, ApiError
-from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, job_chosen, job_dir, keep_brain,
-                        logged_ask, one_line, only_run, read_jsonl, record_interrupted)
+from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, job_chosen, job_dir,
+                        keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -79,10 +79,24 @@ def unavailable(job: Path | None = None, studio: dict | None = None) -> str | No
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
     art = (jobs.studio_settings(job) if job else studio or {}).get("art")
-    problem = brain.settings_problem() or brain.art_problem(art)
+    problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(art)
     if problem:
         return f"the studio's settings are wrong: {problem}"
     return None
+
+
+def refresh_settings(job: Path, api: Api | None) -> Api | None:
+    """Keep the studio's settings as they are now with the job, before its keys are checked: the painter the
+    lesson's last claim named may have been changed since, because this machine lacked its key. Best effort: the
+    claim after it says the same, or fails with the reason. Returns the Api, made from the environment if need be."""
+    try:
+        api = api or Api.from_env()
+        studio = api.studio_settings()
+    except ApiError:
+        return api
+    if studio:  # {} from an API too old to have them: keep what the job has
+        jobs.keep_studio_settings(job, studio)
+    return api
 
 
 def answer_of(job: Path) -> str | None:
@@ -201,6 +215,7 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
 
 def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
     record = Record(job)
+    api = refresh_settings(job, api)
     why = unavailable(job)
     if why:
         return record.finish(STOPPED, "videos", why)
@@ -215,6 +230,11 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
         return record.finish(*_outcome(e, "claim"))
     # Who paints is the admin's setting as of this claim, for the whole run: the heartbeats do not change it.
     jobs.keep_studio_settings(job, claimed.get("studio"))
+    if not (job / BRAIN_FILE).exists():  # a job from before the brain was kept: the one its lesson was written on
+        default, effort = default_brain(claimed.get("studio"))
+        name = claimed.get("brain") or brain.choice_for_model(lesson_model(job) or claimed.get("model")) or default
+        keep_brain(job, name, effort)
+        brain.choose(name, effort)
     why = unavailable(job)  # a painter the setting just changed to may need a key this machine lacks
     if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
         return record.finish(STOPPED, "videos", why)
@@ -287,6 +307,7 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
     job = job_dir(question_id)
     if not (job / "posted.json").exists():
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
+    api = refresh_settings(job, api)
     with job_chosen(job):  # the detached run reads brain.json itself
         why = unavailable(job)
     if why:
@@ -423,8 +444,9 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "bundle.json", bundle)
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
+    # The brain the lesson was written on: the topic's own, else the one its answer records, else today's default.
     default, effort = default_brain(item.get("studio"))
-    keep_brain(job, item.get("brain") or default, effort)  # the topic's own brain, else today's default
+    keep_brain(job, item.get("brain") or brain.choice_for_model(item.get("model")) or default, effort)
     jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
 

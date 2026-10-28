@@ -89,9 +89,9 @@ def main(argv: list[str] | None = None) -> int:
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
     args = parser.parse_args(argv)
-    retired = brain.retired_note()
-    if retired and args.command in ("run", "videos", "recover", "plan", "step"):
-        print(retired, file=sys.stderr)
+    retired = brain.retired_problem()
+    if retired and args.command in ("plan", "step"):  # `run`, `videos` and `recover` stop and say so
+        print(f"note: {retired}", file=sys.stderr)
 
     if args.command == "recover":
         result, question, reason = operator_videos.recover()

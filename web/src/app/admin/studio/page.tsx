@@ -17,6 +17,10 @@ const PAINTERS: Record<Painter, { label: string; note: string }> = {
   svg: { label: 'Claude draws it (SVG)', note: 'The brain draws each scene and says where each part is, on the Anthropic key: no Gemini or Meta key needed. Plainer pictures.' },
 };
 
+// A painter or brain an API newer than this page offers: shown by its name rather than breaking the page.
+const painterOf = (painter: string) => PAINTERS[painter as Painter] ?? { label: painter, note: '' };
+const brainOf = (brain: string) => ({ label: BRAIN_MODELS[brain as Brain] ?? brain, note: BRAIN_NOTES[brain as Brain] ?? '' });
+
 const BRAINS: { provider: keyof ArtSettings; title: string; who: string }[] = [
   { provider: 'claude', title: 'Pictures for Claude topics', who: 'Sent to Claude on the LEARN page, or on Default while the default brain is Claude. Claude Haiku 5.5 checks each picture.' },
   { provider: 'meta', title: 'Pictures for Muse topics', who: 'Sent to Muse Wonder or Muse Spark, or on Default while the default brain is a Muse. Muse Spark 1.3 checks each picture.' },
@@ -74,11 +78,11 @@ export default function AdminStudioPage() {
   const pick = (provider: keyof ArtSettings, painter: Painter) => {
     if (settings?.art[provider] === painter) return;
     save(provider, { art: { [provider]: painter } },
-      `${provider === 'claude' ? 'Claude' : 'Muse'} topics: ${PAINTERS[painter].label} paints from the next run.`);
+      `${provider === 'claude' ? 'Claude' : 'Muse'} topics: ${painterOf(painter).label} paints from the next run.`);
   };
   const pickBrain = (brain: Brain) => {
     if (settings?.brain.default === brain) return;
-    save('brain', { brain: { default: brain } }, `${BRAIN_MODELS[brain]} writes the next topics sent on Default.`);
+    save('brain', { brain: { default: brain } }, `${brainOf(brain).label} writes the next topics sent on Default.`);
   };
   const pickEffort = (effort: Effort) => {
     if (settings?.brain.effort === effort) return;
@@ -127,7 +131,7 @@ export default function AdminStudioPage() {
           <div className="space-y-2" role="radiogroup" aria-label="Default brain">
             {settings.choices.brain.default.map((brain) => (
               <Choice key={brain} on={settings.brain.default === brain} disabled={saving !== null}
-                label={BRAIN_MODELS[brain]} note={BRAIN_NOTES[brain]} isDefault={settings.defaults.brain.default === brain}
+                label={brainOf(brain).label} note={brainOf(brain).note} isDefault={settings.defaults.brain.default === brain}
                 onClick={() => pickBrain(brain)} />
             ))}
           </div>
@@ -160,7 +164,7 @@ export default function AdminStudioPage() {
             <div className="space-y-2" role="radiogroup" aria-label={`Who paints the pictures for ${title}`}>
               {settings.choices.art[provider].map((painter) => (
                 <Choice key={painter} on={settings.art[provider] === painter} disabled={saving !== null}
-                  label={PAINTERS[painter].label} note={PAINTERS[painter].note}
+                  label={painterOf(painter).label} note={painterOf(painter).note}
                   isDefault={settings.defaults.art[provider] === painter} onClick={() => pick(provider, painter)} />
               ))}
             </div>

@@ -15,13 +15,14 @@ import { studioForAgent } from '../lib/studio-settings.js';
 
 // Only what these routes read: the page's view of the videos (lib/droplet.ts) is not theirs.
 const answerSelect = {
-  id: true, questionId: true, agentId: true, bundle: true, factcheck: true,
+  id: true, questionId: true, agentId: true, model: true, bundle: true, factcheck: true,
   videoAttempts: true, videoStatus: true, videoError: true,
   question: { select: { brain: true } },
 } as const;
 
 type ClaimedAnswer = {
-  id: string; questionId: string; bundle: unknown; factcheck: unknown; videoAttempts: number; videoStatus: string | null;
+  id: string; questionId: string; model: string | null; bundle: unknown; factcheck: unknown; videoAttempts: number;
+  videoStatus: string | null;
   question: { brain: string | null };
 };
 
@@ -33,7 +34,8 @@ function serializeClaim(a: ClaimedAnswer, studio: Awaited<ReturnType<typeof stud
     questionId: a.questionId,
     attempt: a.videoAttempts,
     status: a.videoStatus,
-    brain: a.question.brain, // the topic's brain (lib/brains.ts)
+    brain: a.question.brain, // the topic's own brain (lib/brains.ts); null: it was the default's
+    model: a.model, // the model that wrote the lesson, so a machine that never saw it knows whose brain it was
     studio, // the studio's settings (lib/studio-settings.ts): who paints the art, by the brain's provider
     ...(!renewal && { bundle: a.bundle, factcheck: a.factcheck }),
   };

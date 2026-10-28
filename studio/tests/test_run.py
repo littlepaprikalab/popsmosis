@@ -581,3 +581,54 @@ def test_a_default_changed_after_the_check_to_one_that_cannot_run_stops_rather_t
     api.claim = lambda question_id: {**QUESTION, "studio": {"brain": {"default": "muse-spark"}}}  # changed meanwhile
     result, step, reason = operator_run.run("q1", api=api)
     assert (result, step, reason) == ("STOPPED", "request", "the studio's settings are wrong: Muse Spark 1.3 needs MODEL_API_KEY")
+
+
+def test_the_variables_that_used_to_pick_the_brain_stop_the_run_until_removed(jobs_root, monkeypatch):
+    """Ignored, they would let the brain change without anyone seeing why: the run stops, says what to do, and
+    asks the API for nothing."""
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    api = FakeApi()
+    result, step, reason = operator_run.run("q1", api=api)
+    assert (result, step) == ("STOPPED", "run")
+    assert reason.startswith("the studio's settings are wrong: BRAIN_PROVIDER is still set, but the studio no longer reads it")
+    assert api.calls == []
+
+
+def test_an_api_that_cannot_be_reached_stops_the_run_rather_than_failing_the_topic(jobs_root):
+    api = FakeApi()
+    api.errors["studio_settings"] = ApiError(0, "UNREACHABLE", "the API did not answer: timed out")
+    result, step, reason = operator_run.run("q1", api=api)
+    assert (result, step) == ("STOPPED", "run") and "could not be read" in reason
+    assert not (jobs_root / "q1").exists()  # nothing recorded that `fail` could give the topic up for
+
+
+def test_a_lesson_begun_on_the_default_stays_on_it_when_the_default_changes(jobs_root):
+    api = FakeApi(studio={"brain": {"default": "claude"}})
+    ask = SpyBrain(verdict="UNSUPPORTED")  # the fact-check fails, so a retry comes
+    assert operator_run.run("q1", api=api, ask=ask)[:2] == ("FAILED", "factcheck")
+    api.studio = {"brain": {"default": "muse-spark"}}  # an admin changes the default meanwhile
+    ask.verdict = "SUPPORTED"
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert {provider for provider, _ in ask.brains} == {"claude"}  # the bundle's brain checked it too
+    assert operator_run.job_brain(jobs_root / "q1") == "claude"
+
+
+def test_a_lesson_whose_brain_can_no_longer_run_here_goes_on_with_the_default(jobs_root, monkeypatch):
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    monkeypatch.delenv("MODEL_API_KEY", raising=False)
+    job = jobs_root / "q1"
+    api = FakeApi(studio={"brain": {"default": "claude"}})
+    operator_run.run("q1", api=api, ask=FakeBrain(verdict="UNSUPPORTED"))  # the bundle, written on Claude
+    operator_run.keep_brain(job, "muse-wonder")  # as if a Muse had begun it, and this machine lacks Meta's key
+    question = {**QUESTION, "studio": {"brain": {"default": "claude"}}}
+    with brain.chosen(None):
+        operator_run.use_brain(job, question, check=True)
+        assert brain.chosen_name() == "claude"
+    assert operator_run.job_brain(job) == "claude"
+
+
+def test_a_brain_this_studio_does_not_have_stops_rather_than_gives_the_topic_up(jobs_root, monkeypatch):
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    api = FakeApi({**QUESTION, "brain": "muse-ultra"}, studio={"brain": {"default": "claude"}})
+    result, step, reason = operator_run.run("q1", api=api)
+    assert (result, step) == ("STOPPED", "request") and "update the studio" in reason

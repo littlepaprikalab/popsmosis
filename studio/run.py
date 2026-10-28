@@ -134,11 +134,16 @@ def record_interrupted(job: Path) -> None:
 def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
     if ask is None:  # the real brain: the default brain is checked before the topic is claimed
+        retired = brain.retired_problem()
+        if retired:
+            return STOPPED, "run", f"the studio's settings are wrong: {retired}"
         try:
             api = api or Api.from_env()
             studio = api.studio_settings()
         except ApiError as e:
-            return _first(api_outcome(e))
+            result, reason = api_outcome(e)
+            # Down or failing, the API is no reason to fail this topic: nothing about it was tried.
+            return STOPPED, "run", reason if result == STOPPED else f"the studio's settings could not be read: {reason}"
         with brain.chosen(*default_brain(studio)):
             problem = brain.settings_problem()
         if problem:
@@ -151,11 +156,6 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
         record_interrupted(job)
         with job_chosen(job):
             return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None)
-
-
-def _first(outcome: tuple[str, str]) -> tuple[str, str, str]:
-    result, reason = outcome
-    return result, "run", reason
 
 
 def default_brain(studio: dict | None) -> tuple[str | None, str | None]:
@@ -197,25 +197,42 @@ def keep_brain(job: Path, name: str | None, effort: str | None = None) -> None:
 
 
 def use_brain(job: Path, question: dict, check: bool) -> None:
-    """Make the rest of this run on the brain the claim says: the topic's own, else the default brain. With check,
-    one that cannot run here stops the run when it is the default, since every topic would fail the same way,
-    and fails the step when it is the topic's own, so the topic is given up with the reason and the queue moves on."""
+    """Make the rest of this run on the brain the claim says: the topic's own, else the default brain, except that
+    a lesson already begun (its bundle written) stays on the brain that began it, so its fact-check and its videos
+    are that brain's whatever the default has become since. With check, a brain that cannot run here stops the run
+    when it is the default, since every topic would fail the same way, and fails the step when it is the topic's
+    own, so the topic is given up with the reason and the queue moves on. A lesson whose brain can no longer run
+    here goes on with the default."""
     studio = question.get("studio")
     default, effort = default_brain(studio)
     own = question.get("brain") or None
-    name = own or default
-    if (name or brain.DEFAULT_BRAIN) != (job_brain(job) or brain.DEFAULT_BRAIN) or not (job / BRAIN_FILE).exists():
-        label = brain.CHOICES.get(name or brain.DEFAULT_BRAIN, {}).get("name", name)
-        print(f"brain: {label}, {'picked for this topic' if own else 'the default'}", file=sys.stderr)
-    keep_brain(job, name, effort)
+    if own and own not in brain.CHOICES:  # an API newer than this studio: not this topic's fault
+        raise Stop(f"the studio's settings are wrong: this topic asks for the brain {own!r}, which this studio does "
+                   f"not have ({', '.join(brain.CHOICES)}): update the studio")
+    begun = job_brain(job) if not own and (job / BRAIN_FILE).exists() and is_done(job, "bundle") else None
+    _put_brain(job, own or begun or default, effort, "picked for this topic" if own else
+               "the brain that began this lesson" if begun else "the default")
     jobs.keep_studio_settings(job, studio)  # who paints, for `videos`
-    brain.choose(name, effort)
-    if check:
+    if not check:
+        return
+    problem = brain.settings_problem()
+    if problem and begun and begun != (default or brain.DEFAULT_BRAIN):
+        print(f"brain: {problem}; the lesson goes on with the default", file=sys.stderr)
+        _put_brain(job, default, effort, "the default")
         problem = brain.settings_problem()
-        if problem and own:
-            raise StepFailed(f"the studio cannot run this topic's brain here: {problem}")
-        if problem:
-            raise Stop(f"the studio's settings are wrong: {problem}")
+    if problem and own:
+        raise StepFailed(f"the studio cannot run this topic's brain here: {problem}")
+    if problem:
+        raise Stop(f"the studio's settings are wrong: {problem}")
+
+
+def _put_brain(job: Path, name: str | None, effort: str | None, why: str) -> None:
+    """Keep the brain with the job and put it in force, saying so when the job first has it or it changes."""
+    if not (job / BRAIN_FILE).exists() or (name or brain.DEFAULT_BRAIN) != (job_brain(job) or brain.DEFAULT_BRAIN):
+        label = brain.CHOICES.get(name or brain.DEFAULT_BRAIN, {}).get("name", name)
+        print(f"brain: {label}, {why}", file=sys.stderr)
+    keep_brain(job, name, effort)
+    brain.choose(name, effort)
 
 
 def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False) -> tuple[str, str, str]:

@@ -180,7 +180,9 @@ database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort,
 paints each brain's pictures. The studio reads them from the API, with its agent key, before
 it claims a topic and from every claim after, so a change applies from the next run with no
 change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`,
-which used to pick the brain, are no longer read: the commands say so when one is still set.
+which used to pick the brain, are no longer read: while one is still set, `run`, `videos` and
+`recover` stop with `the studio's settings are wrong` and say to set the brain on the page and
+remove it, so a brain never changes without anyone seeing why.
 
 | Setting | Choices | Default |
 |---|---|---|

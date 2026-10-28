@@ -812,7 +812,7 @@ Rules that follow from Inkmory's code:
 - **Name, personality and skills are permanent**, even for the sponsor. Set each agent's
   `llmModel` on the sponsor dashboard: the routine's Claude model for the operator,
   `muse-wonder-1.0` for the planner.
-- **The planner's real record starts with `BRAIN_PROVIDER=meta`**, so every entry in it
+- **The planner's real record starts with a Muse brain** (`/admin/studio`), so every entry in it
   is Muse's. Until then, build and test its beat against a local Inkmory (sparksinfra's
   `LOCAL_DEV.md`, with `ADOPTION_COOLDOWN_DAYS=0`).
 - **Both keys live in the routine's environment**, because the studio runs in the
@@ -831,7 +831,7 @@ Rules that follow from Inkmory's code:
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
 | 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; agent credits |
-| 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
+| 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch the default brain to a Muse on `/admin/studio` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them. Particles built early (Oct 28). The contact sheet can be made (`python -m studio.render sheet`); the helper's check on it is not built. Left: the vertical layout, the QA check |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
 
@@ -900,9 +900,10 @@ To build:
 To run live (day 8):
 
 - The real song, narration and exam question, and the chorus drift on a sung song.
-- Muse Image and SAM 3.1 with `BRAIN_PROVIDER=meta`.
+- Muse Image and Gemini 3.1 Flash Image, each with SAM 3.1 (`/admin/studio`; Gemini's
+  answer and price already checked live).
 - `run` and `videos` end to end, with the upload.
-- The topics that mean done (section 1); `meta` against `claude`; the planner's persona
+- The topics that mean done (section 1); a Muse brain against Claude's (`/admin/studio`); the planner's persona
   in the lesson voice, one topic each way (section 14).
 
 Then the stretch (day 9): the vertical layout and the QA check. Before launch: the song

@@ -95,10 +95,11 @@ d('video claim and queue', () => {
 
   it('carries the brain an admin picked for the topic, so a machine that recovers the render paints its art the same way', async () => {
     const id = await lesson({ brain: 'muse-spark' });
-    expect((await claim(id)).json().brain).toBe('muse-spark');
+    await prisma.answer.update({ where: { id }, data: { model: 'muse-spark-1.3' } });
+    expect((await claim(id)).json()).toMatchObject({ brain: 'muse-spark', model: 'muse-spark-1.3' });
     expect((await claim(id, { attempt: 1 })).json().brain).toBe('muse-spark');
     await goQuiet(id);
-    expect((await queue()).json().data[0]).toMatchObject({ answerId: id, attempt: 2, brain: 'muse-spark' });
+    expect((await queue()).json().data[0]).toMatchObject({ answerId: id, attempt: 2, brain: 'muse-spark', model: 'muse-spark-1.3' });
   });
 
   it('refuses another agent, a lesson with no bundle, finished videos and a bad attempt', async () => {

@@ -16,7 +16,6 @@
  *   svg      the brain draws it; Claude's only
  */
 import prisma from './prisma.js';
-import { Prisma } from '../generated/prisma/client.js';
 import { BRAINS, type Brain } from './brains.js';
 
 export const PROVIDERS = ['claude', 'meta'] as const;
@@ -115,15 +114,20 @@ export async function studioForAgent() {
   return { brain, art };
 }
 
+/**
+ * Apply an admin's change: only the fields it names, merged into what is stored by Postgres itself (jsonb ||), so
+ * two admins saving different fields at once both keep their change. Both keys in one transaction, so a change to
+ * the brain and the art lands whole or not at all.
+ */
 export async function writeStudioSettings(change: { brain?: Partial<BrainSettings>; art?: Partial<ArtSettings> }) {
-  const current = await readStudioSettings();
-  await prisma.$transaction([
-    ...(change.brain ? [[BRAIN_KEY, { ...current.brain, ...change.brain }] as const] : []),
-    ...(change.art ? [[ART_KEY, { ...current.art, ...change.art }] as const] : []),
-  ].map(([key, value]) => prisma.setting.upsert({
-    where: { key },
-    create: { key, value: value as Prisma.InputJsonObject },
-    update: { value: value as Prisma.InputJsonObject },
-  })));
+  const writes = [
+    ...(change.brain ? [[BRAIN_KEY, change.brain] as const] : []),
+    ...(change.art ? [[ART_KEY, change.art] as const] : []),
+  ].map(([key, value]) => prisma.$executeRaw`
+    INSERT INTO settings (key, value, "updatedAt") VALUES (${key}, ${JSON.stringify(value)}::jsonb, now())
+    ON CONFLICT (key) DO UPDATE SET "updatedAt" = now(),
+      value = CASE WHEN jsonb_typeof(settings.value) = 'object' THEN settings.value || EXCLUDED.value ELSE EXCLUDED.value END
+  `);
+  await prisma.$transaction(writes);
   return readStudioSettings();
 }

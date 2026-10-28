@@ -657,7 +657,7 @@ function LearnContent() {
             </div>
             <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="brain-note">
               Admins only. {BRAIN_OPTIONS.find((o) => o.value === brain)?.note}
-              {brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain]}.`}
+              {brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain] ?? defaultBrain}.`}
             </p>
           </div>
         )}

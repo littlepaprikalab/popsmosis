@@ -64,11 +64,19 @@ def test_the_environment_no_longer_picks_the_brain(monkeypatch):
     monkeypatch.setenv("STUDIO_BRAIN_EFFORT", "low")
     request = brain.claude_request("brain", "Write.", None, [], None)
     assert (brain.provider(), request["model"], request["output_config"]) == ("claude", "claude-opus-5-5", {"effort": "high"})
-    assert brain.retired_note() == ("note: BRAIN_PROVIDER, STUDIO_BRAIN_MODEL, STUDIO_BRAIN_EFFORT are no longer read: "
-                                    "the brain is set on /admin/studio, and the environment needs only the keys")
+    assert brain.retired_problem() == (
+        "BRAIN_PROVIDER, STUDIO_BRAIN_MODEL, STUDIO_BRAIN_EFFORT are still set, but the studio no longer reads them: "
+        "the brain is set on /admin/studio now. Set it there, then remove them from the environment")
     for name in brain.RETIRED_VARS:
         monkeypatch.delenv(name)
-    assert brain.retired_note() is None
+    assert brain.retired_problem() is None
+
+
+def test_the_brain_a_lesson_was_written_on_is_known_by_its_model():
+    assert [brain.choice_for_model(m) for m in ("claude-opus-5-5", "muse-wonder-1.0", "muse-spark-1.3")] == list(brain.CHOICES)
+    assert brain.choice_for_model("claude-opus-5") == "claude"  # a refusal's fallback model
+    assert brain.choice_for_model("muse-spark-1.3-20261001") == "muse-spark"  # a dated id
+    assert brain.choice_for_model("gpt-9") is None and brain.choice_for_model(None) is None
 
 
 def test_an_effort_claude_does_not_take_fails_the_call_with_the_allowed_values():
@@ -292,6 +300,26 @@ def test_the_brains_are_the_ones_the_api_and_the_page_offer():
     assert re.findall(r"'([^']+)'", re.search(r"type Brain = (.*);", web).group(1)) == list(brain.CHOICES)
     for picked in brain.CHOICES.values():
         assert picked["model"] in brain.PRICES  # each shows its cost on the bill
+
+
+def test_the_studio_settings_agree_with_the_api():
+    """The studio falls back on its own defaults when the API sends none, and checks a painter against its own list:
+    both must be the API's (api/src/lib/studio-settings.ts)."""
+    import re
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[2] / "api" / "src" / "lib" / "studio-settings.ts").read_text(encoding="utf-8")
+
+    def ts_list(text: str) -> tuple[str, ...]:
+        return tuple(re.findall(r"'([^']+)'", text))
+
+    choices = re.search(r"ART_CHOICES[^=]*= \{\s*claude: \[(.*?)\],\s*meta: \[(.*?)\],", source, re.S)
+    assert {"claude": ts_list(choices.group(1)), "meta": ts_list(choices.group(2))} == brain.ART_CHOICES
+    art = re.search(r"DEFAULT_ART: ArtSettings = \{ claude: '(\w+)', meta: '(\w+)' \}", source)
+    assert art.groups() == (brain.ART_CHOICES["claude"][0], brain.ART_CHOICES["meta"][0])  # each default listed first
+    default = re.search(r"DEFAULT_BRAIN: BrainSettings = \{ default: '([\w-]+)', effort: '(\w+)' \}", source)
+    assert default.groups() == (brain.DEFAULT_BRAIN, brain.DEFAULT_EFFORT)
+    assert ts_list(re.search(r"EFFORTS = \[(.*?)\] as const", source).group(1)) == brain.EFFORTS
 
 
 # --- who paints the art, by the brain and the admin's setting -------------------------------

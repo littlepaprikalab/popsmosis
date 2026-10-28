@@ -105,6 +105,25 @@ d('studio settings', () => {
     expect((await get(adminCookie)).json().art).toEqual({ claude: 'muse', meta: 'gemini' });
   });
 
+  it('keeps both of two changes saved at the same moment', async () => {
+    const saves = await Promise.all([
+      put(adminCookie, { art: { claude: 'muse' } }),
+      put(adminCookie, { art: { meta: 'gemini' } }),
+      put(adminCookie, { brain: { default: 'muse-wonder' } }),
+      put(adminCookie, { brain: { effort: 'low' } }),
+    ]);
+    expect(saves.map((r) => r.statusCode)).toEqual([200, 200, 200, 200]);
+    expect((await get(adminCookie)).json()).toMatchObject({
+      art: { claude: 'muse', meta: 'gemini' }, brain: { default: 'muse-wonder', effort: 'low' },
+    });
+  });
+
+  it('starts over from a stored value that is not an object, rather than keep a broken row', async () => {
+    await prisma.setting.create({ data: { key: 'art', value: 'gemini' } });
+    expect((await get(adminCookie)).json().art).toEqual({ claude: 'gemini', meta: 'muse' });
+    expect((await put(adminCookie, { art: { meta: 'gemini' } })).json().art).toEqual({ claude: 'gemini', meta: 'gemini' });
+  });
+
   it('reaches the studio on the claim of a topic and of its videos', async () => {
     const pending = await prisma.question.create({ data: { userId, content: 'ATP synthesis' } });
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
