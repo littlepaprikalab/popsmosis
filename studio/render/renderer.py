@@ -14,6 +14,7 @@ moves right of the question card.
 from __future__ import annotations
 
 import math
+import xml.etree.ElementTree as ET
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,7 +22,7 @@ from pathlib import Path
 import numpy as np
 import skia
 
-from studio import jobs, media
+from studio import jobs, media, svg
 from studio.render import primitives as p
 from studio.render.layouts import LAYOUTS, Layout, Rect
 from studio.schemas import Locations, SceneLocations, Timeline
@@ -56,6 +57,11 @@ STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 STOP_OFFSET = 34.0  # art pixels: the lead particle holds beside a label's dot, not under it
+# A structure that spins turns slowly and steadily, easing in and out, a whole number of times.
+SPIN_TURNS_PER_S = 0.25
+SPIN_RAMP_S = 0.8
+SURROUND_PX = 8  # how far around a moving structure to look for the colour that fills its place
+PATCH_FADE_S = 0.25  # what fills its place fades in as it starts to turn and out as it stops, so neither shows
 
 Point = tuple[float, float]
 
@@ -92,6 +98,7 @@ class SceneArt:
     def __init__(self, job: Path, located: SceneLocations):
         self.located = located
         art_file = job / located.art
+        self._drawing = art_file.with_suffix(".svg")  # the art step keeps the SVG it drew
         if not art_file.exists():
             raise RenderError(f"no art for scene {located.scene} ({located.art})")
         pixels = _read(art_file, skia.kBGRA_8888_ColorType)
@@ -99,6 +106,8 @@ class SceneArt:
         self.width, self.height = pixels.shape[1], pixels.shape[0]
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
         self.masks: dict[str, skia.Image] = {}
+        self._pixels = pixels
+        self._inside: dict[str, np.ndarray] = {}
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -107,7 +116,10 @@ class SceneArt:
             if grey.shape != pixels.shape[:2]:
                 raise RenderError(f"the mask for {s.name} on {located.scene} is not the art's size")
             self.masks[s.name] = skia.Image.fromarray(np.ascontiguousarray(grey), colorType=skia.kAlpha_8_ColorType)
+            self._inside[s.name] = grey >= 128
         self._ghosts: dict[str, skia.Image] = {}
+        self._sprites: dict[str, skia.Image] = {}
+        self._patches: dict[str, skia.Image] = {}
         self._spots: dict[str, skia.Image] = {}
         self._composed: OrderedDict[tuple, skia.Image] = OrderedDict()
         self.content = _drawn_box(pixels, located)
@@ -145,11 +157,77 @@ class SceneArt:
             self._spots[name] = surface.makeImageSnapshot()
         return self._spots[name]
 
-    def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[tuple, skia.Image]:
-        """The art with each ghost and spotlight wash at its level (0-1), kept for reuse; and its key."""
+    def _svg(self) -> ET.Element | None:
+        try:
+            return ET.fromstring(self._drawing.read_text(encoding="utf-8")) if self._drawing.exists() else None
+        except ET.ParseError:
+            return None
+
+    def sprite(self, name: str) -> skia.Image:
+        """The structure alone, to move on its own: drawn from the art step's SVG, with its smooth
+        edges, when that is there; otherwise cut out of the art by its mask."""
+        if name not in self._sprites:
+            root = self._svg()
+            if root is not None:
+                try:
+                    rgba = svg.alone(root, name)
+                except ValueError:
+                    rgba = None
+                if rgba is not None and rgba.shape[:2] == (self.height, self.width) and rgba[..., 3].any():
+                    self._sprites[name] = skia.Image.fromarray(np.ascontiguousarray(rgba),
+                                                               colorType=skia.kRGBA_8888_ColorType,
+                                                               alphaType=skia.kPremul_AlphaType)
+                    return self._sprites[name]
+            surface = self._surface()
+            canvas = surface.getCanvas()
+            canvas.clear(skia.ColorTRANSPARENT)
+            canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(), skia.Paint(Color=skia.ColorWHITE))
+            canvas.drawImage(self.art, 0, 0, skia.SamplingOptions(), skia.Paint(BlendMode=skia.BlendMode.kSrcIn))
+            self._sprites[name] = surface.makeImageSnapshot()
+        return self._sprites[name]
+
+    def patch(self, name: str) -> skia.Image:
+        """What is drawn over the art while the structure moves. With the art step's SVG, the
+        whole art drawn again without the structure, which shows what lies under it. Without
+        one, the colour just around it (the median of a thin ring outside its mask) over its
+        mask's soft edge."""
+        if name not in self._patches:
+            under = None
+            root = self._svg()
+            if root is not None:
+                try:
+                    rgb = svg.without(root, name)
+                except ValueError:
+                    rgb = None
+                if rgb is not None and rgb.shape[:2] == (self.height, self.width):
+                    bgra = np.empty((self.height, self.width, 4), np.uint8)
+                    bgra[..., 0], bgra[..., 1], bgra[..., 2], bgra[..., 3] = rgb[..., 2], rgb[..., 1], rgb[..., 0], 255
+                    under = skia.Image.fromarray(bgra, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
+            if under is not None:  # the same art everywhere but under the structure: use all of it
+                self._patches[name] = under
+                return under
+            surface = self._surface()
+            canvas = surface.getCanvas()
+            canvas.clear(skia.ColorTRANSPARENT)
+            inside = self._inside[name]
+            grown = inside
+            for _ in range(SURROUND_PX):
+                grown = grown | np.roll(grown, 1, 0) | np.roll(grown, -1, 0) | np.roll(grown, 1, 1) | np.roll(grown, -1, 1)
+            ring = grown & ~inside
+            b, g, r = np.median(self._pixels[ring][:, :3], axis=0) if ring.any() else (255, 255, 255)
+            canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
+                             skia.Paint(Color=skia.ColorSetARGB(255, int(r), int(g), int(b))))
+            self._patches[name] = surface.makeImageSnapshot()
+        return self._patches[name]
+
+    def compose(self, ghosts: dict[str, float], spots: dict[str, float],
+                hidden: dict[str, float] | None = None) -> tuple[tuple, skia.Image]:
+        """The art with each ghost and spotlight wash at its level (0-1), and each hidden structure
+        patched over at its level (it is drawn moving on top), kept for reuse; and its key."""
         key = (tuple(sorted((n, round(v, 3)) for n, v in ghosts.items() if v > 0.002 and n in self.masks)),
-               tuple(sorted((n, round(v, 3)) for n, v in spots.items() if v > 0.002 and n in self.masks)))
-        if not key[0] and not key[1]:
+               tuple(sorted((n, round(v, 3)) for n, v in spots.items() if v > 0.002 and n in self.masks)),
+               tuple(sorted((n, round(v, 3)) for n, v in (hidden or {}).items() if v > 0.002 and n in self.masks)))
+        if not key[0] and not key[1] and not key[2]:
             return key, self.art
         if key in self._composed:
             self._composed.move_to_end(key)
@@ -157,12 +235,19 @@ class SceneArt:
         surface = self._surface()
         canvas = surface.getCanvas()
         canvas.drawImage(self.art, 0, 0)
+        for name, level in key[2]:
+            canvas.drawImage(self.patch(name), 0, 0, skia.SamplingOptions(), skia.Paint(Alphaf=level))
         for name, level in key[0]:
             canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=skia.ColorWHITE, Alphaf=GHOST_WASH * level))
         for name, level in key[1]:
-            canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
-                             skia.Paint(Color=skia.ColorWHITE, Alphaf=SPOT_WASH * level))
+            # A spotlit structure that is moving is drawn bright on top; the place it left is
+            # background now, so it is washed with the rest.
+            if name in dict(key[2]):
+                canvas.drawPaint(skia.Paint(Color=skia.ColorWHITE, Alphaf=SPOT_WASH * level))
+            else:
+                canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
+                                 skia.Paint(Color=skia.ColorWHITE, Alphaf=SPOT_WASH * level))
         image = surface.makeImageSnapshot()
         self._composed[key] = image
         while len(self._composed) > 6:
@@ -205,6 +290,23 @@ def to_frame(cam: Cam, view: Rect, art: SceneArt) -> tuple[float, float, float]:
 
 def mix_rect(a: Rect, b: Rect, x: float) -> Rect:
     return tuple(p.lerp(u, v, x) for u, v in zip(a, b))  # type: ignore[return-value]
+
+
+def spin_angle(t: float, length: float) -> float:
+    """How far a spin has turned, in degrees, t seconds into a run `length` seconds long. It
+    speeds up and slows down over SPIN_RAMP_S at each end and makes a whole number of turns,
+    so it ends where it started and nothing jumps when it stops."""
+    if length <= 0:
+        return 0.0
+    turns = max(1, round(length * SPIN_TURNS_PER_S))
+    ramp = min(SPIN_RAMP_S, length / 2)
+    speed = 360.0 * turns / (length - ramp)
+    t = min(max(t, 0.0), length)
+    if t < ramp:
+        return speed * t * t / (2 * ramp)
+    if t <= length - ramp:
+        return speed * (t - ramp / 2)
+    return 360.0 * turns - speed * (length - t) ** 2 / (2 * ramp)
 
 
 def stop_points(anchors: list[Point]) -> list[Point]:
@@ -283,6 +385,8 @@ class BeatPlan:
     caption_out: float
     flow_in: float  # the particles' run: they set off once the run starts and its stops are revealed
     flow_out: float
+    motion_in: float  # the motion's run: from the run's start, once its structure is revealed
+    motion_out: float
 
     def cam(self, t: float, view: Rect, art: SceneArt) -> Cam:
         return clamp_cam(mix_cam(self.start, self.target, p.ease((t - self.move_at) / self.move_s)), view, art)
@@ -386,9 +490,20 @@ class Renderer:
                 stops = [name for f in beat.particles for name in f.path]
                 flow_in = max([beats[j].t0] + [revealed.get(name, beats[j].t0) for name in stops])
                 flow_out = beats[k].t1
+            motion_in = motion_out = beat.t0
+            if beat.motion:
+                j = i
+                while j > 0 and beats[j - 1].scene == beat.scene and beats[j - 1].motion == beat.motion:
+                    j -= 1
+                k = i
+                while k + 1 < len(beats) and beats[k + 1].scene == beat.scene and beats[k + 1].motion == beat.motion:
+                    k += 1
+                motion_in = max(beats[j].t0, self.revealed.get(beat.scene, {}).get(beat.motion.target, beats[j].t0))
+                motion_out = beats[k].t1
             plans.append(BeatPlan(target=target, start=start, move_at=move_at, move_s=move_s, spot=beat.spotlight,
                                   spot_at=spot_at, prev_spot=prev_spot, caption_in=caption_in,
-                                  caption_out=caption_out, flow_in=flow_in, flow_out=flow_out))
+                                  caption_out=caption_out, flow_in=flow_in, flow_out=flow_out,
+                                  motion_in=motion_in, motion_out=motion_out))
         return plans
 
     def beat_index(self, t: float) -> int:
@@ -427,9 +542,9 @@ class Renderer:
         return levels
 
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,
-                         ghosts: dict[str, float], spots: dict[str, float]) -> None:
+                         ghosts: dict[str, float], spots: dict[str, float], hidden: dict[str, float] | None = None) -> None:
         art = self.scene(scene_id)
-        washes, composed = art.compose(ghosts, spots)
+        washes, composed = art.compose(ghosts, spots, hidden)
         key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
         if self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
@@ -477,7 +592,15 @@ class Renderer:
         if plan.prev_spot and plan.prev_spot != plan.spot:
             spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
         reveals = self.revealed.get(beat.scene, {})
-        self._draw_background(canvas, beat.scene, cam, view, self._ghosts(beat.scene, reveals, t), spots)
+        moving = beat.motion if beat.motion and plan.motion_in <= t <= plan.motion_out else None
+        if moving and moving.target not in art.masks:
+            moving = None
+        patched = {}
+        if moving:
+            patched[moving.target] = p.ease(min(t - plan.motion_in, plan.motion_out - t) / PATCH_FADE_S)
+        self._draw_background(canvas, beat.scene, cam, view, self._ghosts(beat.scene, reveals, t), spots, patched)
+        if moving:
+            self._draw_spin(canvas, beat.scene, moving, plan, cam, view, spots, t)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
 
@@ -491,6 +614,31 @@ class Renderer:
             p.draw_caption(canvas, beat.caption, layout.width / 2, layout.margin + 8, layout.caption_font, caption_alpha)
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _draw_spin(self, canvas: skia.Canvas, scene_id: str, motion, plan: BeatPlan, cam: Cam, view: Rect,
+                   spots: dict[str, float], t: float) -> None:
+        """The structure turned about the middle of its box, over its patched place, washed as
+        pale as the art around it when another structure is spotlit."""
+        art = self.scene(scene_id)
+        box = self.locations.scene(scene_id).get(motion.target).box
+        cx, cy = (box.x0 + box.x1) / 2, (box.y0 + box.y1) / 2  # the axle of a wheel or ring, whatever hangs off it
+        angle = spin_angle(t - plan.motion_in, plan.motion_out - plan.motion_in) * (1 if motion.clockwise else -1)
+        clear = 1.0
+        for name, level in spots.items():
+            if name != motion.target:
+                clear *= 1 - SPOT_WASH * level
+        scale, dx, dy = to_frame(cam, view, art)
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        canvas.translate(dx, dy)
+        canvas.scale(scale, scale)
+        canvas.rotate(angle, cx, cy)
+        canvas.saveLayer()
+        canvas.drawImage(art.sprite(motion.target), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
+        if clear < 1:
+            canvas.drawPaint(skia.Paint(Color=p.with_alpha(0xFFFFFFFF, 1 - clear), BlendMode=skia.BlendMode.kSrcATop))
+        canvas.restore()
+        canvas.restore()
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),

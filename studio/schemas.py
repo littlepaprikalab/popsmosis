@@ -470,6 +470,16 @@ class Particles(Strict):
         return _hex_color(value)
 
 
+class Motion(Strict):
+    """A structure that moves on its own during a beat. Only "spin" so far: it turns in the
+    plane of the drawing about its centre, so it suits a part that really turns and is
+    drawn looking along its axis (a wheel from the side, a ring from above)."""
+
+    kind: Literal["spin"]
+    target: str  # the structure
+    clockwise: bool = True
+
+
 class Beat(Strict):
     t0: float
     t1: float
@@ -481,6 +491,7 @@ class Beat(Strict):
     # label shows from its reveal's t and stays on every later beat of the scene.
     labels: list[str]
     particles: list[Particles]
+    motion: Motion | None = None
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
@@ -592,7 +603,8 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
         for word in beat.words:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
-        named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path]
+        named = ([beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path]
+                 + ([beat.motion.target] if beat.motion else []))
         for name in [n for n in named if n] + beat.labels:
             if name not in timeline.palette:
                 problems.append(f"{where} names {name}, which has no colour in the palette")
@@ -638,7 +650,7 @@ def timeline_problems(timeline: Timeline, locations: Locations) -> list[str]:
     problems = []
     shown = [(f"beat {i}", beat.scene,
               [r.name for r in beat.reveal] + beat.labels + [beat.spotlight, beat.camera.target]
-              + [n for p in beat.particles for n in p.path])
+              + [n for p in beat.particles for n in p.path] + ([beat.motion.target] if beat.motion else []))
              for i, beat in enumerate(timeline.beats)]
     shown.append(("the exam question", timeline.frq.scene, timeline.frq.labels))
     for where, scene_id, names in shown:

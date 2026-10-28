@@ -155,6 +155,42 @@ def rasterise(root: ET.Element) -> np.ndarray:
     return _render(_prepared(root), skia.ColorWHITE)[:, :, :3].copy()
 
 
+def without(root: ET.Element, name: str) -> np.ndarray:
+    """The art with one structure left out (its group, as `rasterise` draws it otherwise):
+    what lies under the structure, shown in its place while it moves."""
+    bare = copy.deepcopy(root)
+    for parent in bare.iter():
+        for child in list(parent):
+            if _squash(child.get(MARK, "")) == _squash(name):
+                parent.remove(child)
+    return rasterise(bare)
+
+
+def alone(root: ET.Element, name: str) -> np.ndarray:
+    """One structure drawn on its own, on transparent (RGBA, premultiplied), with the smooth
+    edges the art has: its group, the groups around it, and what it refers to in <defs>."""
+    bare = copy.deepcopy(root)
+    wanted = [el for el in bare.iter() if _squash(el.get(MARK, "")) == _squash(name)]
+    parents = {child: parent for parent in bare.iter() for child in parent}
+    around = set()
+    for el in wanted:
+        while el in parents:
+            el = parents[el]
+            around.add(el)
+
+    def prune(parent: ET.Element) -> None:
+        for child in list(parent):
+            if child in wanted or _local(child.tag) == "defs":
+                continue
+            if child in around:
+                prune(child)
+            else:
+                parent.remove(child)
+
+    prune(bare)
+    return _render(_prepared(bare), skia.ColorTRANSPARENT)
+
+
 def masks(root: ET.Element, names: list[str]) -> dict[str, np.ndarray]:
     """Per structure, a bool array: True where it is visible in the art.
 

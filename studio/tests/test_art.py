@@ -1,6 +1,7 @@
 """The art and locate steps, with a stand-in brain that answers with the SVGs in studio/tests/art/."""
 
 import shutil
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import numpy as np
@@ -334,6 +335,18 @@ def test_an_answer_cut_off_is_a_refused_try_and_other_brain_errors_fail_the_step
 
     with pytest.raises(brain.Refused):
         art.run(job, refuses)
+
+
+def test_a_structure_can_be_drawn_alone_or_left_out():
+    # What the renderer moves on its own, and what it shows under it while it moves.
+    root = ET.fromstring(svg_text('<rect x="0" y="0" width="1792" height="1024" fill="#EEEEEE"/>',
+                                  blob("Rotor", "#3366CC"), blob("Stator", "#B5487F", x=1300)))
+    alone = svg.alone(root, "rotor")  # names match in any case, as everywhere else
+    assert alone[512, 896, 3] == 255 and alone[512, 1300, 3] == 0 and alone[20, 20, 3] == 0
+    assert tuple(alone[512, 896, :3]) == (0x33, 0x66, 0xCC)
+    bare = svg.without(root, "Rotor")
+    assert tuple(bare[512, 896]) == (0xEE, 0xEE, 0xEE)  # the background it covered
+    assert tuple(bare[512, 1300]) == (0xB5, 0x48, 0x7F)  # the rest as it was
 
 
 def test_names_in_another_case_and_rgb_colours_count():

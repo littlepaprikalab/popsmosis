@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 skia = pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
@@ -23,6 +24,7 @@ from studio.schemas import (
     FrqSegment,
     FrqStep,
     Locations,
+    Motion,
     Particles,
     Reveal,
     Timeline,
@@ -281,6 +283,39 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
     assert (flow.frame(0.0) == still.frame(0.0)).all()  # they fade in: nothing yet at the start
     flow.frame(1.0)
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
+
+
+def test_a_spin_eases_in_and_out_and_ends_on_a_whole_turn():
+    angle = renderer_module.spin_angle
+    assert angle(0, 8.8) == 0 and angle(8.8, 8.8) == pytest.approx(720)  # two turns in 8.8 s
+    samples = [angle(i / 100, 8.8) for i in range(881)]
+    assert all(b >= a for a, b in zip(samples, samples[1:]))
+    assert max(b - a for a, b in zip(samples, samples[1:])) < 1.6  # no jumps: under 1.6 degrees a frame of 10 ms
+    assert angle(1.0, 1.0) == pytest.approx(360)  # a short run still makes one whole turn
+
+
+def test_a_spinning_structure_turns_and_leaves_no_copy_behind(job, monkeypatch):
+    # The sample art has no SVG, so its place is filled with the colour around it.
+    monkeypatch.setattr(p, "draw_label", lambda *args: None)  # nothing drawn over the pixels looked at
+
+    def spinning(motion):
+        named = [Reveal(name=name, t=0.0) for name in FLOW]  # no ghosts
+        return Beat(t0=0, t1=8.0, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=named,
+                    spotlight=None, labels=FLOW, particles=[], motion=motion, caption=None, line_id="v1",
+                    line="it turns", words=[Word(word="turns", start=0.1, end=0.5)])
+    spin = Renderer(job, flowing([spinning(Motion(kind="spin", target="Cytochrome b6f"))]))
+    still = Renderer(job, flowing([spinning(None)]))
+    quarter = 0.4 + 0.9  # 100 degrees a second once up to speed: 90 degrees here
+    assert renderer_module.spin_angle(quarter, 8.0) == pytest.approx(90)
+    orange = p.rgb("#E07A2F")
+    # b6f is an ellipse 120 wide and 150 tall (radii) at (900, 470); a quarter turn swaps them.
+    top, side = (900, 470 - 140), (900 + 140, 470)
+    assert pixel(still.frame(quarter), *still.art_to_frame(quarter, *top)) == pytest.approx(orange, abs=3)
+    turned = spin.frame(quarter).copy()
+    assert pixel(turned, *spin.art_to_frame(quarter, *top)) != pytest.approx(orange, abs=40)  # nothing left behind
+    assert pixel(turned, *spin.art_to_frame(quarter, *side)) == pytest.approx(orange, abs=3)  # turned into here
+    end = np.abs(spin.frame(8.0 - 1e-6).astype(int) - still.frame(8.0 - 1e-6).astype(int)).max(axis=-1)
+    assert end.max() < 80 and (end > 40).sum() < 600  # back where it started: at most its outline a little softer
 
 
 def test_label_text_is_dark_enough_to_read_on_white():
