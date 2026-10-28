@@ -111,6 +111,26 @@ blurred, and the blur grows with the zoom), on the 4-core container, plus the re
 The membrane is drawn once per scale it is needed at and kept. The sample job's 53 s song,
 opening on a schematic, rendered in 33 s with 4 workers. Nothing needs a GPU.
 
+### 3.4 Real jobs (Oct 28)
+
+"How ATP synthase makes ATP in chloroplasts" (AP Biology), local jobs (`python -m studio plan`
+and the media steps; nothing posted), the brain on Haiku 5.5 as the environment sets it:
+
+- The writer chose the schematic for the hook and a detail scene, so the song opens on the
+  machine, and named its parts by the recipe's names.
+- With no study guide, no fact said which way the rotor turns: all four spin claims came back
+  UNSUPPORTED and the rotor stands still; the flow's claim was supported by the lesson's own fact.
+- With study notes citing Noji et al. 1997 (the rotor seen from the membrane side turns
+  counterclockwise while breaking ATP down) and its reversal while making ATP, the fact-check
+  supported the clockwise claim seen from the thylakoid space and the counterclockwise one seen
+  from the stroma, the same turn, and the video shows it. The 3:15 song rendered in 175 s, the
+  lesson in 119 s; the model calls cost about $0.12, plus the song and narration.
+- Found and fixed: the writer's menu described the structures as drawn ("a ring of fourteen
+  capsules"), and the writer taught that as a fact. It now lists names only. The writer also
+  put a failure scene on the schematic, which always shows the machine working; the prompt now
+  keeps failures as illustrations.
+- Left for milestone 2: a line that sings the rotor stopping plays over a turning rotor.
+
 ## 4. Adding a machine
 
 1. Pick an entry (the structure that shows the machine as textbooks draw it) and write
