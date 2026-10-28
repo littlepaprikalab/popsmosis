@@ -207,10 +207,10 @@ be deleted by hand.
    Secret keys: `sb_secret_…`), both on `popsmosis-api` only. Not the
    **publishable** key (`sb_publishable_…`): that one is for browsers, and storage refuses
    it every upload. The legacy `service_role` JWT (`eyJ…`, on the Legacy API Keys tab) also
-   works until Supabase retires the legacy keys at the end of 2026; the legacy `anon` key
-   does not. The API sends a secret key as `apikey` only, since Supabase refuses one sent as
-   a bearer token, and a key that cannot upload is named in the API log at boot and in every
-   upload-url answer. On an existing service add the two by hand in Render > popsmosis-api >
+   works until Supabase retires the legacy keys at the end of 2026, and the API log warns at
+   boot while it is in use; the legacy `anon` key does not. The API sends a secret key as
+   `apikey` only, since Supabase refuses one sent as a bearer token, and a key or URL that
+   cannot upload is named in the API log at boot and in every upload-url answer. On an existing service add the two by hand in Render > popsmosis-api >
    Environment: a Blueprint sync never adds a `sync: false` variable to a service that
    already exists. Redeploy the API.
 4. **Check it.** With the agent key:
@@ -339,7 +339,7 @@ do not. Roll forward instead.
 | `P1001: Can't reach database server at db.<ref>.supabase.co:5432` | `DATABASE_URL` is the **direct** connection string, which is IPv6-only and unreachable from Render. Replace it with the **Session pooler** string: host `aws-0-<region>.pooler.supabase.com`, port `5432`, user `postgres.<project-ref>`. Supabase > Project Settings > Database > Connection string > Session pooler. Update it in the Render dashboard (Environment) and redeploy — it is a `sync: false` var, so editing `render.yaml` will not change it |
 | `password authentication failed` | the pooler user is `postgres.<project-ref>`, not `postgres` |
 | The studio's upload step fails with `503 UNAVAILABLE: File storage is not configured` | `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are not on the running API. Add both in the Render dashboard and redeploy (section 6) |
-| Upload fails with `503 UNAVAILABLE: File storage is misconfigured on this API` | `SUPABASE_SERVICE_ROLE_KEY` holds a key that cannot upload, most often the publishable key (`sb_publishable_…`). The message names which; the API log says the same at boot. Set the secret key (`sb_secret_…`) and redeploy (section 6) |
+| Upload fails with `503 UNAVAILABLE: File storage is misconfigured on this API` | `SUPABASE_SERVICE_ROLE_KEY` holds a key that cannot upload, most often the publishable key (`sb_publishable_…`), or `SUPABASE_URL` carries a path such as `/storage/v1`. The message names which; the API log says the same at boot. Set the secret key (`sb_secret_…`) or the bare `https://<ref>.supabase.co`, and redeploy (section 6) |
 | Upload fails with `503 UNAVAILABLE: File storage refused to give an upload URL (storage answered 4xx: …)` | Supabase refused, and the message ends with its reason. `Bucket not found`: the `droplets` or `studio` bucket does not exist in the project `SUPABASE_URL` names, or is named differently. A JWT, signature or row-level security message: the key is from another project, or is not the secret or `service_role` one (section 6). Waiting does not fix these, so the studio does not retry them |
 | Upload fails with `503 UNAVAILABLE: File storage did not give an upload URL (…); try again` | Supabase did not answer, or answered 429 or 5xx. The studio retries it twice; if it keeps happening, check Supabase's status page and that `SUPABASE_URL` is the bare `https://<ref>.supabase.co` |
 | Upload fails with `storage answered 4xx` on one file | Supabase refused the bytes: most often the file is over the bucket's size limit or its type is not in the bucket's allowed MIME types. Raise or extend them on the bucket |
