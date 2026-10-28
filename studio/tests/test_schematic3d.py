@@ -278,6 +278,13 @@ def test_the_prompt_lists_the_offered_machines_or_says_nothing_of_schematics(toy
     assert "schematic" not in bundle_step.prompt().lower()  # nothing checked: no schematic part at all
 
 
+def test_the_writers_menu_never_describes_a_machine_by_how_it_is_drawn(toy, monkeypatch):
+    # A real job taught "the rotor is a ring of fourteen capsules": the drawing's shapes became a fact.
+    monkeypatch.setenv(library.UNCHECKED_ENV, "1")
+    menu = library.writer_section().lower()
+    assert "atp_synthase" in menu and not any(word in menu for word in ("capsule", "tube", "lobe", "drawn as"))
+
+
 def test_a_bundle_from_before_the_library_reads_as_illustrations_with_the_same_art_key():
     data = bundle_data()
     bundle = Bundle.model_validate(data)

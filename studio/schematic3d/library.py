@@ -88,7 +88,7 @@ class Structure(Model):
     aliases: list[str] = []
     parts: list[str]
     color: Color
-    looks: str  # what it looks like in the drawing: the bundle's sam_phrase
+    looks: str  # what it is, in the textbook's words (the bundle's sam_phrase), never how it is drawn
     label: Label
 
 
@@ -374,9 +374,10 @@ def writer_section() -> str:
     lines = []
     for name in names:
         recipe = load(name).recipe
-        structures = "; ".join(
-            s.name + (f" (also {', '.join(repr(a) for a in s.aliases)})" if s.aliases else "") + f": {s.looks}"
-            for s in recipe.structures)
+        # Names only: how the drawing shapes a part (a capsule, a tube) is not a fact about the machine,
+        # and the writer would teach it as one.
+        structures = "; ".join(s.name + (f" (also {', '.join(repr(a) for a in s.aliases)})" if s.aliases else "")
+                               for s in recipe.structures)
         lines.append(f'- `"{name}"`: {recipe.title}. {recipe.shows} Use it for {recipe.use_for}\n'
                      f"  Its structures: {structures}.")
         for motion in recipe.motions:

@@ -109,7 +109,11 @@ together they go from what the learner already knows to the parts they are learn
 
   A schematic scene lists exactly the structures given for its machine, with their names
   and aliases as written (code sets their colours), and the lines that play over it name
-  them that way. Its `image_prompt` says what the scene is for; nobody draws it.
+  them that way. Its `image_prompt` says what the scene is for; nobody draws it. The facts
+  describe the machine as the course does, never as the schematic draws it (its smooth
+  shapes are a drawing style, not part of the machine).
+- A schematic always shows its machine working, as the facts say it works. A scene about
+  a failure, or about something blocked or stopped, stays an illustration.
 - A schematic moves only as the facts say. A part turns only if a fact says which way,
   seen from one of the ends named above; particles flow only if a fact says which way.
   Say it in a fact only if you are sure of it. Otherwise leave it out: the machine is

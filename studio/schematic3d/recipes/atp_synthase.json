@@ -1,7 +1,7 @@
 {
  "name": "atp_synthase",
  "title": "ATP synthase (chloroplast)",
- "shows": "ATP synthase in the thylakoid membrane, drawn from its real structure: a ring of subunits in the membrane (the rotor), a rod rising from the ring into the catalytic knob in the stroma, and the stator, a stalk beside them anchored in the membrane that holds the knob still. Protons wait in the thylakoid space above the membrane.",
+ "shows": "ATP synthase in the thylakoid membrane, drawn from its real structure: the rotor, a ring of subunits in the membrane; the internal rod, rising from the ring into the catalytic knob in the stroma; and the stator, a stalk anchored in the membrane beside the knob that holds it still. Protons wait in the thylakoid space above the membrane.",
  "use_for": "lessons on how chloroplasts make ATP: the light reactions, chemiosmosis, the proton gradient across the thylakoid membrane. It is the chloroplast's enzyme and its compartments are the thylakoid space and the stroma, so it does not fit a lesson set in mitochondria.",
  "checked": {
   "by": "",
@@ -135,7 +135,7 @@
     "rotor"
    ],
    "color": "#9AA3E8",
-   "looks": "the ring of fourteen capsules standing in the membrane",
+   "looks": "the ring of c subunits in the thylakoid membrane",
    "label": {
     "at": [
      -1.62,
@@ -153,7 +153,7 @@
     "rod"
    ],
    "color": "#8576D6",
-   "looks": "the rod rising from the middle of the ring up into the knob",
+   "looks": "the central rod (gamma and epsilon subunits) rising from the ring into the knob",
    "label": {
     "chain": "g",
     "offset": [
@@ -172,7 +172,7 @@
     "knob"
    ],
    "color": "#C7AEEA",
-   "looks": "the big knob of six lobes hanging below the membrane, in the stroma",
+   "looks": "the head of three alpha and three beta subunits, in the stroma",
    "label": {
     "part": "knob",
     "offset": [
@@ -190,7 +190,7 @@
     "stalk"
    ],
    "color": "#B4B1D8",
-   "looks": "the stalk beside the knob, anchored in the membrane, that holds the knob still",
+   "looks": "the peripheral stalk and subunit a, anchored in the membrane beside the knob",
    "label": {
     "chain": "b",
     "along": 0.68,
