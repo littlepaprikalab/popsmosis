@@ -265,6 +265,12 @@ time gives each structure's mask, so step 4 is not needed. It looks plainer than
 Image, but it writes the same files, so everything downstream is built and tested against
 it unchanged.
 
+**A scene drawn from the schematic library** (docs/SCHEMATIC3D.md) needs no model call:
+a molecular machine the writer picked by name (from recipes a person has checked) is
+drawn from its real structure in the textbook's 3D style. The step writes its still, its
+masks and locations.json like any scene, and the renderer draws it live, moving only in
+the ways the fact-check found the facts support.
+
 ### Step 4: locate
 
 SAM 3.1 via `/v1/responses`, one noun phrase per request. If SAM finds nothing for a
@@ -360,6 +366,7 @@ studio/
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
   steps/           bundle, factcheck, art, locate, audio, timing, timeline, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Bold/SemiBold/ExtraBold)
+  schematic3d/     the schematic library: recipes, fitted shapes, and the 3D drawing
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/
   requirements.txt

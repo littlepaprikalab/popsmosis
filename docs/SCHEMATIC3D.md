@@ -1,8 +1,10 @@
-# 3D schematics: plan
+# 3D schematics
 
-Status: a working prototype (`studio/schematic3d`) that draws one shot, ATP synthase with its rotor
-turning, in the textbook style. This page is the plan for making it a kind of scene the studio
-makes on its own. Nothing in the pipeline uses it yet.
+Status: milestone 1 is built. A scene can be drawn from the schematic library instead of an
+illustration, end to end in a studio job: the writer picks the machine, the fact-check decides how
+it may move, the art step needs no model call, and the renderer draws it live with reveals,
+labels, spotlight and camera like any other scene. The library has one recipe, ATP synthase,
+which is not yet signed by a person (4.2), so the writer is not offered it outside a local run.
 
 ## 1. Why
 
@@ -36,144 +38,128 @@ thick curve. Keeping the shapes' 3D positions, turning the moving ones in 3D eac
 projecting and painting them far to near gives true 3D motion for almost nothing. The same skia
 library popsmosis already renders with draws it all.
 
-## 3. The prototype
+## 3. How it works
 
 ```
 studio/schematic3d/
-  fit.py                    structure file + recipe -> shapes (nm, in the machine's own frame)
-  draw.py                   shapes + recipe -> a still or a video, with popsmosis's labels and band
-  recipes/atp_synthase.json what to draw: chains to parts, axle, colours, compartments, ions, arrows
-  shapes/atp_synthase.json  the shapes fitted to PDB 6FKF, kept so drawing needs no download
-studio/tests/test_schematic3d.py
+  library.py                 the recipe format (Recipe), the library, the writer's menu, the motion claims
+  fit.py                     structure file + recipe -> shapes (nm, in the machine's own frame)
+  draw.py                    Machine: shapes + recipe + motions -> drawn in the art's pixels at any time t
+  recipes/atp_synthase.json  everything about one machine (below)
+  shapes/atp_synthase.json   the shapes fitted to PDB 6FKF, kept so a job needs no download
+studio/tests/test_schematic3d.py, sample_schematic.py, schematic/ (a made-up second recipe)
 ```
 
-```bash
-# fit (needs the structure file: https://files.rcsb.org/download/6FKF.cif)
-python -m studio.schematic3d.fit studio/schematic3d/recipes/atp_synthase.json 6FKF.cif studio/schematic3d/shapes/atp_synthase.json
-# draw a still, or the whole shot
-python -m studio.schematic3d.draw studio/schematic3d/recipes/atp_synthase.json studio/schematic3d/shapes/atp_synthase.json out --still 6
-python -m studio.schematic3d.draw studio/schematic3d/recipes/atp_synthase.json studio/schematic3d/shapes/atp_synthase.json out
-```
+Nothing in the pipeline is written for one machine or one topic. Everything about a machine is in
+its recipe, which `library.Recipe` validates:
 
-- **Fitting.** Each chain's alpha carbons become a capsule along their long axis (the axis that
-  explains most of their spread), or for a long thin chain a tube along its smoothed path. The
-  recipe names the ring that defines the axle, the part that goes below it and the part that goes
-  to the right, which fixes the machine's own frame: axle up the z axis, ring at the origin.
-- **Drawing.** Every frame turns the recipe's spinning parts about the axle, projects every shape
-  and paints them far to near (by each shape's mean depth). A part the recipe says is `inside`
-  another (the rod inside the knob) goes behind all of it, as the book draws it. Shading is the
-  book's: an outline, a darker side, a soft lit side and a shine, lit from the upper left. The
-  compartments and the membrane never move and are drawn once. Ions flow down the red path while
-  the rotor turns.
-- **Limits.** Painting by mean depth can get a pair of long interleaved shapes wrong (the
-  `inside` rule covers the one case so far). No cast shadows, which the book does not use either.
-  The membrane is flat rows of heads and tails. The recipe is hand-written, including the label
-  anchors, the arrows, and the lines the demo sings. **The rotor's turning direction is set from
-  memory** (clockwise seen from the membrane's top, as when it makes ATP); it has to come from the
-  lesson's facts before anything ships.
+- **parts**: which chains of the entry each part is, with the entry's own names for those chains
+  (`structure.entities`, as RCSB names them). Each part is fitted as capsules, or a tube.
+- **structures**: what a scene reveals and labels, each one or more parts, with its name, aliases,
+  colour, what it looks like, and where its label points (a fixed point, a point along a chain, or
+  a part's middle). These become the scene's structures, so the lyrics reveal them by name and the
+  name checks, the timeline and the labels work as for any scene.
+- **page and membrane**: one flat compartment, or one above and one below a membrane, with their
+  names. A soluble machine has no membrane.
+- **camera**: the orthographic view that frames the whole scene.
+- **motions**: `spin` (parts turning about the axle) and `flow` (particles along a path), each
+  written as the claims it would make. The recipe never says which way.
 
-## 4. Making it part of popsmosis
+### 3.1 The pipeline
 
-### 4.1 A scene kind
+1. **Bundle.** `Scene.schematic` is "" (an illustration) or a recipe's name; the schema's enum
+   offers only the recipes a person has signed. The prompt lists them, generated from the library
+   (`library.writer_section`), and says the hook can open on the machine when the lesson is about
+   it. `checks.review` gives a schematic scene exactly its recipe's structures (keeping any aliases
+   the writer added, dropping what the recipe does not draw) and gives the same structure the
+   recipe's colour on every other scene.
+2. **Fact-check.** Each recipe the bundle uses adds its motion claims as lines of kind `motion`:
+   every way a spin could turn, seen from each end of the axle, and every way a flow could go. They
+   are judged against the facts like any line, never corrected, and never fail the check.
+3. **Art.** No model call. The step resolves the motions from `factcheck.json`
+   (`library.resolve`: a motion is drawn only when the facts support exactly one way of it), keeps
+   a snapshot of the recipe, shapes and motions in `art/<scene>.schematic.json`, writes the
+   machine's still as the art and a mask per structure, and locates each structure there. The
+   snapshot is uploaded with the other intermediates, so a re-render draws what was checked.
+4. **Timeline.** Unchanged: the structures are located like any others.
+5. **Render.** `SchematicArt` draws the machine on every frame under the scene's camera. The
+   art's pixels are the world, so camera aim, zoom, reveals, spotlight, labels and the exam
+   question's panel all work as on drawn art. Unrevealed parts are washed 55% toward white (not
+   the 85% of drawn art), so the machine reads from the first frame; the spotlight washes
+   everything but its structure, page included. Labels ride along with turning parts and sit
+   beside the machine rather than on it. Motions run from the first frame at full speed.
 
-A scene today is an SVG the illustrator draws (step 3, `studio/steps/art.py`). A 3D schematic
-scene is a second kind:
+### 3.2 Which way it moves
 
-- The bundle's scene gains `kind` (`"svg"`, or `"schematic3d"`) and, for a schematic, the recipe
-  it uses. The scene's `structures` are the recipe's parts (Rotor, Internal rod, Catalytic knob,
-  Stator), so the lyrics reveal them by name exactly as they reveal an SVG's structures, and the
-  name checks (`studio/checks.py`) work unchanged.
-- The writer chooses a schematic only from the recipe library (4.2), by name. Anything else stays
-  an SVG scene.
+The user-facing rule: the picture moves only as the lesson's facts say. Concretely:
 
-### 4.2 A library of checked recipes first
+- The recipe's spin claim has `{direction}` and `{end}` in it, and the axle names its two ends
+  ("the thylakoid space", "the stroma"). The fact-check gets all four sentences. Clockwise from one
+  end and counterclockwise from the other are the same turn, so either is understood.
+- One way supported: the parts turn that way and the red arcs show it. No way, or contradicting
+  ways: the parts stand still and no arcs are drawn. A flow likewise, its arrow and waiting
+  particles included; `moves_with` keeps particles from streaming past a rotor that is not turning.
+- The prompt tells the writer to state a motion in a fact only when it is sure. What the facts
+  say is as trustworthy as every other line: a wrong fact gives a wrong spin, as it would give a
+  wrong lyric. A person-checked way with a source could be added to each recipe later, to refuse
+  a lesson whose facts disagree with it.
 
-Letting the writer pick any PDB entry and map its chains is the riskiest step for accuracy: the
-wrong entry, or a chain given the wrong role, would teach something false in a confident picture.
-So the first version uses a small curated library, each recipe checked once by a person and reused
-by every lesson on its topic:
+### 3.3 Cost
 
-- ATP synthase (done), then for example the sodium-potassium pump, a voltage-gated channel,
-  aquaporin, hemoglobin, the ribosome, DNA polymerase, and photosystem II with the electron
-  transport chain.
-- Each recipe records its PDB entry and title, and a check compares each part's chains with the
-  entry's own entity names (e.g. "ATP synthase subunit c" for the ring), as the prototype's fit
-  does by hand today. A mismatch fails the recipe, not a lesson.
+About 26 ms a frame for the machine at zoom 1, 84 ms at 2x and 142 ms at 3x (its soft shading is
+blurred, and the blur grows with the zoom), on the 4-core container, plus the rest of the frame.
+The membrane is drawn once per scale it is needed at and kept. The sample job's 53 s song,
+opening on a schematic, rendered in 33 s with 4 workers. Nothing needs a GPU.
 
-Later, the writer could propose a new recipe from an entry it names. It would go through the
-same entity-name check plus a fact-check of the part roles, and stay out of the library until a
-person accepts it.
+## 4. Adding a machine
 
-### 4.3 The fit step
+1. Pick an entry (the structure that shows the machine as textbooks draw it) and write
+   `recipes/<name>.json`: parts with their chains and entity names, structures, page, camera,
+   motions with their claims, `shows` and `use_for` for the writer.
+2. Fit it: `python -m studio.schematic3d.fit recipes/<name>.json <entry>.cif shapes/<name>.json`.
+   The fit refuses a recipe whose recorded entity names differ from the file's.
+3. Look at it: `python -m studio.schematic3d.draw <name> out --still 0 --motion <id>=1`.
+4. Have a person check it, then fill in `checked.by` and `checked.on`.
 
-For a schematic scene, step 3 fits instead of drawing: it fetches the structure file (cached by
-PDB id; the teacher's network policy must allow `files.rcsb.org`), runs `fit.py` and writes the
-shapes into the job. A recipe in the library can ship its fitted shapes, as ATP synthase does, so
-most jobs need no download at all.
+### 4.1 Who checks what
 
-### 4.4 The renderer
+`checked` holds the sign-off. The checker confirms that each part's chains are what its
+`entities` say (the fit has already compared them with the file), that the structure names and
+what they cover are the textbook's, that the compartments are right for where the machine works,
+and that each motion's sentences say what the picture would show. Until then the writer is not
+offered the recipe; `STUDIO_SCHEMATIC_UNCHECKED=1` offers it in a local run, for trying it out.
 
-`studio/render/renderer.py` draws a scene from its art and masks (`SceneArt`). A schematic scene
-draws itself for any time t instead, through `draw.Scene`:
+### 4.2 ATP synthase
 
-- **Reveal and spotlight.** Unrevealed parts are drawn pale (the ghost) and a spotlight washes
-  every other part. This is simpler than with masks, since each part is drawn separately.
-- **Labels.** A label's anchor is its part's point, projected at time t. Labels move with their
-  parts and use the same pills and placement as now.
-- **Camera.** The direction's camera target and zoom become the orthographic view's centre and
-  scale, eased as the renderer eases them now.
-- **The timeline contract.** The timeline step needs each scene's structures located. For a
-  schematic, the locations come from the shapes rather than from masks.
-
-### 4.5 Motions in the direction
-
-The writer already plans `particles` per line. Schematic scenes add motions from a short list,
-each tied to a line:
-
-- `spin`: parts that turn about the axle. The direction has to be in the facts, so the
-  fact-check covers it.
-- `flow`: ions or molecules moving along a path between parts. This is the particles of
-  littlepaprikalab/popsmosis#36, drawn as the ions here.
-- Later: `slide` (a vesicle to a membrane), `open` (a channel's gate), `bind`.
-
-Only what the lines sing moves, and only while they sing it.
-
-### 4.6 Membrane and compartments
-
-The recipe names the compartments ("THYLAKOID SPACE", "STROMA") and which parts sit in the
-membrane. For membrane proteins, where the membrane lies can come from the OPM database
-(Orientations of Proteins in Membranes) instead of a hand rule. Soluble machines (hemoglobin, the
-ribosome) have no membrane and a single background.
-
-### 4.7 Cost
-
-About 50 ms a frame at 1080p on the 4-core container, plus a fraction of a second once per scene
-for the membrane. A 3-minute video entirely in 3D schematics would be about 4,300 frames, roughly 4
-minutes of rendering. That's an estimate from the prototype; the real figure depends on how many
-shapes a scene has. No GPU is needed.
+The chloroplast enzyme, from 6FKF (Hahn et al., Science 2018). Rotor: the fourteen c subunits.
+Internal rod: gamma and epsilon. Catalytic knob: alpha3 beta3. Stator: a and delta, with the
+peripheral stalk b and b'. Its compartments are the thylakoid space and the stroma, so it does
+not fit a lesson set in mitochondria; that needs a mitochondrial recipe. Not yet signed.
 
 ## 5. Coverage
 
-1. Molecular machines with a published structure, from the curated library (4.2).
+1. Molecular machines with a published structure, from the library: any lesson that uses one.
+   ATP synthase alone serves the light reactions, chemiosmosis and photophosphorylation.
 2. Cell-level scenes with no single structure (a mitochondrion, a synapse): the illustrator places
-   the same kit of parts (capsules, spheres, tubes, membranes, ions, arrows) in the same style.
-3. Everything else (history, math, economics) stays an SVG scene.
+   the same kit of parts (capsules, spheres, tubes, membranes, particles, arrows) in the same style.
+3. Everything else (history, math, economics) stays an illustration.
 
 ## 6. Milestones
 
-1. **One recipe end to end.** The `schematic3d` scene kind, ATP synthase from the library, the
-   renderer drawing it with reveals, labels, spotlight and camera, inside a real job.
-2. **Motions from the direction.** `spin` and `flow` per line, with the spin direction coming
-   from the facts.
-3. **The library.** About ten recipes with their entity-name checks, and the writer choosing from
-   them.
+1. **One recipe end to end.** Done: the scene kind, ATP synthase from the library, the renderer
+   drawing it with reveals, labels, spotlight and camera, inside a real job, its motions from the
+   facts.
+2. **Motions from the direction.** `spin` and `flow` per line, so only what the lines sing moves,
+   and only while they sing it. Today a supported motion runs whenever its scene is on screen.
+3. **The library.** About ten recipes, signed, and their structures fetched and checked by
+   script. Candidates: the sodium-potassium pump, a voltage-gated channel, aquaporin, hemoglobin,
+   the ribosome, DNA polymerase, photosystem II, a mitochondrial ATP synthase.
 4. **Scenes built from parts.** Cell-level scenes placed by the illustrator from the kit.
 
 ## 7. Open questions
 
+- Who signs recipes, and should a signed recipe also record a checked way for each motion?
 - Which ten recipes first? Ideally the topics learners ask for most.
-- The teacher's network policy: whether `files.rcsb.org` (and OPM) are allowed, or whether every
-  recipe ships its shapes.
 - Depth-ordering errors on denser machines (the ribosome). Splitting long shapes into pieces, or
   ordering by nearest point rather than mean, may be needed.
 - Licences: PDB data is CC0 (commercial use allowed; credit the entry's authors where we can).
