@@ -98,30 +98,22 @@ together they go from what the learner already knows to the parts they are learn
   structure of its own, the flow that stopped left out).
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
-<!-- schematics -->
-- Some molecular machines can be drawn as a schematic instead of an illustration: smooth
-  shapes in the textbook's style, placed where the real machine's parts are in its
-  published structure, and moving as it works. When a scene shows one of these machines
-  up close, set its `schematic` to the machine's name; every other scene's `schematic` is
-  "". The machines:
-
-{library}
-
-  A schematic scene lists exactly the structures given for its machine, with their names
-  and aliases as written (code sets their colours), and the lines that play over it name
-  them that way. Its `image_prompt` says what the scene is for; nobody draws it. The facts
-  describe the machine as the course does, never as the schematic draws it (its smooth
-  shapes are a drawing style, not part of the machine).
-- A schematic always shows its machine working, as the facts say it works. A scene about
-  a failure, or about something blocked or stopped, stays an illustration.
-- A schematic moves only as the facts say. A part turns only if a fact says which way,
-  seen from one of the ends named above; particles flow only if a fact says which way.
-  Say it in a fact only if you are sure of it. Otherwise leave it out: the machine is
-  then drawn standing still.
-- When the droplet is about one of these machines, open on it: the hook scene (id
-  "hook") can be its schematic, already moving in the first frame, with a hook line that
-  makes a surprising true claim about it.
-<!-- /schematics -->
+- A scene that shows one molecular machine up close (an enzyme, a pump, a channel, a
+  receptor, a motor protein, hemoglobin, a polymerase) can be drawn as a schematic: code
+  finds the machine's published 3D structure and draws it in the textbook's style, each
+  part a smooth shaded shape where the real one is, in its membrane when it sits in one.
+  Set its `schematic` to the machine as the course names it, with what tells it apart
+  ("chloroplast ATP synthase", "human hemoglobin", "the sodium-potassium pump"); every
+  other scene's `schematic` is "". If no structure can be found, the scene is drawn as an
+  illustration from its `image_prompt`, so write that as for any scene.
+- A schematic shows only the machine, standing still: not what flows through it or binds
+  to it, not the cell or organelle around it, and not a failure. A scene about those is
+  an illustration.
+- A schematic scene's structures are the machine's parts as the course names them, each
+  one or more of its subunits ("Rotor", "Catalytic knob", "Alpha subunit"), two to five
+  of them. Their colours follow the usual rules. The facts describe the machine as the
+  course does: its smooth shapes are only a drawing style.
+- When the droplet is about one machine, the hook can be its schematic.
 
 - `image_prompt` describes the diagram's content for an illustrator: what is shown, from
   which view, and which structures must be visible and roughly where. Describe content

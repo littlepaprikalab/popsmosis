@@ -265,11 +265,12 @@ time gives each structure's mask, so step 4 is not needed. It looks plainer than
 Image, but it writes the same files, so everything downstream is built and tested against
 it unchanged.
 
-**A scene drawn from the schematic library** (docs/SCHEMATIC3D.md) needs no model call:
-a molecular machine the writer picked by name (from recipes a person has checked) is
-drawn from its real structure in the textbook's 3D style. The step writes its still, its
-masks and locations.json like any scene, and the renderer draws it live, moving only in
-the ways the fact-check found the facts support.
+**A scene that names a molecular machine** (docs/SCHEMATIC3D.md) is drawn from the
+machine's published 3D structure in the textbook's style: the step finds the entry in the
+Protein Data Bank (and its membrane in OPM), the brain matches the scene's structures to
+its subunits and a fresh call reviews that, and code fits and draws it. It writes its
+still, masks and locations.json like any scene; when it cannot be built, the scene is an
+illustration.
 
 ### Step 4: locate
 
@@ -366,7 +367,7 @@ studio/
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
   steps/           bundle, factcheck, art, locate, audio, timing, timeline, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Bold/SemiBold/ExtraBold)
-  schematic3d/     the schematic library: recipes, fitted shapes, and the 3D drawing
+  schematic3d/     3D schematics of molecular machines, built per lesson from their structures
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/
   requirements.txt
@@ -502,6 +503,8 @@ takes some setup in the routine's environment:
   minutes once and a warm run seconds.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
   `api.elevenlabs.io`, `generativelanguage.googleapis.com` (a Lyria song), `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI,
+  the structure sources for schematics (`search.rcsb.org`, `data.rcsb.org`, `files.rcsb.org`,
+  `opm-back.cc.lehigh.edu`, `opm-assets.storage.googleapis.com`),
   `download.pytorch.org` (CPU PyTorch), `huggingface.co` (the Demucs weights, 81 MB) and
   `dl.fbaipublicfiles.com` (the MMS aligner weights, 1.2 GB).
 - **Queue settings:** the lesson text is posted right after the fact-check, a few minutes

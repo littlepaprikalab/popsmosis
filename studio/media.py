@@ -6,9 +6,9 @@ Every path is relative to the job folder, jobs/<id>/. The models are in studio/s
     masks/<scene>/<structure>.png       3/4   8-bit greyscale, the art's size: 255 where the structure is
                                               visible in the art (what covers it is left out), 0 elsewhere
     locations.json                      3/4   Locations: each structure's mask, box, centroid, label anchor
-    art/<scene>.schematic.json          3     a scene drawn from the schematic library: its recipe, shapes and
-                                              motions (studio/schematic3d/library.Snapshot); art/<scene>.png is
-                                              then its still, which the renderer draws live instead
+    art/<scene>.schematic.json          3     a scene drawn as a schematic: the machine built for it
+                                              (studio/schematic3d/model.Built); art/<scene>.png is then its
+                                              still, and the renderer draws it live
     audio/song.mp3                      5     the song
     audio/narration.mp3                 5     the lesson video's voice-over
     audio/frq.mp3                       5     the exam question read aloud, the lines of frq_lines() in order

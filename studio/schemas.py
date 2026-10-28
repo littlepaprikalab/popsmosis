@@ -16,8 +16,6 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from studio.schematic3d import library as schematics
-
 FILLER = "filler"
 Section = Literal["verse", "chorus", "bridge"]
 SECTION_ORDER = ["verse", "chorus", "verse", "chorus", "bridge", "chorus"]
@@ -66,32 +64,20 @@ class Structure(Strict):
         return _hex_color(value)
 
 
-def _schematic_names(schema: dict) -> None:
-    # The writer may choose only the recipes a person has checked; a stored bundle may name any.
-    schema["enum"] = ["", *schematics.offered()]
-
-
 class Scene(Strict):
     id: str
-    schematic: str = Field(description='A machine from the schematic library that this scene draws, by name; '
-                                       '"" for an illustration', json_schema_extra=_schematic_names)
+    schematic: str = Field(description='The one molecular machine this scene shows up close, as the course names it, '
+                                       'to draw from its published 3D structure; "" for an illustration')
     image_prompt: str
     structures: list[Structure]
 
     @model_validator(mode="before")
     @classmethod
     def _older_scenes(cls, data):
-        # Every scene written before the schematic library was an illustration.
+        # Every scene written before schematics existed was an illustration.
         if isinstance(data, dict) and "schematic" not in data:
             return {**data, "schematic": ""}
         return data
-
-    @field_validator("schematic")
-    @classmethod
-    def _known(cls, value: str) -> str:
-        if value and value not in schematics.all_names():
-            raise ValueError(f"{value!r} is not a recipe in the schematic library")
-        return value
 
 
 class Music(Strict):
@@ -229,7 +215,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "tempo", "schematic"]
+                  "spotlight", "camera", "particles", "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -256,9 +242,7 @@ class FactCheck(Strict):
 
 
 class CheckedLine(Strict):
-    # "motion": a claim a schematic's motion would make (studio/schematic3d/library.probes); it is
-    # never corrected and never fails the check: the motion is drawn only if it is SUPPORTED.
-    kind: Literal["lyric", "narration", "lesson", "frq", "motion"]
+    kind: Literal["lyric", "narration", "lesson", "frq"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -359,7 +343,7 @@ class SceneLocations(Strict):
     # A structure that could not be found is left out: the timeline then gives it no
     # spotlight and no camera move, and the renderer never draws its label.
     structures: list[Location]
-    # A scene drawn from the schematic library: its snapshot (media.schematic_path), which the
+    # A scene drawn as a schematic: the machine as built (media.schematic_path), which the
     # renderer draws live, the art being its still. None: the art is the scene.
     schematic: JobPath | None = None
 

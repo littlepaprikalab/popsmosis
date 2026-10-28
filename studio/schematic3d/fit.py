@@ -1,144 +1,152 @@
-"""Fit a smooth shape to each subunit of a structure, as the recipe groups them.
+"""Fit smooth shapes to a structure's chains, in the machine's own frame, with nothing set by hand.
 
-    python -m studio.schematic3d.fit RECIPE STRUCTURE.cif OUT.json
+The frame: for an entry OPM has placed in its membrane, OPM's (the membrane's normal is z, its
+middle at z = 0, the inner side toward -z), turned about z so the machine shows its widest side
+to the camera. For any other entry, its principal axes: z along the longest, x along the next.
 
-Every chain becomes a capsule along its long axis, or for a long thin chain (`"kind": "tube"`) a
-tube along its smoothed path. Coordinates are in nm, in the machine's own frame: the axle is the z
-axis through the middle of the ring the recipe names, the part it names `down` is below (-z), and
-the part it names `toward_x` is toward +x. The recipe's `membrane.parts` are the ones that sit in
-the membrane; their footprint is kept so the drawing can cut the membrane away around them.
+Each chain's backbone (alpha carbons; phosphates for RNA and DNA) becomes:
 
-Before fitting, the recipe's record of the entry's entity names (structure.entities, which the
-library checks each part's chains against) is compared with the file's own: a recipe that
-names a chain as something the entry does not call it is refused.
+- a tube along its smoothed path, when it is long and thin (a stalk, a long helix);
+- one capsule along its long axis, when it is small enough to read as one lobe;
+- else a capsule per lobe: its backbone split into compact clusters of about LOBE residues.
+
+Coordinates in the file are Å; everything returned is nm.
 """
 
 from __future__ import annotations
 
-import json
-import sys
-from pathlib import Path
+import math
+from dataclasses import dataclass
 
 import numpy as np
 
-
-def frame(z_axis: np.ndarray, toward: np.ndarray) -> np.ndarray:
-    """Rows x, y, z of a right-handed frame with z along z_axis and x as close to `toward` as it can be."""
-    z = z_axis / np.linalg.norm(z_axis)
-    x = toward - np.dot(toward, z) * z
-    x /= np.linalg.norm(x)
-    return np.array([x, np.cross(z, x), z])
+ONE_LOBE = 450  # residues: a chain up to this size is one capsule
+LOBE = 300  # residues per capsule in a bigger chain
+TUBE_RATIO = 4.5  # a chain this many times longer than wide...
+TUBE_LENGTH = 7.0  # ...and at least this long (nm) is a tube
+TUBE_RADIUS = 0.5
 
 
-def alpha_carbons(structure) -> dict[str, np.ndarray]:
-    """Each protein chain's alpha carbons, in nm (a gemmi Structure)."""
-    ca: dict[str, list] = {}
+def backbone(structure, chains: set[str]) -> dict[str, np.ndarray]:
+    """Each chain's backbone points in nm, in residue order (a gemmi Structure)."""
+    out: dict[str, list] = {}
     for chain in structure[0]:
-        pts = [[a.pos.x, a.pos.y, a.pos.z] for res in chain for a in res if a.name == "CA"]
-        if pts:
-            ca.setdefault(chain.name, []).extend(pts)
-    return {k: np.array(v) / 10.0 for k, v in ca.items()}
+        if chain.name not in chains:
+            continue
+        for residue in chain:
+            atom = residue.find_atom("CA", "*") or residue.find_atom("P", "*")
+            if atom is not None and not residue.het_flag == "H":
+                out.setdefault(chain.name, []).append([atom.pos.x, atom.pos.y, atom.pos.z])
+    return {name: np.array(points) / 10.0 for name, points in out.items() if len(points) >= 4}
 
 
-def capsule(pts: np.ndarray, max_radius: float | None = None) -> dict:
-    """The capsule along the points' long axis that covers most of them."""
-    mid = pts.mean(axis=0)
-    axis = np.linalg.svd(pts - mid)[2][0]
-    along = (pts - mid) @ axis
+def _axes(points: np.ndarray) -> np.ndarray:
+    """Rows: the points' principal axes, longest first."""
+    return np.linalg.svd(points - points.mean(axis=0), full_matrices=False)[2]
+
+
+def _skewed(direction: np.ndarray, values: np.ndarray) -> np.ndarray:
+    """The direction, turned so the points' long tail lies along it: a fixed choice of sign."""
+    return direction if float(np.mean(values ** 3)) >= 0 else -direction
+
+
+def frame(points: np.ndarray, oriented: bool) -> tuple[np.ndarray, np.ndarray]:
+    """The centre and rotation (rows x, y, z) that put the machine in its frame."""
+    if oriented:  # keep OPM's z: the membrane is the plane z = 0
+        centre = np.array([*points[:, :2].mean(axis=0), 0.0])
+        flat = points[:, :2] - centre[:2]
+        along = np.linalg.svd(flat, full_matrices=False)[2][0]
+        x = np.array([*_skewed(along, flat @ along), 0.0])
+        z = np.array([0.0, 0.0, 1.0])
+    else:
+        centre = points.mean(axis=0)
+        axes = _axes(points)
+        z = _skewed(axes[0], (points - centre) @ axes[0])
+        x = _skewed(axes[1], (points - centre) @ axes[1])
+    x = x - np.dot(x, z) * z
+    x /= np.linalg.norm(x)
+    return centre, np.array([x, np.cross(z, x), z])
+
+
+def capsule(points: np.ndarray) -> tuple[list[np.ndarray], float]:
+    """The capsule along the points' long axis that covers most of them: its cap centres and radius."""
+    mid = points.mean(axis=0)
+    axis = _axes(points)[0]
+    along = (points - mid) @ axis
     lo, hi = np.percentile(along, [4, 96])
-    radial = np.linalg.norm((pts - mid) - np.outer(along, axis), axis=1)
+    radial = np.linalg.norm((points - mid) - np.outer(along, axis), axis=1)
     radius = float(max(np.percentile(radial, 70), 0.55))
-    if max_radius:
-        radius = min(radius, max_radius)
     a, b = mid + axis * lo, mid + axis * hi
     length = float(np.linalg.norm(b - a))
-    # A capsule's length runs between its cap centres: keep its overall size true.
-    inset = min(radius, length / 2 - 0.05) if length > 2 * radius else 0.0
-    a, b = a + axis * inset, b - axis * inset
-    return {"kind": "capsule", "a": a.round(3).tolist(), "b": b.round(3).tolist(), "radius": round(radius, 3)}
+    inset = min(radius, length / 2 - 0.05) if length > 2 * radius else 0.0  # its overall size stays true
+    return [a + axis * inset, b - axis * inset], radius
 
 
-def tube(pts: np.ndarray, radius: float) -> dict:
-    """A tube along the chain's path, smoothed over 9 residues, a point every 6."""
+def tube(points: np.ndarray) -> list[np.ndarray]:
+    """A path along the chain, smoothed over 9 residues, a point every 6."""
     k = 9
-    smooth = np.array([pts[max(0, i - k // 2):i + k // 2 + 1].mean(axis=0) for i in range(len(pts))])
-    return {"kind": "tube", "path": smooth[::6].round(3).tolist(), "radius": radius}
+    smooth = np.array([points[max(0, i - k // 2):i + k // 2 + 1].mean(axis=0) for i in range(len(points))])
+    return list(smooth[::6]) + ([smooth[-1]] if (len(smooth) - 1) % 6 else [])
 
 
-def fit_structure(structure, recipe: dict) -> dict:
-    ca = alpha_carbons(structure)
-    parts = recipe["parts"]
-    chains_of = {name: [c for c in part["chains"] if c in ca] for name, part in parts.items()}
-    missing = sorted({c for part in parts.values() for c in part["chains"]} - set(ca))
-    if missing:
-        raise ValueError(f"the structure has no protein chains {', '.join(missing)}")
+def lobes(points: np.ndarray, count: int) -> list[np.ndarray]:
+    """The points split into `count` compact clusters (k-means, seeded along the chain, so the same input
+    always gives the same lobes)."""
+    seeds = points[np.linspace(0, len(points) - 1, count).round().astype(int)]
+    for _ in range(12):
+        nearest = np.argmin(((points[:, None, :] - seeds[None, :, :]) ** 2).sum(axis=2), axis=1)
+        seeds = np.array([points[nearest == i].mean(axis=0) if (nearest == i).any() else seeds[i] for i in range(count)])
+    return [points[nearest == i] for i in range(count) if (nearest == i).sum() >= 4]
 
-    axle = recipe["axle"]
-    ring = chains_of[axle["ring"]]
-    rings = np.array([ca[c].mean(axis=0) for c in ring])
-    centre = rings.mean(axis=0)
-    normal = np.linalg.svd(rings - centre)[2][2]
-    down = np.vstack([ca[c] for c in chains_of[axle["down"]]]).mean(axis=0)
-    if np.dot(down - centre, normal) > 0:
-        normal = -normal
-    toward = np.vstack([ca[c] for c in chains_of[axle["toward_x"]]]).mean(axis=0) - centre
-    rotation = frame(normal, toward)
 
-    def place(points):
-        return (np.asarray(points) - centre) @ rotation.T
+def chain_shapes(points: np.ndarray) -> list[tuple[str, list[np.ndarray], float]]:
+    """(kind, points, radius) for each shape a chain is drawn as."""
+    values = np.linalg.svd(points - points.mean(axis=0), compute_uv=False)
+    along = (points - points.mean(axis=0)) @ _axes(points)[0]
+    length = float(np.subtract(*np.percentile(along, [96, 4])))
+    if len(values) > 1 and values[1] > 0 and values[0] / values[1] > TUBE_RATIO and length > TUBE_LENGTH:
+        return [("tube", tube(points), TUBE_RADIUS)]
+    if len(points) <= ONE_LOBE:
+        cap, radius = capsule(points)
+        return [("capsule", cap, radius)]
+    out = []
+    for lobe in lobes(points, math.ceil(len(points) / LOBE)):
+        cap, radius = capsule(lobe)
+        out.append(("capsule", cap, radius))
+    return out
 
+
+@dataclass
+class Fitted:
+    shapes: list[dict]  # {"chain", "structure", "kind", "points", "radius"}, nm, in the machine's frame
+    footprint: list[tuple[float, float]]  # where the machine crosses the membrane (x, y), when it sits in one
+    sides: dict[str, str]  # each structure: "above the membrane", "in the membrane" or "below the membrane"
+
+
+def fit(structure, owners: dict[str, str | None], half_thickness: float | None) -> Fitted:
+    """Shapes for the chains in `owners` (chain -> the structure it belongs to, or None), in the machine's frame.
+
+    `half_thickness` (nm) is the membrane's, when the coordinates are OPM's; None for any other."""
+    chains = backbone(structure, set(owners))
+    if not chains:
+        raise ValueError("none of the chains has a backbone to draw")
+    everything = np.vstack(list(chains.values()))
+    centre, rotation = frame(everything, oriented=half_thickness is not None)
+    placed = {name: (points - centre) @ rotation.T for name, points in chains.items()}
     shapes = []
-    for name, part in parts.items():
-        for chain in chains_of[name]:
-            pts = place(ca[chain])
-            shape = tube(pts, part.get("radius", 0.55)) if part.get("kind") == "tube" else capsule(pts, part.get("max_radius"))
-            shapes.append({"chain": chain, "part": name, **shape})
-
-    ring_pts = place(np.vstack([ca[c] for c in ring]))
-    in_membrane = place(np.vstack([ca[c] for name in recipe["membrane"]["parts"] for c in chains_of[name]]))
-    return {
-        "recipe": recipe["name"],
-        "shapes": shapes,
-        "ring_radius": round(float(np.percentile(np.hypot(ring_pts[:, 0], ring_pts[:, 1]), 95)), 3),
-        # Where the parts in the membrane are, seen from above, near the membrane's middle.
-        "membrane_footprint": in_membrane[np.abs(in_membrane[:, 2]) < 3.0][:, :2].round(2).tolist(),
-    }
-
-
-def entity_names(structure_path: Path) -> dict[str, str]:
-    """Each polymer chain's entity name in an mmCIF file (_entity.pdbx_description), by its author chain id."""
-    import gemmi
-
-    block = gemmi.cif.read(str(structure_path)).sole_block()
-    names = {row.str(0): row.str(1) for row in block.find("_entity.", ["id", "pdbx_description"])}
-    chains = {}
-    for row in block.find("_entity_poly.", ["entity_id", "pdbx_strand_id"]):
-        for chain in row.str(1).split(","):
-            chains[chain.strip()] = names.get(row.str(0), "")
-    return chains
-
-
-def entity_problems(recipe: dict, structure_path: Path) -> list[str]:
-    """Where the recipe's record of the entry's entity names (structure.entities) differs from the file."""
-    recorded = recipe.get("structure", {}).get("entities", {})
-    found = entity_names(structure_path)
-    return [f"chain {chain} is {found.get(chain, 'missing')!r} in the file, not {name!r}"
-            for chain, name in sorted(recorded.items()) if found.get(chain) != name]
-
-
-def fit_file(recipe_path: Path, structure_path: Path) -> dict:
-    import gemmi
-
-    recipe = json.loads(recipe_path.read_text())
-    problems = entity_problems(recipe, structure_path)
-    if problems:
-        raise ValueError("the recipe's entity names do not match the structure: " + "; ".join(problems))
-    return fit_structure(gemmi.read_structure(str(structure_path)), recipe)
-
-
-if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        sys.exit(__doc__.split("\n\n")[1])
-    fitted = fit_file(Path(sys.argv[1]), Path(sys.argv[2]))
-    Path(sys.argv[3]).write_text(json.dumps(fitted))
-    print(f"{len(fitted['shapes'])} shapes, ring radius {fitted['ring_radius']} nm -> {sys.argv[3]}")
+    for name, points in placed.items():
+        for kind, pts, radius in chain_shapes(points):
+            shapes.append({"chain": name, "structure": owners.get(name), "kind": kind,
+                           "points": [tuple(round(float(v), 3) for v in p) for p in pts], "radius": round(radius, 3)})
+    footprint, sides = [], {}
+    if half_thickness is not None:
+        inside = np.vstack(list(placed.values()))
+        crossing = inside[np.abs(inside[:, 2]) < half_thickness + 0.3]
+        footprint = sorted({(round(float(x), 1), round(float(y), 1)) for x, y in crossing[:, :2]})
+        for owner in {o for o in owners.values() if o}:
+            pts = np.vstack([placed[c] for c, o in owners.items() if o == owner and c in placed] or [np.zeros((0, 3))])
+            if len(pts):
+                within = float(np.mean(np.abs(pts[:, 2]) < half_thickness))
+                sides[owner] = ("in the membrane" if within >= 0.4 else
+                                "above the membrane" if pts[:, 2].mean() > 0 else "below the membrane")
+    return Fitted(shapes=shapes, footprint=footprint, sides=sides)

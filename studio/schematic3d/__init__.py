@@ -1,14 +1,13 @@
-"""Textbook-style 3D schematics, drawn without a 3D engine (prototype; docs/SCHEMATIC3D.md).
+"""Textbook-style 3D schematics of molecular machines, built for each lesson (docs/SCHEMATIC3D.md).
 
-A molecular machine is drawn the way textbooks draw it: each subunit a smooth capsule or tube in
-soft lavender, outlined, on flat-coloured compartments with a membrane of grey heads and yellow
-tails. The shapes are fitted to the real structure (from the Protein Data Bank), so they sit where
-the real subunits are, and the parts that move (a rotor) turn in true 3D. Every frame projects the
-3D shapes through the camera and paints them back to front, which takes about 50 ms at 1080p on a
-CPU.
+A scene that names a molecular machine is drawn the way textbooks draw one: each subunit a smooth
+shaded shape, outlined, on flat-coloured compartments with a membrane of grey heads and yellow
+tails. The machine's published structure is found and fitted for the lesson, so the shapes sit
+where the real subunits are. Nothing here is written for one machine or one topic.
 
-    fit.py      structure file + recipe -> shapes (nm, in the machine's own frame)
-    draw.py     shapes + recipe -> frames, a still or a video, with popsmosis's labels and lyric band
-    recipes/    what to draw for one machine: chains to parts, axle, colours, compartments, arrows
-    shapes/     fitted shapes kept for each recipe, so drawing needs no download
+    sources.py  the Protein Data Bank (RCSB) and OPM: searching, entry details, coordinates
+    build.py    the machine for one scene: find, choose and review with the brain; fit; frame
+    fit.py      a structure's chains -> smooth shapes in the machine's own frame
+    model.py    a built machine: what art/<scene>.schematic.json holds
+    draw.py     a built machine -> its still, its masks, and the renderer's live drawing
 """

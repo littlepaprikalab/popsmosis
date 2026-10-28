@@ -10,11 +10,10 @@ The world is the art's pixels; the camera maps it onto the frame. Before the exa
 question the diagram fills the frame above the lyric band; during it, the diagram
 moves right of the question card.
 
-A scene drawn from the schematic library (docs/SCHEMATIC3D.md) is drawn live instead, on
-every frame, from its snapshot (SchematicArt): its machine turns and its particles flow as
-the fact-check allowed, from the first frame, and its labels ride along with the parts.
-Its still is the art's size, so the camera, the reveals, the spotlight and the labels work
-on it exactly as on drawn art.
+A scene drawn as a schematic (docs/SCHEMATIC3D.md) is drawn live from the machine built for
+it (SchematicArt), so it stays sharp however far the camera zooms in. Its still is the art's
+size, so the camera, the reveals, the spotlight and the labels work on it exactly as on
+drawn art, and its labels sit beside the machine rather than on it.
 """
 
 from __future__ import annotations
@@ -30,12 +29,12 @@ import skia
 from studio import jobs, media
 from studio.render import primitives as p
 from studio.render.layouts import LAYOUTS, Layout, Rect
-from studio.schematic3d import library
 from studio.schematic3d.draw import Machine
+from studio.schematic3d.model import Built
 from studio.schemas import Locations, SceneLocations, Timeline
 
 GHOST_WASH = 0.85  # how pale an unrevealed structure is
-SCHEMATIC_GHOST_WASH = 0.55  # a schematic's unrevealed parts stay clear enough to see the machine move
+SCHEMATIC_GHOST_WASH = 0.55  # a schematic's unrevealed parts stay clear enough for the whole machine to read
 SPOT_WASH = 0.6  # how pale everything but the spotlit structure is
 EDGE_BLUR = 3.0  # sigma of a ghost's edge, in art pixels
 SPOT_BLUR = 1.2  # a spotlight's edge stays crisp, so the bright structure keeps its outline
@@ -208,13 +207,13 @@ def _combined(*washes: float) -> float:
 
 
 class SchematicArt:
-    """A scene drawn from the schematic library: its machine, drawn live on every frame in the art's pixels.
+    """A scene drawn as a schematic: its machine, drawn live in the art's pixels.
 
     Each structure is washed toward white by its own ghost and the spotlight (on the others), as
-    SceneArt washes the art through its masks; the page, the arrows and the particles by the
+    SceneArt washes the art through its masks; the page and the machine's other chains by the
     spotlight alone. The art and masks on disk are its still, used for the locations."""
 
-    live = True
+    live = True  # drawn on every frame the camera or the washes change, so it stays sharp at any zoom
 
     def __init__(self, job: Path, located: SceneLocations):
         self.located = located
@@ -222,15 +221,14 @@ class SchematicArt:
         if not path.exists():
             raise RenderError(f"no schematic for scene {located.scene} ({located.schematic})")
         try:
-            snapshot = jobs.read(path, library.Snapshot)
+            built = jobs.read(path, Built)
         except ValueError as e:
             raise RenderError(f"the schematic for scene {located.scene} does not read: {e}") from e
         self.width, self.height = located.width, located.height
-        self.machine = Machine(snapshot.recipe, snapshot.shapes, snapshot.motions, self.width, self.height)
-        self.page = snapshot.recipe.page
-        self.content = (0.0, 0.0, float(self.width), float(self.height))  # the recipe's camera frames the whole scene
+        self.machine = Machine(built, self.width, self.height)
+        self.page = built.page
+        self.content = (0.0, 0.0, float(self.width), float(self.height))  # its camera frames the whole scene
         self.centre = _centre(located)
-        self.moving = self.machine.moving
         self._clear: list[tuple[float, float]] | None = None
 
     @property
@@ -238,7 +236,8 @@ class SchematicArt:
         return list(self.machine.names)
 
     def anchor(self, name: str, t: float) -> tuple[float, float]:
-        return self.machine.label_point(name, t)
+        loc = self.located.get(name)
+        return loc.label_anchor.x, loc.label_anchor.y
 
     def keep_clear(self) -> list[tuple[float, float]]:
         """The machine: its pills go beside it, not on it."""
@@ -253,9 +252,9 @@ class SchematicArt:
                   for name in self.machine.names}
         return washes, _combined(*(SPOT_WASH * level for level in spots.values()))
 
-    def paint(self, canvas: skia.Canvas, t: float, view: Rect, scale: float, dx: float, dy: float,
+    def paint(self, canvas: skia.Canvas, view: Rect, scale: float, dx: float, dy: float,
               ghosts: dict[str, float], spots: dict[str, float], font_size: float, margin: float) -> None:
-        """The machine at t over the view (and no further), with its compartments named."""
+        """The machine over the view (and no further), with its compartments named."""
         washes, other = self.washes(ghosts, spots)
         bounds = ((view[0] - dx) / scale, (view[1] - dy) / scale, (view[2] - dx) / scale, (view[3] - dy) / scale)
         resolution = 1.0 if scale <= 1.1 else 2.0 if scale <= 2.1 else 3.0
@@ -264,7 +263,7 @@ class SchematicArt:
         canvas.save()
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
-        self.machine.draw(canvas, t, washes, other, text=True, bounds=bounds, resolution=resolution)
+        self.machine.draw(canvas, washes, other, bounds=bounds, resolution=resolution)
         canvas.restore()
         self._name_compartments(canvas, view, self.machine.split_y() * scale + dy, other, font_size, margin)
         canvas.restore()
@@ -549,28 +548,27 @@ class Renderer:
         return levels
 
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,
-                         ghosts: dict[str, float], spots: dict[str, float], t: float = 0.0) -> None:
+                         ghosts: dict[str, float], spots: dict[str, float]) -> None:
         art = self.scene(scene_id)
         if art.live:
-            levels = tuple(sorted((n, round(v, 3)) for n, v in [*ghosts.items(), *(("spot:" + k, v) for k, v in spots.items())]))
-            key = (scene_id, levels, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
+            washes = tuple(sorted((n, round(v, 3)) for n, v in [*ghosts.items(), *(("spot:" + k, v) for k, v in spots.items())]))
         else:
             washes, composed = art.compose(ghosts, spots)
-            key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
-        if self._background and self._background[0] == key and not (art.live and art.moving):
+        key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
+        if self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
             return
         canvas.clear(skia.ColorWHITE)
         scale, dx, dy = to_frame(cam, view, art)
         if art.live:
-            art.paint(canvas, t, view, scale, dx, dy, ghosts, spots, self.layout.caption_font, self.layout.margin)
+            art.paint(canvas, view, scale, dx, dy, ghosts, spots, self.layout.caption_font, self.layout.margin)
         else:
             canvas.save()
             canvas.translate(dx, dy)
             canvas.scale(scale, scale)
             canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
             canvas.restore()
-        self._background = None if art.live and art.moving else (key, self.surface.makeImageSnapshot())
+        self._background = (key, self.surface.makeImageSnapshot())
 
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
                 spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float) -> None:
@@ -608,7 +606,7 @@ class Renderer:
         if plan.prev_spot and plan.prev_spot != plan.spot:
             spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
         reveals = self.revealed.get(beat.scene, {})
-        self._draw_background(canvas, beat.scene, cam, view, self._ghosts(beat.scene, reveals, t), spots, t)
+        self._draw_background(canvas, beat.scene, cam, view, self._ghosts(beat.scene, reveals, t), spots)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
 
@@ -707,7 +705,7 @@ class Renderer:
                 spots[step.spotlight] = 1.0 if previous == step.spotlight else p.ease((t - step.t) / SPOT_S)
             if previous and previous != step.spotlight:
                 spots[previous] = max(spots.get(previous, 0), 1 - p.ease((t - step.t) / SPOT_S))
-        self._draw_background(canvas, frq.scene, cam, view, self._ghosts(frq.scene, self.frq_reveals, t), spots, t)
+        self._draw_background(canvas, frq.scene, cam, view, self._ghosts(frq.scene, self.frq_reveals, t), spots)
         names = list(self.frq_reveals)
         bounds = (view[0] + layout.margin, view[1] + layout.margin, view[2] - layout.margin, view[3] - layout.margin)
         self._labels(canvas, frq.scene, [n for n in names if self.frq_reveals[n] <= t], self.frq_reveals, spots, cam,
