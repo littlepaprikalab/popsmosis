@@ -12,7 +12,7 @@ with SAM 3.1 (studio/steps/locate.py), whoever painted it.
 Switching makes the art again on the next run, as switching who sings does the song.
 
 The SVG art. One call per scene to the artist, Claude Sonnet 5.5, draws it (studio/prompts/art.md), every
-structure in one group marked with its name; a drawing Sonnet declines, the brain draws instead (sketch()).
+structure in one group marked with its name; once Sonnet declines one, the brain draws the rest (Artist).
 Code checks the drawing (studio/svg.py); if anything is wrong it asks again with the problems and the drawing,
 up to MAX_TRIES times in all.
 
@@ -103,8 +103,9 @@ def run(job: Path, ask=brain.ask) -> str:
     media.restart(job, media.LOCATIONS)
     (job / "art").mkdir(exist_ok=True)
     scenes, left_out = [], []
+    artist = Artist(ask)
     for scene in bundle.scenes:
-        drawing = draw(job, bundle, scene, ask, resume)
+        drawing = draw(job, bundle, scene, artist, resume)
         scenes.append(save(job, scene, drawing))
         left_out += [f"{name} on {scene.id}" for name in drawing.left_out(scene)]
     locations = Locations(scenes=scenes)
@@ -223,17 +224,29 @@ def judge(text: str, scene: Scene) -> Drawing:
     return drawing
 
 
-def sketch(ask, prompt: str, label: str) -> dict:
-    """One drawing, by the artist (Claude Sonnet 5.5). If Sonnet declines it, the brain (Claude Opus 5.5) draws it:
-    Sonnet's server-side fallback retries only some kinds of refusal, and not a biology one."""
-    try:
-        return ask("artist", prompt, system=PROMPT, label=label)
-    except brain.Refused:
-        return ask("brain", prompt, system=PROMPT, label=f"{label} by the brain")
+class Artist:
+    """Who draws a topic's scenes: the artist, Claude Sonnet 5.5, until it declines one; from then on the brain
+    (Claude Opus 5.5) draws that drawing and every one after it. Sonnet's server-side fallback retries only some
+    kinds of refusal, and not a biology one, and asking it again would likely be declined again, a refusal mid-answer
+    billed like any other answer."""
+
+    def __init__(self, ask):
+        self.ask = ask
+        self.declined = False
+
+    def __call__(self, prompt: str, label: str) -> dict:
+        if not self.declined:
+            try:
+                return self.ask("artist", prompt, system=PROMPT, label=label)
+            except brain.Refused:
+                self.declined = True
+        return self.ask("brain", prompt, system=PROMPT, label=f"{label} by the brain")
 
 
 def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
-    """The scene's drawing: the saved one when resuming, else the artist's best of MAX_TRIES."""
+    """The scene's drawing: the saved one when resuming, else the artist's best of MAX_TRIES. ask is brain.ask, or
+    the Artist a topic's scenes share."""
+    artist = ask if isinstance(ask, Artist) else Artist(ask)
     marker = _marker(bundle, scene)
     text = _saved(job, bundle, scene) if resume else None
     if text is not None:
@@ -246,8 +259,7 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
     best, previous = None, None
     for n in range(1, MAX_TRIES + 1):
         try:
-            answer = sketch(ask, user_prompt(bundle, scene, previous),
-                            f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
+            answer = artist(user_prompt(bundle, scene, previous), f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
             drawing = judge(svg.extract(answer["text"]), scene)
         except brain.Truncated:
             drawing = Drawing("", ["the answer was cut off before </svg>; draw it simpler, under 40 KB"])

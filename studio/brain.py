@@ -89,8 +89,8 @@ CLAUDE_KEY_VARS = ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
 # Server-side refusal fallback: a declined request is re-run, inside the same call,
 # on the model Anthropic recommends for that refusal category. Haiku 5.5 has no
 # fallback, so every call asks for one but the helper's. Sonnet 5.5's retries only
-# some categories (on Sonnet 5), so a drawing Sonnet declines goes to the brain
-# (studio/steps/art.py).
+# some categories (on Sonnet 5), so once Sonnet declines a drawing, the brain draws
+# the rest of the topic's (studio/steps/art.py, Artist).
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
 # USD per million tokens (input, output). Opus 5, Opus 4.8 and Sonnet 5 are fallback targets. A Muse

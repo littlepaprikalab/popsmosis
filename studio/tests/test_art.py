@@ -357,11 +357,30 @@ def test_a_drawing_sonnet_declines_goes_to_the_brain(job):
                 raise brain.Refused("claude-sonnet-5-5", "bio", "declined")
             return super().__call__(role, prompt, schema, images, system=system, label=label)
 
+    # Sonnet is not asked again for this topic: the brain draws the hook and the scenes after it.
     artist = DeclinesTheHook()
     assert art.run(job, artist) == "drew 3 scenes, located 4 of 4 structures"
     assert list(zip(artist.labels(), artist.roles)) == [
-        ("art hook by the brain", "brain"), ("art overview", "artist"), ("art synthase", "artist"),
+        ("art hook by the brain", "brain"), ("art overview by the brain", "brain"), ("art synthase by the brain", "brain"),
     ]
+
+
+def test_until_sonnet_declines_it_draws_the_retries_too(job):
+    from studio import brain
+
+    class DeclinesTheSecondTry(FakeArtist):
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if role == "artist" and label == "art hook try 2":
+                raise brain.Refused("claude-sonnet-5-5", "general_harms", "declined")
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    with_text = drawing("hook").replace("</svg>", '<text x="10" y="20">Thylakoid</text></svg>')
+    artist = DeclinesTheSecondTry({"hook": [with_text, drawing("hook")]})
+    art.run(job, artist)
+    assert list(zip(artist.labels(), artist.roles))[:3] == [
+        ("art hook", "artist"), ("art hook try 2 by the brain", "brain"), ("art overview by the brain", "brain"),
+    ]
+    assert "<last_drawing>" in artist.prompts[1][1]  # the brain picks up from Sonnet's first try
 
 
 def test_names_in_another_case_and_rgb_colours_count():

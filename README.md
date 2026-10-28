@@ -197,7 +197,7 @@ What runs, by the brain's provider:
 | Job | Claude's brain | Muse's brain |
 |---|---|---|
 | Brain: writes and fact-checks the lesson | Claude Opus 5.5 | Muse Wonder 1.0 or Muse Spark 1.3 |
-| Art: paints each scene, up to three tries | the painter set for Claude topics; the SVG is Claude Sonnet 5.5's at effort `high` (Opus draws a scene Sonnet declines) | the painter set for Muse topics |
+| Art: paints each scene, up to three tries | the painter set for Claude topics; the SVG is Claude Sonnet 5.5's at effort `high` (once Sonnet declines a drawing, Opus draws the rest of that topic's) | the painter set for Muse topics |
 | Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
 | Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images (none for the SVG, which says where each one is) | SAM 3.1 |
 
