@@ -204,12 +204,40 @@ side, the lumen below):
   (brain structures, an AP Bio topic). It is what the plan asked for, not a bug, but it
   asks an astronomy diagram to look like a cell biology figure.
 
-What this suggests: a diagram type per scene, chosen by the bundle from a short list, that
-picks both the style and how the scene is made. Cell and molecular biology in the
-Campbell/OpenStax manner, anatomy as a medical textbook draws it, and the everyday objects of
-hooks and analogies are painted by Muse Image from a short prompt; geometry that must be
-exact (orbits and tilt, forces, light rays, circuits, graphs) is drawn as SVG. Both routes
-write the same files, and `art.located()` already accepts scenes made either way.
+The SVG drawings are right but look plain next to Muse Image's pictures, so the next test
+asked Muse Image the way a teacher would: "Educational diagram of the Sun and Earth, oriented
+to show why Earth has seasons during northern summer: the Sun on the left, Earth on the right
+with its axis tilted 23.5 degrees toward the Sun, and parallel rays of sunlight reaching
+Earth. Clean textbook illustration on a white background. No text..." (and the same for the
+hook), with and without one sentence of colours ("Earth's northern hemisphere is shaded blue,
+its southern hemisphere orange, and its axis is a purple rod"), each with Muse Image's tools
+off (as the studio sends it) and on (shell and search, with which Meta says it arranges
+structured graphics before drawing). Three tries each, judged as above:
+
+| Prompt | Sunlight, tools off / on | Hook, tools off / on | All |
+|---|---|---|---|
+| The studio's prompt (above) | 0/3 | 1/3 | 1/6 |
+| Plain "educational diagram" | 2/3, 2/3 | 1/3, 1/3 | 6/12 |
+| Plain, with the colour sentence | 2/3, 2/3 | 2/3, 2/3 | 8/12 |
+
+- **Name the diagram, not its shapes.** Asked for the standard diagram in plain words, Muse
+  Image drew it as textbooks do, with better-looking art than any prompt before: a shaded
+  Sun, parallel rays, a tilted globe, the continents faint under the colours.
+- **The colour sentence is needed.** Without it Muse Image paints a realistic Earth, and half
+  the time no visible axis or tilt; nor could SAM find a hemisphere on it to label.
+- **The tools made no difference** (7/12 off, 7/12 on).
+- **What still goes wrong is small.** Three of the four misses stop the rod inside the globe
+  instead of out through the south pole; one got the tilt wrong. Meta's `/v1/images/edits`
+  ("extend the rod out through the south pole, keep everything else") could mend such a
+  picture instead of the art step painting it again from scratch.
+
+What this suggests: say what a scene is the way a teacher asks for it ("Educational diagram
+of..."), name the real things rather than shapes ("Earth's northern hemisphere", not "blue
+dome"), and give each part's colour in one plain sentence, with no hex codes and no second
+list of parts. The style line can follow the subject: cell and molecular biology in the
+Campbell/OpenStax manner, anatomy as a medical textbook draws it, astronomy and physics as
+their textbooks' clean schematics. That is a change to the bundle prompt's `image_prompt`
+guidance and to `art.muse_prompt()`.
 
 ## Not tested
 
