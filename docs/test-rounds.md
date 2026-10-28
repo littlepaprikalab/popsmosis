@@ -160,6 +160,57 @@ the plan's 15 minutes. Credits are ElevenLabs' (narration and exam question); se
 16. **A refused picture's check is not kept**: only the next try's prompt quotes it, so
     working out why a scene took three tries means reading prompts.
 
+## Why the diagrams come out wrong
+
+Every wrong picture (gaps 1-2) got a spatial relation wrong: an axis not through the poles,
+proteins on the wrong side of a membrane, the north tipped the wrong way. To tell whether
+the prompt is too complex, three scenes that went wrong were painted again, three times
+each, from three prompts:
+
+- **V0 current**: what the art step sends today (100-170 words: the audience, the scene, a
+  list of structures with hex colours, the style line).
+- **V1 short**: the same scene description with the wrapper cut: colour names instead of
+  hex codes, no second list of the structures, one short style line.
+- **V2 explicit**: as short, but rewritten to state the spatial facts ("the axis passes
+  through both poles, at right angles to the equator"; "each complex passes through the
+  membrane, ATP synthase's head above it").
+
+Judged by rules set before looking (seasons: the axis through both poles at about right
+angles to the line between the halves, the north leaning toward the Sun, no rays out of
+Earth; thylakoid: every complex crossing the membrane, ATP synthase's head on the stroma
+side, the lumen below):
+
+| Scene | V0 current | V1 short | V2 explicit | SVG drawn by Muse Spark |
+|---|---|---|---|---|
+| Seasons, sunlight on the tilted Earth | 0/3 | 2/3 | 0/3 | 2/2 |
+| Seasons, hook | 1/3 | 3/3 | 0/3 | 2/2 geometry, 1 rendered black |
+| Thylakoid membrane | 1/3 | 2/3 | 3/3 | not tried |
+| All | 2/9 | 7/9 | 3/9 | |
+
+- **The wrapper hurts.** The same scene descriptions without it went from 2/9 right to 7/9.
+  V1 also swapped the style line ("OpenStax/Campbell, shaded vector, soft gradients" for
+  "flat shaded vector"), so the gain is the length and the style together.
+- **Words cannot pin geometry.** Told "a blue northern half on top and an orange southern
+  half below" and "at right angles to the equator", Muse Image drew a level equator and a
+  tilted rod through it, all six times: it keeps the concrete placement ("on top") over the
+  relation ("at right angles"). The same kind of rewrite fixed the membrane (3/3), whose
+  facts are placements ("above", "through").
+- **Drawing gets geometry right.** The art step's SVG route (studio/prompts/art.md), with
+  Muse Spark drawing, put the axis, the tilt and the rays right in all four drawings, about
+  40 s and 4 cents each. One rendered the Sun and Earth black (a gradient that did not
+  resolve) and passed the SVG checks, so that route needs a check on the rendered colours.
+- **One style for every subject.** Both art prompts name the same house style, "in the style
+  of OpenStax/Campbell" (PLAN section 8, "One style"), chosen for the two showcase topics
+  (brain structures, an AP Bio topic). It is what the plan asked for, not a bug, but it
+  asks an astronomy diagram to look like a cell biology figure.
+
+What this suggests: a diagram type per scene, chosen by the bundle from a short list, that
+picks both the style and how the scene is made. Cell and molecular biology in the
+Campbell/OpenStax manner, anatomy as a medical textbook draws it, and the everyday objects of
+hooks and analogies are painted by Muse Image from a short prompt; geometry that must be
+exact (orbits and tilt, forces, light rays, circuits, graphs) is drawn as SVG. Both routes
+write the same files, and `art.located()` already accepts scenes made either way.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
