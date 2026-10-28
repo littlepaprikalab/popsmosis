@@ -101,6 +101,7 @@ d('the Droplets tab', () => {
       tags: { song: [], lesson: [] }, // a droplet made before there were tags
       likeCount: 0, commentCount: 0, liked: false,
       createdAt: expect.any(String),
+      comments: { data: [], nextCursor: null },
     });
 
     const first = (await get('/api/droplets?limit=1')).json();

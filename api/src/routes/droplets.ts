@@ -6,7 +6,7 @@ import { containsPersonalInfo, parseLimit, validateString } from '../lib/validat
 import { decodeCreatedAtIdCursor, decodeCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
 import { EXCERPT_SOURCE_LENGTH, publicDropletSelect, publicDropletWhere, serializeDroplet, serializeDropletCard } from '../lib/droplet.js';
 import {
-  COMMENT_MAX_LENGTH, COMMENTS_PAGE_MAX, COMMENTS_PAGE_SIZE, commentSelect, commentsPerUserPerHour, hasVisibleText, idempotencyKeyOf, serializeComment,
+  COMMENT_MAX_LENGTH, COMMENTS_ON_CARD, COMMENTS_PAGE_MAX, COMMENTS_PAGE_SIZE, commentSelect, commentsPerUserPerHour, hasVisibleText, idempotencyKeyOf, serializeComment,
 } from '../lib/engagement.js';
 import { PUBLIC_PER_CLIENT_PER_MINUTE, PUBLIC_PER_INSTANCE_PER_MINUTE, WindowCounter, publicClientKey } from '../lib/public-limit.js';
 import { requireUser, sessionSubject } from '../middleware/auth.js';
@@ -52,6 +52,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
 
   // GET /api/droplets — READY and not hidden, newest first; ?cursor=, ?limit= (default 12, max 24);
   // ?tag= only those whose song or lesson video carries that hashtag ("#APBio" and "apbio" alike).
+  // Each card brings its newest comments (COMMENTS_ON_CARD), so the list shows them in one request.
   app.get('/api/droplets', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
     const { limit, cursor } = request.query as Record<string, string | undefined>;
@@ -86,8 +87,50 @@ export default async function dropletRoutes(app: FastifyInstance) {
       ORDER BY "createdAt" DESC, id DESC
       LIMIT ${take}
     `;
-    return { data: rows.map((row) => serializeDropletCard(row, row.liked)), nextCursor: encodeCreatedAtIdCursor(rows, take) };
+    // The comments are extra to the list: when they cannot be read, the cards go out without
+    // them, and a card reads its own when it is opened, as it does from an API older than them.
+    let comments: Awaited<ReturnType<typeof cardComments>> | null = null;
+    try {
+      comments = await cardComments(rows, viewer);
+    } catch (err) {
+      request.log.warn({ err }, 'the cards went out without their comments');
+    }
+    return {
+      data: rows.map((row) => ({ ...serializeDropletCard(row, row.liked), ...(comments && { comments: comments(row) }) })),
+      nextCursor: encodeCreatedAtIdCursor(rows, take),
+    };
   });
+
+  // The newest few comments of each card on a page of the list, so a card can show them
+  // without a request of its own. One statement for the page: for each droplet that has any,
+  // a probe of the (answerId, createdAt DESC, id DESC) index. A card's cursor is where its
+  // comments route carries on, and null once it shows them all.
+  async function cardComments(cards: { id: string; commentCount: number }[], viewer: string | null) {
+    const ids = cards.filter((c) => c.commentCount > 0).map((c) => c.id);
+    const rows = ids.length === 0 ? [] : await prisma.$queryRaw<
+      { answerId: string; id: string; content: string; createdAt: Date; userId: string; name: string | null }[]
+    >`
+      SELECT c."answerId", c.id, c.content, c."createdAt", c."userId", u.name
+      FROM unnest(ARRAY[${Prisma.join(ids)}]::text[]) AS d(id)
+      CROSS JOIN LATERAL (
+        SELECT id, "answerId", content, "createdAt", "userId" FROM droplet_comments
+        WHERE "answerId" = d.id
+        ORDER BY "createdAt" DESC, id DESC
+        LIMIT ${COMMENTS_ON_CARD}
+      ) c
+      JOIN users u ON u.id = c."userId"
+      ORDER BY c."createdAt" DESC, c.id DESC
+    `;
+    const byDroplet = new Map<string, typeof rows>();
+    for (const row of rows) byDroplet.set(row.answerId, [...(byDroplet.get(row.answerId) ?? []), row]);
+    return (card: { id: string; commentCount: number }) => {
+      const newest = byDroplet.get(card.id) ?? [];
+      return {
+        data: newest.map((c) => serializeComment({ ...c, user: { name: c.name } }, viewer)),
+        nextCursor: newest.length > 0 && card.commentCount > newest.length ? encodeCreatedAtIdCursor(newest, newest.length) : null,
+      };
+    };
+  }
 
   // A page of a droplet's comments, newest first. Walks the (answerId, createdAt DESC, id DESC) index.
   async function commentsPage(answerId: string, viewer: string | null, take: number, cursor?: string) {

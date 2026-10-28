@@ -243,7 +243,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt }` |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 

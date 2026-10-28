@@ -1,4 +1,4 @@
-import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 
 const S = seed();
@@ -6,6 +6,9 @@ const S = seed();
 const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
 const SONG = `${BASE}/samples/song.mp4`;
 const LESSON = `${BASE}/samples/lesson.mp4`;
+// How far a video has played, and whether it is paused.
+const playedTo = (video: Locator) => video.evaluate((v: HTMLVideoElement) => v.currentTime);
+const paused = (video: Locator) => video.evaluate((v: HTMLVideoElement) => v.paused);
 
 test.describe('the Droplets tab, signed out', () => {
   test('lists the finished droplets and plays one, with no sign-in', async ({ page }) => {
@@ -21,7 +24,23 @@ test.describe('the Droplets tab, signed out', () => {
     await expect(page.getByText('Ben')).toHaveCount(0);
     await expect(page.getByText('how do cells actually make ATP')).toHaveCount(0);
 
-    await card.click();
+    // The song plays on the card itself: watching it takes no trip to the droplet's page.
+    const onCard = card.getByLabel('ATP synthesis: song video');
+    const play = card.getByRole('button', { name: 'Play the song video: ATP synthesis' });
+    // The still is a lazy image until it plays, so a page of cards loads only the ones in view.
+    await expect(play.locator('img')).toHaveAttribute('src', '/samples/song.jpg');
+    await expect(play.locator('img')).toHaveAttribute('loading', 'lazy');
+    await play.click();
+    await expect.poll(() => playedTo(onCard)).toBeGreaterThan(0);
+    await expect(page).toHaveURL(/\/droplets$/);
+    // Its own controls take over, to pause it or seek, and the keyboard with them.
+    await expect(play).toHaveCount(0);
+    await expect(onCard).toHaveAttribute('controls', '');
+    await expect(onCard).toBeFocused();
+    await expect(onCard).toHaveAttribute('poster', '/samples/song.jpg');
+
+    // And the card links to the page, with both videos, the lesson and the lyrics.
+    await card.getByRole('link', { name: 'Full page: ATP synthesis' }).click();
     await expect(page).toHaveURL(new RegExp(`/droplets/${S.droplet}$`));
     await expect(page.getByRole('heading', { name: 'ATP synthesis' })).toBeVisible();
     await expect(page.locator('.md strong', { hasText: 'gradient' })).toBeVisible();
@@ -43,6 +62,19 @@ test.describe('the Droplets tab, signed out', () => {
       return v.currentTime;
     });
     expect(played).toBeGreaterThan(0);
+  });
+
+  test('one card plays at a time: starting another pauses the first', async ({ page }) => {
+    await page.goto('/droplets');
+    const cards = page.getByTestId('droplet-card');
+    const [first, second] = [cards.nth(0).locator('video'), cards.nth(1).locator('video')];
+    await expect(second).toBeVisible();
+    await cards.nth(0).getByTestId('card-play').click();
+    await expect.poll(() => playedTo(first)).toBeGreaterThan(0);
+    await cards.nth(1).getByTestId('card-play').click();
+    await expect.poll(() => playedTo(second)).toBeGreaterThan(0);
+    expect(await paused(first)).toBe(true);
+    expect(await paused(second)).toBe(false);
   });
 
   test('tags each video, and finds droplets by a tag', async ({ page }) => {
@@ -330,9 +362,27 @@ test.describe('likes and comments on the Droplets tab', () => {
     await expect(card.getByTestId('like-signin')).toHaveText(/\b1\b/); // Ada's
     await expect(card.getByTestId('like-button')).toHaveCount(0);
     await expect(card.getByTestId('card-comments')).toHaveText(/\b1\b/);
+    // The card shows its newest comment, all of them there are.
+    const preview = card.getByTestId('card-comment-preview');
+    await expect(preview.getByTestId('comment')).toHaveCount(1);
+    await expect(preview.getByTestId('comment')).toContainText('Ada The chorus is the only way');
+    await expect(preview.getByRole('button', { name: /View all/ })).toHaveCount(0);
 
+    // The count opens them on the card, without leaving the list, and asks for a sign-in to add one.
     await card.getByTestId('card-comments').click();
-    await expect(page).toHaveURL(new RegExp(`/droplets/${S.droplet}#comments$`));
+    await expect(card.getByTestId('card-comments')).toHaveAttribute('aria-expanded', 'true');
+    const panel = card.getByTestId('card-comments-panel');
+    await expect(panel.getByTestId('comment')).toHaveCount(1);
+    await expect(panel.getByText('Ada', { exact: true })).toBeVisible();
+    await expect(panel.getByTestId('comment-signin')).toHaveAttribute('href', `/auth/callback?returnTo=${encodeURIComponent('/droplets')}`);
+    await expect(page.getByRole('textbox', { name: 'Add a comment' })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/droplets$/);
+    await card.getByTestId('card-comments').click();
+    await expect(panel).toHaveCount(0);
+    await expect(preview.getByTestId('comment')).toHaveCount(1);
+
+    // A link to a droplet's comments lands on them, on its page.
+    await page.goto(`/droplets/${S.droplet}#comments`);
     const comments = page.getByTestId('droplet-comments');
     await expect(comments).toBeInViewport();
     await expect(comments.getByTestId('comment')).toHaveCount(1);
@@ -374,6 +424,83 @@ test.describe('likes and comments on the Droplets tab', () => {
     await expect(page).toHaveURL(/\/droplets$/);
     await expect(like).toHaveAttribute('aria-pressed', 'false');
     await expect(like.getByTestId('like-count')).toHaveText(String(before));
+  });
+
+  test('a card shows its two newest comments and opens to all of them in place, where one can be added', async ({ page, context, request }) => {
+    const stamp = `E2E ${Date.now()}`;
+    try {
+      for (const words of ['the proton part', 'the rotor part']) {
+        const res = await request.post(apiUrl(`/api/droplets/${S.droplet}/comments`), { headers: asWriter(S.users.ben), data: { content: `${stamp}: ${words}` } });
+        expect(res.status()).toBe(201);
+      }
+      const total: number = (await (await request.get(apiUrl(`/api/droplets/${S.droplet}/comments`))).json()).commentCount;
+
+      await signIn(context, S.users.ben);
+      const calls: string[] = [];
+      page.on('request', (r) => { const url = new URL(r.url()); if (url.pathname.startsWith('/api/droplets')) calls.push(`${r.method()} ${url.pathname}`); });
+      await page.goto('/droplets');
+      const card = atpCard(page);
+      const preview = card.getByTestId('card-comment-preview');
+      await expect(preview.getByTestId('comment')).toHaveCount(2);
+      await expect(preview.getByTestId('comment').nth(0)).toContainText(`${stamp}: the rotor part`);
+      await expect(preview.getByTestId('comment').nth(1)).toContainText(`${stamp}: the proton part`);
+      expect(calls).toEqual(['GET /api/droplets']); // the list brought them
+
+      // All of them, in place: the two it showed, and the older ones after them.
+      await preview.getByRole('button', { name: `View all ${total} comments` }).click();
+      const panel = card.getByTestId('card-comments-panel');
+      await expect(panel).toBeFocused();
+      await expect(panel.getByTestId('comment')).toHaveCount(total);
+      await expect(panel.getByText('The chorus is the only way', { exact: false })).toBeVisible();
+      expect(calls).toEqual(['GET /api/droplets', `GET /api/droplets/${S.droplet}/comments`]);
+      await expect(page).toHaveURL(/\/droplets$/);
+
+      // Added on the card, it is the newest there, folded or not.
+      const mine = `${stamp}: written on the card`;
+      await panel.getByRole('textbox', { name: 'Add a comment' }).fill(mine);
+      await panel.getByRole('button', { name: 'Comment', exact: true }).click();
+      await expect(panel.getByTestId('comment').first()).toContainText(mine);
+      await expect(card.getByTestId('card-comments')).toHaveText(new RegExp(`\\b${total + 1}\\b`));
+      await panel.getByRole('button', { name: 'Hide comments' }).click();
+      await expect(panel).toHaveCount(0);
+      await expect(preview.getByTestId('comment').first()).toContainText(mine);
+      await expect(preview.getByRole('button', { name: `View all ${total + 1} comments` })).toBeVisible();
+    } finally {
+      // Ben's from this run, whatever step it stopped at: the other tests count Ada's alone.
+      const listed = await (await request.get(apiUrl(`/api/droplets/${S.droplet}/comments?limit=50`), { headers: cookieOf(S.users.ben) })).json();
+      for (const c of listed.data as { id: string; content: string; mine: boolean }[]) {
+        if (c.mine && c.content.startsWith(stamp)) await request.delete(apiUrl(`/api/droplets/${S.droplet}/comments/${c.id}`), { headers: asWriter(S.users.ben) });
+      }
+    }
+  });
+
+  test('from an API that sends no comments with the cards, a card reads its own when it opens', async ({ page }) => {
+    // What a new page meets while the API it talks to is still the one before this change, or
+    // when the API could not read the cards' comments: the cards come without them.
+    await page.route((url) => url.pathname === '/api/droplets', async (route) => {
+      const res = await route.fetch();
+      const body = await res.json();
+      for (const d of body.data) delete d.comments;
+      return route.fulfill({ response: res, json: body });
+    });
+    const calls: string[] = [];
+    page.on('request', (r) => { const url = new URL(r.url()); if (url.pathname.startsWith('/api/droplets')) calls.push(`${r.method()} ${url.pathname}`); });
+    await page.goto('/droplets');
+    const card = atpCard(page);
+    await expect(card.getByTestId('card-comments')).toHaveText(/\b1\b/);
+    await expect(card.getByTestId('card-comment-preview')).toHaveCount(0);
+
+    await card.getByTestId('card-comments').click();
+    const panel = card.getByTestId('card-comments-panel');
+    await expect(panel.getByTestId('comment')).toHaveCount(1);
+    await expect(panel.getByText('The chorus is the only way', { exact: false })).toBeVisible();
+    expect(calls).toEqual(['GET /api/droplets', `GET /api/droplets/${S.droplet}/comments`]);
+    // Folded again, it shows the newest, now that it has them, and reads nothing more.
+    await panel.getByRole('button', { name: 'Hide comments' }).click();
+    await expect(card.getByTestId('card-comment-preview').getByTestId('comment')).toHaveCount(1);
+    await card.getByTestId('card-comments').click();
+    await expect(panel.getByTestId('comment')).toHaveCount(1);
+    expect(calls).toHaveLength(2);
   });
 
   test('a droplet page is one request, comments and all', async ({ page }) => {
