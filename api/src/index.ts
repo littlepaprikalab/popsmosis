@@ -177,10 +177,13 @@ export async function buildApp() {
   await app.register(dropletRoutes);
   await app.register(videoRoutes);
 
-  // A storage key that cannot upload is said once at boot, where whoever set it looks;
-  // the rest of the API works without storage, so it still starts.
+  // A storage setting that cannot upload is said once at boot, where whoever set it looks;
+  // the rest of the API works without storage, so it still starts. So is a key on borrowed time.
   const storage = storageConfig();
   if (storage && 'problem' in storage) app.log.error(`File storage is misconfigured: ${storage.problem}`);
+  else if (storage?.legacy) {
+    app.log.warn('File storage uses the legacy service_role key, which Supabase retires at the end of 2026; set SUPABASE_SERVICE_ROLE_KEY to the secret key (sb_secret_…)');
+  }
 
   app.get('/api/health', async (_request, reply) => {
     try {

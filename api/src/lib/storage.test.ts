@@ -28,13 +28,22 @@ describe('storageConfig', () => {
 
   it('sends a secret key as apikey only, since it is not a JWT', () => {
     expect(storageConfig({ SUPABASE_URL: 'https://x.supabase.co/', SUPABASE_SERVICE_ROLE_KEY: ' sb_secret_k ' }))
-      .toEqual({ url: 'https://x.supabase.co', headers: { apikey: 'sb_secret_k' } });
+      .toEqual({ url: 'https://x.supabase.co', headers: { apikey: 'sb_secret_k' }, legacy: false });
+  });
+
+  it('takes the project URL alone, since the upload and public URLs are built on it', () => {
+    const config = (url: string) => storageConfig({ SUPABASE_URL: url, SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_k' });
+    expect(config(' https://X.supabase.co// ')).toMatchObject({ url: 'https://x.supabase.co' });
+    expect(config('http://127.0.0.1:54321')).toMatchObject({ url: 'http://127.0.0.1:54321' }); // the Supabase CLI
+    for (const bad of ['https://x.supabase.co/storage/v1', 'https://x.supabase.co/rest/v1/', 'x.supabase.co', 'https://x.supabase.co?a=1', 'ftp://x.supabase.co']) {
+      expect(config(bad), bad).toEqual({ problem: expect.stringMatching(/SUPABASE_URL must be the project URL alone/) });
+    }
   });
 
   it('sends the legacy service_role JWT as apikey and as a bearer token', () => {
     const key = legacyKey('service_role');
     expect(storageConfig({ SUPABASE_URL: 'https://x.supabase.co', SUPABASE_SERVICE_ROLE_KEY: key }))
-      .toEqual({ url: 'https://x.supabase.co', headers: { apikey: key, authorization: `Bearer ${key}` } });
+      .toEqual({ url: 'https://x.supabase.co', headers: { apikey: key, authorization: `Bearer ${key}` }, legacy: true });
   });
 
   it('names a key that cannot upload, and the key it needs', () => {
@@ -51,7 +60,7 @@ describe('storageConfig', () => {
 });
 
 describe('signUpload', () => {
-  const config = { url: 'https://x.supabase.co', headers: { apikey: 'sb_secret_k' } };
+  const config = { url: 'https://x.supabase.co', headers: { apikey: 'sb_secret_k' }, legacy: false };
 
   it('asks Supabase for an upserting upload URL and says where the file will be read', async () => {
     const seen: { url?: string; init?: RequestInit } = {};

@@ -38,7 +38,11 @@ export function fileError(file: unknown): string | null {
  * The publishable key (sb_publishable_…) and the legacy anon JWT are browser keys that
  * storage refuses every upload, so they are named as the problem before any upload.
  */
-export type StorageConfig = { url: string; headers: Record<string, string> };
+export type StorageConfig = {
+  url: string; // the project's origin, https://<project-ref>.supabase.co
+  headers: Record<string, string>;
+  legacy: boolean; // the legacy service_role JWT, which stops working when Supabase retires it
+};
 export type StorageProblem = { problem: string };
 
 const NEEDS = 'set it to the secret key (sb_secret_…) from Supabase > Project Settings > API Keys';
@@ -66,16 +70,31 @@ function keyHeaders(key: string): { headers: Record<string, string> } | StorageP
   return { problem: `SUPABASE_SERVICE_ROLE_KEY is not a Supabase secret key; ${NEEDS}` };
 }
 
+// The project URL alone: the upload and public URLs are built on it, so a path pasted
+// with it (such as /storage/v1) would break both.
+function projectOrigin(url: string): string | StorageProblem {
+  const problem = { problem: 'SUPABASE_URL must be the project URL alone, https://<project-ref>.supabase.co, with no path' };
+  try {
+    const parsed = new URL(url);
+    const bare = parsed.pathname === '/' && !parsed.search && !parsed.hash && !parsed.username && !parsed.password;
+    return bare && (parsed.protocol === 'https:' || parsed.protocol === 'http:') ? parsed.origin : problem;
+  } catch {
+    return problem;
+  }
+}
+
 /**
  * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY: null when uploads are not set up, the
- * problem when the key cannot sign them.
+ * problem when they cannot sign them.
  */
 export function storageConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig | StorageProblem | null {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, '');
+  const rawUrl = env.SUPABASE_URL?.trim().replace(/\/+$/, '');
   const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  if (!url || !key) return null;
+  if (!rawUrl || !key) return null;
+  const url = projectOrigin(rawUrl);
+  if (typeof url !== 'string') return url;
   const auth = keyHeaders(key);
-  return 'problem' in auth ? auth : { url, headers: auth.headers };
+  return 'problem' in auth ? auth : { url, headers: auth.headers, legacy: !key.startsWith('sb_secret_') };
 }
 
 /** Supabase did not give an upload URL. retryable: a moment may fix it (no answer, 429, a 5xx). */

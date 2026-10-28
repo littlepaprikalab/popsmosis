@@ -126,7 +126,7 @@ export default async function answerRoutes(app: FastifyInstance) {
       // Supabase does not take) says what to fix on the API instead.
       return err.retryable
         ? sendError(reply, 'UNAVAILABLE', `File storage did not give an upload URL (${err.message}); try again`, { retryable: true })
-        : sendError(reply, 'UNAVAILABLE', `File storage refused to give an upload URL (${err.message}); check the bucket and SUPABASE_SERVICE_ROLE_KEY on the API`);
+        : sendError(reply, 'UNAVAILABLE', `File storage refused to give an upload URL (${err.message}); check the bucket, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the API`);
     }
   });
 
