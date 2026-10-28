@@ -101,7 +101,7 @@ function Droplets() {
   return (
     <PageContainer maxWidth="6xl" className="py-6">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold tracking-wider mb-1">DROPLETS</h2>
+        <h2 className="text-2xl font-bold tracking-wider mb-1 whitespace-nowrap" aria-label="DROPLETS">DR<DropO />PLETS</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
           Every finished droplet, free to watch: a lesson checked line by line by AI, a song to remember it by, and a lesson video.
           No account needed to watch; sign in to like and comment. All made by AI.
@@ -211,5 +211,30 @@ function Droplets() {
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/**
+ * The heading's O, drawn as an outlined drop (the one in the tab icon, src/app/icon.svg)
+ * that falls into the gap between R and P when the page opens, and stays a little above
+ * the line. The real O stays in the text, see-through, so the heading still copies and
+ * searches as "DROPLETS". Both stay in the line of text (taking either out of it splits
+ * the word for screen readers): the drop is one character wide (1ch, in a monospace font)
+ * and its negative margin puts the O back under it.
+ *
+ * The heading around it never wraps, since the drop is a place the word could break, and
+ * carries the word as a label, since some screen readers read it in pieces around the drop.
+ * In high-contrast mode, which shows every letter, the drop hides and the plain O shows.
+ */
+function DropO() {
+  return (
+    <>
+      <svg aria-hidden="true" viewBox="14 7 36 48" className="animate-drop-fall relative inline forced-colors:hidden"
+        style={{ width: '1ch', marginRight: '-1ch', height: '0.8em', verticalAlign: '-0.03em', top: '-0.32em', color: 'var(--accent-brand)' }}>
+        <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z"
+          fill="none" stroke="currentColor" strokeWidth="6.6" strokeLinejoin="round" />
+      </svg>
+      <span className="text-transparent">O</span>
+    </>
   );
 }
