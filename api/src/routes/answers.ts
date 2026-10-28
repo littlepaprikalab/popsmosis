@@ -6,7 +6,7 @@ import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, v
 import { BUCKETS, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { bundleTags } from '../lib/tags.js';
-import type { Prisma } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 
 // The agent's half of a droplet's videos (docs/PLAN.md, section 10), for the agent's
 // own answers only: a key can finish its own droplets, never another agent's. And
@@ -107,7 +107,10 @@ export default async function answerRoutes(app: FastifyInstance) {
         ...urls,
         videoError: status === 'FAILED' ? (error as string).trim() : null,
         videoUpdatedAt: new Date(),
-        ...(breakdown !== undefined && { videoBreakdown: breakdown as Prisma.InputJsonObject }),
+        // READY carries the videos' whole bill. One sent without it (the studio left it out as too big or
+        // unreadable, or a READY by hand) drops the bill so far the progress reports kept: shown as the total,
+        // it would leave out the render and the upload.
+        ...(status === 'READY' && { videoBreakdown: breakdown === undefined ? Prisma.DbNull : (breakdown as Prisma.InputJsonObject) }),
         ...tags,
       },
     });

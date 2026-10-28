@@ -93,6 +93,8 @@ d('progress reports', () => {
     const started = Date.parse(q.progress.running[0].startedAt);
     expect(Date.now() - started).toBeGreaterThanOrEqual(29_000);
     expect(Date.now() - started).toBeLessThan(40_000);
+    expect(q.progress.running[0].seconds).toBeGreaterThanOrEqual(30); // what the page counts on from
+    expect(q.progress.running[0].seconds).toBeLessThan(40);
     expect(q.progress.videos).toBe(true);
     expect(q.progress.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle']);
     expect(q.progress.breakdown.costUsd).toBe(0.53);
@@ -112,10 +114,53 @@ d('progress reports', () => {
     expect((await lessonReport({ running: [{ step: 'bundle' }] })).statusCode).toBe(400);
     expect((await lessonReport({ running: [] }, keyA, 'nope')).statusCode).toBe(404);
     expect((await app.inject({ method: 'PUT', url: `/api/questions/${questionId}/progress`, payload: { running: [] } })).statusCode).toBe(401);
+    // A report is not a sign of life the agent row needs: the claim keeps that, and every run would queue on it.
+    const seen = async () => (await prisma.agent.findFirstOrThrow({ where: { name: 'teacher' } })).lastSeenAt;
+    const before = await seen();
+    await new Promise((r) => setTimeout(r, 20));
+    expect((await lessonReport({ running: [{ step: 'bundle', seconds: 0 }], breakdown: LESSON_BILL, videos: true })).statusCode).toBe(204);
+    expect(await seen()).toEqual(before);
     expect((await post()).statusCode).toBe(201);
+    // Posted: of the lesson's report only whether videos follow stays, not its bill, which every list would carry.
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: questionId } })).progress).toEqual({ videos: true });
     const late = await lessonReport({ running: [] });
     expect(late.statusCode).toBe(409);
     expect(late.json().error.message).toBe('Question already has an answer');
+  });
+
+  it('drops the bill so far when READY comes without one, and holds nothing for a lesson posted without a bundle', async () => {
+    expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
+    const answerId = (await post()).json().id;
+    expect((await claimVideos(answerId)).statusCode).toBe(200);
+    expect((await videoReport(answerId, { attempt: 1, running: [], breakdown: ART_BILL })).statusCode).toBe(204);
+    const ready = await app.inject({ method: 'PATCH', url: `/api/answers/${answerId}/video`, headers: asAgent(keyA),
+      payload: { status: 'READY', attempt: 1, songVideoUrl: 'https://cdn.example/song.mp4' } });
+    expect(ready.statusCode).toBe(200);
+    expect((await prisma.answer.findUniqueOrThrow({ where: { id: answerId } })).videoBreakdown).toBeNull();
+    expect((await card()).answer.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle']);
+
+    questionId = (await prisma.question.create({ data: { userId, content: 'Osmosis' } })).id;
+    expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
+    expect((await post({ content: 'A lesson written by hand.' })).statusCode).toBe(201); // no bundle: no videos can come
+    expect((await card()).answer.awaitingVideos).toBe(false);
+  });
+
+  it('drops the lesson\'s report when the topic is given up, and keeps nothing when none said whether videos follow', async () => {
+    expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'bundle', seconds: 0 }], breakdown: LESSON_BILL })).statusCode).toBe(204);
+    const failed = await app.inject({ method: 'POST', url: `/api/questions/${questionId}/fail`, headers: asAgent(keyA), payload: { reason: 'bundle failed' } });
+    expect(failed.statusCode).toBe(200);
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: questionId } })).progress).toBeNull();
+    expect((await card()).progress).toBeNull();
+
+    questionId = (await prisma.question.create({ data: { userId, content: 'Osmosis' } })).id;
+    expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'bundle', seconds: 0 }], breakdown: LESSON_BILL })).statusCode).toBe(204);
+    expect((await post()).statusCode).toBe(201);
+    expect((await prisma.question.findUniqueOrThrow({ where: { id: questionId } })).progress).toBeNull();
+    expect((await card()).answer.awaitingVideos).toBe(false); // nobody said videos follow: a text-only droplet
   });
 
   it('holds the lesson text back while its videos are made, then shows it with them', async () => {
@@ -139,7 +184,8 @@ d('progress reports', () => {
     expect(q.progress.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle', 'art']);
     expect(q.answer.breakdown.steps).toHaveLength(3); // the bill under the lesson fills in as the videos are made
 
-    // READY with the last bill: the text shows with the videos, and nothing is in progress any more.
+    // READY with the last bill: the text shows with the videos, and nothing is in progress any more. (One sent
+    // without a bill drops the bill so far, which would read as the total: tested below.)
     const ready = await app.inject({
       method: 'PATCH', url: `/api/answers/${answerId}/video`, headers: asAgent(keyA),
       payload: { status: 'READY', attempt: 1, songVideoUrl: 'https://cdn.example/song.mp4', breakdown: ART_BILL },
@@ -159,17 +205,36 @@ d('progress reports', () => {
     expect(q.answer.awaitingVideos).toBe(false);
     expect(q.progress).toBeNull();
 
+    // Its videos claimed after all (by another machine, or by hand): a lesson already shown stays shown.
     expect((await claimVideos(answerId)).statusCode).toBe(200);
+    expect((await card()).answer.awaitingVideos).toBe(false);
+
+    // A droplet whose videos were coming: held while they render, then shown 20 minutes on whatever they do.
+    questionId = (await prisma.question.create({ data: { userId, content: 'Osmosis' } })).id;
+    expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
+    const held = (await post()).json().id;
+    expect((await claimVideos(held)).statusCode).toBe(200);
     expect((await card()).answer.awaitingVideos).toBe(true);
-    await prisma.answer.update({ where: { id: answerId }, data: { createdAt: new Date(Date.now() - 21 * 60_000) } });
+    await prisma.answer.update({ where: { id: held }, data: { createdAt: new Date(Date.now() - 21 * 60_000) } });
     q = await card();
     expect(q.answer.awaitingVideos).toBe(false);
     expect(q.answer.video.status).toBe('RENDERING');
     expect(q.progress).toMatchObject({ videos: true }); // still rendering: the bill under the text keeps filling in
   });
 
+  it('counts the reports in a rate-limit bucket of their own, so a burst never starves the claims', async () => {
+    expect((await claim()).statusCode).toBe(200);
+    const codes: number[] = [];
+    for (let i = 0; i < 301; i++) codes.push((await lessonReport({ running: [{ step: 'bundle', seconds: i }] })).statusCode);
+    expect(codes.slice(0, 300).every((c) => c === 204)).toBe(true);
+    expect(codes[300]).toBe(429);
+    expect((await claim()).statusCode).toBe(200); // the key's own budget, for its claims, uploads and READY, is untouched
+  });
+
   it('takes the videos\' report only while they render, from the attempt that holds them', async () => {
     expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
     const answerId = (await post()).json().id;
     expect((await videoReport(answerId, { running: [] })).statusCode).toBe(409); // not started
     expect((await claimVideos(answerId)).statusCode).toBe(200);

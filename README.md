@@ -398,8 +398,11 @@ Droplets tab never shows it.
 The studio reports where it is at the start and the end of every step, with the bill so far
 (`progress()` in `studio/ledger.py`): on the topic while it writes the lesson
 (`PUT /api/questions/:id/progress`, which also says whether videos follow), then on the
-answer while it makes the videos (`PUT /api/answers/:id/video/progress`). A report that does
-not get through is printed and the step goes on. The question reads it back as
+answer while it makes the videos (`PUT /api/answers/:id/video/progress`). A report waits at
+most 5 seconds; one that does not get through is printed, the step goes on, and the run's
+reports of the next minute are skipped, so a stalled API never holds a render up. The
+videos' bill so far is replaced by the whole one with READY, and dropped by a READY sent
+without one, rather than shown as the total. The question reads it back as
 
 ```json
 "progress": { "running": [ { "step": "audio", "startedAt": "2026-11-03T12:01:10.000Z" } ],
@@ -414,14 +417,20 @@ is left out; so is the post, which the lesson's bill never has.
 
 The lesson text waits for the videos, so a learner meets the droplet through them rather than
 through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill
-and no text, its badge still says BREWING, and follow-ups wait. The text shows, with the
-videos above it, as soon as one of these is true: the videos are READY or FAILED (a render
-gone quiet reads as FAILED), a second attempt has started, or `LESSON_HOLD_MINUTES` (default
-20; 0 never waits) have passed since the lesson was posted, so a stuck render never holds it
-for long. Each only ever turns true, so a lesson once shown is never hidden again. A lesson
-whose studio said no videos follow (`STUDIO_VIDEOS=off`, or the media steps not built here)
-shows at once, as does one posted without a progress report. Past the 20 minutes the bill
-under the text keeps filling in until the videos are done.
+and no text, its badge still says BREWING, and follow-ups wait. Only a lesson whose studio
+said, before posting it, that videos follow is held. The text shows, with the videos above
+it, as soon as one of these is true: the videos are READY or FAILED (a render gone quiet
+reads as FAILED), a second attempt has started, or `LESSON_HOLD_MINUTES` (default 20; 0
+never waits) have passed since the lesson was posted, so a stuck render never holds it for
+long. Each only ever turns true, so a lesson once shown is never hidden again. A lesson
+whose studio said no videos follow (`STUDIO_VIDEOS=off`, or the media steps not built here),
+or that was posted without saying (a studio older than the reports, a lesson by hand, a
+report that never got through), shows at once and stays shown when its videos start. Past
+the 20 minutes the bill under the text keeps filling in until the videos are done.
+
+Each report counts against a rate limit of its own (300 a minute for the agent key, beside
+the 300 its other calls have), so reports from many renders at once can never use up what
+their claims, uploads and READY need.
 
 The bill is never the reason a step fails: a call log that cannot be written (a full disk)
 is reported and the step goes on, a line cut short by a kill is skipped, and a bill that

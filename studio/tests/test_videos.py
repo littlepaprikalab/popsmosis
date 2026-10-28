@@ -147,6 +147,7 @@ def test_a_report_the_api_refuses_never_fails_the_render(setup, capsys):
     posted()
     assert videos.videos("q1", api=api)[0] == "DONE"
     assert "progress not reported" in capsys.readouterr().err
+    assert api.names().count("report_video_progress") == 1  # then quiet for a minute, the render going on
 
 
 def test_a_failed_step_lets_the_other_branch_finish_and_the_retry_resumes_there(setup):

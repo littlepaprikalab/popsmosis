@@ -4,7 +4,7 @@ import pytest
 
 from studio import brain, jobs
 from studio import run as operator_run
-from studio.api import Api, ApiError
+from studio.api import PROGRESS_TIMEOUT_S, Api, ApiError
 from studio.schemas import Bundle, FactCheck, Request
 from studio.tests.sample import bundle_data
 
@@ -163,6 +163,14 @@ def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether
     assert api.reports and all(r["videos"] is False for r in api.reports)  # a text-only droplet: the page need not wait
 
 
+def test_a_post_that_fails_tells_the_page_rather_than_leave_the_fact_check_running(jobs_root):
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "try again")
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[:2] == ("FAILED", "post")
+    last = api.reports[-1]
+    assert last["running"] == [] and last["failed"] == ["post"]
+
+
 def test_a_failed_step_tells_the_page_with_the_try_it_cost(jobs_root):
     api = FakeApi()
     assert operator_run.run("q1", api=api, ask=FakeBrain(bundle_error=brain.Truncated("hit max_tokens")))[0] == "FAILED"
@@ -182,6 +190,8 @@ def test_a_report_the_api_refuses_never_changes_the_runs_outcome(jobs_root, caps
     api.errors["report_progress"] = ApiError(0, "UNREACHABLE", "the API did not answer")
     assert operator_run.run("q1", api=api, ask=FakeBrain()) == ("DONE", "post", "lesson posted as answer ans1")
     assert "progress not reported: ApiError: the API did not answer" in capsys.readouterr().err
+    # Tried once: an API that does not take them costs the run one timeout a minute, not one a step.
+    assert api.names().count("report_progress") == 1
 
 
 def test_running_again_resumes_at_the_step_that_failed(jobs_root):
@@ -405,10 +415,11 @@ def test_a_lesson_posted_whose_reply_was_lost_is_recovered_from_the_409(jobs_roo
 
 
 def test_the_client_sends_the_key_and_json_and_raises_the_apis_error():
-    sent = []
+    sent, timeouts = [], []
 
-    def send(method, url, headers, body):
+    def send(method, url, headers, body, timeout=None):
         sent.append((method, url, headers, body))
+        timeouts.append(timeout)
         if url.endswith("/fail"):
             return 409, b'{"error":{"code":"CONFLICT","message":"Question already has an answer"}}'
         return 200, b'{"id":"q1"}'
@@ -418,6 +429,8 @@ def test_the_client_sends_the_key_and_json_and_raises_the_apis_error():
     api.report_progress("q1", {"running": [{"step": "bundle", "seconds": 0.0}], "videos": True})
     api.report_video_progress("ans1", 2, {"running": [], "failed": ["art"]})
     progress, video_progress = sent.pop(1), sent.pop(1)
+    # The claim waits as long as any call; a report for the page gives up long before it could hold a step up.
+    assert timeouts[:3] == [None, PROGRESS_TIMEOUT_S, PROGRESS_TIMEOUT_S] and PROGRESS_TIMEOUT_S <= 5
     assert progress[:2] == ("PUT", "http://localhost:3001/api/questions/q1/progress")
     assert json.loads(progress[3]) == {"running": [{"step": "bundle", "seconds": 0.0}], "videos": True}
     assert video_progress[:2] == ("PUT", "http://localhost:3001/api/answers/ans1/video/progress")

@@ -20,10 +20,13 @@ from dataclasses import dataclass
 from typing import Callable
 
 TIMEOUT_S = 60
+# A progress report is for the page only and is sent on a step's way in and out: one the API is slow to take is
+# dropped well before it could hold a render up.
+PROGRESS_TIMEOUT_S = 5
 # Cloudflare in front of the API refuses urllib's default "Python-urllib" agent (error 1010).
 USER_AGENT = "popsmosis-studio/1"
-# send(method, url, headers, body) -> (status, response body). Tests pass their own.
-Send = Callable[[str, str, dict, bytes | None], tuple[int, bytes]]
+# send(method, url, headers, body[, timeout=seconds]) -> (status, response body). Tests pass their own.
+Send = Callable[..., tuple[int, bytes]]
 # A body bigger than this is streamed in blocks: urllib sends bytes in one sendall, and
 # the timeout would then cap the whole upload of a video rather than each block of it.
 STREAM_OVER_BYTES = 1024 * 1024
@@ -40,7 +43,7 @@ class ApiError(RuntimeError):
         super().__init__(f"{status} {code}: {message}" if status else message)
 
 
-def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, bytes]:
+def _urllib_send(method: str, url: str, headers: dict, body: bytes | None, timeout: float = TIMEOUT_S) -> tuple[int, bytes]:
     headers = {"User-Agent": USER_AGENT, **headers}
     data: bytes | io.BytesIO | None = body
     if body is not None and len(body) > STREAM_OVER_BYTES:
@@ -48,7 +51,7 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         headers["Content-Length"] = str(len(body))
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
             return response.status, response.read()
     except urllib.error.HTTPError as e:
         return e.code, e.read()
@@ -69,13 +72,13 @@ class Api:
             raise ApiError(0, "NOT_CONFIGURED", "POPSMOSIS_API_URL and POPSMOSIS_API_KEY must both be set")
         return cls(url.rstrip("/"), key)
 
-    def request(self, method: str, path: str, body: dict | None = None) -> dict:
+    def request(self, method: str, path: str, body: dict | None = None, timeout: float | None = None) -> dict:
         headers = {"Authorization": f"Bearer {self.key}", "Accept": "application/json"}
         data = None
         if body is not None:
             headers["Content-Type"] = "application/json"
             data = json.dumps(body, ensure_ascii=False).encode("utf-8")
-        status, raw = self.send(method, self.base_url + path, headers, data)
+        status, raw = self.send(method, self.base_url + path, headers, data, **({"timeout": timeout} if timeout else {}))
         try:
             answer = json.loads(raw) if raw else {}
         except ValueError:
@@ -111,7 +114,7 @@ class Api:
         """Where the lesson is, for the page (studio/ledger.py's progress()): the steps running now, the ones
         whose last try failed, the bill so far, and whether the videos come after. 409 unless this agent holds
         the claim and the topic has no lesson yet."""
-        self.request("PUT", f"/api/questions/{question_id}/progress", progress)
+        self.request("PUT", f"/api/questions/{question_id}/progress", progress, timeout=PROGRESS_TIMEOUT_S)
 
     # --- the videos (docs/PLAN.md, section 10) ----------------------------------
 
@@ -166,7 +169,7 @@ class Api:
         """Where the render is, for the page: as report_progress, its bill the videos' so far. 409 unless the
         videos are rendering under this attempt."""
         body = {**progress, **({"attempt": attempt} if attempt is not None else {})}
-        self.request("PUT", f"/api/answers/{answer_id}/video/progress", body)
+        self.request("PUT", f"/api/answers/{answer_id}/video/progress", body, timeout=PROGRESS_TIMEOUT_S)
 
     def videos_queue(self, limit: int = 1) -> list[dict]:
         """This agent's droplets whose render died with its machine, each claimed as its next attempt."""

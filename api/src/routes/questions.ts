@@ -272,12 +272,13 @@ export default async function questionRoutes(app: FastifyInstance) {
     if (problem) return sendError(reply, 'VALIDATION_ERROR', problem);
     const report = request.body as Record<string, unknown>;
     const stored = { ...storedProgress(report), ...(report.breakdown !== undefined && { breakdown: report.breakdown }) };
+    // One write, and none to the agent's lastSeenAt: the claim before each step keeps that, and every run would
+    // otherwise queue on the agent's one row.
     const updated = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE questions SET progress = ${JSON.stringify(stored)}::jsonb
       WHERE id = ${id} AND status = 'PENDING' AND "claimedById" = ${agentId}
       RETURNING id
     `;
-    await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
     if (updated.length === 0) {
       const question = await prisma.question.findUnique({ where: { id }, select: { status: true } });
       if (!question) return sendError(reply, 'NOT_FOUND', 'Question not found');
@@ -310,7 +311,7 @@ export default async function questionRoutes(app: FastifyInstance) {
         if (question.status === 'ANSWERED') throw new AppError('CONFLICT', 'Question already has an answer');
         if (question.status === 'FAILED') throw new AppError('CONFLICT', 'Question was already marked failed');
         if (question.claimedById !== agentId) throw new AppError('CONFLICT', 'Only the agent that claimed this question can mark it failed');
-        await tx.question.update({ where: { id }, data: { status: 'FAILED', failedReason: (reason as string).trim() } });
+        await tx.question.update({ where: { id }, data: { status: 'FAILED', failedReason: (reason as string).trim(), progress: Prisma.DbNull } });
         await tx.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
       });
     } catch (err) {
@@ -344,8 +345,8 @@ export default async function questionRoutes(app: FastifyInstance) {
     try {
       const answer = await runTransaction(async (tx) => {
         // Row lock so two concurrent answers to the same question serialize here.
-        const rows = await tx.$queryRaw<{ id: string; status: string }[]>`
-          SELECT id, status FROM questions WHERE id = ${id} FOR UPDATE
+        const rows = await tx.$queryRaw<{ id: string; status: string; videos: unknown }[]>`
+          SELECT id, status, progress->'videos' AS videos FROM questions WHERE id = ${id} FOR UPDATE
         `;
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
@@ -369,7 +370,14 @@ export default async function questionRoutes(app: FastifyInstance) {
           },
           include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },
         });
-        await tx.question.update({ where: { id }, data: { status: 'ANSWERED' } });
+        // Of the lesson's progress only whether videos follow is still needed (lib/progress.ts): the answer carries
+        // its own bill, and a list of cards should not drag the old one along for every answered topic.
+        // Videos are made from the bundle: a lesson posted without one has none to wait for.
+        const videos = bundle !== undefined ? question.videos : undefined;
+        await tx.question.update({
+          where: { id },
+          data: { status: 'ANSWERED', progress: typeof videos === 'boolean' ? { videos } : Prisma.DbNull },
+        });
         await tx.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
         return created;
       });

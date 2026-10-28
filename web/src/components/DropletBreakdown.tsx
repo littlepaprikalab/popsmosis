@@ -119,7 +119,7 @@ interface Row {
   step: string;
   status: Status;
   bill: BreakdownStep | null; // null: nothing spent on it yet
-  startedAt: string | null;
+  since: number | null; // while it runs: when it started, by this browser's clock
 }
 
 const rank = (step: string) => (ORDER.includes(step) ? ORDER.indexOf(step) : ORDER.length);
@@ -131,7 +131,7 @@ const rank = (step: string) => (ORDER.includes(step) ? ORDER.indexOf(step) : ORD
  */
 export function progressRows(p: Progress): Row[] {
   const billed = new Map((p.breakdown?.steps ?? []).map((s) => [s.step, s]));
-  const running = new Map(p.running.map((r) => [r.step, r.startedAt]));
+  const running = new Map(p.running.map((r) => [r.step, r.since ?? Date.parse(r.startedAt)]));
   const failed = new Set(p.failed);
   const started = (step: string) => billed.has(step) || running.has(step) || failed.has(step);
   const passed = (step: string, seen = new Set<string>()): boolean => (NEXT[step] ?? []).some((next) => {
@@ -148,7 +148,7 @@ export function progressRows(p: Progress): Row[] {
       step,
       status: running.has(step) ? 'running' : failed.has(step) ? 'failed' : billed.has(step) ? 'done' : 'waiting',
       bill: billed.get(step) ?? null,
-      startedAt: running.get(step) ?? null,
+      since: running.get(step) ?? null,
     }));
 }
 
@@ -158,22 +158,22 @@ export function progressCount(p: Progress): { done: number; total: number } {
   return { done: rows.filter((r) => r.status === 'done').length, total: rows.length };
 }
 
-/** The time now, every second while `active`, so a running step's time counts up. */
-function useNow(active: boolean): number {
+/** A running step's time, counting up every second: its earlier tries and this one so far. Only this text
+ *  re-renders each second, never the bill around it. */
+function Elapsed({ base, since }: { base: number; since: number }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!active) return;
-    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [active]);
-  return now;
+  }, []);
+  return <>{duration(base + Math.max(0, (now - since) / 1000))}</>;
 }
 
-/** A step's time: every try together, and for one running now, its try so far too. */
-function rowSeconds(r: Row, now: number): number | null {
-  if (r.status !== 'running' || !r.startedAt) return r.bill?.seconds ?? null;
-  return (r.bill?.seconds ?? 0) + Math.max(0, (now - Date.parse(r.startedAt)) / 1000);
+/** A step's time: every try together, and for one running now, counting up; nothing yet for one to come. */
+function RowTime({ row }: { row: Row }) {
+  if (row.status === 'waiting') return <>—</>;
+  if (row.status === 'running' && row.since !== null) return <Elapsed base={row.bill?.seconds ?? 0} since={row.since} />;
+  return <>{duration(row.bill?.seconds ?? null)}</>;
 }
 
 const MARKS: Record<Status, { label: string; color: string }> = {
@@ -232,8 +232,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
   const making = !!progress;
   const bill = progress ? progress.breakdown : breakdown;
   const rows: Row[] = progress ? progressRows(progress)
-    : (breakdown?.steps ?? []).map((s) => ({ step: s.step, status: 'done' as const, bill: s, startedAt: null }));
-  const now = useNow(open && rows.some((r) => r.status === 'running'));
+    : (breakdown?.steps ?? []).map((s) => ({ step: s.step, status: 'done' as const, bill: s, since: null }));
   if (rows.length === 0) return null;
 
   const steps = bill?.steps ?? [];
@@ -277,7 +276,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
         <span className="text-[10px] hidden group-open:inline">hide</span>
       </summary>
       {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <PhoneBill rows={rows} bill={bill} making={making} now={now} />
+        <PhoneBill rows={rows} bill={bill} making={making} />
         <table className="w-full border-collapse hidden sm:table" style={{ color: 'var(--text-secondary)' }}>
           <thead>
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
@@ -295,7 +294,6 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
             {rows.map((r, i) => {
               const lines = r.bill ? linesOf(r.bill) : [];
               const items = lines.length > 0 ? lines : [null];
-              const seconds = rowSeconds(r, now);
               return (
                 <Fragment key={r.step}>
                   {items.map((l, j) => (
@@ -313,7 +311,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
                       <td className={cell}><MakerChip maker={l?.maker ?? null} /></td>
                       <td className={num}>{l?.calls ?? ''}</td>
                       <td className={num} style={r.status === 'running' ? { color: 'var(--accent-cyan)' } : undefined}>
-                        {j === 0 ? (r.status === 'waiting' ? '—' : duration(seconds)) : ''}
+                        {j === 0 && <RowTime row={r} />}
                       </td>
                       <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{l?.cost ?? '—'}</td>
                     </tr>
@@ -341,7 +339,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
 }
 
 /** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
-function PhoneBill({ rows, bill, making, now }: { rows: Row[]; bill: Breakdown | null; making: boolean; now: number }) {
+function PhoneBill({ rows, bill, making }: { rows: Row[]; bill: Breakdown | null; making: boolean }) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
       <ol>
@@ -356,7 +354,7 @@ function PhoneBill({ rows, bill, making, now }: { rows: Row[]; bill: Breakdown |
               <span className="tabular-nums" style={{ color: 'var(--text-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
               <span className="min-w-0" style={{ color: 'var(--text-primary)' }}><StepName row={r} short /></span>
               <span className="ml-auto tabular-nums whitespace-nowrap" style={r.status === 'running' ? { color: 'var(--accent-cyan)' } : undefined}>
-                {r.status === 'waiting' ? '—' : duration(rowSeconds(r, now))}
+                <RowTime row={r} />
               </span>
             </div>
             {r.bill && linesOf(r.bill).map((l) => (

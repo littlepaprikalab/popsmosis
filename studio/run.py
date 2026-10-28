@@ -140,6 +140,7 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
 def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, str]:
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
+    reporter = ledger.Reporter()
     result, step, reason = DONE, "post", "the lesson was already posted"
     # From the first step that is not done, every step runs: a new bundle makes the fact-check stale.
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
@@ -152,7 +153,7 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
             with ledger.at_step(step):
                 question = claim(api, question_id) if step != "post" else None
                 if step != "post":  # the post makes the answer, which the videos' reports go on
-                    report_progress(job, api, {step: step_clock})
+                    report_progress(reporter, job, api, {step: step_clock})
                 reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
         except Stop as e:
@@ -167,9 +168,10 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
         seconds = round(time.monotonic() - step_clock, 1)
         done_steps.append({"step": step, "seconds": seconds, "result": result})
         print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
-        if result == FAILED and step != "post" and api is not None:
-            # The page says so until the retry starts it again, and bills the try that failed.
-            report_progress(job, api, {}, failed=(step,), ending=(step, seconds))
+        if result == FAILED and api is not None:
+            # The page says so until the retry starts it again, and bills the try that failed. A failed post
+            # too: the topic has no lesson yet, so its card would otherwise show the fact-check still running.
+            report_progress(reporter, job, api, {}, failed=(step,), ending=(step, seconds))
         if result != DONE:
             break
     reason = one_line(reason)
@@ -190,18 +192,18 @@ def claim(api: Api, question_id: str) -> dict:
         raise (Stop if result == STOPPED else StepFailed)(f"claim: {reason}") from e
 
 
-def report_progress(job: Path, api: Api, running: dict[str, float], failed: tuple[str, ...] = (),
-                    ending: tuple[str, float] | None = None) -> None:
+def report_progress(reporter: ledger.Reporter, job: Path, api: Api, running: dict[str, float],
+                    failed: tuple[str, ...] = (), ending: tuple[str, float] | None = None) -> None:
     """Tell the page where the lesson is (studio/ledger.py's progress()), and whether the videos come after it.
-    Best effort: a report that does not get through is never a step's outcome."""
+    Best effort: a report that does not get through is never a step's outcome (ledger.Reporter)."""
     from studio import videos  # it imports this module
 
-    try:
+    def send():
         report = ledger.progress(job, "lesson", running, failed, ending)
         report["videos"] = videos.unavailable() is None
         api.report_progress(job.name, report)
-    except Exception as e:
-        print(f"progress not reported: {type(e).__name__}: {e}", file=sys.stderr)
+
+    reporter.send(send)
 
 
 def api_outcome(e: ApiError) -> tuple[str, str]:

@@ -35,9 +35,16 @@ describe('storedProgress and readProgress', () => {
       failed: ['locate'],
       videos: true,
     });
-    expect(readProgress({ ...stored, breakdown: BILL, extra: 1 })).toEqual({ ...stored, breakdown: BILL });
+    // Read back with how long each has run by the same clock, which a browser counts on from.
+    expect(readProgress({ ...stored, breakdown: BILL, extra: 1 }, NOW)).toEqual({
+      ...stored,
+      running: [{ step: 'art', startedAt: '2026-11-03T11:58:30.000Z', seconds: 90 }, { step: 'audio', startedAt: NOW.toISOString(), seconds: 0 }],
+      breakdown: BILL,
+    });
     expect(readProgress(null)).toEqual({ running: [], failed: [], videos: null, breakdown: undefined });
     expect(readProgress({ running: [{ step: 'art', startedAt: 'never' }, 'x'], failed: [1, 'art'] }).running).toEqual([]);
+    // A start a little ahead of this clock (another API instance) never counts below zero.
+    expect(readProgress({ running: [{ step: 'art', startedAt: '2026-11-03T12:00:02.000Z' }] }, NOW).running[0].seconds).toBe(0);
   });
 });
 
@@ -47,16 +54,21 @@ describe('awaitingVideos', () => {
 
   it('holds the text back while the first attempt renders, for 20 minutes after the lesson was posted', () => {
     expect(lessonHoldMinutes()).toBe(20);
-    expect(awaitingVideos(lesson(5), { status: 'RENDERING' }, false, NOW)).toBe(true);
-    expect(awaitingVideos(lesson(19.9), { status: 'RENDERING' }, false, NOW)).toBe(true);
-    expect(awaitingVideos(lesson(20), { status: 'RENDERING' }, false, NOW)).toBe(false);
+    expect(awaitingVideos(lesson(5), { status: 'RENDERING' }, true, NOW)).toBe(true);
+    expect(awaitingVideos(lesson(19.9), { status: 'RENDERING' }, true, NOW)).toBe(true);
+    expect(awaitingVideos(lesson(20), { status: 'RENDERING' }, true, NOW)).toBe(false);
+  });
+
+  it('never holds a lesson whose studio did not say videos follow, so a claim just after its post cannot hide it', () => {
+    expect(awaitingVideos(lesson(0.1, 0), null, false, NOW)).toBe(false); // shown at its post...
+    expect(awaitingVideos(lesson(0.2), { status: 'RENDERING' }, false, NOW)).toBe(false); // ...and still, once claimed
   });
 
   it('shows it once the videos are READY or FAILED, or a second attempt starts, so it is never hidden again', () => {
     expect(awaitingVideos(lesson(5), { status: 'READY' }, true, NOW)).toBe(false);
     expect(awaitingVideos(lesson(5), { status: 'FAILED' }, true, NOW)).toBe(false);
     expect(awaitingVideos(lesson(5, 2), { status: 'RENDERING' }, true, NOW)).toBe(false);
-    expect(awaitingVideos(lesson(5, 0), { status: 'RENDERING' }, false, NOW)).toBe(true); // marked by hand, never claimed
+    expect(awaitingVideos(lesson(5, 0), { status: 'RENDERING' }, true, NOW)).toBe(true); // marked by hand, never claimed
   });
 
   it('holds a lesson with no videos yet only when the studio said they are coming', () => {
@@ -65,11 +77,19 @@ describe('awaitingVideos', () => {
     expect(awaitingVideos(lesson(25, 0), null, true, NOW)).toBe(false);
   });
 
+  it('never holds past the stale limit, so a late heartbeat cannot hide a lesson the stale render showed', () => {
+    process.env.VIDEO_STALE_MINUTES = '10';
+    expect(awaitingVideos(lesson(9), { status: 'RENDERING' }, true, NOW)).toBe(true);
+    expect(awaitingVideos(lesson(11), { status: 'RENDERING' }, true, NOW)).toBe(false);
+    delete process.env.VIDEO_STALE_MINUTES;
+  });
+
   it('takes LESSON_HOLD_MINUTES, where 0 never holds and a bad value keeps the default', () => {
     process.env.LESSON_HOLD_MINUTES = '5';
-    expect(awaitingVideos(lesson(6), { status: 'RENDERING' }, false, NOW)).toBe(false);
+    expect(awaitingVideos(lesson(4), { status: 'RENDERING' }, true, NOW)).toBe(true);
+    expect(awaitingVideos(lesson(6), { status: 'RENDERING' }, true, NOW)).toBe(false);
     process.env.LESSON_HOLD_MINUTES = '0';
-    expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, false, NOW)).toBe(false);
+    expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, true, NOW)).toBe(false);
     process.env.LESSON_HOLD_MINUTES = 'soon';
     expect(lessonHoldMinutes()).toBe(20);
   });
@@ -79,8 +99,8 @@ describe('the page\'s view', () => {
   const report = { running: [{ step: 'bundle', startedAt: NOW.toISOString() }], failed: [], videos: false, breakdown: BILL };
 
   it('shows a lesson being written with its bill, and nothing running once its lease has lapsed', () => {
-    const live = lessonProgress(report, true);
-    expect(live.running).toEqual(report.running);
+    const live = lessonProgress(report, true, minutesAgo(-0.5));
+    expect(live.running).toEqual([{ ...report.running[0], seconds: 30 }]);
     expect(live.videos).toBe(false);
     expect(live.breakdown?.steps.map((s) => [s.step, s.part])).toEqual([['bundle', 'lesson']]);
     expect(lessonProgress(report, false).running).toEqual([]);

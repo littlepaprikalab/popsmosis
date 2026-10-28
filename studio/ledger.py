@@ -231,6 +231,27 @@ def progress(job: Path, part: str, running: dict[str, float], failed: tuple[str,
     return report
 
 
+class Reporter:
+    """Sends a run's progress reports, best effort: one that fails is printed and the reports of the next minute
+    are skipped, so an API that stalls, or is older than the reports, costs the run one short timeout a minute at
+    most rather than one on every step's way in and out."""
+
+    QUIET_S = 60.0
+
+    def __init__(self):
+        self.quiet_until = 0.0
+
+    def send(self, report) -> None:
+        """Call report() (which builds and sends one) unless a report failed less than a minute ago."""
+        if time.monotonic() < self.quiet_until:
+            return
+        try:
+            report()
+        except Exception as e:
+            self.quiet_until = time.monotonic() + self.QUIET_S
+            print(f"progress not reported: {type(e).__name__}: {e}; the next minute's reports are skipped", file=sys.stderr)
+
+
 @functools.cache
 def version(tool: str) -> str | None:
     """The version of a tool installed on this machine: a Python package's, or ffmpeg's. None when

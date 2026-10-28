@@ -14,6 +14,7 @@
  * hidden again.
  */
 import { breakdownError, serializeBreakdown, type Breakdown } from './breakdown.js';
+import { videoStaleMinutes } from './droplet.js';
 
 // The studio's step names are short (bundle, factcheck, timeline...); a bill caps them the same.
 const STEP_MAX_LENGTH = 40;
@@ -28,10 +29,14 @@ export function lessonHoldMinutes(): number {
   return Number.isNaN(n) || n < 0 ? DEFAULT_LESSON_HOLD_MINUTES : n;
 }
 
-/** A step running now, and when it started by this server's clock. */
+/**
+ * A step running now: when it started by this server's clock, and how long it has run by the same clock when the
+ * response was made, which is what a browser counts on from (its own clock may be minutes off this one).
+ */
 export interface RunningStep {
   step: string;
   startedAt: string;
+  seconds: number;
 }
 
 /** What the page shows while a droplet is made: every step so far, and the ones running now. */
@@ -84,19 +89,22 @@ export function storedProgress(value: Record<string, unknown>, now = new Date())
   };
 }
 
-function readRunning(raw: unknown): RunningStep[] {
+function readRunning(raw: unknown, now: Date): RunningStep[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((r): r is { step: string; startedAt: string } => isObject(r) && isStep(r.step) && typeof r.startedAt === 'string'
       && !Number.isNaN(Date.parse(r.startedAt)))
-    .map((r) => ({ step: r.step, startedAt: new Date(r.startedAt).toISOString() }));
+    .map((r) => {
+      const started = Date.parse(r.startedAt);
+      return { step: r.step, startedAt: new Date(started).toISOString(), seconds: Math.max(0, Math.round((now.getTime() - started) / 100) / 10) };
+    });
 }
 
 /** A stored report read back, keeping only the fields it knows. */
-export function readProgress(raw: unknown) {
+export function readProgress(raw: unknown, now = new Date()) {
   const p = isObject(raw) ? raw : {};
   return {
-    running: readRunning(p.running),
+    running: readRunning(p.running, now),
     failed: Array.isArray(p.failed) ? p.failed.filter(isStep) : [],
     videos: typeof p.videos === 'boolean' ? p.videos : null, // null: the studio did not say
     breakdown: p.breakdown, // the lesson's bill so far, on the question's report
@@ -105,8 +113,13 @@ export function readProgress(raw: unknown) {
 
 /**
  * Whether the page holds the lesson text back for its videos, `now`. `video` is the answer's videos as the page
- * reads them (a render gone quiet already reads as FAILED); `videosPlanned`, whether the studio said the videos
- * come after the lesson, for the moment between the post and their first claim.
+ * reads them (a render gone quiet already reads as FAILED); `videosPlanned`, whether the studio said, before it
+ * posted the lesson, that the videos come after it.
+ *
+ * Only a lesson whose studio said so is held, from its post: one posted without that word (a studio older than
+ * the reports, a lesson by hand, a report that never got through) is shown at once, as it always was, and stays
+ * shown when its videos are claimed a moment later. Every other condition only ever turns false, so a lesson
+ * once shown is never hidden again.
  */
 export function awaitingVideos(
   answer: { createdAt: Date; videoAttempts: number },
@@ -114,14 +127,17 @@ export function awaitingVideos(
   videosPlanned: boolean,
   now = new Date(),
 ): boolean {
-  if (now.getTime() - answer.createdAt.getTime() >= lessonHoldMinutes() * 60_000) return false;
-  if (!video) return videosPlanned;
-  return video.status === 'RENDERING' && answer.videoAttempts <= 1;
+  if (!videosPlanned) return false;
+  // Never past the stale limit either: a render quiet that long reads FAILED and shows the text, and a late
+  // heartbeat that makes it RENDERING again must not hide it.
+  const hold = Math.min(lessonHoldMinutes(), videoStaleMinutes());
+  if (now.getTime() - answer.createdAt.getTime() >= hold * 60_000) return false;
+  return !video || (video.status === 'RENDERING' && answer.videoAttempts <= 1);
 }
 
 /** The page's view of a topic still being written: its report, if the lease that sent it is still held. */
-export function lessonProgress(raw: unknown, leaseLive: boolean): Progress {
-  const p = readProgress(raw);
+export function lessonProgress(raw: unknown, leaseLive: boolean, now = new Date()): Progress {
+  const p = readProgress(raw, now);
   return {
     running: leaseLive ? p.running : [], // a run that let its lease lapse has died: nothing of it is running
     failed: p.failed,
@@ -131,8 +147,10 @@ export function lessonProgress(raw: unknown, leaseLive: boolean): Progress {
 }
 
 /** The page's view of a droplet whose lesson is posted and whose videos are still to come or being made. */
-export function videoProgress(raw: unknown, rendering: boolean, lessonBreakdown: unknown, videoBreakdown: unknown): Progress {
-  const p = readProgress(raw);
+export function videoProgress(
+  raw: unknown, rendering: boolean, lessonBreakdown: unknown, videoBreakdown: unknown, now = new Date(),
+): Progress {
+  const p = readProgress(raw, now);
   return {
     running: rendering ? p.running : [],
     failed: rendering ? p.failed : [],

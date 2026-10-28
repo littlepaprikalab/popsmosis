@@ -237,10 +237,12 @@ export interface Breakdown {
   complete: boolean; // every call priced
 }
 
-/** A step the studio is running now, and when it started by the API's clock. */
+/** A step the studio is running now. */
 export interface RunningStep {
   step: string;
-  startedAt: string;
+  startedAt: string; // by the API's clock: what tells one try from the next
+  seconds?: number; // how long it had run when the API answered; absent from an API older than this page
+  since?: number; // when it started by this browser's clock, worked out from `seconds` as the answer arrived
 }
 
 /** Where the studio is while it makes a droplet (api/src/lib/progress.ts): its bill filling in. */
@@ -249,6 +251,24 @@ export interface Progress {
   failed: string[]; // steps whose last try failed and that are not running again yet
   videos: boolean; // whether the videos' steps are part of this droplet
   breakdown: Breakdown | null; // the bill so far: the lesson's steps, then the videos'
+}
+
+/**
+ * Each running step's start by this browser's clock, from how long the API says it has run: a computer whose clock
+ * is minutes off the API's would otherwise show every running step minutes off too.
+ */
+function localClock(q: Question): Question {
+  const running = q.progress?.running;
+  if (!q.progress || !running?.length) return q;
+  const now = Date.now();
+  return {
+    ...q,
+    progress: { ...q.progress, running: running.map((r) => ({ ...r, since: now - (r.seconds ?? Math.max(0, (now - Date.parse(r.startedAt)) / 1000)) * 1000 })) },
+  };
+}
+
+function onLocalClock<T extends { data: Question[] }>(page: T): T {
+  return { ...page, data: page.data.map(localClock) };
 }
 
 export interface Answer {
@@ -368,11 +388,11 @@ export const api = {
 
   // Questions
   listQuestions: (params?: Record<string, string>) =>
-    request<{ data: Question[]; nextCursor: string | null }>(`/questions?${new URLSearchParams(params)}`),
-  getQuestion: (id: string) => request<Question>(`/questions/${id}`),
+    request<{ data: Question[]; nextCursor: string | null }>(`/questions?${new URLSearchParams(params)}`).then(onLocalClock),
+  getQuestion: (id: string) => request<Question>(`/questions/${id}`).then(localClock),
   getQuestionsByIds: (ids: string[]) =>
-    request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`),
-  askQuestion: (content: string) => request<Question>('/questions', { method: 'POST', body: JSON.stringify({ content }) }),
+    request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`).then(onLocalClock),
+  askQuestion: (content: string) => request<Question>('/questions', { method: 'POST', body: JSON.stringify({ content }) }).then(localClock),
   deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh

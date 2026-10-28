@@ -216,7 +216,12 @@ test.describe('videos on /learn', () => {
     const bot = agent(request, S.POPSMOSIS_API_KEY);
     const questionId = (await asked.json()).id;
     expect((await bot.claim(questionId)).status()).toBe(200);
-    const answer = await bot.answer(questionId, 'The Calvin cycle **fixes carbon** with the ATP the light reactions made.');
+    // The studio says, as it writes the lesson, that videos follow: only then does the text wait for them.
+    expect((await bot.progress(questionId, { running: [{ step: 'factcheck', seconds: 0 }], videos: true })).status()).toBe(204);
+    const answer = await bot.answer(questionId, 'The Calvin cycle **fixes carbon** with the ATP the light reactions made.', {
+      bundle: { course: 'AP Biology', topic: 'the Calvin cycle' }, // the videos are made from it
+      factcheck: { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] },
+    });
     expect(answer.status()).toBe(201);
     const answerId = (await answer.json()).id;
     expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);

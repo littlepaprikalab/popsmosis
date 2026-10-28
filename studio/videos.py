@@ -131,6 +131,7 @@ class Record:
         self.failed: set[str] = set()  # steps whose last try in this run failed
         self.lock = threading.Lock()
         self.reporting = threading.Lock()  # one report at a time, so an older one never lands after a newer
+        self.reporter = ledger.Reporter()
 
     def _save(self) -> None:
         step = min(self.running, key=media.MEDIA_STEPS.index) if self.running else "videos"
@@ -163,10 +164,8 @@ class Record:
         with self.reporting:
             with self.lock:
                 running, failed = dict(self.running), tuple(self.failed)
-            try:
-                api.report_video_progress(answer, held_attempt(self.job), ledger.progress(self.job, "videos", running, failed))
-            except Exception as e:
-                print(f"progress not reported: {type(e).__name__}: {e}", file=sys.stderr)
+            self.reporter.send(lambda: api.report_video_progress(
+                answer, held_attempt(self.job), ledger.progress(self.job, "videos", running, failed)))
 
     def finish(self, result: str, step: str, reason: str) -> tuple[str, str, str]:
         reason = one_line(reason)

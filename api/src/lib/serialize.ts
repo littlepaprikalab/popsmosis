@@ -157,12 +157,12 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned =
 function progressOf(q: QuestionRow, answer: ReturnType<typeof serializeAnswer> | null, now: Date) {
   if (q.status === 'PENDING') {
     const leaseLive = !!q.claimedAt && now.getTime() - q.claimedAt.getTime() < claimMinutes() * 60_000;
-    return lessonProgress(q.progress, leaseLive);
+    return lessonProgress(q.progress, leaseLive, now);
   }
   const row = q.answers[0];
   const rendering = answer?.video?.status === 'RENDERING';
   if (!row || !answer || !(rendering || answer.awaitingVideos)) return null;
-  return videoProgress(row.videoProgress, rendering, row.lessonBreakdown, row.videoBreakdown);
+  return videoProgress(row.videoProgress, rendering, row.lessonBreakdown, row.videoBreakdown, now);
 }
 
 export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new Date()) {

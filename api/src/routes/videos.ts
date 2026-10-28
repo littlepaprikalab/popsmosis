@@ -152,7 +152,7 @@ export default async function videoRoutes(app: FastifyInstance) {
         AND (${attempt}::int IS NULL OR "videoAttempts" = ${attempt}::int)
       RETURNING id
     `;
-    await prisma.agent.update({ where: { id: agentId }, data: { lastSeenAt: new Date() } });
+    // No lastSeenAt here: the claim before each step keeps it (routes/questions.ts says why).
     if (updated.length === 0) {
       const answer = await prisma.answer.findUnique({ where: { id }, select: answerSelect });
       if (!answer) return sendError(reply, 'NOT_FOUND', 'Answer not found');

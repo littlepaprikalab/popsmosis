@@ -163,6 +163,33 @@ def test_a_job_with_nothing_done_has_an_empty_breakdown(tmp_path):
     assert ledger.breakdown(tmp_path, "videos") == {"steps": [], "seconds": None}
 
 
+def test_the_pages_checklist_has_the_studios_steps_in_its_order():
+    """The page shows every step before it runs (web/src/components/DropletBreakdown.tsx): a step renamed or added
+    here and not there would be an unnamed line at the end of the bill, and a branch joined wrongly there would
+    hide a step still to come."""
+    import re
+
+    from studio import media, videos
+
+    source = (videos.REPO / "web/src/components/DropletBreakdown.tsx").read_text(encoding="utf-8")
+
+    def listed(name):
+        return re.findall(r"'(\w+)'", re.search(rf"const {name}[^=]*= \[([^\]]*)\]", source).group(1))
+
+    labels = re.search(r"const STEP_LABELS[^{]*\{([^}]*)\}", source).group(1)
+    assert re.findall(r"^\s*(\w+):", labels, re.M) == [*ledger.LESSON_STEPS, *media.MEDIA_STEPS]
+    assert listed("LESSON_STEPS") == [s for s in ledger.LESSON_STEPS if s != "post"]  # no bill has the post
+    assert listed("VIDEO_STEPS") == list(media.MEDIA_STEPS)
+    after = {step: re.findall(r"'(\w+)'", nexts)
+             for step, nexts in re.findall(r"(\w+): \[([^\]]*)\]", re.search(r"const NEXT[^{]*\{([^}]*)\}", source).group(1))}
+    for branch in videos.BRANCHES:
+        for step, following in zip(branch, (*branch[1:], videos.TAIL[0])):
+            assert following in after[step], (step, following)
+    for step, following in zip(videos.TAIL, videos.TAIL[1:]):
+        assert following in after[step], (step, following)
+    assert {branch[0] for branch in videos.BRANCHES} <= set(after["post"]) & set(after["factcheck"])
+
+
 def test_every_step_the_runners_run_has_a_place():
     from studio import media
 
