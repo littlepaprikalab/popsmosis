@@ -527,8 +527,11 @@ rendered silent. About $1.00 for both, with the repaint and second locate below.
   5 problems), so all 11 scenes were painted twice, and 9 of 11 kept their first picture
   anyway, the second scoring no better; one passed on its second. What it lists now is
   mostly the picture's own faults (a chute opening too high, bubbles above the water), not
-  flows or the analogy. A repaint only for writing in the picture, or for a fault of
-  placement, would save about $0.02 a scene.
+  flows or the analogy. So a picture is now painted again only for writing in it or a part
+  missing or out of place (`misplaced`); anything else wrong is recorded. Checked again
+  that way ($0.09), 5 of this round's 11 first pictures would be repainted, each for a
+  fault of placement (the cyanide outside its complex, the rotor ring in the lumen, the
+  herbicide above the membrane): about $0.05 saved a lesson.
 
 ## Not tested
 

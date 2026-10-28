@@ -119,8 +119,8 @@ class FakeHelper:
             assert system == art.CHECK_PROMPT
             scene = label.split()[2]
             tries = sum(1 for lab, _ in self.asked if lab.startswith(f"art check {scene}"))
-            answers = self.checks.get(scene, [{"text": [], "wrong": []}])
-            return answers[min(tries, len(answers)) - 1]
+            answers = self.checks.get(scene, [{}])
+            return {"text": [], "misplaced": [], "wrong": [], **answers[min(tries, len(answers)) - 1]}
         assert schema is locate.Spot and system == locate.BOX_PROMPT
         name = next(n for n in SPOTS if label.endswith(" " + n))
         return self.boxes.get(name, {"seen": False, "left": 0, "top": 0, "right": 1, "bottom": 1})
@@ -180,8 +180,8 @@ def test_a_picture_on_a_dark_background_is_fitted_on_that_colour():
 
 def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wrong(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"hook": [{"text": ["ATP", "H+"], "wrong": []}, {"text": [], "wrong": []}],
-                         "synthase": [{"text": [], "wrong": ["no thylakoid stack"]}, {"text": [], "wrong": []}]})
+    helper = FakeHelper({"hook": [{"text": ["ATP", "H+"]}, {}],
+                         "synthase": [{"misplaced": ["head in the lumen"]}, {}]})
     result = art.run(job, helper)
     assert result == "painted 3 scenes with Muse Image in 5 tries"
     hook = [prompt for label, prompt in fake.painted if label.split()[1] == "hook"]
@@ -189,24 +189,35 @@ def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wro
     assert len(hook) == len(synthase) == 2
     assert "refused" not in hook[0]
     assert "it has writing in it ('ATP', 'H+'); it must have none" in hook[1]
-    assert "no thylakoid stack" in synthase[1] and "writing" not in synthase[1]
+    assert "head in the lumen" in synthase[1] and "writing" not in synthase[1]
     made = json.loads((job / "art" / "hook.json").read_text())
     assert made["try"] == 2
     # What each try was refused for is kept, not only the next prompt's quote of it.
-    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "wrong": []}, {"try": 2, "text": [], "wrong": []}]
+    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "wrong": []},
+                             {"try": 2, "text": [], "misplaced": [], "wrong": []}]
     assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png"]
 
 
 def test_after_the_last_try_the_scene_keeps_its_best_picture_without_writing(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"overview": [{"text": [], "wrong": ["no b6f"]}, {"text": ["ATP"], "wrong": []}],
-                         "synthase": [{"text": [], "wrong": ["stalk missing", "wrong membrane"]},
-                                      {"text": [], "wrong": ["stalk missing"]}]})
+    helper = FakeHelper({"overview": [{"misplaced": ["no b6f"]}, {"text": ["ATP"]}],
+                         "synthase": [{"misplaced": ["stalk missing"], "wrong": ["lumpy head"]},
+                                      {"misplaced": ["stalk missing"]}]})
     result = art.run(job, helper)
     assert result.endswith("; the helper still saw: overview: no b6f; synthase: stalk missing")
     assert json.loads((job / "art" / "overview.json").read_text())["try"] == 1  # the other has writing
-    assert json.loads((job / "art" / "synthase.json").read_text())["try"] == 2  # fewer problems
+    assert json.loads((job / "art" / "synthase.json").read_text())["try"] == 2  # as misplaced, less else wrong
     assert len(fake.painted) == 5  # two pictures a scene at most
+
+
+def test_a_picture_with_only_lesser_faults_is_kept_and_they_are_recorded(job, monkeypatch):
+    # Round 8: a second picture painted for a shape or a detail was no better 9 times in 11.
+    fake = FakeMuse().install(monkeypatch)
+    helper = FakeHelper({"overview": [{"wrong": ["Calvin cycle arrows broken"]}]})
+    assert art.run(job, helper) == ("painted 3 scenes with Muse Image in 3 tries; "
+                                    "the helper still saw: overview: Calvin cycle arrows broken")
+    assert len(fake.painted) == 3
+    assert json.loads((job / "art" / "overview.json").read_text())["check"]["wrong"] == ["Calvin cycle arrows broken"]
 
 
 def test_an_everyday_scene_is_asked_for_without_molecules():
@@ -233,7 +244,7 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
 
 def test_a_scene_with_writing_in_every_picture_fails_the_step_and_keeps_the_others(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"overview": [{"text": ["e-"], "wrong": []}]})
+    helper = FakeHelper({"overview": [{"text": ["e-"]}]})
     with pytest.raises(media.StepFailed, match=r"scene overview: no usable picture in 2 tries: it has writing"):
         art.run(job, helper)
     # The other scenes were painted at the same time, and are kept.

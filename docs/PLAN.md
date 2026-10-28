@@ -298,9 +298,11 @@ plain request 8 in 12: [test-rounds.md](test-rounds.md).) Disable Muse Image's w
 (`tool_enablement`); turning them on made no difference. Keep
 structures away from the edges so vertical crops work later. The helper looks at each
 image, told what kind of scene it is (hook, overview, analogy or close-up) and that the
-video animates the flows; if any text is visible or the anatomy is wrong, regenerate
-(max 2, since Oct 28) with what was wrong. A picture with text is never used; after the
-second, the scene keeps the text-free picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`); first
+video animates the flows; if any text is visible or a structure is missing, out of place or
+facing the wrong way, regenerate (max 2, since Oct 28) with what was wrong. Anything else
+wrong is recorded, not repainted: a second picture for those was no better 9 times in 11. A
+picture with text is never used; after the second, the scene keeps the text-free picture
+with the fewest structures out of place. Built (`studio/steps/art.py`, `studio/muse.py`); first
 run live on Oct 28 ([test-rounds.md](test-rounds.md)).
 
 **Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure

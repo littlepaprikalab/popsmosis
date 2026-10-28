@@ -40,11 +40,14 @@ way a teacher asks for a standard textbook diagram, each structure's colour by n
 Live tests (docs/test-rounds.md) found the plain request right 8 times in 12 where the
 earlier prompt, with hex codes, a list of shapes and one biology style for every subject,
 was right once in 6. The helper looks at each
-picture for text and for anything missing or wrong, told what kind of scene it is (an
-analogy is meant not to show the topic's own parts); a picture with either is asked for
-again with what was wrong, up to MAX_PAINTS pictures in all. A picture with text in it is
-never used (the renderer draws every label); after the last try the scene keeps the
-text-free picture with the fewest problems, and the step fails if there is none.
+picture for text, for a structure missing or out of place, and for anything else wrong,
+told what kind of scene it is (an analogy is meant not to show the topic's own parts). A
+picture with text or a structure missing or out of place is asked for again with what was
+wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not repainted
+(round 8: a second picture painted for those was no better 9 times in 11). A picture with
+text in it is never used (the renderer draws every label); after the last try the scene
+keeps the text-free picture with the fewest structures out of place, then the fewest other
+problems, and the step fails if there is none.
 
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
 art/<scene>.json, last: the key (as above), the model, the prompt, the helper's check of
@@ -342,10 +345,15 @@ renderer adds every label and caption itself, so the picture must have none of i
 List in `text` every piece of writing you can see in the picture, exactly as written: words, letters, \
 numbers, labels, captions, legends, watermarks, even a single letter. Leave it empty when there is none.
 
-List in `wrong` anything that would mislead a learner, each in a few words: a structure below that is \
-missing or hard to make out, a part in the wrong place or of the wrong shape, or anything scientifically \
-wrong for what the scene should show. Judge it as the kind of scene it is, against what it should show, \
-not the whole topic: what the scene leaves out is not missing. The video animates each flow itself, as dots \
+List in `misplaced` each structure below that is missing from the picture, in the wrong place, or facing \
+the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
+wrong side of its membrane), each in a few words. A picture with any of these is painted again.
+
+List in `wrong` anything else that would mislead a learner, each in a few words: a part of the wrong shape \
+or too hard to make out, or anything scientifically wrong for what the scene should show.
+
+Judge both as the kind of scene it is, against what it should show, not the whole topic: what the scene \
+leaves out is not missing. The video animates each flow itself, as dots \
 moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
 wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
 is right. Do not list matters of taste or style."""
@@ -355,7 +363,8 @@ class ArtCheck(Strict):
     """The helper's look at one picture."""
 
     text: list[str]  # every piece of writing seen in it; empty when there is none
-    wrong: list[str]  # what is missing or wrong for the scene, a few words each; empty when it is right
+    misplaced: list[str]  # each structure missing, out of place or facing the wrong way; a repaint
+    wrong: list[str]  # anything else wrong for the scene, a few words each; recorded, not repainted
 
 
 @dataclass
@@ -368,8 +377,13 @@ class Painting:
     check: ArtCheck
 
     def problems(self) -> list[str]:
+        """What the scene is painted again for: writing in the picture, a structure missing or out of place."""
         text = [f"it has writing in it ({', '.join(repr(t) for t in self.check.text)}); it must have none"]
-        return (text if self.check.text else []) + self.check.wrong
+        return (text if self.check.text else []) + self.check.misplaced
+
+    def score(self) -> tuple[int, int]:
+        """Lower is better, among pictures without writing."""
+        return len(self.check.misplaced), len(self.check.wrong)
 
 
 def run_painted(job: Path, ask) -> str:
@@ -383,7 +397,8 @@ def run_painted(job: Path, ask) -> str:
     # The scenes at the same time; one that fails fails the step once the others are saved.
     results = ledger.parallel(lambda scene: paint(job, bundle, scene, ask), todo, WORKERS)
     painted, tries = len(results), sum(attempts for _, attempts in results)
-    left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results) for p in best.check.wrong]
+    left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results)
+            for p in best.check.misplaced + best.check.wrong]
     return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
             + (f", kept {kept} painted before" if kept else "")
@@ -412,7 +427,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
                                label=f"art check {scene.id}" + (f" try {n}" if n > 1 else "")))
         painting = Painting(path, prompt, n, check)
         tries.append({"try": n, **check.model_dump()})
-        if not check.text and (best is None or len(check.wrong) < len(best.check.wrong)):
+        if not check.text and (best is None or painting.score() < best.score()):
             best = painting
         problems = painting.problems()
         if not problems:
