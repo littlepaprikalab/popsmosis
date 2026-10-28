@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from studio import brain, jobs, ledger, media, muse, svg
-from studio.schemas import Box, Locations, Structure, Timeline, locations_problems, timeline_problems
+from studio.schemas import Box, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 
@@ -209,6 +209,16 @@ def test_after_the_last_try_the_scene_keeps_its_best_picture_without_writing(job
     assert len(fake.painted) == 5  # two pictures a scene at most
 
 
+def test_an_everyday_scene_is_asked_for_without_molecules():
+    # In round 8 the style line's "proteins and molecules" scattered molecules round a sprinter.
+    bundle = sample_media.bundle()
+    hook, overview = (art.muse_prompt(bundle, scene) for scene in bundle.scenes[:2])
+    analogy = art.muse_prompt(bundle, bundle.scenes[1].model_copy(update={"id": "analogy"}))
+    assert hook.endswith(art.EVERYDAY_STYLE) and analogy.endswith(art.EVERYDAY_STYLE)
+    assert art.MOLECULES not in hook + analogy
+    assert overview.endswith(art.STYLE) and art.MOLECULES in overview
+
+
 def test_the_helper_is_told_what_kind_of_scene_it_checks():
     bundle = sample_media.bundle()
     hook, overview, synthase = (art.check_prompt(bundle, scene) for scene in bundle.scenes)
@@ -394,6 +404,33 @@ def test_a_match_in_another_structures_colour_is_dropped_and_the_structure_left_
     assert locate.run(job, helper) == ("located 3 of 4 structures with SAM 3.1; dropped 3 matches in another "
                                        "structure's colour; left out Cytochrome b6f on overview")
     assert jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f") is None
+
+
+def test_a_paler_duller_version_of_a_structures_colour_counts_as_it_and_another_hue_does_not(tmp_path):
+    # Round 8: asked for green, Muse Image painted ATP synthase sage with pale highlights, which plain Lab
+    # distance put nearer the white oxygen than the bundle's bright green, so it was left out.
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), SLATE, np.uint8)
+    synthase_at = disc(500, 500, 150)
+    pixels[synthase_at] = (138, 185, 130)  # sage
+    pixels[synthase_at & disc(450, 450, 110)] = (200, 230, 195)  # its pale highlight
+    pixels[disc(1300, 500, 100)] = (245, 245, 245)  # the oxygen
+    pixels[disc(896, 900, 80)] = (150, 120, 90)  # brown earth: no structure's colour
+    path = tmp_path / "art.png"
+    path.write_bytes(svg.png(pixels))
+    synthase, oxygen, cyanide = (
+        Structure(name="ATP synthase", aliases=[], sam_phrase="green mushroom", color_hex="#3DDC84"),
+        Structure(name="oxygen", aliases=[], sam_phrase="white spheres", color_hex="#F0F0F0"),
+        Structure(name="cyanide", aliases=[], sam_phrase="magenta wedge", color_hex="#FF3DCB"))  # not painted
+    colours = locate.Colours(path, Scene(id="detail", image_prompt="A membrane.",
+                                         structures=[synthase, oxygen, cyanide]))
+    assert colours.judge(synthase_at, synthase) == (0.0, 1.0)
+    assert colours.fits(synthase_at, synthase) and not colours.fits(synthase_at, oxygen)
+    assert colours.judge(disc(1300, 500, 100), oxygen) == (0.0, 1.0)
+    # Brown earth is another hue. Green is painted elsewhere, so the earth is not the synthase (round 8's
+    # "green turbine" came back as earth); magenta is painted nowhere, so it cannot be judged by colour.
+    earth = disc(896, 900, 80)
+    assert colours.judge(earth, synthase) == (0.0, 0.0) and not colours.fits(earth, synthase)
+    assert colours.judge(earth, cyanide) == (0.0, None) and colours.fits(earth, cyanide)
 
 
 def test_a_match_on_the_white_background_is_dropped(job, monkeypatch):

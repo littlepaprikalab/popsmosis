@@ -22,7 +22,10 @@ With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each s
 Every match is held to the structure's colour first (Colours): the bundle gives each
 structure in a scene its own colour and Muse Image paints it so, so a match whose pixels
 are mostly another structure's colour is another structure, and is dropped, as is one that
-is mostly the art's background (unless the structure is itself near its colour). On the first
+is mostly the art's background (unless the structure is itself near its colour). Muse Image
+paints a colour named "green" in a green of its own, often paler or duller than the bundle's,
+so a paler or duller version of a colour counts as it, and another hue does not (distance()).
+On the first
 live runs a box drawn around two Earths came back as one Earth's northern half, labelled
 "Southern Hemisphere", and a "gray plug" as the pale sky above a membrane. A structure left
 out is better than one labelled wrong.
@@ -56,9 +59,13 @@ MIN_OWN_COLOUR = 0.5
 # unless its own colour is near the background's: a "gray plug" once came back as the pale sky above a
 # membrane, all of it background. Right matches were at most 0.39 background.
 MAX_BACKGROUND = 0.6
-CLOSE = 30.0  # how near a pixel is to a colour to count as it: Lab distance, lightness counted half
+CLOSE = 20.0  # how near a pixel is to a colour to count as it (distance())
 SAME = 10.0  # two structures this near in colour are one colour here (an analogy part and its structure)
 JUDGED = 0.2  # a match needs this share of its pixels in some structure's colour to be judged at all
+# ...unless the picture has the structure's colour elsewhere (this share of it, or more): then a match with
+# almost none is not it. Round 8's "green turbine" came back as a band of brown earth across the picture,
+# with the green turbine below it, and was labelled.
+PAINTED = 0.001
 
 BOX_PROMPT = """You find one part in an illustration, for a segmentation model that will then trace it. \
 Say whether the part is in the picture (`seen`) and give the box around all of it as fractions of the \
@@ -186,6 +193,19 @@ def _lab(rgb: np.ndarray) -> np.ndarray:
     return np.stack([116 * f[..., 1] - 16, 500 * (f[..., 0] - f[..., 1]), 200 * (f[..., 1] - f[..., 2])], -1)
 
 
+def distance(pixels: np.ndarray, refs: np.ndarray) -> np.ndarray:
+    """How far each pixel is from each colour, both in Lab ((N, 3) and (R, 3)), as (N, R): CIE94's
+    distance with the colour as the standard, its hue counted in full. Lightness counts half, since
+    shading moves it most; a paler or duller version of a colour is near it, another hue is not. With
+    plain Lab distance, round 8's ATP synthase, painted sage where the bundle said bright green, was
+    nearer the white oxygen beside it, and was left out."""
+    lightness = pixels[:, None, 0] - refs[None, :, 0]
+    chroma = np.hypot(refs[:, 1], refs[:, 2])[None, :]
+    duller = np.hypot(pixels[:, 1], pixels[:, 2])[:, None] - chroma
+    hue_squared = np.maximum(((pixels[:, None, 1:] - refs[None, :, 1:]) ** 2).sum(-1) - duller ** 2, 0)
+    return np.sqrt((lightness / 2) ** 2 + (duller / (1 + 0.045 * chroma)) ** 2 + hue_squared)
+
+
 class Colours:
     """Which structure each pixel of a scene's art is coloured as: the nearest of the scene's
     structure colours and the art's background (white, or the dark slate Muse Image paints), when it is
@@ -200,19 +220,23 @@ class Colours:
         self.refs = _lab(np.array(refs))
         self.pixels = _lab(rgb)
         self.dropped = 0
+        sample = self.pixels[::2, ::2].reshape(-1, 3)  # every fourth pixel is plenty to see what is painted
+        far = distance(sample, self.refs)
+        near = np.where(far.min(1) <= CLOSE, far.argmin(1), -1)
+        self.painted = np.bincount(near[near >= 0], minlength=len(refs)) / len(sample) >= PAINTED
 
     def judge(self, mask: np.ndarray, structure: Structure) -> tuple[float, float | None]:
         """The share of the mask's pixels that are the background, unless the structure is itself near
         its colour (then 0); and of its pixels coloured as some structure, the share coloured as this one,
-        None when too few are coloured as any (a picture painted in other colours) to judge."""
+        None when too few are coloured as any to judge (a picture painted in other colours), or 0 when
+        the picture has the structure's colour elsewhere."""
         mine = self.names.index(structure.name)
         pixels = self.pixels[mask]
         if not len(pixels):
             return 0.0, None
-        weight = np.array([0.5, 1.0, 1.0], np.float32)  # shading moves lightness most
-        distance = np.sqrt((((pixels[:, None, :] - self.refs[None, :, :]) * weight) ** 2).sum(-1))
-        nearest, close = distance.argmin(1), distance.min(1) <= CLOSE
-        apart = np.sqrt((((self.refs - self.refs[mine]) * weight) ** 2).sum(-1))
+        far = distance(pixels, self.refs)
+        nearest, close = far.argmin(1), far.min(1) <= CLOSE
+        apart = distance(self.refs, self.refs[mine:mine + 1])[:, 0]
         own_colour = apart <= SAME
         own_colour[-1] = False  # the background is never a structure's own colour here
         backdrop = (nearest == len(self.refs) - 1) & close
@@ -220,7 +244,7 @@ class Colours:
         own = (own_colour[nearest] & close).sum()
         other = (~own_colour[nearest] & ~backdrop & close).sum()
         if own + other < JUDGED * len(pixels):
-            return background, None
+            return background, (0.0 if (self.painted & own_colour).any() else None)
         return background, float(own / (own + other))
 
     def fits(self, mask: np.ndarray, structure: Structure) -> bool:

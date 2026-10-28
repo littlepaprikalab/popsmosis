@@ -101,15 +101,31 @@ together they go from what the learner already knows to the parts they are learn
   on the left, Earth on the right with its axis tilted 23.5 degrees toward the Sun, and
   parallel rays of sunlight reaching it." The illustrator knows what the standard diagrams
   look like, and is best at drawing one it knows.
-- Then say where everything is and where each step happens, in the order the process
-  runs: "Glycolysis in the cytoplasm on the left, glucose split into two pyruvate; the
-  pyruvate passing into a mitochondrion inside the cell, cut open on the right; the Krebs cycle as a ring
-  of arrows in its matrix; the electron transport chain as a row of protein complexes
-  along its folded inner membrane, ATP synthase among them." Wherever the request leaves
-  the layout out, the illustrator invents one, and an invented one is often wrong (the
-  Krebs cycle drawn in the cytoplasm, the chain along the cell's outer membrane). Put
-  every part inside what holds it (a mitochondrion inside its cell, not beside it). Say only
-  what is true and what the scene needs.
+- The picture is a still stage, and the video does the acting. Ask for where everything
+  is, never for what it does: nothing pumped, flowing, carried, meeting or turning into
+  something, no arrows from one part to another, no streams or crowds of ions. The video
+  shows each of those as dots moving between the parts (`particles`, under Direction) and
+  labels everything. A picture asked to show ions pumped up, crowding a space, flowing
+  back down and oxygen turning into water came back cluttered with dots and tangled
+  arrows; the same layout without them came back clean. A stage that textbooks draw as a
+  shape of its own is that shape, where it happens (the Krebs cycle as a ring of arrows in
+  the matrix, glycolysis as a short chain of arrows in the cytoplasm); a molecule the scene
+  names is one small shape where it sits. Where a space must look crowded, ask for a soft
+  tint or a light sprinkle, never a number. A hook or an analogy is the same: its things
+  in place (the reservoir behind the dam, the chute down to the wheel), the dots showing
+  what moves.
+- Say where everything is, region by region: first the regions ("the membrane across the
+  middle, the intermembrane space above it tinted blue, the matrix below it tinted pink"),
+  then each part in its region, how it sits and which way it faces ("ATP synthase passing
+  through the membrane, its round head in the matrix below"). For a whole system:
+  "a cell's cytoplasm on the left with a glucose molecule in it; inside the same cell, on
+  the right, a mitochondrion cut open lengthwise, its inner membrane folded into cristae;
+  the Krebs cycle as a ring of arrows in its matrix; a row of protein complexes along the
+  folded inner membrane, ATP synthase among them." Wherever the request leaves the layout
+  out, the illustrator invents one, and an invented one is often wrong (the Krebs cycle
+  drawn in the cytoplasm, the chain along the cell's outer membrane, ATP synthase with
+  its head on the wrong side). Put every part inside what holds it (a mitochondrion
+  inside its cell, not beside it). Say only what is true and what the scene needs.
 - Pick the kind that fits the subject, and end the request with the look that kind of
   textbook gives it, in these words:
   - A cell or molecular process (membranes, organelles, proteins, molecules): "a clean,
@@ -128,9 +144,10 @@ together they go from what the learner already knows to the parts they are learn
   - Place things with plain words (left, right, above, below, inside, through, tilted
     toward), each said once. The illustrator follows where to put a thing far better than
     a relation such as "at right angles to".
-  - Give every structure its colour, by name, in the sentence. Code finds each structure
-    by its colour, so in a scene each needs its own, with names that differ (blue and
-    orange, not blue and teal). Keep a thing's natural colour where it has one: a green
+  - Give every structure its colour, by name, in the sentence: the colour its `color_hex`
+    is, never a deeper or darker one ("light blue", not "a deep, rich blue"), since a dark
+    part sinks into the dark background. Code finds each structure by its colour, so in a
+    scene each needs its own, with names that differ (blue and orange, not blue and teal). Keep a thing's natural colour where it has one: a green
     leaf, a yellow Sun, a blue Earth with its continents; a thing painted a colour it never
     has looks like a toy. Choose a colour only for what has none of its own (a protein, a
     compartment, an axis drawn as a rod), as textbooks do. Where two parts of one real
@@ -386,7 +403,8 @@ order, keyed by `line_id`:
   the correction lands on it.
 - `particles`: for a line about something that travels (a signal, a molecule), the
   structures it travels between, in order; otherwise []. Use them whenever a line tells
-  how something moves through the steps: the motion is what shows how a process works.
+  how something moves through the steps: the motion is what shows how a process works,
+  and the pictures draw none of it.
   Where a failure scene shows the flow stopped, it has none.
 - `caption`: almost always "". At most one short caption (a few words) per song section,
   for a term worth seeing written.

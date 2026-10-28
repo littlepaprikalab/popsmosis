@@ -324,10 +324,16 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
 # says only what every picture needs. A dark slate blue background, as a modern study infographic
 # has: the colours stand out on it, and so do the renderer's white label pills. Code reads the
 # background's colour off each picture's edge (media.paper), so any plain colour works.
-STYLE = ("On a plain, flat dark slate blue background, every part well inside the frame, with clear space "
-         "around each part for its label. Every part sits inside whatever holds it in life, as an organelle sits "
-         "inside its cell. Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, "
-         "coils or clusters of atoms. No text, labels, letters or numbers anywhere in the picture.")
+# Where each part sits is the scene's own prompt's to say (studio/prompts/bundle.md): said here, "every part
+# sits inside whatever holds it" wrapped two of round 6's everyday scenes (a dam, a pond) in cell-like bubbles.
+LOOK = ("On a plain, flat dark slate blue background, every part well inside the frame, with clear space "
+        "around each part for its label.")
+# Only in a diagram: in an everyday scene it scattered molecules round round 8's sprinter and through its reservoir.
+MOLECULES = "Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, coils or clusters of atoms."
+NO_TEXT = "No text, labels, letters or numbers anywhere in the picture."
+STYLE = f"{LOOK} {MOLECULES} {NO_TEXT}"  # a diagram's
+EVERYDAY_STYLE = f"{LOOK} {NO_TEXT}"  # the hook's and the analogy's: everyday things, no molecules
+EVERYDAY = ("hook", "analogy")
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The video's \
@@ -440,13 +446,14 @@ def fit(picture: bytes) -> np.ndarray:
 
 def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = ()) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
-    image model reads names), and STYLE. Short on purpose: every extra line was a chance to miss."""
+    image model reads names), and STYLE (EVERYDAY_STYLE for the hook and the analogy). Short on purpose:
+    every extra line was a chance to miss."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
     parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
-    parts.append(STYLE)
+    parts.append(EVERYDAY_STYLE if scene.id in EVERYDAY else STYLE)
     return " ".join(parts)
 
 

@@ -282,13 +282,16 @@ cytochrome b6f pumps).
 ### Step 3: art
 
 **Painted, by Gemini 3.1 Flash Image or Muse Image** (`/admin/studio`; Gemini by default with `claude`, Muse Image with `meta`), every scene at the same time. Gemini: `generateContent` at 16:9, 1K (1376 x 768), about $0.07 a picture, run live. Muse Image (`/v1/images/generations`), size `1792x1024`
-(an aspect ratio: the picture is fitted to the art on white).
-The prompt is short: the scene's `image_prompt`, which asks for it the way a teacher asks
-for a standard textbook diagram of its subject ("Educational diagram, as an Earth science
-textbook draws it, of the Sun and Earth oriented to show why Earth has seasons..."), each
-structure's colour by name, and "A clean, shaded textbook illustration on a plain white
-background, every part well inside the frame. No text, labels, letters or numbers." The
-kind of diagram is the scene's: a cell biology figure in the Campbell/OpenStax manner, an
+(an aspect ratio). Either picture is fitted to the art on its own background colour.
+The prompt is short: the scene's `image_prompt`, which asks for it
+the way a teacher asks for a standard textbook diagram of its subject ("Educational
+diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
+Earth has seasons..."), each structure's colour by name, and the style line (`art.STYLE`: a
+plain dark slate blue background, room for labels, smooth rounded proteins, no text; the
+hook and the analogy leave the proteins out). The picture is a still stage: the request
+says where everything is and which way it faces, never what it does, and the video draws
+every flow as moving dots (round 8: the same layouts without their actions came back
+clean, [test-rounds.md](test-rounds.md)). The kind of diagram is the scene's: a cell biology figure in the Campbell/OpenStax manner, an
 astronomy schematic as its textbooks draw one. (One OpenStax/Campbell style for every
 subject, hex colours and a list of shapes were right once in 6 on the seasons scenes; the
 plain request 8 in 12: [test-rounds.md](test-rounds.md).) Disable Muse Image's web search and shell

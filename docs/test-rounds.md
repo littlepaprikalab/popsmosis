@@ -473,6 +473,63 @@ prompt Gemini suggested ($0.02, and $0.01 to check).
   space instead of the matrix. A still layout needs the facts of where things are and
   which way they face; it is the actions that crowd it.
 
+## Round 8: pictures that hold still
+
+Round 6's two lessons kept, with only their scenes' picture prompts rewritten by Claude under
+a new rule ($0.18): a picture is a still stage and the video does the acting, so a prompt
+says where everything is (the regions, each part in its region, which way it faces) and
+nothing it does. Repainted on Muse Image with two pictures a scene, located with SAM, and
+rendered silent. About $1.00 for both, with the repaint and second locate below.
+
+| | Cellular respiration | Light reactions |
+|---|---|---|
+| Pictures | 14 for 5 scenes (2 scenes painted twice) | 15 for 6 |
+| Located | 16 of 18 (round 6: 16) | 20 of 21 (round 6: 20) |
+| Cost | $0.51 | $0.49 |
+
+- **The diagrams are clean.** No pumped ions, tangled arrows or crowds of dots: the
+  membranes are bands, the proteins stand apart with room for labels, and ATP synthase
+  faces the right way in 4 of 5 close-ups (its head in the matrix or the stroma). The
+  mitochondrion sits inside its cell in the overview, which round 6 drew beside it.
+- **The style line had put bubbles and molecules into everyday scenes.** "Every part sits
+  inside whatever holds it" wrapped round 6's dam and pond in cell-like bubbles, and
+  "proteins and molecules are smooth, rounded shapes" scattered molecules round the
+  sprinter and through the reservoir. The first is gone (each scene's prompt says where
+  its parts sit), and the second is now only in a diagram's style. Repainted, the hooks
+  and analogies are a plain sprinter, a pond, and two dams that look like dams.
+- **Muse Image paints a colour in its own shade.** Asked for green, it painted ATP synthase
+  sage; plain Lab distance put its pale highlights nearer the white oxygen than the
+  bundle's bright green, so locate dropped it in two scenes, and the pale pink matrix and
+  light blue intermembrane space with it. Colours are now compared by CIE94 with the
+  structure's colour as the standard and its hue counted in full: a paler or duller shade
+  of a colour counts as it, another hue does not. On every part located this round the old
+  rule would have dropped 5 right matches, the new one none; but it drops the white oxygen
+  in the chain close-up, whose pale blue shading now counts as the intermembrane space (42
+  to 46% its own colour, under the 50% it needs).
+- **A dark part sinks into the background.** Claude's rewrite asked for the lumen "a deep,
+  rich blue", though its colour is light blue; painted navy, 90% of it read as the
+  background and it was left out. The bundle prompt now says to name the colour
+  `color_hex` gives, never a deeper one.
+- **A match with none of a part's colour was labelled.** SAM's "green turbine" came back as
+  a band of brown earth across the dam picture, and the label "turbine" pointed at it: a
+  match with too little of any part's colour was let through unjudged, a rule meant for a
+  picture painted in other colours. Now it is let through only when the picture has the
+  part's colour nowhere; otherwise it is dropped, and the helper's box found the turbine.
+- **In the silent videos the pictures work and the motion is thin.** The labels sit on the
+  right parts and read well on the slate, and in the light reactions the dots go from the
+  stroma down through cytochrome b6f into the lumen. But the dots are small, few, and look
+  like the ions painted in the picture; they run straight between the parts' label points
+  (across the dam rather than along its pipe); they say nothing of what they are (an
+  electron, a proton); and a flow loses its start when a part is left out (the lumen in the
+  ATP synthase close-up). This is the motion engine's work: routes, molecule markers drawn
+  by the renderer, motion on the art.
+- **The second picture rarely helps.** Sonnet found something in every first picture (2 to
+  5 problems), so all 11 scenes were painted twice, and 9 of 11 kept their first picture
+  anyway, the second scoring no better; one passed on its second. What it lists now is
+  mostly the picture's own faults (a chute opening too high, bubbles above the water), not
+  flows or the analogy. A repaint only for writing in the picture, or for a fault of
+  placement, would save about $0.02 a scene.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
