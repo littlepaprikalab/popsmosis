@@ -5,8 +5,13 @@ the lines: every lyric line, every narration sentence, every sentence of the
 lesson and every line of the exam question the videos read aloud (media.frq_lines). Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
-Writes factcheck.json. When the check passes after corrections, bundle.json is
-rewritten with them and the writer's version is kept as bundle.draft.json.
+The same call checks each video's hashtags, which are public and what the Droplets tab
+is searched by: a tag the checker does not pass is dropped from both videos, never
+rewritten, and never fails the job. A tag that gets no verdict in three rounds is dropped
+too, so only checked tags are posted.
+
+Writes factcheck.json. When the check passes after corrections or dropped tags,
+bundle.json is rewritten with them and the writer's version is kept as bundle.draft.json.
 """
 
 from __future__ import annotations
@@ -26,13 +31,16 @@ from studio.sentences import replace_sentences, split_sentences
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KINDS = ("lyric", "narration", "lesson", "frq")
+KINDS = ("lyric", "narration", "lesson", "frq")  # the lines a correction rewrites
+TAG = "tag"  # a video's hashtag: passed, or dropped
+PASSING = ("SUPPORTED", "FILLER")
 
 
 @dataclass(frozen=True)
 class Line:
-    kind: str  # lyric, narration, lesson or frq
-    id: str  # the bundle's id; for the lesson, the sentence's number; for the exam question, media.frq_lines'
+    kind: str  # lyric, narration, lesson, frq or tag
+    id: str  # the bundle's id; for the lesson, the sentence's number; for the exam question, media.frq_lines';
+    # for a tag, its video and place ("song-3")
     text: str
 
     @property
@@ -64,7 +72,28 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
     lines += [Line("frq", line_id, text) for line_id, text in media.frq_lines(bundle)]
-    return lines
+    return lines + tag_lines(bundle)
+
+
+def tag_lines(bundle: Bundle) -> list[Line]:
+    """Each video's hashtags, written "#tag". One both videos carry is checked once, like a chorus line."""
+    return [Line(TAG, f"{video}-{i}", f"#{tag}")
+            for video, tags in (("song", bundle.tags.song), ("lesson", bundle.tags.lesson))
+            for i, tag in enumerate(tags, 1)]
+
+
+def about(bundle: Bundle) -> dict[str, str]:
+    """What the checker needs to judge a tag beyond the facts: "#apbio" by the course, "#kpop" by the song."""
+    return {"course": bundle.course, "topic": bundle.topic, "song_style": ", ".join(bundle.music.positive_styles)}
+
+
+def dropped_tags(report: FactCheckReport) -> list[CheckedLine]:
+    """The tags the check did not pass, each once, as the report has them."""
+    seen: dict[str, CheckedLine] = {}
+    for line in report.lines:
+        if line.kind == TAG and line.verdict not in PASSING:
+            seen.setdefault(line.text, line)
+    return list(seen.values())
 
 
 def check_bundle(
@@ -76,6 +105,7 @@ def check_bundle(
     its text changes, and a chorus line sung three times is checked once.
     """
     facts = {fact.id: fact.text for fact in bundle.facts}
+    context = about(bundle)
     verdicts: dict[tuple[str, str], tuple[Check, int]] = {}
     corrections: list[Correction] = []
     reason = ""
@@ -91,13 +121,14 @@ def check_bundle(
         if not pending:
             break
         rounds = round_no
-        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no)
+        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context)
         for line in pending:
             check = checks.get(line.key)
             # A missing verdict, or SUPPORTED without a real source, is asked again next round.
             if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)):
                 verdicts[(line.kind, line.text)] = (check, round_no)
-        wrong = [line for line in pending if _verdict(verdicts, line) == "UNSUPPORTED"]
+        # A tag that fails is dropped below, never corrected: only the other lines get fixes.
+        wrong = [line for line in pending if line.kind != TAG and _verdict(verdicts, line) == "UNSUPPORTED"]
         if not wrong or round_no == max_rounds:
             continue
 
@@ -127,8 +158,16 @@ def check_bundle(
         check, round_no = verdicts.get((line.kind, line.text), (None, 0))
         checked.append(CheckedLine(kind=line.kind, id=line.id, text=line.text,
                                    verdict=check.verdict if check else None,
-                                   source=check.source if check else "", round=round_no))
-    failing = [c for c in checked if c.verdict not in ("SUPPORTED", "FILLER")]
+                                   source=check.source if check else "", round=round_no,
+                                   problem=check.problem if check and check.verdict == "UNSUPPORTED" else ""))
+    # Only checked tags are posted: one that failed, or never got a verdict, leaves both videos.
+    passed_tags = {c.text.removeprefix("#") for c in checked if c.kind == TAG and c.verdict in PASSING}
+    tags = bundle.tags
+    if any(t not in passed_tags for t in [*tags.song, *tags.lesson]):
+        bundle = bundle.model_copy(update={"tags": tags.model_copy(update={
+            "song": [t for t in tags.song if t in passed_tags],
+            "lesson": [t for t in tags.lesson if t in passed_tags]})})
+    failing = [c for c in checked if c.kind != TAG and c.verdict not in PASSING]
     if failing and not reason:
         reason = f"after {rounds} round(s), {len(failing)} line(s) still fail: " + "; ".join(
             _describe(c, verdicts) for c in failing[:3]
@@ -139,7 +178,7 @@ def check_bundle(
 
 
 def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], study_guide: str, ask,
-                round_no: int) -> dict[str, Check]:
+                round_no: int, context: dict[str, str] | None = None) -> dict[str, Check]:
     previous: dict[str, str] = {}
     if round_no > 1:
         # A re-check sends lines without their neighbours, so each brings the one before it.
@@ -150,6 +189,8 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
     payload: dict = {"facts": [{"id": i, "text": text} for i, text in facts.items()]}
     if study_guide:
         payload["study_guide"] = study_guide
+    if context and any(line.kind == TAG for line in pending):
+        payload["about"] = context  # for the tags only: every other line is judged by the facts alone
     payload["lines"] = [
         {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {})}
         for line in pending

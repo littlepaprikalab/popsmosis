@@ -215,6 +215,8 @@ for the lesson video. Write 6 to 10 for each, the most useful first.
 - Each tag is one word, as hashtags are written: lowercase letters and digits, no
   spaces or punctuation ("#cellularrespiration", not "#Cellular Respiration").
 - Tags are search words, never claims, and only for what the video teaches: a search
-  for a tag should find a video that covers it.
+  for a tag should find a video that covers it. The fact-checker reads every tag too and
+  drops any that names a topic or term your facts do not cover, so tag what the facts
+  say, not what is merely related.
 - Never tags that help no one find this video ("#fyp", "#foryou", "#viral"), an artist or
   band, or anything about the learner: their name, school, teacher or class.

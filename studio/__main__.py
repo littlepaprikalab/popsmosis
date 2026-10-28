@@ -210,11 +210,16 @@ def print_job(job: Path, brief: bool = False) -> None:
             print(_wrap(f"{'  ' if p.repaired else '! '}{p.line_id:<6} {p.rule:<13} {p.detail}", indent=23))
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
-        counts = {v: sum(line.verdict == v for line in report.lines) for v in ("SUPPORTED", "FILLER", "UNSUPPORTED")}
+        said = [line for line in report.lines if line.kind != "tag"]
+        counts = {v: sum(line.verdict == v for line in said) for v in ("SUPPORTED", "FILLER", "UNSUPPORTED")}
         print(f"\n## Fact-check: {report.status} after {report.rounds} round(s); "
               + ", ".join(f"{n} {v.lower()}" for v, n in counts.items()) + "\n")
         if report.reason:
             print(_wrap(f"Reason: {report.reason}") + "\n")
+        dropped = factcheck_step.dropped_tags(report)
+        if dropped:
+            print(_wrap("Tags dropped: " + "; ".join(
+                f"{t.text} ({t.problem or 'no verdict'})" for t in dropped), indent=4) + "\n")
         if not brief:
             print(f"  {'line':<15} {'verdict':<11} {'source':<9} {'rnd':<3} text")
             for line in report.lines:

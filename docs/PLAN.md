@@ -222,8 +222,8 @@ parts build on the facts it has already written.
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
    written knowing the whole plan. Code cleans them to one lowercase word each and never
-   fails a bundle over one; they are search words, not claims, so the fact-check does not
-   read them (README, "Tags").
+   fails a bundle over one; the fact-check (step 2) passes or drops each one (README,
+   "Tags").
 
 Code checks then hold each line's `names` and its direction together
 (`studio/checks.py`): a line names only structures its scene draws, and a spotlight
@@ -248,6 +248,14 @@ job fails with the reason shown on the droplet. Nothing is posted or sung that h
 passed.
 
 There is no teacher approval step: the fact-check is the gate.
+
+The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):
+SUPPORTED when a tag names something the facts cover, FILLER when it names only the topic,
+a subject containing it, the course or the video itself (with `about`, the course, topic
+and song style, sent for the tags alone), UNSUPPORTED otherwise. A tag that fails, or gets
+no verdict in 3 rounds, is dropped from both videos, never rewritten, and never fails the
+job; the posted bundle carries only the tags that passed. They add a few hundred tokens to
+the call, not a call of their own.
 
 Regression test: "Every electron hand-off pumps a proton" must be flagged (only
 cytochrome b6f pumps).

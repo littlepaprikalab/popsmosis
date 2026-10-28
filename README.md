@@ -256,8 +256,19 @@ writes 6 to 10 hashtags for the song video and for the lesson video as the last 
 bundle (`tags.song`, `tags.lesson`; the prompt is in `studio/prompts/bundle.md`). Both lists
 start with the topic, its key terms, the subject and the course ("#photosynthesis",
 "#thylakoid", "#apbio"); then come the video's own: the song's genre ("#kpop",
-"#studysong"), or what the lesson does ("#explained"). No extra model call: they cost a
-few dozen tokens of the bundle's.
+"#studysong"), or what the lesson does ("#explained").
+
+The fact-check then checks every tag in the same call as the lines, by rules of its own
+(`studio/prompts/factcheck.md`, "Tags"): a tag passes when it names something the facts
+cover, or only the topic, a subject containing it, the course or the video itself (the
+checker is given the course, topic and song style for this). Anything else is dropped from
+both videos, never rewritten: a neighbouring topic the lesson does not cover
+("#calvincycle"), a claim, a style the song does not have, an artist, anything about the
+learner, or a tag that helps no one ("#fyp"). A tag never fails the droplet, and one that
+gets no verdict is dropped too, so only checked tags are posted. `python -m studio show`
+lists what was dropped and why. Like the lines, a tag passes only on what the facts say: a
+term the facts never mention is dropped even when it is related. No extra model call: the
+tags cost a few dozen tokens of the bundle's and a few hundred of the fact-check's.
 
 A tag is one word as a search matches it: lowercase letters (accents kept), digits and
 underscores, no "#" (the page adds it back), at most 40 characters, at most 10 to a video,

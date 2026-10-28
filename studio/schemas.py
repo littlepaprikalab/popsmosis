@@ -265,12 +265,13 @@ class FactCheck(Strict):
 
 
 class CheckedLine(Strict):
-    kind: Literal["lyric", "narration", "lesson", "frq"]
+    kind: Literal["lyric", "narration", "lesson", "frq", "tag"]  # a tag is dropped when it fails, never corrected
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
     source: str
     round: int  # the round that gave the verdict; 0 if none did
+    problem: str = ""  # UNSUPPORTED: what the checker found wrong; for a tag, why it was dropped
 
 
 class Correction(Strict):
