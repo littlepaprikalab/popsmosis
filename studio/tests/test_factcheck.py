@@ -5,7 +5,7 @@ import pytest
 from studio.jobs import read, write
 from studio.schemas import Bundle, FactCheck, FactCheckReport, Request
 from studio.steps import factcheck
-from studio.steps.factcheck import check_bundle, cites, lines_of
+from studio.steps.factcheck import check_bundle, cites, dropped_tags, lines_of
 from studio.tests.sample import CHORUS, bundle_data
 
 SEEDED = "Every electron hand-off pumps a proton"
@@ -240,3 +240,70 @@ def test_a_bundle_from_before_names_can_still_be_fact_checked(tmp_path):
     write(tmp_path / "request.json", Request(topic="the light reactions"))
     (tmp_path / "bundle.json").write_text(json.dumps(data))
     assert factcheck.run(tmp_path, ask=FakeChecker(supported)).status == "passed"
+
+
+def test_tags_are_checked_once_each_with_what_a_tag_is_judged_by():
+    fake = FakeChecker(supported)
+    report, checked = check_bundle(bundle(), "", fake)
+    tags = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("tag:")]
+    # The tags both videos carry are sent once, under the song's ids.
+    assert tags == [("tag:song-1", "#photosynthesis"), ("tag:song-2", "#lightreactions"), ("tag:song-3", "#apbio"),
+                    ("tag:song-4", "#studysong"), ("tag:song-5", "#pop"), ("tag:lesson-4", "#explained")]
+    assert fake.payloads[0]["about"] == {"course": "AP Biology", "topic": "the light reactions",
+                                         "song_style": "upbeat pop, 112 bpm"}
+    assert report.status == "passed" and checked.tags == bundle().tags and dropped_tags(report) == []
+    assert [line.id for line in report.lines if line.kind == "tag"] == [
+        "song-1", "song-2", "song-3", "song-4", "song-5", "lesson-1", "lesson-2", "lesson-3", "lesson-4"]
+
+
+def test_a_tag_that_fails_leaves_both_videos_and_never_fails_the_check():
+    def rule(text):
+        if text == "#lightreactions":
+            return "UNSUPPORTED", "", ""  # dropped: a tag is never rewritten
+        if text == "#apbio":
+            return None  # never gets a verdict
+        if text.startswith("#"):
+            return "FILLER", "", ""
+        return supported(text)
+
+    fake = FakeChecker(rule)
+    report, checked = check_bundle(bundle(), "", fake)
+    assert report.status == "passed" and report.reason == "" and report.corrections == []
+    assert checked.tags.song == ["photosynthesis", "studysong", "pop"]
+    assert checked.tags.lesson == ["photosynthesis", "explained"]
+    # The tag with no verdict is asked again each round, with what it is judged by; then it is dropped.
+    assert len(fake.payloads) == 3 and fake.ids(2) == ["tag:song-3"] and fake.ids(3) == ["tag:song-3"]
+    assert fake.payloads[1]["about"]["course"] == "AP Biology"
+    assert [(t.text, t.verdict, t.problem) for t in dropped_tags(report)] == [
+        ("#lightreactions", "UNSUPPORTED", "wrong"), ("#apbio", None, "")]
+    assert FactCheckReport.model_validate_json(report.model_dump_json()) == report
+
+
+def test_a_tag_never_rides_along_with_a_corrected_line():
+    fake = FakeChecker(seeded_is_wrong)
+    report, _ = check_bundle(bundle(), "", fake)
+    # The re-check is only the corrected lyric: the tags already have their verdicts.
+    assert fake.ids(2) == ["lyric:v1-2"] and "about" not in fake.payloads[1]
+
+
+def test_a_bundle_without_tags_sends_none_and_no_about():
+    fake = FakeChecker(supported)
+    report, checked = check_bundle(bundle(lambda d: d.pop("tags")), "", fake)
+    assert report.status == "passed" and "about" not in fake.payloads[0]
+    assert not [i for i in fake.ids(1) if i.startswith("tag:")]
+
+
+def test_run_posts_only_the_tags_that_passed_and_keeps_the_draft(tmp_path):
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    write(tmp_path / "bundle.json", bundle())
+    report = factcheck.run(tmp_path, ask=FakeChecker(lambda t: ("UNSUPPORTED", "", "") if t == "#pop" else supported(t)))
+    assert report.status == "passed"
+    assert read(tmp_path / "bundle.json", Bundle).tags.song == ["photosynthesis", "lightreactions", "apbio", "studysong"]
+    assert read(tmp_path / "bundle.draft.json", Bundle) == bundle()
+
+
+def test_a_report_from_before_tags_still_reads():
+    old = {"status": "passed", "reason": "", "rounds": 1, "corrections": [],
+           "lines": [{"kind": "lyric", "id": "v1-1", "text": "x", "verdict": "SUPPORTED", "source": "f1", "round": 1}]}
+    assert FactCheckReport.model_validate(old).lines[0].problem == ""
+

@@ -245,6 +245,7 @@ export interface Answer {
   model: string | null;
   createdAt: string;
   video: Video | null; // null: a text-only droplet
+  tags?: DropletTags; // each video's hashtags; absent from an API older than them
   breakdown: Breakdown | null; // null: the studio sent none (a lesson written by hand, or an older one)
   hidden: boolean; // an admin took it off the public Droplets tab
   replies: Reply[];
@@ -272,6 +273,12 @@ export interface DropletVideos {
   lessonPosterUrl: string | null;
 }
 
+/** Each video's hashtags, without the "#", most useful first (api/src/lib/tags.ts). The tab searches by them. */
+export interface DropletTags {
+  song: string[];
+  lesson: string[];
+}
+
 export interface DropletCard {
   id: string;
   title: string; // "AP Biology: ATP synthesis"
@@ -279,6 +286,7 @@ export interface DropletCard {
   topic: string;
   excerpt: string; // the lesson's first lines, plain text
   video: DropletVideos;
+  tags?: DropletTags; // absent from an API older than the tags
   // Absent from an API older than the likes and comments: the page then leaves them out.
   likeCount?: number;
   commentCount?: number;
@@ -364,8 +372,14 @@ export const api = {
   deleteReply: (id: string) => request<void>(`/replies/${id}`, { method: 'DELETE' }),
 
   // The public Droplets tab: no sign-in needed
-  listDroplets: (cursor?: string | null) =>
-    request<{ data: DropletCard[]; nextCursor: string | null }>(`/droplets${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`),
+  // With a tag, only the droplets whose song or lesson video carries it.
+  listDroplets: (cursor?: string | null, tag?: string | null) => {
+    const query = new URLSearchParams();
+    if (tag) query.set('tag', tag);
+    if (cursor) query.set('cursor', cursor);
+    const qs = query.toString();
+    return request<{ data: DropletCard[]; nextCursor: string | null }>(`/droplets${qs ? `?${qs}` : ''}`);
+  },
   getDroplet: (id: string) => request<Droplet>(`/droplets/${encodeURIComponent(id)}`),
   // Thumbs-up: idempotent both ways, so each may be retried through a gateway blip.
   setDropletLiked: (id: string, liked: boolean) =>

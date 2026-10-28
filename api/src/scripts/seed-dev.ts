@@ -2,6 +2,7 @@ import 'dotenv/config';
 import prisma from '../lib/prisma.js';
 import { generateApiKey } from '../lib/apikey.js';
 import { termsAccepted } from '../lib/terms.js';
+import { bundleTags } from '../lib/tags.js';
 
 // Local-development seed: three users (Ada is an admin), one agent, one topic with
 // its lesson, its two videos, a follow-up thread, and a like and a comment from Ada on
@@ -18,7 +19,8 @@ import { termsAccepted } from '../lib/terms.js';
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600e3);
 
 // What the studio saves with a lesson (docs/PLAN.md, step 1), cut down to what the
-// pages read: the title comes from course and topic, the song's words from lyrics.
+// pages read: the title comes from course and topic, the song's words from lyrics, and
+// each video's hashtags from tags (copied onto the answer as the API does: lib/tags.ts).
 const ATP_BUNDLE = {
   course: 'AP Biology',
   topic: 'ATP synthesis',
@@ -33,6 +35,18 @@ const ATP_BUNDLE = {
     { id: 'c1', section: 'chorus', text: 'Spin the rotor, make the ATP', names: ['ATP synthase'], fact_id: 'f2' },
     { id: 'c2', section: 'chorus', text: 'Every turn a little energy for me', names: [], fact_id: 'f2' },
   ],
+  tags: {
+    song: ['#ATPsynthesis', '#ATPsynthase', '#cellularrespiration', '#mitochondria', '#apbio', '#biology', '#studysong', '#kpop', '#studytok'],
+    lesson: ['#ATPsynthesis', '#ATPsynthase', '#cellularrespiration', '#mitochondria', '#apbio', '#biology', '#explained', '#studytok'],
+  },
+};
+const OSMOSIS_BUNDLE = {
+  ...ATP_BUNDLE,
+  topic: 'Osmosis',
+  tags: {
+    song: ['#osmosis', '#diffusion', '#cellmembrane', '#biology', '#studysong', '#poppunk'],
+    lesson: ['#osmosis', '#diffusion', '#cellmembrane', '#biology', '#explained'],
+  },
 };
 const PASSED = { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] };
 const SAMPLE_VIDEO = {
@@ -92,7 +106,7 @@ const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, 
 await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
 
 const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'ATP synthesis: how do cells actually make ATP?' } });
-const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
+const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, ...bundleTags(ATP_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
 
 1. The electron transport chain pumps protons (H+) out of the matrix, building up a **gradient** across the membrane.
 2. The protons can only flow back in through ATP synthase, and that flow spins its rotor.
@@ -113,7 +127,7 @@ await prisma.dropletComment.create({ data: { answerId: a1.id, userId: ada.id, cr
 await prisma.question.create({ data: { userId: ada.id, createdAt: hoursAgo(0.3), content: 'Photosynthesis: how do the light reactions and the Calvin cycle fit together?' } });
 
 const q3 = await prisma.question.create({ data: { userId: cal.id, status: 'ANSWERED', createdAt: hoursAgo(5), content: 'Osmosis, for my biology test on Monday' } });
-const a3 = await prisma.answer.create({ data: { questionId: q3.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(4.5), bundle: { ...ATP_BUNDLE, topic: 'Osmosis' }, factcheck: PASSED, ...SAMPLE_VIDEO, content: '**Osmosis** is water moving across a membrane toward the side with more dissolved stuff.' } });
+const a3 = await prisma.answer.create({ data: { questionId: q3.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(4.5), bundle: OSMOSIS_BUNDLE, ...bundleTags(OSMOSIS_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, content: '**Osmosis** is water moving across a membrane toward the side with more dissolved stuff.' } });
 
 // Filler history from earlier days (outside the 24h ask quota) so the list has
 // more than one page to scroll through.

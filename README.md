@@ -139,7 +139,7 @@ pipeline without posting anything, start a local job instead:
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
 python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
 python -m studio step factcheck <job-id>                               # re-run one step
-python -m studio show <job-id>                                         # facts, scenes, lyrics, checks, verdicts, runs, calls
+python -m studio show <job-id>                                         # facts, scenes, lyrics, tags, checks, verdicts, runs, calls
 ```
 
 Each droplet is written for one audience: high school, unless the learner's request says
@@ -194,12 +194,12 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24). Each: `{ id, title, course, topic, excerpt, video, likeCount, commentCount, liked, createdAt }` |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt }` |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 
 Only the title (the bundle's `course` and `topic`), the lesson text, the videos with
-their posters, the lyrics, the counts and the comments are public. The learner's name and
+their posters and hashtags, the lyrics, the counts and the comments are public. The learner's name and
 avatar, the request in their own words, their files and the follow-ups never leave through
 these. A comment names its author by first name and last initial ("Grace H."), never their
 full name, email, picture or id. `liked` and `mine` say what is the viewer's own when the
@@ -248,10 +248,53 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
-both URLs, both posters and the error; `breakdown`, its bill of materials (below); and
+both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below); and
 `hidden`, true when an admin took it off the Droplets tab. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
+
+### Tags
+
+Each video is tagged the way a TikTok is, so the Droplets tab can be searched: the brain
+writes 6 to 10 hashtags for the song video and for the lesson video as the last part of the
+bundle (`tags.song`, `tags.lesson`; the prompt is in `studio/prompts/bundle.md`). Both lists
+start with the topic, its key terms, the subject and the course ("#photosynthesis",
+"#thylakoid", "#apbio"); then come the video's own: the song's genre ("#kpop",
+"#studysong"), or what the lesson does ("#explained").
+
+The fact-check then checks every tag in the same call as the lines, by rules of its own
+(`studio/prompts/factcheck.md`, "Tags"): a tag passes when it names something the facts
+cover, or only the topic, a subject containing it, the course or the video itself (the
+checker is given the course, topic and song style for this). Anything else is dropped from
+both videos, never rewritten: a neighbouring topic the lesson does not cover
+("#calvincycle"), a claim, a style the song does not have, an artist, anything about the
+learner, or a tag that helps no one ("#fyp"). A tag never fails the droplet, and one that
+gets no verdict is dropped too, so only checked tags are posted. `python -m studio show`
+lists what was dropped and why. Like the lines, a tag passes only on what the facts say: a
+term the facts never mention is dropped even when it is related. No extra model call: the
+tags cost a few dozen tokens of the bundle's and a few hundred of the fact-check's.
+
+A tag is one word as a search matches it: lowercase letters (accents kept), digits and
+underscores, no "#" (the page adds it back), at most 40 characters, at most 10 to a video,
+and never one that reads as a phone number. The studio cleans them that way (`tag_of` in
+`studio/schemas.py`) and so do the API (`api/src/lib/tags.ts`) and the search box
+(`web/src/lib/tags.ts`), alike for every Unicode character and the same when cleaned twice,
+so a tag clicked on the page always finds its own droplet. The API keeps each video's on
+the answer (`songTags`, `lessonTags`, each with a GIN index) when the lesson is posted, and
+again when its videos go READY if they are still missing (a lesson posted to an API older
+than the tags, during a deploy). They read back as
+
+```json
+"tags": { "song": ["photosynthesis", "thylakoid", "apbio", "kpop", "studysong"],
+          "lesson": ["photosynthesis", "thylakoid", "apbio", "explained"] }
+```
+
+The page shows each video's under it, a card its first four, and every tag is a link to
+`/droplets?tag=<tag>`; the box at the top of the tab searches by a tag typed in any form.
+A search matches whole tags, as a hashtag search does: `#photo` does not find
+`#photosynthesis`. Droplets posted before tags existed have none. A common tag walks the
+newest-first index and stops at a page; a rare one reads the GIN indexes: on 200,000
+droplets, under a millisecond either way.
 
 ### Bill of materials
 
@@ -339,8 +382,8 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 
 Two sides, kept apart in the API (`api/src/lib/privacy.ts`):
 
-- **Public:** the lesson, its videos, lyrics and a title from the bundle's `course` and
-  `topic`, on the Droplets tab. Nothing about who asked.
+- **Public:** the lesson, its videos, lyrics, hashtags and a title from the bundle's
+  `course` and `topic`, on the Droplets tab. Nothing about who asked.
 - **The learner's own:** their name, email and photo, the request in their words, their
   files and the follow-up thread. A learner sees only their own topics on `/learn`, and only
   they post follow-ups in their thread. Admins see everyone's (to moderate and fix things)

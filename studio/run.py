@@ -252,7 +252,9 @@ def make_factcheck(job: Path, api: Api, question: dict, ask) -> str:
     report = factcheck_step.run(job, ask=ask)
     if report.status == "failed":
         raise StepFailed(report.reason)
-    return f"passed in {report.rounds} round(s), {len(report.corrections)} correction(s)"
+    dropped = len(factcheck_step.dropped_tags(report))
+    return f"passed in {report.rounds} round(s), {len(report.corrections)} correction(s)" + (
+        f", {dropped} tag(s) dropped" if dropped else "")
 
 
 def post_lesson(job: Path, api: Api, question: dict | None, ask) -> str:
@@ -366,7 +368,9 @@ def summary(question_id: str) -> str:
             parts.append(", ".join(timed) + ".")
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
-        parts.append(f"Fact-check {report.status} in {report.rounds} round(s), {len(report.corrections)} correction(s).")
+        dropped = len(factcheck_step.dropped_tags(report))
+        parts.append(f"Fact-check {report.status} in {report.rounds} round(s), {len(report.corrections)} correction(s)"
+                     + (f", {dropped} tag(s) dropped." if dropped else "."))
     posted = (job / "posted.json").exists()
     parts.append("Lesson posted." if posted else "A run is still going." if running else "No lesson posted.")
     video_runs = [r for r in runs if r.get("part") == "videos"]

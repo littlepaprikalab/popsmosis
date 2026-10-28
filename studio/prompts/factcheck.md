@@ -10,9 +10,12 @@ You get JSON with:
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
   row's cells are separated by " | "), and "frq:..." a line of the exam question both
   videos read aloud at the end: its prompt, the predict question, or a step of the model
-  answer. Lines come in order, so read each one in the
+  answer. "tag:..." is a hashtag under one of the videos, judged by its own rules (Tags,
+  below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only.
+- `about`, only when there are tags: the lesson's `course` and `topic` and the song's
+  `song_style`. It is there for the tags alone; it never makes any other line supported.
 
 Judge each line against the facts and the study guide alone. Your own knowledge never
 makes a claim supported, though you should read the facts the way an exam would. Return
@@ -65,3 +68,24 @@ For example, with the fact "The Treaty of Versailles, signed in 1919, made Germa
 responsibility for the war and pay reparations", the line "Versailles ended the fighting
 in 1919" is UNSUPPORTED: the fact says when the treaty was signed, not when the fighting
 ended. Corrected: "Versailles was signed in 1919".
+
+## Tags
+
+A line whose id starts with "tag:" is a hashtag under a video ("tag:song-3" under the song
+video, "tag:lesson-2" under the lesson video). Students search the Droplets tab by them, so
+judge a tag by one question: would a student searching for it be right to find this video?
+
+- **SUPPORTED**: it names a topic, term, structure or process the facts cover
+  ("#thylakoid", "#atpsynthase"). `source` is the fact id, as for any line.
+- **FILLER**: it names no content of its own beyond what `about` gives: the topic, or a
+  broader subject that contains it ("#photosynthesis" for the light reactions,
+  "#biology"); the course or exam ("#apbio"); or the video itself, its format or the
+  song's style as `song_style` describes it ("#studysong", "#kpop", "#explained",
+  "#studytok"). `source` is "".
+- **UNSUPPORTED**: anything else. A topic or term the facts do not cover, even a
+  neighbouring one ("#calvincycle" for a lesson on the light reactions); a claim (a tag
+  names, it never asserts); a style the song does not have; an artist, band or brand;
+  anything about the learner (a name, school, teacher or class); a tag that helps no one
+  find this video ("#fyp", "#foryou", "#viral"); or anything not right for a classroom.
+  `problem` says why in a few words, and `corrected` is "": a tag that fails is dropped,
+  never rewritten.
