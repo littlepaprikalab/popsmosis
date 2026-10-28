@@ -97,6 +97,26 @@ def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     assert art.compose({}, {"Cytochrome b6f": 1.0})[1] is lit  # composed once, then reused
 
 
+def test_on_dark_art_the_ghost_and_the_spotlight_fade_toward_its_background(tmp_path):
+    from studio import svg
+
+    dark = sample_media.write_job(tmp_path / "dark", art=True)
+    path = dark / media.art_path("overview")
+    rgb = skia.Image.open(str(path)).toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3].copy()
+    rgb[(rgb > 250).all(axis=2)] = (40, 55, 75)  # the white behind the diagram, now dark slate
+    path.write_bytes(svg.png(rgb))
+    art = SceneArt(dark, jobs.read(dark / media.LOCATIONS, Locations).scene("overview"))
+    _, plain = art.compose({}, {})
+    _, ghosted = art.compose({"Cytochrome b6f": 1.0}, {})
+    _, lit = art.compose({}, {"Cytochrome b6f": 1.0})
+    b6f = located(dark, "overview", "Cytochrome b6f").centroid
+    thylakoid = located(dark, "overview", "Thylakoid").label_anchor
+    assert ghosted.toarray()[int(b6f.y), int(b6f.x)][:3].max() < 110  # dark, not a white blob
+    before = plain.toarray()[int(thylakoid.y), int(thylakoid.x)][:3]
+    after = lit.toarray()[int(thylakoid.y), int(thylakoid.x)][:3]
+    assert after.max() < before.max() - 40  # the others dimmed into the background, not washed white
+
+
 def test_the_lyric_band_is_white_and_marks_the_word_being_sung(song):
     beat = song.timeline.beats[0]
     word = beat.words[1]

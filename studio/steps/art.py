@@ -45,7 +45,7 @@ again with what was wrong, up to MAX_TRIES pictures in all. A picture with text 
 never used (the renderer draws every label); after the last try the scene keeps the
 text-free picture with the fewest problems, and the step fails if there is none.
 
-Writes, per scene, art/<scene>.png (fitted to the art's size on white), then
+Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
 art/<scene>.json, last: the key (as above), the model, the prompt and the helper's
 check, so the picture counts as done only for this bundle. A refused picture is kept as
 art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
@@ -316,10 +316,12 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
 # --- the painted art: Gemini 3.1 Flash Image or Muse Image -------------------------------------
 
 # After every scene's prompt. The look is the scene's own (its image_prompt ends with the look its
-# kind of textbook gives it: a cell biology figure's flat shading, an astronomy schematic), so this
-# says only what every picture needs.
-STYLE = ("On a plain white background, every part well inside the frame. "
-         "No text, labels, letters or numbers anywhere in the picture.")
+# kind of textbook gives it: a modern cell biology illustration, an astronomy schematic), so this
+# says only what every picture needs. A dark slate blue background, as a modern study infographic
+# has: the colours stand out on it, and so do the renderer's white label pills. Code reads the
+# background's colour off each picture's edge (media.paper), so any plain colour works.
+STYLE = ("On a plain, flat dark slate blue background, every part well inside the frame, with clear space "
+         "around each part for its label. No text, labels, letters or numbers anywhere in the picture.")
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The video's \
@@ -409,13 +411,15 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
 
 
 def fit(picture: bytes) -> np.ndarray:
-    """A painted picture (any size, roughly the art's shape) scaled to fit the art on white, centred: RGB."""
+    """A painted picture (any size, roughly the art's shape) scaled to fit the art, centred, on its own
+    background colour (media.paper): RGB."""
     image = skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy(picture))
     if image is None:
         raise media.StepFailed("the painted picture is not an image skia can read")
+    r, g, b = media.paper(image.toarray(colorType=skia.kRGBA_8888_ColorType))
     surface = skia.Surface(media.ART_WIDTH, media.ART_HEIGHT)
     canvas = surface.getCanvas()
-    canvas.clear(skia.ColorWHITE)
+    canvas.clear(skia.Color(r, g, b))
     scale = min(media.ART_WIDTH / image.width(), media.ART_HEIGHT / image.height())
     w, h = image.width() * scale, image.height() * scale
     canvas.drawImageRect(image, skia.Rect.MakeXYWH((media.ART_WIDTH - w) / 2, (media.ART_HEIGHT - h) / 2, w, h),

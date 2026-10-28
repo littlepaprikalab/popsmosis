@@ -164,6 +164,34 @@ def test_ask_streams_records_the_call_and_validates(monkeypatch):
     assert call.label == "factcheck round 1" and call.stop_reason == "end_turn"
 
 
+class TooLargeWhenStrict(FakeStream):
+    """Refuses any request whose schema is in output_config, as the API does a schema too large to compile."""
+
+    def __enter__(self):
+        if "format" in self.sent[-1]["output_config"]:
+            import anthropic
+
+            response = NS(status_code=400, headers={}, request=None)
+            raise anthropic.BadRequestError("Error code: 400 - The compiled grammar is too large, which would "
+                                            "cause performance issues.", response=response, body=None)
+        return self
+
+
+def test_a_schema_too_large_for_claudes_grammar_is_asked_for_in_the_prompt(monkeypatch):
+    sent = []
+    fenced = "Here it is.\n```json\n" + ANSWER + "\n```"
+    client = NS(beta=NS(messages=NS(stream=TooLargeWhenStrict(message([text(fenced)]), sent))))
+    monkeypatch.setitem(brain._clients, "claude", client)
+    monkeypatch.setattr(brain, "calls", [])
+    monkeypatch.setattr(brain, "_too_large", set())
+    assert brain.ask("brain", "Check.", FactCheck) == FactCheck.model_validate_json(ANSWER).model_dump()
+    assert "format" in sent[0]["output_config"] and "format" not in sent[1]["output_config"]
+    assert '"properties"' in sent[1]["messages"][0]["content"][-1]["text"]  # the schema, in the prompt
+    brain.ask("brain", "Again.", FactCheck)
+    assert len(sent) == 3 and "format" not in sent[2]["output_config"]  # not tried strictly again this run
+    assert len(brain.calls) == 2  # the refused request generated nothing, so it is not a call
+
+
 def test_a_refused_call_is_still_recorded(monkeypatch):
     refusal = message([], "refusal", usage_=usage(800, 0), stop_details=NS(category=None, explanation=None))
     client = NS(beta=NS(messages=NS(stream=FakeStream(refusal, []))))

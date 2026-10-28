@@ -67,9 +67,10 @@ class RenderError(Exception):
 # --- each scene, once ----------------------------------------------------------------------
 
 
-def _drawn_box(pixels: np.ndarray, located: SceneLocations) -> tuple[float, float, float, float]:
-    """Around everything drawn on the white art, and every located structure: what "the whole scene" frames."""
-    drawn = pixels[..., :3].min(axis=2) < 240
+def _drawn_box(pixels: np.ndarray, located: SceneLocations, paper: tuple[int, int, int]) -> tuple[float, float, float, float]:
+    """Around everything drawn on the art's background, and every located structure: what "the whole
+    scene" frames."""
+    drawn = np.abs(pixels[..., :3].astype(np.int16) - np.array(paper, np.int16)).max(axis=2) > 15
     rows, cols = np.flatnonzero(drawn.any(axis=1)), np.flatnonzero(drawn.any(axis=0))
     if not len(rows):
         return 0.0, 0.0, float(pixels.shape[1]), float(pixels.shape[0])
@@ -97,6 +98,8 @@ class SceneArt:
         pixels = _read(art_file, skia.kBGRA_8888_ColorType)
         pixels[..., 3] = 255
         self.width, self.height = pixels.shape[1], pixels.shape[0]
+        b, g, r = media.paper(pixels)  # the art's background, which the washes fade toward
+        self.paper = skia.Color(r, g, b)
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
         self.masks: dict[str, skia.Image] = {}
         for s in located.structures:
@@ -110,7 +113,7 @@ class SceneArt:
         self._ghosts: dict[str, skia.Image] = {}
         self._spots: dict[str, skia.Image] = {}
         self._composed: OrderedDict[tuple, skia.Image] = OrderedDict()
-        self.content = _drawn_box(pixels, located)
+        self.content = _drawn_box(pixels, located, (b, g, r))
         self.centre = (self.width / 2, self.height / 2)
         if located.structures:
             self.centre = (sum(s.centroid.x for s in located.structures) / len(located.structures),
@@ -121,7 +124,7 @@ class SceneArt:
         return skia.Surface.MakeRaster(skia.ImageInfo.Make(self.width, self.height, kind, skia.kPremul_AlphaType))
 
     def ghost(self, name: str) -> skia.Image:
-        """Where the structure is, with a soft edge: drawn white at GHOST_WASH over the art.
+        """Where the structure is, with a soft edge: drawn in the background's colour at GHOST_WASH over the art.
 
         Washes are alpha only (a byte a pixel), so a scene with many structures stays small."""
         if name not in self._ghosts:
@@ -134,7 +137,8 @@ class SceneArt:
         return self._ghosts[name]
 
     def spot(self, name: str) -> skia.Image:
-        """Everywhere but the structure: drawn white at SPOT_WASH, it leaves only that one bright."""
+        """Everywhere but the structure: drawn in the background's colour at SPOT_WASH, it leaves only that
+        one bright."""
         if name not in self._spots:
             surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
@@ -159,10 +163,10 @@ class SceneArt:
         canvas.drawImage(self.art, 0, 0)
         for name, level in key[0]:
             canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
-                             skia.Paint(Color=skia.ColorWHITE, Alphaf=GHOST_WASH * level))
+                             skia.Paint(Color=self.paper, Alphaf=GHOST_WASH * level))
         for name, level in key[1]:
             canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
-                             skia.Paint(Color=skia.ColorWHITE, Alphaf=SPOT_WASH * level))
+                             skia.Paint(Color=self.paper, Alphaf=SPOT_WASH * level))
         image = surface.makeImageSnapshot()
         self._composed[key] = image
         while len(self._composed) > 6:
@@ -438,7 +442,7 @@ class Renderer:
         if self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
             return
-        canvas.clear(skia.ColorWHITE)
+        canvas.clear(art.paper)
         scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
         canvas.translate(dx, dy)

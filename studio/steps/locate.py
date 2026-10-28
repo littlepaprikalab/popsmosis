@@ -22,7 +22,7 @@ With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each s
 Every match is held to the structure's colour first (Colours): the bundle gives each
 structure in a scene its own colour and Muse Image paints it so, so a match whose pixels
 are mostly another structure's colour is another structure, and is dropped, as is one that
-is mostly the white background (unless the structure is itself near white). On the first
+is mostly the art's background (unless the structure is itself near its colour). On the first
 live runs a box drawn around two Earths came back as one Earth's northern half, labelled
 "Southern Hemisphere", and a "gray plug" as the pale sky above a membrane. A structure left
 out is better than one labelled wrong.
@@ -52,9 +52,9 @@ WORKERS = 4  # scenes located at once
 # least this share are its own. On the first live runs every right match scored 0.58 or more,
 # and the one that would have been labelled wrong 0.40.
 MIN_OWN_COLOUR = 0.5
-# Nor is a match that is mostly the white background (or near-white washes around the art) the
-# structure, unless its own colour is near white: a "gray plug" once came back as the pale sky above
-# a membrane, all of it background. Right matches were at most 0.39 background.
+# Nor is a match that is mostly the art's background (read off its edge: media.paper) the structure,
+# unless its own colour is near the background's: a "gray plug" once came back as the pale sky above a
+# membrane, all of it background. Right matches were at most 0.39 background.
 MAX_BACKGROUND = 0.6
 CLOSE = 30.0  # how near a pixel is to a colour to count as it: Lab distance, lightness counted half
 SAME = 10.0  # two structures this near in colour are one colour here (an analogy part and its structure)
@@ -188,20 +188,22 @@ def _lab(rgb: np.ndarray) -> np.ndarray:
 
 class Colours:
     """Which structure each pixel of a scene's art is coloured as: the nearest of the scene's
-    structure colours and white, when it is near enough to count as any."""
+    structure colours and the art's background (white, or the dark slate Muse Image paints), when it is
+    near enough to count as any."""
 
     def __init__(self, picture: Path, scene: Scene):
         import skia
 
-        refs = [s.color_hex for s in scene.structures] + ["#FFFFFF"]
+        rgb = skia.Image.open(str(picture)).toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3]
+        refs = [[int(s.color_hex[i:i + 2], 16) for i in (1, 3, 5)] for s in scene.structures] + [media.paper(rgb)]
         self.names = [s.name for s in scene.structures]
-        self.refs = _lab(np.array([[int(h[i:i + 2], 16) for i in (1, 3, 5)] for h in refs]))
-        self.pixels = _lab(skia.Image.open(str(picture)).toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3])
+        self.refs = _lab(np.array(refs))
+        self.pixels = _lab(rgb)
         self.dropped = 0
 
     def judge(self, mask: np.ndarray, structure: Structure) -> tuple[float, float | None]:
-        """The share of the mask's pixels that are the white background, unless the structure is itself
-        near white (then 0); and of its pixels coloured as some structure, the share coloured as this one,
+        """The share of the mask's pixels that are the background, unless the structure is itself near
+        its colour (then 0); and of its pixels coloured as some structure, the share coloured as this one,
         None when too few are coloured as any (a picture painted in other colours) to judge."""
         mine = self.names.index(structure.name)
         pixels = self.pixels[mask]
@@ -212,11 +214,11 @@ class Colours:
         nearest, close = distance.argmin(1), distance.min(1) <= CLOSE
         apart = np.sqrt((((self.refs - self.refs[mine]) * weight) ** 2).sum(-1))
         own_colour = apart <= SAME
-        own_colour[-1] = False  # white is the background, never a structure's own colour here
-        white = (nearest == len(self.refs) - 1) & close
-        background = 0.0 if apart[-1] <= CLOSE else float(white.mean())
+        own_colour[-1] = False  # the background is never a structure's own colour here
+        backdrop = (nearest == len(self.refs) - 1) & close
+        background = 0.0 if apart[-1] <= CLOSE else float(backdrop.mean())
         own = (own_colour[nearest] & close).sum()
-        other = (~own_colour[nearest] & ~white & close).sum()
+        other = (~own_colour[nearest] & ~backdrop & close).sum()
         if own + other < JUDGED * len(pixels):
             return background, None
         return background, float(own / (own + other))

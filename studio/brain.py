@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import json
 import os
 import threading
 import time
@@ -424,10 +425,22 @@ def claude_brain() -> tuple[str, str]:
     return brain_model(), effort
 
 
+# Claude's structured outputs compile the schema into a grammar, which has a size limit. The bundle's
+# schema outgrew it on Oct 28 (every field compiles alone; with direction and tags added, the whole does
+# not), and the API refuses such a request with this message. A schema refused for it is then asked for in
+# the prompt instead, and the answer is validated as every answer is (parse()).
+GRAMMAR_TOO_LARGE = "compiled grammar is too large"
+_too_large: set[str] = set()  # names of the schemas the API refused for it, this run
+SCHEMA_IN_PROMPT = ("\n\nAnswer with one JSON object that fits this JSON schema, and nothing else: no "
+                    "prose before or after it, no code fence.\n\n{schema}")
+
+
 def claude_request(
-    role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None
+    role: str, prompt: str, schema: type[BaseModel] | None, images: Sequence[str | Path], system: str | None,
+    constrained: bool = True,
 ) -> dict:
-    """The keyword arguments for client.beta.messages.stream()."""
+    """The keyword arguments for client.beta.messages.stream(). With constrained False, the schema goes
+    in the prompt rather than in output_config (GRAMMAR_TOO_LARGE)."""
     if role == "brain":
         model, effort = claude_brain()
     else:
@@ -436,9 +449,11 @@ def claude_request(
         {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": data}}
         for media_type, data in map(_image, images)
     ]
+    if schema is not None and not constrained:
+        prompt += SCHEMA_IN_PROMPT.format(schema=json.dumps(strict_schema(schema)))
     content.append({"type": "text", "text": prompt})
     output_config: dict = {"effort": effort}
-    if schema is not None:
+    if schema is not None and constrained:
         output_config["format"] = {"type": "json_schema", "schema": strict_schema(schema)}
     request = {
         "model": model,
@@ -457,7 +472,8 @@ def claude_request(
 def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
     import anthropic
 
-    request = claude_request(role, prompt, schema, images, system)
+    constrained = schema is None or schema.__name__ not in _too_large
+    request = claude_request(role, prompt, schema, images, system, constrained)
     if "claude" not in _clients:
         # The studio's calls bill to the API account behind this key, never to
         # whatever other credential the machine happens to hold.
@@ -470,10 +486,24 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
         # Streamed so a long answer never trips the SDK's request timeout.
         with _clients["claude"].beta.messages.stream(**request) as stream:
             message = stream.get_final_message()
+    except anthropic.BadRequestError as e:
+        # No error type of its own: the message is the only sign. Nothing was generated or billed.
+        if constrained and schema is not None and GRAMMAR_TOO_LARGE in str(e):
+            _too_large.add(schema.__name__)
+            return _ask_claude(role, prompt, schema, images, system, label)
+        raise BrainError(f"{request['model']}: {e}") from e
     except anthropic.APIError as e:
         raise BrainError(f"{request['model']}: {e}") from e
     _record(claude_call(message, request["model"], role, label, time.monotonic() - started))
-    return claude_texts(message)
+    texts = claude_texts(message)
+    return texts if constrained else [json_part(t) for t in texts]
+
+
+def json_part(text: str) -> str:
+    """The JSON object in an answer asked for in the prompt: from its first brace to its last, so a code
+    fence or a line of prose around it does not fail validation."""
+    start, end = text.find("{"), text.rfind("}")
+    return text[start:end + 1] if 0 <= start < end else text
 
 
 def claude_call(message, asked_model: str, role: str, label: str, seconds: float) -> Call:

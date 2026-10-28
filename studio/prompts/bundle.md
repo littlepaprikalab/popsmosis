@@ -103,22 +103,31 @@ together they go from what the learner already knows to the parts they are learn
   the finer parts out.
 
 - `image_prompt` asks an illustrator for the scene the way a teacher asks for a standard
-  textbook diagram, in one to three plain sentences. Start with the kind of diagram and
-  the textbook it would come from, then say what it shows and how it is oriented:
+  textbook diagram, in a few plain sentences. Start with the kind of diagram and the
+  textbook it would come from, then say what it shows and how it is oriented:
   "Educational diagram, as a Campbell Biology figure draws it, of a thylakoid membrane in
   cross-section: the membrane across the middle, the stroma above, the lumen below, four
   protein complexes passing through it..." or "Educational diagram, as an Earth science
   textbook draws it, of the Sun and Earth oriented to show why Earth has seasons: the Sun
   on the left, Earth on the right with its axis tilted 23.5 degrees toward the Sun, and
   parallel rays of sunlight reaching it." The illustrator knows what the standard diagrams
-  look like, and is best at drawing one it knows. Pick the kind that fits the subject, and
-  end the request with the look that kind of textbook gives it, in these words:
-  - A cell or molecular process (membranes, organelles, proteins, molecules): "drawn the
-    way biology textbooks draw membrane processes: simple, smooth, rounded shapes with
-    soft flat shading and thin dark outlines, not atomic detail; the membrane a
-    phospholipid bilayer of round grey heads and yellow tails; each compartment a flat
-    pale colour; ions and small molecules as small spheres." This is the figure students
-    know from their textbook, not a detailed molecular rendering.
+  look like, and is best at drawing one it knows.
+- Then say where everything is and where each step happens, in the order the process
+  runs: "Glycolysis in the cytoplasm on the left, glucose split into two pyruvate; the
+  pyruvate passing into a mitochondrion cut open in the middle; the Krebs cycle as a ring
+  of arrows in its matrix; the electron transport chain as a row of protein complexes
+  along its folded inner membrane, ATP synthase among them." Wherever the request leaves
+  the layout out, the illustrator invents one, and an invented one is often wrong (the
+  Krebs cycle drawn in the cytoplasm, the chain along the cell's outer membrane). Say only
+  what is true and what the scene needs.
+- Pick the kind that fits the subject, and end the request with the look that kind of
+  textbook gives it, in these words:
+  - A cell or molecular process (membranes, organelles, proteins, molecules): "a clean,
+    modern biology textbook illustration: semi-realistic organelles and proteins, soft
+    gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid
+    bilayer; ions and small molecules as small glossy spheres." This is the figure
+    students know from a modern textbook or study guide, not a detailed molecular
+    rendering.
   - Anatomy (the brain, organs, body systems): "a softly shaded medical textbook
     illustration."
   - Astronomy, Earth science, physics or chemistry: "a clean textbook schematic, each
@@ -139,8 +148,9 @@ together they go from what the learner already knows to the parts they are learn
     thing ("the globe's northern half tinted orange, its southern half tinted pink, the
     continents showing through"), never a solid paint that hides what it is.
   - Leave out anything the lesson does not need. Never ask for text, labels, letters or
-    numbers in the art: the renderer draws every label. The art step adds the white
-    background and keeps the structures away from the edges of the frame.
+    numbers in the art: the renderer draws every label. The art step adds the background
+    (a plain dark slate blue), clear space for the labels, and keeps the structures away
+    from the edges of the frame.
 - `structures` are the parts that scene reveals and labels, and every scene has at least
   one. For an abstract topic they are the parts of its diagram: the sections of a bar, the
   branches of a tree, the regions of a chart. `name` is the label as it should read on
@@ -154,9 +164,10 @@ together they go from what the learner already knows to the parts they are learn
   names, and each extra adjective makes it likelier to miss: "yellow flashlight", not
   "golden yellow small flashlight". No positions, commands or negations: the model goes
   by what the thing looks like. `color_hex` is its colour as #RRGGBB.
-- A structure keeps one name and one colour in every scene and both videos. Pick distinct
-  mid-tone colours that read well on white. Only an analogy part shares a colour, with the
-  structure it stands for.
+- A structure keeps one name and one colour in every scene and both videos. Pick distinct,
+  bright mid-tone colours that stand out on the art's dark slate blue background; never
+  navy, slate, dark grey or near black, which disappear into it. Only an analogy part
+  shares a colour, with the structure it stands for.
 - Structures in one scene never overlap. A group (the brainstem, the limbic system, the
   cerebral cortex) and its parts (medulla and pons; amygdala and hippocampus; the four
   lobes) can't both be structures in the same scene. When the core idea is about groups,

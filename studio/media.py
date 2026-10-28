@@ -2,7 +2,7 @@
 
 Every path is relative to the job folder, jobs/<id>/. The models are in studio/schemas.py.
 
-    art/<scene>.png                     3     RGB, ART_WIDTH x ART_HEIGHT, white background, no text in it
+    art/<scene>.png                     3     RGB, ART_WIDTH x ART_HEIGHT, a plain background, no text in it
     masks/<scene>/<structure>.png       3/4   8-bit greyscale, the art's size: 255 where the structure is
                                               visible in the art (what covers it is left out), 0 elsewhere
     locations.json                      3/4   Locations: each structure's mask, box, centroid, label anchor
@@ -51,6 +51,8 @@ import re
 from pathlib import Path
 from types import ModuleType
 
+import numpy as np
+
 from studio.schemas import SAFE_PATH, Bundle  # every path built here passes SAFE_PATH
 
 MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
@@ -82,6 +84,20 @@ def file_name(name: str) -> str:
         return name
     digest = hashlib.sha256(name.encode("utf-8")).hexdigest()[:6]
     return f"{plain}-{digest}" if plain else digest
+
+
+PAPER_EDGE = 6  # pixels: the ring around a picture whose colour is its background
+
+
+def paper(pixels: np.ndarray) -> tuple[int, int, int]:
+    """A picture's background colour: the median of a thin ring around its edge, its channels in the
+    picture's own order (H x W x 3 or more). White for the SVG art; for Muse Image's, whatever it painted
+    behind the diagram (dark slate blue, as art.STYLE asks)."""
+    rgb = pixels[..., :3]
+    e = PAPER_EDGE
+    ring = np.concatenate([rgb[:e].reshape(-1, 3), rgb[-e:].reshape(-1, 3),
+                           rgb[:, :e].reshape(-1, 3), rgb[:, -e:].reshape(-1, 3)])
+    return tuple(int(v) for v in np.median(ring, axis=0))
 
 
 def art_path(scene: str) -> str:

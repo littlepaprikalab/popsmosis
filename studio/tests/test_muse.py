@@ -50,10 +50,13 @@ def disc(x: int, y: int, r: int) -> np.ndarray:
     return (xs - x) ** 2 + (ys - y) ** 2 <= r * r
 
 
-def painting(scene_id: str) -> bytes:
+SLATE = (40, 55, 75)  # the dark slate blue art.STYLE asks Muse Image to paint behind the diagram
+
+
+def painting(scene_id: str, paper=(255, 255, 255)) -> bytes:
     """Muse Image's picture of a sample scene, stood in for: each structure a disc in its own
-    colour, where the stand-in SAM finds it (SPOTS), on white."""
-    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), 255, np.uint8)
+    colour, where the stand-in SAM finds it (SPOTS), on white or another plain background."""
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), paper, np.uint8)
     for structure in next(s for s in sample_media.bundle().scenes if s.id == scene_id).structures:
         pixels[disc(*SPOTS[structure.name])] = tuple(bytes.fromhex(structure.color_hex[1:]))
     return svg.png(pixels)
@@ -165,6 +168,14 @@ def test_a_picture_of_another_shape_is_fitted_to_the_art_on_white():
     assert pixels[512, 896, 0] > 150 and pixels[512, 896, 1] < 60  # its red middle, in the middle
     with pytest.raises(media.StepFailed, match="not an image"):
         art.fit(b"not a picture")
+
+
+def test_a_picture_on_a_dark_background_is_fitted_on_that_colour():
+    pixels = np.full((1000, 1000, 3), SLATE, np.uint8)
+    pixels[300:700, 300:700] = (200, 0, 0)
+    fitted = art.fit(svg.png(pixels))
+    assert tuple(fitted[512, 10]) == pytest.approx(SLATE, abs=2)  # either side of the square, its own slate
+    assert fitted[512, 896, 0] > 150
 
 
 def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wrong(job, monkeypatch):
@@ -373,6 +384,22 @@ def test_a_match_on_the_white_background_is_dropped(job, monkeypatch):
     result = locate.run(job, FakeHelper())
     assert result == ("located 3 of 4 structures with SAM 3.1; dropped 2 matches in another structure's colour; "
                       "left out Cytochrome b6f on overview")
+
+
+def test_a_match_on_a_dark_background_is_dropped_too(job, monkeypatch):
+    # The background is read off the art's edge, so the dark slate counts as background as white did.
+    painted(job, monkeypatch, pictures={scene.id: [painting(scene.id, SLATE)] for scene in sample_media.bundle().scenes},
+            spots={**SPOTS, "Cytochrome b6f": (200, 900, 80)})  # where nothing is painted
+    result = locate.run(job, FakeHelper())
+    assert result == ("located 3 of 4 structures with SAM 3.1; dropped 2 matches in another structure's colour; "
+                      "left out Cytochrome b6f on overview")
+
+
+def test_the_background_is_read_off_the_pictures_edge():
+    pixels = np.full((200, 300, 3), SLATE, np.uint8)
+    pixels[50:150, 100:200] = (200, 0, 0)
+    pixels[0, :40] = (255, 255, 255)  # a stray light streak along the edge does not move the median
+    assert media.paper(pixels) == SLATE
 
 
 def test_a_picture_in_none_of_the_structures_colours_is_not_judged_by_colour(job, monkeypatch):

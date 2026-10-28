@@ -249,7 +249,10 @@ repair what code safely can (no spotlight, the whole scene) and report the rest
 in `checks.json`.
 
 The bundle is roughly 6–10k tokens. If it ever outgrows a model's output limit (Claude's
-is 128K), split it into two calls: parts 1–2, then 3–7.
+is 128K), split it into two calls: parts 1–2, then 3–7. Claude's structured outputs compile the schema into a grammar
+with a size limit, and the bundle's schema outgrew it on Oct 28 (with `direction` and
+`tags`): a schema the API refuses for that is asked for in the prompt instead, and the
+answer validated as every answer is (`studio/brain.py`).
 
 ### Step 2: fact-check
 
@@ -477,12 +480,14 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
 - **Primitives** (`studio/render/primitives.py`):
   - **Camera:** the world is art pixel coordinates; per beat, ease zoom and pan toward
     the target structure's centroid; clamp to the art's bounds.
-  - **Ghost:** unrevealed structures drawn pale through their mask (white wash at ~85%
-    alpha, blurred edge); fade to full over 0.4 s when revealed. A structure the video
+  - **Ghost:** unrevealed structures faded into the art's background through their mask (a
+    wash in the background's colour, read off the art's edge, at ~85% alpha, blurred edge:
+    pale on the SVG art's white, dark on Muse Image's slate); fade to full over 0.4 s when
+    revealed. A structure the video
     never names on a scene is drawn as it is, unlabelled: as a ghost it washed its part of
     the picture out for as long as the scene was on screen.
-  - **Spotlight:** wash all other structures pale. Never add a glow on top (it tints the
-    colours).
+  - **Spotlight:** wash all other structures toward the background. Never add a glow on top
+    (it tints the colours).
   - **Label:** white rounded pill, 3.5 px outline in the structure's colour, text in a
     darkened version of that colour, Inter Bold, a leader line and a 6 px dot at the
     mask's `label_anchor`. Pills stay inside the frame and avoid each other (a simple
@@ -521,7 +526,8 @@ video in under 5 minutes per layout.
 
 ## 8. Quality rules (also the QA checklist)
 
-- One style: textbook shaded vector on white. Never anime, personified characters,
+- One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
+  coding) on a plain dark slate blue background; the SVG art's on white. Never anime, personified characters,
   clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
 - No text baked into the art; the renderer draws all text.
 - A fixed colour per structure across all scenes and both videos.
