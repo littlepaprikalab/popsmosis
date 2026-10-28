@@ -102,6 +102,7 @@ export function followUpContext(bundle: unknown) {
   return {
     course: str(bundle.course),
     topic: str(bundle.topic),
+    audience: str(bundle.audience),
     coreIdea: str(bundle.core_idea),
     facts: list(bundle.facts).map((f) => ({ id: str(f.id), text: str(f.text) })),
     misconception: str(bundle.misconception),

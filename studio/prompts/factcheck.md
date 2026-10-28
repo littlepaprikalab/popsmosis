@@ -36,6 +36,18 @@ one check per line, with the line's id:
   false. `problem` says what is wrong in one sentence, and `corrected` is the line
   rewritten to say only what the facts support.
 
+Figures of speech are claims too: an analogy, a metaphor, a part that acts like a person,
+a story told about a molecule. Judge the point the image makes about the real thing, not
+its literal words. "Protons turn the rotor like water turns a wheel" is SUPPORTED when a
+fact says the flow of protons turns the rotor. An image is UNSUPPORTED when the point it
+makes is wrong or not in the facts, or when it would lead a learner to believe something
+false (calling a part that only lets protons through a "pump").
+
+Whatever its facts, a line that is not fit to play or show in a classroom is UNSUPPORTED:
+crude, sexual or hateful language, cruelty played for laughs, gore for shock, or a name
+or detail about a person the facts do not mention. Students of every age watch these
+videos.
+
 When you write `corrected`:
 
 - Keep the line's job and voice. A lyric stays a singable lyric of about the same length
@@ -45,7 +57,9 @@ When you write `corrected`:
 - Keep every structure name the line uses: hearing the name is what reveals the structure
   on screen.
 - Fix the claim rather than replacing it with filler, unless the facts support nothing
-  like it.
+  like it. Keep the line's image or analogy when a true version of it exists: fix what
+  it says, not the picture.
+- For a line not fit for a classroom, keep its job and drop what made it unfit.
 
 For SUPPORTED and FILLER lines, `problem` and `corrected` are "". Check every line you
 are given, each exactly once.

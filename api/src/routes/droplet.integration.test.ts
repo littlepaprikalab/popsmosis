@@ -232,13 +232,20 @@ d('droplet endpoints', () => {
     expect((await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' })).statusCode).toBe(503);
 
     process.env.SUPABASE_URL = 'https://x.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_publishable_k';
     const asked: string[] = [];
     vi.stubGlobal('fetch', async (url: string) => {
       asked.push(url);
       const path = url.split('/object/upload/sign/')[1];
       return new Response(JSON.stringify({ url: `/object/upload/sign/${path}?token=t0k` }));
     });
+    // A key that cannot upload is named before storage is asked, and is not worth a retry.
+    const misconfigured = await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' });
+    expect(misconfigured.statusCode).toBe(503);
+    expect(misconfigured.json().error.message).toMatch(/misconfigured.*publishable key.*sb_secret_/);
+    expect(misconfigured.json().error.retryable).toBeUndefined();
+
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_k';
     expect((await upload(keyA, { bucket: 'public', file: 'out/song_h.mp4' })).statusCode).toBe(400);
     expect((await upload(keyA, { bucket: 'droplets', file: '../x.mp4' })).statusCode).toBe(400);
     expect((await upload(keyB, { bucket: 'droplets', file: 'out/song_h.mp4' })).statusCode).toBe(403);
@@ -257,5 +264,12 @@ d('droplet endpoints', () => {
     const down = await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' });
     expect(down.statusCode).toBe(503);
     expect(down.json().error.retryable).toBe(true);
+
+    // A refusal carries storage's reason, and waiting will not fix it.
+    vi.stubGlobal('fetch', async () => new Response('{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}', { status: 400 }));
+    const refused = await upload(keyA, { bucket: 'studio', file: 'locations.json' });
+    expect(refused.statusCode).toBe(503);
+    expect(refused.json().error.message).toMatch(/refused.*storage answered 400: Bucket not found/);
+    expect(refused.json().error.retryable).toBeUndefined();
   });
 });

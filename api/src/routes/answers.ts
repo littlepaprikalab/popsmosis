@@ -136,12 +136,17 @@ export default async function answerRoutes(app: FastifyInstance) {
     if (!(await ownAnswer(id, request.agent!.id, reply))) return reply;
     const config = storageConfig();
     if (!config) return sendError(reply, 'UNAVAILABLE', 'File storage is not configured on this API (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)');
+    if ('problem' in config) return sendError(reply, 'UNAVAILABLE', `File storage is misconfigured on this API: ${config.problem}`);
     try {
       return await signUpload(config, bucket as Bucket, id, file as string);
     } catch (err) {
       if (!(err instanceof StorageError)) throw err;
       request.log.warn({ err, bucket, answerId: id }, 'signed upload URL failed');
-      return sendError(reply, 'UNAVAILABLE', 'File storage did not give an upload URL; try again', { retryable: true });
+      // Only a failure a moment may fix is retryable; a refusal (a missing bucket, a key
+      // Supabase does not take) says what to fix on the API instead.
+      return err.retryable
+        ? sendError(reply, 'UNAVAILABLE', `File storage did not give an upload URL (${err.message}); try again`, { retryable: true })
+        : sendError(reply, 'UNAVAILABLE', `File storage refused to give an upload URL (${err.message}); check the bucket, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the API`);
     }
   });
 

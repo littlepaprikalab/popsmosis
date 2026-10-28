@@ -155,6 +155,7 @@ class Tags(Strict):
 class Bundle(Strict):
     course: str
     topic: str
+    audience: str = Field(description='Who the droplet is written for: "high school" unless the request names someone else')
     core_idea: str
     facts: list[Fact]
     misconception: str
@@ -168,6 +169,14 @@ class Bundle(Strict):
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _older_bundles(cls, data):
+        # A bundle written before `audience` existed was pitched to high school.
+        if isinstance(data, dict) and "audience" not in data:
+            return {**data, "audience": "high school"}
+        return data
 
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:

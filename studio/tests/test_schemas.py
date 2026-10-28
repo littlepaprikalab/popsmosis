@@ -27,7 +27,7 @@ def test_schema_uses_only_what_both_providers_accept(model):
 
 def test_bundle_fields_are_in_the_order_the_model_writes_them():
     assert list(strict_schema(Bundle)["properties"]) == [
-        "course", "topic", "core_idea", "facts", "misconception", "frq",
+        "course", "topic", "audience", "core_idea", "facts", "misconception", "frq",
         "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction", "tags",
     ]
     facts = strict_schema(Bundle)["properties"]["facts"]["items"]
@@ -75,6 +75,13 @@ def test_a_bundle_written_before_tags_has_none():
     del data["tags"]
     tags = Bundle.model_validate(data).tags
     assert tags.song == [] and tags.lesson == []
+
+
+def test_a_bundle_from_before_the_audience_reads_as_high_school():
+    data = bundle_data()
+    del data["audience"]
+    assert Bundle.model_validate(data).audience == "high school"
+    assert Bundle.model_validate({**bundle_data(), "audience": "about age 10"}).audience == "about age 10"
 
 
 def broken(change):

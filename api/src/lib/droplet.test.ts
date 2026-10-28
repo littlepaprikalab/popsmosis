@@ -56,7 +56,7 @@ describe('serializeVideo', () => {
 describe('followUpContext', () => {
   it('keeps what a follow-up needs and drops the rest', () => {
     const context = followUpContext({
-      course: 'AP Biology', topic: 'the light reactions', core_idea: 'Light pumps protons.',
+      course: 'AP Biology', topic: 'the light reactions', audience: 'high school', core_idea: 'Light pumps protons.',
       facts: [{ id: 'f1', text: 'Only cytochrome b6f pumps protons.', source_quote: '' }],
       misconception: 'Not every carrier pumps.',
       frq: { prompt: 'Explain.', predict_question: 'Which?', model_answer_steps: ['b6f pumps.'], twist: 'A leak?' },
@@ -64,7 +64,7 @@ describe('followUpContext', () => {
       lyrics: [{ id: 'v1', section: 'verse', text: 'Light lands', names: [], fact_id: 'f1' }],
     });
     expect(context).toEqual({
-      course: 'AP Biology', topic: 'the light reactions', coreIdea: 'Light pumps protons.',
+      course: 'AP Biology', topic: 'the light reactions', audience: 'high school', coreIdea: 'Light pumps protons.',
       facts: [{ id: 'f1', text: 'Only cytochrome b6f pumps protons.' }],
       misconception: 'Not every carrier pumps.',
       frq: { prompt: 'Explain.', modelAnswerSteps: ['b6f pumps.'], twist: 'A leak?' },

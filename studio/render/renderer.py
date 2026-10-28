@@ -47,6 +47,17 @@ LEAD_S = 1.5
 BLINK_S = 0.5  # an empty band shorter than this would blink: the next line takes the whole gap
 FRQ_IN_S = 1.0
 EDGE_FADE = 2 * p.DOT_R  # a label fades out as its dot nears the edge of the view, over about the dot's width
+# Particles: what travels between structures (a proton, a signal), so a process moves as it is sung.
+FLOW_SPEED = 260.0  # art pixels a second: slow enough to follow
+FLOW_PAUSE_S = 0.5  # the lead particle holds at each stop
+FLOW_MIN_LEG_S = 0.8  # a short hop still takes this long, so it reads as a move
+FLOW_IN_S = 0.4
+STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
+TRAIL = 7  # the lead particle's trail: this many earlier positions...
+TRAIL_DT = 0.04  # ...this many seconds apart
+STOP_OFFSET = 34.0  # art pixels: the lead particle holds beside a label's dot, not under it
+
+Point = tuple[float, float]
 
 
 class RenderError(Exception):
@@ -196,6 +207,59 @@ def mix_rect(a: Rect, b: Rect, x: float) -> Rect:
     return tuple(p.lerp(u, v, x) for u, v in zip(a, b))  # type: ignore[return-value]
 
 
+def stop_points(anchors: list[Point]) -> list[Point]:
+    """Where the particles stop: each label anchor moved a little toward its neighbour on the
+    path (the next stop for the first, the one before for the rest), so the label's dot stays
+    in sight beside the particle."""
+    points = []
+    for i, (x, y) in enumerate(anchors):
+        nx, ny = anchors[i - 1] if i else anchors[1]
+        d = math.dist((x, y), (nx, ny))
+        k = min(STOP_OFFSET, d / 3) / d if d else 0.0
+        points.append((x + (nx - x) * k, y + (ny - y) * k))
+    return points
+
+
+def lead_at(points: list[Point], t: float) -> tuple[Point, int]:
+    """Where the lead particle is t seconds after it set off, and which trip it is on.
+
+    It holds at a stop, eases to the next, and after the last stop starts over from the first."""
+    legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+    trip, t = divmod(max(t, 0.0), FLOW_PAUSE_S * len(points) + sum(legs))
+    for i, leg in enumerate(legs):
+        if t < FLOW_PAUSE_S:
+            return points[i], int(trip)
+        t -= FLOW_PAUSE_S
+        if t < leg:
+            x = p.ease(t / leg)
+            return (p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)), int(trip)
+        t -= leg
+    return points[-1], int(trip)
+
+
+def stream_at(points: list[Point], t: float) -> list[tuple[Point, float]]:
+    """The dots streaming along the path at an even pace, about STREAM_GAP apart, each with
+    its fade: they fade in leaving the first stop and out reaching the last."""
+    lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
+    total = sum(lengths)
+    if total < 1:
+        return []
+    count = max(round(total / STREAM_GAP), 1)
+    gap = total / count
+    shift = (max(t, 0.0) * FLOW_SPEED / 2) % gap
+    dots = []
+    for j in range(count):
+        d = shift + j * gap
+        fade = p.clamp01(min(d, total - d) / (gap / 2))
+        for i, length in enumerate(lengths):
+            if d <= length:
+                x = d / length if length else 0.0
+                dots.append(((p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)), fade))
+                break
+            d -= length
+    return dots
+
+
 def edge_fade(x: float, y: float, view: Rect) -> float:
     """1 while a label's dot is wholly inside the view, down to 0 at its edge: a label the camera moves
     away from fades out rather than clinging to the edge, and a label on screen has its dot on screen."""
@@ -217,6 +281,8 @@ class BeatPlan:
     prev_spot: str | None  # the beat before's spotlight, fading out (same scene only)
     caption_in: float  # the caption's run on screen, for its fades
     caption_out: float
+    flow_in: float  # the particles' run: they set off once the run starts and its stops are revealed
+    flow_out: float
 
     def cam(self, t: float, view: Rect, art: SceneArt) -> Cam:
         return clamp_cam(mix_cam(self.start, self.target, p.ease((t - self.move_at) / self.move_s)), view, art)
@@ -304,9 +370,25 @@ class Renderer:
                 while k + 1 < len(beats) and beats[k + 1].caption == beat.caption:
                     k += 1
                 caption_in, caption_out = beats[j].t0, beats[k].t1
+            flow_in = flow_out = beat.t0
+            if beat.particles:
+                # Beats in a row on one scene with the same paths are one run: the particles
+                # keep going across them rather than starting over at every line.
+                def same_flow(other) -> bool:
+                    return other.scene == beat.scene and [f.path for f in other.particles] == [f.path for f in beat.particles]
+                j = i
+                while j > 0 and same_flow(beats[j - 1]):
+                    j -= 1
+                k = i
+                while k + 1 < len(beats) and same_flow(beats[k + 1]):
+                    k += 1
+                revealed = self.revealed.get(beat.scene, {})
+                stops = [name for f in beat.particles for name in f.path]
+                flow_in = max([beats[j].t0] + [revealed.get(name, beats[j].t0) for name in stops])
+                flow_out = beats[k].t1
             plans.append(BeatPlan(target=target, start=start, move_at=move_at, move_s=move_s, spot=beat.spotlight,
                                   spot_at=spot_at, prev_spot=prev_spot, caption_in=caption_in,
-                                  caption_out=caption_out))
+                                  caption_out=caption_out, flow_in=flow_in, flow_out=flow_out))
         return plans
 
     def beat_index(self, t: float) -> int:
@@ -396,6 +478,8 @@ class Renderer:
             spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
         reveals = self.revealed.get(beat.scene, {})
         self._draw_background(canvas, beat.scene, cam, view, self._ghosts(beat.scene, reveals, t), spots)
+        if beat.particles:
+            self._particles(canvas, beat, plan, cam, view, t)
 
         caption_alpha = 0.0
         if beat.caption:
@@ -407,6 +491,38 @@ class Renderer:
             p.draw_caption(canvas, beat.caption, layout.width / 2, layout.margin + 8, layout.caption_font, caption_alpha)
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
+        """Each path's particles, between its structures' label anchors (always inside them),
+        over the diagram and under the labels; they stop beside each label's dot."""
+        alpha = p.ease((t - plan.flow_in) / FLOW_IN_S) * p.ease((plan.flow_out - t) / FLOW_IN_S)
+        if alpha <= 0.01:
+            return
+        located = self.locations.scene(beat.scene)
+        scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
+
+        def on_frame(q: Point) -> Point:
+            return q[0] * scale + dx, q[1] * scale + dy
+
+        elapsed = t - plan.flow_in
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        for flow in beat.particles:
+            stops = [located.get(name) for name in flow.path]
+            points = stop_points([(s.label_anchor.x, s.label_anchor.y) for s in stops if s is not None])
+            if len(points) < 2:
+                continue
+            lead, trip = lead_at(points, elapsed)
+            trail = []
+            for k in range(1, TRAIL + 1 if flow.trail else 1):
+                then = elapsed - k * TRAIL_DT
+                earlier, earlier_trip = lead_at(points, then)
+                if then < 0 or earlier_trip != trip:  # no trail from before it set off, or from the last trip
+                    break
+                trail.append(on_frame(earlier))
+            p.draw_particles(canvas, flow.color, [(on_frame(q), fade) for q, fade in stream_at(points, elapsed)],
+                             on_frame(lead), trail, alpha)
+        canvas.restore()
 
     def _band_beat(self, i: int, t: float):
         """The beat whose line the band shows at t: beat i's own, or in the song, late in an

@@ -197,20 +197,24 @@ One structured-output call returns everything that can be written from the topic
 The fields are in this order on purpose: the model writes in field order, so the later
 parts build on the facts it has already written.
 
-1. `course`, `topic`, `core_idea`, `facts[3-4]` (`id`, `text`, `source_quote` when a
-   study guide was given), `misconception`, `frq` (`prompt`, `predict_question`,
-   `model_answer_steps[]`, `twist`).
-2. `scenes[3-6]`: hook, overview, one or two zoomed details. Each has `id`,
+1. `course`, `topic`, `audience` ("high school" unless the learner's request names
+   someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
+   (`id`, `text`, `source_quote` when a study guide was given), `misconception`, `frq`
+   (`prompt`, `predict_question`, `model_answer_steps[]`, `twist`).
+2. `scenes[3-6]`: the hook (where it can, the topic in the learner's world), overview,
+   one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
+   in the colours of what they stand for) and a detail showing what happens when a part
+   fails. Each has `id`,
    `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
    One fixed colour per structure for the whole job.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
-   verse, chorus, bridge, chorus). The style is one high school students listen to (pop
-   with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's mood setting
-   its tempo, or the learner's own when they ask for one: a question line starting
-   `Style:` becomes `song_style` in `request.json`. One tag names the tempo, "<n> bpm"
-   from 80 to 160; the code checks repair a missing or second one.
+   verse, chorus, bridge, chorus). The style is one the audience listens to (for high
+   school: pop with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's
+   mood setting its tempo, or the learner's own when they ask for one: a question line
+   starting `Style:` becomes `song_style` in `request.json`. One tag names the tempo,
+   "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
    and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
    `aliases`, because hearing that word is what reveals the structure on screen.
@@ -442,8 +446,12 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     darkened version of that colour, Inter Bold, a leader line and a 6 px dot at the
     mask's `label_anchor`. Pills stay inside the frame and avoid each other (a simple
     repulsion pass). Once introduced, a label stays on every shot of that diagram.
-  - **Particles** (stretch): dots moving slowly along a polyline between structure
-    centroids, one highlighted particle with a fading trail, pausing at each stop.
+  - **Particles:** for a line whose direction names `particles`, dots stream slowly along
+    a polyline between the structures' label anchors (always inside them), and one lead
+    particle with a trail eases from stop to stop, holding at each one beside the label's
+    dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
+    have, keeps them readable on any colour. Lines in a row with the same path are one
+    run, so the motion carries on across them, and it waits for its stops to be revealed.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and

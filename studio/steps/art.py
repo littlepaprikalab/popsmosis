@@ -223,6 +223,7 @@ def key(bundle: Bundle, scene: Scene) -> str:
 
 def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -> str:
     parts = [f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else ""),
+             f"Audience: {bundle.audience}",
              f"Core idea: {bundle.core_idea}",
              f"Scene: {scene.id}\nWhat it shows: {scene.image_prompt}"]
     lines = []
