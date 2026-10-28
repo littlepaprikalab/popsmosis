@@ -106,6 +106,8 @@ class Direction(Strict):
     camera: Camera
     spotlight: str = Field(description='A structure name, or "" for none')
     particles: list[str] = Field(description="Structure names the particles travel between, in order; [] for none")
+    carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
+                                     '"" for none')
     caption: str = Field(description='Usually ""')
 
 
@@ -171,7 +173,12 @@ class Bundle(Strict):
         if "audience" not in data:
             data = {**data, "audience": "high school"}
         # The exam question (`frq`) left both videos on Oct 28; a bundle written before still has one.
-        return {k: v for k, v in data.items() if k != "frq"}
+        data = {k: v for k, v in data.items() if k != "frq"}
+        # What the particles carry was added on Oct 28: before, they were unmarked.
+        if isinstance(data.get("direction"), list):
+            data["direction"] = [{**d, "carries": ""} if isinstance(d, dict) and "carries" not in d else d
+                                 for d in data["direction"]]
+        return data
 
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:
@@ -245,7 +252,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "tempo"]
+                  "spotlight", "camera", "particles", "carries", "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -516,6 +523,7 @@ class Particles(Strict):
     path: list[str]  # the structures they travel between, in order
     color: str
     trail: bool
+    label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
 
     @field_validator("color")
     @classmethod

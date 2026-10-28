@@ -267,10 +267,16 @@ STREAM_R = 5.5  # the dots streaming along the path
 HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any colour
 
 
+MARKER_R = 22.0  # a marked lead particle: room for "H⁺" inside it, in frame pixels
+MARKER_FONT = 24.0
+MARKER_PAD = 8.0  # a longer marker ("glucose") is a pill this far wider than its word, each side
+
+
 def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[float, float], float]],
-                   lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float) -> None:
+                   lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float, label: str = "") -> None:
     """What travels between structures: dots streaming along the path (each with its own fade,
-    0-1), and the lead particle with its trail, the newest position first."""
+    0-1), and the lead particle with its trail, the newest position first; marked with what it
+    is when there is a label."""
     halo, fill = skia.Paint(AntiAlias=True), skia.Paint(AntiAlias=True)
     for (x, y), fade in stream:
         if alpha * fade <= 0.01:
@@ -283,12 +289,31 @@ def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[flo
     fill.setColor(argb(color, alpha))
     for k, (x, y) in reversed(list(enumerate(trail, 1))):
         canvas.drawCircle(x, y, 0.8 * PARTICLE_R * (1 - k / (len(trail) + 1)), fill)
+    if label:
+        draw_marker(canvas, lead, color, label, alpha)
+        return
     halo.setColor(with_alpha(0xFFFFFFFF, alpha))
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R + HALO, halo)
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R, fill)
     ring = skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2.5,
                       Color=argb(darken(color, 3.0), alpha))
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R - 1.25, ring)
+
+
+def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float) -> None:
+    """The lead particle marked with what it is: a disc for "H⁺", a pill for "glucose", in its colour
+    with a white halo, the word in dark or white ink, whichever reads on it."""
+    x, y = at
+    f = font("ExtraBold", MARKER_FONT)
+    width = text_width(f, label)
+    half = max(MARKER_R, width / 2 + MARKER_PAD)
+    body = rounded((x - half, y - MARKER_R, x + half, y + MARKER_R), MARKER_R)
+    shadow(canvas, body, alpha)
+    canvas.drawRRect(rounded((x - half - HALO, y - MARKER_R - HALO, x + half + HALO, y + MARKER_R + HALO),
+                             MARKER_R + HALO), skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
+    ink = "#1A1A1A" if _luminance(*rgb(color)) > 0.3 else "#FFFFFF"
+    draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
 
 
 # --- the lyric band ------------------------------------------------------------------------

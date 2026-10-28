@@ -19,6 +19,8 @@ from pathlib import Path
 from studio.jobs import write
 from studio.schemas import BPM_TAG, Bundle, CheckReport, Problem
 
+MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
+
 
 def run(job: Path) -> CheckReport:
     """Re-check a job's bundle.json in place."""
@@ -192,3 +194,9 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         problems.append(Problem(line_id=line_id, rule="particles", repaired=True,
                                 detail=f'particles name structures scene "{scene}" does not draw; kept {stops}'))
         direction["particles"] = stops
+    carries = direction["carries"]
+    if carries and (not direction["particles"] or len(carries) > MARKER_MAX):
+        why = "with no particles" if not direction["particles"] else f"is over {MARKER_MAX} characters"
+        problems.append(Problem(line_id=line_id, rule="carries", repaired=True,
+                                detail=f"carries {carries!r} {why}; unmarked"))
+        direction["carries"] = ""

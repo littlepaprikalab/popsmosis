@@ -513,7 +513,7 @@ class Renderer:
                     break
                 trail.append(on_frame(earlier))
             p.draw_particles(canvas, flow.color, [(on_frame(q), fade) for q, fade in stream_at(points, elapsed)],
-                             on_frame(lead), trail, alpha)
+                             on_frame(lead), trail, alpha, flow.label)
         canvas.restore()
 
     def _band_beat(self, i: int, t: float):

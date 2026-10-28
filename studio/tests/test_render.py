@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 skia = pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
@@ -242,8 +243,8 @@ def flowing(beats: list[Beat]) -> Timeline:
     return Timeline(video="song", duration=beats[-1].t1, fps=30, audio=[], beats=beats, palette=PALETTE)
 
 
-def flow_beat(t0, t1, path=FLOW, labels=(), reveal=()):
-    particles = [Particles(path=list(path), color="#F2C230", trail=True)] if path else []
+def flow_beat(t0, t1, path=FLOW, labels=(), reveal=(), label="", color="#F2C230"):
+    particles = [Particles(path=list(path), color=color, trail=True, label=label)] if path else []
     return Beat(t0=t0, t1=t1, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=list(reveal),
                 spotlight=None, labels=list(labels), particles=particles, caption=None, line_id=f"v{t0}",
                 line="protons flow", words=[Word(word="protons", start=t0 + 0.1, end=t0 + 0.5)])
@@ -300,6 +301,27 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
     assert (flow.frame(0.0) == still.frame(0.0)).all()  # they fade in: nothing yet at the start
     flow.frame(1.0)
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
+
+
+def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
+    cyan = "#4CC9F0"
+    marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
+    plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
+    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
+    x, y = marked.art_to_frame(held, *stops[0])
+    badge, dot = marked.frame(held).copy(), plain.frame(held).copy()
+
+    def cyan_across(frame):  # how wide the cyan runs across the particle, above its word
+        row = frame[round(y) - 14, round(x) - 60:round(x) + 60, 2::-1]  # BGRA to RGB
+        return int((np.abs(row.astype(int) - p.rgb(cyan)).max(1) < 12).sum())
+
+    assert cyan_across(dot) == 0 and cyan_across(badge) > 15  # bigger than the plain dot
+    ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
+    assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
+
+    pill = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)])).frame(held)
+    assert cyan_across(pill.copy()) > cyan_across(badge) + 25  # a longer word gets a pill
 
 
 def test_label_text_is_dark_enough_to_read_on_white():

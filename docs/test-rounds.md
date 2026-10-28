@@ -533,6 +533,25 @@ rendered silent. About $1.00 for both, with the repaint and second locate below.
   fault of placement (the cyanide outside its complex, the rotor ring in the lumen, the
   herbicide above the membrane): about $0.05 saved a lesson.
 
+## Round 9: marked particles
+
+The motion engine's first piece, on round 8's two lessons and pictures. Each line's direction
+now says what its particles carry (`carries`), and the video writes it on the lead particle:
+a badge in that kind's colour ("H⁺" gold, "e⁻" cyan, "ATP", a pill for "pyruvate"). Claude
+filled in `carries` for the two lessons' 40 moving lines without writing them again ($0.10
+for two tries), and both were rendered silent.
+
+- **Claude's choices were right on every line but the analogies**: electrons from
+  photosystem II to cytochrome b6f, protons from the stroma through b6f into the lumen and
+  back through ATP synthase, pyruvate from glycolysis to the Krebs cycle, ATP to the Calvin
+  cycle, nothing marked on sunlight. It marked the dams' water "H₂O", which in the analogy
+  stands for the protons; the rule now leaves an analogy's particles unmarked.
+- **The badges read at full size** once they were made 44 pixels across: at 36 the "⁺" and
+  "⁻" were hard to see.
+- **`carries` is not fact-checked**: like the particles' path, it is direction, which the
+  fact-check does not see. A wrong marker (e⁻ where protons move) would teach something
+  wrong; the next step is to show the fact-check each moving line with what it carries.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

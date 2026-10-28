@@ -232,7 +232,8 @@ parts build on the facts it has already written.
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
    what the song only names: every fact, step by step, and every structure drawn.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
-   (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
+   (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
+   "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
    from the alignment.
 8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
@@ -448,7 +449,7 @@ come from step 6.
       "reveal": [{"name": "Broca's area", "t": 12.6}],   // fades from ghost to full when the word is sung
       "spotlight": "Broca's area",         // others washed pale; null = none
       "labels": ["Broca's area", "Wernicke's area"],  // everything revealed on this scene so far
-      "particles": [{"path": ["Wernicke's area", "Broca's area"], "color": "#F2C230", "trail": true}],
+      "particles": [{"path": ["Wernicke's area", "Broca's area"], "color": "#F2C230", "trail": true, "label": ""}],
       "caption": null,                     // at most ~1 per section, held >= 4 s
       "line_id": "v1-2",                   // null in an instrumental gap
       "line": "Broca builds the words you say",
@@ -496,6 +497,10 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
     have, keeps them readable on any colour. Lines in a row with the same path are one
     run, so the motion carries on across them, and it waits for its stops to be revealed.
+    When the line's direction says what the particles carry, the lead particle is a badge
+    with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
+    kind has its own colour in every lesson (protons gold, electrons cyan), so a proton
+    reads apart from an electron and from anything painted in the picture.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and

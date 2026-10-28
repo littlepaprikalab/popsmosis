@@ -96,6 +96,18 @@ def test_particles_stay_on_the_scene():
     assert found == [("v1-1", "particles", True)]
 
 
+def test_what_particles_carry_needs_particles_and_fits_on_the_dot():
+    def carrying(particles, carries):
+        def change(data):
+            direction(data, "v1-1").update(particles=particles, carries=carries)
+        bundle, found, _ = review(change)
+        return next(d.carries for d in bundle.direction if d.line_id == "v1-1"), found
+
+    assert carrying(["Thylakoid", "Cytochrome b6f"], "H⁺") == ("H⁺", [])
+    assert carrying([], "H⁺") == ("", [("v1-1", "carries", True)])
+    assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True)])
+
+
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
     data = bundle_data()
     for item in [*data["lyrics"], *data["narration"]]:
@@ -165,6 +177,7 @@ def test_checking_a_checked_bundle_changes_nothing():
             d["spotlight"] = rng.choice(targets)
             d["camera"] = {"target": rng.choice(targets), "zoom": rng.choice([1.0, 2.0])}
             d["particles"] = rng.sample(targets, rng.randint(0, 3))
+            d["carries"] = rng.choice(["", "H⁺", "plastoquinone"])
         if rng.random() < 0.2:
             data["scenes"][0]["structures"] = []
         once, first = checks.review(Bundle.model_validate(data))

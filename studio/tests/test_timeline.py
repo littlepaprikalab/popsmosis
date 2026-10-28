@@ -169,6 +169,25 @@ def test_particles_come_from_the_direction(job):
     assert song["c1-1"].particles == []
 
 
+def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="e-")
+    direct(data, "v2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    direct(data, "b-1", particles=["Thylakoid", "Cytochrome b6f"], carries="")
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1")}
+    assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)]}
+
+
+def test_what_particles_carry_is_written_as_a_textbook_prints_it():
+    printed = {"H+": "H⁺", "e-": "e⁻", "O2": "O₂", "H2O": "H₂O", "CO2": "CO₂", "Ca2+": "Ca²⁺", "Cl-": "Cl⁻",
+               "NAD+": "NAD⁺", "2H+": "2H⁺", "H +": "H⁺", "H⁺": "H⁺", "HCO₃⁻": "HCO₃⁻", "glucose": "glucose", "": ""}
+    assert {text: step.notation(text) for text in printed} == printed
+    # Another kind keeps one colour of its own, whatever the lesson.
+    assert step.marker_colour("pyruvate") == step.marker_colour("pyruvate") in step.OTHER_MARKERS
+
+
 def test_instrumental_gaps_get_beats_of_their_own(job):
     bundle = sample_media.bundle()
     timed = sample_media.timings(bundle)

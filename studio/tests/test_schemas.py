@@ -117,6 +117,13 @@ def test_the_song_sections_follow_the_lyrics():
                                      if i == 0 or line.section != bundle.lyrics[i - 1].section]
 
 
+def test_a_bundle_written_before_particles_carried_anything_loads_unmarked():
+    data = bundle_data()
+    for d in data["direction"]:
+        del d["carries"]
+    assert {d.carries for d in Bundle.model_validate(data).direction} == {""}
+
+
 def test_a_bundle_written_with_an_exam_question_still_loads_without_it():
     data = bundle_data()
     data["frq"] = {"prompt": "Explain it.", "predict_question": "Which?", "model_answer_steps": ["One."], "twist": "And?"}

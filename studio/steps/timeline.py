@@ -16,6 +16,9 @@ No model calls, so it is free to run again:
   singing starts later than INTRO_MAX_S (Lyria now and then plays a 10-second intro
   however it is asked) is played from INTRO_KEEP_S before its first sung word, fading in,
   so the hook is sung within the first two seconds (PLAN section 8).
+- The particles are marked with what they carry, as a textbook prints it ("H+" -> "H⁺",
+  notation()), each kind in its own colour (marker_colour()), so a proton reads apart
+  from an electron and from the ions painted in the picture.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
@@ -25,6 +28,7 @@ No model calls, so it is free to run again:
 from __future__ import annotations
 
 import re
+import zlib
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,7 +58,13 @@ GAP_S = 1.5  # a silence at least this long between lines gets a beat of its own
 LINGER_S = 0.4  # how long a line stays in the lyric band after its last word, before a gap
 CAPTION_HOLD_S = 4.0
 LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions are spaced instead
-PARTICLE_COLOR = "#F2C230"
+PARTICLE_COLOR = "#F2C230"  # an unmarked particle's, and a proton's
+# Each common kind of particle in its own colour, the same in every lesson; any other by its name.
+MARKER_COLOURS = {"H⁺": PARTICLE_COLOR, "e⁻": "#4CC9F0", "O₂": "#E8EEF5", "H₂O": "#7FD1FF", "CO₂": "#B8C2CC",
+                  "ATP": "#FF6B6B", "Na⁺": "#B79CFF", "K⁺": "#8EE06B", "Ca²⁺": "#F4E1C1", "Cl⁻": "#5EF2C4"}
+OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF")
+SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
+SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 MAX_ZOOM = 3.0
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
@@ -119,6 +129,25 @@ def tokens(text: str) -> list[str]:
 def _same(heard: str, name: str, last: bool) -> bool:
     """A heard token matches a name's token; the last one may be plural ("thylakoids")."""
     return heard == name or (last and heard in (name + "s", name + "es"))
+
+
+def notation(carries: str) -> str:
+    """What the particles carry, as a textbook prints it. The bundle asks for it so ("H⁺", "Ca²⁺");
+    plain text is turned into it: a charge at the end is raised, with the digit just before it
+    ("H+" -> "H⁺", "Ca2+" -> "Ca²⁺"), and any other digit after a letter lowered ("H2O" -> "H₂O")."""
+    text = " ".join(carries.split()).replace("\u2212", "-")  # a minus sign, as a hyphen
+    text = re.sub(r"\s+(?=\d?[+-]$)", "", text)  # "H +" -> "H+"
+    charge = ""
+    if found := re.fullmatch(r"(.*[A-Za-z)\]])(\d?[+-])", text):
+        text, charge = found.groups()
+    return re.sub(r"(?<=[A-Za-z)\]])\d+", lambda d: d.group().translate(SUBSCRIPT), text) + charge.translate(SUPERSCRIPT)
+
+
+def marker_colour(label: str) -> str:
+    """The colour of particles carrying `label`: its own for a common kind, else one picked by its name."""
+    if not label:
+        return PARTICLE_COLOR
+    return MARKER_COLOURS.get(label) or OTHER_MARKERS[zlib.crc32(label.encode()) % len(OTHER_MARKERS)]
 
 
 @dataclass
@@ -240,7 +269,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
         stops = [s for s in (scene_names.canonical(p) for p in (direction.particles if direction else [])) if s]
         stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
-        particles = [Particles(path=stops, color=PARTICLE_COLOR, trail=True)] if len(stops) >= 2 else []
+        label = notation(direction.carries) if direction else ""
+        particles = [Particles(path=stops, color=marker_colour(label), trail=True, label=label)] if len(stops) >= 2 else []
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
                       "reveal": reveals, "spotlight": spotlight, "labels": list(labels), "particles": particles,

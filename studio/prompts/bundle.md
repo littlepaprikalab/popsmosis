@@ -405,6 +405,13 @@ order, keyed by `line_id`:
   structures it travels between, in order; otherwise []. Use them whenever a line tells
   how something moves through the steps: the motion is what shows how a process works,
   and the pictures draw none of it.
+- `carries`: what those particles are, written on the moving dot: the molecule or ion as a
+  textbook prints it, with its superscripts and subscripts ("H⁺", "e⁻", "O₂", "Ca²⁺",
+  "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line. It
+  must be what really travels that path (protons through ATP synthase, electrons along the
+  chain). "" when there are no particles, for what has no chemical name (a nerve signal,
+  light), and on the analogy scene, where what moves is the everyday thing (its water
+  stands for the protons, so marking it "H₂O" would mislead).
   Where a failure scene shows the flow stopped, it has none.
 - `caption`: almost always "". At most one short caption (a few words) per song section,
   for a term worth seeing written.
