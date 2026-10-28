@@ -319,6 +319,15 @@ picture with text is never used; after the second, the scene keeps the text-free
 with the fewest structures out of place. Built (`studio/steps/art.py`, `studio/muse.py`); first
 run live on Oct 28 ([test-rounds.md](test-rounds.md)).
 
+**Saying what is left wrong.** The check also writes, for each problem that would teach the
+student something false, a sentence for them ("The chromosomes' bends point the wrong way:
+each is pulled toward its pole by its middle, so the bend leads."), leaving out matters of
+look. Whatever those notes say of the picture the video uses, after its tries, is shown
+beside it (`Timeline.notices`): a white card at the right under "AI-generated picture", up
+to three notes, for as long as the picture is on screen. The picture moves left to make
+room, and so do the other stages of its process. The check can miss a mistake (round 16's
+anaphase had twice the chromosomes it should); the card says only what it found.
+
 **Stages** are painted as one subject in one framing: each later stage of a process is
 redrawn from the first stage's picture (`/v1/images/edits`, the first stage's picture
 with the stage's own prompt after "Redraw this picture as a later stage of mitosis: the

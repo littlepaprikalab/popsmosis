@@ -37,6 +37,9 @@ MOVE_S = 1.8  # a camera move between two stations
 SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
 SETTLE_ZOOM = 1.06
 STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
+NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
+NOTICE_MAX = 3  # notes on the card; any more are counted
+NOTICE_FONT = 22
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
@@ -442,6 +445,12 @@ class Renderer:
         # Each process's stages, which fade one into the next. What was shown on the stage before is on
         # the next from its first frame, rather than shown again from a pale wash.
         self._process = {sid: (n, k) for n, group in enumerate(timeline.stages) for k, sid in enumerate(group)}
+        # The scenes drawn beside a notice card: those with notices, and every stage of a process one of whose
+        # stages has them, so its stages keep one framing.
+        self._beside = set(timeline.notices)
+        for group in timeline.stages:
+            if self._beside & set(group):
+                self._beside |= set(group)
         for i, beat in enumerate(timeline.beats):
             if i and self.staged(timeline.beats[i - 1].scene, beat.scene):
                 before, now = self.revealed.get(timeline.beats[i - 1].scene, {}), self.revealed.get(beat.scene, {})
@@ -453,6 +462,12 @@ class Renderer:
         self.pixels = np.zeros((height, width, 4), np.uint8)
         self.surface = skia.Surface(self.pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         self._background: tuple[tuple, skia.Image] | None = None
+
+    def view(self, scene_id: str) -> Rect:
+        """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
+        has one."""
+        x0, y0, x1, y1 = self.layout.view
+        return (x0, y0, x1 - NOTICE_W, y1) if scene_id in self._beside else (x0, y0, x1, y1)
 
     def staged(self, before: str, after: str) -> bool:
         """Whether going from one scene to the other is one stage of a process giving way to a later one. Back to
@@ -469,8 +484,8 @@ class Renderer:
         art = self.scene(scene_id)
         loc = self.locations.scene(scene_id).get(target) if target else None
         if loc is None:
-            return self._whole(scene_id, self.layout.view)
-        view = self.layout.view
+            return self._whole(scene_id, self.view(scene_id))
+        view = self.view(scene_id)
         box_w, box_h = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         fits = min((view[2] - view[0]) / (box_w * FIT_PAD), (view[3] - view[1]) / (box_h * FIT_PAD)) / _fit(view, art)
         zoom = max(1.0, min(zoom, fits))
@@ -496,12 +511,12 @@ class Renderer:
             same = i > 0 and beats[i - 1].scene == beat.scene
             staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
             if same:
-                start = plans[-1].cam(beat.t0, self.layout.view, self.scene(beat.scene))
+                start = plans[-1].cam(beat.t0, self.view(beat.scene), self.scene(beat.scene))
                 move_at = max(beat.t0, reveals.get(beat.camera.target, beat.t0))
                 move_s = MOVE_S if beat.camera.ease == "inOut" else max(beat.t1 - move_at, 0.1)
             elif staged:  # the same framing: the camera goes on from where it was
-                start = clamp_cam(plans[-1].cam(beat.t0, self.layout.view, self.scene(beats[i - 1].scene)),
-                                  self.layout.view, self.scene(beat.scene))
+                start = clamp_cam(plans[-1].cam(beat.t0, self.view(beats[i - 1].scene), self.scene(beats[i - 1].scene)),
+                                  self.view(beat.scene), self.scene(beat.scene))
                 move_at, move_s = beat.t0, MOVE_S
             else:
                 start = Cam(target.cx, target.cy, target.zoom * (HOOK_ZOOM if i == 0 else SETTLE_ZOOM))
@@ -547,7 +562,8 @@ class Renderer:
         """Where an art pixel of the beat at t lands on the frame."""
         i = self.beat_index(t)
         art = self.scene(self.timeline.beats[i].scene)
-        scale, dx, dy = to_frame(self.plans[i].cam(t, self.layout.view, art), self.layout.view, art)
+        view = self.view(self.timeline.beats[i].scene)
+        scale, dx, dy = to_frame(self.plans[i].cam(t, view, art), view, art)
         return x * scale + dx, y * scale + dy
 
     # --- drawing ---------------------------------------------------------------------------
@@ -586,6 +602,7 @@ class Renderer:
         canvas.clear(art.paper)
         scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
         canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
@@ -619,7 +636,7 @@ class Renderer:
         i = self.beat_index(t)
         beat, plan = self.timeline.beats[i], self.plans[i]
         art = self.scene(beat.scene)
-        view = layout.view
+        view = self.view(beat.scene)
         cam = plan.cam(t, view, art)
         spots: dict[str, float] = {}
         if plan.spot:
@@ -656,7 +673,12 @@ class Renderer:
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - layout.margin)
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
         if beat.caption:
-            p.draw_caption(canvas, beat.caption, layout.width / 2, layout.margin + 8, layout.caption_font, caption_alpha)
+            p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
+                           caption_alpha)
+        notes = self.timeline.notices.get(beat.scene, [])
+        if notes:  # what a check found still wrong in this AI-made picture, disclosed beside it
+            p.draw_notice(canvas, view[2], layout.margin + 8, layout.width - layout.margin, notes[:NOTICE_MAX],
+                          NOTICE_FONT, fade, more=max(len(notes) - NOTICE_MAX, 0))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
 

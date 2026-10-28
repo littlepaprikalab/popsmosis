@@ -716,12 +716,56 @@ and about 1,500 ElevenLabs credits for the narration; 20 minutes.
   over (one per cell) is labelled once, on one of them.
 - **Nothing to repair**: the faults left were shapes and places, not a part upside down.
 
+## Round 16: mitosis in stages, three ways to draw it, and saying what is wrong
+
+Mitosis again (`r14-mitosis`), written fresh under the stage rule: each stage a scene of its
+own, every stage after the first redrawn from the first stage's picture, and the video
+fading from one stage into the next. Claude wrote seven scenes: the hook (a healing
+scrape), prophase, the analogy (a tug-of-war), metaphase, anaphase, telophase and a
+drug-blocked spindle. The four stages each open with the same framing sentence, word for
+word, and there is no overview. The run cost $1.77 in metered calls (the song and the
+voice are not priced), and SAM found 20 of 20 parts.
+
+- **The stages fade into each other.** The song fades three times from one stage to the
+  next, the lesson twice. The redraws kept the look (the same cell, the same colours), but
+  not the framing or the science: anaphase came back a wider oval, so halfway through the
+  fade two cell outlines show. It also came back with eight chromosomes on each side,
+  where metaphase's four should give four. The check saw the anaphase chromosomes' bends
+  pointing the wrong way, but not the count.
+- **Going back a stage cut, rather than fading, after this round.** The song went from
+  telophase back to anaphase over a fade, and the cell seemed to come back together.
+- **Claude's SVG, from the same plan** (`ART_PROVIDER=svg`, `r14-svg`): every stage right,
+  four chromosomes to each side in anaphase, the hook's new cells in the bottom of the top
+  layer of skin, where Muse Image put them deeper. Every stage the same cell at the same
+  size in the same place. Plainer than Muse Image's pictures, and its tug-of-war teams were
+  stiff. $1.90 for the seven scenes, 14 minutes one after another; every part's outline
+  comes with the drawing.
+- **Claude's SVG restyled by Muse Image** (`/v1/images/edits`, the drawing as the
+  reference, 7 pictures, $0.07): the parts stayed put. Lined up by the box round what is
+  drawn, 81 to 97% of each part of the four stages was in its own colour where the drawing
+  had it; the analogy's people moved more (33 to 53%). But the restyle added little: a
+  dark background and softer shading.
+- **OpenStax was not tried.** Biology 2e's mitosis figure is the stages done right, in one
+  framing, but the book is CC BY-NC-SA and its page says it may not be "ingested into large
+  language models or generative AI offerings without OpenStax's prior written permission".
+- **What is left wrong is now said beside the picture.** The art check also writes, for
+  each problem that would teach something false, a sentence for the student, and leaves out
+  matters of look ("the cell is oval, not round"). Checked again with it (`r14-notice`,
+  about 6 cents), three of the seven pictures had notes: the hook ("The purple new cells sit
+  in the deeper skin as a loose row; in truth, dividing cells lie in the base of the top
+  layer, just under the scrape."), prophase (the spindle already across the cell) and
+  anaphase (the bends, and the fibres on the chromosomes' ends rather than at their
+  centromeres). The video shows them on a white card at the right, under "AI-generated
+  picture", for as long as the picture is on screen; the picture moves left to make room,
+  and so do the other stages of its process, to keep one framing.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
   API in `POPSMOSIS_API_URL`, which here is production, and Supabase is not set up.
-- `BRAIN_PROVIDER=claude` (the SVG art) as the studio runs it. Muse Wonder as the brain
-  only for the bundle and fact-check (round 5), not through the videos.
+- The SVG art (`ART_PROVIDER=svg`) through the videos: round 16 drew one plan's scenes with it,
+  but made no videos from them. Muse Wonder as the brain only for the bundle and fact-check
+  (round 5), not through the videos.
 - The planner's Inkmory record (`INKMORY_ENABLED` is not set).
 
 ## Running a round again

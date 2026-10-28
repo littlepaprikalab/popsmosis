@@ -9,7 +9,7 @@ import time
 import numpy as np
 import pytest
 
-from studio import brain, jobs, ledger, media, muse, svg
+from studio import brain, checks, jobs, ledger, media, muse, svg
 from studio.schemas import Box, Bundle, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
@@ -224,6 +224,21 @@ def test_a_stage_muse_image_will_not_redraw_is_painted_afresh(job, monkeypatch):
     assert made["redrawn_from"] == "" and "400 no images" in made["tries"][0]["redraw_failed"]
 
 
+def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_video(job, monkeypatch):
+    FakeMuse().install(monkeypatch)
+    note = "The protein's head should face the stroma, not the lumen."
+    helper = FakeHelper(checks={"synthase": [{"misplaced": ["head in the lumen"], "notes": [note]}],
+                                "overview": [{"wrong": ["a little dark"]}]})  # no note: it misleads no one
+    art.run(job, helper)
+    assert "`notes`" in art.CHECK_PROMPT and "for the student" in art.CHECK_PROMPT
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert len(made["tries"]) == 2 and made["check"]["notes"] == [note]  # still wrong after both tries
+    bundle = checks.load(job / "bundle.json")
+    assert art.notices(job, bundle) == {"synthase": [note]}
+    staged(job)  # a changed bundle: the pictures are no longer this bundle's, so nothing is disclosed for them
+    assert art.notices(job, checks.load(job / "bundle.json")) == {}
+
+
 def sample_media_image(path):
     import skia
 
@@ -262,8 +277,8 @@ def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wro
     made = json.loads((job / "art" / "hook.json").read_text())
     assert made["try"] == 2
     # What each try was refused for is kept, not only the next prompt's quote of it.
-    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "wrong": []},
-                             {"try": 2, "text": [], "misplaced": [], "wrong": []}]
+    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "wrong": [], "notes": []},
+                             {"try": 2, "text": [], "misplaced": [], "wrong": [], "notes": []}]
     assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png"]
 
 

@@ -641,6 +641,9 @@ class Timeline(Strict):
     palette: dict[str, str]  # structure name -> #RRGGBB, the same in both videos
     beats: list[Beat]
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
+    # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
+    # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.
+    notices: dict[str, list[str]] = {}
 
     @field_validator("palette")
     @classmethod

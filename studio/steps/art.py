@@ -71,6 +71,8 @@ import numpy as np
 
 import skia
 
+from pydantic import Field
+
 from studio import brain, checks, gemini, jobs, ledger, media, muse, svg
 from studio.jobs import read, write
 from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems, stage_groups
@@ -387,7 +389,14 @@ Judge both as the kind of scene it is, against what it should show, not the whol
 leaves out is not missing. The video animates each flow itself, as dots \
 moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
 wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
-is right. Do not list matters of taste or style."""
+is right. Do not list matters of taste or style.
+
+Then, in `notes`, write for the student watching the video one short, plain sentence for each problem \
+above that would teach them something false about the topic: a part in the wrong place, facing the wrong \
+way, of the wrong shape or in the wrong number. Say what the picture shows and what is true ("The \
+chromosomes' bends point the wrong way: each is pulled toward its pole by its middle, so the bend leads."). \
+Under 25 words each. Leave out writing in the picture and problems of look, size or framing, which \
+mislead no one. Leave it empty when nothing would."""
 
 
 class ArtCheck(Strict):
@@ -396,6 +405,9 @@ class ArtCheck(Strict):
     text: list[str]  # every piece of writing seen in it; empty when there is none
     misplaced: list[str]  # each structure missing, out of place or facing the wrong way; a repaint
     wrong: list[str]  # anything else wrong for the scene, a few words each; recorded, not repainted
+    # The problems that would teach something false, as a sentence each for the student: the video shows
+    # those of the picture it uses beside it (notices). [] in a check made before.
+    notes: list[str] = Field(default_factory=list)
 
 
 @dataclass
@@ -576,6 +588,21 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
             + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
+
+
+def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
+    """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
+    by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
+    None for a drawing (ART_PROVIDER=svg), which is not checked this way."""
+    found = {}
+    for scene in bundle.scenes:
+        if not _painted(job, bundle, scene):
+            continue
+        made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
+        notes = [n.strip() for n in (made.get("check") or {}).get("notes") or [] if n.strip()]
+        if notes:
+            found[scene.id] = notes
+    return found
 
 
 def _painting(job: Path, scene: Scene) -> Path:

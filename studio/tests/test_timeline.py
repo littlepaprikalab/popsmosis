@@ -347,3 +347,23 @@ def test_a_processs_stages_are_listed_for_the_renderer_to_fade_between(job):
     write_bundle(job, data)
     timelines = make(job)
     assert [t.stages for t in timelines.values()] == [[["overview", "synthase"]]] * 2
+
+
+def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_it_is_shown(job):
+    import json
+
+    from studio import muse
+    from studio.steps import art
+
+    bundle = jobs.read(job / "bundle.json", Bundle)
+    synthase = next(s for s in bundle.scenes if s.id == "synthase")
+    note = "The head of ATP synthase should face the stroma."
+    (job / "art").mkdir(exist_ok=True)
+    (job / media.art_path("synthase")).touch()  # Muse Image's picture, as far as the timeline step looks
+    (job / "art" / "synthase.json").write_text(json.dumps(
+        {"key": art.key(bundle, synthase), "model": muse.IMAGE_MODEL, "check": {"notes": [note]}}))
+    timelines = make(job)
+    assert timelines["lesson"].notices == {"synthase": [note]}  # the lesson shows the close-up
+    assert timelines["song"].notices == {}  # the song never does
+    os.utime(job / "art" / "synthase.json")  # a new check makes the timelines out of date
+    assert not step.is_done(job)

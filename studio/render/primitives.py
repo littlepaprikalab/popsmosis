@@ -437,6 +437,62 @@ def draw_band(canvas: skia.Canvas, rect: Rect, words: list[BandWord], t: float, 
 # --- the caption pill ----------------------------------------------------------------------
 
 
+NOTICE_ACCENT = 0xFFF59E0B  # amber: the side of a notice card, and its warning sign
+NOTICE_SUBTLE = 0xFF475569  # slate-600
+NOTICE_TITLE = "AI-generated picture"
+NOTICE_LEAD = "A check found these mistakes:"
+
+
+def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: list[str], font_size: float,
+                alpha: float = 1.0, more: int = 0) -> float:
+    """A white card telling the viewer the picture beside it is AI-made and what a check found wrong in it, a
+    bullet per note (and how many more were left out). Returns the card's bottom."""
+    if alpha <= 0.01:
+        return top
+    pad, bar = 22.0, 7.0
+    title, body = font("ExtraBold", font_size * 1.15), font("SemiBold", font_size)
+    line_h = font_size * 1.32
+    inner = x1 - x0 - 2 * pad - bar
+    bullet = text_width(body, "•  ")
+    rows: list[tuple[str, float, skia.Font, int]] = []  # text, indent, font, colour
+    for note in notes:
+        for k, line in enumerate(wrap(note, body, inner - bullet)):
+            rows.append((("•  " if k == 0 else "") + line, 0.0 if k == 0 else bullet, body, INK))
+    if more:
+        rows.append((f"and {more} more", 0.0, body, NOTICE_SUBTLE))
+    lead = wrap(NOTICE_LEAD, body, inner)
+    sign = font_size * 1.15
+    height = pad + sign + 12 + len(lead) * line_h + 8 + len(rows) * line_h + pad - 6
+    rect = (x0, top, x1, top + height)
+    rrect = rounded(rect, 16)
+    shadow(canvas, rrect, alpha, blur=12, dy=4)
+    canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * 0.97)))
+    canvas.save()
+    canvas.clipRRect(rrect, doAntiAlias=True)
+    canvas.drawRect(skia.Rect.MakeLTRB(x0, top, x0 + bar, top + height), skia.Paint(Color=with_alpha(NOTICE_ACCENT, alpha)))
+    canvas.restore()
+    x, y = x0 + bar + pad, top + pad
+    # The warning sign: an amber triangle with a dark "!".
+    path = skia.Path()
+    path.moveTo(x + sign / 2, y)
+    path.lineTo(x + sign, y + sign * 0.9)
+    path.lineTo(x, y + sign * 0.9)
+    path.close()
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
+    bang = font("ExtraBold", sign * 0.62)
+    draw_text(canvas, "!", x + sign / 2 - text_width(bang, "!") / 2, y + sign * 0.78, bang, with_alpha(INK, alpha))
+    draw_text(canvas, NOTICE_TITLE, x + sign + 12, y + sign * 0.5 + cap_height(title) / 2, title, with_alpha(INK, alpha))
+    y += sign + 12
+    for line in lead:
+        y += line_h
+        draw_text(canvas, line, x, y - line_h * 0.3, body, with_alpha(NOTICE_SUBTLE, alpha))
+    y += 8
+    for text, indent, f, color in rows:
+        y += line_h
+        draw_text(canvas, text, x + indent, y - line_h * 0.3, f, with_alpha(color, alpha))
+    return top + height
+
+
 def draw_caption(canvas: skia.Canvas, text: str, centre_x: float, top: float, font_size: float, alpha: float) -> None:
     if alpha <= 0.01:
         return

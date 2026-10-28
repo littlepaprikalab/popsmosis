@@ -68,6 +68,7 @@ from studio.schemas import (
     timeline_problems,
     timing_problems,
 )
+from studio.steps import art
 
 HOOK = "hook"
 GAP_S = 1.5  # a silence at least this long between lines gets a beat of its own
@@ -106,9 +107,12 @@ def run(job: Path, ask=None) -> str:
         raise StepFailed("the timings do not match the bundle: " + "; ".join(problems))
 
     timelines = {}
+    notices = art.notices(job, bundle)
     for video in media.VIDEOS:
         try:
             timeline = build(video, bundle, timed, locations)
+            shown = {beat.scene for beat in timeline.beats}
+            timeline.notices = {scene: notes for scene, notes in notices.items() if scene in shown}
         except ValidationError as e:
             raise StepFailed(f"the {video} timeline does not validate: {e}") from e
         problems = timeline_problems(timeline, locations)
@@ -124,7 +128,8 @@ def run(job: Path, ask=None) -> str:
 
 def is_done(job: Path) -> bool:
     """Both timelines read, and are newer than everything they were made from."""
-    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.TIMED)]
+    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.TIMED),
+              *(job / "art").glob("*.json")]  # what each picture's check found, for its notices
     try:
         newest_input = max(path.stat().st_mtime for path in inputs)
         for video in media.VIDEOS:

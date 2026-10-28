@@ -588,3 +588,20 @@ def test_one_stage_of_a_process_fades_into_the_next_framed_alike(job):
     assert cut.revealed["overview"]["Thylakoid"] == 4.0
     backwards = video([["overview", "hook"]])  # back to the earlier stage: a cut
     assert backwards.plans[1].fade_from is None and min(at(backwards, 4 + fade / 2)) > 245
+
+
+def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them(job):
+    beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
+    plain = Renderer(job, flowing([beat]))
+    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+    noted = Renderer(job, flowing([beat]).model_copy(update={"notices": notices}))
+    width = noted.layout.width
+    edge = width - renderer_module.NOTICE_W
+    assert plain.view("overview")[2] == width and noted.view("overview")[2] == edge
+    assert noted.art_to_frame(2.0, 896, 560)[0] < plain.art_to_frame(2.0, 896, 560)[0]  # the picture moved left
+    amber = p.rgb("#F59E0B")
+    assert np.allclose(pixel(noted.frame(2.0), edge + 3, 120), amber, atol=12)  # the card's side
+    assert not np.allclose(pixel(plain.frame(2.0), edge + 3, 120), amber, atol=12)
+    # Every stage of a process with notices keeps the same framing, card or not.
+    staged = Renderer(job, flowing([beat]).model_copy(update={"notices": notices, "stages": [["hook", "overview"]]}))
+    assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
