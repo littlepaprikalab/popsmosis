@@ -43,6 +43,9 @@ The runner needs these in its environment:
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
+| `INKMORY_PLANNER_API_KEY` | the planner agent's (Boojum's) `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the studio keeps the planner's record on every topic made on a Muse brain (README, [The planner's record on Inkmory](../README.md#the-planners-record-on-inkmory)). Only studio code reads it; the skill file never uses it |
+| `STUDIO_PLANNER_PERSONA` | optional: `record` (the default) or `lesson`, where the planner's persona and memory go: into its record only, or into the bundle prompt as well |
+| `INKMORY_PLANNER_ON_CLAUDE` | optional: `true` lets the planner keep its record on a topic whose brain is Claude. Unset, its record is Muse's only |
 | `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless Lyria sings it (the audio step). Its calls bill to that ElevenLabs account |
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |

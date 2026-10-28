@@ -9,6 +9,11 @@ from the queue and runs this on its id. The steps, each done once its file exist
     factcheck  factcheck.json               done only once it has passed
     post       posted.json                  the lesson, bundle and fact-check, saved on the API
 
+A run that runs the bundle or the fact-check is also the planner's beat on Inkmory
+(studio/inkmory.py): it reads the planner's context before the first of them, and
+writes the planner's record once the run has ended. Best effort: it never changes the
+run's outcome.
+
 `run` starts at the first step that is not done, so running it again after a
 failure retries the step that failed. Before each step but the post it claims the
 topic again (POST /api/questions/:id/claim), which renews the queue's lease, so a
@@ -49,7 +54,7 @@ import time
 import traceback
 from pathlib import Path
 
-from studio import brain, checks, jobs, ledger
+from studio import brain, checks, inkmory, jobs, ledger
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -239,6 +244,7 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
+    planner = inkmory.Planner()  # its beat: begun before its first step this run, if any
     result, step, reason = DONE, "post", "the lesson was already posted"
     # From the first step that is not done, every step runs: a new bundle makes the fact-check stale.
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
@@ -254,7 +260,12 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
                     use_brain(job, question, check_brain)
                 if step != "post":  # the post makes the answer, which the videos' reports go on
                     report_progress(reporter, job, api, {step: step_clock})
-                reason = STEP_RUNNERS[step](job, api, question, ask)
+                if step in inkmory.STEPS:
+                    planner.begin()
+                if step == "bundle":
+                    reason = make_bundle(job, api, question, ask, persona=planner.lesson_voice())
+                else:
+                    reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
         except Stop as e:
             result, reason = STOPPED, str(e)
@@ -281,6 +292,9 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
         with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
             log.write(json.dumps(record, ensure_ascii=False) + "\n")
     (job / "run.current.json").unlink(missing_ok=True)
+    # Last, once the run is on record: the lesson is never held up by it, a kill now is not a failed
+    # run, and the record sees this run's outcome.
+    planner.finish(job, ask)
     return result, step, reason
 
 
@@ -368,8 +382,8 @@ def download(api: Api, url: str) -> bytes | None:
         raise
 
 
-def make_bundle(job: Path, api: Api, question: dict, ask) -> str:
-    bundle = bundle_step.run(job, ask=ask)
+def make_bundle(job: Path, api: Api, question: dict, ask, persona: str = "") -> str:
+    bundle = bundle_step.run(job, ask=ask, persona=persona)
     return f"{bundle.course} / {bundle.topic}"
 
 

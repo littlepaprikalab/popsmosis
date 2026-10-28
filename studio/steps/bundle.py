@@ -16,10 +16,11 @@ from studio.schemas import Bundle, Request
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
 
 
-def run(job: Path, ask=brain.ask) -> Bundle:
+def run(job: Path, ask=brain.ask, persona: str = "") -> Bundle:
+    """persona: the planner's, ending the prompt (studio/inkmory.py, STUDIO_PLANNER_PERSONA=lesson); "" for none."""
     request = read(job / "request.json", Request)
     try:
-        answer = ask("brain", user_prompt(request), Bundle, request.images, system=PROMPT, label="bundle")
+        answer = ask("brain", user_prompt(request), Bundle, request.images, system=PROMPT + persona, label="bundle")
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
