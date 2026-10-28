@@ -16,10 +16,12 @@ endpoints as built.
    trigger, so a run starts within seconds.
 4. The routine runs the **studio**, a Python pipeline in this repo, on the topic. The
    studio writes the lesson, fact-checks every line, then makes two videos from the same
-   plan and the same diagrams. Only the audio differs:
-   - **Lesson video**: narrated, ending with a worked exam question (FRQ).
-   - **Song video**: the same content sung, the diagram labels synced to the vocals, the
-     same FRQ at the end.
+   plan and the same diagrams. They do different jobs:
+   - **Lesson video**: explains. The narration walks through every step and every part,
+     ending with a worked exam question (FRQ).
+   - **Song video**: makes it stick. A song the learner replays, carrying the 3–5 things
+     to remember in rhyme and a chant-like chorus, the diagram labels synced to the
+     vocals, the same FRQ at the end.
 5. The page shows the droplet: both videos when they finish rendering, with the lesson
    text under them, updating in place without a reload. Until then the card shows the
    droplet's bill of materials filling in, step by step, as its progress; the text waits
@@ -215,16 +217,21 @@ parts build on the facts it has already written.
    One fixed colour per structure for the whole job.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
-4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
-   verse, chorus, bridge, chorus). The style is one the audience listens to (for high
+4. `music`: `positive_styles`, `negative_styles`, and the section order (intro, verse,
+   pre-chorus, chorus, verse, pre-chorus, bridge, chorus, outro). The style is one the audience listens to (for high
    school: pop with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's
    mood setting its tempo, or the learner's own when they ask for one: a question line
    starting `Style:` becomes `song_style` in `request.json`. One tag names the tempo,
    "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
-   and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
-   `aliases`, because hearing that word is what reveals the structure on screen.
-6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics.
+   and the `fact_id` it teaches or `"filler"`. The song is for memory, not a sung lesson:
+   3–5 ideas, rhyming couplets, a story through the steps, a title line that opens the
+   song and comes back in the chorus, and a chorus that chants `core_idea`; the bridge
+   sings what happens when a part fails. A line need not name a structure; one that does
+   uses its `name` or one of its `aliases`, because hearing that word is what reveals the
+   structure on screen.
+6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
+   what the song only names: every fact, step by step, and every structure drawn.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
    from the alignment.
@@ -317,8 +324,9 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   `composition_plan` of one chunk per section: `text` ("[Section]\nlines"),
   `duration_ms`, `positive_styles`, `negative_styles`, `context_adherence` "high". The
   studio's code makes this call, only after the fact-check passes. Section durations come
-  from the line count and the styles' "<n> bpm" tag (two bars per line: 4.8 s at 100
-  bpm, 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
+  from the line count and the styles' "<n> bpm" tag (one bar per line below 130 bpm, 2.4 s
+  at 100 bpm, so the lines come short and punchy; two bars from 130 bpm, where one would be
+  under 1.9 s: 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
 - **Or the song from Lyria** (picked on `/admin/studio`): `POST
   https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent` with
   one text prompt: the style tags (the same tempo tag), the length, the planned structure

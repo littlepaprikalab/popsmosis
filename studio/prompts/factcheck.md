@@ -41,7 +41,16 @@ a story told about a molecule. Judge the point the image makes about the real th
 its literal words. "Protons turn the rotor like water turns a wheel" is SUPPORTED when a
 fact says the flow of protons turns the rotor. An image is UNSUPPORTED when the point it
 makes is wrong or not in the facts, or when it would lead a learner to believe something
-false (calling a part that only lets protons through a "pump").
+false (calling a part that only lets protons through a "pump"). Song lyrics also carry
+attitude that makes no claim ("that's the trick", "you see", "for real"): judge the rest of
+the line, and a line that is only attitude is FILLER.
+
+A fact about one case never supports a line about another. Read each line with the lines
+around it to see which case it is about: when a song's bridge asks "what if the turbine
+jams?", its next lines are about a jammed turbine, and a fact about a different failure
+(a blocked carrier earlier in the chain) supports none of them. Such a line is
+UNSUPPORTED unless a fact describes its own case, and its `corrected` stays with that
+case: say only what the facts support about it, never the other case's outcome.
 
 Whatever its facts, a line that is not fit to play or show in a classroom is UNSUPPORTED:
 crude, sexual or hateful language, cruelty played for laughs, gore for shock, or a name
@@ -51,7 +60,8 @@ videos.
 When you write `corrected`:
 
 - Keep the line's job and voice. A lyric stays a singable lyric of about the same length
-  and rhythm. A narration sentence stays one spoken sentence. An exam-question line
+  and rhythm, in the same casual voice, and keeps its last word when a true line can end
+  on it, since it rhymes with the line next to it. A narration sentence stays one spoken sentence. An exam-question line
   stays a question if it was one, and a model-answer step stays one spoken sentence. A lesson sentence keeps its
   inline markdown, and a table row keeps the same cells, separated by " | ".
 - Keep every structure name the line uses: hearing the name is what reveals the structure

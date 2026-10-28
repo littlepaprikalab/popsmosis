@@ -59,7 +59,8 @@ SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this 
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
-BEATS_PER_LINE = 8  # one sung line is two bars of 4/4 (PLAN section 5, step 5): 4.3 s at 112 bpm
+BEATS_PER_BAR = 4
+TWO_BAR_BPM = 130  # from this tempo a line is two bars, since one would be under 1.9 s (PLAN section 5, step 5)
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
 TIMEOUT_S = 600  # a song takes a minute or two to come back
 SPEECH = ("narration", "frq")
@@ -187,12 +188,15 @@ def sections(bundle: Bundle) -> list[dict]:
 
 
 def line_ms(bundle: Bundle) -> float:
-    """How long one line takes to sing at the tempo the song's styles name."""
-    return BEATS_PER_LINE * 60_000 / bundle.music.bpm
+    """How long one line takes to sing at the tempo the song's styles name: one bar, short
+    and punchy (2.4 s at 100 bpm), or two bars from TWO_BAR_BPM (3.2 s at 150)."""
+    bpm = bundle.music.bpm
+    bars = 2 if bpm >= TWO_BAR_BPM else 1
+    return bars * BEATS_PER_BAR * 60_000 / bpm
 
 
 def planned_sections(bundle: Bundle) -> list[dict]:
-    """Each section in sung order with its lines, and where it is planned to fall: two bars a
+    """Each section in sung order with its lines, and where it is planned to fall: line_ms a
     line at the tempo the styles name."""
     out, at = [], 0
     for part in sections(bundle):

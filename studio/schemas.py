@@ -18,11 +18,11 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FILLER = "filler"
-Section = Literal["verse", "chorus", "bridge"]
-SECTION_ORDER = ["verse", "chorus", "verse", "chorus", "bridge", "chorus"]
+Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
+SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "bridge", "chorus", "outro"]
 Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
-BPM_RANGE = (80, 160)  # the tempos the song may take; a line is two bars, so 6.0 s down to 3.0 s
+BPM_RANGE = (80, 160)  # the tempos the song may take; a sung line lasts 1.9 s to 3.7 s (audio.line_ms)
 DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
 BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)

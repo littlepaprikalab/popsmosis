@@ -63,6 +63,7 @@ def made(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
+    monkeypatch.setattr(audio, "TWO_BAR_BPM", 0)  # two bars a line, room for the fake singer's steady words
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())

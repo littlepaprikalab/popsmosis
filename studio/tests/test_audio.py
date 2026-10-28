@@ -98,26 +98,41 @@ def test_the_song_is_one_chunk_per_section_timed_by_its_lines(job, monkeypatch):
     assert [c["text"].split("\n")[0] for c in chunks] == ["[Verse]", "[Chorus]", "[Verse]", "[Chorus]", "[Bridge]",
                                                          "[Chorus]"]
     assert chunks[0]["text"] == "[Verse]\nLight lands on the thylakoid\nEvery electron hand-off pumps a proton"
-    assert [c["duration_ms"] for c in chunks] == [8571, 4286, 4286, 4286, 4286, 4286]  # two bars a line at 112 bpm
+    # one bar a line at 112 bpm (2143 ms); a one-line section is held to the 3 s a chunk must last
+    assert [c["duration_ms"] for c in chunks] == [4286, 3000, 3000, 3000, 3000, 3000]
     assert all(c["positive_styles"] == ["upbeat pop", "112 bpm"] and c["negative_styles"] == ["mumbled vocals"]
                for c in chunks)
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["song_id"] == "song123"
-    assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 8571)]
+    assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 4286)]
     assert (job / "audio/song.mp3").read_bytes() == b"ID3 song"
 
 
-@pytest.mark.parametrize("tags, chorus_ms, chorus_at", [
-    (["pop-punk anthem at 150 bpm"], 3200, 6400),
-    (["K-pop", "98 bpm"], 4898, 9796),
-    (["upbeat pop"], 4286, 8571),  # a bundle from before the styles chose a tempo: 112 bpm
+@pytest.mark.parametrize("tags, verse_ms", [
+    (["pop-punk anthem at 150 bpm"], 6400),  # from 130 bpm a line is two bars: 3.2 s
+    (["dance-pop", "129 bpm"], 3721),  # below it, one bar: 1.86 s
+    (["K-pop", "98 bpm"], 4898),
+    (["upbeat pop"], 4286),  # a bundle from before the styles chose a tempo: 112 bpm
 ])
-def test_each_section_is_timed_by_the_tempo_the_styles_name(tags, chorus_ms, chorus_at):
+def test_each_section_is_timed_by_the_tempo_the_styles_name(tags, verse_ms):
     data = sample_media.bundle().model_dump()
     data["music"]["positive_styles"] = tags
     plan, placed = audio.composition_plan(sample_media.bundle().model_validate(data))
-    assert plan["chunks"][1]["duration_ms"] == chorus_ms  # the first chorus: one line
-    assert placed[1]["start_ms"] == chorus_at  # after a two-line verse
+    assert plan["chunks"][0]["duration_ms"] == verse_ms  # the first verse: two lines
+    assert placed[1]["start_ms"] == verse_ms
+
+
+def test_the_song_can_have_an_intro_pre_choruses_and_an_outro():
+    data = sample_media.bundle().model_dump()
+    first = data["lyrics"][0]
+    data["lyrics"] = [{**first, "id": "i-1", "section": "intro"}, *data["lyrics"],
+                      {**first, "id": "pc-1", "section": "pre-chorus"}, {**first, "id": "o-1", "section": "outro"}]
+    data["music"]["sections"] = ["intro", *data["music"]["sections"], "pre-chorus", "outro"]
+    data["direction"].append({**data["direction"][0], "line_id": "i-1"})
+    data["direction"] += [{**data["direction"][0], "line_id": i} for i in ("pc-1", "o-1")]
+    plan, _ = audio.composition_plan(sample_media.bundle().model_validate(data))
+    heads = [c["text"].split("\n")[0] for c in plan["chunks"]]
+    assert heads[0] == "[Intro]" and heads[-2:] == ["[Pre-Chorus]", "[Outro]"]
 
 
 def test_a_chunk_is_never_shorter_than_the_api_allows():
@@ -249,8 +264,8 @@ def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, m
     assert headers["x-goog-api-key"] == "gemini-key" and "xi-api-key" not in headers
     assert body["generationConfig"] == {"responseModalities": ["AUDIO", "TEXT"]}
     prompt = body["contents"][0]["parts"][0]["text"]
-    assert prompt.startswith("Style: upbeat pop, 112 bpm.\nAvoid: mumbled vocals.\nLength: about 0:30.")
-    assert "[0:00 - 0:09] Verse\n[0:09 - 0:13] Chorus\n" in prompt
+    assert prompt.startswith("Style: upbeat pop, 112 bpm.\nAvoid: mumbled vocals.\nLength: about 0:19.")
+    assert "[0:00 - 0:04] Verse\n[0:04 - 0:07] Chorus\n" in prompt
     assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEvery electron hand-off pumps a proton"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Verse]\nOnly b6f pumps them in"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Bridge]\nFeel the gradient build"

@@ -33,9 +33,12 @@ TEXTS = {  # (text, scene, spotlight and camera target)
               ("Only b6f pumps them in", "overview", "Cytochrome b6f"),
               ("Protons crowd the inner space", "overview", ""), ("Pressure builds across the wall", "overview", "")],
     "chorus": [("Protons flow and ATP grows", "overview", "")],
+    "pre-chorus": [("Only b6f pumps them in", "overview", "Cytochrome b6f")],
     "bridge": [("Down through ATP synthase", "synthase", "ATP synthase"),
                ("The synthase spins as protons pass", "synthase", "ATP synthase")],
 }
+TEXTS["intro"] = TEXTS["verse"][:2]
+TEXTS["outro"] = TEXTS["chorus"]
 
 
 def bench_bundle() -> Bundle:
