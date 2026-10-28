@@ -64,6 +64,19 @@ class Scene(Strict):
     id: str
     image_prompt: str
     structures: list[Structure]
+    # Scenes that are stages of one process, in scene order: painted as one subject in one framing (each
+    # later stage redrawn from the first), and the video cross-fades between them. "" in a bundle before.
+    stage_of: str = Field(default_factory=str, description='The process this scene is one stage of ("mitosis"), its stages '
+                                                            'in scene order; "" for any other scene')
+
+
+def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
+    """Each process's stage scenes, in scene order."""
+    groups: dict[str, list[Scene]] = {}
+    for scene in scenes:
+        if scene.stage_of:
+            groups.setdefault(scene.stage_of, []).append(scene)
+    return groups
 
 
 class Music(Strict):
@@ -225,8 +238,9 @@ def bundle_problems(bundle: Bundle) -> list[str]:
     problems = []
     if not 3 <= len(bundle.facts) <= 4:
         problems.append(f"{len(bundle.facts)} facts, not 3-4")
-    if not 3 <= len(bundle.scenes) <= 6:
-        problems.append(f"{len(bundle.scenes)} scenes, not 3-6")
+    most = 8 if any(s.stage_of for s in bundle.scenes) else 6  # a process's stages take a scene each
+    if not 3 <= len(bundle.scenes) <= most:
+        problems.append(f"{len(bundle.scenes)} scenes, not 3-{most}")
     for kind, ids in (
         ("fact", [f.id for f in bundle.facts]),
         ("scene", [s.id for s in bundle.scenes]),
@@ -275,7 +289,8 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "glow", "tempo"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "glow", "stages",
+                  "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -625,6 +640,7 @@ class Timeline(Strict):
     audio: list[AudioClip]  # mixed into one track
     palette: dict[str, str]  # structure name -> #RRGGBB, the same in both videos
     beats: list[Beat]
+    stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
 
     @field_validator("palette")
     @classmethod

@@ -557,3 +557,32 @@ def test_a_render_that_hangs_is_stopped_at_its_time_limit(job, tmp_path, monkeyp
         encode(job, short_timeline(job, "song"), tmp_path / "out.mp4", parts=2)
     assert time.monotonic() - started < 10
     assert not (tmp_path / "out.mp4").exists()
+
+
+def test_one_stage_of_a_process_fades_into_the_next_framed_alike(job):
+    def beat(t0, t1, scene, reveal):
+        return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0),
+                    reveal=[Reveal(name="Thylakoid", t=reveal)], spotlight=None, labels=["Thylakoid"], particles=[],
+                    caption=None, line_id=f"v{t0}", line="the stages", words=[])
+
+    def video(stages):
+        return Renderer(job, Timeline(video="song", duration=8, fps=30, audio=[], palette=PALETTE, stages=stages,
+                                      beats=[beat(0, 4, "hook", 1.0), beat(4, 8, "overview", 4.0)]))
+
+    staged, cut = video([["hook", "overview"]]), video([])
+    fade = renderer_module.STAGE_FADE_S
+    # The camera goes on from where it was, rather than cutting in and settling.
+    assert staged.plans[1].start == renderer_module.clamp_cam(
+        staged.plans[0].cam(4.0, staged.layout.view, staged.scene("hook")), staged.layout.view, staged.scene("overview"))
+    assert cut.plans[1].start.zoom > cut.plans[1].target.zoom  # a cut settles in
+    # A spot that is the hook's thylakoid and the overview's white background: green, then fading to white.
+    def at(renderer, t):
+        return pixel(renderer.frame(t), *renderer.art_to_frame(t, 896, 300))
+
+    green, halfway, white = at(staged, 3.9), at(staged, 4 + fade / 2), at(staged, 4 + fade + 0.1)
+    assert green[1] > green[0] + 40 and min(white) > 245
+    assert all(g + 25 < h < w - 25 for g, h, w in zip(green, halfway, white) if w - g > 100)
+    assert min(at(cut, 4 + fade / 2)) > 245  # without stages, a cut
+    # The thylakoid, shown on the stage before, is on in full from the next stage's first frame.
+    assert staged.revealed["overview"]["Thylakoid"] < 4.0 - renderer_module.REVEAL_S + 1e-9
+    assert cut.revealed["overview"]["Thylakoid"] == 4.0

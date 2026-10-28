@@ -64,6 +64,7 @@ from studio.schemas import (
     Timing,
     Turning,
     Word,
+    stage_groups,
     timeline_problems,
     timing_problems,
 )
@@ -308,8 +309,9 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _turn(beats, bundle, located)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
+    stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
-                    beats=[Beat(**b) for b in beats])
+                    beats=[Beat(**b) for b in beats], stages=stages)
 
 
 def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:

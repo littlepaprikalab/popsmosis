@@ -1,6 +1,7 @@
 """Muse Image and SAM 3.1 on Meta's Model API: the art when Muse Image paints it, and the masks of any painted art.
 
-    paint(job, label, prompt)                 one picture from Muse Image (POST /v1/images/generations), as PNG bytes
+    paint(job, label, prompt, reference)      one picture from Muse Image (POST /v1/images/generations), as PNG
+                                              bytes; with a reference picture, redrawn from it (/v1/images/edits)
     segment(job, label, art, phrase=...)      SAM 3.1 (POST /v1/responses): every match of a short noun phrase
     segment(job, label, art, box=...)         or the one thing inside a box, each as a full-size mask
 
@@ -90,8 +91,10 @@ sleep = time.sleep  # tests pass their own
 # --- Muse Image -------------------------------------------------------------------------
 
 
-def paint(job: Path, label: str, prompt: str) -> bytes:
-    """One picture of the prompt at the art's aspect ratio, as PNG bytes (any size: the caller fits it)."""
+def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> bytes:
+    """One picture of the prompt at the art's aspect ratio, as PNG bytes (any size: the caller fits it). With a
+    reference picture it is redrawn from that one, which keeps its framing and look (a process's later stages
+    from its first)."""
     body = {
         "model": IMAGE_MODEL,
         "prompt": prompt,
@@ -102,8 +105,10 @@ def paint(job: Path, label: str, prompt: str) -> bytes:
         # A diagram from its prompt alone: no web search or shell (PLAN section 5, step 3).
         "tool_enablement": {"enable_web_search": False, "enable_shell": False},
     }
+    if reference is not None:
+        body["images"] = [{"image_url": "data:image/png;base64," + base64.standard_b64encode(reference.read_bytes()).decode("ascii")}]
     started = time.monotonic()
-    status, answer = _post("/images/generations", body)
+    status, answer = _post("/images/edits" if reference is not None else "/images/generations", body)
     if status == 400 and _error(answer).get("code") == "content_policy_violation":
         raise Declined(f"Muse Image declined the picture: {_message(answer)}")
     if status != 200:

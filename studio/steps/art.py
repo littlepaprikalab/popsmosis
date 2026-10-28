@@ -73,7 +73,7 @@ import skia
 
 from studio import brain, checks, gemini, jobs, ledger, media, muse, svg
 from studio.jobs import read, write
-from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems
+from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems, stage_groups
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
 MAX_TRIES = 3  # SVG drawings a scene may take
@@ -89,8 +89,10 @@ class Painter:
     name: str
     title: str
     model: str
-    make: Callable[[Path, str, str], bytes]  # (job, label, prompt) -> the picture's bytes
+    make: Callable[[Path, str, str, Path | None], bytes]  # (job, label, prompt, reference) -> the picture's bytes
     declined: type[Exception]  # a picture it would not make: a refused try
+    failed: type[Exception]  # any picture it did not make
+    redraws: bool  # it can redraw a reference picture (a process's later stages, from its first)
 
 
 def painter(job: Path) -> str:
@@ -102,8 +104,10 @@ def painter(job: Path) -> str:
 def painter_of(job: Path) -> Painter:
     """The painter that paints this job's pictures (not for svg). Looked up at each call, so tests can stand in."""
     if painter(job) == "gemini":
-        return Painter("gemini", gemini.NAME, gemini.MODEL, lambda *a: gemini.paint(*a), gemini.Declined)
-    return Painter("muse", "Muse Image", muse.IMAGE_MODEL, lambda *a: muse.paint(*a), muse.Declined)
+        return Painter("gemini", gemini.NAME, gemini.MODEL, lambda job, label, prompt, reference=None:
+                       gemini.paint(job, label, prompt), gemini.Declined, gemini.GeminiError, redraws=False)
+    return Painter("muse", "Muse Image", muse.IMAGE_MODEL, lambda *a: muse.paint(*a), muse.Declined, muse.MuseError,
+                   redraws=True)
 
 
 def run(job: Path, ask=brain.ask) -> str:
@@ -288,12 +292,39 @@ def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
 
 
 def key(bundle: Bundle, scene: Scene) -> str:
-    """Changes when the topic or the scene does (its prompt, structures, colours).
+    """Changes when the topic or the scene does (its prompt, structures, colours), and for a process's later
+    stage when its first stage does, which it is redrawn from.
 
     Not when the art prompt does: a prompt change should not redraw finished jobs.
     """
-    data = json.dumps([bundle.topic, scene.model_dump()], sort_keys=True)
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]
+    data = [bundle.topic, _dump(scene)]
+    if (stage := Stage.of(bundle, scene)) and stage.number > 1:
+        data.append(_dump(stage.first))
+    return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def _dump(scene: Scene) -> dict:
+    # Without an empty stage_of: a scene that is no stage keeps the key it had before stages existed.
+    return scene.model_dump(exclude=set() if scene.stage_of else {"stage_of"})
+
+
+@dataclass
+class Stage:
+    """Where a scene stands in the process it is a stage of (Scene.stage_of)."""
+
+    process: str
+    number: int  # from 1
+    count: int
+    first: Scene  # the first stage: its picture is what the later ones are redrawn from
+
+    @classmethod
+    def of(cls, bundle: Bundle, scene: Scene) -> Stage | None:
+        if not scene.stage_of:
+            return None
+        group = stage_groups(bundle.scenes).get(scene.stage_of, [])
+        if len(group) < 2:
+            return None
+        return cls(scene.stage_of, [s.id for s in group].index(scene.id) + 1, len(group), group[0])
 
 
 def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -> str:
@@ -392,10 +423,20 @@ def run_painted(job: Path, ask) -> str:
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
-    todo = [scene for scene in bundle.scenes if not (resume and _painted(job, bundle, scene))]
+    stages = {scene.id: stage for scene in bundle.scenes if (stage := Stage.of(bundle, scene))}
+    again = {scene.id for scene in bundle.scenes if not (resume and _painted(job, bundle, scene))}
+    # A later stage is redrawn from its first: painted again whenever that one is.
+    again |= {sid for sid, stage in stages.items() if stage.first.id in again}
+    todo = [scene for scene in bundle.scenes if scene.id in again]
     kept = len(bundle.scenes) - len(todo)
-    # The scenes at the same time; one that fails fails the step once the others are saved.
-    results = ledger.parallel(lambda scene: paint(job, bundle, scene, ask), todo, WORKERS)
+    first = [scene for scene in todo if scene.id not in stages or stages[scene.id].number == 1]
+    later = [scene for scene in todo if scene not in first]
+    # The scenes at the same time, then each process's later stages, redrawn from its first stage's picture.
+    # One that fails fails the step once the others are saved.
+    results = ledger.parallel(lambda scene: paint(job, bundle, scene, ask), first, WORKERS)
+    results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
+                               later, WORKERS)
+    todo = first + later
     painted, tries = len(results), sum(attempts for _, attempts in results)
     left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results)
             for p in best.check.misplaced + best.check.wrong]
@@ -405,22 +446,33 @@ def run_painted(job: Path, ask) -> str:
             + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
 
 
-def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
+def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None) -> tuple[Painting, int]:
     """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
-    how many pictures were asked for."""
+    how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
+    (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
+    not, or the painter cannot, it is painted afresh."""
     by = painter_of(job)
+    if not by.redraws:
+        reference = None
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
         old.unlink()
     best, problems, n, tries = None, [], 0, []
     for n in range(1, MAX_PAINTS + 1):
-        prompt = paint_prompt(bundle, scene, problems)
+        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
-            picture = by.make(job, label, prompt)
+            picture = by.make(job, label, prompt, reference)
         except by.declined as e:
             problems = [f"{e}; describe the scene plainly, as a textbook diagram"]
             tries.append({"try": n, "declined": str(e)})
             continue
+        except by.failed as e:
+            if reference is None:
+                raise
+            tries.append({"try": n, "redraw_failed": str(e)})
+            reference = None  # painted afresh from here on
+            prompt = paint_prompt(bundle, scene, problems)
+            picture = by.make(job, label, prompt, None)
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
         check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
@@ -437,6 +489,8 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
+                                  "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
+                                  and stage.number > 1 else "",
                                   "try": best.attempt, "check": best.check.model_dump(), "tries": tries})
     _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
@@ -459,12 +513,14 @@ def fit(picture: bytes) -> np.ndarray:
     return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
 
 
-def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = ()) -> str:
+def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
     image model reads names), and STYLE (EVERYDAY_STYLE for the hook and the analogy). Short on purpose:
-    every extra line was a chance to miss."""
+    every extra line was a chance to miss. A later stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
     parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
+    if redrawn and (stage := Stage.of(bundle, scene)):
+        parts.insert(0, REDRAW.format(process=stage.process))
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
@@ -505,12 +561,20 @@ SCENE_KINDS = {
     "overview": "the overview: the whole system at once, each part in its place.",
 }
 DETAIL = "a close-up of one part of the topic."
+STAGE = ("stage {number} of {count} of {process}: the same subject as its other stages, at the same size and in "
+         "the same place, showing what this stage shows.")
+# Before a later stage's own prompt, when it is redrawn from the first stage's picture (/v1/images/edits).
+REDRAW = ("Redraw this picture as a later stage of {process}: the same subject, at the same size and in the same "
+          "place, in the same colours and style; change only what this stage shows.")
 
 
 def check_prompt(bundle: Bundle, scene: Scene) -> str:
     lines = [f"- {s.name}: {s.sam_phrase}" for s in scene.structures]
+    stage = Stage.of(bundle, scene)
+    kind = (STAGE.format(number=stage.number, count=stage.count, process=stage.process) if stage
+            else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
-            + f"\nThe scene is {SCENE_KINDS.get(scene.id, DETAIL)}"
+            + f"\nThe scene is {kind}"
             + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
 
 

@@ -36,6 +36,7 @@ SPOT_S = 0.6
 MOVE_S = 1.8  # a camera move between two stations
 SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
 SETTLE_ZOOM = 1.06
+STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
@@ -413,6 +414,7 @@ class BeatPlan:
     caption_out: float
     flow_in: float  # the particles' run: they set off once the run starts and its stops are revealed
     flow_out: float
+    fade_from: str | None = None  # the stage this one fades in over (Timeline.stages)
 
     def cam(self, t: float, view: Rect, art: SceneArt) -> Cam:
         return clamp_cam(mix_cam(self.start, self.target, p.ease((t - self.move_at) / self.move_s)), view, art)
@@ -437,11 +439,24 @@ class Renderer:
         for beat in timeline.beats:
             for r in beat.reveal:
                 self.revealed.setdefault(beat.scene, {}).setdefault(r.name, r.t)
+        # Each process's stages, which fade one into the next. What was shown on the stage before is on
+        # the next from its first frame, rather than shown again from a pale wash.
+        self._process = {sid: n for n, group in enumerate(timeline.stages) for sid in group}
+        for i, beat in enumerate(timeline.beats):
+            if i and self.staged(timeline.beats[i - 1].scene, beat.scene):
+                before, now = self.revealed.get(timeline.beats[i - 1].scene, {}), self.revealed.get(beat.scene, {})
+                for name, at in now.items():
+                    if at == beat.t0 and before.get(name, math.inf) <= beat.t0:
+                        now[name] = beat.t0 - max(REVEAL_S, LABEL_IN_S)
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
         self.surface = skia.Surface(self.pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         self._background: tuple[tuple, skia.Image] | None = None
+
+    def staged(self, before: str, after: str) -> bool:
+        """Whether going from one scene to the other is one stage of a process giving way to the next."""
+        return before != after and self._process.get(before, -1) == self._process.get(after, -2)
 
     def scene(self, scene_id: str) -> SceneArt:
         if scene_id not in self._scenes:
@@ -477,10 +492,15 @@ class Renderer:
             reveals = {r.name: r.t for r in beat.reveal}
             target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom)
             same = i > 0 and beats[i - 1].scene == beat.scene
+            staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
             if same:
                 start = plans[-1].cam(beat.t0, self.layout.view, self.scene(beat.scene))
                 move_at = max(beat.t0, reveals.get(beat.camera.target, beat.t0))
                 move_s = MOVE_S if beat.camera.ease == "inOut" else max(beat.t1 - move_at, 0.1)
+            elif staged:  # the same framing: the camera goes on from where it was
+                start = clamp_cam(plans[-1].cam(beat.t0, self.layout.view, self.scene(beats[i - 1].scene)),
+                                  self.layout.view, self.scene(beat.scene))
+                move_at, move_s = beat.t0, MOVE_S
             else:
                 start = Cam(target.cx, target.cy, target.zoom * (HOOK_ZOOM if i == 0 else SETTLE_ZOOM))
                 move_at, move_s = beat.t0, SETTLE_S * (1.4 if i == 0 else 1.0)
@@ -513,7 +533,8 @@ class Renderer:
                 flow_out = beats[k].t1
             plans.append(BeatPlan(target=target, start=start, move_at=move_at, move_s=move_s, spot=beat.spotlight,
                                   spot_at=spot_at, prev_spot=prev_spot, caption_in=caption_in,
-                                  caption_out=caption_out, flow_in=flow_in, flow_out=flow_out))
+                                  caption_out=caption_out, flow_in=flow_in, flow_out=flow_out,
+                                  fade_from=beats[i - 1].scene if staged else None))
         return plans
 
     def beat_index(self, t: float) -> int:
@@ -551,11 +572,13 @@ class Renderer:
         return levels
 
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,
-                         ghosts: dict[str, float], spots: dict[str, float]) -> None:
+                         ghosts: dict[str, float], spots: dict[str, float], keep: bool = True) -> None:
+        """The scene's picture, framed by the camera, over the whole frame. Kept for the next frame unless
+        `keep` is False (a stage fading into the next: two pictures, each drawn in part)."""
         art = self.scene(scene_id)
         washes, composed = art.compose(ghosts, spots)
         key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
-        if self._background and self._background[0] == key:
+        if keep and self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
             return
         canvas.clear(art.paper)
@@ -565,7 +588,8 @@ class Renderer:
         canvas.scale(scale, scale)
         canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
         canvas.restore()
-        self._background = (key, self.surface.makeImageSnapshot())
+        if keep:
+            self._background = (key, self.surface.makeImageSnapshot())
 
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
                 spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float) -> None:
@@ -602,7 +626,16 @@ class Renderer:
             spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
         reveals = self.revealed.get(beat.scene, {})
         ghosts = self._ghosts(beat.scene, reveals, t)
-        self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
+        fade = p.ease((t - beat.t0) / STAGE_FADE_S) if plan.fade_from else 1.0
+        if fade < 1.0:  # the stage before, under this one fading in, framed alike
+            before = plan.fade_from
+            self._draw_background(canvas, before, cam, view,
+                                  self._ghosts(before, self.revealed.get(before, {}), t), {}, keep=False)
+            canvas.saveLayerAlpha(None, round(255 * fade))
+            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False)
+            canvas.restore()
+        else:
+            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
         if beat.turning:
             self._turning(canvas, beat, cam, view, t, ghosts, spots, face=True)
         if beat.crowds:

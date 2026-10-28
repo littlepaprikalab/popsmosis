@@ -246,3 +246,15 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
     assert styles(["bright pop"]) == (["bright pop", "112 bpm"], repaired)  # none named: what songs used to be
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+
+
+def test_a_process_needs_two_stages_or_more():
+    def staging(*stages):
+        def change(data):
+            for scene in data["scenes"]:
+                scene["stage_of"] = "photosynthesis" if scene["id"] in stages else ""
+        bundle, found, _ = review(change)
+        return [s.stage_of for s in bundle.scenes], found
+
+    assert staging("overview", "synthase") == (["", "photosynthesis", "photosynthesis"], [])
+    assert staging("synthase") == (["", "", ""], [("scene:synthase", "stages", True)])  # an ordinary scene

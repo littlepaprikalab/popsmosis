@@ -212,8 +212,11 @@ parts build on the facts it has already written.
    one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
-   `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
-   One fixed colour per structure for the whole job.
+   `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`) and
+   `stage_of`. One fixed colour per structure for the whole job. A process whose parts move
+   or change shape from stage to stage (mitosis, the phases of the Moon) takes a scene per
+   stage, 2 to 5 of them, each with `stage_of` naming the process, all opening with the same
+   framing sentence; then up to 8 scenes in all.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
 4. `music`: `positive_styles`, `negative_styles`, and the section order (intro, verse,
@@ -315,6 +318,13 @@ wrong is recorded, not repainted: a second picture for those was no better 9 tim
 picture with text is never used; after the second, the scene keeps the text-free picture
 with the fewest structures out of place. Built (`studio/steps/art.py`, `studio/muse.py`); first
 run live on Oct 28 ([test-rounds.md](test-rounds.md)).
+
+**Stages** are painted as one subject in one framing: each later stage of a process is
+redrawn from the first stage's picture (`/v1/images/edits`, the first stage's picture
+with the stage's own prompt after "Redraw this picture as a later stage of mitosis: the
+same subject, at the same size and in the same place..."), and the helper is told which
+stage of how many it checks. A later stage is painted again whenever its first stage is;
+if Muse Image will not redraw a picture, the stage is painted afresh.
 
 **Repair before repainting** (`studio/repair.py`, run by the locate step once the
 structures are found): code fixes what it can for at most a helper look or two, where a
@@ -544,6 +554,11 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
   - **Glow:** a line's `glow` lights its part with a warm light past its edge, pulsing,
     for the line: light exciting photosystem II, a neuron firing. Rare, and like the
     spotlight, never on a part not yet named.
+  - **Stages:** where the video goes from one stage of a process to the next
+    (`Timeline.stages`), the next stage's picture fades in over the last for 0.8 s with
+    the camera going on from where it was, in place of a cut; what was shown on the stage
+    before is on in full from the next stage's first frame. Since every stage is painted
+    in the same framing, what changes between them is what the viewer sees move.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and

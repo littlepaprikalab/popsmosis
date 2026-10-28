@@ -71,7 +71,8 @@ Then:
 
 ## Scenes and structures
 
-Write 3 to 6 scenes in the order the videos use them. Each scene is one diagram, and
+Write 3 to 6 scenes in the order the videos use them (up to 8 for a process shown in
+stages, below). Each scene is one diagram, and
 together they go from what the learner already knows to the parts they are learning:
 
 - The hook first (id "hook"). Where it can, it shows where the topic turns up in the
@@ -88,6 +89,18 @@ together they go from what the learner already knows to the parts they are learn
 - When the bridge sings what happens when something fails, a detail scene can show
   it: the same view as another scene with that one change drawn in (what blocks it as a
   structure of its own, the flow that stopped left out: the video shows it stopping).
+- When the topic is a process whose parts move or change shape from one stage to the
+  next (mitosis, the phases of the Moon), each stage the lesson teaches is a scene of its
+  own, in order, 2 to 5 of them, each with `stage_of` naming the process ("mitosis");
+  every other scene's `stage_of` is "". The stages are the same subject in the same
+  framing: each `image_prompt` starts with the same sentence, word for word, saying the
+  kind of diagram, the subject, its size and its place ("Educational diagram, as Campbell
+  Biology draws it, of one animal cell, large and round in the centre of the picture."),
+  then says what this stage looks like. A structure keeps its name and colour from stage
+  to stage. The video fades each stage into the next as it is sung, so what changes
+  between them is what the viewer sees move. No scene draws several stages side by side:
+  an overview of mitosis drawn that way came back with its stages wrong. The stages are
+  the overview, and the chorus plays over the stage that draws what it names.
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
 

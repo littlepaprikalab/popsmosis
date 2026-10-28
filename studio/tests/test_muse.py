@@ -1,6 +1,7 @@
 """The Muse Image art and the SAM 3.1 locate step (Muse's brain, by default), with Meta's API stood in for."""
 
 import base64
+import hashlib
 import json
 import re
 import time
@@ -9,7 +10,7 @@ import numpy as np
 import pytest
 
 from studio import brain, jobs, ledger, media, muse, svg
-from studio.schemas import Box, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
+from studio.schemas import Box, Bundle, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 
@@ -66,15 +67,22 @@ class FakeMuse:
     """Stands in for muse.paint and muse.segment, records what each was asked, and logs each call
     made as they do (muse._log), at Meta's price."""
 
-    def __init__(self, pictures=None, spots=None, sure=0.9):
+    def __init__(self, pictures=None, spots=None, sure=0.9, redraw_error=None):
         self.pictures = pictures or {}  # scene -> a list of picture bytes (or exceptions), one per try
         self.spots = SPOTS if spots is None else spots
         self.sure = sure  # SAM's confidence for a phrase, by structure name or for all
+        self.redraw_error = redraw_error  # raised for every picture asked for with a reference
         self.painted: list[tuple[str, str]] = []
+        self.references: list[tuple[str, object]] = []  # (label, the reference picture or None), per call
         self.segmented: list[tuple[str, str | None, Box | None]] = []
 
-    def paint(self, job, label, prompt):
+    def paint(self, job, label, prompt, reference=None):
         scene = label.split()[1]
+        self.references.append((label, reference))
+        if reference is not None:
+            assert reference.exists()
+            if self.redraw_error:
+                raise self.redraw_error
         self.painted.append((label, prompt))
         tries = sum(1 for lab, _ in self.painted if lab.split()[1] == scene)
         answers = self.pictures.get(scene, [painting(scene)])
@@ -153,6 +161,67 @@ def test_muse_image_paints_each_scene_and_the_helper_checks_it(job, monkeypatch)
         assert made["key"] == art.key(bundle, scene) and made["model"] == muse.IMAGE_MODEL and made["try"] == 1
     assert not (job / media.LOCATIONS).exists() and not list((job / "art").glob("*.try*.png"))
     assert art.is_done(job) and not locate.is_done(job)
+
+
+def staged(job):
+    """The sample job with its overview and its ATP synthase close-up as two stages of one process."""
+    data = sample_media.bundle().model_dump()
+    for scene in data["scenes"][1:]:
+        scene["stage_of"] = "photosynthesis"
+    bundle = Bundle.model_validate(data)
+    jobs.write(job / "bundle.json", bundle)
+    return bundle
+
+
+def test_a_later_stage_is_redrawn_from_the_first_stages_picture(job, monkeypatch):
+    bundle = staged(job)
+    fake = FakeMuse().install(monkeypatch)
+    helper = FakeHelper()
+    assert art.run(job, helper) == "painted 3 scenes with Muse Image in 3 tries"
+    labels = [label for label, _ in fake.painted]
+    assert labels.index("art overview") < labels.index("art synthase")  # the first stage is painted first
+    references = dict(fake.references)
+    assert references["art hook"] is None and references["art overview"] is None
+    assert references["art synthase"] == job / media.art_path("overview")
+    redraw = art.REDRAW.format(process="photosynthesis")
+    assert dict(fake.painted)["art synthase"].startswith(f"{redraw} ATP synthase.")
+    assert redraw not in dict(fake.painted)["art overview"]
+    checked = dict(helper.asked)
+    assert "The scene is stage 1 of 2 of photosynthesis: the same subject" in checked["art check overview"]
+    assert "The scene is stage 2 of 2 of photosynthesis" in checked["art check synthase"]
+    assert "The scene is the video's opening" in checked["art check hook"]
+    made = {s.id: json.loads((job / "art" / f"{s.id}.json").read_text()) for s in bundle.scenes}
+    assert [made[s]["redrawn_from"] for s in ("hook", "overview", "synthase")] == ["", "", "overview"]
+    assert art.is_done(job)
+
+
+def test_a_later_stage_is_painted_again_whenever_its_first_stage_is(job, monkeypatch):
+    bundle = staged(job)
+    fake = FakeMuse().install(monkeypatch)
+    art.run(job, FakeHelper())
+    (job / "art" / "overview.json").unlink()  # its picture to be made again
+    fake.painted.clear()
+    assert art.run(job, FakeHelper()) == "painted 2 scenes with Muse Image in 2 tries, kept 1 painted before"
+    assert sorted(label for label, _ in fake.painted) == ["art overview", "art synthase"]
+    # The later stage's key follows its first stage's scene; a scene that is no stage keeps the key it
+    # had before stages existed, so finished jobs are not painted again.
+    hook, _, synthase = bundle.scenes
+    moved = bundle.model_copy(deep=True)
+    moved.scenes[1].image_prompt = "A thylakoid membrane, seen from above."
+    assert art.key(moved, moved.scenes[2]) != art.key(bundle, synthase)
+    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of"})], sort_keys=True)
+    assert art.key(bundle, hook) == hashlib.sha256(before.encode()).hexdigest()[:16]
+
+
+def test_a_stage_muse_image_will_not_redraw_is_painted_afresh(job, monkeypatch):
+    staged(job)
+    fake = FakeMuse(redraw_error=muse.MuseError("Muse Image refused the picture: 400 no images")).install(monkeypatch)
+    assert art.run(job, FakeHelper()) == "painted 3 scenes with Muse Image in 3 tries"
+    assert [(label, ref is not None) for label, ref in fake.references if label == "art synthase"] == [
+        ("art synthase", True), ("art synthase", False)]
+    assert not dict(fake.painted)["art synthase"].startswith("Redraw")
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["redrawn_from"] == "" and "400 no images" in made["tries"][0]["redraw_failed"]
 
 
 def sample_media_image(path):
@@ -539,6 +608,20 @@ def test_paint_asks_muse_image_for_a_png_without_web_search_and_logs_its_price(t
                                "response_format": "b64_json", "output_format": "png",
                                "tool_enablement": {"enable_web_search": False, "enable_shell": False}}
     assert calls(tmp_path) == [("art hook", "muse-image-1.0", 0.01)]
+
+
+def test_paint_redraws_a_reference_picture_with_the_edits_endpoint(tmp_path, monkeypatch):
+    png, first = picture(), tmp_path / "prophase.png"
+    first.write_bytes(picture(color=(200, 0, 0)))
+    send = FakeSend((200, {"data": [{"b64_json": base64.b64encode(png).decode()}]}))
+    monkeypatch.setattr(muse, "send", send)
+    assert muse.paint(tmp_path, "art metaphase", "the next stage", first) == png
+    request = send.requests[-1]
+    assert request["url"] == "https://api.meta.ai/v1/images/edits"
+    assert request["body"]["prompt"] == "the next stage"
+    assert request["body"]["images"] == [
+        {"image_url": "data:image/png;base64," + base64.b64encode(first.read_bytes()).decode()}]
+    assert calls(tmp_path) == [("art metaphase", "muse-image-1.0", 0.01)]
 
 
 def test_paint_says_why_a_picture_is_not_made(tmp_path, monkeypatch):

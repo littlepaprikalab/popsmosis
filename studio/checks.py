@@ -58,10 +58,24 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             heard |= _check_names(line, canon, scene, drawn[scene], problems) & drawn[scene]  # heard where drawn
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
+    _check_stages(data, problems)
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+def _check_stages(data: dict, problems: list) -> None:
+    """A process needs two stages or more: a lone one is an ordinary scene."""
+    counts: dict[str, int] = {}
+    for scene in data["scenes"]:
+        if scene.get("stage_of"):
+            counts[scene["stage_of"]] = counts.get(scene["stage_of"], 0) + 1
+    for scene in data["scenes"]:
+        if scene.get("stage_of") and counts[scene["stage_of"]] < 2:
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="stages", repaired=True,
+                                    detail=f"the only stage of {scene['stage_of']}; an ordinary scene instead"))
+            scene["stage_of"] = ""
 
 
 def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:

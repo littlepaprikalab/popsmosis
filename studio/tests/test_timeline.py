@@ -338,3 +338,12 @@ def test_lines_the_aligner_put_at_one_instant_still_make_a_timeline(job):
     beats = lines(timeline)
     assert [beats[i].t0 for i in ("v1-2", "c1-1", "v2-1")] == sorted({beats[i].t0 for i in ("v1-2", "c1-1", "v2-1")})
     assert all(b.t0 <= w.start <= w.end <= b.t1 for b in timeline.beats for w in b.words)
+
+
+def test_a_processs_stages_are_listed_for_the_renderer_to_fade_between(job):
+    data = bundle_data()
+    for scene in data["scenes"][1:]:
+        scene["stage_of"] = "photosynthesis"
+    write_bundle(job, data)
+    timelines = make(job)
+    assert [t.stages for t in timelines.values()] == [[["overview", "synthase"]]] * 2
