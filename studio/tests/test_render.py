@@ -586,3 +586,5 @@ def test_one_stage_of_a_process_fades_into_the_next_framed_alike(job):
     # The thylakoid, shown on the stage before, is on in full from the next stage's first frame.
     assert staged.revealed["overview"]["Thylakoid"] < 4.0 - renderer_module.REVEAL_S + 1e-9
     assert cut.revealed["overview"]["Thylakoid"] == 4.0
+    backwards = video([["overview", "hook"]])  # back to the earlier stage: a cut
+    assert backwards.plans[1].fade_from is None and min(at(backwards, 4 + fade / 2)) > 245

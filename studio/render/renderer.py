@@ -441,7 +441,7 @@ class Renderer:
                 self.revealed.setdefault(beat.scene, {}).setdefault(r.name, r.t)
         # Each process's stages, which fade one into the next. What was shown on the stage before is on
         # the next from its first frame, rather than shown again from a pale wash.
-        self._process = {sid: n for n, group in enumerate(timeline.stages) for sid in group}
+        self._process = {sid: (n, k) for n, group in enumerate(timeline.stages) for k, sid in enumerate(group)}
         for i, beat in enumerate(timeline.beats):
             if i and self.staged(timeline.beats[i - 1].scene, beat.scene):
                 before, now = self.revealed.get(timeline.beats[i - 1].scene, {}), self.revealed.get(beat.scene, {})
@@ -455,8 +455,10 @@ class Renderer:
         self._background: tuple[tuple, skia.Image] | None = None
 
     def staged(self, before: str, after: str) -> bool:
-        """Whether going from one scene to the other is one stage of a process giving way to the next."""
-        return before != after and self._process.get(before, -1) == self._process.get(after, -2)
+        """Whether going from one scene to the other is one stage of a process giving way to a later one. Back to
+        an earlier stage is a cut: faded, the cell would be seen coming together again."""
+        (p, k), (q, m) = self._process.get(before, (-1, 0)), self._process.get(after, (-2, 0))
+        return p == q and m > k
 
     def scene(self, scene_id: str) -> SceneArt:
         if scene_id not in self._scenes:
