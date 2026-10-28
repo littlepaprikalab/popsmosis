@@ -61,6 +61,7 @@ from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
 TAIL = ("timeline", "render", "upload")
+LOCAL_TAIL = ("timeline", "render")  # a local job has no posted lesson to upload the videos to
 STARTED, RUNNING, RECOVER, NONE = "STARTED", "RUNNING", "RECOVER", "NONE"
 CLAIM = "videos.json"  # {answerId, attempt}: the attempt this machine holds
 BACKGROUND = "videos.background.json"  # {pid, runs}: the detached run and where its outcome will be
@@ -170,8 +171,8 @@ class Record:
             self.failed.discard(step)
             self._save()
 
-    def end(self, step: str, seconds: float, result: str) -> None:
-        print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
+    def end(self, step: str, seconds: float, result: str, reason: str = "") -> None:
+        print(f"{step}: {result.lower()} in {seconds:.0f}s" + (f": {reason}" if reason else ""), file=sys.stderr)
         with self.lock:
             del self.running[step]
             if result == FAILED:
@@ -242,6 +243,11 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
     if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
         return record.finish(STOPPED, "videos", why)
 
+    return record.finish(*_make(job, api, ask, record, TAIL))
+
+
+def _make(job: Path, api: Api | None, ask, record: Record, tail: tuple[str, ...]) -> tuple[str, str, str]:
+    """The branches side by side, then the tail; (DONE | FAILED | STOPPED, step, reason)."""
     with ThreadPoolExecutor(len(BRANCHES)) as pool:
         branches = list(pool.map(lambda steps: _run_steps(job, steps, api, ask, record), BRANCHES))
     ran = any(branch[3] for branch in branches)
@@ -249,11 +255,28 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
     if unfinished:
         # Nothing to retry beats something to retry; then the earliest step.
         result, step, reason, _ = min(unfinished, key=lambda b: (b[0] != STOPPED, media.MEDIA_STEPS.index(b[1])))
-        return record.finish(result, step, reason)
-    result, step, reason, tail_ran = _run_steps(job, TAIL, api, ask, record, fresh=ran)
+        return result, step, reason
+    result, step, reason, tail_ran = _run_steps(job, tail, api, ask, record, fresh=ran)
     if result == DONE and not (ran or tail_ran):
         reason = "the videos were already made"
-    return record.finish(result, step, reason)
+    return result, step, reason
+
+
+def local(job: Path, ask=None) -> tuple[str, str, str]:
+    """`python -m studio make <job>`: a local job's videos, made as `videos` makes them but with no API
+    (no claim, no upload): art and locate alongside audio and timing, then the timeline and the
+    render. For trying the pipeline on a job from `plan` (docs/test-rounds.md). Each branch resumes
+    at its first step not done, and the run is kept in runs.jsonl, as for `videos`."""
+    with only_run(job) as mine:
+        if not mine:
+            return STOPPED, "videos", "a run of this job is still going"
+        record_interrupted(job)
+        record = Record(job)
+        why = unavailable(job)
+        if why:
+            return record.finish(STOPPED, "videos", why)
+        with job_chosen(job):  # the brain the job was made on (`plan --brain`), else the default
+            return record.finish(*_make(job, None, ask or logged_ask(job), record, LOCAL_TAIL))
 
 
 def _step_done(job: Path, name: str) -> bool:
@@ -263,7 +286,7 @@ def _step_done(job: Path, name: str) -> bool:
         return False
 
 
-def _run_steps(job: Path, steps: tuple[str, ...], api: Api, ask, record: Record,
+def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: Record,
                fresh: bool = False) -> tuple[str, str, str, bool]:
     """Run steps in order from the first not done (all of them when fresh); (result, step, reason, ran any)."""
     first = 0 if fresh else next((i for i, name in enumerate(steps) if not _step_done(job, name)), len(steps))
@@ -273,8 +296,9 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api, ask, record: Record,
         clock = time.monotonic()
         try:
             with ledger.at_step(step):
-                claim(api, job)  # the heartbeat: a render that stops renewing is recovered by a later run
-                record.report(api)
+                if api is not None:  # a local job (`make`) has no claim to renew, and no page to tell
+                    claim(api, job)  # the heartbeat: a render that stops renewing is recovered by a later run
+                    record.report(api)
                 reason = media.step_module(step).run(job, ask=ask) or f"{step} done"
             result = DONE
         except Stop as e:
@@ -287,10 +311,10 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api, ask, record: Record,
             traceback.print_exc(file=sys.stderr)
             result, reason = FAILED, f"{type(e).__name__}: {e}"
         ran = True
-        record.end(step, round(time.monotonic() - clock, 1), result)
+        record.end(step, round(time.monotonic() - clock, 1), result, one_line(reason))
         # Done or failed, the page hears it now: the other branch may run on for minutes. The upload's READY
         # already carried the last bill, and a run that was stopped has nothing to report.
-        if result == FAILED or (result == DONE and step != "upload"):
+        if api is not None and (result == FAILED or (result == DONE and step != "upload")):
             record.report(api)
         if result != DONE:
             break

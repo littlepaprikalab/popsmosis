@@ -419,11 +419,15 @@ class Renderer:
         return self.surface.makeImageSnapshot()
 
     def _ghosts(self, scene_id: str, reveals: dict[str, float], t: float) -> dict[str, float]:
+        """Each structure's ghost wash at t: full until its name is heard, fading out as it is revealed.
+        A structure this video never names on the scene is drawn as it is, unlabelled: as a ghost it
+        would wash out its part of the picture the whole time the scene is on screen (the first live
+        runs left a whole Earth pale through a song)."""
         art = self.scene(scene_id)
         levels = {}
         for name in art.masks:
             r = reveals.get(name)
-            levels[name] = 1.0 if r is None else 1.0 - p.ease((t - r) / REVEAL_S)
+            levels[name] = 0.0 if r is None else 1.0 - p.ease((t - r) / REVEAL_S)
         return levels
 
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,

@@ -272,11 +272,18 @@ cytochrome b6f pumps).
 
 ### Step 3: art
 
-**Painted, by Gemini 3.1 Flash Image or Muse Image** (`/admin/studio`; Gemini by default with `claude`, Muse Image with `meta`). Gemini: `generateContent` at 16:9, 1K (1376 x 768), about $0.07 a picture, run live. Muse Image (`/v1/images/generations`), size `1792x1024`
-(an aspect ratio: the picture is fitted to the art on white). The prompt suffix is always:
-"textbook illustration in the style of OpenStax/Campbell, shaded vector, soft gradients,
-clean outlines, white background, scientifically accurate, absolutely no text, no labels,
-no letters, no numbers." Disable web search and shell (`tool_enablement`). Keep
+**Painted, by Gemini 3.1 Flash Image or Muse Image** (`/admin/studio`; Gemini by default with `claude`, Muse Image with `meta`), every scene at the same time. Gemini: `generateContent` at 16:9, 1K (1376 x 768), about $0.07 a picture, run live. Muse Image (`/v1/images/generations`), size `1792x1024`
+(an aspect ratio: the picture is fitted to the art on white).
+The prompt is short: the scene's `image_prompt`, which asks for it the way a teacher asks
+for a standard textbook diagram of its subject ("Educational diagram, as an Earth science
+textbook draws it, of the Sun and Earth oriented to show why Earth has seasons..."), each
+structure's colour by name, and "A clean, shaded textbook illustration on a plain white
+background, every part well inside the frame. No text, labels, letters or numbers." The
+kind of diagram is the scene's: a cell biology figure in the Campbell/OpenStax manner, an
+astronomy schematic as its textbooks draw one. (One OpenStax/Campbell style for every
+subject, hex colours and a list of shapes were right once in 6 on the seasons scenes; the
+plain request 8 in 12: [test-rounds.md](test-rounds.md).) Disable Muse Image's web search and shell
+(`tool_enablement`); turning them on made no difference. Keep
 structures away from the edges so vertical crops work later. The helper looks at each
 image; if any text is visible or the anatomy is wrong, regenerate (max 3) with what was
 wrong. A picture with text is never used; after the third, the scene keeps the text-free
@@ -463,7 +470,9 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
   - **Camera:** the world is art pixel coordinates; per beat, ease zoom and pan toward
     the target structure's centroid; clamp to the art's bounds.
   - **Ghost:** unrevealed structures drawn pale through their mask (white wash at ~85%
-    alpha, blurred edge); fade to full over 0.4 s when revealed.
+    alpha, blurred edge); fade to full over 0.4 s when revealed. A structure the video
+    never names on a scene is drawn as it is, unlabelled: as a ghost it washed its part of
+    the picture out for as long as the scene was on screen.
   - **Spotlight:** wash all other structures pale. Never add a glow on top (it tints the
     colours).
   - **Label:** white rounded pill, 3.5 px outline in the structure's colour, text in a

@@ -33,7 +33,6 @@ SAM marked, so two structures that overlap in the picture share those pixels.
 
 from __future__ import annotations
 
-import colorsys
 import math
 import re
 import shutil
@@ -41,12 +40,14 @@ from pathlib import Path
 
 import numpy as np
 
-from studio import brain, checks, media, muse, svg
+from studio import brain, checks, ledger, media, muse, svg
 from studio.jobs import write
 from studio.schemas import Box, Location, Locations, Scene, SceneLocations, Strict, Structure, locations_problems
 from studio.steps import art
+from studio.steps.art import colour_word
 
 MIN_CONFIDENCE = 0.5
+WORKERS = 4  # scenes located at once
 # A match is the structure's own when, of its pixels that are some structure's colour, at
 # least this share are its own. On the first live runs every right match scored 0.58 or more,
 # and the one that would have been labelled wrong 0.40.
@@ -87,8 +88,9 @@ def run(job: Path, ask=brain.ask) -> str:
         raise media.StepFailed(f"no {art.painter_of(job).title} art for this bundle; run the art step first")
     media.restart(job, media.LOCATIONS)
     scenes, left_out, boxed, dropped = [], [], [], 0
-    for scene in bundle.scenes:
-        located, how, wrong = find_all(job, scene, ask)
+    # The scenes at the same time: each waits on SAM and the helper, one structure after another.
+    found_all = ledger.parallel(lambda scene: find_all(job, scene, ask), bundle.scenes, WORKERS)
+    for scene, (located, how, wrong) in zip(bundle.scenes, found_all):
         dropped += wrong
         if len(located) < max(1, math.ceil(len(scene.structures) / 2)):
             missing = [s.name for s in scene.structures if s.name not in located]
@@ -169,27 +171,6 @@ def phrases(structure: Structure) -> list[str]:
         if phrase and phrase not in (a.lower() for a in asked):
             asked.append(phrase)
     return asked
-
-
-# Hue bands in degrees, for colour_word.
-HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
-        (290, "purple"), (335, "pink"), (360, "red"))
-
-
-def colour_word(color_hex: str) -> str:
-    """A colour as the everyday words SAM knows: "#90BE6D" -> "light green", "#E9A000" -> "yellow"."""
-    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
-    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
-    if saturation < 0.15:
-        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
-    name = next(word for limit, word in HUES if hue * 360 < limit)
-    if name in ("orange", "red") and value < 0.55:
-        return "brown"
-    if value < 0.4:
-        return f"dark {name}"
-    if saturation < 0.5 and value > 0.6:
-        return f"light {name}"
-    return name
 
 
 # --- holding a match to its structure's colour --------------------------------------------------

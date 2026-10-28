@@ -16,9 +16,11 @@ planned times only roughly, so its plan says the sections are not pinned and ste
 for its lines across the whole song. The narration and the exam question are always
 ElevenLabs text-to-speech, whose character timings step 6 turns into words.
 
-Every call costs credits, so a file that is already there is never asked for again,
-unless the bundle's lines have changed since it was made, or for the song, who sings it
-(its .json says what it was made from and by whom). To redo one by hand, delete its
+The three are asked for at the same time (the song takes longest), after the keys and the
+speech's length are checked. One that fails fails the step once the others are saved, so
+a retry asks only for what is missing. Every call costs credits, so a file that is already
+there is never asked for again, unless the bundle's lines have changed since it was made,
+or for the song, who sings it (its .json says what it was made from and by whom). To redo one by hand, delete its
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
 the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
 Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model.
@@ -107,15 +109,22 @@ def run(job: Path, ask=brain.ask) -> str:
         raise media.StepFailed(f"the song's provider {provider!r} is not one this studio has "
                                f"({', '.join(SONG_PROVIDERS)}): update the studio")
     _check_keys(todo, provider)  # before anything is spent: the song is paid for even if the narration then fails
-    made = []
-    for kind in todo:
-        (job / "audio").mkdir(exist_ok=True)
+    for kind in todo:  # likewise what a voice call would refuse, since the song is asked for at the same time
+        if kind != "song" and len(join_lines(speech_lines(bundle, kind))[0]) > TTS_MAX_CHARS:
+            raise media.StepFailed(f"the {kind} is {len(join_lines(speech_lines(bundle, kind))[0])} characters; "
+                                   f"one text-to-speech call takes {TTS_MAX_CHARS}")
+    (job / "audio").mkdir(exist_ok=True)
+
+    def make(kind: str) -> str:
         if kind == "song":
             _make_song(job, bundle, provider)
-            made.append(f"song ({provider})")
-        else:
-            _make_speech(job, kind, speech_lines(bundle, kind))
-            made.append(kind)
+            return f"song ({provider})"
+        _make_speech(job, kind, speech_lines(bundle, kind))
+        return kind
+
+    # All three at once: the song takes longest, and the voice is made while it is. One that
+    # fails fails the step after the others are saved, so a retry makes only what is missing.
+    made = ledger.parallel(make, todo, len(todo))
     lengths = ", ".join(f"{kind} {duration(job / media.audio_path(kind)):.1f}s" for kind in media.TIMED)
     return f"made {', '.join(made) or 'nothing (all cached)'}; {lengths}"
 

@@ -8,6 +8,8 @@
     python -m studio recover                     # take a render that died with its machine, rebuild its job
 
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
+    python -m studio plan --topic "..." --videos  # and then its videos: a whole test round in one command
+    python -m studio make <job-id>               # a local job's videos, in `videos`' order, with no API
     python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
     python -m studio step render <job-id>        # or a media step, once it is built (studio/media.py)
     python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
@@ -79,6 +81,10 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--brain", choices=list(brain.CHOICES),
                       help=f"the brain, as an admin picks it on /learn (default: {brain.DEFAULT_BRAIN})")
     plan.add_argument("--effort", choices=list(brain.EFFORTS), help=f"Claude's effort (default: {brain.DEFAULT_EFFORT})")
+    plan.add_argument("--videos", action="store_true", help="then make its videos, as `make` does")
+    local = commands.add_parser("make", help="a local job's videos, in `videos`' order with no API: art and locate "
+                                             "alongside audio and timing, then timeline and render")
+    local.add_argument("job")
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=[*STEPS, *media.MEDIA_STEPS])
     step.add_argument("job")
@@ -122,6 +128,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{result} {step}: {reason}")
         return EXIT_CODES[result]
 
+    if args.command == "make":
+        job = jobs.ROOT / args.job
+        if not job.is_dir():
+            parser.error(f"no job folder {job}")
+        result, step, reason = operator_videos.local(job)
+        print(f"{result} {step}: {reason}")
+        return EXIT_CODES[result]
+
     if args.command == "fallback":
         job = jobs.ROOT / args.job
         if not job.is_dir():
@@ -150,6 +164,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"job {job.name}", file=sys.stderr)
         with brain.chosen(args.brain, args.effort):
             ok = run_steps(job, ["bundle", "factcheck"])
+        if ok and args.videos:
+            print_job(job, brief=args.brief)
+            result, step, reason = operator_videos.local(job)  # on the job's brain, as `make` is
+            print(f"{result} {step}: {reason}")
+            return EXIT_CODES[result]
     else:
         job = jobs.ROOT / args.job
         if not job.is_dir():

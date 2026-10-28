@@ -133,14 +133,15 @@ def test_muse_image_paints_each_scene_and_the_helper_checks_it(job, monkeypatch)
     fake = FakeMuse().install(monkeypatch)
     helper = FakeHelper()
     assert art.run(job, helper) == "painted 3 scenes with Muse Image in 3 tries"
-    assert [label for label, _ in fake.painted] == ["art hook", "art overview", "art synthase"]
-    assert helper.labels() == ["art check hook", "art check overview", "art check synthase"]
+    # The scenes are painted at the same time, so in any order.
+    assert sorted(label for label, _ in fake.painted) == ["art hook", "art overview", "art synthase"]
+    assert sorted(helper.labels()) == ["art check hook", "art check overview", "art check synthase"]
 
     prompt = dict(fake.painted)["art overview"]
     bundle = sample_media.bundle()
-    assert bundle.scenes[1].image_prompt in prompt and art.STYLE in prompt and bundle.topic in prompt
-    assert "- Cytochrome b6f: the cytochrome b6f, coloured #E07A2F" in prompt
-    assert "away from the edges" in prompt
+    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.STYLE)
+    assert "Colours: Thylakoid green, Cytochrome b6f orange." in prompt  # names, which the model reads
+    assert "#" not in prompt and "away from the edges" not in prompt.replace(art.STYLE, "")
 
     for scene in bundle.scenes:
         pixels = sample_media_image(job / media.art_path(scene.id))
@@ -197,11 +198,13 @@ def test_a_scene_with_writing_in_every_picture_fails_the_step_and_keeps_the_othe
     helper = FakeHelper({"overview": [{"text": ["e-"], "wrong": []}]})
     with pytest.raises(media.StepFailed, match=r"scene overview: no usable picture in 3 tries: it has writing"):
         art.run(job, helper)
-    assert (job / "art" / "hook.json").exists() and not (job / "art" / "overview.json").exists()
+    # The other scenes were painted at the same time, and are kept.
+    assert (job / "art" / "hook.json").exists() and (job / "art" / "synthase.json").exists()
+    assert not (job / "art" / "overview.json").exists()
 
     fake.painted.clear()
-    assert art.run(job, FakeHelper()) == "painted 2 scenes with Muse Image in 2 tries, kept 1 painted before"
-    assert [label for label, _ in fake.painted] == ["art overview", "art synthase"]
+    assert art.run(job, FakeHelper()) == "painted 1 scene with Muse Image in 1 try, kept 2 painted before"
+    assert [label for label, _ in fake.painted] == ["art overview"]
     fake.painted.clear()
     art.run(job, FakeHelper())  # done: running it again paints every scene
     assert len(fake.painted) == 3
@@ -258,9 +261,9 @@ def painted(job, monkeypatch, **muse_args) -> FakeMuse:
 def test_sam_finds_every_structure_and_locate_writes_the_masks_and_locations(job, monkeypatch):
     fake = painted(job, monkeypatch)
     assert locate.run(job, FakeHelper()) == "located 4 of 4 structures with SAM 3.1"
-    assert [(label, phrase) for label, phrase, _ in fake.segmented] == [
-        ("locate hook Thylakoid", "the thylakoid"), ("locate overview Thylakoid", "the thylakoid"),
-        ("locate overview Cytochrome b6f", "the cytochrome b6f"), ("locate synthase ATP synthase", "the atp synthase")]
+    assert sorted((label, phrase) for label, phrase, _ in fake.segmented) == [  # scenes at once: any order
+        ("locate hook Thylakoid", "the thylakoid"), ("locate overview Cytochrome b6f", "the cytochrome b6f"),
+        ("locate overview Thylakoid", "the thylakoid"), ("locate synthase ATP synthase", "the atp synthase")]
 
     locations = jobs.read(job / media.LOCATIONS, Locations)
     assert locations_problems(locations, sample_media.bundle()) == []
@@ -279,7 +282,7 @@ def test_an_unsure_match_asks_the_helper_for_a_box_and_sam_for_what_is_in_it(job
     helper = FakeHelper(boxes={"ATP synthase": {"seen": True, "left": 0.35, "top": 0.2, "right": 0.65, "bottom": 0.8}})
     assert locate.run(job, helper) == "located 4 of 4 structures with SAM 3.1, 1 in the helper's box"
     assert helper.labels() == ["locate box synthase ATP synthase"]
-    label, phrase, box = fake.segmented[-1]
+    label, phrase, box = next(call for call in fake.segmented if call[0].endswith(" box"))
     assert label == "locate synthase ATP synthase box" and phrase is None
     assert box == Box(x0=627, y0=204, x1=1165, y1=820)
     located = jobs.read(job / media.LOCATIONS, Locations).scene("synthase").get("ATP synthase")
@@ -335,7 +338,7 @@ def test_the_plainer_words_are_the_structures_colour_and_the_phrases_last_noun()
     assert asked("the cytochrome b6f", "#E07A2F") == ["the cytochrome b6f", "orange region"]
     words = {"#E76F51": "orange", "#D64550": "red", "#2A9D8F": "teal", "#6A4C93": "purple", "#277DA1": "blue",
              "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey"}
-    assert {h: locate.colour_word(h) for h in words} == words
+    assert {h: art.colour_word(h) for h in words} == words
 
 
 def test_a_match_in_another_structures_colour_is_dropped_and_the_structure_left_out(job, monkeypatch):
@@ -501,3 +504,16 @@ def test_the_helpers_prompts_read_cleanly_and_its_answers_fit_both_providers():
         brain.strict_schema(schema)  # raises on a keyword one provider would refuse
     for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.STYLE):
         assert "\\" not in prompt and "  " not in prompt
+
+
+def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
+    tries = []
+
+    def drops_once(method, url, headers, body):
+        tries.append(url)
+        if len(tries) == 1:
+            raise muse.NoAnswer("Meta's API did not answer: [Errno 104] Connection reset by peer")
+        return 200, {}, json.dumps({"data": [{"b64_json": base64.b64encode(picture()).decode()}]}).encode()
+
+    monkeypatch.setattr(muse, "send", drops_once)
+    assert muse.paint(tmp_path, "art hook", "a leaf") == picture() and len(tries) == 2

@@ -339,3 +339,25 @@ def test_a_front_end_normalised_across_the_window_is_heard_in_one_pass(monkeypat
     window = torch.randn(1, 3 * timing.SAMPLE_RATE) * 0.1
     with torch.inference_mode():
         assert torch.equal(timing._emission(model, window), model(window)[0])
+
+
+def test_jobs_on_one_machine_time_their_songs_in_turn(tmp_path):
+    import threading
+    import time as clock
+
+    inside, most = [], []
+
+    def time_a_song(name):
+        (tmp_path / name).mkdir()
+        with timing.cpu_turn(tmp_path / name):
+            inside.append(name)
+            most.append(len(inside))
+            clock.sleep(0.05)
+            inside.remove(name)
+
+    threads = [threading.Thread(target=time_a_song, args=(f"job{i}",)) for i in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert max(most) == 1

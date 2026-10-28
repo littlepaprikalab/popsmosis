@@ -34,8 +34,12 @@ locations.json yet) keeps the scenes it already drew, unless their scene changed
 An answer cut off at the output limit counts as a refused try; any other brain error
 fails the step, and the scenes already drawn are kept for the retry.
 
-The painted art. One picture per scene, from Gemini or Muse Image, from the scene's image_prompt,
-its structures and their colours, and the house style (STYLE). The helper looks at each
+The painted art. One picture per scene, from Gemini or Muse Image, the scenes painted at the
+same time, from a short prompt (paint_prompt()): the scene's image_prompt, which asks for it the
+way a teacher asks for a standard textbook diagram, each structure's colour by name, and STYLE.
+Live tests (docs/test-rounds.md) found the plain request right 8 times in 12 where the
+earlier prompt, with hex codes, a list of shapes and one biology style for every subject,
+was right once in 6. The helper looks at each
 picture for text and for anything missing or wrong; a picture with either is asked for
 again with what was wrong, up to MAX_TRIES pictures in all. A picture with text in it is
 never used (the renderer draws every label); after the last try the scene keeps the
@@ -50,6 +54,7 @@ pictures. Resuming and redrawing work as for the SVG art.
 
 from __future__ import annotations
 
+import colorsys
 import hashlib
 import json
 import math
@@ -62,7 +67,7 @@ import numpy as np
 
 import skia
 
-from studio import brain, checks, gemini, jobs, media, muse, svg
+from studio import brain, checks, gemini, jobs, ledger, media, muse, svg
 from studio.jobs import read, write
 from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems
 
@@ -310,9 +315,12 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
 
 # --- the painted art: Gemini 3.1 Flash Image or Muse Image -------------------------------------
 
-# The house style (docs/PLAN.md, section 5, step 3), after every scene's prompt.
-STYLE = ("Textbook illustration in the style of OpenStax/Campbell: shaded vector, soft gradients, clean outlines, "
-         "white background, scientifically accurate. Absolutely no text, no labels, no letters, no numbers.")
+# After every scene's prompt. The look is the scene's own (its image_prompt ends with the look its
+# kind of textbook gives it: a cell biology figure's flat shading, an astronomy schematic), so this
+# says only what every picture needs.
+STYLE = ("On a plain white background, every part well inside the frame. "
+         "No text, labels, letters or numbers anywhere in the picture.")
+WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The video's \
 renderer adds every label and caption itself, so the picture must have none of its own.
@@ -353,14 +361,12 @@ def run_painted(job: Path, ask) -> str:
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
-    painted, kept, tries, left = 0, 0, 0, []
-    for scene in bundle.scenes:
-        if resume and _painted(job, bundle, scene):
-            kept += 1
-            continue
-        best, attempts = paint(job, bundle, scene, ask)
-        painted, tries = painted + 1, tries + attempts
-        left += [f"{scene.id}: {p}" for p in best.check.wrong]
+    todo = [scene for scene in bundle.scenes if not (resume and _painted(job, bundle, scene))]
+    kept = len(bundle.scenes) - len(todo)
+    # The scenes at the same time; one that fails fails the step once the others are saved.
+    results = ledger.parallel(lambda scene: paint(job, bundle, scene, ask), todo, WORKERS)
+    painted, tries = len(results), sum(attempts for _, attempts in results)
+    left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results) for p in best.check.wrong]
     return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
             + (f", kept {kept} painted before" if kept else "")
@@ -418,16 +424,36 @@ def fit(picture: bytes) -> np.ndarray:
 
 
 def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = ()) -> str:
-    lines = [f"- {s.name}: {s.sam_phrase}, coloured {s.color_hex}" for s in scene.structures]
-    parts = [f"A diagram for a lesson on {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
-             + f", for {bundle.audience}. {scene.image_prompt}",
-             "Show each of these clearly, in its colour, and keep all of them well inside the frame, "
-             "away from the edges:\n" + "\n".join(lines)]
+    """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
+    image model reads names), and STYLE. Short on purpose: every extra line was a chance to miss."""
+    colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
+    parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
     parts.append(STYLE)
-    return "\n\n".join(parts)
+    return " ".join(parts)
+
+
+# Hue bands in degrees, for colour_word.
+HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
+        (290, "purple"), (335, "pink"), (360, "red"))
+
+
+def colour_word(color_hex: str) -> str:
+    """A colour as everyday words, which image and segmentation models know: "#90BE6D" -> "light green"."""
+    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
+    if saturation < 0.15:
+        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
+    name = next(word for limit, word in HUES if hue * 360 < limit)
+    if name in ("orange", "red") and value < 0.55:
+        return "brown"
+    if value < 0.4:
+        return f"dark {name}"
+    if saturation < 0.5 and value > 0.6:
+        return f"light {name}"
+    return name
 
 
 def check_prompt(bundle: Bundle, scene: Scene) -> str:

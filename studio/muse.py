@@ -13,8 +13,9 @@ SAM answers in a token grammar of its own, one record per match: a box, then a m
 covering only that box, in an encoding of Meta's. meta-sam-parser, Meta's own parser,
 reads it; segment() puts each mask back on the whole art.
 
-A busy or failing server (429, 502, 503, 504) is asked again three times; 500 is not,
-since Meta says it will not go away on a retry. A picture Muse Image will not make
+A busy or failing server (429, 502, 503, 504), or a connection that drops, is asked again
+three times; 500 is not, since Meta says it will not go away on a retry, nor a timeout,
+since Meta may still be making (and billing) what was asked. A picture Muse Image will not make
 (content policy) raises Declined, which the art step counts as a refused try.
 """
 
@@ -56,6 +57,10 @@ class Declined(MuseError):
     """Muse Image would not make this picture (its content policy)."""
 
 
+class NoAnswer(MuseError):
+    """The request never reached Meta, or the connection dropped: safe to send again."""
+
+
 @dataclass
 class Match:
     """One thing SAM found: where it shows on the art, and how sure SAM is (None when it did not say)."""
@@ -75,7 +80,7 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         # Not retried: Meta may still be making, and billing, what was asked.
         raise MuseError(f"Meta's API took over {TIMEOUT_S}s to answer") from e
     except (urllib.error.URLError, OSError) as e:
-        raise MuseError(f"Meta's API did not answer: {getattr(e, 'reason', e)}") from e
+        raise NoAnswer(f"Meta's API did not answer: {getattr(e, 'reason', e)}") from e
 
 
 send: Send = _urllib_send
@@ -202,9 +207,14 @@ def _post(path: str, body: dict) -> tuple[int, bytes]:
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     url = brain.META_BASE_URL + path
     for wait in (*RETRY_WAITS_S, None):
-        status, _, answer = send("POST", url, headers, data)
-        if status not in RETRY_STATUSES or wait is None:
-            return status, answer
+        try:
+            status, _, answer = send("POST", url, headers, data)
+        except NoAnswer:  # a dropped connection (seen live: "Connection reset by peer"), as audio does
+            if wait is None:
+                raise
+        else:
+            if status not in RETRY_STATUSES or wait is None:
+                return status, answer
         sleep(wait)
     raise AssertionError("unreachable")
 

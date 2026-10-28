@@ -24,6 +24,8 @@ calls.jsonl logs them with their time and no cost (studio/ledger.py).
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import re
 import statistics
@@ -52,6 +54,23 @@ MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
+TURN = ".timing.lock"  # beside the jobs: the jobs on one machine time their songs in turn
+
+
+@contextlib.contextmanager
+def cpu_turn(job: Path):
+    """Wait for this machine's other jobs to finish timing a song. Demucs and the aligner each use
+    every core; two at once (a test round's topics side by side) took 8 times as long each, their
+    threads fighting for the cores, where taking turns costs only the wait. A routine runs on a
+    machine of its own, so it never waits."""
+    with open(job.parent / TURN, "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
 # align(vocals at 16 kHz, a list of normalised words) -> per word (start s, end s, score),
 # in the window's own time. Tests pass their own.
 Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
@@ -74,7 +93,8 @@ def run(job: Path, ask=brain.ask) -> str:
         jobs.write(job / media.timing_path(kind), timing)
         parts.append(f"{kind} {len(timing.lines)} lines")
     try:
-        timing, report = song_timing(job, bundle)
+        with cpu_turn(job):
+            timing, report = song_timing(job, bundle)
     except (ValueError, RuntimeError) as e:  # a timing out of order, or an aligner that could not fit the words
         raise media.StepFailed(f"the song could not be aligned: {e}") from e
     _check(timing, [line.id for line in bundle.lyrics], "song")

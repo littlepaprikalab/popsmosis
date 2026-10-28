@@ -142,8 +142,14 @@ pipeline without posting anything, start a local job instead:
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
 python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
 python -m studio step factcheck <job-id>                               # re-run one step
+python -m studio make <job-id>                                         # its videos, as `videos` makes them, with no API
 python -m studio show <job-id>                                         # facts, scenes, lyrics, tags, checks, verdicts, runs, calls
 ```
+
+`plan ... --videos` makes the videos too once the fact-check passes, so a test round of a
+topic is one command ([docs/test-rounds.md](docs/test-rounds.md)). `make` runs the media steps
+in `videos`' order (art and locate alongside audio and timing, then the timeline and render)
+but claims nothing and uploads nothing; run again, it resumes at the first step not done.
 
 Each droplet is written for one audience: high school, unless the learner's request says
 who it is for ("I'm in 5th grade", "for my college course"). The audience sets the level

@@ -99,11 +99,45 @@ together they go from what the learner already knows to the parts they are learn
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
 
-- `image_prompt` describes the diagram's content for an illustrator: what is shown, from
-  which view, and which structures must be visible and roughly where. Describe content
-  only; the art step adds the style (a textbook illustration on white). Never ask for
-  text, labels, letters or numbers in the art: the renderer draws every label. Keep the
-  named structures away from the edges of the frame.
+- `image_prompt` asks an illustrator for the scene the way a teacher asks for a standard
+  textbook diagram, in one to three plain sentences. Start with the kind of diagram and
+  the textbook it would come from, then say what it shows and how it is oriented:
+  "Educational diagram, as a Campbell Biology figure draws it, of a thylakoid membrane in
+  cross-section: the membrane across the middle, the stroma above, the lumen below, four
+  protein complexes passing through it..." or "Educational diagram, as an Earth science
+  textbook draws it, of the Sun and Earth oriented to show why Earth has seasons: the Sun
+  on the left, Earth on the right with its axis tilted 23.5 degrees toward the Sun, and
+  parallel rays of sunlight reaching it." The illustrator knows what the standard diagrams
+  look like, and is best at drawing one it knows. Pick the kind that fits the subject, and
+  end the request with the look that kind of textbook gives it, in these words:
+  - A cell or molecular process (membranes, organelles, proteins, molecules): "drawn the
+    way biology textbooks draw membrane processes: simple, smooth, rounded shapes with
+    soft flat shading and thin dark outlines, not atomic detail; the membrane a
+    phospholipid bilayer of round grey heads and yellow tails; each compartment a flat
+    pale colour; ions and small molecules as small spheres." This is the figure students
+    know from their textbook, not a detailed molecular rendering.
+  - Anatomy (the brain, organs, body systems): "a softly shaded medical textbook
+    illustration."
+  - Astronomy, Earth science, physics or chemistry: "a clean textbook schematic, each
+    object simplified but recognisable" (a globe with its continents, a Sun with its glow).
+  - An everyday hook or analogy: "a friendly textbook illustration of the real thing."
+  - Name the real things, never their shapes: "Earth's northern hemisphere", not "a blue
+    dome". A thing named stays the thing; a shape described becomes a different picture.
+  - Place things with plain words (left, right, above, below, inside, through, tilted
+    toward), each said once. The illustrator follows where to put a thing far better than
+    a relation such as "at right angles to".
+  - Give every structure its colour, by name, in the sentence. Code finds each structure
+    by its colour, so in a scene each needs its own, with names that differ (blue and
+    orange, not blue and teal). Keep a thing's natural colour where it has one: a green
+    leaf, a yellow Sun, a blue Earth with its continents; a thing painted a colour it never
+    has looks like a toy. Choose a colour only for what has none of its own (a protein, a
+    compartment, an axis drawn as a rod), as textbooks do. Where two parts of one real
+    thing must be told apart (the halves of a globe), ask for a soft tint over the real
+    thing ("the globe's northern half tinted orange, its southern half tinted pink, the
+    continents showing through"), never a solid paint that hides what it is.
+  - Leave out anything the lesson does not need. Never ask for text, labels, letters or
+    numbers in the art: the renderer draws every label. The art step adds the white
+    background and keeps the structures away from the edges of the frame.
 - `structures` are the parts that scene reveals and labels, and every scene has at least
   one. For an abstract topic they are the parts of its diagram: the sections of a bar, the
   branches of a tree, the regions of a chart. `name` is the label as it should read on

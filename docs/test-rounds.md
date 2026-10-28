@@ -118,7 +118,7 @@ the plan's 15 minutes. Credits are ElevenLabs' (narration and exam question); se
 
 ### It looks broken or reads badly
 
-5. **A structure never named on its scene stays a ghost for as long as the scene is on
+5. *(Fixed after round 3.)* **A structure never named on its scene stays a ghost for as long as the scene is on
    screen.** Round 1's seasons "sunlight detail": the narration says "the hemisphere leaning
    toward the Sun", which is neither name nor alias, so the whole Earth stayed washed out.
    Either draw a structure that is never named on a scene plainly (unlabelled), or have
@@ -149,11 +149,11 @@ the plan's 15 minutes. Credits are ElevenLabs' (narration and exam question); se
     words add up to two SAM calls (half a cent, a few seconds) before the box. Round 2's
     photosynthesis spent 176 s and $0.14 on locate (round 1: 115 s, $0.09), most of it on
     the leaf and chloroplast that nothing could separate (gap 3).
-13. **No local command makes the videos.** `plan` stops after the fact-check and `videos`
+13. *(Fixed: `python -m studio make <job>`, and `plan --videos`.)* **No local command makes the videos.** `plan` stops after the fact-check and `videos`
     needs a posted lesson, so trying the media steps on a local job means running
     `step art`, `step locate`, `step audio` and so on by hand. A `make <job>` that runs
     `videos`' order without the API would make rounds like these one command.
-14. **`show` on a local job reads "cut off" and "time n/a" for every step**, since `plan`
+14. *(Fixed for the videos: `make` keeps runs.jsonl.)* **`show` on a local job reads "cut off" and "time n/a" for every step**, since `plan`
     and `step` write no `runs.jsonl`; the bill's times look broken.
 15. **The note "the brain is set by the environment" lists `STUDIO_BRAIN_EFFORT`** on
     `BRAIN_PROVIDER=meta`, which ignores it.
@@ -239,21 +239,85 @@ Campbell/OpenStax manner, anatomy as a medical textbook draws it, astronomy and 
 their textbooks' clean schematics. That is a change to the bundle prompt's `image_prompt`
 guidance and to `art.muse_prompt()`.
 
+## Rounds 3 and 4: the plain request, ElevenLabs songs, a faster round
+
+Round 3 ran both topics end to end with the scene prompt rewritten as the plain request
+above (the bundle prompt asks the brain for it, and `art.muse_prompt()` sends it with the
+colours by name, no hex codes and no list of shapes) and the song from Eleven Music
+(`SONG_PROVIDER=elevenlabs`). Round 4 ran the bundle, art and locate only, with two more
+changes from looking at round 3: cell scenes in the classic textbook look, and natural
+colours.
+
+| | Round 3 photosynthesis | Round 3 seasons | Round 4 photosynthesis | Round 4 seasons |
+|---|---|---|---|---|
+| Located | 10/10, none by the box | 17/18, none by the box | failed: 4 of 9 on one scene | 11/12, none by the box |
+| Song (Eleven Music) | 137 s, made in 12 s; sung from 9.8 s (cut to 1.0 s) | 112 s, made in 13 s; sung from 0.4 s | not made | not made |
+| Aligner unsure of | 0 of 28 lines | 0 of 35 lines | | |
+| Cost | $0.39 + 1,167 credits | $0.46 + 1,139 credits | $0.72 (to locate) | $0.48 (to locate) |
+
+- **Eleven Music times far better than Lyria.** Each song came back in about 12 s, exactly
+  its planned length (its sections are pinned), and the aligner was sure of every line,
+  where it was unsure of 4 to 9 per Lyria song. It too sang one song from 9.8 s, which the
+  intro cut caught. Its answer carries no cost header, so the bill shows the song unpriced.
+- **SAM found what it could by name and colour.** No structure in rounds 3 and 4 came from
+  the helper's box (in round 1, 13 of 30 did); the helper was asked only for what SAM could
+  not find at all, mostly round 4's scattered molecules.
+- **Cell scenes look like the textbook.** Asked for the look biology textbooks give
+  membrane processes ("simple, smooth, rounded shapes with soft flat shading and thin dark
+  outlines, not atomic detail; the membrane a phospholipid bilayer of round grey heads and
+  yellow tails; each compartment a flat pale colour; ions as small spheres"), Muse Image
+  drew the familiar figure in 6 pictures of 6 in a side test, every complex across the
+  membrane and ATP synthase's head in the stroma. Round 3's "as a Campbell figure draws
+  it" alone gave detailed ribbon proteins students do not know. The bundle prompt now
+  gives each kind of diagram its look in those words.
+- **Natural colours look better.** A green leaf, a yellow Sun and a blue Earth with its
+  continents look like textbook art; a thing painted a colour it never has (an orange and
+  pink Earth, a magenta water wheel) looks like a toy. The bundle prompt now keeps natural
+  colours, and chooses colours only for what has none.
+- **What is still wrong:**
+  - *The hemisphere close-ups.* Asked for a globe with its halves "tinted", Muse Image
+    still paints them solid, and neither round-4 close-up drew the axis at right angles to
+    the equator; one tilted the north toward the Sun in December (the helper said so; the
+    picture was kept anyway, gap 1). Textbooks rarely colour hemispheres at all: they draw
+    the lit half of the globe and the lines of latitude. Drawing it that way, or mending a
+    near-miss with Meta's `/v1/images/edits`, are the next things to try.
+  - *Molecules as structures.* The round-4 bundle made water drops, oxygen bubbles and
+    NADPH dots structures of their own (9 in one scene); SAM cannot pin scattered dots, so
+    the scene failed the step. Small molecules should be drawn, not labelled.
+  - *Odd colour choices.* A solid black Photosystem II and a pink stroma: the brain picks
+    the colours, and nothing holds them to how textbooks colour those parts.
+
+A test round is now one command a topic, and faster:
+
+- `python -m studio plan ... --videos` writes the bundle, fact-checks it and makes the
+  videos; `python -m studio make <job>` makes or resumes a local job's videos in `videos`'
+  order, with no API, keeping runs.jsonl so `show` has each step's time, and printing each
+  step's one line.
+- The art step paints its scenes at the same time, locate finds them at the same time, and
+  the audio step asks for the song, narration and exam question at once. Round 4 painted 5
+  scenes in 66 s (rounds 1-2: 2-3.5 min) and located them in 27 s (1-3 min).
+- Two jobs on one machine time their songs in turn: in round 3 both separated their vocals
+  at once and each took 8 times as long (Demucs 5.3 min instead of 40 s), their threads
+  fighting for the cores.
+- A dropped connection to Meta's API is now asked again; it failed round 3's
+  photosynthesis art once ("Connection reset by peer").
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
   API in `POPSMOSIS_API_URL`, which here is production, and Supabase is not set up.
-- `BRAIN_PROVIDER=claude` (the SVG art), Muse Wonder as the brain, and Eleven Music
-  (`SONG_PROVIDER=elevenlabs`).
+- `BRAIN_PROVIDER=claude` (the SVG art) as the studio runs it, and Muse Wonder as the brain.
 - The planner's Inkmory record (`INKMORY_ENABLED` is not set).
 
 ## Running a round again
 
 ```bash
-python -m studio plan --topic "..." --course "..." --request "..." --job <id> --brief
-for s in art locate audio timing timeline render; do python -m studio step $s <id> --brief; done
+python -m studio plan --topic "..." --course "..." --request "..." --job <id> --brief --videos
+python -m studio make <id>        # resume after a failure
 python -m studio show <id> --brief
 ```
+
+For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
 
 The jobs from these rounds were `r1-*` and `r2-*` in `jobs/` (git-ignored, gone with the
 container). To look at a video, take a still every few seconds (`ffmpeg -ss <t> -i

@@ -78,6 +78,13 @@ def test_a_structure_is_a_pale_ghost_until_its_name_is_sung(job, song):
     assert after == pytest.approx(green, abs=3)
 
 
+def test_a_structure_never_named_on_its_scene_is_drawn_as_it_is_not_as_a_ghost(job, song):
+    # Only what the video names on a scene builds up from a ghost; the rest is drawn plainly, unlabelled.
+    reveals = {"Thylakoid": 5.0}  # as if the video never named Cytochrome b6f on the overview
+    assert song._ghosts("overview", reveals, 4.0) == {"Thylakoid": 1.0, "Cytochrome b6f": 0.0}
+    assert song._ghosts("overview", reveals, 6.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
+
+
 def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
     _, plain = art.compose({}, {})

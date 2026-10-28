@@ -205,12 +205,13 @@ def test_a_timeout_or_a_server_that_stays_busy_fails_without_more_calls(job, mon
     monkeypatch.setattr(audio, "send", times_out)
     with pytest.raises(media.StepFailed, match="600s"):
         audio.run(job)
-    assert len(calls) == 1  # the song may still be being made, and billed
+    # Each file asked for once, never again: it may still be being made, and billed.
+    assert len(calls) == 3 and sum("/v1/music" in url for url in calls) == 1
 
     monkeypatch.setattr(audio, "send", FakeEleven(status=503))
     with pytest.raises(media.StepFailed, match="503"):
         audio.run(job)
-    assert len(audio.send.requests) == 1 + len(audio.RETRY_WAITS_S)
+    assert len(audio.send.requests) == 3 * (1 + len(audio.RETRY_WAITS_S))
 
 
 def test_a_song_cut_off_before_its_audio_is_written_is_made_again(job, monkeypatch):
@@ -318,7 +319,8 @@ def test_a_gemini_refusal_or_block_fails_the_step_and_keeps_nothing(job, monkeyp
     with pytest.raises(media.StepFailed, match=reason):
         audio.run(job)
     assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
-    assert len(fake.requests) == 1  # nothing else was asked for once the song failed
+    # The voice was made at the same time and is kept, so a retry asks for the song alone.
+    assert len(fake.gemini()) == 1 and (job / "audio/narration.mp3").exists() and (job / "audio/frq.mp3").exists()
 
 
 def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monkeypatch):
@@ -429,21 +431,21 @@ def _logged(job):
 def test_each_elevenlabs_call_is_logged_in_the_credits_it_cost(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeEleven())
     audio.run(job)
-    rows = _logged(job)
-    assert [(r["label"], r["role"], r["model"]) for r in rows] == [
-        ("song", "audio", "music_v2_5"), ("narration", "audio", "eleven_multilingual_v2"),
-        ("frq", "audio", "eleven_multilingual_v2")]
+    rows = {r["label"]: r for r in _logged(job)}  # made at the same time, so logged in any order
+    assert {label: (r["role"], r["model"]) for label, r in rows.items()} == {
+        "song": ("audio", "music_v2_5"), "narration": ("audio", "eleven_multilingual_v2"),
+        "frq": ("audio", "eleven_multilingual_v2")}
     # The fake's music answer names no cost; its speech costs a credit a character. No plan price: no dollars.
-    assert rows[0]["credits"] is None and rows[0]["cost_usd"] is None
+    assert rows["song"]["credits"] is None and rows["song"]["cost_usd"] is None
     narration = json.loads((job / audio.plan_path("narration")).read_text())["text"]
-    assert rows[1]["credits"] == len(narration) and rows[1]["cost_usd"] is None
+    assert rows["narration"]["credits"] == len(narration) and rows["narration"]["cost_usd"] is None
 
 
 def test_the_plans_price_of_credits_turns_them_into_dollars(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, "0.30")
     audio.run(job)
-    narration = _logged(job)[1]
+    narration = next(r for r in _logged(job) if r["label"] == "narration")
     assert narration["cost_usd"] == pytest.approx(narration["credits"] * 0.30 / 1000)
 
 
@@ -452,14 +454,15 @@ def test_a_price_that_is_not_one_leaves_the_credits_alone(job, monkeypatch, valu
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, value)
     audio.run(job)
-    assert _logged(job)[1]["cost_usd"] is None and _logged(job)[1]["credits"]
+    narration = next(r for r in _logged(job) if r["label"] == "narration")
+    assert narration["cost_usd"] is None and narration["credits"]
 
 
 def test_a_lyria_song_is_logged_at_its_models_price(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeGemini())
     sing(job, "gemini")
     audio.run(job)
-    song = _logged(job)[0]
+    song = next(r for r in _logged(job) if r["label"] == "song")
     assert (song["label"], song["model"], song["cost_usd"]) == ("song", "lyria-3.5", 0.08)
 
 
@@ -482,4 +485,4 @@ def test_a_lyria_answer_with_no_song_is_not_logged_as_one(job, monkeypatch):
     sing(job, "gemini")
     with pytest.raises(media.StepFailed, match="blocked"):
         audio.run(job)
-    assert not (job / "calls.jsonl").exists()
+    assert "song" not in [r["label"] for r in _logged(job)]  # only the voice, made at the same time
