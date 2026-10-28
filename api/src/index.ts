@@ -75,11 +75,14 @@ export async function buildApp() {
       return null;
     }
   };
+  const isProgressReport = (req: FastifyRequest) => req.method === 'PUT' && /\/progress$/.test(req.url.split('?')[0]);
   await app.register(rateLimit, {
     timeWindow: '1 minute',
     keyGenerator: (req: FastifyRequest) => {
       const token = bearerToken(req.headers.authorization);
-      if (isAgentToken(token)) return `agent:${hashApiKey(token).slice(0, 16)}`;
+      // The studio's progress reports (lib/progress.ts) count in a bucket of their own: every run shares one key,
+      // and a burst of reports for the page must never use up what its claims, uploads and READY need.
+      if (isAgentToken(token)) return `${isProgressReport(req) ? 'agent-progress' : 'agent'}:${hashApiKey(token).slice(0, 16)}`;
       const sub = subFromCookie(req);
       if (sub) return `user:${sub}`;
       return req.ip;

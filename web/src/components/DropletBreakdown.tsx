@@ -1,7 +1,7 @@
 'use client';
 
-import { Fragment, useState } from 'react';
-import type { Breakdown, BreakdownModel, BreakdownStep, Video } from '@/lib/api';
+import { Fragment, useEffect, useState } from 'react';
+import type { Breakdown, BreakdownModel, BreakdownStep, Progress, Video } from '@/lib/api';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
 const STEP_LABELS: Record<string, string> = {
@@ -97,43 +97,190 @@ function LineName({ line }: { line: Line }) {
   return <>{line.name}{line.version && <span style={{ color: 'var(--text-muted)' }}> {line.version}</span>}</>;
 }
 
+
+// --- while the droplet is made ------------------------------------------------------------
+
+/** Every step the studio can run, in the order the bill lists them. */
+const ORDER = Object.keys(STEP_LABELS);
+// The steps the page expects before any has run. The post is left out: it makes the answer the
+// lesson's bill is sent with, so a bill never has it.
+const LESSON_STEPS = ['request', 'bundle', 'factcheck'];
+const VIDEO_STEPS = ['art', 'locate', 'audio', 'timing', 'timeline', 'render', 'upload'];
+// What comes right after each step: the art and the audio are made side by side, and meet at the timeline.
+const NEXT: Record<string, string[]> = {
+  request: ['bundle'], bundle: ['factcheck'], factcheck: ['post', 'art', 'audio'], post: ['art', 'audio'],
+  art: ['locate'], locate: ['timeline'], audio: ['timing'], timing: ['timeline'], timeline: ['render'], render: ['upload'],
+};
+
+type Status = 'done' | 'running' | 'failed' | 'waiting';
+
+/** One step on the bill: what it has cost so far, and, while it runs, when it started. */
+interface Row {
+  step: string;
+  status: Status;
+  bill: BreakdownStep | null; // null: nothing spent on it yet
+  since: number | null; // while it runs: when it started, by this browser's clock
+}
+
+const rank = (step: string) => (ORDER.includes(step) ? ORDER.indexOf(step) : ORDER.length);
+
+/**
+ * Every step of a droplet being made: the ones done, the ones running now, and the ones still to come. A step
+ * still to come that a later step has gone past is left out: this run had it done already (a render resumed on
+ * another machine), or does not run it.
+ */
+export function progressRows(p: Progress): Row[] {
+  const billed = new Map((p.breakdown?.steps ?? []).map((s) => [s.step, s]));
+  const running = new Map(p.running.map((r) => [r.step, r.since ?? Date.parse(r.startedAt)]));
+  const failed = new Set(p.failed);
+  const started = (step: string) => billed.has(step) || running.has(step) || failed.has(step);
+  const passed = (step: string, seen = new Set<string>()): boolean => (NEXT[step] ?? []).some((next) => {
+    if (seen.has(next)) return false;
+    seen.add(next);
+    return started(next) || passed(next, seen);
+  });
+  const names = [...LESSON_STEPS, ...(p.videos ? VIDEO_STEPS : [])];
+  for (const step of [...billed.keys(), ...running.keys(), ...failed]) if (!names.includes(step)) names.push(step);
+  return names
+    .sort((a, b) => rank(a) - rank(b))
+    .filter((step) => started(step) || !passed(step))
+    .map((step) => ({
+      step,
+      status: running.has(step) ? 'running' : failed.has(step) ? 'failed' : billed.has(step) ? 'done' : 'waiting',
+      bill: billed.get(step) ?? null,
+      since: running.get(step) ?? null,
+    }));
+}
+
+/** How far along a droplet being made is, for a line of text: steps done, and steps in all. */
+export function progressCount(p: Progress): { done: number; total: number } {
+  const rows = progressRows(p);
+  return { done: rows.filter((r) => r.status === 'done').length, total: rows.length };
+}
+
+/** A running step's time, counting up every second: its earlier tries and this one so far. Only this text
+ *  re-renders each second, never the bill around it. */
+function Elapsed({ base, since }: { base: number; since: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return <>{duration(base + Math.max(0, (now - since) / 1000))}</>;
+}
+
+/** A step's time: every try together, and for one running now, counting up; nothing yet for one to come. */
+function RowTime({ row }: { row: Row }) {
+  if (row.status === 'waiting') return <>—</>;
+  if (row.status === 'running' && row.since !== null) return <Elapsed base={row.bill?.seconds ?? 0} since={row.since} />;
+  return <>{duration(row.bill?.seconds ?? null)}</>;
+}
+
+const MARKS: Record<Status, { label: string; color: string }> = {
+  done: { label: 'done', color: 'var(--accent-green)' },
+  running: { label: 'running now', color: 'var(--accent-cyan)' },
+  failed: { label: 'failed; to be tried again', color: 'var(--accent-red)' },
+  waiting: { label: 'still to come', color: 'var(--text-muted)' },
+};
+
+/** Where a step stands, as a mark before it: a tick, a pulsing dot, a cross, or a hollow dot. */
+function StatusMark({ status }: { status: Status }) {
+  const { label, color } = MARKS[status];
+  return (
+    <span role="img" aria-label={label} title={label} className="inline-flex w-3 h-[1lh] shrink-0 items-center justify-center" style={{ color }}>
+      {status === 'running' ? <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: color }} />
+        : status === 'waiting' ? <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ border: `1px solid ${color}` }} />
+          : status === 'done' ? '✓' : '✕'}
+    </span>
+  );
+}
+
+/** A step's name on the bill, with its tries when it took more than one. */
+function StepName({ row, short = false }: { row: Row; short?: boolean }) {
+  const tries = row.bill?.tries ?? 0;
+  return (
+    <>
+      {STEP_LABELS[row.step] ?? row.step}
+      {tries > 1 && <span className="ml-1" style={{ color: 'var(--accent-orange)' }}>×{tries}{short ? '' : ' tries'}</span>}
+    </>
+  );
+}
+
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
  * with how many calls and what they cost, the tools it ran with their versions, who made each,
  * how long it took, and the totals. Folded until opened,
  * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
+ *
+ * With `progress`, the droplet is still being made, and the bill is how far it has got: every
+ * step, each done, running (its time counting up), failed or still to come, and what it has cost
+ * so far. Open with `defaultOpen`, as it is while the lesson waits for its videos; one that turns
+ * true later (the studio has started on a waiting topic) opens it, unless the reader has opened
+ * or folded it themselves.
  */
-export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; video: Video | null }) {
-  const [open, setOpen] = useState(false);
-  const { steps } = breakdown;
-  if (steps.length === 0) return null;
+export function DropletBreakdown({ breakdown, video, progress, defaultOpen = false }: {
+  breakdown: Breakdown | null;
+  video: Video | null;
+  progress?: Progress | null;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const [touched, setTouched] = useState(false);
+  useEffect(() => {
+    if (defaultOpen && !touched) setOpen(true);
+  }, [defaultOpen, touched]);
+  const making = !!progress;
+  const bill = progress ? progress.breakdown : breakdown;
+  const rows: Row[] = progress ? progressRows(progress)
+    : (breakdown?.steps ?? []).map((s) => ({ step: s.step, status: 'done' as const, bill: s, since: null }));
+  if (rows.length === 0) return null;
+
+  const steps = bill?.steps ?? [];
   const stepSeconds = steps.reduce((sum, s) => sum + (s.seconds ?? 0), 0);
   const notes = [
-    breakdown.seconds !== null && stepSeconds > breakdown.seconds + 1
+    making && rows.some((r) => r.status === 'running')
+      && 'A step running now counts its time up, and shows what it has spent so far.',
+    bill && bill.seconds !== null && stepSeconds > bill.seconds + 1
       && 'The times add up to more than the total: the diagrams and the audio are made side by side.',
     steps.some((s) => s.tries > 1) && 'A step tried more than once counts every try, in time and in cost.',
     steps.some((s) => s.models.some((m) => m.costUsd === 0)) && 'free: run on the studio’s own machine.',
     steps.some((s) => s.tools?.some((t) => t.version)) && 'Versions: as installed on the studio’s machine that made the videos.',
-    breakdown.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',
-    breakdown.unpriced > 0 && 'n/a: the provider did not say what it charged.',
-    video?.status === 'RENDERING' && (steps.some((s) => s.part === 'videos')
+    bill && bill.credits !== null && 'cr: credits on the ElevenLabs plan, which bills by credit.',
+    bill && bill.unpriced > 0 && 'n/a: the provider did not say what it charged.',
+    // An API older than the progress reports sends the videos' lines only with READY.
+    !making && video?.status === 'RENDERING' && (steps.some((s) => s.part === 'videos')
       ? 'The videos’ lines are from an earlier try; they are brought up to date when the videos are done.'
       : 'The videos’ lines are added when they are done.'),
   ].filter((n): n is string => !!n);
 
+  const done = rows.filter((r) => r.status === 'done').length;
+  const anyStarted = rows.some((r) => r.status !== 'waiting');
+  const cost = bill ? totalCost(bill) : '$0';
+
   return (
-    <details className="mt-3 text-[11px] group" data-testid="breakdown" onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="cursor-pointer select-none flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}>
+    <details className="mt-3 text-[11px] group" data-testid="breakdown" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="cursor-pointer select-none flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}
+        onClick={() => setTouched(true)}>
         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--accent-yellow)' }}>Bill of materials</span>
-        <span data-testid="breakdown-total">{duration(breakdown.seconds)} · {totalCost(breakdown)}</span>
+        {making ? (
+          <span data-testid="breakdown-progress" className="flex items-center gap-1.5">
+            {rows.some((r) => r.status === 'running') && (
+              <span className="inline-block w-1.5 h-1.5 shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+            )}
+            {anyStarted ? `Making it · ${done} of ${rows.length} steps done · ${cost} so far` : `${rows.length} steps to go`}
+          </span>
+        ) : (
+          <span data-testid="breakdown-total">{duration(bill?.seconds ?? null)} · {cost}</span>
+        )}
         <span className="text-[10px] group-open:hidden">show</span>
         <span className="text-[10px] hidden group-open:inline">hide</span>
       </summary>
       {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <PhoneBill breakdown={breakdown} />
+        <PhoneBill rows={rows} bill={bill} making={making} />
         <table className="w-full border-collapse hidden sm:table" style={{ color: 'var(--text-secondary)' }}>
           <thead>
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
+              {making && <th className={`${cell} !pr-1 font-semibold`}><span className="sr-only">Status</span></th>}
               <th className={`${cell} font-semibold`}>#</th>
               <th className={`${cell} font-semibold`}>Step</th>
               <th className={`${cell} font-semibold`}>Model / tool</th>
@@ -144,27 +291,28 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
             </tr>
           </thead>
           <tbody>
-            {steps.map((s, i) => {
-              const lines = linesOf(s);
-              const rows = lines.length > 0 ? lines : [null];
+            {rows.map((r, i) => {
+              const lines = r.bill ? linesOf(r.bill) : [];
+              const items = lines.length > 0 ? lines : [null];
               return (
-                <Fragment key={`${s.part}-${s.step}`}>
-                  {rows.map((l, j) => (
-                    <tr key={j} data-testid={j === 0 ? 'breakdown-step' : undefined}
-                      style={j === rows.length - 1 && i < steps.length - 1 ? { borderBottom: '1px solid var(--border)' } : undefined}>
+                <Fragment key={r.step}>
+                  {items.map((l, j) => (
+                    <tr key={j} data-testid={j === 0 ? 'breakdown-step' : undefined} data-status={j === 0 && making ? r.status : undefined}
+                      style={{
+                        ...(j === items.length - 1 && i < rows.length - 1 && { borderBottom: '1px solid var(--border)' }),
+                        ...(r.status === 'waiting' && { opacity: 0.55 }),
+                      }}>
+                      {making && <td className={`${cell} !pr-1`}>{j === 0 && <StatusMark status={r.status} />}</td>}
                       <td className={`${cell} tabular-nums`} style={{ color: 'var(--text-muted)' }}>{j === 0 ? String(i + 1).padStart(2, '0') : ''}</td>
-                      <td className={cell} style={{ color: 'var(--text-primary)' }}>
-                        {j === 0 && (
-                          <>
-                            {STEP_LABELS[s.step] ?? s.step}
-                            {s.tries > 1 && <span className="ml-1" style={{ color: 'var(--accent-orange)' }}>×{s.tries} tries</span>}
-                          </>
-                        )}
+                      <td className={cell} style={{ color: 'var(--text-primary)' }}>{j === 0 && <StepName row={r} />}</td>
+                      <td className={`${cell} break-all`}>
+                        {l ? <LineName line={l} /> : <span style={{ color: 'var(--text-muted)' }}>{r.bill && r.status !== 'running' ? 'code' : '—'}</span>}
                       </td>
-                      <td className={`${cell} break-all`}>{l ? <LineName line={l} /> : <span style={{ color: 'var(--text-muted)' }}>code</span>}</td>
                       <td className={cell}><MakerChip maker={l?.maker ?? null} /></td>
                       <td className={num}>{l?.calls ?? ''}</td>
-                      <td className={num}>{j === 0 ? duration(s.seconds) : ''}</td>
+                      <td className={num} style={r.status === 'running' ? { color: 'var(--accent-cyan)' } : undefined}>
+                        {j === 0 && <RowTime row={r} />}
+                      </td>
                       <td className={`${num} !pr-0`} style={{ color: 'var(--text-primary)' }}>{l?.cost ?? '—'}</td>
                     </tr>
                   ))}
@@ -174,9 +322,9 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
           </tbody>
           <tfoot>
             <tr className="font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
-              <td className={cell} colSpan={5}>Total</td>
-              <td className={num}>{duration(breakdown.seconds)}</td>
-              <td className={`${num} !pr-0`}>{totalCost(breakdown)}</td>
+              <td className={cell} colSpan={making ? 6 : 5}>{making ? 'So far' : 'Total'}</td>
+              <td className={num}>{duration(bill?.seconds ?? null)}</td>
+              <td className={`${num} !pr-0`}>{cost}</td>
             </tr>
           </tfoot>
         </table>
@@ -191,23 +339,26 @@ export function DropletBreakdown({ breakdown, video }: { breakdown: Breakdown; v
 }
 
 /** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
-function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
+function PhoneBill({ rows, bill, making }: { rows: Row[]; bill: Breakdown | null; making: boolean }) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
       <ol>
-        {breakdown.steps.map((s, i) => (
-          <li key={`${s.part}-${s.step}`} className="py-1" data-testid="breakdown-step-phone"
-            style={i < breakdown.steps.length - 1 ? { borderBottom: '1px solid var(--border)' } : undefined}>
+        {rows.map((r, i) => (
+          <li key={r.step} className="py-1" data-testid="breakdown-step-phone" data-status={making ? r.status : undefined}
+            style={{
+              ...(i < rows.length - 1 && { borderBottom: '1px solid var(--border)' }),
+              ...(r.status === 'waiting' && { opacity: 0.55 }),
+            }}>
             <div className="flex gap-2">
+              {making && <StatusMark status={r.status} />}
               <span className="tabular-nums" style={{ color: 'var(--text-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
-              <span className="min-w-0" style={{ color: 'var(--text-primary)' }}>
-                {STEP_LABELS[s.step] ?? s.step}
-                {s.tries > 1 && <span className="ml-1" style={{ color: 'var(--accent-orange)' }}>×{s.tries}</span>}
+              <span className="min-w-0" style={{ color: 'var(--text-primary)' }}><StepName row={r} short /></span>
+              <span className="ml-auto tabular-nums whitespace-nowrap" style={r.status === 'running' ? { color: 'var(--accent-cyan)' } : undefined}>
+                <RowTime row={r} />
               </span>
-              <span className="ml-auto tabular-nums whitespace-nowrap">{duration(s.seconds)}</span>
             </div>
-            {linesOf(s).map((l) => (
-              <div key={`${l.name} ${l.version ?? ''}`} className="flex gap-2 pl-6">
+            {r.bill && linesOf(r.bill).map((l) => (
+              <div key={`${l.name} ${l.version ?? ''}`} className={`flex gap-2 ${making ? 'pl-11' : 'pl-6'}`}>
                 <span className="min-w-0 break-all">
                   <LineName line={l} />{l.calls !== null && l.calls > 1 ? ` ×${l.calls}` : ''}<MakerChip maker={l.maker} className="ml-1.5" />
                 </span>
@@ -218,8 +369,8 @@ function PhoneBill({ breakdown }: { breakdown: Breakdown }) {
         ))}
       </ol>
       <div className="flex gap-2 pt-1 font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
-        <span>Total</span>
-        <span className="ml-auto text-right tabular-nums">{duration(breakdown.seconds)} · {totalCost(breakdown)}</span>
+        <span>{making ? 'So far' : 'Total'}</span>
+        <span className="ml-auto text-right tabular-nums">{duration(bill?.seconds ?? null)} · {bill ? totalCost(bill) : '$0'}</span>
       </div>
     </div>
   );

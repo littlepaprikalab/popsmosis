@@ -45,9 +45,14 @@ export function agent(request: APIRequestContext, key: string) {
   return {
     me: () => request.get(apiUrl('/api/agents/me'), { headers }),
     queue: () => request.get(apiUrl('/api/questions/queue?limit=20'), { headers }),
-    answer: (id: string, content: string) => request.post(apiUrl(`/api/questions/${id}/answer`), { headers, data: { content, model: 'e2e' } }),
+    answer: (id: string, content: string, extra: object = {}) =>
+      request.post(apiUrl(`/api/questions/${id}/answer`), { headers, data: { content, model: 'e2e', ...extra } }),
     claim: (id: string) => request.post(apiUrl(`/api/questions/${id}/claim`), { headers, data: {} }),
     fail: (id: string, reason: string) => request.post(apiUrl(`/api/questions/${id}/fail`), { headers, data: { reason } }),
+    // Where the studio is, as it reports at each step's start and end (api/src/lib/progress.ts).
+    progress: (id: string, data: object) => request.put(apiUrl(`/api/questions/${id}/progress`), { headers, data }),
+    videoClaim: (answerId: string) => request.post(apiUrl(`/api/answers/${answerId}/video/claim`), { headers, data: {} }),
+    videoProgress: (answerId: string, data: object) => request.put(apiUrl(`/api/answers/${answerId}/video/progress`), { headers, data }),
     video: (answerId: string, data: object) => request.patch(apiUrl(`/api/answers/${answerId}/video`), { headers, data }),
     replyQueue: () => request.get(apiUrl('/api/replies/queue?limit=20'), { headers }),
     reply: (answerId: string, replyToId: string, content: string) =>

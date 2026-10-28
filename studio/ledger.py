@@ -10,7 +10,9 @@ runs.jsonl.
 breakdown(job, part) puts the two together for the API, which keeps it with the droplet
 (`breakdown` on POST /api/questions/:id/answer and PATCH /api/answers/:id/video): each
 step's time and tries, what it cost, the models that ran it, and the other software it ran
-on this machine (TOOLS) at the version installed here.
+on this machine (TOOLS) at the version installed here. progress() sends the same bill so
+far at the start and the end of every step, with the steps running then, so the page shows
+it filling in while the droplet is made (api/src/lib/progress.ts).
 
     {"steps": [{"step": "bundle", "seconds": 186.2, "tries": 1, "costUsd": 0.5213,
                 "models": [{"model": "claude-opus-5-5", "calls": 1, "costUsd": 0.5213, "credits": null}],
@@ -210,6 +212,44 @@ def try_breakdown(job: Path, part: str, running: tuple[str, float] | None = None
         print(f"breakdown left out: {size} bytes, more than the API takes ({MAX_BYTES})", file=sys.stderr)
         return None
     return report
+
+
+def progress(job: Path, part: str, running: dict[str, float], failed: tuple[str, ...] = (),
+             ending: tuple[str, float] | None = None) -> dict:
+    """Where one part of the droplet is, for the page: the steps running now (each with the time.monotonic()
+    it started at), the steps whose last try failed and that are not running again, and the bill so far, with
+    `ending`, a step that has just ended and is not in the run's record yet, and its seconds.
+
+    A running step is not a line of the bill until it ends: what its calls have cost so far is."""
+    now = time.monotonic()
+    report: dict = {"running": [{"step": step, "seconds": round(max(0.0, now - started), 1)}
+                                for step, started in sorted(running.items(), key=lambda r: PARTS[part].index(r[0]))],
+                    "failed": sorted(set(failed) - set(running), key=PARTS[part].index)}
+    bill = try_breakdown(job, part, ending)
+    if bill:
+        report["breakdown"] = bill
+    return report
+
+
+class Reporter:
+    """Sends a run's progress reports, best effort: one that fails is printed and the reports of the next minute
+    are skipped, so an API that stalls, or is older than the reports, costs the run one short timeout a minute at
+    most rather than one on every step's way in and out."""
+
+    QUIET_S = 60.0
+
+    def __init__(self):
+        self.quiet_until = 0.0
+
+    def send(self, report) -> None:
+        """Call report() (which builds and sends one) unless a report failed less than a minute ago."""
+        if time.monotonic() < self.quiet_until:
+            return
+        try:
+            report()
+        except Exception as e:
+            self.quiet_until = time.monotonic() + self.QUIET_S
+            print(f"progress not reported: {type(e).__name__}: {e}; the next minute's reports are skipped", file=sys.stderr)
 
 
 @functools.cache

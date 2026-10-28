@@ -15,7 +15,10 @@ The teacher does not write the lessons itself: it runs the **studio**, a Python
 pipeline in this repo, which writes each lesson, fact-checks every line and posts it.
 Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
-in Supabase and shown beside the text. Once a droplet's videos are done it is listed on the
+in Supabase and shown above the text. The learner meets a droplet through its videos: while
+they are made, `/learn` holds the text back and shows the droplet's bill of materials filling
+in, step by step ([While a droplet is made](#while-a-droplet-is-made)), and shows the text
+with the videos once they are done. Once a droplet's videos are done it is listed on the
 public **Droplets** tab (`/droplets`), where anyone can watch it without an account, and
 anyone signed in can give it a thumbs-up and comment on it. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
@@ -284,18 +287,22 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it; 409 if answered, failed, or leased to another agent |
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
+| PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
 | PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until storage is set up (`SUPABASE_URL` and a secret key in `SUPABASE_SERVICE_ROLE_KEY`), with `retryable: true` only when waiting may fix it |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, bundle, factcheck }`; 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
 | POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |
+| PUT | `/api/answers/:id/video/progress` | own answers: `{ attempt?, running: [{ step, seconds }], failed?, breakdown? }`, where the render is, its `breakdown` the videos' bill so far; 204; 409 unless they are RENDERING under that attempt. Not the heartbeat: the claim is |
 | GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |
 | GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
-both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below); and
-`hidden`, true when an admin took it off the Droplets tab. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
+both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
+`awaitingVideos`, true while the page holds the text back for the videos (below); and
+`hidden`, true when an admin took it off the Droplets tab. The question carries `progress` while its droplet is being
+made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
 
@@ -385,6 +392,45 @@ the studio's machine for free. ElevenLabs bills in its plan's credits: they are 
 credits (`credits`) unless `ELEVENLABS_USD_PER_1K_CREDITS` gives their price. A model whose
 provider said neither is counted in `unpriced`. The bill stays on `/learn`: the public
 Droplets tab never shows it.
+
+#### While a droplet is made
+
+The studio reports where it is at the start and the end of every step, with the bill so far
+(`progress()` in `studio/ledger.py`): on the topic while it writes the lesson
+(`PUT /api/questions/:id/progress`, which also says whether videos follow), then on the
+answer while it makes the videos (`PUT /api/answers/:id/video/progress`). A report waits at
+most 5 seconds; one that does not get through is printed, the step goes on, and the run's
+reports of the next minute are skipped, so a stalled API never holds a render up. The
+videos' bill so far is replaced by the whole one with READY, and dropped by a READY sent
+without one, rather than shown as the total. The question reads it back as
+
+```json
+"progress": { "running": [ { "step": "audio", "startedAt": "2026-11-03T12:01:10.000Z" } ],
+              "failed": [], "videos": true, "breakdown": { "steps": [ ... ], ... } }
+```
+
+with each running step's start by the API's clock, and the bill in the shape above. The card
+on `/learn` shows it as the bill of materials open, one line per step: done (its time and
+cost), running (a pulsing dot, its time counting up, what it has spent so far), failed and
+waiting for the retry, or still to come. A step still to come that a later one has gone past
+is left out; so is the post, which the lesson's bill never has.
+
+The lesson text waits for the videos, so a learner meets the droplet through them rather than
+through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill
+and no text, its badge still says BREWING, and follow-ups wait. Only a lesson whose studio
+said, before posting it, that videos follow is held. The text shows, with the videos above
+it, as soon as one of these is true: the videos are READY or FAILED (a render gone quiet
+reads as FAILED), a second attempt has started, or `LESSON_HOLD_MINUTES` (default 20; 0
+never waits) have passed since the lesson was posted, so a stuck render never holds it for
+long. Each only ever turns true, so a lesson once shown is never hidden again. A lesson
+whose studio said no videos follow (`STUDIO_VIDEOS=off`, or the media steps not built here),
+or that was posted without saying (a studio older than the reports, a lesson by hand, a
+report that never got through), shows at once and stays shown when its videos start. Past
+the 20 minutes the bill under the text keeps filling in until the videos are done.
+
+Each report counts against a rate limit of its own (300 a minute for the agent key, beside
+the 300 its other calls have), so reports from many renders at once can never use up what
+their claims, uploads and READY need.
 
 The bill is never the reason a step fails: a call log that cannot be written (a full disk)
 is reported and the step goes on, a line cut short by a kill is skipped, and a bill that

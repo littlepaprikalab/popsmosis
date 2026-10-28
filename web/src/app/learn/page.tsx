@@ -20,7 +20,7 @@ import { ReplyThread } from '@/components/ReplyThread';
 import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
-import { DropletBreakdown } from '@/components/DropletBreakdown';
+import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
 import { Wordmark } from '@/components/Wordmark';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
@@ -39,11 +39,11 @@ const VIDEO_WATCH_MS = 15 * 60_000;
 
 /**
  * A card the armed poll re-fetches: a topic with no lesson yet, a thread where a
- * human spoke last, videos still rendering, or a lesson new enough that its videos
- * may be about to start.
+ * human spoke last, a lesson waiting for its videos, videos still rendering, or a
+ * lesson new enough that its videos may be about to start.
  */
 function isArmed(q: Question, now = Date.now()): boolean {
-  if (q.status === 'PENDING' || q.answer?.awaitingAgent) return true;
+  if (q.status === 'PENDING' || q.answer?.awaitingAgent || q.answer?.awaitingVideos) return true;
   const answer = q.answer;
   if (!answer) return false;
   if (answer.video?.status === 'RENDERING') return true;
@@ -55,6 +55,14 @@ function videoKey(a: Answer | null): string {
   const v = a?.video;
   const bill = a?.breakdown ? `${a.breakdown.steps.length}|${a.breakdown.seconds}` : 'no-bill';
   return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden, bill].join('|') : `none|${a?.hidden}|${bill}`;
+}
+
+/** The same for where the studio is with the droplet: the steps running and every line of the bill so far. */
+function progressKey(q: Question): string {
+  const p = q.progress;
+  if (!p) return `none|${q.answer?.awaitingVideos}`;
+  const bill = (p.breakdown?.steps ?? []).map((s) => `${s.step}:${s.tries}:${s.seconds}:${s.costUsd}:${s.models.length}`).join(',');
+  return [p.running.map((r) => `${r.step}@${r.startedAt}`).join(','), p.failed.join(','), p.videos, bill, q.answer?.awaitingVideos].join('|');
 }
 
 export default function LearnPage() {
@@ -159,6 +167,12 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
   // pay to strip markdown for a teaser that is hidden while the card is open.
   const snippet = useMemo(() => (answer ? snippetOf(answer.content) : ''), [answer?.content]);
   const notesUrl = inkmoryRecordsUrl(q.id);
+  // The lesson is posted, and waits for its videos: the card shows the bill filling in instead of the text,
+  // so the droplet is met through its videos (api/src/lib/progress.ts).
+  const awaiting = !!answer?.awaitingVideos && !!q.progress;
+  const made = awaiting && q.progress ? progressCount(q.progress) : null;
+  // Brewing until there is something to watch or read: a lesson waiting for its videos is not ready yet.
+  const badge = STATUS_BADGES[awaiting ? 'PENDING' : q.status];
 
   return (
     <CollapsibleCard
@@ -184,8 +198,8 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] uppercase font-bold" style={{ color: STATUS_BADGES[q.status].color }}>
-                {STATUS_BADGES[q.status].label}
+              <span className="text-[10px] uppercase font-bold" style={{ color: badge.color }}>
+                {badge.label}
               </span>
               <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{timeAgo(q.createdAt)}</span>
               {q.canDelete && (
@@ -207,7 +221,12 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
           {!collapsed && <AttachmentList attachments={q.attachments} />}
         </>
       )}
-      preview={answer ? (
+      preview={made ? (
+        <p className="text-[10px] flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="making-preview">
+          <span className="inline-block w-1.5 h-1.5 shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+          Making the videos: {made.done} of {made.total} steps done — tap to follow along
+        </p>
+      ) : answer ? (
         <>
           <p className="text-sm line-clamp-3" style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }} data-testid="answer-preview">
             <span className="font-bold" style={{ color: 'var(--accent-blue)' }}>{answer.agent.name}:</span>{' '}
@@ -224,7 +243,26 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
       {(collapse) => (
         <>
           {/* Lesson */}
-          {answer ? (
+          {answer && awaiting && q.progress ? (
+            <>
+              <div className="rounded-md p-3" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }} data-testid="making">
+                <div className="flex items-center gap-2">
+                  <AgentAvatar name={answer.agent.name} />
+                  <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>{answer.agent.name}</span>
+                  <span className="badge-agent text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold">agent</span>
+                  {answer.model && <span className="text-[10px] ml-auto truncate" style={{ color: 'var(--text-muted)' }}>{answer.model}</span>}
+                </div>
+                <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="awaiting-videos">
+                  <span className="inline-block w-1.5 h-1.5 mt-[5px] shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+                  The lesson is written and checked. The teacher is making its song and lesson videos; the lesson shows here with them.
+                </p>
+                <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} defaultOpen />
+              </div>
+              <div className="flex justify-end mt-2">
+                <CollapseButton onClick={collapse} />
+              </div>
+            </>
+          ) : answer ? (
             <>
               <div className="rounded-md p-3" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}>
                 <div className="flex items-center gap-2 mb-2">
@@ -234,10 +272,11 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{timeAgo(answer.createdAt)}</span>
                   {answer.model && <span className="text-[10px] ml-auto truncate" style={{ color: 'var(--text-muted)' }}>{answer.model}</span>}
                 </div>
-                <div className="md text-sm" style={{ color: 'var(--text-primary)' }}>
+                {/* The videos first: the droplet is them, and the text is what they teach, to read after. */}
+                <LessonVideos video={answer.video} tags={answer.tags} />
+                <div className={`md text-sm ${answer.video ? 'mt-3' : ''}`} style={{ color: 'var(--text-primary)' }}>
                   <Markdown>{answer.content}</Markdown>
                 </div>
-                <LessonVideos video={answer.video} tags={answer.tags} />
                 {(answer.video?.status === 'READY' || notesUrl) && (
                   <p className="text-[10px] mt-2 flex flex-wrap items-center gap-x-3 gap-y-1" style={{ color: 'var(--text-muted)' }}>
                     {answer.video?.status === 'READY' && (
@@ -254,7 +293,10 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                     {notesUrl && <TeacherNotesLink href={notesUrl} />}
                   </p>
                 )}
-                {answer.breakdown && <DropletBreakdown breakdown={answer.breakdown} video={answer.video} />}
+                {/* Still rendering after the text was shown (20 minutes on): the bill keeps filling in under it. */}
+                {(answer.breakdown || q.progress) && (
+                  <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={answer.video?.status === 'RENDERING' ? q.progress : null} />
+                )}
                 <ReplyThread answer={answer} canReply={q.isOwner} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">
@@ -267,10 +309,17 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
               {notesUrl && <span className="block mt-1.5 text-[10px]"><TeacherNotesLink href={notesUrl} /></span>}
             </p>
           ) : (
-            <p className="text-xs flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
-              <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
-              The teacher is preparing this droplet… this card refreshes itself.
-            </p>
+            <>
+              <p className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
+                <span className="inline-block w-1.5 h-1.5 mt-[5px] shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+                The teacher is preparing this droplet… this card refreshes itself.
+              </p>
+              {/* The bill as a checklist of what is to come, open once the studio has started on it. */}
+              {q.progress && (
+                <DropletBreakdown breakdown={null} video={null} progress={q.progress}
+                  defaultOpen={q.progress.running.length > 0 || !!q.progress.breakdown?.steps.length} />
+              )}
+            </>
           )}
         </>
       )}
@@ -353,7 +402,8 @@ function LearnContent() {
           || (next.answer?.id ?? null) !== (q.answer?.id ?? null)
           || (next.answer?.replies.length ?? 0) !== (q.answer?.replies.length ?? 0)
           || next.answer?.awaitingAgent !== q.answer?.awaitingAgent
-          || videoKey(next.answer) !== videoKey(q.answer);
+          || videoKey(next.answer) !== videoKey(q.answer)
+          || progressKey(next) !== progressKey(q);
         return changed ? next : q;
       }));
       // Keep the status watermark current so our own localized updates do not trip the banner.

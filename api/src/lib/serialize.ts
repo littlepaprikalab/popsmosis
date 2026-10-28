@@ -6,6 +6,8 @@ import { serializeVideo, type VideoStatus } from './droplet.js';
 import { serializeBreakdown } from './breakdown.js';
 import { serializeTags } from './tags.js';
 import { termsCurrent } from './terms.js';
+import { awaitingVideos, lessonProgress, readProgress, videoProgress } from './progress.js';
+import { claimMinutes } from './claim.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
@@ -68,9 +70,11 @@ type AnswerRow = {
   lessonPosterUrl: string | null;
   videoError: string | null;
   videoUpdatedAt: Date | null;
+  videoAttempts: number;
   hiddenAt: Date | null;
   lessonBreakdown: unknown;
   videoBreakdown: unknown;
+  videoProgress: unknown;
   songTags: string[];
   lessonTags: string[];
   agent: { id: string; name: string };
@@ -84,6 +88,8 @@ type QuestionRow = {
   status: 'PENDING' | 'ANSWERED' | 'FAILED';
   failedReason: string | null;
   createdAt: Date;
+  claimedAt: Date | null;
+  progress: unknown;
   user: { id: string; name: string | null; avatarUrl: string | null } | null;
   answers: AnswerRow[];
   attachments: AttachmentRow[];
@@ -116,9 +122,14 @@ export function serializeReply(r: ReplyRow, viewerId?: string) {
   };
 }
 
-export function serializeAnswer(a: AnswerRow, viewerId?: string) {
+/**
+ * `videosPlanned`: the studio said, while it wrote the lesson, that the videos come after it (lib/progress.ts);
+ * it holds the text back in the moment between the post and the videos' first claim.
+ */
+export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned = false, now = new Date()) {
   const replies = a.replies.map((r) => serializeReply(r, viewerId));
   const last = a.replies[a.replies.length - 1];
+  const video = serializeVideo(a, now);
   return {
     id: a.id,
     questionId: a.questionId,
@@ -126,7 +137,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     content: a.content,
     model: a.model,
     createdAt: a.createdAt.toISOString(),
-    video: serializeVideo(a), // null: a text-only droplet
+    video, // null: a text-only droplet
     tags: serializeTags(a), // each video's hashtags (lib/tags.ts); none for a lesson posted without a bundle
     // Each step's time, cost and models (lib/breakdown.ts); null when the studio sent none.
     breakdown: serializeBreakdown(a.lessonBreakdown, a.videoBreakdown),
@@ -134,11 +145,30 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,
+    // True while the page holds the lesson text back until its videos are done, or LESSON_HOLD_MINUTES pass.
+    awaitingVideos: awaitingVideos(a, video, videosPlanned, now),
   };
 }
 
-export function serializeQuestion(q: QuestionRow, viewerId?: string) {
+/**
+ * Where the studio is with this droplet, while it is being made (lib/progress.ts): the topic is waiting for its
+ * lesson, or its videos are to come or rendering. Null once there is nothing left to make.
+ */
+function progressOf(q: QuestionRow, answer: ReturnType<typeof serializeAnswer> | null, now: Date) {
+  if (q.status === 'PENDING') {
+    const leaseLive = !!q.claimedAt && now.getTime() - q.claimedAt.getTime() < claimMinutes() * 60_000;
+    return lessonProgress(q.progress, leaseLive, now);
+  }
+  const row = q.answers[0];
+  const rendering = answer?.video?.status === 'RENDERING';
+  if (!row || !answer || !(rendering || answer.awaitingVideos)) return null;
+  return videoProgress(row.videoProgress, rendering, row.lessonBreakdown, row.videoBreakdown, now);
+}
+
+export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new Date()) {
   const isOwner = !!viewerId && q.userId === viewerId;
+  const videosPlanned = readProgress(q.progress).videos === true;
+  const answer = q.answers[0] ? serializeAnswer(q.answers[0], viewerId, videosPlanned, now) : null;
   return {
     id: q.id,
     content: q.content,
@@ -147,7 +177,9 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string) {
     attachments: q.attachments.map(serializeAttachment),
     createdAt: q.createdAt.toISOString(),
     user: q.user,
-    answer: q.answers[0] ? serializeAnswer(q.answers[0], viewerId) : null,
+    answer,
+    // While the droplet is being made: the steps running now and the bill so far, shown as it fills in.
+    progress: progressOf(q, answer, now),
     isOwner,
     // Always the owner's to take back. One with a lesson keeps the lesson for everyone else (lib/privacy.ts).
     canDelete: isOwner,

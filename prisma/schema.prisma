@@ -87,6 +87,10 @@ model Question {
 
   failedReason String? // FAILED: one line on why, shown on the card
 
+  // Where the studio is while it writes the lesson (lib/progress.ts): the steps running now, the lesson's bill so
+  // far, and whether the videos' steps come after. Sent before each step (PUT /api/questions/:id/progress).
+  progress Json?
+
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers     Answer[]
   attachments Attachment[]
@@ -123,7 +127,8 @@ model Answer {
   // How the droplet was made, step by step: each step's time and tries, its cost and the models that ran it
   // (studio/ledger.py, lib/breakdown.ts). Shown under the lesson on /learn.
   lessonBreakdown Json? // the steps up to the post, sent with the lesson
-  videoBreakdown  Json? // the media steps, sent with READY
+  videoBreakdown  Json? // the media steps: so far while they render (PUT /api/answers/:id/video/progress), then with READY
+  videoProgress   Json? // the media steps running now, while they render (lib/progress.ts)
 
   // The Droplets tab's thumbs-up and comments, counted. Kept by triggers on droplet_likes and droplet_comments
   // (migration 20261031120000_droplet_engagement), never written by the API, so a cascade from a deleted user or a

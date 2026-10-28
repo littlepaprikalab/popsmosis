@@ -4,7 +4,7 @@ import pytest
 
 from studio import brain, jobs
 from studio import run as operator_run
-from studio.api import Api, ApiError
+from studio.api import PROGRESS_TIMEOUT_S, Api, ApiError
 from studio.schemas import Bundle, FactCheck, Request
 from studio.tests.sample import bundle_data
 
@@ -27,6 +27,7 @@ class FakeApi:
         self.calls = []
         self.errors = {}  # method name -> ApiError to raise
         self.posted = None
+        self.reports = []  # each progress report, as sent
 
     def _call(self, name, *args):
         self.calls.append((name, *args))
@@ -36,6 +37,10 @@ class FakeApi:
     def claim(self, question_id):
         self._call("claim", question_id)
         return self.question
+
+    def report_progress(self, question_id, progress):
+        self._call("report_progress", question_id)
+        self.reports.append(progress)
 
     def download(self, path):
         self._call("download", path)
@@ -88,8 +93,10 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     (jobs_root / "q1" / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "claude-opus-5-5"}) + "\n")
 
     assert operator_run.run("q1", api=api, ask=ask) == ("DONE", "post", "lesson posted as answer ans1")
-    # Claimed again before every step but the post, so the lease outlasts a slow step.
-    assert api.names() == ["claim", "download", "download", "claim", "claim", "post_answer"]
+    # Claimed again before every step but the post, so the lease outlasts a slow step; and each of those steps
+    # tells the page it is running.
+    assert api.names() == ["claim", "report_progress", "download", "download", "claim", "report_progress",
+                           "claim", "report_progress", "post_answer"]
     assert ask.labels == ["bundle", "factcheck round 1"]
 
     job = jobs_root / "q1"
@@ -136,6 +143,55 @@ def test_a_style_line_in_the_question_is_the_songs_style(jobs_root):
 ])
 def test_only_a_line_that_starts_with_style_names_the_songs_style(content, split):
     assert operator_run.split_style(content) == split
+
+
+def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether_videos_follow(jobs_root, monkeypatch):
+    from studio import videos
+
+    monkeypatch.setattr(videos, "unavailable", lambda: None)
+    api = FakeApi()
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
+    assert [[r["step"] for r in report["running"]] for report in api.reports] == [["request"], ["bundle"], ["factcheck"]]
+    assert all(r["running"][0]["seconds"] < 5 and r["failed"] == [] and r["videos"] is True for r in api.reports)
+    # The bill so far is the steps already done, never the one just starting.
+    assert "breakdown" not in api.reports[0] or api.reports[0]["breakdown"]["steps"] == []
+    assert [s["step"] for s in api.reports[2]["breakdown"]["steps"]] == ["request", "bundle"]
+
+    monkeypatch.setattr(videos, "unavailable", lambda: "the videos are turned off here (STUDIO_VIDEOS)")
+    api = FakeApi()
+    operator_run.run("q2", api=api, ask=FakeBrain())
+    assert api.reports and all(r["videos"] is False for r in api.reports)  # a text-only droplet: the page need not wait
+
+
+def test_a_post_that_fails_tells_the_page_rather_than_leave_the_fact_check_running(jobs_root):
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "try again")
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[:2] == ("FAILED", "post")
+    last = api.reports[-1]
+    assert last["running"] == [] and last["failed"] == ["post"]
+
+
+def test_a_failed_step_tells_the_page_with_the_try_it_cost(jobs_root):
+    api = FakeApi()
+    assert operator_run.run("q1", api=api, ask=FakeBrain(bundle_error=brain.Truncated("hit max_tokens")))[0] == "FAILED"
+    last = api.reports[-1]
+    assert last["running"] == [] and last["failed"] == ["bundle"]
+    assert [(s["step"], s["tries"]) for s in last["breakdown"]["steps"]] == [("request", 1), ("bundle", 1)]
+    # The retry runs it again, so the page says it is running, not failed; and it counts both tries.
+    api.reports.clear()
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
+    assert api.reports[0]["running"][0]["step"] == "bundle" and api.reports[0]["failed"] == []
+    bundle = next(s for s in api.posted["breakdown"]["steps"] if s["step"] == "bundle")
+    assert bundle["tries"] == 2
+
+
+def test_a_report_the_api_refuses_never_changes_the_runs_outcome(jobs_root, capsys):
+    api = FakeApi()
+    api.errors["report_progress"] = ApiError(0, "UNREACHABLE", "the API did not answer")
+    assert operator_run.run("q1", api=api, ask=FakeBrain()) == ("DONE", "post", "lesson posted as answer ans1")
+    assert "progress not reported: ApiError: the API did not answer" in capsys.readouterr().err
+    # Tried once: an API that does not take them costs the run one timeout a minute, not one a step.
+    assert api.names().count("report_progress") == 1
 
 
 def test_running_again_resumes_at_the_step_that_failed(jobs_root):
@@ -359,16 +415,26 @@ def test_a_lesson_posted_whose_reply_was_lost_is_recovered_from_the_409(jobs_roo
 
 
 def test_the_client_sends_the_key_and_json_and_raises_the_apis_error():
-    sent = []
+    sent, timeouts = [], []
 
-    def send(method, url, headers, body):
+    def send(method, url, headers, body, timeout=None):
         sent.append((method, url, headers, body))
+        timeouts.append(timeout)
         if url.endswith("/fail"):
             return 409, b'{"error":{"code":"CONFLICT","message":"Question already has an answer"}}'
         return 200, b'{"id":"q1"}'
 
     api = Api("http://localhost:3001", "sk_pop_x", send=send)
     assert api.claim("q1") == {"id": "q1"}
+    api.report_progress("q1", {"running": [{"step": "bundle", "seconds": 0.0}], "videos": True})
+    api.report_video_progress("ans1", 2, {"running": [], "failed": ["art"]})
+    progress, video_progress = sent.pop(1), sent.pop(1)
+    # The claim waits as long as any call; a report for the page gives up long before it could hold a step up.
+    assert timeouts[:3] == [None, PROGRESS_TIMEOUT_S, PROGRESS_TIMEOUT_S] and PROGRESS_TIMEOUT_S <= 5
+    assert progress[:2] == ("PUT", "http://localhost:3001/api/questions/q1/progress")
+    assert json.loads(progress[3]) == {"running": [{"step": "bundle", "seconds": 0.0}], "videos": True}
+    assert video_progress[:2] == ("PUT", "http://localhost:3001/api/answers/ans1/video/progress")
+    assert json.loads(video_progress[3]) == {"running": [], "failed": ["art"], "attempt": 2}
     method, url, headers, body = sent[0]
     assert (method, url, body) == ("POST", "http://localhost:3001/api/questions/q1/claim", b"{}")
     assert headers["Authorization"] == "Bearer sk_pop_x" and headers["Content-Type"] == "application/json"

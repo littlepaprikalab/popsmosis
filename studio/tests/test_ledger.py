@@ -143,8 +143,51 @@ def test_a_breakdown_bigger_than_the_api_takes_is_left_out_rather_than_refused(t
     assert ledger.try_breakdown(tmp_path, "lesson") is None
 
 
+def test_progress_is_the_steps_running_the_failed_ones_and_the_bill_so_far(tmp_path, monkeypatch):
+    monkeypatch.setattr(ledger.time, "monotonic", lambda: 100.0)
+    write_runs(tmp_path, {"part": "videos", "seconds": 50.0, "result": "FAILED", "step": "art",
+                          "steps": [{"step": "art", "seconds": 50.0, "result": "FAILED"}]})
+    with ledger.at_step("audio"):
+        ledger.log(tmp_path, [call("song", model="music_v1", cost=None, credits=2000)])
+    report = ledger.progress(tmp_path, "videos", {"timing": 98.0, "art": 90.0}, failed=("art", "locate"))
+    # In the order the steps run, with how long each has run; a failed step running again is running, not failed.
+    assert report["running"] == [{"step": "art", "seconds": 10.0}, {"step": "timing", "seconds": 2.0}]
+    assert report["failed"] == ["locate"]
+    # The running audio's call is billed already; the step has no time of its own until it ends.
+    assert [(s["step"], s["tries"]) for s in report["breakdown"]["steps"]] == [("art", 1), ("audio", 0)]
+    ended = ledger.progress(tmp_path, "videos", {}, ending=("audio", 30.0))
+    assert [(s["step"], s["tries"], s["seconds"]) for s in ended["breakdown"]["steps"]] == [("art", 1, 50.0), ("audio", 1, 30.0)]
+
+
 def test_a_job_with_nothing_done_has_an_empty_breakdown(tmp_path):
     assert ledger.breakdown(tmp_path, "videos") == {"steps": [], "seconds": None}
+
+
+def test_the_pages_checklist_has_the_studios_steps_in_its_order():
+    """The page shows every step before it runs (web/src/components/DropletBreakdown.tsx): a step renamed or added
+    here and not there would be an unnamed line at the end of the bill, and a branch joined wrongly there would
+    hide a step still to come."""
+    import re
+
+    from studio import media, videos
+
+    source = (videos.REPO / "web/src/components/DropletBreakdown.tsx").read_text(encoding="utf-8")
+
+    def listed(name):
+        return re.findall(r"'(\w+)'", re.search(rf"const {name}[^=]*= \[([^\]]*)\]", source).group(1))
+
+    labels = re.search(r"const STEP_LABELS[^{]*\{([^}]*)\}", source).group(1)
+    assert re.findall(r"^\s*(\w+):", labels, re.M) == [*ledger.LESSON_STEPS, *media.MEDIA_STEPS]
+    assert listed("LESSON_STEPS") == [s for s in ledger.LESSON_STEPS if s != "post"]  # no bill has the post
+    assert listed("VIDEO_STEPS") == list(media.MEDIA_STEPS)
+    after = {step: re.findall(r"'(\w+)'", nexts)
+             for step, nexts in re.findall(r"(\w+): \[([^\]]*)\]", re.search(r"const NEXT[^{]*\{([^}]*)\}", source).group(1))}
+    for branch in videos.BRANCHES:
+        for step, following in zip(branch, (*branch[1:], videos.TAIL[0])):
+            assert following in after[step], (step, following)
+    for step, following in zip(videos.TAIL, videos.TAIL[1:]):
+        assert following in after[step], (step, following)
+    assert {branch[0] for branch in videos.BRANCHES} <= set(after["post"]) & set(after["factcheck"])
 
 
 def test_every_step_the_runners_run_has_a_place():
