@@ -112,8 +112,9 @@ together they go from what the learner already knows to the parts they are learn
   the matrix, glycolysis as a short chain of arrows in the cytoplasm); a molecule the scene
   names is one small shape where it sits. Never ask for ions or small molecules scattered
   through a space: the video draws them, filling and emptying the space as the lesson goes
-  (`builds_up`), and painted ones would look like them and never move. A space is a soft
-  tint. A hook or an analogy is the same: its things
+  (`builds_up`), and painted ones would look like them and never move. A space is an even
+  wash of its own colour, as clear as its `color_hex` ("the matrix below it tinted pink"),
+  with nothing scattered in it. A hook or an analogy is the same: its things
   in place (the reservoir behind the dam, the chute down to the wheel), the dots showing
   what moves.
 - Say where everything is, region by region: first the regions ("the membrane across the
@@ -148,7 +149,8 @@ together they go from what the learner already knows to the parts they are learn
     a relation such as "at right angles to".
   - Give every structure its colour, by name, in the sentence: the colour its `color_hex`
     is, never a deeper or darker one ("light blue", not "a deep, rich blue"), since a dark
-    part sinks into the dark background. Code finds each structure by its colour, so in a
+    part sinks into the dark background, nor a pale or soft wash of it, which reads as
+    white. Code finds each structure by its colour, so in a
     scene each needs its own, with names that differ (blue and orange, not blue and teal). Keep a thing's natural colour where it has one: a green
     leaf, a yellow Sun, a blue Earth with its continents; a thing painted a colour it never
     has looks like a toy. Choose a colour only for what has none of its own (a protein, a

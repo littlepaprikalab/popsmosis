@@ -587,6 +587,33 @@ exactly H⁺ in the intermembrane space and H⁺ in the thylakoid lumen ($0.02 f
   Open: a `sam_phrase` that also describes the membrane needs a check, or the oxygen a
   colour of its own.
 
+## Round 11: the close-ups painted again
+
+The five membrane close-ups of round 8's lessons, painted before pictures were told to leave
+out loose ions, were painted again: Claude rewrote only those five scenes' requests under the
+current rules ($0.14), Muse Image painted them with the scene-aware checker (11 pictures with
+the chain close-up's second go, $0.11, checks $0.09), and only those five were located again
+($0.20; the other six kept their locations). About $0.54 in all.
+
+- **The loose ions are gone** from four of the five (a few stray spheres stay in the
+  thylakoid membrane close-up), so the H⁺ crowd is the only gold in a space: in the chain
+  close-up it now reads plainly as it fills and runs down.
+- **The cyanide now sits inside its complex**, and is located (it was not before); the
+  light reactions' lumen is a light blue that is located in the ATP synthase close-up, so
+  that lesson's lumen now drains too, from 73% to 38%.
+- **A "soft light" tint reads as white.** Claude first asked for the chain close-up's spaces
+  as "a soft light blue tint" and "a soft pink tint"; painted that pale, both counted as the
+  white oxygen's colour and neither was located. The rules now ask for a space as an even
+  wash of its own colour, as clear as its `color_hex`; painted again that way, the
+  intermembrane space was located (the matrix was not).
+- **ATP synthase stays upside down in the chain close-up**: four pictures across two rounds
+  drew its mushroom head up in the intermembrane space, though every request put it in the
+  matrix. Muse Image draws the mushroom upright; the rotor ring in the light reactions'
+  close-up moved up into the membrane's lower edge, not into it.
+- **The checker listed a non-problem as misplaced** ("ATP synthase head in lumen side? no:
+  head is in stroma, correct") and so painted the herbicide close-up a second time for
+  nothing.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
