@@ -30,7 +30,8 @@ from studio.tests import sample_schematic as toy  # noqa: E402
 from studio.tests.sample import bundle_data  # noqa: E402
 from studio.tests.test_art import FakeArtist  # noqa: E402
 
-LESSON = {"topic": "ATP synthesis", "course": "AP Biology", "core_idea": "Proton flow turns the rotor."}
+LESSON = {"topic": "ATP synthesis", "course": "AP Biology", "core_idea": "Proton flow turns the rotor.",
+          "facts": ["The rotor is a ring of c subunits with a central gamma stalk attached."]}
 PARTS = [(name, toy.COLORS[name]) for name in toy.PARTS]
 
 
@@ -108,6 +109,27 @@ def test_a_part_the_review_finds_wrong_is_drawn_but_never_labelled(monkeypatch, 
     assert [s.name for s in machine.structures] == ["Rotor", "Internal rod", "Catalytic knob"]
     assert next(s for s in machine.shapes if s.chain == "b").structure is None  # still drawn
     assert any("Stator left unlabelled: subunit b is only part of it" in note for note in machine.notes)
+
+
+def test_a_choice_the_review_objects_to_is_made_again_with_its_objections(monkeypatch, tmp_path):
+    first = toy.FakeBrain().choose
+    stator_missing = {**first, "structures": first["structures"][:3]}
+
+    def review(label):
+        verdicts = toy.FakeBrain().review
+        if not label.endswith(" 2"):  # the first round: the stator was left out
+            return {**verdicts, "structures": [{"structure": "Rotor", "verdict": "WRONG", "problem": "needs the gamma stalk"}]}
+        return verdicts
+
+    brain = toy.FakeBrain(choose=lambda label: first if label.endswith(" 2") else stator_missing, review=review)
+    machine = built(monkeypatch, tmp_path, brain)
+    assert [s.name for s in machine.structures] == list(toy.PARTS)
+    assert brain.labels == ["schematic find", "schematic choose", "schematic review", "schematic choose 2",
+                            "schematic review 2"]
+    retry = json.loads(brain.prompts["schematic choose 2"])["last_try"]
+    assert retry["review"] == ["Rotor: needs the gamma stalk"] and len(retry["structures"]) == 3
+    lesson = json.loads(brain.prompts["schematic review"])["lesson"]
+    assert lesson == LESSON  # the facts go with it
 
 
 @pytest.mark.parametrize("change, reason", [

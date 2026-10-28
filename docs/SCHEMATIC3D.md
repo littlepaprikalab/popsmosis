@@ -62,14 +62,17 @@ Nothing is written for one machine or one topic, and nothing is kept between les
      to the entry's first biological assembly (one machine, not a crystal's copies). For a machine
      in a membrane, OPM says which candidates it has placed in their membrane.
    - *Choose.* The brain picks the entry (the whole machine, the lesson's organism, placed by OPM
-     when it sits in a membrane) and the entities that make up each of the scene's structures.
+     when it sits in a membrane) and the entities that make up each of the scene's structures,
+     as the lesson's facts describe them ("the rotor, a ring of c subunits with a central gamma
+     stalk attached" is the c and gamma entities).
    - *Fit.* Code downloads the coordinates, OPM's oriented ones when there are, and fits shapes
      with no hand-set numbers (`fit.py`): a capsule per small chain, a capsule per lobe of a big
      one, a tube for a long thin one. OPM's frame puts the membrane in the plane z = 0; without
      OPM, the machine stands along its longest axis.
-   - *Review.* A fresh brain call judges the entry and each structure's subunits, and names the
-     compartments above and below the membrane from where code found the parts. A structure judged
-     wrong is drawn but never labelled.
+   - *Review.* A fresh brain call judges the entry and each structure's subunits against the
+     lesson's facts, and names the compartments above and below the membrane from where code found
+     the parts. When it objects, the choice is made once more with its objections and reviewed
+     again; a structure still judged wrong is drawn but never labelled.
    - *Frame.* The camera fits the machine with room for labels.
    - The result (`art/<scene>.schematic.json`) is kept with the job and uploaded with the art, so a
      re-render draws the same machine. The step writes its still as the art and a mask per
@@ -92,8 +95,8 @@ travel between structures as a line sings it.
 
 ### 3.2 Cost
 
-Building a machine takes three brain calls and about 30 seconds (most of it the calls), and a few
-cents. Drawing it costs about 26 ms a frame at zoom 1, 84 ms at 2x and 142 ms at 3x on the 4-core
+Building a machine takes three brain calls (five when the review objects) and about 20 to 30
+seconds, most of it the calls, and well under a cent on Haiku. Drawing it costs about 26 ms a frame at zoom 1, 84 ms at 2x and 142 ms at 3x on the 4-core
 container, only when the camera or the washes change.
 
 ## 4. What it needs

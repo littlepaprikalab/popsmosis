@@ -7,13 +7,14 @@ draws one without a job, with the brain and the network, into OUT_DIR (schematic
 1. Find. The brain gives search phrases and entries it knows (prompts/schematic_find.md); RCSB
    returns candidates with their subunits, each limited to its first biological assembly (one
    machine, not a crystal's copies); for a machine in a membrane, OPM's placement of each.
-2. Choose. The brain picks the entry and the subunits that make each of the scene's structures
-   (prompts/schematic_choose.md).
+2. Choose. The brain picks the entry and the subunits that make each of the scene's structures,
+   as the lesson's facts describe them (prompts/schematic_choose.md).
 3. Fit. Code downloads the coordinates (OPM's, oriented in the membrane, when OPM placed the
    entry) and fits shapes to them (fit.py).
-4. Review. A fresh brain call judges the entry and each match, and names the compartments above
-   and below the membrane from where the parts ended up (prompts/schematic_review.md). A part it
-   finds wrong is drawn but never labelled.
+4. Review. A fresh brain call judges the entry and each match against the lesson's facts, and
+   names the compartments above and below the membrane from where the parts ended up
+   (prompts/schematic_review.md). When it finds something wrong, the choice is made once more
+   with its objections, and reviewed again; a part still wrong is drawn but never labelled.
 5. Frame. The camera fits the machine with room around it for the labels.
 
 Any step that cannot be done (nothing found, the entry judged wrong, fewer than half the
@@ -42,6 +43,7 @@ from studio.schematic3d.model import Built, Camera, Compartment, Membrane, Page,
 PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 FIND, CHOOSE, REVIEW = ((PROMPTS / f"schematic_{name}.md").read_text(encoding="utf-8") for name in ("find", "choose", "review"))
 MAX_CANDIDATES = 12
+ROUNDS = 2  # a choice the review objects to is made once more, with the objections
 MAX_CHAINS = 150  # more chains than this is not one machine a diagram can label
 ELEVATION_DEG = 13.0
 FILL_HEIGHT, FILL_WIDTH = 0.78, 0.6  # the machine fills at most this much of the art: the rest is room for labels
@@ -93,21 +95,69 @@ def build(lesson: dict, machine: str, structures: list[tuple[str, str]], ask, fo
           label: str = "schematic") -> Built:
     """The machine named `machine`, with `structures` ((name, #RRGGBB), the scene's) matched to its parts.
 
-    `lesson` is {"topic", "course", "core_idea"}; structure files are downloaded into `folder`."""
+    `lesson` is {"topic", "course", "core_idea", "facts"}; structure files are downloaded into `folder`."""
     names = [name for name, _ in structures]
     asked = {"lesson": lesson, "machine": machine, "structures": names}
     leads = Leads.model_validate(ask("brain", json.dumps(asked, ensure_ascii=False), Leads, system=FIND,
                                      label=f"{label} find"))
     candidates, placements = _candidates(leads)
-    choice = Choice.model_validate(ask("brain", json.dumps({**asked, "candidates": [
-        _described(entry, placements.get(entry.id)) for entry in candidates]}, ensure_ascii=False), Choice,
-        system=CHOOSE, label=f"{label} choose"))
-    entry = next((c for c in candidates if c.id.upper() == choice.entry.strip().upper()), None)
-    if entry is None:
-        raise BuildFailed(f"no entry shows {machine}" + (f" ({choice.why})" if choice.why else ""))
-    placement = placements.get(entry.id)
+    offered = [_described(entry, placements.get(entry.id)) for entry in candidates]
+    objections: dict | None = None
+    for attempt in range(1, ROUNDS + 1):
+        again = f" {attempt}" if attempt > 1 else ""
+        choice = Choice.model_validate(ask("brain", json.dumps(
+            {**asked, "candidates": offered, **({"last_try": objections} if objections else {})}, ensure_ascii=False),
+            Choice, system=CHOOSE, label=f"{label} choose{again}"))
+        entry = next((c for c in candidates if c.id.upper() == choice.entry.strip().upper()), None)
+        if entry is None:
+            raise BuildFailed(f"no entry shows {machine}" + (f" ({choice.why})" if choice.why else ""))
+        placement = placements.get(entry.id)
+        owners, subunits, fitted = _fitted(entry, placement, _picked(choice, entry, names), folder)
+        found = [name for name in names if name in subunits]
+        review = Review.model_validate(ask("brain", json.dumps({
+            "lesson": lesson, "machine": machine,
+            "entry": {"id": entry.id, "title": entry.title, "organisms": entry.organisms},
+            "membrane": bool(placement),
+            "parts": [{"name": name, "subunits": subunits[name], "where": fitted.sides.get(name, "")} for name in found],
+        }, ensure_ascii=False), Review, system=REVIEW, label=f"{label} review{again}"))
+        wrong = {v.structure: v.problem for v in review.structures if v.verdict == "WRONG" and v.structure in found}
+        if attempt == ROUNDS or (review.entry == "RIGHT" and not wrong):
+            break
+        objections = {"entry": choice.entry, "structures": [p.model_dump() for p in choice.structures],
+                      "review": ([f"the entry: {review.entry_problem}"] if review.entry == "WRONG" else [])
+                      + [f"{name}: {problem}" for name, problem in wrong.items()]}
+    if review.entry == "WRONG":
+        raise BuildFailed(f"{entry.id} is not {machine}: {review.entry_problem}")
+    kept = [name for name in found if name not in wrong]
+    notes = [f"{entry.id}, {entry.title}: {choice.why}"]
+    notes += [f"{name} left unlabelled: {problem}" for name, problem in wrong.items()]
+    notes += [f"{name} not found in {entry.id}" for name in names if name not in found]
+    if len(kept) < max(1, math.ceil(len(names) / 2)):
+        raise BuildFailed(f"only {len(kept)} of {len(names)} structures found in {entry.id} and judged right; "
+                          + "; ".join(notes[1:]))
 
-    picked = _picked(choice, entry, names)
+    colors = dict(structures)
+    shapes = [Shape(chain=s["chain"], structure=s["structure"] if s["structure"] in kept else None, kind=s["kind"],
+                    points=s["points"], radius=s["radius"]) for s in fitted.shapes]
+    if placement:
+        page = Page(above=Compartment(name=review.above.strip().upper(), color=ABOVE),
+                    below=Compartment(name=review.below.strip().upper(), color=BELOW))
+    else:
+        page = Page(above=Compartment(name="", color=AROUND))
+    camera, half_width = frame(shapes, placement.half_thickness if placement else None)
+    membrane = (Membrane(name=placement.membrane, half_thickness=placement.half_thickness,
+                         footprint=fitted.footprint, half_width=half_width) if placement else None)
+    return Built(key=key, machine=machine,
+                 source=Source(pdb=entry.id, title=entry.title, organisms=entry.organisms, method=entry.method,
+                               resolution=entry.resolution, oriented_by="OPM" if placement else "principal axes"),
+                 structures=[Structure(name=name, color=colors[name], chains=sorted(c for c, o in owners.items() if o == name),
+                                       subunits=subunits[name]) for name in kept],
+                 shapes=shapes, page=page, membrane=membrane, camera=camera, notes=notes)
+
+
+def _fitted(entry: sources.Entry, placement: sources.Placement | None, picked: dict[str, list[sources.Entity]],
+            folder: Path) -> tuple[dict[str, str | None], dict[str, list[str]], fitting.Fitted]:
+    """The chains drawn, each with its structure (or None); each structure's subunits; and the fitted shapes."""
     try:
         path = sources.coordinates(entry.id, folder, oriented=placement is not None)
         import gemmi
@@ -131,45 +181,9 @@ def build(lesson: dict, machine: str, structures: list[tuple[str, str]], ask, fo
                     if entity.description not in subunits[name]:
                         subunits[name].append(entity.description)
     try:
-        fitted = fitting.fit(structure, owners, placement.half_thickness if placement else None)
+        return owners, subunits, fitting.fit(structure, owners, placement.half_thickness if placement else None)
     except ValueError as e:
         raise BuildFailed(f"{entry.id} could not be fitted: {e}") from e
-
-    found = [name for name in names if name in subunits]
-    review = Review.model_validate(ask("brain", json.dumps({
-        "lesson": lesson, "machine": machine,
-        "entry": {"id": entry.id, "title": entry.title, "organisms": entry.organisms},
-        "membrane": bool(placement),
-        "parts": [{"name": name, "subunits": subunits[name], "where": fitted.sides.get(name, "")} for name in found],
-    }, ensure_ascii=False), Review, system=REVIEW, label=f"{label} review"))
-    if review.entry == "WRONG":
-        raise BuildFailed(f"{entry.id} is not {machine}: {review.entry_problem}")
-    wrong = {v.structure: v.problem for v in review.structures if v.verdict == "WRONG"}
-    kept = [name for name in found if name not in wrong]
-    notes = [f"{entry.id}, {entry.title}: {choice.why}"]
-    notes += [f"{name} left unlabelled: {problem}" for name, problem in wrong.items() if name in found]
-    notes += [f"{name} not found in {entry.id}" for name in names if name not in found]
-    if len(kept) < max(1, math.ceil(len(names) / 2)):
-        raise BuildFailed(f"only {len(kept)} of {len(names)} structures found in {entry.id} and judged right; "
-                          + "; ".join(notes[1:]))
-
-    colors = dict(structures)
-    shapes = [Shape(chain=s["chain"], structure=s["structure"] if s["structure"] in kept else None, kind=s["kind"],
-                    points=s["points"], radius=s["radius"]) for s in fitted.shapes]
-    if placement:
-        page = Page(above=Compartment(name=review.above.strip().upper(), color=ABOVE),
-                    below=Compartment(name=review.below.strip().upper(), color=BELOW))
-    else:
-        page = Page(above=Compartment(name="", color=AROUND))
-    camera, half_width = frame(shapes, placement.half_thickness if placement else None)
-    membrane = (Membrane(name=placement.membrane, half_thickness=placement.half_thickness,
-                         footprint=fitted.footprint, half_width=half_width) if placement else None)
-    return Built(key=key, machine=machine,
-                 source=Source(pdb=entry.id, title=entry.title, organisms=entry.organisms, method=entry.method,
-                               resolution=entry.resolution, oriented_by="OPM" if placement else "principal axes"),
-                 structures=[Structure(name=name, color=colors[name], chains=sorted(c for c, o in owners.items() if o == name),
-                                       subunits=subunits[name]) for name in kept],
-                 shapes=shapes, page=page, membrane=membrane, camera=camera, notes=notes)
 
 
 def _candidates(leads: Leads) -> tuple[list[sources.Entry], dict[str, sources.Placement]]:
@@ -257,7 +271,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     palette = ["#E07A2F", "#3366CC", "#2E8B57", "#B5487A", "#8E6BBF", "#C9A227"]
     parts = [(name.strip(), palette[i % len(palette)]) for i, name in enumerate(args.structures.split(",")) if name.strip()]
-    lesson = {"topic": args.topic or args.machine, "course": args.course, "core_idea": ""}
+    lesson = {"topic": args.topic or args.machine, "course": args.course, "core_idea": "", "facts": []}
     args.out.mkdir(parents=True, exist_ok=True)
     try:
         built = build(lesson, args.machine, parts, brain.ask, args.out)

@@ -112,8 +112,9 @@ class FakeSources:
 
 
 class FakeBrain:
-    """Stands in for brain.ask in the build's three calls (label "... find", "... choose", "... review");
-    `then` answers anything else (the art step's illustrations)."""
+    """Stands in for brain.ask in the build's calls (labels "... schematic find", "... schematic choose",
+    "... schematic review", and " 2" on a second round); `choose` and `review` are answers, or functions
+    of the label giving one; `then` answers anything else (the art step's illustrations)."""
 
     def __init__(self, choose: dict | None = None, review: dict | None = None, then=None):
         self.choose = choose or {"entry": PDB, "why": "the whole toy machine",
@@ -128,12 +129,14 @@ class FakeBrain:
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         self.labels.append(label)
         self.prompts[label] = prompt
-        if label.endswith(" find"):
+        words = label.split()
+        task = words[words.index("schematic") + 1] if "schematic" in words[:-1] else ""
+        if task == "find":
             return {"membrane": True, "phrases": ["toy rotary synthase"], "entries": []}
-        if label.endswith(" choose"):
-            return self.choose
-        if label.endswith(" review"):
-            return self.review
+        if task == "choose":
+            return self.choose(label) if callable(self.choose) else self.choose
+        if task == "review":
+            return self.review(label) if callable(self.review) else self.review
         return self.then(role, prompt, schema, images, system=system, label=label)
 
 

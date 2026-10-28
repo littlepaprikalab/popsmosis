@@ -266,7 +266,8 @@ def draw_schematic(job: Path, bundle: Bundle, scene: Scene, ask) -> SceneLocatio
 
     built = _built(job, bundle, scene)
     if built is None:
-        lesson = {"topic": bundle.topic, "course": bundle.course, "core_idea": bundle.core_idea}
+        lesson = {"topic": bundle.topic, "course": bundle.course, "core_idea": bundle.core_idea,
+                  "facts": [f.text for f in bundle.facts]}  # what the course means by each part's name
         with tempfile.TemporaryDirectory() as folder:  # the structure file is not kept: what was built is
             built = build(lesson, scene.schematic, [(s.name, s.color_hex) for s in scene.structures], ask,
                           Path(folder), key=schematic_key(bundle, scene), label=f"art {scene.id} schematic")
