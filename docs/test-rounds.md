@@ -556,6 +556,28 @@ for two tries), and both were rendered silent.
   acetyl group enters the cycle. Inside the fact-check's one call that is about $0.02 a
   lesson more (alone, $0.04, mostly the facts sent again).
 
+## Round 10: spaces that fill and empty
+
+The motion engine's second piece, on the same two lessons and pictures. The bundle now says
+what piles up where (`builds_up`); the timeline works out how full each space is on every
+line (filling while marked particles end there, emptying while they start from it, never
+below 15%, carried on across scenes), and the renderer fills the space with that kind's
+dots, one in three marked "H⁺", and a tint. Asked for `builds_up` on its own, Claude named
+exactly H⁺ in the intermembrane space and H⁺ in the thylakoid lumen ($0.02 for both).
+
+- **The crowds show the gradient**: the lumen fills from 15% to 73% on the line where
+  cytochrome b6f pumps, and the intermembrane space fills to 73% and runs down to 38% as
+  protons flow back through ATP synthase. The light reactions' lumen never empties in
+  this lesson: in the ATP synthase close-up, where they leave, the lumen was not located.
+- **The spotlight hid them at first**: the pumping line spotlights the pump, which dimmed
+  the crowd it was filling. A crowd now stays bright while particles fill or empty it.
+- **Painted ions look like them**: round 8's chain close-up has a sprinkle of painted gold
+  ions in the intermembrane space, the crowd's own gold, so the crowd reads only by its
+  marked dots there. The bundle prompt now asks for no loose ions in a picture (a space is
+  a tint), so new pictures will not have them; these two lessons keep theirs until their
+  close-ups are painted again.
+- **A gold tint turns a blue space olive** at 0.35; it is 0.18 now.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

@@ -180,6 +180,33 @@ def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(j
     assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)]}
 
 
+def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H+")  # into the space
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # out of it
+    direct(data, "b-1", particles=["Thylakoid", "Cytochrome b6f"], carries="e-")  # something else
+    data["builds_up"] = [{"carries": "H+", "region": "Cytochrome b6f"}]
+    write_bundle(job, data)
+    song = make(job)["song"]
+    level = step.CROWD_START
+    for beat in song.beats:
+        crowds = beat.crowds
+        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
+            assert crowds == []
+            continue
+        [crowd] = crowds
+        assert (crowd.region, crowd.label, crowd.color) == ("Cytochrome b6f", "H⁺", "#F2C230")
+        assert crowd.start == pytest.approx(level, abs=1e-3)  # it runs on from where it was
+        rise = (crowd.end - crowd.start) / (beat.t1 - beat.t0)
+        if beat.line_id == "v1-2":
+            assert rise == pytest.approx(1 / step.FILL_S, rel=0.01)
+        elif beat.line_id == "v2-1":
+            assert rise < 0 and crowd.end >= step.CROWD_MIN
+        else:
+            assert rise == 0
+        level = crowd.end
+
+
 def test_what_particles_carry_is_written_as_a_textbook_prints_it():
     printed = {"H+": "H⁺", "e-": "e⁻", "O2": "O₂", "H2O": "H₂O", "CO2": "CO₂", "Ca2+": "Ca²⁺", "Cl-": "Cl⁻",
                "NAD+": "NAD⁺", "2H+": "2H⁺", "H +": "H⁺", "H⁺": "H⁺", "HCO₃⁻": "HCO₃⁻", "glucose": "glucose", "": ""}

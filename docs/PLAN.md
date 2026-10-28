@@ -234,7 +234,8 @@ parts build on the facts it has already written.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
    "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
-   from the alignment.
+   from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
+   (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties.
 8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
@@ -507,6 +508,13 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
     kind has its own colour in every lesson (protons gold, electrons cyan), so a proton
     reads apart from an electron and from anything painted in the picture.
+  - **Spaces filling up:** for what the bundle's `builds_up` says piles up where ("H⁺" in
+    the thylakoid lumen), the space fills with that kind's dots while marked particles end
+    there and empties while they start from it, tinted its colour as it fills; one dot in
+    three is marked. How full it is runs on across scenes. The dots sit inside the space's
+    mask, drift a few pixels in place, and stay bright while particles fill or empty the
+    space, whatever the spotlight. The pictures paint no loose ions, so nothing painted
+    looks like them.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and

@@ -19,6 +19,10 @@ No model calls, so it is free to run again:
 - The particles are marked with what they carry, as a textbook prints it ("H+" -> "H⁺",
   notation()), each kind in its own colour (marker_colour()), so a proton reads apart
   from an electron and from the ions painted in the picture.
+- A space that something builds up in (Bundle.builds_up) fills while particles carrying it
+  end there and empties while they start from it: FILL_S seconds of them fill it from
+  empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
+  on across scenes, so a close-up of the same space shows it as full as the overview left it.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
@@ -35,12 +39,14 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from studio import checks, media
+from studio.checks import notation
 from studio.jobs import read, write
 from studio.media import StepFailed
 from studio.schemas import (
     AudioClip,
     Beat,
     Bundle,
+    Crowd,
     Locations,
     Particles,
     Reveal,
@@ -63,9 +69,11 @@ PARTICLE_COLOR = "#F2C230"  # an unmarked particle's, and a proton's
 MARKER_COLOURS = {"H⁺": PARTICLE_COLOR, "e⁻": "#4CC9F0", "O₂": "#E8EEF5", "H₂O": "#7FD1FF", "CO₂": "#B8C2CC",
                   "ATP": "#FF6B6B", "Na⁺": "#B79CFF", "K⁺": "#8EE06B", "Ca²⁺": "#F4E1C1", "Cl⁻": "#5EF2C4"}
 OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF")
-SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
-SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 MAX_ZOOM = 3.0
+FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
+DRAIN_S = 10.0  # seconds of them leaving that would empty it
+CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
+CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
@@ -129,18 +137,6 @@ def tokens(text: str) -> list[str]:
 def _same(heard: str, name: str, last: bool) -> bool:
     """A heard token matches a name's token; the last one may be plural ("thylakoids")."""
     return heard == name or (last and heard in (name + "s", name + "es"))
-
-
-def notation(carries: str) -> str:
-    """What the particles carry, as a textbook prints it. The bundle asks for it so ("H⁺", "Ca²⁺");
-    plain text is turned into it: a charge at the end is raised, with the digit just before it
-    ("H+" -> "H⁺", "Ca2+" -> "Ca²⁺"), and any other digit after a letter lowered ("H2O" -> "H₂O")."""
-    text = " ".join(carries.split()).replace("\u2212", "-")  # a minus sign, as a hyphen
-    text = re.sub(r"\s+(?=\d?[+-]$)", "", text)  # "H +" -> "H+"
-    charge = ""
-    if found := re.fullmatch(r"(.*[A-Za-z)\]])(\d?[+-])", text):
-        text, charge = found.groups()
-    return re.sub(r"(?<=[A-Za-z)\]])\d+", lambda d: d.group().translate(SUBSCRIPT), text) + charge.translate(SUPERSCRIPT)
 
 
 def marker_colour(label: str) -> str:
@@ -289,10 +285,32 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     # The last beat holds its picture to the end, TAIL_S after the voice.
     duration = round(max(cursor, voice.duration) + TAIL_S, 3)
     beats[-1]["t1"] = duration
+    _fill_crowds(beats, bundle, located)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats])
+
+
+def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
+    """How full each build-up's space is on each beat: rising while particles carrying it end there,
+    falling while they start from it, carried on from beat to beat whatever the scene. A beat shows
+    the spaces located on its scene."""
+    builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
+    level = dict.fromkeys(builds, CROWD_START)
+    for beat in beats:
+        crowds = []
+        for build in builds:
+            label, region = build
+            flows = [f for f in beat["particles"] if f.label == label]
+            rate = ((1 / FILL_S if any(f.path[-1] == region for f in flows) else 0)
+                    - (1 / DRAIN_S if any(f.path[0] == region for f in flows) else 0))
+            start = level[build]
+            level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
+            if region in located.get(beat["scene"], set()):
+                crowds.append(Crowd(region=region, label=label, color=marker_colour(label),
+                                    start=round(start, 4), end=round(end, 4)))
+        beat["crowds"] = crowds
 
 
 def intro_skip(timing: Timing) -> float:

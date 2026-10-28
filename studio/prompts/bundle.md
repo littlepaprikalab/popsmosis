@@ -110,8 +110,10 @@ together they go from what the learner already knows to the parts they are learn
   arrows; the same layout without them came back clean. A stage that textbooks draw as a
   shape of its own is that shape, where it happens (the Krebs cycle as a ring of arrows in
   the matrix, glycolysis as a short chain of arrows in the cytoplasm); a molecule the scene
-  names is one small shape where it sits. Where a space must look crowded, ask for a soft
-  tint or a light sprinkle, never a number. A hook or an analogy is the same: its things
+  names is one small shape where it sits. Never ask for ions or small molecules scattered
+  through a space: the video draws them, filling and emptying the space as the lesson goes
+  (`builds_up`), and painted ones would look like them and never move. A space is a soft
+  tint. A hook or an analogy is the same: its things
   in place (the reservoir behind the dam, the chute down to the wheel), the dots showing
   what moves.
 - Say where everything is, region by region: first the regions ("the membrane across the
@@ -131,7 +133,7 @@ together they go from what the learner already knows to the parts they are learn
   - A cell or molecular process (membranes, organelles, proteins, molecules): "a clean,
     modern biology textbook illustration: semi-realistic organelles, each protein complex a
     smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the
-    membrane a phospholipid bilayer; ions and small molecules as small glossy spheres."
+    membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere."
     This is the figure students know from a modern textbook or study guide, not a
     detailed molecular rendering: "semi-realistic proteins" came back as ribbon models.
   - Anatomy (the brain, organs, body systems): "a softly shaded medical textbook
@@ -419,6 +421,17 @@ order, keyed by `line_id`:
   for a term worth seeing written.
 
 Give no times: code adds them from the audio.
+
+## What builds up
+
+`builds_up` lists what piles up in a space as the lesson goes, when the lesson is about it
+(a gradient): `[{"carries": "H⁺", "region": "Thylakoid lumen"}]`. The region is a
+structure that is a space (a lumen, a compartment, the reservoir behind a dam), named as
+in `structures`, and particles marked with the same `carries` end in it (they pile up)
+and start from it (they leave). The video fills the space with them as they arrive and
+empties it as they leave, so the learner watches the gradient build and run down. List
+only what the facts say piles up there; the fact-check holds each one to them. [] when
+nothing does.
 
 ## Tags
 

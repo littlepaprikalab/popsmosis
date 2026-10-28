@@ -300,20 +300,32 @@ def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[flo
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R - 1.25, ring)
 
 
-def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float) -> None:
-    """The lead particle marked with what it is: a disc for "H⁺", a pill for "glucose", in its colour
-    with a white halo, the word in dark or white ink, whichever reads on it."""
+def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,
+                size: float = 1.0) -> None:
+    """A particle marked with what it is: a disc for "H⁺", a pill for "glucose", in its colour
+    with a white halo, the word in dark or white ink, whichever reads on it. `size` scales it (a crowd's
+    marked dots are smaller than the lead particle)."""
     x, y = at
-    f = font("ExtraBold", MARKER_FONT)
+    r, pad = MARKER_R * size, MARKER_PAD * size
+    f = font("ExtraBold", MARKER_FONT * size)
     width = text_width(f, label)
-    half = max(MARKER_R, width / 2 + MARKER_PAD)
-    body = rounded((x - half, y - MARKER_R, x + half, y + MARKER_R), MARKER_R)
+    half = max(r, width / 2 + pad)
+    body = rounded((x - half, y - r, x + half, y + r), r)
     shadow(canvas, body, alpha)
-    canvas.drawRRect(rounded((x - half - HALO, y - MARKER_R - HALO, x + half + HALO, y + MARKER_R + HALO),
-                             MARKER_R + HALO), skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawRRect(rounded((x - half - HALO, y - r - HALO, x + half + HALO, y + r + HALO),
+                             r + HALO), skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
     canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
     ink = "#1A1A1A" if _luminance(*rgb(color)) > 0.3 else "#FFFFFF"
     draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
+
+
+CROWD_R = 8.5  # a crowd's unmarked dots, in frame pixels: bigger than the stream's, smaller than the lead's
+
+
+def draw_crowd_dot(canvas: skia.Canvas, at: tuple[float, float], color: str, alpha: float) -> None:
+    """One of a crowd's dots: its colour in a white ring, as the particles have."""
+    canvas.drawCircle(at[0], at[1], CROWD_R + HALO, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.85 * alpha)))
+    canvas.drawCircle(at[0], at[1], CROWD_R, skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
 
 
 # --- the lyric band ------------------------------------------------------------------------

@@ -111,6 +111,11 @@ class Direction(Strict):
     caption: str = Field(description='Usually ""')
 
 
+class BuildUp(Strict):
+    carries: str = Field(description='What piles up, as `carries` writes it ("H⁺")')
+    region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
+
+
 def tag_of(value: str) -> str:
     """A hashtag as it is stored and searched: "#AP Bio" -> "apbio".
 
@@ -160,6 +165,9 @@ class Bundle(Strict):
     lyrics: list[Lyric]
     narration: list[Narration]
     direction: list[Direction]
+    # What piles up where as the lesson goes (a gradient), filled and emptied by the marked particles.
+    # A bundle written before Oct 28 has none.
+    builds_up: list[BuildUp] = Field(default_factory=list, description="What piles up in which space; [] for none")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -252,7 +260,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "tempo"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -531,6 +539,21 @@ class Particles(Strict):
         return _hex_color(value)
 
 
+class Crowd(Strict):
+    """A space filling up with what the particles carry (Bundle.builds_up), as one beat shows it."""
+
+    region: str  # the space, a structure located on the beat's scene
+    label: str  # what fills it ("H⁺"), written on some of its dots
+    color: str
+    start: float  # how full it is when the beat starts, 0-1
+    end: float  # and when it ends; it changes evenly in between
+
+    @field_validator("color")
+    @classmethod
+    def _color(cls, value: str) -> str:
+        return _hex_color(value)
+
+
 class Beat(Strict):
     t0: float
     t1: float
@@ -542,6 +565,7 @@ class Beat(Strict):
     # label shows from its reveal's t and stays on every later beat of the scene.
     labels: list[str]
     particles: list[Particles]
+    crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
@@ -629,7 +653,11 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
         for word in beat.words:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
-        named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path]
+        named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path] + [
+            c.region for c in beat.crowds]
+        for crowd in beat.crowds:
+            if not (0 <= crowd.start <= 1 and 0 <= crowd.end <= 1):
+                problems.append(f"{where} fills {crowd.region} to {crowd.start}-{crowd.end}, outside 0-1")
         for name in [n for n in named if n] + beat.labels:
             if name not in timeline.palette:
                 problems.append(f"{where} names {name}, which has no colour in the palette")

@@ -116,4 +116,8 @@ about what moves, where from, through what and where to.
   is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
   video, never rewritten.
 
+A motion that says something "builds up" in a space ("H⁺ builds up in Thylakoid lumen")
+is the video filling that space with it as it arrives: SUPPORTED when the facts say it
+piles up or accumulates there, UNSUPPORTED otherwise, judged as above.
+
 A motion is never FILLER.

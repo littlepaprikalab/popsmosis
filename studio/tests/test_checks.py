@@ -108,6 +108,22 @@ def test_what_particles_carry_needs_particles_and_fits_on_the_dot():
     assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True)])
 
 
+def test_what_builds_up_is_where_marked_particles_start_or_end():
+    def building(*builds):
+        def change(data):
+            direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+            data["builds_up"] = [{"carries": c, "region": r} for c, r in builds]
+        bundle, found, _ = review(change)
+        return [(b.carries, b.region) for b in bundle.builds_up], found
+
+    assert building(("H+", "cytochrome B6F")) == ([("H+", "Cytochrome b6f")], [])  # its name, from any spelling
+    assert building(("H⁺", "Thylakoid")) == ([("H⁺", "Thylakoid")], [])  # where they start counts too
+    left_out = [("builds_up", "builds_up", True)]
+    assert building(("H⁺", "ATP synthase")) == ([], left_out)  # no particles carrying H⁺ start or end there
+    assert building(("e⁻", "Thylakoid")) == ([], left_out)  # none carry electrons
+    assert building(("H⁺", "the lumen")) == ([], left_out)  # no such structure
+
+
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
     data = bundle_data()
     for item in [*data["lyrics"], *data["narration"]]:

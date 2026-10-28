@@ -86,10 +86,16 @@ def motion_text(carries: str, particles: list[str]) -> str:
     return f"{carries} travels from " + " to ".join(particles)
 
 
+def build_up_text(carries: str, region: str) -> str:
+    return f"{carries} builds up in {region}"
+
+
 def motion_lines(bundle: Bundle) -> list[Line]:
-    """What each line's particles show moving, when they are marked with what they carry."""
+    """What each line's particles show moving, when they are marked with what they carry, and what the
+    video shows piling up."""
     return [Line(MOTION, d.line_id, motion_text(d.carries, d.particles))
-            for d in bundle.direction if d.carries and len(d.particles) >= 2]
+            for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
+        Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -201,6 +207,8 @@ def check_bundle(
         for d in data["direction"]:
             if d["carries"] and len(d["particles"]) >= 2 and motion_text(d["carries"], d["particles"]) not in passed_motions:
                 d["particles"], d["carries"] = [], ""
+        data["builds_up"] = [b for b in data["builds_up"]
+                             if build_up_text(b["carries"], b["region"]) in passed_motions]
         bundle = Bundle.model_validate(data)
     failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED and c.verdict not in PASSING]
     if failing and not reason:

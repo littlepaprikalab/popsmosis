@@ -306,6 +306,20 @@ def test_a_motion_with_no_verdict_is_asked_again_then_left_out():
     assert {d.line_id for d in checked.direction if d.particles} == {"v2-1", "b-1"}
 
 
+def test_what_builds_up_is_checked_too_and_left_out_when_it_fails():
+    def building(data):
+        moving(data)
+        data["builds_up"] = [{"carries": "H⁺", "region": "Thylakoid"}, {"carries": "e⁻", "region": "Cytochrome b6f"}]
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == "e⁻ builds up in Cytochrome b6f"
+                       else supported(text))
+    report, checked = check_bundle(bundle(building), "", fake)
+    sent = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:builds")]
+    assert sent == [("motion:builds-1", "H⁺ builds up in Thylakoid"), ("motion:builds-2", "e⁻ builds up in Cytochrome b6f")]
+    assert report.status == "passed" and [(b.carries, b.region) for b in checked.builds_up] == [("H⁺", "Thylakoid")]
+    assert [m.text for m in dropped_motions(report)] == ["e⁻ builds up in Cytochrome b6f"]
+
+
 def test_a_tag_never_rides_along_with_a_corrected_line():
     fake = FakeChecker(seeded_is_wrong)
     report, _ = check_bundle(bundle(), "", fake)

@@ -21,6 +21,7 @@ from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
     Beat,
+    Crowd,
     Locations,
     Particles,
     Reveal,
@@ -322,6 +323,34 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
 
     pill = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)])).frame(held)
     assert cyan_across(pill.copy()) > cyan_across(badge) + 25  # a longer word gets a pill
+
+
+def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
+    gold = "#F2C230"
+
+    def crowded(level):
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"crowds": [
+            Crowd(region="Thylakoid", label="H⁺", color=gold, start=level, end=level)]})
+        return Renderer(job, flowing([beat]))
+
+    mask = skia.Image.open(str(job / located(job, "overview", "Thylakoid").mask)).toarray(
+        colorType=skia.kGray_8_ColorType) > 127
+    full = crowded(1.0)
+    scale, x0, y0 = renderer_module.to_frame(full.plans[0].cam(4.0, full.layout.view, full.scene("overview")),
+                                             full.layout.view, full.scene("overview"))
+
+    def gold_inside(renderer):  # gold pixels on the frame, and how many of them fall on the thylakoid
+        frame = renderer.frame(4.0)
+        rgb = frame[..., 2::-1].astype(int)
+        ys, xs = np.nonzero(np.abs(rgb - p.rgb(gold)).max(-1) < 20)
+        ax, ay = ((xs - x0) / scale).astype(int), ((ys - y0) / scale).astype(int)
+        ok = (ax >= 0) & (ax < mask.shape[1]) & (ay >= 0) & (ay < mask.shape[0])
+        return len(xs), int(mask[ay[ok], ax[ok]].sum())
+
+    empty, low, lots = gold_inside(crowded(0.0)), gold_inside(crowded(0.2)), gold_inside(full)
+    assert empty == (0, 0) and 0 < low[0] < lots[0]
+    assert lots[1] > 0.9 * lots[0]  # the dots sit on the space
+    assert (full.frame(4.0) == full.frame(4.0)).all()
 
 
 def test_label_text_is_dark_enough_to_read_on_white():

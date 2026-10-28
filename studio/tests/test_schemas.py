@@ -28,7 +28,7 @@ def test_schema_uses_only_what_both_providers_accept(model):
 def test_bundle_fields_are_in_the_order_the_model_writes_them():
     assert list(strict_schema(Bundle)["properties"]) == [
         "course", "topic", "audience", "core_idea", "facts", "misconception",
-        "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction", "tags",
+        "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction", "builds_up", "tags",
     ]
     facts = strict_schema(Bundle)["properties"]["facts"]["items"]
     assert list(facts["properties"]) == ["id", "text", "source_quote"]
@@ -122,6 +122,12 @@ def test_a_bundle_written_before_particles_carried_anything_loads_unmarked():
     for d in data["direction"]:
         del d["carries"]
     assert {d.carries for d in Bundle.model_validate(data).direction} == {""}
+
+
+def test_a_bundle_written_before_build_ups_loads_with_none():
+    data = bundle_data()
+    data.pop("builds_up", None)
+    assert Bundle.model_validate(data).builds_up == []
 
 
 def test_a_bundle_written_with_an_exam_question_still_loads_without_it():

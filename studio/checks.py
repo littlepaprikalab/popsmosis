@@ -20,6 +20,8 @@ from studio.jobs import write
 from studio.schemas import BPM_TAG, Bundle, CheckReport, Problem
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
+SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
+SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
 
 def run(job: Path) -> CheckReport:
@@ -55,8 +57,28 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             named = _check_names(line, canon, scene, drawn[scene], problems)
             revealed[scene] |= named & drawn[scene]
             _check_direction(line["id"], direction, canon, scene, drawn[scene], revealed[scene], problems)
+    _check_builds_up(data, canon, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+def _check_builds_up(data: dict, canon: dict[str, str], problems: list) -> None:
+    """Each build-up names a structure, as its name, that particles carrying the same thing start or end in:
+    they are what fill it and empty it in the video. Any other is left out."""
+    kept = []
+    for build in data["builds_up"]:
+        carries, region = notation(build["carries"]), canon.get(fold(build["region"]))
+        ends = {canon.get(fold(d["particles"][k])) for d in data["direction"]
+                if d["particles"] and notation(d["carries"]) == carries for k in (0, -1)}
+        why = ("is not marked" if not carries or len(carries) > MARKER_MAX else
+               "names no structure" if not region else
+               f"is not where any particles carrying {carries} start or end" if region not in ends else "")
+        if why:
+            problems.append(Problem(line_id="builds_up", rule="builds_up", repaired=True,
+                                    detail=f"{build['carries']} building up in {build['region']} {why}; left out"))
+            continue
+        kept.append({"carries": build["carries"], "region": region})
+    data["builds_up"] = kept
 
 
 def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
@@ -75,6 +97,18 @@ def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
 
 
 # Curly quotes and long dashes read as plain ones, so "Broca’s area" is "Broca's area".
+def notation(carries: str) -> str:
+    """What the particles carry, as a textbook prints it. The bundle asks for it so ("H⁺", "Ca²⁺");
+    plain text is turned into it: a charge at the end is raised, with the digit just before it
+    ("H+" -> "H⁺", "Ca2+" -> "Ca²⁺"), and any other digit after a letter lowered ("H2O" -> "H₂O")."""
+    text = " ".join(carries.split()).replace("\u2212", "-")  # a minus sign, as a hyphen
+    text = re.sub(r"\s+(?=\d?[+-]$)", "", text)  # "H +" -> "H+"
+    charge = ""
+    if found := re.fullmatch(r"(.*[A-Za-z)\]])(\d?[+-])", text):
+        text, charge = found.groups()
+    return re.sub(r"(?<=[A-Za-z)\]])\d+", lambda d: d.group().translate(SUBSCRIPT), text) + charge.translate(SUPERSCRIPT)
+
+
 # Each swaps one character for one, so positions in the folded text match the original.
 _PLAIN = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"', "\u2013": "-", "\u2014": "-"})
 

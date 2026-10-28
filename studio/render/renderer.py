@@ -13,6 +13,7 @@ frame above the lyric band.
 from __future__ import annotations
 
 import math
+import zlib
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,6 +55,14 @@ STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 STOP_OFFSET = 34.0  # art pixels: the lead particle holds beside a label's dot, not under it
+# A space filling up (Beat.crowds): its dots, at most CROWD_MAX of them, CROWD_SPACING art pixels apart
+# or more, each drifting CROWD_DRIFT pixels about its place; one in CROWD_MARKED written with what it is,
+# and the space tinted their colour, CROWD_TINT strong when it is full.
+CROWD_MAX = 36
+CROWD_SPACING = 46.0
+CROWD_DRIFT = 5.0
+CROWD_MARKED = 3
+CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 
 Point = tuple[float, float]
 
@@ -100,6 +109,8 @@ class SceneArt:
         self.paper = skia.Color(r, g, b)
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
         self.masks: dict[str, skia.Image] = {}
+        self._mask_files: dict[str, Path] = {}
+        self._crowd_points: dict[str, list[Point]] = {}
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -108,6 +119,7 @@ class SceneArt:
             if grey.shape != pixels.shape[:2]:
                 raise RenderError(f"the mask for {s.name} on {located.scene} is not the art's size")
             self.masks[s.name] = skia.Image.fromarray(np.ascontiguousarray(grey), colorType=skia.kAlpha_8_ColorType)
+            self._mask_files[s.name] = mask_file
         self._ghosts: dict[str, skia.Image] = {}
         self._spots: dict[str, skia.Image] = {}
         self._composed: OrderedDict[tuple, skia.Image] = OrderedDict()
@@ -146,6 +158,31 @@ class SceneArt:
                                         ImageFilter=skia.ImageFilters.Blur(SPOT_BLUR, SPOT_BLUR)))
             self._spots[name] = surface.makeImageSnapshot()
         return self._spots[name]
+
+    def crowd_points(self, name: str) -> list[Point]:
+        """Where a space's crowd sits, in the order its dots appear: spread through the space, each at
+        least CROWD_SPACING from the others and half that inside its edge. The same every time, so a frame
+        depends only on its time."""
+        if name not in self._crowd_points:
+            inside = _read(self._mask_files[name], skia.kGray_8_ColorType) > 127
+            ys, xs = np.nonzero(inside)
+            spacing = max(CROWD_SPACING, math.sqrt(len(xs) / CROWD_MAX)) if len(xs) else CROWD_SPACING
+            m = int(spacing / 2)
+            h, w = inside.shape
+            picked: list[Point] = []
+            rng = np.random.default_rng(zlib.crc32(name.encode()))
+            for i in rng.permutation(len(xs))[:40000]:
+                x, y = int(xs[i]), int(ys[i])
+                if not (m <= x < w - m and m <= y < h - m and inside[y, x - m] and inside[y, x + m]
+                        and inside[y - m, x] and inside[y + m, x]):
+                    continue
+                if any((x - px) ** 2 + (y - py) ** 2 < spacing ** 2 for px, py in picked):
+                    continue
+                picked.append((float(x), float(y)))
+                if len(picked) == CROWD_MAX:
+                    break
+            self._crowd_points[name] = picked
+        return self._crowd_points[name]
 
     def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[tuple, skia.Image]:
         """The art with each ghost and spotlight wash at its level (0-1), kept for reuse; and its key."""
@@ -469,7 +506,10 @@ class Renderer:
         if plan.prev_spot and plan.prev_spot != plan.spot:
             spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
         reveals = self.revealed.get(beat.scene, {})
-        self._draw_background(canvas, beat.scene, cam, view, self._ghosts(beat.scene, reveals, t), spots)
+        ghosts = self._ghosts(beat.scene, reveals, t)
+        self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
+        if beat.crowds:
+            self._crowds(canvas, beat, cam, view, t, ghosts, spots)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
 
@@ -483,6 +523,45 @@ class Renderer:
             p.draw_caption(canvas, beat.caption, layout.width / 2, layout.margin + 8, layout.caption_font, caption_alpha)
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _crowds(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
+                ghosts: dict[str, float], spots: dict[str, float]) -> None:
+        """Each space filling up: tinted its dots' colour as it fills, and its dots, drifting in place, appearing
+        one by one as it fills and going as it empties. Over the diagram, under the particles; as pale as the
+        space while it is a ghost, and dimmed with it when something else is spotlit, unless the beat's
+        particles are filling or emptying it, which is what the line is about."""
+        art = self.scene(beat.scene)
+        scale, dx, dy = to_frame(cam, view, art)
+        x = p.clamp01((t - beat.t0) / (beat.t1 - beat.t0))
+        for crowd in beat.crowds:
+            if crowd.region not in art.masks:
+                continue
+            level = p.lerp(crowd.start, crowd.end, x)
+            moving = any(f.label == crowd.label and crowd.region in (f.path[0], f.path[-1]) for f in beat.particles)
+            others = 0.0 if moving else max((v for name, v in spots.items() if name != crowd.region), default=0.0)
+            alpha = (1 - ghosts.get(crowd.region, 0.0)) * (1 - SPOT_WASH * others)
+            if alpha <= 0.01:
+                continue
+            canvas.save()
+            canvas.translate(dx, dy)
+            canvas.scale(scale, scale)
+            canvas.drawImage(art.ghost(crowd.region), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
+                             skia.Paint(Color=p.argb(crowd.color), Alphaf=CROWD_TINT * level * alpha))
+            canvas.restore()
+            points = art.crowd_points(crowd.region)
+            shown = level * len(points)
+            for k, (px, py) in enumerate(points):
+                fade = p.clamp01(shown - k)
+                if fade <= 0.01:
+                    break
+                phase = k * 2.39996  # the golden angle, so no two drift together
+                speed = 0.5 + 0.08 * (k % 5)
+                at = ((px + CROWD_DRIFT * math.sin(speed * t + phase)) * scale + dx,
+                      (py + CROWD_DRIFT * math.cos(0.8 * speed * t + 2 * phase)) * scale + dy)
+                if k % CROWD_MARKED == 0 and crowd.label:
+                    p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade, size=0.62)
+                else:
+                    p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),
