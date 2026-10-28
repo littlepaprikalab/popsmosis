@@ -1,9 +1,10 @@
 # Popsmosis — droplets for learning
 
-Status: **day 2 of 10** (Oct 27). Built for the Meta Global AI Developer Hackathon (Indie
+Status: **day 3 of 10** (Oct 28). Built for the Meta Global AI Developer Hackathon (Indie
 track); the submission is due Nov 4, 9:00 PM ET. The zoey port is done (below); this is
-the plan the rest of the build follows. Where the code and this document differ, the
-code wins; the README lists the endpoints as built.
+the plan the rest of the build follows, and what is left of it is listed at the end of
+section 12. Where the code and this document differ, the code wins; the README lists the
+endpoints as built.
 
 ## 1. What we are building
 
@@ -335,6 +336,8 @@ against the live API.
 - **Narration:** ElevenLabs' character timings converted to words.
 - **Checks:** repeated chorus lines should have near-identical durations; flag any line
   that drifts more than 0.5 s. If a section was sung wrong, regenerate that section only.
+  Built: the flag, in `timing/song_report.json` and the step's summary line. Not built:
+  the regeneration.
 
 Output is a `Timing` per audio file: each line by id, with its start, end and
 `[{word, start, end}]`.
@@ -372,6 +375,10 @@ each intermediate as its step finishes.
 After both 16:9 videos work end to end: the vertical 9:16 layout, particles, and QA
 (render a still every 5 s, tile them into one contact sheet per video, the helper checks
 it against section 8; re-render on a fail, max 2).
+
+Particles are built (section 7). For QA, `python -m studio.render sheet <job> <video>
+--every 5` makes the contact sheet; the helper's check and the re-render are not built.
+The vertical layout is not started.
 
 ### Layout
 
@@ -662,9 +669,9 @@ account.
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs
   publicly, and Google's terms for Lyria's when `SONG_PROVIDER=gemini` (they carry a
-  SynthID watermark). Encode with `-movflags +faststart` so a video starts playing before it has
-  downloaded, and keep the bitrate modest (flat diagrams compress well) to hold down
-  Supabase egress.
+  SynthID watermark). Keep the bitrate modest (flat diagrams compress well) to hold down
+  Supabase egress. Done: the videos are encoded with `-movflags +faststart`, so one starts
+  playing before it has downloaded.
 
 ## 11. The two agents and their record on Inkmory
 
@@ -819,12 +826,12 @@ Rules that follow from Inkmory's code:
 | Day | Date | Work | Status |
 |---|---|---|---|
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
-| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days, the planner's beat against a local Inkmory |
+| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days, the planner's beat against a local Inkmory (not started: there is no `studio/inkmory.py`) |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
-| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; the upload in `run`; agent credits |
+| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; agent credits |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
-| 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them |
+| 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them. Particles built early (Oct 28). The contact sheet can be made (`python -m studio.render sheet`); the helper's check on it is not built. Left: the vertical layout, the QA check |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
 
 ### Days 3–7 in parallel
@@ -840,7 +847,7 @@ before it land:
 3. **Art:** the interim SVG art, its masks and `locations.json` (steps 3–4).
 4. **Timeline and renderer** (steps 7–8), on the sample job's art and timings.
 5. **Web and upload:** the Droplets tab, the players on `/learn`, and the upload step (step 9).
-   Built; the upload is not yet in `run`.
+   Built; `videos` runs the upload after the render.
 
 They join in `python -m studio videos` (studio/videos.py), built against stand-in steps
 before the lanes landed: after the post, art and audio at the same time, then the
@@ -865,6 +872,40 @@ seams, which no lane owns:
   each intermediate as its step finishes, so a recovery resumes instead, is the next step.
 - **Installs.** `.claude/hooks/session-start.sh` installs every package, system tool and
   model before a session starts, the routine's included, so no run installs anything.
+
+### Left (Oct 28)
+
+Setup by hand. Until it is done, no droplet runs live from topic to videos:
+
+- **The ElevenLabs key.** `ELEVENLABS_API_KEY` must hold the key itself, not its ID
+  (day 3).
+- **The routine:** its environment and the API trigger (the runbook, Option A).
+- **Supabase Storage:** the `droplets` and `studio` buckets, and `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` on the API (DEPLOY.md, section 6).
+- **The operator on Inkmory:** adopt it, then run its first beat within 3 days.
+
+To build:
+
+- **The planner's beat** (section 11): `studio/inkmory.py`, reading its context before
+  step 1 and posting its record after step 2, tested against a local Inkmory. Nothing
+  reads `INKMORY_PLANNER_API_KEY` yet.
+- **A recovery that resumes:** upload each intermediate as its step finishes
+  (`upload_file()` is ready for it), so a recovered render does not pay for the song and
+  the art again.
+- **Re-sing a section that drifts:** step 6 flags it; nothing regenerates it yet.
+- **The Fire or Don't reference** (section 14), and matching it on one scene.
+- **Agent credits** on the droplet, if there is time.
+
+To run live (day 8):
+
+- The real song, narration and exam question, and the chorus drift on a sung song.
+- Muse Image and SAM 3.1 with `BRAIN_PROVIDER=meta`.
+- `run` and `videos` end to end, with the upload.
+- The topics that mean done (section 1); `meta` against `claude`; the planner's persona
+  in the lesson voice, one topic each way (section 14).
+
+Then the stretch (day 9): the vertical layout and the QA check. Before launch: the song
+terms (section 10). Day 10: the demo and the submission.
 
 ## 13. Risks and fallbacks
 
@@ -897,7 +938,7 @@ seams, which no lane owns:
    4–6): its code under `reference/fire-or-dont/`, a few stills beside it as the visual
    bar, and its finished videos outside git (GitHub rejects files over 100 MB), in
    Supabase or as a link. The same goes for the visual-style playbook and the 10-second
-   clip tests.
+   clip tests. None of it is in the repo yet.
 3. **The planner's persona in the lesson voice.** Either its persona and memory go into
    the bundle prompt, so they shape how the lesson and the song sound, or they go only
    into the call that writes its record. Run one topic each way and compare (day 8).
