@@ -538,7 +538,7 @@ rendered silent. About $1.00 for both, with the repaint and second locate below.
 The motion engine's first piece, on round 8's two lessons and pictures. Each line's direction
 now says what its particles carry (`carries`), and the video writes it on the lead particle:
 a badge in that kind's colour ("H⁺" gold, "e⁻" cyan, "ATP", a pill for "pyruvate"). Claude
-filled in `carries` for the two lessons' 40 moving lines without writing them again ($0.10
+filled in `carries` for the two lessons' 40 moving lines without writing them again ($0.13
 for two tries), and both were rendered silent.
 
 - **Claude's choices were right on every line but the analogies**: electrons from
