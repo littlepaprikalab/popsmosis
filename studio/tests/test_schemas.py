@@ -27,13 +27,11 @@ def test_schema_uses_only_what_both_providers_accept(model):
 
 def test_bundle_fields_are_in_the_order_the_model_writes_them():
     assert list(strict_schema(Bundle)["properties"]) == [
-        "course", "topic", "audience", "core_idea", "facts", "misconception", "frq",
+        "course", "topic", "audience", "core_idea", "facts", "misconception",
         "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction", "tags",
     ]
     facts = strict_schema(Bundle)["properties"]["facts"]["items"]
     assert list(facts["properties"]) == ["id", "text", "source_quote"]
-    frq = strict_schema(Bundle)["properties"]["frq"]
-    assert list(frq["properties"]) == ["prompt", "predict_question", "model_answer_steps", "twist"]
 
 
 def test_constraints_that_would_reach_the_schema_are_refused():
@@ -102,7 +100,7 @@ def broken(change):
         (lambda d: d["direction"][0].update(scene="nowhere"), "unknown scene 'nowhere'"),
         (lambda d: d["narration"][0].update(id="v1-1"), "duplicate line ids: v1-1"),
         (lambda d: d.update(lesson_markdown="x" * 5001), "over 5000"),
-        (lambda d: d["frq"].update(extra="nope"), "Extra inputs are not permitted"),
+        (lambda d: d["music"].update(extra="nope"), "Extra inputs are not permitted"),
     ],
 )
 def test_bundle_problems_are_caught(change, message):
@@ -117,3 +115,9 @@ def test_the_song_sections_follow_the_lyrics():
     bundle = Bundle.model_validate(data)
     assert bundle.music.sections == [line.section for i, line in enumerate(bundle.lyrics)
                                      if i == 0 or line.section != bundle.lyrics[i - 1].section]
+
+
+def test_a_bundle_written_with_an_exam_question_still_loads_without_it():
+    data = bundle_data()
+    data["frq"] = {"prompt": "Explain it.", "predict_question": "Which?", "model_answer_steps": ["One."], "twist": "And?"}
+    assert "frq" not in Bundle.model_validate(data).model_dump()

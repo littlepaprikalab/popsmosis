@@ -153,7 +153,7 @@ but claims nothing and uploads nothing; run again, it resumes at the first step 
 
 Each droplet is written for one audience: high school, unless the learner's request says
 who it is for ("I'm in 5th grade", "for my college course"). The audience sets the level
-of the lesson, the song, the narration and the exam question, never the rules: every
+of the lesson, the song and the narration, never the rules: every
 droplet is fact-checked the same way and stays fit for a classroom. The song's style is
 one the audience listens to (for high school: pop with rapped verses, K-pop,
 R&B, dance-pop, pop-punk), at a tempo that fits the topic's mood, unless the learner

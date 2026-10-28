@@ -18,11 +18,8 @@ No model calls, so it is free to run again:
   so the hook is sung within the first two seconds (PLAN section 8).
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
-- After the song or the narration, the exam question: audio/frq.mp3 up to the end of the
-  predict question, a pause of media.PREDICT_PAUSE_S, then the rest, with each step
-  spotlighting the structure it names. The card labels what the video revealed on its
-  scene and every step's spotlight.
-- Beats meet exactly: each starts where the one before it ends, from 0 to the exam question.
+- The video ends TAIL_S after the song or the narration does, holding its last picture.
+- Beats meet exactly: each starts where the one before it ends, from 0 to the end.
 """
 
 from __future__ import annotations
@@ -40,8 +37,6 @@ from studio.schemas import (
     AudioClip,
     Beat,
     Bundle,
-    FrqSegment,
-    FrqStep,
     Locations,
     Particles,
     Reveal,
@@ -61,7 +56,7 @@ CAPTION_HOLD_S = 4.0
 LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions are spaced instead
 PARTICLE_COLOR = "#F2C230"
 MAX_ZOOM = 3.0
-TAIL_S = 1.5  # the last exam step stays on screen this long after its line is read
+TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
 INTRO_FADE_S = 0.5
@@ -76,7 +71,6 @@ def run(job: Path, ask=None) -> str:
     expected = {
         "song": [line.id for line in bundle.lyrics],
         "narration": [n.id for n in bundle.narration],
-        "frq": [i for i, _ in media.frq_lines(bundle)],
     }
     problems = [f"{kind}: {p}" for kind, ids in expected.items() for p in timing_problems(timed[kind], ids)]
     if problems:
@@ -168,10 +162,6 @@ class Names:
                     word = flat[start][1]
                     found[name] = min(found.get(name, word), word)
         return found
-
-    def first_named(self, text: str) -> str | None:
-        found = self.heard(text.split())
-        return min(found, key=found.get) if found else None
 
     def canonical(self, name: str) -> str | None:
         """A direction's name (or alias) as the structure's name, if this scene has it located."""
@@ -266,11 +256,13 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         cursor = beats[-1]["t1"]
 
     _place_captions(beats, captions, sections, video)
-    frq, audio, duration = _exam_question(bundle, timed, voice, cursor, revealed, names, beats[-1]["scene"])
-    if skip:
-        audio[0] = AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S)
+    # The last beat holds its picture to the end, TAIL_S after the voice.
+    duration = round(max(cursor, voice.duration) + TAIL_S, 3)
+    beats[-1]["t1"] = duration
+    audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
+             else AudioClip(path=voice.audio, at=0)]
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
-                    beats=[Beat(**b) for b in beats], frq=frq)
+                    beats=[Beat(**b) for b in beats])
 
 
 def intro_skip(timing: Timing) -> float:
@@ -332,52 +324,3 @@ def _place_captions(beats: list[dict], captions: list[str | None], sections: dic
             if later["t0"] >= last_start + CAPTION_HOLD_S and later is not beat:
                 break
             later["caption"] = caption
-
-
-def _exam_question(bundle: Bundle, timed: dict[str, Timing], voice: Timing, t0: float,
-                   revealed: dict[str, list[str]], names: dict[str, Names],
-                   last_scene: str) -> tuple[FrqSegment, list[AudioClip], float]:
-    frq_timing = timed["frq"]
-    predict = frq_timing.line("frq-predict")
-    asked = predict.end if predict else frq_timing.duration
-    predict_t = max(t0, round(t0 + asked, 3))
-    answer_at = predict_t + media.PREDICT_PAUSE_S
-    offset = answer_at - asked
-    scene = _exam_scene(bundle, revealed, names, last_scene)
-    scene_names = names.get(scene) or Names([])
-    steps = []
-    for i, text in enumerate(bundle.frq.model_answer_steps, 1):
-        line = frq_timing.line(f"frq-step-{i}")
-        t = offset + (line.start if line else asked)
-        steps.append(FrqStep(t=round(max(t, answer_at), 3), text=text, spotlight=scene_names.first_named(text)))
-    # The card reviews the whole diagram: what this video revealed on the scene, in that
-    # order, then every other structure located there (each step's spotlight among them).
-    labels = list(revealed.get(scene, []))
-    for structure in next((sc.structures for sc in bundle.scenes if sc.id == scene), []):
-        if structure.name in scene_names.located and structure.name not in labels:
-            labels.append(structure.name)
-    duration = round(offset + frq_timing.duration + TAIL_S, 3)
-    audio = [
-        AudioClip(path=voice.audio, at=0),
-        AudioClip(path=frq_timing.audio, at=t0, start=0, end=round(asked, 3)),
-        AudioClip(path=frq_timing.audio, at=round(answer_at, 3), start=round(asked, 3)),
-    ]
-    # t0 is exactly where the last beat ends: beats meet the exam question with no gap.
-    frq = FrqSegment(t0=t0, t1=duration, scene=scene, labels=labels, prompt=bundle.frq.prompt,
-                     predict_question=bundle.frq.predict_question, predict_t=predict_t,
-                     predict_pause_s=media.PREDICT_PAUSE_S, steps=steps)
-    return frq, audio, duration
-
-
-def _exam_scene(bundle: Bundle, revealed: dict[str, list[str]], names: dict[str, Names], last_scene: str) -> str:
-    """The diagram behind the exam question: the one that can spotlight the most steps, then the most labelled."""
-    texts = [*bundle.frq.model_answer_steps, bundle.frq.prompt]
-    best, best_score = last_scene, None
-    for order, scene in enumerate(s.id for s in bundle.scenes):
-        if scene not in revealed:
-            continue
-        spotlit = sum(1 for text in texts if names[scene].first_named(text))
-        score = (spotlit, len(revealed[scene]), -order)
-        if best_score is None or score > best_score:
-            best, best_score = scene, score
-    return best

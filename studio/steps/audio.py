@@ -1,22 +1,22 @@
-"""Step 5: audio. The song, then the narration and the exam question read aloud.
+"""Step 5: audio. The song, then the narration read aloud.
 
     audio/song.mp3                the song: Eleven Music, one composition-plan chunk per
                                   section, or Lyria on the Gemini API, from one prompt
     audio/song.plan.json          what was asked for, which lines each section sings, who made it
     audio/narration.mp3           text-to-speech, the narration sentences in order
     audio/narration.chars.json    what was read, where each line sits in it, and the
-    audio/frq.mp3                 character timings the TTS returned (step 6 turns them
-    audio/frq.chars.json          into words without an aligner)
+                                  character timings the TTS returned (step 6 turns them
+                                  into words without an aligner)
 
 Who makes the song is an admin's setting on /admin/studio, as the claim said (the job's
 settings.json, song_provider()): elevenlabs (the default) or gemini. Eleven Music
 makes each section a chunk of the length asked for, so step 6 looks for each section's
 lines where it was planned. Lyria takes the whole song as one prompt and keeps to the
 planned times only roughly, so its plan says the sections are not pinned and step 6 looks
-for its lines across the whole song. The narration and the exam question are always
-ElevenLabs text-to-speech, whose character timings step 6 turns into words.
+for its lines across the whole song. The narration is always ElevenLabs text-to-speech,
+whose character timings step 6 turns into words.
 
-The three are asked for at the same time (the song takes longest), after the keys and the
+The two are asked for at the same time (the song takes longest), after the keys and the
 speech's length are checked. One that fails fails the step once the others are saved, so
 a retry asks only for what is missing. Every call costs credits, so a file that is already
 there is never asked for again, unless the bundle's lines have changed since it was made,
@@ -63,7 +63,7 @@ BEATS_PER_BAR = 4
 TWO_BAR_BPM = 130  # from this tempo a line is two bars, since one would be under 1.9 s (PLAN section 5, step 5)
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
 TIMEOUT_S = 600  # a song takes a minute or two to come back
-SPEECH = ("narration", "frq")
+SPEECH = ("narration",)
 # USD per song, by Lyria model (Gemini API pricing). A model not here is logged with no price.
 GEMINI_SONG_PRICES = {"lyria-3.5": 0.08, "lyria-3-clip-preview": 0.04}
 ELEVENLABS_PRICE_VAR = "ELEVENLABS_USD_PER_1K_CREDITS"
@@ -123,7 +123,7 @@ def run(job: Path, ask=brain.ask) -> str:
         _make_speech(job, kind, speech_lines(bundle, kind))
         return kind
 
-    # All three at once: the song takes longest, and the voice is made while it is. One that
+    # Both at once: the song takes longest, and the voice is made while it is. One that
     # fails fails the step after the others are saved, so a retry makes only what is missing.
     made = ledger.parallel(make, todo, len(todo))
     lengths = ", ".join(f"{kind} {duration(job / media.audio_path(kind)):.1f}s" for kind in media.TIMED)
@@ -365,13 +365,14 @@ def as_mp3(audio: bytes, mime_type: str) -> bytes:
     raise media.StepFailed(f"cannot keep Gemini's song ({mime_type or 'no type given'}) as an MP3: {detail}")
 
 
-# --- narration and the exam question ------------------------------------------------------
+# --- the narration -------------------------------------------------------------------------
 
 
 def speech_lines(bundle: Bundle, kind: str) -> list[tuple[str, str]]:
-    if kind == "narration":
-        return [(n.id, n.text) for n in bundle.narration]
-    return media.frq_lines(bundle)
+    """What a speech file reads aloud: (line id, text), in order. The narration is the only one."""
+    if kind != "narration":
+        raise ValueError(f"no speech called {kind!r}")
+    return [(n.id, n.text) for n in bundle.narration]
 
 
 def voice_id() -> str:

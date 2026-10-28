@@ -148,14 +148,14 @@ def test_speech_keeps_its_character_timings_and_where_each_line_is(job, monkeypa
     monkeypatch.setattr(audio, "send", fake)
     audio.run(job)
     tts = [r for r in fake.requests if "text-to-speech" in r[0]]
-    assert [url.split("?")[0].rsplit("/", 2)[-2] for url, _, _ in tts] == [audio.DEFAULT_VOICE] * 2
-    frq = json.loads((job / audio.plan_path("frq")).read_text())
-    bundle = sample_media.bundle()
-    assert frq["text"] == " ".join(text for _, text in media.frq_lines(bundle))
-    for span, (line_id, text) in zip(frq["lines"], media.frq_lines(bundle)):
-        assert span["id"] == line_id and frq["text"][span["start"]:span["end"]] == text
-    assert len(frq["alignment"]["characters"]) == len(frq["text"])
-    assert (job / "audio/frq.mp3").read_bytes() == b"ID3 speech"
+    assert [url.split("?")[0].rsplit("/", 2)[-2] for url, _, _ in tts] == [audio.DEFAULT_VOICE]
+    narration = json.loads((job / audio.plan_path("narration")).read_text())
+    lines = [(n.id, n.text) for n in sample_media.bundle().narration]
+    assert narration["text"] == " ".join(text for _, text in lines)
+    for span, (line_id, text) in zip(narration["lines"], lines):
+        assert span["id"] == line_id and narration["text"][span["start"]:span["end"]] == text
+    assert len(narration["alignment"]["characters"]) == len(narration["text"])
+    assert (job / "audio/narration.mp3").read_bytes() == b"ID3 speech"
     assert audio.is_done(job)
 
 
@@ -164,23 +164,23 @@ def test_the_voice_can_be_changed(job, monkeypatch):
     monkeypatch.setattr(audio, "send", fake)
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice42")
     audio.run(job)
-    assert sum("/text-to-speech/voice42/with-timestamps" in url for url in fake.urls()) == 2
+    assert sum("/text-to-speech/voice42/with-timestamps" in url for url in fake.urls()) == 1
 
 
 def test_made_files_are_never_asked_for_again_until_their_lines_change(job, monkeypatch):
     fake = FakeEleven()
     monkeypatch.setattr(audio, "send", fake)
     audio.run(job)
-    assert len(fake.requests) == 3
-    assert "nothing" in audio.run(job) and len(fake.requests) == 3
+    assert len(fake.requests) == 2
+    assert "nothing" in audio.run(job) and len(fake.requests) == 2
 
     bundle = sample_media.bundle()
     data = bundle.model_dump()
-    data["frq"]["model_answer_steps"][0] = "Cytochrome b6f pumps protons into the lumen."
+    data["narration"][0]["text"] = "The light reactions happen on the thylakoid membrane."
     jobs.write(job / "bundle.json", bundle.model_validate(data))
     assert not audio.is_done(job)
     audio.run(job)
-    assert len(fake.requests) == 4 and "text-to-speech" in fake.requests[-1][0]
+    assert len(fake.requests) == 3 and "text-to-speech" in fake.requests[-1][0]
 
 
 def test_a_refusal_or_a_missing_key_fails_the_step(job, monkeypatch):
@@ -207,7 +207,7 @@ def test_a_busy_server_or_a_dropped_connection_is_tried_again(job, monkeypatch):
 
     monkeypatch.setattr(audio, "send", flaky)
     audio.run(job)
-    assert waits == [30.0, 20] and len(fake.requests) == 3 and audio.is_done(job)
+    assert waits == [30.0, 20] and len(fake.requests) == 2 and audio.is_done(job)
 
 
 def test_a_timeout_or_a_server_that_stays_busy_fails_without_more_calls(job, monkeypatch):
@@ -221,12 +221,12 @@ def test_a_timeout_or_a_server_that_stays_busy_fails_without_more_calls(job, mon
     with pytest.raises(media.StepFailed, match="600s"):
         audio.run(job)
     # Each file asked for once, never again: it may still be being made, and billed.
-    assert len(calls) == 3 and sum("/v1/music" in url for url in calls) == 1
+    assert len(calls) == 2 and sum("/v1/music" in url for url in calls) == 1
 
     monkeypatch.setattr(audio, "send", FakeEleven(status=503))
     with pytest.raises(media.StepFailed, match="503"):
         audio.run(job)
-    assert len(audio.send.requests) == 3 * (1 + len(audio.RETRY_WAITS_S))
+    assert len(audio.send.requests) == 2 * (1 + len(audio.RETRY_WAITS_S))
 
 
 def test_a_song_cut_off_before_its_audio_is_written_is_made_again(job, monkeypatch):
@@ -271,7 +271,7 @@ def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, m
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Bridge]\nFeel the gradient build"
                            "\n\n[Chorus]\nProtons flow and ATP grows")
     assert not any("/v1/music" in u for u in fake.urls())
-    assert sum("text-to-speech" in u for u in fake.urls()) == 2  # the narration and the exam question
+    assert sum("text-to-speech" in u for u in fake.urls()) == 1  # the narration
 
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["provider"] == "gemini" and plan["model_id"] == "lyria-3.5" and plan["sections_pinned"] is False
@@ -286,17 +286,17 @@ def test_switching_the_provider_makes_only_the_song_again(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
     audio.run(job)
-    assert len(fake.requests) == 3 and json.loads((job / audio.plan_path("song")).read_text())["provider"] == "elevenlabs"
+    assert len(fake.requests) == 2 and json.loads((job / audio.plan_path("song")).read_text())["provider"] == "elevenlabs"
 
     sing(job, "gemini")
     assert not audio.is_done(job)
     audio.run(job)
-    assert len(fake.requests) == 4 and len(fake.gemini()) == 1  # the speech was kept
-    assert "nothing" in audio.run(job) and len(fake.requests) == 4
+    assert len(fake.requests) == 3 and len(fake.gemini()) == 1  # the speech was kept
+    assert "nothing" in audio.run(job) and len(fake.requests) == 3
 
     sing(job, "elevenlabs")
     audio.run(job)
-    assert len(fake.requests) == 5 and "/v1/music" in fake.requests[-1][0]
+    assert len(fake.requests) == 4 and "/v1/music" in fake.requests[-1][0]
 
 
 def test_a_song_made_before_there_was_a_choice_counts_as_elevenlabs(job, monkeypatch):
@@ -335,7 +335,7 @@ def test_a_gemini_refusal_or_block_fails_the_step_and_keeps_nothing(job, monkeyp
         audio.run(job)
     assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
     # The voice was made at the same time and is kept, so a retry asks for the song alone.
-    assert len(fake.gemini()) == 1 and (job / "audio/narration.mp3").exists() and (job / "audio/frq.mp3").exists()
+    assert len(fake.gemini()) == 1 and (job / "audio/narration.mp3").exists()
 
 
 def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monkeypatch):
@@ -448,8 +448,7 @@ def test_each_elevenlabs_call_is_logged_in_the_credits_it_cost(job, monkeypatch)
     audio.run(job)
     rows = {r["label"]: r for r in _logged(job)}  # made at the same time, so logged in any order
     assert {label: (r["role"], r["model"]) for label, r in rows.items()} == {
-        "song": ("audio", "music_v2_5"), "narration": ("audio", "eleven_multilingual_v2"),
-        "frq": ("audio", "eleven_multilingual_v2")}
+        "song": ("audio", "music_v2_5"), "narration": ("audio", "eleven_multilingual_v2")}
     # The fake's music answer names no cost; its speech costs a credit a character. No plan price: no dollars.
     assert rows["song"]["credits"] is None and rows["song"]["cost_usd"] is None
     narration = json.loads((job / audio.plan_path("narration")).read_text())["text"]

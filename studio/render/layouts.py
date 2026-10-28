@@ -19,8 +19,6 @@ class Layout:
     label_font: float
     caption_font: float
     margin: float  # labels and pills keep this far from the frame's edges
-    frq_card: Rect  # the exam question's card
-    frq_view: Rect  # where the diagram sits beside the card
 
     @property
     def view(self) -> Rect:
@@ -29,7 +27,6 @@ class Layout:
 
 
 H = Layout(name="h", width=media.VIDEO_WIDTH, height=media.VIDEO_HEIGHT, band_h=110, band_font=46,
-           label_font=30, caption_font=34, margin=20,
-           frq_card=(64, 48, 800, 1032), frq_view=(830, 40, 1900, 1040))
+           label_font=30, caption_font=34, margin=20)
 
 LAYOUTS = {"h": H}

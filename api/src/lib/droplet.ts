@@ -98,7 +98,6 @@ export function followUpContext(bundle: unknown) {
   if (!isObject(bundle)) return null;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
   const list = (v: unknown) => (Array.isArray(v) ? v.filter(isObject) : []);
-  const frq = isObject(bundle.frq) ? bundle.frq : {};
   return {
     course: str(bundle.course),
     topic: str(bundle.topic),
@@ -106,11 +105,6 @@ export function followUpContext(bundle: unknown) {
     coreIdea: str(bundle.core_idea),
     facts: list(bundle.facts).map((f) => ({ id: str(f.id), text: str(f.text) })),
     misconception: str(bundle.misconception),
-    frq: {
-      prompt: str(frq.prompt),
-      modelAnswerSteps: Array.isArray(frq.model_answer_steps) ? frq.model_answer_steps.filter((s) => typeof s === 'string') : [],
-      twist: str(frq.twist),
-    },
     lyrics: list(bundle.lyrics).map((l) => ({ section: str(l.section), text: str(l.text) })),
   };
 }

@@ -5,7 +5,6 @@
                                   section at a time (across the whole song at once when
                                   its sections are not pinned: a Gemini song)
     timing/narration_words.json   from the character timings the TTS returned (step 5)
-    timing/frq_words.json
     timing/song_report.json       how sure the aligner was of each line, the lines it was unsure
                                   of that it heard again alone between their neighbours, and
                                   chorus drift
@@ -79,11 +78,11 @@ Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
 def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     if not audio_step.is_done(job):
-        raise media.StepFailed("the audio step has not made all three audio files from this bundle yet")
-    # Not done until all three are written again; the cached vocals are kept.
+        raise media.StepFailed("the audio step has not made both audio files from this bundle yet")
+    # Not done until both are written again; the cached vocals are kept.
     media.restart(job, *(media.timing_path(kind) for kind in media.TIMED), REPORT)
     parts = []
-    for kind in ("narration", "frq"):
+    for kind in audio_step.SPEECH:
         try:
             timing = speech_timing(job, kind)
         except (ValueError, KeyError, IndexError) as e:
@@ -108,8 +107,7 @@ def is_done(job: Path) -> bool:
     try:
         bundle = jobs.read(job / "bundle.json", Bundle)
         expected = {"song": [line.id for line in bundle.lyrics],
-                    "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")],
-                    "frq": [i for i, _ in audio_step.speech_lines(bundle, "frq")]}
+                    "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")]}
         for kind, ids in expected.items():
             path = job / media.timing_path(kind)
             if timing_problems(jobs.read(path, Timing), ids):
@@ -184,7 +182,7 @@ def spoken(word: str) -> str:
     return re.sub(r"[^a-z']", "", plain)
 
 
-# --- narration and the exam question: the TTS character timings ---------------------------
+# --- the narration: the TTS character timings ---------------------------------------------
 
 
 def speech_timing(job: Path, kind: str) -> Timing:

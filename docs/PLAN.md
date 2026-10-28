@@ -18,10 +18,10 @@ endpoints as built.
    studio writes the lesson, fact-checks every line, then makes two videos from the same
    plan and the same diagrams. They do different jobs:
    - **Lesson video**: explains. The narration walks through every step and every part,
-     ending with a worked exam question (FRQ).
+     ending on the core idea.
    - **Song video**: makes it stick. A song the learner replays, carrying the 3–5 things
      to remember in rhyme and a chant-like chorus, the diagram labels synced to the
-     vocals, the same FRQ at the end.
+     vocals.
 5. The page shows the droplet: both videos when they finish rendering, with the lesson
    text under them, updating in place without a reload. Until then the card shows the
    droplet's bill of materials filling in, step by step, as its progress; the text waits
@@ -176,8 +176,8 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Gemini 3.1 Flash Image or Muse Image + helper; or the brain's SVG (`/admin/studio`) | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper on painted art; nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
-| 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
-| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
+| 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3` |
+| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
 | 9 | Upload | API + Supabase | Videos (public), intermediates (private) |
@@ -207,8 +207,7 @@ parts build on the facts it has already written.
 
 1. `course`, `topic`, `audience` ("high school" unless the learner's request names
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
-   (`id`, `text`, `source_quote` when a study guide was given), `misconception`, `frq`
-   (`prompt`, `predict_question`, `model_answer_steps[]`, `twist`).
+   (`id`, `text`, `source_quote` when a study guide was given), `misconception`.
 2. `scenes[3-6]`: the hook (where it can, the topic in the learner's world), overview,
    one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
    in the colours of what they stand for) and a detail showing what happens when a part
@@ -342,9 +341,9 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   as a whole. Switching the provider makes a job's song again, not its speech.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
-- **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict
-  question, the model answer steps) into `audio/frq.mp3`. Both videos end on it. The
-  fact-check covers these lines (kind `frq`) and writes its fixes back into `bundle.frq`.
+- **No exam question:** both videos ended on a read-aloud exam question (`audio/frq.mp3`)
+  until Oct 28, when it left them (the song's bridge still poses one, sung). A bundle
+  written before still loads, its `frq` dropped.
 
 ### Step 6: timing
 
@@ -432,9 +431,7 @@ come from step 6.
 {
   "video": "song", "duration": 212.5, "fps": 30,
   "audio": [                               // mixed into one track
-    {"path": "audio/song.mp3", "at": 0},
-    {"path": "audio/frq.mp3", "at": 195.5, "start": 0, "end": 9.2},   // the question
-    {"path": "audio/frq.mp3", "at": 209.7, "start": 9.2}               // the answer, after the pause
+    {"path": "audio/song.mp3", "at": 0}
   ],
   "palette": {"Broca's area": "#E07A2F", ...},
   "beats": [
@@ -451,19 +448,14 @@ come from step 6.
       "line": "Broca builds the words you say",
       "words": [{"word": "Broca", "start": 12.6, "end": 13.0}, ...]
     }
-  ],
-  "frq": {"t0": 195.5, "t1": 212.5, "scene": "overview", "labels": ["Broca's area", ...],
-          "prompt": "...", "predict_question": "...",
-          "predict_t": 204.7, "predict_pause_s": 5,
-          "steps": [{"t": 209.7, "text": "...", "spotlight": "Broca's area"}]}
+  ]
 }
 ```
 
-Validation (pydantic): `t0 < t1`; the beats run from 0 to `frq.t0`, each starting
+Validation (pydantic): `t0 < t1`; the beats run from 0 to `duration`, each starting
 exactly where the last ended, so every frame (`n / fps`, `beat_at(t)`) has one; a
 reveal is labelled, and a spotlight or camera target waits for its reveal; a label once
-shown stays on that scene; zoom is at least 1; every name has a colour; the steps follow
-the predict pause, each spotlighting a structure the card labels. Paths are ones the
+shown stays on that scene; zoom is at least 1; every name has a colour. Paths are ones the
 API's upload takes, built by `studio/media.py`, which turns model-written scene ids and
 structure names into safe, distinct file names.
 `timeline_problems()` adds that every name is located on its scene's art. Both videos
@@ -504,9 +496,7 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     spotlight still move when it is sung).
   - **Caption pill:** optional, top area, held at least 4 s.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
-  - **FRQ segment:** a question card over the diagram, a visible countdown during the
-    predict pause, then numbered model-answer steps appearing in sync with the
-    narration, spotlighting the structure each step names.
+  - **Ending:** the last picture stays on screen 1.5 s after the voice ends.
 - **Encoding:** pipe raw BGRA frames to ffmpeg (H.264 + AAC, 30 fps, 1920x1080). Render
   frame ranges in parallel processes, each encoding video only; join them with
   `-c copy`, then add the audio once (audio added per chunk clicks at the joins). Encode
@@ -587,7 +577,7 @@ The `jobs/<id>/` folder disappears with the routine's machine. These copies outl
 | Art, masks, `locations.json`, audio, timings, timelines | Supabase Storage, private bucket `studio/<answerId>/` | Re-render after a renderer fix without paying again for the song and the art |
 
 **Follow-ups read the droplet from the database.** The reply queue includes a compact
-context taken from the bundle: `core_idea`, the facts, the misconception, the FRQ and the
+context taken from the bundle: `core_idea`, the facts, the misconception and the
 lyrics. It leaves out the scenes and the camera directions, so a thread stays a couple of
 thousand tokens. Whichever model answers reads the same context, so moving follow-ups from
 Claude to Muse Wonder later is a model change, not a data change.

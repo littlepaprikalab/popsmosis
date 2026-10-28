@@ -103,32 +103,14 @@ def test_a_lesson_fix_is_written_back_into_the_markdown():
     assert fake.ids(2) == ["lesson:3"]
 
 
-def test_the_exam_question_is_checked_and_its_fixes_go_back_into_the_frq():
-    wrong_step = "Cytochrome b6f pumps protons."
-    fixed_step = "Cytochrome b6f pumps protons into the lumen."
-
-    def step_is_wrong(text):
-        if text == wrong_step:
-            return "UNSUPPORTED", "", fixed_step
-        if text.endswith("?"):
-            return "FILLER", "", ""
-        return supported(text)
-
-    fake = FakeChecker(step_is_wrong)
-    report, checked = check_bundle(bundle(), "", fake)
-    assert [k for k in fake.ids(1) if k.startswith("frq:")] == [
-        "frq:frq-prompt", "frq:frq-predict", "frq:frq-step-1", "frq:frq-step-2"]
-    assert fake.ids(2) == ["frq:frq-step-1"]
-    assert report.status == "passed"
-    assert checked.frq.model_answer_steps == [fixed_step, "ATP synthase uses the flow."]
-    assert checked.frq.prompt == bundle().frq.prompt
-    [correction] = report.corrections
-    assert (correction.kind, correction.ids, correction.after) == ("frq", ["frq-step-1"], fixed_step)
-    frq = [line for line in report.lines if line.kind == "frq"]
-    assert [(line.id, line.verdict) for line in frq] == [
-        ("frq-prompt", "SUPPORTED"), ("frq-predict", "FILLER"), ("frq-step-1", "SUPPORTED"), ("frq-step-2", "SUPPORTED")]
-    # The report still reads back, as the API stores it.
-    assert FactCheckReport.model_validate_json(report.model_dump_json()) == report
+def test_a_bundle_written_with_an_exam_question_is_checked_without_it():
+    # The exam question left the videos on Oct 28; a bundle written before still carries one.
+    data = bundle().model_dump()
+    data["frq"] = {"prompt": "Explain it.", "predict_question": "Which?", "model_answer_steps": ["One."], "twist": "And?"}
+    fake = FakeChecker(supported)
+    report, checked = check_bundle(Bundle.model_validate(data), "", fake)
+    assert report.status == "passed" and not any(k.startswith("frq:") for k in fake.ids(1))
+    assert "frq" not in checked.model_dump()
 
 
 def test_it_fails_after_three_rounds_when_fixes_keep_failing():

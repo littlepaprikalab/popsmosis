@@ -54,7 +54,7 @@ describe('serializeVideo', () => {
 });
 
 describe('followUpContext', () => {
-  it('keeps what a follow-up needs and drops the rest', () => {
+  it('keeps what a follow-up needs and drops the rest, an old bundle\'s exam question included', () => {
     const context = followUpContext({
       course: 'AP Biology', topic: 'the light reactions', audience: 'high school', core_idea: 'Light pumps protons.',
       facts: [{ id: 'f1', text: 'Only cytochrome b6f pumps protons.', source_quote: '' }],
@@ -67,7 +67,6 @@ describe('followUpContext', () => {
       course: 'AP Biology', topic: 'the light reactions', audience: 'high school', coreIdea: 'Light pumps protons.',
       facts: [{ id: 'f1', text: 'Only cytochrome b6f pumps protons.' }],
       misconception: 'Not every carrier pumps.',
-      frq: { prompt: 'Explain.', modelAnswerSteps: ['b6f pumps.'], twist: 'A leak?' },
       lyrics: [{ section: 'verse', text: 'Light lands' }],
     });
   });

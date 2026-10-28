@@ -1,8 +1,8 @@
 """Step 2: the fact-check, the gate before anything is posted or sung.
 
 A fresh brain call sees only the facts (and the study guide, if one was given) and
-the lines: every lyric line, every narration sentence, every sentence of the
-lesson and every line of the exam question the videos read aloud (media.frq_lines). Code applies the checker's corrections and re-checks only the lines that
+the lines: every lyric line, every narration sentence and every sentence of the
+lesson, in one call. Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
 The same call checks each video's hashtags, which are public and what the Droplets tab
@@ -23,7 +23,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, checks, media
+from studio import brain, checks
 from studio.jobs import read, write
 from studio.schemas import (Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
@@ -31,16 +31,15 @@ from studio.sentences import replace_sentences, split_sentences
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KINDS = ("lyric", "narration", "lesson", "frq")  # the lines a correction rewrites
+KINDS = ("lyric", "narration", "lesson")  # the lines a correction rewrites
 TAG = "tag"  # a video's hashtag: passed, or dropped
 PASSING = ("SUPPORTED", "FILLER")
 
 
 @dataclass(frozen=True)
 class Line:
-    kind: str  # lyric, narration, lesson, frq or tag
-    id: str  # the bundle's id; for the lesson, the sentence's number; for the exam question, media.frq_lines';
-    # for a tag, its video and place ("song-3")
+    kind: str  # lyric, narration, lesson or tag
+    id: str  # the bundle's id; for the lesson, the sentence's number; for a tag, its video and place ("song-3")
     text: str
 
     @property
@@ -71,7 +70,6 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines = [Line("lyric", lyric.id, lyric.text) for lyric in bundle.lyrics]
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
-    lines += [Line("frq", line_id, text) for line_id, text in media.frq_lines(bundle)]
     return lines + tag_lines(bundle)
 
 
@@ -209,10 +207,6 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     lesson = {before: after for (kind, before), after in fixes.items() if kind == "lesson"}
     if lesson:
         data["lesson_markdown"] = replace_sentences(data["lesson_markdown"], lesson)
-    frq = data["frq"]
-    for field in ("prompt", "predict_question"):
-        frq[field] = fixes.get(("frq", frq[field]), frq[field])
-    frq["model_answer_steps"] = [fixes.get(("frq", step), step) for step in frq["model_answer_steps"]]
     return Bundle.model_validate(data)
 
 

@@ -1,14 +1,13 @@
 """Draws a timeline's frames (docs/PLAN.md, section 7).
 
 Every frame depends only on its time: Renderer.frame(t) finds the beat that holds t
-(or the exam question, from frq.t0) and draws it. Nothing carries over from the frame
+and draws it. Nothing carries over from the frame
 before, so frame ranges render in parallel and stills cost one frame each. What does
 not change between frames (each scene's art, its masks and the washes made from
 them) is made once per scene and kept.
 
-The world is the art's pixels; the camera maps it onto the frame. Before the exam
-question the diagram fills the frame above the lyric band; during it, the diagram
-moves right of the question card.
+The world is the art's pixels; the camera maps it onto the frame: the diagram fills the
+frame above the lyric band.
 """
 
 from __future__ import annotations
@@ -45,7 +44,6 @@ CAPTION_FADE_S = 0.3
 # who comes in early (Lyria adds a take now and then) lands on words already on screen.
 LEAD_S = 1.5
 BLINK_S = 0.5  # an empty band shorter than this would blink: the next line takes the whole gap
-FRQ_IN_S = 1.0
 EDGE_FADE = 2 * p.DOT_R  # a label fades out as its dot nears the edge of the view, over about the dot's width
 # Particles: what travels between structures (a proton, a signal), so a process moves as it is sung.
 FLOW_SPEED = 260.0  # art pixels a second: slow enough to follow
@@ -207,10 +205,6 @@ def to_frame(cam: Cam, view: Rect, art: SceneArt) -> tuple[float, float, float]:
     return scale, (view[0] + view[2]) / 2 - cam.cx * scale, (view[1] + view[3]) / 2 - cam.cy * scale
 
 
-def mix_rect(a: Rect, b: Rect, x: float) -> Rect:
-    return tuple(p.lerp(u, v, x) for u, v in zip(a, b))  # type: ignore[return-value]
-
-
 def stop_points(anchors: list[Point]) -> list[Point]:
     """Where the particles stop: each label anchor moved a little toward its neighbour on the
     path (the next stop for the first, the one before for the rest), so the label's dot stays
@@ -300,7 +294,7 @@ class Renderer:
         self.layout = LAYOUTS[layout] if isinstance(layout, str) else layout
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
-        scene_ids = {b.scene for b in timeline.beats} | {timeline.frq.scene}
+        scene_ids = {b.scene for b in timeline.beats}
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
                 raise RenderError(f"scene {scene_id} has no locations")
@@ -311,11 +305,6 @@ class Renderer:
         for beat in timeline.beats:
             for r in beat.reveal:
                 self.revealed.setdefault(beat.scene, {}).setdefault(r.name, r.t)
-        frq = timeline.frq
-        # The card shows frq.labels revealed: those revealed before stay as they were, the
-        # rest fill in as the card arrives.
-        earlier = self.revealed.get(frq.scene, {})
-        self.frq_reveals = {name: earlier.get(name, frq.t0) for name in frq.labels}
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
@@ -396,12 +385,11 @@ class Renderer:
         return plans
 
     def beat_index(self, t: float) -> int:
-        """The index of the beat on screen at t (Timeline.beat_at); the last beat from the exam question on."""
-        beat = self.timeline.beat_at(t)
-        return self._index[id(beat)] if beat is not None else len(self.timeline.beats) - 1
+        """The index of the beat on screen at t (Timeline.beat_at)."""
+        return self._index[id(self.timeline.beat_at(t))]
 
     def art_to_frame(self, t: float, x: float, y: float) -> tuple[float, float]:
-        """Where an art pixel of the beat at t lands on the frame (before the exam question)."""
+        """Where an art pixel of the beat at t lands on the frame."""
         i = self.beat_index(t)
         art = self.scene(self.timeline.beats[i].scene)
         scale, dx, dy = to_frame(self.plans[i].cam(t, self.layout.view, art), self.layout.view, art)
@@ -411,11 +399,7 @@ class Renderer:
 
     def frame(self, t: float) -> np.ndarray:
         """The frame at time t: BGRA pixels, height x width x 4 (a view kept by the renderer)."""
-        canvas = self.surface.getCanvas()
-        if t >= self.timeline.frq.t0:
-            self._draw_frq(canvas, t)
-        else:
-            self._draw_beat(canvas, t)
+        self._draw_beat(self.surface.getCanvas(), t)
         return self.pixels
 
     def image(self, t: float) -> skia.Image:
@@ -558,46 +542,4 @@ class Renderer:
                 if k == first or any(part.startswith(beat.words[k].word.lower()[:4]) for part in parts):
                     words[k].color = self.timeline.palette[r.name]
         return words
-
-    def _draw_frq(self, canvas: skia.Canvas, t: float) -> None:
-        layout, frq = self.layout, self.timeline.frq
-        art = self.scene(frq.scene)
-        into = p.ease((t - frq.t0) / FRQ_IN_S)
-        whole = self._whole(frq.scene, layout.frq_view)
-        last = self.timeline.beats[-1]
-        if last.scene == frq.scene:
-            before = self.plans[-1].cam(frq.t0, layout.view, art)
-            view = mix_rect(layout.view, layout.frq_view, into)
-            cam = clamp_cam(mix_cam(before, whole, into), view, art)
-        else:
-            view, cam = layout.frq_view, whole
-
-        current = None
-        for k, step in enumerate(frq.steps):
-            if step.t <= t:
-                current = k
-        spots: dict[str, float] = {}
-        if current is not None:
-            step = frq.steps[current]
-            previous = frq.steps[current - 1].spotlight if current else None
-            if step.spotlight:
-                spots[step.spotlight] = 1.0 if previous == step.spotlight else p.ease((t - step.t) / SPOT_S)
-            if previous and previous != step.spotlight:
-                spots[previous] = max(spots.get(previous, 0), 1 - p.ease((t - step.t) / SPOT_S))
-        self._draw_background(canvas, frq.scene, cam, view, self._ghosts(frq.scene, self.frq_reveals, t), spots)
-        names = list(self.frq_reveals)
-        bounds = (view[0] + layout.margin, view[1] + layout.margin, view[2] - layout.margin, view[3] - layout.margin)
-        self._labels(canvas, frq.scene, [n for n in names if self.frq_reveals[n] <= t], self.frq_reveals, spots, cam,
-                     view, bounds, t)
-
-        pause_end = frq.predict_t + frq.predict_pause_s
-        countdown = pause_end - t if frq.predict_t <= t < pause_end else None
-        steps = [p.CardStep(number=k + 1, text=s.text, color=self.timeline.palette.get(s.spotlight) if s.spotlight
-                            else None, alpha=p.ease((t - s.t) / 0.35), current=k == current)
-                 for k, s in enumerate(frq.steps)]
-        p.draw_frq_card(canvas, layout.frq_card, into, frq.prompt, frq.predict_question, countdown,
-                        frq.predict_pause_s, steps)
-        if into < 1:  # the lyric band drops away as the card comes in
-            band_y = layout.height - layout.band_h + layout.band_h * into
-            p.draw_band(canvas, (0, band_y, layout.width, band_y + layout.band_h), [], t, layout.band_font)
 

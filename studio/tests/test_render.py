@@ -20,8 +20,6 @@ from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
     Beat,
-    FrqSegment,
-    FrqStep,
     Locations,
     Particles,
     Reveal,
@@ -214,10 +212,7 @@ def test_a_label_is_drawn_only_while_its_dot_is_on_screen(job, monkeypatch, dot_
     beat = Beat(t0=0, t1=5.0, scene="overview", camera=TimelineCamera(target="Cytochrome b6f", zoom=3.0),
                 reveal=[], spotlight=None, labels=["Thylakoid", "Cytochrome b6f"], particles=[], caption=None,
                 line_id="v1-1", line="b6f pumps", words=[Word(word="b6f", start=0.2, end=0.6)])
-    frq = FrqSegment(t0=5.0, t1=6.0, scene="overview", labels=["Thylakoid"], prompt="Explain it.",
-                     predict_question="Which pumps?", predict_t=5.1, predict_pause_s=0.4,
-                     steps=[FrqStep(t=5.5, text="b6f pumps.", spotlight=None)])
-    timeline = Timeline(video="song", duration=6.0, fps=30, audio=[], beats=[beat], frq=frq,
+    timeline = Timeline(video="song", duration=5.0, fps=30, audio=[], beats=[beat],
                         palette={"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"})
     settled = 4.0  # the camera has finished its move onto b6f
     camera = Renderer(job, timeline)
@@ -243,12 +238,8 @@ FLOW = ["Thylakoid", "Cytochrome b6f"]
 
 
 def flowing(beats: list[Beat]) -> Timeline:
-    """A song of these beats on the overview, then a short exam question."""
-    end = beats[-1].t1
-    frq = FrqSegment(t0=end, t1=end + 1, scene="overview", labels=["Thylakoid"], prompt="Explain it.",
-                     predict_question="Which pumps?", predict_t=end + 0.1, predict_pause_s=0.4,
-                     steps=[FrqStep(t=end + 0.5, text="b6f pumps.", spotlight=None)])
-    return Timeline(video="song", duration=end + 1, fps=30, audio=[], beats=beats, frq=frq, palette=PALETTE)
+    """A song of these beats on the overview."""
+    return Timeline(video="song", duration=beats[-1].t1, fps=30, audio=[], beats=beats, palette=PALETTE)
 
 
 def flow_beat(t0, t1, path=FLOW, labels=(), reveal=()):
@@ -317,18 +308,6 @@ def test_label_text_is_dark_enough_to_read_on_white():
         assert 1.05 / (p._luminance(r, g, b) + 0.05) >= 4.5
 
 
-def test_the_exam_question_counts_down_then_shows_its_steps(song):
-    frq = song.timeline.frq
-    countdown = song.frame(frq.predict_t + 0.5).copy()
-    ring = p.rgb("#F59E0B")
-    amber = ((countdown[..., 2] == ring[0]) & (countdown[..., 1] == ring[1]) & (countdown[..., 0] == ring[2])).sum()
-    assert amber > 2000
-    after = song.frame(frq.steps[0].t + 1.0)
-    orange = p.rgb("#E07A2F")  # step 1's number circle, in its spotlight's colour
-    near = (abs(after[..., 2].astype(int) - orange[0]) < 4) & (abs(after[..., 1].astype(int) - orange[1]) < 4)
-    assert near[:, :800].sum() > 500
-
-
 def test_a_missing_mask_is_a_render_error(job, tmp_path):
     shutil.copytree(job, tmp_path / "job")
     (tmp_path / "job" / media.mask_path("overview", "Thylakoid")).unlink()
@@ -345,7 +324,7 @@ def test_frames_split_into_ranges_with_none_missed():
 
 
 def short_timeline(job, video: str) -> Timeline:
-    """Two seconds: a line on the hook, then the exam question with a short pause."""
+    """Two seconds: a line on the hook, then an instrumental gap on the overview."""
     tone = job / "audio" / "tone.mp3"
     if not tone.exists():
         tone.parent.mkdir(exist_ok=True)
@@ -356,13 +335,13 @@ def short_timeline(job, video: str) -> Timeline:
     beat = Beat(t0=0, t1=1.0, scene="hook", camera=TimelineCamera(target=None, zoom=1.0),
                 reveal=[Reveal(name="Thylakoid", t=0.8)], spotlight=None, labels=["Thylakoid"], particles=[],
                 caption=None, line_id="v1-1", line="Light lands on the thylakoid", words=words)
-    frq = FrqSegment(t0=1.0, t1=2.0, scene="overview", labels=["Thylakoid"], prompt="Explain it.", predict_question="Which pumps?",
-                     predict_t=1.1, predict_pause_s=0.4, steps=[FrqStep(t=1.5, text="b6f pumps.", spotlight=None)])
+    gap = Beat(t0=1.0, t1=2.0, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
+               spotlight=None, labels=[], particles=[], caption=None, line_id=None, line="", words=[])
     return Timeline(video=video, duration=2.0, fps=30,
                     audio=[AudioClip(path="audio/tone.mp3", at=0, end=1.0),
                            AudioClip(path="audio/tone.mp3", at=1.5, start=1.0)],
                     palette={"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"},
-                    beats=[beat], frq=frq)
+                    beats=[beat, gap])
 
 
 def test_a_clip_that_starts_partway_into_music_fades_in(job):
@@ -371,7 +350,7 @@ def test_a_clip_that_starts_partway_into_music_fades_in(job):
     _, mix = audio_filter(job, timeline)
     first, second = mix.split(";")[:2]
     assert "atrim=start=0.500" in first and "afade=t=in:st=0:d=0.500" in first
-    assert "afade" not in second  # the exam question's answer starts as it was read
+    assert "afade" not in second  # a clip that starts partway on purpose is not faded
 
 
 def probe(path):

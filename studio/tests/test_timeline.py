@@ -122,8 +122,7 @@ def test_a_structure_the_art_could_not_locate_is_never_revealed_or_spotlit(job):
     timelines = make(job)
     song = lines(timelines["song"])
     assert song["v2-1"].reveal == [] and song["v2-1"].spotlight is None and song["v2-1"].camera.target is None
-    assert all(s.spotlight != "Cytochrome b6f" for s in timelines["song"].frq.steps)
-    assert "Cytochrome b6f" not in timelines["song"].frq.labels
+    assert all("Cytochrome b6f" not in b.labels for b in timelines["song"].beats)
 
 
 def test_both_videos_open_on_the_hook_even_when_the_direction_does_not(job):
@@ -190,10 +189,10 @@ def test_instrumental_gaps_get_beats_of_their_own(job):
     assert gaps[0].t0 == 0 and gaps[0].scene == "hook" and gaps[0].line == "" and gaps[0].words == []
     after = timeline.beats.index(gaps[1]) - 1
     assert gaps[1].scene == timeline.beats[after].scene and gaps[1].camera == timeline.beats[after].camera
-    assert timeline.frq.t0 == pytest.approx(timed["song"].duration)
-    # Beats meet exactly, from 0 to the exam question, so every frame has one.
+    assert timeline.duration == pytest.approx(timed["song"].duration + step.TAIL_S)
+    # Beats meet exactly, from 0 to the end, so every frame has one.
     ends = [0.0] + [b.t1 for b in timeline.beats]
-    assert [b.t0 for b in timeline.beats] == ends[:-1] and ends[-1] == timeline.frq.t0
+    assert [b.t0 for b in timeline.beats] == ends[:-1] and ends[-1] == timeline.duration
 
 
 def test_a_long_intro_is_cut_so_the_hook_is_sung_within_two_seconds(job):
@@ -215,34 +214,19 @@ def test_a_long_intro_is_cut_so_the_hook_is_sung_within_two_seconds(job):
     assert timeline.audio[0] == AudioClip(path="audio/song.mp3", at=0, start=skip, fade_in=step.INTRO_FADE_S)
     assert timeline.beats[0].line_id == first.line_id  # no intro beat: the hook is sung at once
     assert timeline.beats[0].words[0].start == pytest.approx(step.INTRO_KEEP_S)
-    assert timeline.frq.t0 == pytest.approx(timed["song"].duration - skip)
+    assert timeline.duration == pytest.approx(timed["song"].duration - skip + step.TAIL_S)
     assert timelines["lesson"].audio[0] == AudioClip(path="audio/narration.mp3", at=0)  # the narration is not cut
     assert timeline_problems(timeline, jobs.read(job / media.LOCATIONS, Locations)) == []
 
 
-def test_the_exam_question_pauses_to_predict_then_spotlights_each_step(job):
+def test_each_video_ends_a_moment_after_its_voice_on_its_last_picture(job):
     timelines = make(job)
-    bundle = sample_media.bundle()
-    frq_timing = sample_media.timings(bundle)["frq"]
-    asked = frq_timing.line("frq-predict").end
+    timed = sample_media.timings(sample_media.bundle())
     for video, timeline in timelines.items():
-        frq = timeline.frq
-        assert frq.t0 == timeline.beats[-1].t1
-        assert frq.predict_t == pytest.approx(frq.t0 + asked)
-        assert frq.predict_pause_s == media.PREDICT_PAUSE_S
-        answer_at = frq.predict_t + media.PREDICT_PAUSE_S
-        assert [(c.path, c.at, c.start, c.end) for c in timeline.audio[1:]] == [
-            ("audio/frq.mp3", frq.t0, 0, asked), ("audio/frq.mp3", pytest.approx(answer_at), asked, None)]
-        first_step = frq_timing.line("frq-step-1").start
-        assert frq.steps[0].t == pytest.approx(answer_at + first_step - asked)
-        # Behind the card: the scene shown in this video that can spotlight the most steps.
-        # The song shows the overview ("Cytochrome b6f pumps protons."); the lesson never does.
-        expected = {"song": ("overview", ["Cytochrome b6f", None]), "lesson": ("synthase", [None, "ATP synthase"])}
-        assert (frq.scene, [s.spotlight for s in frq.steps]) == expected[video]
-        # The card reviews the whole diagram: what the video revealed there first, then the rest.
-        card = {"song": ["Thylakoid", "Cytochrome b6f"], "lesson": ["ATP synthase"]}
-        assert frq.labels == card[video]
-        assert timeline.duration == pytest.approx(frq.t1)
+        voice = timed["song" if video == "song" else "narration"]
+        assert timeline.duration == pytest.approx(voice.duration + step.TAIL_S)
+        assert timeline.beats[-1].t1 == timeline.duration  # the last beat holds its picture to the end
+        assert timeline.audio == [AudioClip(path=voice.audio, at=0)]
 
 
 def test_timings_that_do_not_match_the_bundle_fail_the_step(job):

@@ -40,7 +40,6 @@ def test_the_sample_job_validates_and_its_parts_agree(job):
     timed = {kind: jobs.read(job / media.timing_path(kind), Timing) for kind in media.TIMED}
     assert timing_problems(timed["song"], [line.id for line in bundle.lyrics]) == []
     assert timing_problems(timed["narration"], [n.id for n in bundle.narration]) == []
-    assert timing_problems(timed["frq"], [i for i, _ in media.frq_lines(bundle)]) == []
     for video in media.VIDEOS:
         timeline = jobs.read(job / media.timeline_path(video), Timeline)
         assert timeline_problems(timeline, locations) == []
@@ -60,11 +59,6 @@ def test_the_sample_masks_match_the_art_and_the_locations(job):
     _, _, thylakoid = read_png(job / media.mask_path("overview", "Thylakoid"))
     b6f = locations.scene("overview").get("Cytochrome b6f").centroid
     assert thylakoid[int(b6f.y)][int(b6f.x)] == 0
-
-
-def test_frq_lines():
-    bundle = sample_media.bundle()
-    assert [i for i, _ in media.frq_lines(bundle)] == ["frq-prompt", "frq-predict", "frq-step-1", "frq-step-2"]
 
 
 def test_names_the_model_wrote_become_safe_distinct_paths_the_api_takes():
@@ -92,7 +86,6 @@ def song() -> dict:
     (lambda t: t["beats"][1].update(t0=t["beats"][1]["t0"] + 0.01), "not where the beat before it ends"),
     (lambda t: t["beats"][1]["camera"].update(zoom=0.5), "shows past it"),
     (lambda t: t["beats"][1].update(t1=float("nan")), "not a finite number"),
-    (lambda t: t["frq"].update(labels=["Thylakoid"]), "which it does not label"),
     (lambda t: t["beats"][0].update(t0=0.5), "not 0"),
     (lambda t: t["beats"][0].update(labels=[]), "without labelling it"),
     (lambda t: t["beats"][1].update(spotlight="Cytochrome b6f"), "before it is revealed"),
@@ -100,9 +93,8 @@ def song() -> dict:
     (lambda t: t["beats"][3]["reveal"][0].update(t=0.0), "outside the beat"),
     (lambda t: t["beats"][0]["words"][0].update(start=99.0, end=99.5), "outside the beat"),
     (lambda t: t["palette"].pop("Thylakoid"), "no colour in the palette"),
-    (lambda t: t["frq"].update(t0=t["frq"]["t0"] + 2), "not where the exam question starts"),
-    (lambda t: t["frq"]["steps"][0].update(t=t["frq"]["predict_t"] + 1), "follow the predict pause"),
-    (lambda t: t["audio"][1].update(end=0.0), "audio clip"),
+    (lambda t: t.update(duration=t["duration"] + 2), "not at the end of the video"),
+    (lambda t: t["audio"][0].update(end=0.0), "audio clip"),
 ])
 def test_a_broken_timeline_is_refused(break_it, message):
     data = song()
@@ -111,11 +103,12 @@ def test_a_broken_timeline_is_refused(break_it, message):
         Timeline.model_validate(data)
 
 
-def test_every_frame_finds_its_beat_or_the_exam_question():
+def test_every_frame_finds_its_beat():
     timeline = sample_media.timeline("song")
     assert timeline.frame_count == round(timeline.duration * timeline.fps)
     held = [timeline.beat_at(n / timeline.fps) for n in range(timeline.frame_count)]
-    assert all((beat is None) == (n / timeline.fps >= timeline.frq.t0) for n, beat in enumerate(held))
+    assert all(beat.t0 <= n / timeline.fps < beat.t1 for n, beat in enumerate(held))
+    assert timeline.beat_at(timeline.duration) is timeline.beats[-1]  # the last picture holds to the end
     second = timeline.beats[1]
     assert timeline.beat_at(second.t0) is second  # a beat holds its own start
     assert timeline.beat_at(second.t0 - 1e-9) is timeline.beats[0]
