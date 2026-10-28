@@ -212,9 +212,11 @@ topic is failed or given up over a setting. For a local job, `python -m studio p
 --brain muse-spark --effort medium` (the default: Claude Opus 5.5 at high); Muse Spark vets
 a prompt change for about a quarter of Muse Wonder's price.
 
-The Meta calls follow Meta's docs but have not run against the live API yet: check them
-first with `STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s`
-(one scene, a few cents). Gemini's has: `STUDIO_LIVE=1 GEMINI_API_KEY=... python -m pytest
+The Meta calls first ran live on Oct 28, on two topics end to end (Muse Spark 1.3 as the
+brain, Muse Image and SAM 3.1 for the art, Lyria for the song): what worked and what did not
+is in [docs/test-rounds.md](docs/test-rounds.md). Check them again after a change with
+`STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
+scene, a few cents). Gemini's too: `STUDIO_LIVE=1 GEMINI_API_KEY=... python -m pytest
 studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 
 #### One topic on another brain

@@ -519,7 +519,7 @@ def claude_texts(message) -> list[str]:
 
 
 # --- Meta ---------------------------------------------------------------------
-# Untested until MODEL_API_KEY exists. Muse takes OpenAI-style chat completions. No
+# First run live on Oct 28 (muse-spark-1.3). Muse takes OpenAI-style chat completions. No
 # effort is sent: the effort on /admin/studio is Claude's, and Muse keeps its own default.
 
 

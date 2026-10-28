@@ -166,8 +166,10 @@ def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[l
     for i, clip in enumerate(timeline.audio):
         inputs += ["-i", str(job / clip.path)]
         trim = f"atrim=start={clip.start:.3f}" + (f":end={clip.end:.3f}" if clip.end is not None else "")
+        fade = f",afade=t=in:st=0:d={clip.fade_in:.3f}" if clip.fade_in > 0 else ""
         delay = round(clip.at * 1000)
-        chains.append(f"[{i + first_input}:a]aresample=48000,{trim},asetpts=PTS-STARTPTS,adelay={delay}:all=1[a{i}]")
+        chains.append(f"[{i + first_input}:a]aresample=48000,{trim},asetpts=PTS-STARTPTS{fade},"
+                      f"adelay={delay}:all=1[a{i}]")
     mix = "".join(f"[a{i}]" for i in range(len(timeline.audio)))
     chains.append(f"{mix}amix=inputs={len(timeline.audio)}:normalize=0:duration=longest,"
                   f"apad,atrim=end={timeline.duration:.3f}[mix]")

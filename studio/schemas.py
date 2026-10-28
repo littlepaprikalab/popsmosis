@@ -498,6 +498,7 @@ class AudioClip(Strict):
     at: float
     start: float = 0.0  # where in the file to start
     end: float | None = None  # where in the file to stop; None: its end
+    fade_in: float = 0.0  # seconds it fades in over, for a clip that starts partway into music
 
 
 class TimelineCamera(Strict):

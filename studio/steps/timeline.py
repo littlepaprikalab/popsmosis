@@ -12,7 +12,10 @@ No model calls, so it is free to run again:
   a row. Longer names win, so "motor cortex" is not also read as "cortex".
 - A spotlight or camera target that is not located on its scene, or not revealed there
   yet, falls back to no spotlight and the camera on the whole scene, as checks.py does.
-- Both videos open on the hook scene.
+- Both videos open on the hook scene, and the song video on its hook line: a song whose
+  singing starts later than INTRO_MAX_S (Lyria now and then plays a 10-second intro
+  however it is asked) is played from INTRO_KEEP_S before its first sung word, fading in,
+  so the hook is sung within the first two seconds (PLAN section 8).
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - After the song or the narration, the exam question: audio/frq.mp3 up to the end of the
@@ -42,6 +45,7 @@ from studio.schemas import (
     Locations,
     Particles,
     Reveal,
+    TimedLine,
     Timeline,
     TimelineCamera,
     Timing,
@@ -58,6 +62,9 @@ LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions ar
 PARTICLE_COLOR = "#F2C230"
 MAX_ZOOM = 3.0
 TAIL_S = 1.5  # the last exam step stays on screen this long after its line is read
+INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
+INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
+INTRO_FADE_S = 0.5
 
 
 def run(job: Path, ask=None) -> str:
@@ -184,6 +191,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     """One video's timeline. Raises ValidationError if the result does not hold together."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     voice = timed["song" if video == "song" else "narration"]
+    skip = intro_skip(voice) if video == "song" else 0.0
+    voice = shifted(voice, skip)
     texts = {line.id: line.text for line in lines}
     sections = _section_runs(bundle) if video == "song" else {}
     directions = {d.line_id: d for d in bundle.direction}
@@ -258,8 +267,31 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
 
     _place_captions(beats, captions, sections, video)
     frq, audio, duration = _exam_question(bundle, timed, voice, cursor, revealed, names, beats[-1]["scene"])
+    if skip:
+        audio[0] = AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S)
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], frq=frq)
+
+
+def intro_skip(timing: Timing) -> float:
+    """How much of the start of the audio to leave out: its intro, when the first word is heard
+    later than INTRO_MAX_S, all but INTRO_KEEP_S of it; else nothing."""
+    first = timing.lines[0].start if timing.lines else 0.0
+    return round(first - INTRO_KEEP_S, 3) if first > INTRO_MAX_S else 0.0
+
+
+def shifted(timing: Timing, skip: float) -> Timing:
+    """The timing as heard when its audio is played from `skip` seconds in."""
+    if not skip:
+        return timing
+
+    def at(t: float) -> float:
+        return round(max(0.0, t - skip), 3)
+
+    return Timing(audio=timing.audio, duration=at(timing.duration), lines=[
+        TimedLine(line_id=line.line_id, start=at(line.start), end=at(line.end),
+                  words=[Word(word=w.word, start=at(w.start), end=at(w.end)) for w in line.words])
+        for line in timing.lines])
 
 
 def _shown(name: str, scene_names: Names, labels: list[str]) -> str | None:

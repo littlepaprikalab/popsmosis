@@ -110,11 +110,13 @@ together they go from what the learner already knows to the parts they are learn
   screen. `aliases` are the other words the lyrics or narration use for it
   (for example "medulla" for "medulla oblongata"). Each name and alias means only that
   structure in this lesson: a common word ("healthy", "cell") would reveal it every time
-  it is said. `sam_phrase` is how a segmentation model finds it in the picture: a short
-  noun phrase, two to six words, naming its colour and what it looks like ("orange
-  cauliflower-shaped lobe"), the colour being the one `color_hex` gives. No positions,
-  commands or negations: the model goes by what the thing looks like. `color_hex` is its
-  colour as #RRGGBB.
+  it is said. `sam_phrase` is how a segmentation model finds it in the picture: its
+  colour and one plain, everyday noun for what it looks like, two or three words
+  ("orange lobe", "blue disc", "yellow flashlight", "green stream"), the colour being the
+  one `color_hex` gives. The model knows colours and everyday things, not scientific
+  names, and each extra adjective makes it likelier to miss: "yellow flashlight", not
+  "golden yellow small flashlight". No positions, commands or negations: the model goes
+  by what the thing looks like. `color_hex` is its colour as #RRGGBB.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct
   mid-tone colours that read well on white. Only an analogy part shares a colour, with the
   structure it stands for.

@@ -15,7 +15,7 @@ skia = pytest.importorskip("skia", reason="skia-python is not installed (or its 
 
 from studio import jobs, media
 from studio.render import primitives as p
-from studio.render.encode import EncodeError, encode, poster_time, ranges, write_poster
+from studio.render.encode import EncodeError, audio_filter, encode, poster_time, ranges, write_poster
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
@@ -124,7 +124,8 @@ def band_of(frame):
     return frame[media.VIDEO_HEIGHT - 100:, :, :3].copy()  # the frame is a view the next one draws over
 
 
-def test_late_in_a_gap_the_song_shows_its_next_line_dimmed_and_unmarked(job):
+def test_late_in_a_gap_the_song_shows_its_next_line_dimmed_and_unmarked(job, monkeypatch):
+    monkeypatch.setattr(timeline_step, "INTRO_MAX_S", 99.0)  # keep the 3 s intro: it is the long gap here
     song = Renderer(job, gapped(job, "song"))
     beats = song.timeline.beats
     gaps = [i for i, b in enumerate(beats) if b.line_id is None]
@@ -335,6 +336,15 @@ def short_timeline(job, video: str) -> Timeline:
                            AudioClip(path="audio/tone.mp3", at=1.5, start=1.0)],
                     palette={"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"},
                     beats=[beat], frq=frq)
+
+
+def test_a_clip_that_starts_partway_into_music_fades_in(job):
+    timeline = short_timeline(job, "song")
+    timeline.audio[0] = AudioClip(path="audio/tone.mp3", at=0, start=0.5, fade_in=0.5)
+    _, mix = audio_filter(job, timeline)
+    first, second = mix.split(";")[:2]
+    assert "atrim=start=0.500" in first and "afade=t=in:st=0:d=0.500" in first
+    assert "afade" not in second  # the exam question's answer starts as it was read
 
 
 def probe(path):

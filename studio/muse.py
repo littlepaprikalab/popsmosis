@@ -6,8 +6,8 @@
 
 Both take MODEL_API_KEY, the Meta key, whatever the brain, and log each call that comes back to the
 job's calls.jsonl (studio/ledger.py) at Meta's price: $0.01 a picture, $2.50 per 1,000
-images segmented. Neither has run against the live API yet; the request and answer
-shapes follow Meta's docs (dev.meta.ai/docs/image-generation, dev.meta.ai/docs/sam).
+images segmented. The request and answer shapes follow Meta's docs
+(dev.meta.ai/docs/image-generation, dev.meta.ai/docs/sam); both first ran live on Oct 28.
 
 SAM answers in a token grammar of its own, one record per match: a box, then a mask
 covering only that box, in an encoding of Meta's. meta-sam-parser, Meta's own parser,

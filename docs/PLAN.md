@@ -280,8 +280,8 @@ no letters, no numbers." Disable web search and shell (`tool_enablement`). Keep
 structures away from the edges so vertical crops work later. The helper looks at each
 image; if any text is visible or the anatomy is wrong, regenerate (max 3) with what was
 wrong. A picture with text is never used; after the third, the scene keeps the text-free
-picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`), not
-yet run against the live API.
+picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`); first
+run live on Oct 28 ([test-rounds.md](test-rounds.md)).
 
 **Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure
 as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
@@ -292,13 +292,17 @@ it unchanged. Switching the painter makes a job's art again on its next run.
 ### Step 4: locate
 
 SAM 3.1 via `/v1/responses`, one noun phrase per request (the structure's `sam_phrase`:
-its colour and shape in a few words). Every match at least 0.5 sure makes up its mask. If
-SAM finds nothing that sure for a structure, the helper proposes a box and SAM is called
-again with that box. A structure neither finds is left out, like one the SVG art leaves
-out (no spotlight, no camera move), and a scene with fewer than half its structures found
-fails the step. `locations.json` holds `box`, `centroid` and `label_anchor` per
-structure, all in art pixel coordinates. Built (`studio/steps/locate.py`), not yet run
-against the live API.
+its colour and an everyday noun, "yellow flashlight"). Every match at least 0.5 sure makes
+up its mask. If SAM finds nothing that sure for a structure, it is asked again in plainer
+words (its colour and the phrase's last noun, then its colour and "region"), and only then
+does the helper propose a box for SAM to look in. Every match is held to the structure's
+colour: one mostly in another structure's colour is dropped. A structure none of these finds
+is left out, like one the SVG art leaves out (no spotlight, no camera move), and a scene
+with fewer than half its structures found fails the step. `locations.json` holds `box`,
+`centroid` and `label_anchor` per structure, all in art pixel coordinates. Built
+(`studio/steps/locate.py`); first run live on Oct 28, when SAM missed most long phrases and a
+helper box around two Earths labelled one's northern half "Southern Hemisphere", so the
+plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
 
 ### Step 5: audio
 

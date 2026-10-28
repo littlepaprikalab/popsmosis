@@ -7,12 +7,25 @@ With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each s
 
 1. SAM is given the structure's sam_phrase. Every match at least MIN_CONFIDENCE sure
    makes up its mask (a structure the picture shows twice keeps both).
-2. If none is that sure, or what it found is too small to point a label at, the helper
-   looks at the art and gives a box around the structure, and SAM finds the one thing in
-   that box.
-3. If that finds nothing either, the structure is left out of locations.json: the
+2. If none is that sure, SAM is asked again in plainer words (phrases()): the
+   structure's colour and the phrase's last word ("blue complex"), then its colour and
+   "region". SAM 3.1 knows colours and everyday nouns, not scientific names or a string
+   of adjectives: on the first live runs "golden yellow small flashlight" found nothing
+   and "yellow flashlight" found both flashlights. A SAM call costs a quarter of a cent.
+3. If none of those is that sure, or what it found is too small to point a label at,
+   the helper looks at the art and gives a box around the structure, and SAM finds the
+   one thing in that box.
+4. If that finds nothing either, the structure is left out of locations.json: the
    timeline then gives it no spotlight and no camera move, as for a structure the SVG
    art left out. Fewer than half of a scene's structures located fails the step.
+
+Every match is held to the structure's colour first (Colours): the bundle gives each
+structure in a scene its own colour and Muse Image paints it so, so a match whose pixels
+are mostly another structure's colour is another structure, and is dropped, as is one that
+is mostly the white background (unless the structure is itself near white). On the first
+live runs a box drawn around two Earths came back as one Earth's northern half, labelled
+"Southern Hemisphere", and a "gray plug" as the pale sky above a membrane. A structure left
+out is better than one labelled wrong.
 
 Writes masks/<scene>/<structure>.png, then locations.json, last. Each mask is everything
 SAM marked, so two structures that overlap in the picture share those pixels.
@@ -20,7 +33,9 @@ SAM marked, so two structures that overlap in the picture share those pixels.
 
 from __future__ import annotations
 
+import colorsys
 import math
+import re
 import shutil
 from pathlib import Path
 
@@ -32,6 +47,17 @@ from studio.schemas import Box, Location, Locations, Scene, SceneLocations, Stri
 from studio.steps import art
 
 MIN_CONFIDENCE = 0.5
+# A match is the structure's own when, of its pixels that are some structure's colour, at
+# least this share are its own. On the first live runs every right match scored 0.58 or more,
+# and the one that would have been labelled wrong 0.40.
+MIN_OWN_COLOUR = 0.5
+# Nor is a match that is mostly the white background (or near-white washes around the art) the
+# structure, unless its own colour is near white: a "gray plug" once came back as the pale sky above
+# a membrane, all of it background. Right matches were at most 0.39 background.
+MAX_BACKGROUND = 0.6
+CLOSE = 30.0  # how near a pixel is to a colour to count as it: Lab distance, lightness counted half
+SAME = 10.0  # two structures this near in colour are one colour here (an analogy part and its structure)
+JUDGED = 0.2  # a match needs this share of its pixels in some structure's colour to be judged at all
 
 BOX_PROMPT = """You find one part in an illustration, for a segmentation model that will then trace it. \
 Say whether the part is in the picture (`seen`) and give the box around all of it as fractions of the \
@@ -60,9 +86,10 @@ def run(job: Path, ask=brain.ask) -> str:
     if not art.is_done(job):
         raise media.StepFailed(f"no {art.painter_of(job).title} art for this bundle; run the art step first")
     media.restart(job, media.LOCATIONS)
-    scenes, left_out, boxed = [], [], []
+    scenes, left_out, boxed, dropped = [], [], [], 0
     for scene in bundle.scenes:
-        located, how = find_all(job, scene, ask)
+        located, how, wrong = find_all(job, scene, ask)
+        dropped += wrong
         if len(located) < max(1, math.ceil(len(scene.structures) / 2)):
             missing = [s.name for s in scene.structures if s.name not in located]
             raise media.StepFailed(f"scene {scene.id}: SAM 3.1 found {len(located)} of {len(scene.structures)} "
@@ -79,6 +106,8 @@ def run(job: Path, ask=brain.ask) -> str:
     found = sum(len(s.structures) for s in scenes)
     return (f"located {found} of {total} structures with SAM 3.1"
             + (f", {len(boxed)} in the helper's box" if boxed else "")
+            + (f"; dropped {dropped} match{'es' if dropped != 1 else ''} in another structure's colour"
+               if dropped else "")
             + (f"; left out {', '.join(left_out)}" if left_out else ""))
 
 
@@ -86,39 +115,138 @@ def is_done(job: Path) -> bool:
     return art.located(job) is not None and art.is_done(job)
 
 
-def find_all(job: Path, scene: Scene, ask) -> tuple[dict[str, tuple[np.ndarray, svg.Found]], dict[str, str]]:
-    """Each structure SAM found on the scene's art: its mask and where it is; and how it was found."""
+def find_all(job: Path, scene: Scene, ask) -> tuple[dict[str, tuple[np.ndarray, svg.Found]], dict[str, str], int]:
+    """Each structure SAM found on the scene's art: its mask and where it is; how it was found; and
+    how many matches were dropped for being another structure's colour."""
     picture = job / media.art_path(scene.id)
+    colours = Colours(picture, scene)
     located, how = {}, {}
     for structure in scene.structures:
-        result = find(job, scene, structure, picture, ask)
+        result = find(job, scene, structure, picture, ask, colours)
         if result is not None:
             mask, found, by = result
             located[structure.name], how[structure.name] = (mask, found), by
-    return located, how
+    return located, how, colours.dropped
 
 
-def find(job: Path, scene: Scene, structure: Structure, picture: Path,
-         ask) -> tuple[np.ndarray, svg.Found, str] | None:
+def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
+         colours: Colours | None = None) -> tuple[np.ndarray, svg.Found, str] | None:
     """A structure's mask on the art, where it is, and how it was found ("sam" or "sam-box"); None
     when SAM cannot find enough of it to point a label at."""
+    colours = colours or Colours(picture, scene)
     label = f"locate {scene.id} {structure.name}"
-    sure = [m for m in muse.segment(job, label, picture, phrase=structure.sam_phrase)
-            if m.confidence is None or m.confidence >= MIN_CONFIDENCE]
-    if sure:
-        mask = np.logical_or.reduce([m.mask for m in sure])
-        found = svg.locate(mask)
-        if found is not None:
-            return mask, found, "sam"
+    for n, phrase in enumerate(phrases(structure)):
+        sure = [m for m in muse.segment(job, label + (f" try {n + 1}" if n else ""), picture, phrase=phrase)
+                if (m.confidence is None or m.confidence >= MIN_CONFIDENCE) and colours.fits(m.mask, structure)]
+        if sure:
+            mask = np.logical_or.reduce([m.mask for m in sure])
+            found = svg.locate(mask)
+            if found is not None:
+                return mask, found, "sam"
     box = helper_box(scene, structure, picture, ask)
     if box is None:
         return None
-    matched = muse.segment(job, label + " box", picture, box=box)
+    matched = [m for m in muse.segment(job, label + " box", picture, box=box) if colours.fits(m.mask, structure)]
     if not matched:
         return None
     best = max(matched, key=lambda m: -1.0 if m.confidence is None else m.confidence)
     found = svg.locate(best.mask)
     return (best.mask, found, "sam-box") if found is not None else None
+
+
+# --- asking SAM in plainer words --------------------------------------------------------------
+
+
+def phrases(structure: Structure) -> list[str]:
+    """What SAM is asked for, in order: the bundle's sam_phrase, then its colour and the phrase's last
+    word ("golden yellow small flashlight" -> "yellow flashlight"), then its colour and "region"."""
+    colour = colour_word(structure.color_hex)
+    words = re.findall(r"[a-z0-9]+", structure.sam_phrase.lower())
+    last = words[-1] if words else ""
+    noun = last if last.isalpha() and len(last) >= 3 and last not in colour.split() else ""  # not "b6f"
+    asked = [structure.sam_phrase]
+    for phrase in (f"{colour} {noun}" if noun else "", f"{colour} region"):
+        if phrase and phrase not in (a.lower() for a in asked):
+            asked.append(phrase)
+    return asked
+
+
+# Hue bands in degrees, for colour_word.
+HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
+        (290, "purple"), (335, "pink"), (360, "red"))
+
+
+def colour_word(color_hex: str) -> str:
+    """A colour as the everyday words SAM knows: "#90BE6D" -> "light green", "#E9A000" -> "yellow"."""
+    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
+    if saturation < 0.15:
+        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
+    name = next(word for limit, word in HUES if hue * 360 < limit)
+    if name in ("orange", "red") and value < 0.55:
+        return "brown"
+    if value < 0.4:
+        return f"dark {name}"
+    if saturation < 0.5 and value > 0.6:
+        return f"light {name}"
+    return name
+
+
+# --- holding a match to its structure's colour --------------------------------------------------
+
+
+def _lab(rgb: np.ndarray) -> np.ndarray:
+    """sRGB (0-255, ... x 3) to CIE Lab (D65)."""
+    c = rgb.astype(np.float32) / 255.0
+    c = np.where(c > 0.04045, ((c + 0.055) / 1.055) ** 2.4, c / 12.92)
+    xyz = c @ np.array([[0.4124, 0.3576, 0.1805], [0.2126, 0.7152, 0.0722], [0.0193, 0.1192, 0.9505]],
+                       np.float32).T / np.array([0.95047, 1.0, 1.08883], np.float32)
+    f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787 * xyz + 16 / 116)
+    return np.stack([116 * f[..., 1] - 16, 500 * (f[..., 0] - f[..., 1]), 200 * (f[..., 1] - f[..., 2])], -1)
+
+
+class Colours:
+    """Which structure each pixel of a scene's art is coloured as: the nearest of the scene's
+    structure colours and white, when it is near enough to count as any."""
+
+    def __init__(self, picture: Path, scene: Scene):
+        import skia
+
+        refs = [s.color_hex for s in scene.structures] + ["#FFFFFF"]
+        self.names = [s.name for s in scene.structures]
+        self.refs = _lab(np.array([[int(h[i:i + 2], 16) for i in (1, 3, 5)] for h in refs]))
+        self.pixels = _lab(skia.Image.open(str(picture)).toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3])
+        self.dropped = 0
+
+    def judge(self, mask: np.ndarray, structure: Structure) -> tuple[float, float | None]:
+        """The share of the mask's pixels that are the white background, unless the structure is itself
+        near white (then 0); and of its pixels coloured as some structure, the share coloured as this one,
+        None when too few are coloured as any (a picture painted in other colours) to judge."""
+        mine = self.names.index(structure.name)
+        pixels = self.pixels[mask]
+        if not len(pixels):
+            return 0.0, None
+        weight = np.array([0.5, 1.0, 1.0], np.float32)  # shading moves lightness most
+        distance = np.sqrt((((pixels[:, None, :] - self.refs[None, :, :]) * weight) ** 2).sum(-1))
+        nearest, close = distance.argmin(1), distance.min(1) <= CLOSE
+        apart = np.sqrt((((self.refs - self.refs[mine]) * weight) ** 2).sum(-1))
+        own_colour = apart <= SAME
+        own_colour[-1] = False  # white is the background, never a structure's own colour here
+        white = (nearest == len(self.refs) - 1) & close
+        background = 0.0 if apart[-1] <= CLOSE else float(white.mean())
+        own = (own_colour[nearest] & close).sum()
+        other = (~own_colour[nearest] & ~white & close).sum()
+        if own + other < JUDGED * len(pixels):
+            return background, None
+        return background, float(own / (own + other))
+
+    def fits(self, mask: np.ndarray, structure: Structure) -> bool:
+        """Whether a match can be the structure: not mostly the background, nor another structure's colour."""
+        background, share = self.judge(mask, structure)
+        if background > MAX_BACKGROUND or (share is not None and share < MIN_OWN_COLOUR):
+            self.dropped += 1
+            return False
+        return True
 
 
 def helper_box(scene: Scene, structure: Structure, picture: Path, ask) -> Box | None:

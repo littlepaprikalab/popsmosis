@@ -4,7 +4,7 @@ import pytest
 
 from studio import jobs, media
 from studio.media import StepFailed
-from studio.schemas import Bundle, Locations, Timeline, Timing, timeline_problems
+from studio.schemas import AudioClip, Bundle, Locations, Timeline, Timing, timeline_problems
 from studio.steps import timeline as step
 from studio.tests import sample_media
 from studio.tests.sample import bundle_data
@@ -174,8 +174,8 @@ def test_instrumental_gaps_get_beats_of_their_own(job):
     bundle = sample_media.bundle()
     timed = sample_media.timings(bundle)
     song = timed["song"].model_dump()
-    for i, line in enumerate(song["lines"]):  # a 3 s intro, and 2 s more before each chorus
-        shift = 3.0 + 2.0 * sum(1 for earlier in song["lines"][1:i + 1] if earlier["line_id"].startswith("c"))
+    for i, line in enumerate(song["lines"]):  # a 1.8 s intro (kept: under INTRO_MAX_S), 2 s more before each chorus
+        shift = 1.8 + 2.0 * sum(1 for earlier in song["lines"][1:i + 1] if earlier["line_id"].startswith("c"))
         line["start"] += shift
         line["end"] += shift
         for w in line["words"]:
@@ -194,6 +194,30 @@ def test_instrumental_gaps_get_beats_of_their_own(job):
     # Beats meet exactly, from 0 to the exam question, so every frame has one.
     ends = [0.0] + [b.t1 for b in timeline.beats]
     assert [b.t0 for b in timeline.beats] == ends[:-1] and ends[-1] == timeline.frq.t0
+
+
+def test_a_long_intro_is_cut_so_the_hook_is_sung_within_two_seconds(job):
+    bundle = sample_media.bundle()
+    timed = sample_media.timings(bundle)
+    song = timed["song"].model_dump()
+    for line in song["lines"]:  # Lyria's 10 s intro
+        line["start"] += 10.0
+        line["end"] += 10.0
+        for w in line["words"]:
+            w["start"] += 10.0
+            w["end"] += 10.0
+    song["duration"] += 10.0
+    timed["song"] = Timing.model_validate(song)
+    write_bundle(job, bundle.model_dump(), timed)
+    timelines = make(job)
+    timeline, first = timelines["song"], timed["song"].lines[0]
+    skip = round(first.start - step.INTRO_KEEP_S, 3)
+    assert timeline.audio[0] == AudioClip(path="audio/song.mp3", at=0, start=skip, fade_in=step.INTRO_FADE_S)
+    assert timeline.beats[0].line_id == first.line_id  # no intro beat: the hook is sung at once
+    assert timeline.beats[0].words[0].start == pytest.approx(step.INTRO_KEEP_S)
+    assert timeline.frq.t0 == pytest.approx(timed["song"].duration - skip)
+    assert timelines["lesson"].audio[0] == AudioClip(path="audio/narration.mp3", at=0)  # the narration is not cut
+    assert timeline_problems(timeline, jobs.read(job / media.LOCATIONS, Locations)) == []
 
 
 def test_the_exam_question_pauses_to_predict_then_spotlights_each_step(job):

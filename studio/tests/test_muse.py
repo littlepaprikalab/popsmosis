@@ -2,13 +2,14 @@
 
 import base64
 import json
+import re
 import time
 
 import numpy as np
 import pytest
 
 from studio import brain, jobs, ledger, media, muse, svg
-from studio.schemas import Box, Locations, Timeline, locations_problems, timeline_problems
+from studio.schemas import Box, Locations, Structure, Timeline, locations_problems, timeline_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 
@@ -49,6 +50,15 @@ def disc(x: int, y: int, r: int) -> np.ndarray:
     return (xs - x) ** 2 + (ys - y) ** 2 <= r * r
 
 
+def painting(scene_id: str) -> bytes:
+    """Muse Image's picture of a sample scene, stood in for: each structure a disc in its own
+    colour, where the stand-in SAM finds it (SPOTS), on white."""
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), 255, np.uint8)
+    for structure in next(s for s in sample_media.bundle().scenes if s.id == scene_id).structures:
+        pixels[disc(*SPOTS[structure.name])] = tuple(bytes.fromhex(structure.color_hex[1:]))
+    return svg.png(pixels)
+
+
 class FakeMuse:
     """Stands in for muse.paint and muse.segment, records what each was asked, and logs each call
     made as they do (muse._log), at Meta's price."""
@@ -64,7 +74,7 @@ class FakeMuse:
         scene = label.split()[1]
         self.painted.append((label, prompt))
         tries = sum(1 for lab, _ in self.painted if lab.split()[1] == scene)
-        answers = self.pictures.get(scene, [picture()])
+        answers = self.pictures.get(scene, [painting(scene)])
         answer = answers[min(tries, len(answers)) - 1]
         if isinstance(answer, Exception):
             raise answer
@@ -73,7 +83,8 @@ class FakeMuse:
 
     def segment(self, job, label, art_path, *, phrase=None, box=None):
         assert art_path.exists()
-        name = next(n for n in SPOTS if label.removesuffix(" box").endswith(" " + n))
+        asked = re.sub(r" (box|try \d+)$", "", label)
+        name = next(n for n in SPOTS if asked.endswith(" " + n))
         self.segmented.append((label, phrase, box))
         muse._log(job, label, muse.SAM_MODEL, time.monotonic(), muse.SAM_PRICE_USD)
         if name not in self.spots:
@@ -286,6 +297,68 @@ def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monke
     with pytest.raises(media.StepFailed, match="scene synthase: SAM 3.1 found 0 of 1 structures; not ATP synthase"):
         locate.run(job, FakeHelper())
     assert not (job / media.LOCATIONS).exists()
+
+
+class PlainWordsMuse(FakeMuse):
+    """SAM as it was on the first live runs: sure of colour-and-noun phrases ("orange region"),
+    blind to the bundle's own."""
+
+    def segment(self, job, label, art_path, *, phrase=None, box=None):
+        found = super().segment(job, label, art_path, phrase=phrase, box=box)
+        sure = 0.9 if phrase is None or phrase.endswith(" region") else 0.1
+        return [muse.Match(m.mask, sure) for m in found]
+
+
+def test_sam_is_asked_in_plainer_words_before_the_helper_is(job, monkeypatch):
+    fake = painted(job, monkeypatch)
+    fake = PlainWordsMuse().install(monkeypatch)
+    helper = FakeHelper()
+    assert locate.run(job, helper) == "located 4 of 4 structures with SAM 3.1"
+    assert helper.labels() == []  # no helper box needed
+    asked = [(label, phrase) for label, phrase, _ in fake.segmented if label.startswith("locate overview Cytochrome")]
+    assert asked == [("locate overview Cytochrome b6f", "the cytochrome b6f"),
+                     ("locate overview Cytochrome b6f try 2", "orange region")]  # "b6f" is no everyday noun
+    located = jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f")
+    assert located.found_by == "sam" and abs(located.centroid.x - 1300.5) < 1
+
+
+def test_the_plainer_words_are_the_structures_colour_and_the_phrases_last_noun():
+    def asked(phrase, color_hex):
+        return locate.phrases(Structure(name="x", aliases=[], sam_phrase=phrase, color_hex=color_hex))
+
+    assert asked("golden yellow small flashlight", "#E9A000") == [
+        "golden yellow small flashlight", "yellow flashlight", "yellow region"]
+    assert asked("pale green fluid stroma", "#90BE6D") == [
+        "pale green fluid stroma", "light green stroma", "light green region"]
+    assert asked("gold mushroom-shaped synthase complex", "#C99A2B")[1] == "yellow complex"
+    assert asked("blue region", "#3A86FF") == ["blue region"]  # nothing plainer left to ask
+    assert asked("the cytochrome b6f", "#E07A2F") == ["the cytochrome b6f", "orange region"]
+    words = {"#E76F51": "orange", "#D64550": "red", "#2A9D8F": "teal", "#6A4C93": "purple", "#277DA1": "blue",
+             "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey"}
+    assert {h: locate.colour_word(h) for h in words} == words
+
+
+def test_a_match_in_another_structures_colour_is_dropped_and_the_structure_left_out(job, monkeypatch):
+    # SAM puts Cytochrome b6f (orange) on the Thylakoid (green) whatever it is asked: a match it must
+    # not keep, since the label would point at the wrong structure.
+    painted(job, monkeypatch, spots={**SPOTS, "Cytochrome b6f": SPOTS["Thylakoid"]})
+    helper = FakeHelper(boxes={"Cytochrome b6f": {"seen": True, "left": 0.2, "top": 0.3, "right": 0.35, "bottom": 0.7}})
+    assert locate.run(job, helper) == ("located 3 of 4 structures with SAM 3.1; dropped 3 matches in another "
+                                       "structure's colour; left out Cytochrome b6f on overview")
+    assert jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f") is None
+
+
+def test_a_match_on_the_white_background_is_dropped(job, monkeypatch):
+    painted(job, monkeypatch, spots={**SPOTS, "Cytochrome b6f": (200, 900, 80)})  # where nothing is painted
+    result = locate.run(job, FakeHelper())
+    assert result == ("located 3 of 4 structures with SAM 3.1; dropped 2 matches in another structure's colour; "
+                      "left out Cytochrome b6f on overview")
+
+
+def test_a_picture_in_none_of_the_structures_colours_is_not_judged_by_colour(job, monkeypatch):
+    painted(job, monkeypatch, pictures={scene.id: [picture(color=(150, 60, 200))]  # purple: no structure's
+                                        for scene in sample_media.bundle().scenes})
+    assert locate.run(job, FakeHelper()) == "located 4 of 4 structures with SAM 3.1"
 
 
 def test_the_helper_box_is_dropped_when_it_is_not_seen_a_sliver_or_the_whole_picture():
