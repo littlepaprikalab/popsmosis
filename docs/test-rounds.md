@@ -302,11 +302,100 @@ A test round is now one command a topic, and faster:
 - A dropped connection to Meta's API is now asked again; it failed round 3's
   photosynthesis art once ("Connection reset by peer").
 
+## Round 5: a song to remember, and figures redrawn from real ones
+
+Set off by "Split the Water", an AP Bio song video on the same topic (3:20, a karaoke lyric
+band over a scanned textbook figure and a slide of text), and the prompt that wrote its
+lyrics. Its song sounds like a song; ours read like sentences. Its figure is the real
+textbook one, correct and familiar, but small (about 18% of the screen), blurry and still.
+
+### The song
+
+Why ours read like sentences:
+
+- **The brief made the song the lesson sung.** Every line a fact, "leave out jokes", and
+  lines led by part names so the labels appear ("Cytochrome b6f pumps protons through").
+  The brain wrote headlines with the small words dropped, rhymed 2 or 3 of its 10
+  couplets (Split the Water: nearly all), and two lines broke ("NADPH forms to feed the
+  Calvin").
+- **Each line had two bars**: 4.9 s at 98 bpm, so a six-word line was drawn out. Split the
+  Water sings a line a bar, about 2.3 s.
+
+The song and the lesson video now do different jobs: the narration explains every step,
+the song is what a learner replays to remember 3 to 5 things. The bundle prompt's song
+brief follows the Split the Water prompt's shape: an intro whose first line is a short
+title line, a verse, a pre-chorus that busts the misconception, a chant-like chorus that
+opens and ends on the title line, a verse, a pre-chorus to the next topic, a bridge that
+walks one failure's effects in order (one the facts describe, not the exam question's), a
+last chorus with a summary couplet, an outro. Rhyming couplets, a story through the steps,
+one metaphor throughout, one surprising fact, terms spelled as sung ("NAD plus"), and a
+line need not name a part. Lines are one bar below 130 bpm, two from 130 (one would be
+under 1.9 s). Sections may now be `intro`, `pre-chorus` and `outro` too.
+
+| | Spark, photosynthesis | Spark, seasons | Wonder, photosynthesis | Wonder, seasons |
+|---|---|---|---|---|
+| Lines | 51 at 98 bpm (2:05) | 47 at 150 bpm (2:30) | 50 at 150 bpm (2:40) | 50 at 150 bpm (2:40) |
+| Fact-check | 2 rounds, 2 lyric fixes | 2 rounds, 2 lyric fixes | 1 round, no fixes | 1 round, no fixes |
+| Bundle + fact-check | $0.30 | $0.28 | $1.16, after a $0.82 try that failed | $1.26 |
+
+- **It sounds like a song now.** Choruses chant ("Tilt to the Sun, it's summer light /
+  Straight rays hit hard, the days run bright / Lean away now for the long cold night"),
+  the pre-chorus busts the myth ("Closest in January, what a twist"), and the bridges walk
+  a failure through ("What if a leak lets protons slip away... NADPH still forms... But
+  Calvin starves with no ATP to spend").
+- **Muse Spark still writes nonsense to reach a rhyme**: "Calvin builds the sugar from that
+  text", "ATP rolls out, the cell's new toy", "Up to NADP plus into the sky". Muse Wonder
+  writes clean, correct lines that rhyme, but plainer, nearer to sentences again, at about
+  four times the price. Its first photosynthesis plan came back with every field but the
+  song (no lyrics, no music styles) and failed validation; the second was fine.
+- **Muse Spark wrote "Split the water, catch the light"**, the video's own title line, in 2
+  of its 3 photosynthesis songs. The phrase is in none of our prompts.
+- **The fact-check made a right line wrong.** The writer's bridge jammed ATP synthase and
+  sang "NADPH piles up for a short time" (the standard answer); the fact-check "corrected"
+  it to "No NADPH is made", borrowing a fact about a herbicide that blocks electron flow.
+  The fact-check prompt now holds each line to its own case, and the facts now cover a
+  second failure for the bridge. It also lets attitude through ("you see") and keeps a
+  corrected line's rhyme word. (Split the Water's own prompt asked its writer to check
+  itself, and still shipped "every hand-off pumps a proton".)
+
+### The figures
+
+The diagrams were wrong because Muse Image drew them from a prompt alone (see "Why the
+diagrams come out wrong"). Given a real figure to redraw (Meta's `/v1/images/edits`, two
+pictures each at $0.01):
+
+| Asked for | What came back |
+|---|---|
+| The OpenStax light-reactions figure, redrawn without text | The figure: every complex in its place and order, sharp at 2016x1152; 1 of 2 added a wrong electron path into the interior |
+| The same, one colour per complex | The same, colour-coded for SAM; 1 of 2 added a stray dotted loop |
+| No figure, the prompt alone (as the pipeline does now) | Five generic proteins in a row, nothing a student would recognise |
+| The IAU seasons diagram (its blank version), redrawn | The diagram, label boxes gone, every axis pointing the same way |
+| The same, on white | The tilt kept, but some globes lit from the wrong side |
+| The June Earth alone, large, from that diagram | Right: the axis toward the Sun, the north pole in daylight, the south in shadow, rays from the Sun's side (the close-up rounds 1 to 4 kept getting wrong) |
+| Split the Water's image prompt: each part named with its colour, shape and place, left to right, "leave clear space around each protein for labels" | The parts in the right order and colours, far better than our prompt alone, but lumpy, detailed proteins rather than the flat figure students know |
+| The same prompt with the OpenStax figure to redraw | Muse followed the prompt's look and dropped the figure's |
+| Split the Water's Photosystem II close-up prompt | Ribbon-model proteins under a glowing beam: striking, not a figure a student would recognise |
+
+A test job (`mock-ps1`) put the colour-coded redraw through locate, timeline and render with
+five Split the Water lines at its pace: SAM found all five complexes (one with the
+helper's box), the camera moved to each as it was sung, and particles ran from the
+cytochrome complex to Photosystem I to NADP+ reductase. One fault: the redraw gave
+Photosystem II's core Photosystem I's teal, so it lit up with Photosystem I. "Each complex
+one colour throughout" belongs in the redraw prompt.
+
+To make it the pipeline: a figure for each scene (a small library of openly licensed
+figures for the demo topics, OpenStax CC BY and the IAU's CC BY diagrams, or an image search
+for the rest), the credit on the droplet, a check that the redraw kept the science (the
+helper, or the better of two), and the art step's edit call in place of its paint call.
+Split the Water's prompt has two things worth taking into the redraw prompt: each part's
+colour by name, and "leave clear space around each protein for labels".
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
   API in `POPSMOSIS_API_URL`, which here is production, and Supabase is not set up.
-- `BRAIN_PROVIDER=claude` (the SVG art) as the studio runs it, and Muse Wonder as the brain.
+- `BRAIN_PROVIDER=claude` (the SVG art) as the studio runs it. Muse Wonder as the brain
+  only for the bundle and fact-check (round 5), not through the videos.
 - The planner's Inkmory record (`INKMORY_ENABLED` is not set).
 
 ## Running a round again
