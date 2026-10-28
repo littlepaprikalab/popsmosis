@@ -1,0 +1,40 @@
+{
+  "name": "atp_synthase",
+  "title": "ATP synthase (chloroplast)",
+  "structure": {"pdb": "6FKF", "title": "Chloroplast F1Fo conformation 1", "url": "https://files.rcsb.org/download/6FKF.cif"},
+  "parts": {
+    "rotor": {"chains": ["G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"], "kind": "capsule",
+              "max_radius": 0.78, "color": "#A9A4E4", "turns": true},
+    "rod": {"chains": ["g", "e"], "kind": "capsule", "color": "#9B92DD", "turns": true, "inside": "knob"},
+    "knob": {"chains": ["A", "B", "C", "D", "E", "F"], "kind": "capsule", "color": "#BEB8EE"},
+    "stator": {"chains": ["a", "d"], "kind": "capsule", "color": "#C8C2F1"},
+    "stalk": {"chains": ["b", "p"], "kind": "tube", "radius": 0.55, "color": "#C8C2F1"}
+  },
+  "axle": {"ring": "rotor", "down": "knob", "toward_x": "stalk"},
+  "membrane": {"parts": ["rotor", "stator", "stalk"], "head_z": 2.45, "head_radius": 0.44, "spacing": 0.95,
+               "rows": 9, "half_width": 44, "cut": 0.95},
+  "page": {"above": {"name": "THYLAKOID SPACE", "color": "#F39A3E"}, "below": {"name": "STROMA", "color": "#FCE7A2"}},
+  "camera": {"elevation_deg": 13, "top": 14.8, "bottom": -19.4, "centre_x": 1.5},
+  "spin": {"parts": ["rotor", "rod"], "turn_s": 6.0, "start_s": 0.5, "ramp_s": 1.0, "clockwise_from_above": true,
+           "why": "Clockwise seen from the membrane's top is counterclockwise seen from the knob, as when it makes ATP. Check this against the lesson's facts."},
+  "ions": {"label": "H⁺", "radius": 0.85,
+           "at": [[-15, -6, 9], [-9, -6, 13.5], [-4.5, -6, 7.5], [8.5, -6, 12], [14, -6, 8.5], [18.5, -6, 13],
+                  [-20, -6, 5.6], [1.8, -6, 11.8], [15.0, -4, -8.4]]},
+  "flow": {"path": [[3.1, -2.6, 9.4], [3.15, -2.65, 5.0], [3.2, -2.7, 1.5], [3.25, -2.7, -1.8], [3.8, -2.7, -3.7],
+                    [6.0, -2.7, -5.2], [12.6, -3.7, -7.7]],
+           "every_s": 2.0, "front": [0, -1.2, 0]},
+  "arcs": [{"radius": 3.49, "z": 0.9, "from_deg": 330, "to_deg": 215},
+           {"radius": 2.1, "z": -6.6, "from_deg": 330, "to_deg": 215}],
+  "labels": {
+    "color": "#6C63C9",
+    "Rotor": {"at": [-1.62, -2.35, 0.0]},
+    "Internal rod": {"chain": "g", "offset": [0, -1.2, 2.2]},
+    "Catalytic knob": {"part": "knob", "offset": [-2.5, -3.0, -1.0]},
+    "Stator": {"chain": "b", "along": 0.68, "offset": [0.4, -0.5, 0]}
+  },
+  "demo_lines": [
+    {"from": 0.0, "to": 2.4, "text": "Protons turn a ring in the membrane", "reveals": {"ring": "Rotor"}},
+    {"from": 2.4, "to": 4.8, "text": "a rod spins down inside the knob", "reveals": {"rod": "Internal rod", "knob": "Catalytic knob"}},
+    {"from": 4.8, "to": 7.2, "text": "while the stator holds the knob still", "reveals": {"stator": "Stator"}}
+  ]
+}
