@@ -7,6 +7,7 @@ import { videoMaxAttempts } from '../lib/video-claim.js';
 import { parseLimit, validateString } from '../lib/validation.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { progressError, storedProgress } from '../lib/progress.js';
+import { studioForClaim } from '../lib/studio-settings.js';
 
 // The claim on a droplet's videos (lib/video-claim.ts): who is rendering them, which
 // attempt this is, and the queue that hands a render whose machine died to a later run.
@@ -26,13 +27,14 @@ type ClaimedAnswer = {
 
 // What a run needs to make the videos on a machine that has never seen the topic. A renewal,
 // the heartbeat before every step, leaves out the bundle and fact-check its run already has.
-function serializeClaim(a: ClaimedAnswer, renewal = false) {
+function serializeClaim(a: ClaimedAnswer, studio: Awaited<ReturnType<typeof studioForClaim>>, renewal = false) {
   return {
     answerId: a.id,
     questionId: a.questionId,
     attempt: a.videoAttempts,
     status: a.videoStatus,
-    brain: a.question.brain, // the topic's brain (lib/brains.ts): the art is its provider's
+    brain: a.question.brain, // the topic's brain (lib/brains.ts)
+    studio, // the studio's settings (lib/studio-settings.ts): who paints the art, by the brain's provider
     ...(!renewal && { bundle: a.bundle, factcheck: a.factcheck }),
   };
 }
@@ -92,7 +94,7 @@ export default async function videoRoutes(app: FastifyInstance) {
       }
       return sendError(reply, 'CONFLICT', `The videos were given up after ${answer.videoAttempts} attempt(s)`);
     }
-    return serializeClaim(answer, renewed);
+    return serializeClaim(answer, await studioForClaim(), renewed);
   });
 
   // GET /api/videos/queue?limit=N — agent: its own droplets whose render went quiet
@@ -129,7 +131,8 @@ export default async function videoRoutes(app: FastifyInstance) {
       select: answerSelect,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    return { data: answers.map((a) => serializeClaim(a)) };
+    const studio = await studioForClaim();
+    return { data: answers.map((a) => serializeClaim(a, studio)) };
   });
 
   // PUT /api/answers/:id/video/progress — { attempt?, running: [{ step, seconds }], failed?, breakdown? }: where

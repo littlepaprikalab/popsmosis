@@ -168,6 +168,7 @@ def use_brain(job: Path, question: dict, check: bool) -> None:
     if name and name != job_brain(job):  # said once, when the job first learns it
         print(f"brain: {brain.CHOICES.get(name, {}).get('name', name)}, picked for this topic", file=sys.stderr)
     keep_brain(job, name)
+    jobs.keep_studio_settings(job, question.get("studio"))  # who paints, for `videos`
     brain.choose(name)
     if check and name:
         problem = brain.settings_problem()
@@ -240,7 +241,7 @@ def report_progress(reporter: ledger.Reporter, job: Path, api: Api, running: dic
 
     def send():
         report = ledger.progress(job, "lesson", running, failed, ending)
-        report["videos"] = videos.unavailable() is None
+        report["videos"] = videos.unavailable(job) is None
         api.report_progress(job.name, report)
 
     reporter.send(send)

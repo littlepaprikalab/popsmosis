@@ -309,6 +309,17 @@ export interface Question {
   canDelete: boolean;
 }
 
+/** Who paints a droplet's pictures, by the provider of the brain that wrote it (api/src/lib/studio-settings.ts). */
+export type Painter = 'gemini' | 'muse' | 'svg';
+export type ArtSettings = { claude: Painter; meta: Painter };
+
+export interface StudioSettings {
+  art: ArtSettings;
+  updatedAt: string | null; // null: never changed, the defaults
+  defaults: { art: ArtSettings };
+  choices: { art: { claude: Painter[]; meta: Painter[] } };
+}
+
 /** A droplet on the public tab (api/src/lib/droplet.ts). Nothing about who asked for it. */
 export interface DropletVideos {
   songVideoUrl: string | null;
@@ -458,4 +469,9 @@ export const api = {
   listUsers: (q?: string) => request<{ data: User[] }>(`/users?${new URLSearchParams(q ? { q } : {})}`),
   setUserRole: (id: string, role: 'ADMIN' | 'USER') =>
     request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+
+  // Admin: the studio's settings (api/src/routes/studio.ts). A change reaches the teacher's next run.
+  getStudioSettings: () => request<StudioSettings>('/studio/settings'),
+  setStudioArt: (art: Partial<ArtSettings>) =>
+    request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify({ art }) }),
 };

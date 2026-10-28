@@ -14,6 +14,9 @@ from pydantic import BaseModel
 
 M = TypeVar("M", bound=BaseModel)
 ROOT = Path(os.environ.get("STUDIO_JOBS_DIR") or Path(__file__).resolve().parent.parent / "jobs")
+# The studio's settings as the API's claim said ({"art": {"claude": ..., "meta": ...}}; api/src/lib/studio-settings.ts):
+# who paints the art, as an admin set it on /admin/studio.
+SETTINGS = "settings.json"
 
 
 def new_id(topic: str) -> str:
@@ -37,3 +40,19 @@ def write(path: Path, data: BaseModel | dict | list) -> None:
 
 def read(path: Path, model: type[M]) -> M:
     return model.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def studio_settings(job: Path) -> dict:
+    """The studio's settings the job was last claimed with (SETTINGS); {} for none, and the defaults apply."""
+    try:
+        data = json.loads((job / SETTINGS).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def keep_studio_settings(job: Path, studio) -> None:
+    """Save the settings a claim carried, for the steps after it. A claim without them (an older API) keeps what
+    is there."""
+    if isinstance(studio, dict) and studio != studio_settings(job):
+        write(job / SETTINGS, studio)

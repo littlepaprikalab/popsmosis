@@ -41,9 +41,10 @@ class FakeArtist:
 
 @pytest.fixture(autouse=True)
 def svg_art(monkeypatch):
-    """These are the brain's SVG art; studio/tests/test_muse.py has Muse Image's."""
+    """These are the brain's SVG art, as an admin can set it for Claude's brain; studio/tests/test_muse.py and
+    test_gemini.py have the painted art."""
     monkeypatch.delenv("BRAIN_PROVIDER", raising=False)
-    monkeypatch.setenv("STUDIO_ART", "svg")
+    monkeypatch.setattr(art, "painter", lambda job: "svg")
 
 
 @pytest.fixture

@@ -148,7 +148,7 @@ def test_only_a_line_that_starts_with_style_names_the_songs_style(content, split
 def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether_videos_follow(jobs_root, monkeypatch):
     from studio import videos
 
-    monkeypatch.setattr(videos, "unavailable", lambda: None)
+    monkeypatch.setattr(videos, "unavailable", lambda job=None: None)
     api = FakeApi()
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
     assert [[r["step"] for r in report["running"]] for report in api.reports] == [["request"], ["bundle"], ["factcheck"]]
@@ -157,7 +157,7 @@ def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether
     assert "breakdown" not in api.reports[0] or api.reports[0]["breakdown"]["steps"] == []
     assert [s["step"] for s in api.reports[2]["breakdown"]["steps"]] == ["request", "bundle"]
 
-    monkeypatch.setattr(videos, "unavailable", lambda: "the videos are turned off here (STUDIO_VIDEOS)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None: "the videos are turned off here (STUDIO_VIDEOS)")
     api = FakeApi()
     operator_run.run("q2", api=api, ask=FakeBrain())
     assert api.reports and all(r["videos"] is False for r in api.reports)  # a text-only droplet: the page need not wait

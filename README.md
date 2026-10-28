@@ -173,30 +173,41 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 |---|---|---|---|
 | `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson (the next table) |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | none | Needed with `claude`. `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
-| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`, and for the art with either. Every Meta model the studio calls bills to it |
-| `STUDIO_ART` | `muse` or `svg` | `muse` | Who makes the art, whatever the brain: Muse Image paints it and SAM 3.1 finds its structures (`muse`), or the brain draws it as SVG (`svg`, for an environment with no Meta key) |
+| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`, and for SAM 3.1 (and Muse Image) in the art with either. Every Meta model the studio calls bills to it |
+| `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | none | Needed when Gemini 3.1 Flash Image paints the art (the default for Claude's brain), and for Lyria songs |
 | `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. Change it when you change `BRAIN_PROVIDER`: a model from the other provider stops the run (below) |
 | `STUDIO_BRAIN_EFFORT` | `low`, `medium`, `high`, `xhigh`, `max` | `high` | How hard the brain thinks, with `claude` only; `meta` ignores it |
 
-What runs, by `BRAIN_PROVIDER` and `STUDIO_ART`:
+What each brain's provider runs, with the art at its defaults:
 
 | Job | `claude` | `meta` |
 |---|---|---|
 | Brain: writes and fact-checks the lesson | Claude Opus 5.5, or `STUDIO_BRAIN_MODEL` | Muse Wonder 1.0, or `STUDIO_BRAIN_MODEL` |
+| Art: paints each scene, up to three tries | Gemini 3.1 Flash Image, about $0.07 a picture | Muse Image 1.0, $0.01 a picture |
+| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
+| Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images | SAM 3.1 |
 
-| Job | `muse` (the default, with either brain) | `svg` |
+#### Who paints: the Studio page
+
+The painter is not an environment variable: an admin picks it for each brain's provider on
+**STUDIO** in the nav (`/admin/studio`), and it is kept in the database
+(`api/src/lib/studio-settings.ts`). The studio reads it from the claim that starts a
+droplet's videos, so a change applies from the next run with no change to the routine's
+environment. The keys stay in the environment, never on the page.
+
+| Brain | Painters | Default |
 |---|---|---|
-| Art | Muse Image 1.0 paints it, $0.01 a picture, up to three a scene | the brain draws each scene as SVG |
-| Helper: checks each picture, boxes a structure SAM missed | Muse Spark 1.3, with either brain: it is part of this flow | not called: code checks the SVG |
-| Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images | the SVG says where each one is |
+| Claude | Gemini 3.1 Flash Image, Muse Image, or Claude draws it as SVG | Gemini 3.1 Flash Image |
+| Muse | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 
-The art stays on Meta's models with Claude's brain because they cost less than the brain
-drawing it: cents a droplet. Switching `STUDIO_ART` makes a job's art again on its next
-run; a lesson already written stays as it is.
+Gemini's and Muse Image's pictures go to SAM 3.1 to find each structure; the SVG art says
+where each one is, so it needs no Gemini or Meta key. Gemini's picture is 1K at 16:9 (1376 x
+768), fitted to the art (`studio/gemini.py`). Switching the painter makes a job's art again
+on its next run; a lesson already written stays as it is.
 
 `run`, `videos` and `recover` check these settings before they claim anything. A wrong one
 (an unknown provider, its key missing, a model from the other provider, a misspelled
-effort; for `videos` and `recover`, the art's Meta key missing too) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
+effort; for `videos` and `recover`, a key the painter or SAM needs) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
 `videos`), and the teacher stops and reports it, so no topic is failed or given up over a
 setting.
 
@@ -217,7 +228,8 @@ or with `BRAIN_PROVIDER=meta`, `STUDIO_BRAIN_MODEL=muse-spark-1.3`.
 
 The Meta calls follow Meta's docs but have not run against the live API yet: check them
 first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
-scene, a few cents).
+scene, a few cents). Gemini's has: `STUDIO_LIVE_ART=1 GEMINI_API_KEY=... python -m pytest
+studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 
 #### One topic on another brain
 
@@ -232,8 +244,8 @@ remembered on that browser, and the topic's card shows it.
 | Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
 | Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | `MODEL_API_KEY` |
 
-The art is the same whichever is picked: `STUDIO_ART`'s, so Muse Image, Muse Spark's
-checks and SAM 3.1 on `MODEL_API_KEY` unless it says `svg`. For that topic the pick wins
+The pictures are painted by the Studio page's painter for the pick's provider: by default
+Gemini 3.1 Flash Image for Claude, Muse Image for the Muses. For that topic the pick wins
 over `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL` (`STUDIO_BRAIN_EFFORT` still sets Claude's
 effort). The studio keeps it in the job's `brain.json`, so a retry, `videos`, `recover` and
 `step` stay on it, and the bill shows the models that ran. The environment needs the key of

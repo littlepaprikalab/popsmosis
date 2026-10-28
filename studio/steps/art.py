@@ -1,10 +1,13 @@
-"""Step 3: the art. STUDIO_ART picks who makes it, whatever the brain (docs/PLAN.md, section 5):
+"""Step 3: the art. Who makes it goes by the brain's provider, as an admin sets it on /admin/studio
+(painter(); brain.painter(); docs/PLAN.md, section 5):
 
-    muse     the default. Muse Image paints each scene and the helper (Muse Spark) checks it;
-             the locate step then finds the structures in it with SAM 3.1 (studio/steps/locate.py)
+    gemini   Gemini 3.1 Flash Image paints each scene (studio/gemini.py), the default for Claude's brain
+    muse     Muse Image paints each scene (studio/muse.py), the default for Muse's
     svg      the brain draws each scene as SVG, every structure a named group, so the
-             drawing says where each one is and this step writes the masks too. For an
-             environment with no Meta key
+             drawing says where each one is and this step writes the masks too. Claude's only
+
+A painted picture is checked by the helper, and the locate step then finds the structures in it
+with SAM 3.1 (studio/steps/locate.py), whoever painted it.
 
 Switching makes the art again on the next run, as SONG_PROVIDER does the song.
 
@@ -31,7 +34,7 @@ locations.json yet) keeps the scenes it already drew, unless their scene changed
 An answer cut off at the output limit counts as a refused try; any other brain error
 fails the step, and the scenes already drawn are kept for the retry.
 
-The Muse Image art. One picture per scene (studio/muse.py), from the scene's image_prompt,
+The painted art. One picture per scene, from Gemini or Muse Image, from the scene's image_prompt,
 its structures and their colours, and the house style (STYLE). The helper looks at each
 picture for text and for anything missing or wrong; a picture with either is asked for
 again with what was wrong, up to MAX_TRIES pictures in all. A picture with text in it is
@@ -53,12 +56,13 @@ import math
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 
 import skia
 
-from studio import brain, checks, media, muse, svg
+from studio import brain, checks, gemini, jobs, media, muse, svg
 from studio.jobs import read, write
 from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems
 
@@ -66,9 +70,33 @@ PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_te
 MAX_TRIES = 3
 
 
+@dataclass(frozen=True)
+class Painter:
+    """Who paints a scene: its name in the settings, its model, and how to ask it for one picture."""
+
+    name: str
+    title: str
+    model: str
+    make: Callable[[Path, str, str], bytes]  # (job, label, prompt) -> the picture's bytes
+    declined: type[Exception]  # a picture it would not make: a refused try
+
+
+def painter(job: Path) -> str:
+    """Who makes this job's art: gemini, muse or svg, the admin's setting for the brain in force as the API's last
+    claim said (settings.json), else that brain's default."""
+    return brain.painter(jobs.studio_settings(job).get("art"))
+
+
+def painter_of(job: Path) -> Painter:
+    """The painter that paints this job's pictures (not for svg). Looked up at each call, so tests can stand in."""
+    if painter(job) == "gemini":
+        return Painter("gemini", gemini.NAME, gemini.MODEL, lambda *a: gemini.paint(*a), gemini.Declined)
+    return Painter("muse", "Muse Image", muse.IMAGE_MODEL, lambda *a: muse.paint(*a), muse.Declined)
+
+
 def run(job: Path, ask=brain.ask) -> str:
-    if brain.art() == "muse":
-        return run_muse(job, ask)
+    if painter(job) != "svg":
+        return run_painted(job, ask)
     bundle = checks.load(job / "bundle.json")
     resume = located(job) is None
     media.restart(job, media.LOCATIONS)
@@ -90,12 +118,12 @@ def run(job: Path, ask=brain.ask) -> str:
 
 
 def is_done(job: Path) -> bool:
-    """The art is there for this bundle, made the way STUDIO_ART names."""
+    """The art is there for this bundle, made by the painter the settings name."""
     try:
         bundle = checks.load(job / "bundle.json")
     except (OSError, ValueError):
         return False
-    if brain.art() == "muse":
+    if painter(job) != "svg":
         return all(_painted(job, bundle, scene) for scene in bundle.scenes)
     return located(job) is not None and all(_saved(job, bundle, scene) is not None for scene in bundle.scenes)
 
@@ -280,7 +308,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     return "\n\n".join(parts)
 
 
-# --- the Muse Image art (STUDIO_ART=muse) ---------------------------------------------------
+# --- the painted art: Gemini 3.1 Flash Image or Muse Image -------------------------------------
 
 # The house style (docs/PLAN.md, section 5, step 3), after every scene's prompt.
 STYLE = ("Textbook illustration in the style of OpenStax/Campbell: shaded vector, soft gradients, clean outlines, "
@@ -319,8 +347,9 @@ class Painting:
         return (text if self.check.text else []) + self.check.wrong
 
 
-def run_muse(job: Path, ask) -> str:
+def run_painted(job: Path, ask) -> str:
     bundle = checks.load(job / "bundle.json")
+    by = painter_of(job)
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
@@ -332,24 +361,25 @@ def run_muse(job: Path, ask) -> str:
         best, attempts = paint(job, bundle, scene, ask)
         painted, tries = painted + 1, tries + attempts
         left += [f"{scene.id}: {p}" for p in best.check.wrong]
-    return (f"painted {painted} scene{'s' if painted != 1 else ''} with Muse Image in {tries} "
+    return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
             + (f", kept {kept} painted before" if kept else "")
             + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
-    """The scene's picture: the best of up to MAX_TRIES from Muse Image, saved as its art. Returns it and
+    """The scene's picture: the best of up to MAX_TRIES from the job's painter, saved as its art. Returns it and
     how many pictures were asked for."""
+    by = painter_of(job)
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
         old.unlink()
     best, problems, n = None, [], 0
     for n in range(1, MAX_TRIES + 1):
-        prompt = muse_prompt(bundle, scene, problems)
+        prompt = paint_prompt(bundle, scene, problems)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
-            picture = muse.paint(job, label, prompt)
-        except muse.Declined as e:
+            picture = by.make(job, label, prompt)
+        except by.declined as e:
             problems = [f"{e}; describe the scene plainly, as a textbook diagram"]
             continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
@@ -366,17 +396,17 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
         raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_TRIES} tries: {problems[0]}"
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
-    write(_painting(job, scene), {"key": key(bundle, scene), "model": muse.IMAGE_MODEL, "prompt": best.prompt,
+    write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
                                   "try": best.attempt, "check": best.check.model_dump()})
-    _kept(job, scene).unlink(missing_ok=True)  # the art is Muse Image's now, whatever drew it before
+    _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
 
 
 def fit(picture: bytes) -> np.ndarray:
-    """Muse Image's picture (any size, roughly the art's shape) scaled to fit the art on white, centred: RGB."""
+    """A painted picture (any size, roughly the art's shape) scaled to fit the art on white, centred: RGB."""
     image = skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy(picture))
     if image is None:
-        raise muse.MuseError("Muse Image's picture is not an image skia can read")
+        raise media.StepFailed("the painted picture is not an image skia can read")
     surface = skia.Surface(media.ART_WIDTH, media.ART_HEIGHT)
     canvas = surface.getCanvas()
     canvas.clear(skia.ColorWHITE)
@@ -387,7 +417,7 @@ def fit(picture: bytes) -> np.ndarray:
     return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
 
 
-def muse_prompt(bundle: Bundle, scene: Scene, problems: list[str] = ()) -> str:
+def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = ()) -> str:
     lines = [f"- {s.name}: {s.sam_phrase}, coloured {s.color_hex}" for s in scene.structures]
     parts = [f"A diagram for a lesson on {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
              + f", for {bundle.audience}. {scene.image_prompt}",
@@ -407,15 +437,15 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
 
 
 def _painting(job: Path, scene: Scene) -> Path:
-    """art/<scene>.json: what Muse Image's picture of the scene was made from."""
+    """art/<scene>.json: what the painted picture of the scene was made from."""
     return job / "art" / f"{media.file_name(scene.id)}.json"
 
 
 def _painted(job: Path, bundle: Bundle, scene: Scene) -> bool:
-    """Whether the scene's art is Muse Image's picture of the scene as the bundle now has it."""
+    """Whether the scene's art is the job's painter's picture of the scene as the bundle now has it."""
     try:
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    return (isinstance(made, dict) and made.get("key") == key(bundle, scene) and made.get("model") == muse.IMAGE_MODEL
+    return (isinstance(made, dict) and made.get("key") == key(bundle, scene) and made.get("model") == painter_of(job).model
             and (job / media.art_path(scene.id)).exists())

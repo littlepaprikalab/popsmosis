@@ -1,4 +1,4 @@
-"""Muse Image and SAM 3.1 on Meta's Model API: the art and its masks (STUDIO_ART=muse, the default).
+"""Muse Image and SAM 3.1 on Meta's Model API: the art when Muse Image paints it, and the masks of any painted art.
 
     paint(job, label, prompt)                 one picture from Muse Image (POST /v1/images/generations), as PNG bytes
     segment(job, label, art, phrase=...)      SAM 3.1 (POST /v1/responses): every match of a short noun phrase

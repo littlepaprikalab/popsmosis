@@ -19,8 +19,9 @@ to a later run by `python -m studio recover`, which rebuilds the job here from w
 the API stored.
 
 The videos run on the topic's brain (brain.json, which `run` keeps from the claim, and
-`recover` from the API), as the lesson did. The art is STUDIO_ART's whatever the brain:
-Muse Image and SAM 3.1 unless it says svg.
+`recover` from the API), as the lesson did. Who paints the art is the admin's setting for
+that brain's provider (settings.json, kept from the claim that starts each run): Gemini
+3.1 Flash Image or Muse Image, with SAM 3.1 finding the structures, or Claude's own SVG.
 
 It ends with one line, like `run`:
 
@@ -68,14 +69,16 @@ WAIT_MINUTES = 9.0  # under the 10 minutes one tool command may take
 REPO = Path(__file__).resolve().parent.parent
 
 
-def unavailable() -> str | None:
-    """Why the videos cannot be made here, or None. Checks the step modules exist without importing them."""
+def unavailable(job: Path | None = None) -> str | None:
+    """Why the videos cannot be made here, or None. Checks the step modules exist without importing them, and the
+    keys the brain and the art's painter need: the job's painter, or without a job, the default one."""
     if os.environ.get("STUDIO_VIDEOS", "").strip().lower() in ("off", "0", "false", "no"):
         return "the videos are turned off here (STUDIO_VIDEOS)"
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
-    problem = brain.settings_problem() or brain.art_problem()  # the brain's key, and Meta's for Muse Image's art
+    art = jobs.studio_settings(job).get("art") if job else None
+    problem = brain.settings_problem() or brain.art_problem(art)
     if problem:
         return f"the studio's settings are wrong: {problem}"
     return None
@@ -112,7 +115,7 @@ def claim(api: Api, job: Path) -> dict:
 def start_after_post(job: Path, api: Api) -> str:
     """`run` calls this once the lesson is posted: claim the first attempt, so the page says the videos
     are coming and a routine that dies before `videos` starts is still recovered later. Best effort."""
-    why = unavailable()
+    why = unavailable(job)
     if why:
         return f"no videos: {why}"
     try:
@@ -197,18 +200,23 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
 
 def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
     record = Record(job)
-    why = unavailable()
+    why = unavailable(job)
     if why:
         return record.finish(STOPPED, "videos", why)
     try:
         api = api or Api.from_env()
-        claim(api, job)
+        claimed = claim(api, job)
     except Stop as e:
         return record.finish(STOPPED, "claim", str(e))
     except media.StepFailed as e:
         return record.finish(FAILED, "claim", str(e))
     except ApiError as e:  # not configured
         return record.finish(*_outcome(e, "claim"))
+    # Who paints is the admin's setting as of this claim, for the whole run: the heartbeats do not change it.
+    jobs.keep_studio_settings(job, claimed.get("studio"))
+    why = unavailable(job)  # a painter the setting just changed to may need a key this machine lacks
+    if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
+        return record.finish(STOPPED, "videos", why)
 
     with ThreadPoolExecutor(len(BRANCHES)) as pool:
         branches = list(pool.map(lambda steps: _run_steps(job, steps, api, ask, record), BRANCHES))
@@ -279,7 +287,7 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
     if not (job / "posted.json").exists():
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
     with brain.chosen(job_brain(job)):  # the detached run reads brain.json itself
-        why = unavailable()
+        why = unavailable(job)
     if why:
         return STOPPED, "videos", why
     if _alive(_background_pid(job)):
@@ -410,6 +418,7 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
     keep_brain(job, item.get("brain"))  # the topic's brain, as the lesson's
+    jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
 
 

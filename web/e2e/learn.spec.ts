@@ -410,6 +410,43 @@ test.describe('admin', () => {
 // The API is a separate Render service that spins down when idle and goes
 // unroutable for a moment mid-deploy. Render answers those windows itself with
 // an HTML error page, which must never be read as "this user is signed out".
+test.describe('studio settings', () => {
+  const asAda = () => ({ cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' });
+
+  test('an admin picks who paints each brain\'s pictures, and the teacher\'s next claim carries it', async ({ page, context, request }) => {
+    // From the defaults, whatever an earlier run left.
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini', meta: 'muse' } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const claude = page.getByTestId('art-claude');
+    const meta = page.getByTestId('art-meta');
+    await expect(claude.getByRole('radio', { name: /Gemini 3.1 Flash Image/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(meta.getByRole('radio', { name: /Muse Image/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(meta.getByRole('radio', { name: /Claude draws it/ })).toHaveCount(0); // the SVG art is Claude's only
+
+    await claude.getByRole('radio', { name: /Muse Image/ }).click();
+    await expect(claude.getByRole('radio', { name: /Muse Image/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('studio-updated')).toContainText('Last changed');
+    await page.reload();
+    await expect(page.getByTestId('art-claude').getByRole('radio', { name: /Muse Image/ })).toHaveAttribute('aria-checked', 'true');
+
+    // The studio reads it from its claim of a topic.
+    const text = `E2E ${Date.now()}: studio settings`;
+    const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
+    const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
+    expect((await claimed.json()).studio).toEqual({ art: { claude: 'muse', meta: 'muse' } });
+    expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
+  });
+
+  test('is for admins only', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/admin/studio');
+    await expect(page.getByText('Admin access required.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'STUDIO' })).toHaveCount(0);
+  });
+});
+
 test.describe('API unavailable', () => {
   const renderErrorPage = { status: 502, contentType: 'text/html; charset=utf-8', body: '<!DOCTYPE html><html><body>502</body></html>' };
 

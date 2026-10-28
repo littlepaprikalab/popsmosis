@@ -14,7 +14,7 @@ ANSWER = '{"checks": [{"id": "lyric:v1-1", "verdict": "FILLER", "source": "", "p
 @pytest.fixture(autouse=True)
 def default_brain(monkeypatch):
     """The defaults, whatever the session's environment sets (a cloud environment may run the brain on Haiku)."""
-    for name in ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "STUDIO_ART"):
+    for name in ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT"):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -344,43 +344,59 @@ def test_the_brains_are_the_ones_the_api_and_the_page_offer():
         assert picked["model"] in brain.PRICES  # each shows its cost on the bill
 
 
-# --- the art, whatever the brain --------------------------------------------------------------
+# --- who paints the art, by the brain and the admin's setting -------------------------------
 
 
-def test_the_art_is_muse_images_unless_it_says_svg(monkeypatch):
-    assert brain.art() == "muse"
-    monkeypatch.setenv("STUDIO_ART", " svg\n")
-    assert brain.art() == "svg"
-    monkeypatch.setenv("STUDIO_ART", "SVG")
-    with pytest.raises(ValueError, match="STUDIO_ART must be muse or svg, not 'SVG'"):
-        brain.art()
+def test_the_painter_goes_by_the_brains_provider_and_the_admins_setting():
+    assert brain.painter() == "gemini"  # Claude's brain, nothing set: Gemini 3.1 Flash Image
+    assert brain.painter({"claude": "muse"}) == "muse"
+    assert brain.painter({"claude": "svg", "meta": "gemini"}) == "svg"
+    assert brain.painter({"claude": "imagen"}) == "gemini"  # not a painter: the default
+    with brain.chosen("muse-spark"):
+        assert brain.painter() == "muse"  # Muse's brain, nothing set: Muse Image
+        assert brain.painter({"claude": "svg", "meta": "gemini"}) == "gemini"
+        assert brain.painter({"meta": "svg"}) == "muse"  # the SVG art is Claude's only
+    assert brain.ART_CHOICES == {"claude": ("gemini", "muse", "svg"), "meta": ("muse", "gemini")}
 
 
-def test_the_helper_checks_muse_images_art_on_muse_spark_whatever_the_brain(monkeypatch):
-    """It is part of the Muse Image flow: on Claude's brain the brain role is Claude's and the helper is Meta's."""
+def test_the_helper_is_the_brains_whoever_paints(monkeypatch):
+    """It checks each picture and boxes what SAM missed: Claude Haiku on Claude's brain, Muse Spark on Muse's."""
     sent = []
+    monkeypatch.setitem(brain._clients, "claude", NS(beta=NS(messages=NS(stream=FakeStream(
+        message([text('{"seen": true}')], model="claude-haiku-5-5"), sent)))))
+    brain.ask("helper", "Any text in it?")
+    assert sent[-1]["model"] == "claude-haiku-5-5"
     answer = NS(model="muse-spark-1.3", usage=NS(prompt_tokens=10, completion_tokens=5),
                 choices=[NS(finish_reason="stop", message=NS(content="seen", refusal=None))])
-    monkeypatch.setitem(brain._clients, "meta", NS(chat=NS(completions=NS(create=lambda **r: sent.append(r) or answer))))
+    seen = []
+    monkeypatch.setitem(brain._clients, "meta", NS(chat=NS(completions=NS(create=lambda **r: seen.append(r) or answer))))
     monkeypatch.setenv("MODEL_API_KEY", "k")
-    for picked in (None, "claude", "muse-wonder"):
-        with brain.chosen(picked):
-            assert brain.ask("helper", "Any text in it?") == {"text": "seen"}
-    assert [r["model"] for r in sent] == ["muse-spark-1.3"] * 3
-    assert (brain.role_provider("brain"), brain.role_provider("helper")) == ("claude", "meta")
-    monkeypatch.setenv("STUDIO_ART", "svg")  # the brain draws it, and nothing checks a picture
-    assert brain.role_provider("helper") == "claude"
+    with brain.chosen("muse-wonder"):
+        brain.ask("helper", "Any text in it?")
+    assert seen[-1]["model"] == "muse-spark-1.3"
 
 
-def test_the_art_says_it_needs_the_meta_key_on_claudes_brain(monkeypatch):
+@pytest.mark.parametrize("brain_name, art, keys, problem", [
+    (None, None, {"GEMINI_API_KEY", "MODEL_API_KEY"}, None),
+    (None, None, {"MODEL_API_KEY"}, "the art needs GEMINI_API_KEY: Gemini 3.1 Flash Image paints it"),
+    (None, None, set(), "the art needs GEMINI_API_KEY and MODEL_API_KEY: Gemini 3.1 Flash Image paints it and SAM 3.1"),
+    (None, {"claude": "muse"}, {"MODEL_API_KEY"}, None),
+    (None, {"claude": "svg"}, set(), None),  # Claude draws it: no other key
+    ("muse-spark", None, {"GEMINI_API_KEY"}, "the art needs MODEL_API_KEY: Muse Image paints it"),
+    ("muse-spark", {"meta": "gemini"}, {"MODEL_API_KEY"}, "the art needs GEMINI_API_KEY: Gemini 3.1 Flash Image"),
+])
+def test_the_art_needs_its_painters_key_and_metas_for_sam(monkeypatch, brain_name, art, keys, problem):
+    for var in ("GEMINI_API_KEY", "MODEL_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    for var in keys:
+        monkeypatch.setenv(var, "k")
+    with brain.chosen(brain_name):
+        found = brain.art_problem(art)
+    assert found is None if problem is None else (problem in found and found.endswith(
+        "(an admin can pick another painter on /admin/studio)"))
+
+
+def test_sam_says_it_needs_the_meta_key_on_claudes_brain(monkeypatch):
     monkeypatch.delenv("MODEL_API_KEY", raising=False)
-    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
-    assert brain.settings_problem() is None  # the lesson needs only the brain's key
-    assert brain.art_problem() == ("the art needs MODEL_API_KEY: Muse Image paints it and SAM 3.1 finds its "
-                                   "structures (STUDIO_ART=svg has the brain draw it instead)")
-    with pytest.raises(brain.BrainError, match=r"^the art \(Muse Image, SAM 3.1 and Muse Spark's checks\) needs MODEL_API_KEY"):
+    with pytest.raises(brain.BrainError, match=r"^SAM 3.1 \(and Muse Image, when it paints\) needs MODEL_API_KEY"):
         brain.meta_key()
-    monkeypatch.setenv("STUDIO_ART", "svg")
-    assert brain.art_problem() is None
-    monkeypatch.setenv("STUDIO_ART", "paint")
-    assert brain.art_problem() == "STUDIO_ART must be muse or svg, not 'paint'"

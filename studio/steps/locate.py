@@ -1,9 +1,9 @@
 """Step 4: locate each structure in the art (docs/PLAN.md, section 5).
 
-With the SVG art (STUDIO_ART=svg) the art step already wrote the masks and
-locations.json, so there is nothing to do.
+With the SVG art (an admin's setting for Claude's brain) the art step already wrote the masks
+and locations.json, so there is nothing to do.
 
-With Muse Image's art (STUDIO_ART=muse, the default) SAM 3.1 finds each structure (studio/muse.py):
+With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each structure (studio/muse.py):
 
 1. SAM is given the structure's sam_phrase. Every match at least MIN_CONFIDENCE sure
    makes up its mask (a structure the picture shows twice keeps both).
@@ -51,14 +51,14 @@ class Spot(Strict):
 
 
 def run(job: Path, ask=brain.ask) -> str:
-    if brain.art() != "muse":
+    if art.painter(job) == "svg":
         if is_done(job):
             return "nothing to do: the art step located every structure"
         raise media.StepFailed("no SVG art and locations.json for this bundle; run the art step first (its SVG "
                                "art locates every structure)")
     bundle = checks.load(job / "bundle.json")
     if not art.is_done(job):
-        raise media.StepFailed("no Muse Image art for this bundle; run the art step first")
+        raise media.StepFailed(f"no {art.painter_of(job).title} art for this bundle; run the art step first")
     media.restart(job, media.LOCATIONS)
     scenes, left_out, boxed = [], [], []
     for scene in bundle.scenes:

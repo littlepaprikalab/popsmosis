@@ -11,15 +11,16 @@ Muse model on meta (muse-spark-1.3 vets a change for about a quarter of Muse Won
 price). STUDIO_BRAIN_EFFORT sets its effort, on claude only. Unset or empty, each keeps
 the default above, and the helper has no such setting.
 
-STUDIO_ART picks who makes the art, whatever the brain (studio/steps/art.py, art()): muse,
-the default, has Muse Image paint it and SAM 3.1 find its structures, and the helper that
-checks each picture is then Muse Spark on either provider, since it is part of that flow;
-svg has the brain draw it, for an environment with no Meta key.
+Who paints the art goes by the brain's provider, as an admin sets it on /admin/studio
+(painter(); api/src/lib/studio-settings.ts): by default Gemini 3.1 Flash Image for Claude's
+brain and Muse Image for Muse's, and SAM 3.1 then finds the structures in either. Claude's
+brain may instead draw the art as SVG. The helper, which checks each picture and boxes a
+structure SAM missed, is the brain's provider's whoever paints.
 
 A topic can carry a brain of its own, picked by an admin on /learn (CHOICES). The runners
 put it in force with chosen() and choose(), and for that topic's droplet it wins over
-BRAIN_PROVIDER and STUDIO_BRAIN_MODEL; STUDIO_BRAIN_EFFORT still sets Claude's effort,
-and the art is still STUDIO_ART's.
+BRAIN_PROVIDER and STUDIO_BRAIN_MODEL, its painter included; STUDIO_BRAIN_EFFORT still
+sets Claude's effort.
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -57,8 +58,12 @@ META = {
 }
 META_BASE_URL = "https://api.meta.ai/v1"
 META_KEY_VAR = "MODEL_API_KEY"
-# Who makes the art (art()): Muse Image and SAM 3.1 on Meta's API, or the brain as SVG.
-ARTS = ("muse", "svg")
+# Who paints the art, by the brain's provider (painter()). An admin changes it on /admin/studio, and the API keeps
+# the same lists (api/src/lib/studio-settings.ts): each provider's default is first.
+ART_CHOICES = {"claude": ("gemini", "muse", "svg"), "meta": ("muse", "gemini")}
+PAINTER_NAMES = {"gemini": "Gemini 3.1 Flash Image", "muse": "Muse Image", "svg": "the brain, as SVG"}
+# The keys each painter's art needs: SAM 3.1 finds the structures in a painted picture, on Meta's key.
+PAINTER_KEYS = {"gemini": ("GEMINI_API_KEY", META_KEY_VAR), "muse": (META_KEY_VAR,), "svg": ()}
 
 # The brains an admin may pick for one topic on /learn: its provider and brain model. The API holds the same
 # keys (api/src/lib/brains.ts); keep the two lists the same.
@@ -234,7 +239,7 @@ def ask(
     """
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}, not {role!r}")
-    if role_provider(role) == "claude":
+    if provider() == "claude":
         texts = _ask_claude(role, prompt, schema, images, system, label or role)
     else:
         texts = _ask_meta(role, prompt, schema, images, system, label or role)
@@ -255,42 +260,36 @@ def provider() -> str:
     return name
 
 
-def art() -> str:
-    """STUDIO_ART: who makes the art, whatever the brain. muse (the default): Muse Image paints each scene,
-    Muse Spark checks it and SAM 3.1 finds its structures, all on MODEL_API_KEY. svg: the brain draws it."""
-    name = os.environ.get("STUDIO_ART", "").strip() or "muse"
-    if name not in ARTS:
-        raise ValueError(f"STUDIO_ART must be muse or svg, not {name!r}")
-    return name
-
-
-def role_provider(role: str) -> str:
-    """Whose model answers a role: the brain's provider, but the helper runs on Meta's Muse Spark whenever the
-    art is Muse Image's, since checking those pictures and boxing what SAM missed is part of that flow."""
-    if role == "helper" and art() == "muse":
-        return "meta"
-    return provider()
+def painter(art: dict | None = None) -> str:
+    """Who paints the art for the brain in force: gemini, muse or svg. art is the admin's setting as the API's claim
+    said ({"claude": ..., "meta": ...}); a provider it leaves out, or a painter that provider may not use, gets the
+    default: Gemini 3.1 Flash Image for Claude's brain, Muse Image for Muse's."""
+    allowed = ART_CHOICES[provider()]
+    picked = (art or {}).get(provider()) if isinstance(art, dict) else None
+    return picked if picked in allowed else allowed[0]
 
 
 def meta_key() -> str:
     """The Meta API key every Meta model here takes: the brain's, Muse Image's and SAM's."""
     key = os.environ.get(META_KEY_VAR)
     if not key:
-        who = _who() if provider() == "meta" else "the art (Muse Image, SAM 3.1 and Muse Spark's checks)"
+        who = _who() if provider() == "meta" else "SAM 3.1 (and Muse Image, when it paints)"
         raise BrainError(f"{who} needs {META_KEY_VAR}")
     return key
 
 
-def art_problem() -> str | None:
-    """What is wrong with the art's settings (STUDIO_ART and, for Muse Image's, MODEL_API_KEY), or None.
-    The videos ask before they claim anything, as for settings_problem()."""
+def art_problem(art: dict | None = None) -> str | None:
+    """What the art's painter (painter(art)) needs and this environment does not have, or None. The videos ask
+    before they claim anything, as for settings_problem()."""
     try:
-        if art() == "muse" and not os.environ.get(META_KEY_VAR):
-            return (f"the art needs {META_KEY_VAR}: Muse Image paints it and SAM 3.1 finds its structures "
-                    "(STUDIO_ART=svg has the brain draw it instead)")
-    except ValueError as e:
+        name = painter(art)
+    except (ValueError, BrainError) as e:
         return str(e)
-    return None
+    missing = [var for var in PAINTER_KEYS[name] if not os.environ.get(var)]
+    if not missing:
+        return None
+    return (f"the art needs {' and '.join(missing)}: {PAINTER_NAMES[name]} paints it and SAM 3.1 finds its "
+            "structures (an admin can pick another painter on /admin/studio)")
 
 
 def settings_problem() -> str | None:
