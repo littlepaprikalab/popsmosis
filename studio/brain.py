@@ -9,14 +9,17 @@ BRAIN_PROVIDER picks the models behind the two thinking roles (docs/PLAN.md, sec
 STUDIO_BRAIN_MODEL sets the brain's model on either provider: a Claude model on claude, a
 Muse model on meta (muse-spark-1.3 vets a change for about a quarter of Muse Wonder's
 price). STUDIO_BRAIN_EFFORT sets its effort, on claude only. Unset or empty, each keeps
-the default above, and the helper has no such setting. BRAIN_PROVIDER also picks who
-makes the art: the brain draws SVG on claude, Muse Image paints it on meta
-(studio/steps/art.py).
+the default above, and the helper has no such setting.
+
+STUDIO_ART picks who makes the art, whatever the brain (studio/steps/art.py, art()): muse,
+the default, has Muse Image paint it and SAM 3.1 find its structures, and the helper that
+checks each picture is then Muse Spark on either provider, since it is part of that flow;
+svg has the brain draw it, for an environment with no Meta key.
 
 A topic can carry a brain of its own, picked by an admin on /learn (CHOICES). The runners
-put it in force with chosen() and choose(), and for that topic's whole droplet, its art
-included, it wins over BRAIN_PROVIDER and STUDIO_BRAIN_MODEL; STUDIO_BRAIN_EFFORT still
-sets Claude's effort.
+put it in force with chosen() and choose(), and for that topic's droplet it wins over
+BRAIN_PROVIDER and STUDIO_BRAIN_MODEL; STUDIO_BRAIN_EFFORT still sets Claude's effort,
+and the art is still STUDIO_ART's.
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -54,6 +57,8 @@ META = {
 }
 META_BASE_URL = "https://api.meta.ai/v1"
 META_KEY_VAR = "MODEL_API_KEY"
+# Who makes the art (art()): Muse Image and SAM 3.1 on Meta's API, or the brain as SVG.
+ARTS = ("muse", "svg")
 
 # The brains an admin may pick for one topic on /learn: its provider and brain model. The API holds the same
 # keys (api/src/lib/brains.ts); keep the two lists the same.
@@ -229,7 +234,7 @@ def ask(
     """
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}, not {role!r}")
-    if provider() == "claude":
+    if role_provider(role) == "claude":
         texts = _ask_claude(role, prompt, schema, images, system, label or role)
     else:
         texts = _ask_meta(role, prompt, schema, images, system, label or role)
@@ -250,12 +255,42 @@ def provider() -> str:
     return name
 
 
+def art() -> str:
+    """STUDIO_ART: who makes the art, whatever the brain. muse (the default): Muse Image paints each scene,
+    Muse Spark checks it and SAM 3.1 finds its structures, all on MODEL_API_KEY. svg: the brain draws it."""
+    name = os.environ.get("STUDIO_ART", "").strip() or "muse"
+    if name not in ARTS:
+        raise ValueError(f"STUDIO_ART must be muse or svg, not {name!r}")
+    return name
+
+
+def role_provider(role: str) -> str:
+    """Whose model answers a role: the brain's provider, but the helper runs on Meta's Muse Spark whenever the
+    art is Muse Image's, since checking those pictures and boxing what SAM missed is part of that flow."""
+    if role == "helper" and art() == "muse":
+        return "meta"
+    return provider()
+
+
 def meta_key() -> str:
     """The Meta API key every Meta model here takes: the brain's, Muse Image's and SAM's."""
     key = os.environ.get(META_KEY_VAR)
     if not key:
-        raise BrainError(f"{_who()} needs {META_KEY_VAR}")
+        who = _who() if provider() == "meta" else "the art (Muse Image, SAM 3.1 and Muse Spark's checks)"
+        raise BrainError(f"{who} needs {META_KEY_VAR}")
     return key
+
+
+def art_problem() -> str | None:
+    """What is wrong with the art's settings (STUDIO_ART and, for Muse Image's, MODEL_API_KEY), or None.
+    The videos ask before they claim anything, as for settings_problem()."""
+    try:
+        if art() == "muse" and not os.environ.get(META_KEY_VAR):
+            return (f"the art needs {META_KEY_VAR}: Muse Image paints it and SAM 3.1 finds its structures "
+                    "(STUDIO_ART=svg has the brain draw it instead)")
+    except ValueError as e:
+        return str(e)
+    return None
 
 
 def settings_problem() -> str | None:

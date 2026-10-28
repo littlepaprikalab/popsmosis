@@ -374,6 +374,7 @@ def meta_job(setup, monkeypatch):
     monkeypatch.setenv("BRAIN_PROVIDER", "meta")
     monkeypatch.setenv("MODEL_API_KEY", "meta-test-key")
     monkeypatch.delenv("STUDIO_BRAIN_MODEL", raising=False)
+    monkeypatch.delenv("STUDIO_ART", raising=False)
     setup.barrier = threading.Barrier(1)  # the real art step does not wait for the audio
     real = {"art": art, "locate": locate}
     stand_ins = setup.module
@@ -428,18 +429,18 @@ def test_on_meta_a_failed_locate_keeps_the_pictures_and_the_retry_only_locates(m
     assert meta_job.muse.painted == []  # the pictures were paid for once
 
 
-def test_switching_the_provider_between_runs_remakes_the_art_and_everything_after_it(meta_job, monkeypatch):
+def test_switching_the_art_between_runs_remakes_it_and_everything_after_it(meta_job, monkeypatch):
     setup = meta_job
     job = meta_job.job
     videos.videos("q1", api=VideoApi())
     assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "the videos were already made")
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    monkeypatch.setenv("STUDIO_ART", "svg")
     assert videos.videos("q1", api=VideoApi())[0] == "DONE"
     assert [label for label in meta_job.artist.labels()] == ["art hook", "art overview", "art synthase"]
     assert not (job / "art" / "hook.json").exists() and (job / "art" / "hook.svg").exists()
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setenv("STUDIO_ART", "muse")
     meta_job.muse.painted.clear()
     assert videos.videos("q1", api=VideoApi())[0] == "DONE"
     assert len(meta_job.muse.painted) == 3 and not (job / "art" / "hook.svg").exists()
@@ -464,11 +465,11 @@ def test_wrong_brain_settings_stop_the_videos_before_anything_is_claimed(setup, 
 # --- a topic's own brain, picked by an admin on /learn ----------------------------------------
 
 
-def test_the_art_is_made_on_the_topics_brain_whatever_the_environment_says(meta_job, monkeypatch):
+def test_a_topic_sent_to_claude_still_gets_muse_images_art(meta_job, monkeypatch):
+    """Claude writes and checks the lesson; Muse Image, Muse Spark and SAM 3.1 make the art, as on Muse."""
     from studio import brain
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
-    operator_run.keep_brain(meta_job.job, "muse-spark")
+    operator_run.keep_brain(meta_job.job, "claude")
     assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "upload made")
     assert len(meta_job.muse.painted) == 3 and meta_job.artist.labels() == []  # Muse Image, not the SVG artist
     assert brain.topic_brain() is None
@@ -483,9 +484,26 @@ def test_recover_keeps_the_topics_brain_so_the_new_machine_makes_the_art_the_sam
     assert operator_run.job_brain(jobs.ROOT / "q9") == "muse-spark"
 
 
+def test_the_videos_need_the_meta_key_for_muse_images_art_whatever_the_brain(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    for name in ("BRAIN_PROVIDER", "MODEL_API_KEY", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "STUDIO_VIDEOS",
+                 "STUDIO_ART"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")  # Claude's brain is set up; Meta's key is not
+    api = VideoApi()
+    operator_run.keep_brain(posted(), "claude")
+    wrong = ("the studio's settings are wrong: the art needs MODEL_API_KEY: Muse Image paints it and SAM 3.1 finds "
+             "its structures (STUDIO_ART=svg has the brain draw it instead)")
+    assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert api.calls == [] and setup.ran == []
+    monkeypatch.setenv("STUDIO_ART", "svg")  # the brain draws it: no Meta key needed
+    assert videos.videos("q1", api=api)[0] == "DONE"
+
+
 def test_the_videos_check_the_settings_of_the_topics_brain(setup, monkeypatch):
     monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
-    for name in ("BRAIN_PROVIDER", "MODEL_API_KEY", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "STUDIO_VIDEOS"):
+    for name in ("BRAIN_PROVIDER", "MODEL_API_KEY", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "STUDIO_VIDEOS",
+                 "STUDIO_ART"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
     api = VideoApi()

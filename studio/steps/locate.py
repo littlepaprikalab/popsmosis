@@ -1,9 +1,9 @@
 """Step 4: locate each structure in the art (docs/PLAN.md, section 5).
 
-With the SVG art (BRAIN_PROVIDER=claude) the art step already wrote the masks and
+With the SVG art (STUDIO_ART=svg) the art step already wrote the masks and
 locations.json, so there is nothing to do.
 
-With Muse Image's art (BRAIN_PROVIDER=meta) SAM 3.1 finds each structure (studio/muse.py):
+With Muse Image's art (STUDIO_ART=muse, the default) SAM 3.1 finds each structure (studio/muse.py):
 
 1. SAM is given the structure's sam_phrase. Every match at least MIN_CONFIDENCE sure
    makes up its mask (a structure the picture shows twice keeps both).
@@ -51,7 +51,7 @@ class Spot(Strict):
 
 
 def run(job: Path, ask=brain.ask) -> str:
-    if brain.provider() != "meta":
+    if brain.art() != "muse":
         if is_done(job):
             return "nothing to do: the art step located every structure"
         raise media.StepFailed("no SVG art and locations.json for this bundle; run the art step first (its SVG "

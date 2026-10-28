@@ -94,14 +94,16 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 - **Two agents keep a public record on Inkmory.** Claude, the operator, and Muse Wonder,
   the planner, each read who they are before a run and write down what happened after it
   (section 11).
-- **The brain is swappable.** `BRAIN_PROVIDER` picks the models for the thinking roles,
-  and who makes the art (step 3). It defaults to `claude`. Switch to `meta` once the key
-  is in the routine's environment: this is a Meta hackathon, so the submission runs on Meta.
+- **The brain is swappable.** `BRAIN_PROVIDER` picks the brain's model. It defaults to
+  `claude`. Switch to `meta` once the key is in the routine's environment: this is a Meta
+  hackathon, so the submission runs on Meta. The art is Meta's with either brain
+  (`STUDIO_ART=muse`, the default: Muse Image, SAM 3.1 and Muse Spark's checks cost less
+  than the brain drawing it); `STUDIO_ART=svg` has the brain draw it instead.
 
 | Role | `BRAIN_PROVIDER=claude` (default for now) | `BRAIN_PROVIDER=meta` |
 |---|---|---|
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` | Muse Wonder (`muse-wonder-1.0`) |
-| **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
+| **Helper**: image checks, SAM boxes, QA stills | Muse Spark (`muse-spark-1.3`) with Muse Image's art; Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low`, with the SVG art, where nothing calls it | Muse Spark (`muse-spark-1.3`) |
 
 `STUDIO_BRAIN_MODEL` changes the brain's model on either provider: a Claude model with
 `claude`, a Muse model with `meta` (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to
@@ -109,15 +111,15 @@ vet a change; its Contributor version is cheaper still, but Meta may train on wh
 sent, so test topics only). `STUDIO_BRAIN_EFFORT` changes the effort with `claude`.
 Unset, they are the defaults above. The helper's models are set in `studio/brain.py`.
 An admin can also send one topic to its own brain on `/learn` (Claude, Muse Wonder or Muse
-Spark), which wins over both for that topic's droplet, its art included: README, "One
-topic on another brain".
+Spark), which wins over both for that topic's lesson; its art is `STUDIO_ART`'s as for
+any topic: README, "One topic on another brain".
 
 The other jobs:
 
 | Job | Made by |
 |---|---|
-| Diagrams | Muse Image (`muse-image-1.0`) with `BRAIN_PROVIDER=meta`; brain-drawn SVG with `claude` (step 3) |
-| Structure masks | SAM 3.1 (`sam-3.1`) on Muse Image's art, with a helper box as the fallback; the SVG art's own groups with `claude` |
+| Diagrams | Muse Image (`muse-image-1.0`) with either brain; brain-drawn SVG with `STUDIO_ART=svg` (step 3) |
+| Structure masks | SAM 3.1 (`sam-3.1`) on Muse Image's art, with a helper box as the fallback; the SVG art's own groups with `STUDIO_ART=svg` |
 | Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API with `SONG_PROVIDER=gemini` |
 | Narration | ElevenLabs text-to-speech with timestamps |
 | Word timing (song) | Demucs (vocals) + Meta's MMS forced aligner, both open source, run locally |
@@ -173,8 +175,8 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | 1 | Bundle | Brain, one call | `bundle.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
-| 3 | Art | Muse Image + helper (`meta`); the brain's SVG (`claude`) | `art/<scene>.png` |
-| 4 | Locate | SAM 3.1 + helper (`meta`); nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
+| 3 | Art | Muse Image + helper (`STUDIO_ART=muse`, either brain); the brain's SVG (`svg`) | `art/<scene>.png` |
+| 4 | Locate | SAM 3.1 + helper (`muse`); nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
 | 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
 | 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
@@ -273,7 +275,7 @@ cytochrome b6f pumps).
 
 ### Step 3: art
 
-**With `BRAIN_PROVIDER=meta`:** Muse Image (`/v1/images/generations`), size `1792x1024`
+**With `STUDIO_ART=muse`, the default, whatever the brain:** Muse Image (`/v1/images/generations`), size `1792x1024`
 (an aspect ratio: the picture is fitted to the art on white). The prompt suffix is always:
 "textbook illustration in the style of OpenStax/Campbell, shaded vector, soft gradients,
 clean outlines, white background, scientifically accurate, absolutely no text, no labels,
@@ -284,11 +286,11 @@ wrong. A picture with text is never used; after the third, the scene keeps the t
 picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`), not
 yet run against the live API.
 
-**With `BRAIN_PROVIDER=claude`**, the brain draws each scene as SVG, with every structure
+**With `STUDIO_ART=svg`**, the brain draws each scene as SVG, with every structure
 as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
 time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
 Image, but it writes the same files, so everything downstream is built and tested against
-it unchanged. Switching the provider makes a job's art again on its next run.
+it unchanged. Switching `STUDIO_ART` makes a job's art again on its next run.
 
 ### Step 4: locate
 
@@ -871,8 +873,9 @@ seams, which no lane owns:
 
 ## 13. Risks and fallbacks
 
-- **No Meta key in time, or Meta's API misbehaves:** `BRAIN_PROVIDER=claude` runs the
-  whole pipeline on the Claude brain and the SVG art. Nothing downstream changes.
+- **No Meta key in time, or Meta's API misbehaves:** `BRAIN_PROVIDER=claude` with
+  `STUDIO_ART=svg` runs the whole pipeline on the Claude brain and the SVG art. Nothing
+  downstream changes.
 - **SAM misses illustrated anatomy:** a helper box plus a SAM box prompt; a structure
   neither finds goes unlabelled.
 - **Muse Image puts text in the art:** a stronger negative prompt, the helper check,

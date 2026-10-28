@@ -171,27 +171,32 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 
 | Variable | Values | Default | What it does |
 |---|---|---|---|
-| `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson, and who makes its art (the next table) |
+| `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson (the next table) |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | none | Needed with `claude`. `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
-| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`. Every Meta model the studio calls bills to it |
+| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`, and for the art with either. Every Meta model the studio calls bills to it |
+| `STUDIO_ART` | `muse` or `svg` | `muse` | Who makes the art, whatever the brain: Muse Image paints it and SAM 3.1 finds its structures (`muse`), or the brain draws it as SVG (`svg`, for an environment with no Meta key) |
 | `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. Change it when you change `BRAIN_PROVIDER`: a model from the other provider stops the run (below) |
 | `STUDIO_BRAIN_EFFORT` | `low`, `medium`, `high`, `xhigh`, `max` | `high` | How hard the brain thinks, with `claude` only; `meta` ignores it |
 
-What each `BRAIN_PROVIDER` runs:
+What runs, by `BRAIN_PROVIDER` and `STUDIO_ART`:
 
 | Job | `claude` | `meta` |
 |---|---|---|
 | Brain: writes and fact-checks the lesson | Claude Opus 5.5, or `STUDIO_BRAIN_MODEL` | Muse Wonder 1.0, or `STUDIO_BRAIN_MODEL` |
-| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 (not called: code checks the SVG art) | Muse Spark 1.3 |
-| Art | the brain draws each scene as SVG | Muse Image 1.0 paints it, $0.01 a picture, up to three a scene |
-| Finding each structure in the art | the SVG says where each one is | SAM 3.1, $2.50 per 1,000 images |
 
-Switching `BRAIN_PROVIDER` makes a job's art again on its next run; a lesson already
-written stays as it is.
+| Job | `muse` (the default, with either brain) | `svg` |
+|---|---|---|
+| Art | Muse Image 1.0 paints it, $0.01 a picture, up to three a scene | the brain draws each scene as SVG |
+| Helper: checks each picture, boxes a structure SAM missed | Muse Spark 1.3, with either brain: it is part of this flow | not called: code checks the SVG |
+| Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images | the SVG says where each one is |
+
+The art stays on Meta's models with Claude's brain because they cost less than the brain
+drawing it: cents a droplet. Switching `STUDIO_ART` makes a job's art again on its next
+run; a lesson already written stays as it is.
 
 `run`, `videos` and `recover` check these settings before they claim anything. A wrong one
 (an unknown provider, its key missing, a model from the other provider, a misspelled
-effort) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
+effort; for `videos` and `recover`, the art's Meta key missing too) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
 `videos`), and the teacher stops and reports it, so no topic is failed or given up over a
 setting.
 
@@ -220,15 +225,16 @@ An admin can send one topic to a brain of its own: the **Brain** buttons under t
 `/learn` (admins only; a learner's topic is always made by the teacher's own). The pick is
 remembered on that browser, and the topic's card shows it.
 
-| Button | Brain | Art | Bills to |
-|---|---|---|---|
-| Default | whatever the variables above say | the same | the same |
-| Claude | Claude Opus 5.5 (`claude-opus-5-5`) | the brain draws it as SVG | `POPSMOSIS_ANTHROPIC_API_KEY` |
-| Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | Muse Image paints it | `MODEL_API_KEY` |
-| Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | Muse Image paints it | `MODEL_API_KEY` |
+| Button | Brain: writes and fact-checks the lesson | Brain bills to |
+|---|---|---|
+| Default | whatever `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL` say | the same |
+| Claude | Claude Opus 5.5 (`claude-opus-5-5`) | `POPSMOSIS_ANTHROPIC_API_KEY` |
+| Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
+| Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | `MODEL_API_KEY` |
 
-For that topic the pick wins over `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL`, for the whole
-droplet: the lesson, its fact-check and the art (`STUDIO_BRAIN_EFFORT` still sets Claude's
+The art is the same whichever is picked: `STUDIO_ART`'s, so Muse Image, Muse Spark's
+checks and SAM 3.1 on `MODEL_API_KEY` unless it says `svg`. For that topic the pick wins
+over `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL` (`STUDIO_BRAIN_EFFORT` still sets Claude's
 effort). The studio keeps it in the job's `brain.json`, so a retry, `videos`, `recover` and
 `step` stay on it, and the bill shows the models that ran. The environment needs the key of
 the pick's provider: a topic sent to a brain whose key is missing fails at its first step

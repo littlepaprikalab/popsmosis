@@ -1,10 +1,10 @@
-"""Muse Image and SAM 3.1 on Meta's Model API: the art and its masks when BRAIN_PROVIDER=meta.
+"""Muse Image and SAM 3.1 on Meta's Model API: the art and its masks (STUDIO_ART=muse, the default).
 
     paint(job, label, prompt)                 one picture from Muse Image (POST /v1/images/generations), as PNG bytes
     segment(job, label, art, phrase=...)      SAM 3.1 (POST /v1/responses): every match of a short noun phrase
     segment(job, label, art, box=...)         or the one thing inside a box, each as a full-size mask
 
-Both take MODEL_API_KEY, the brain's Meta key, and log each call that comes back to the
+Both take MODEL_API_KEY, the Meta key, whatever the brain, and log each call that comes back to the
 job's calls.jsonl (studio/ledger.py) at Meta's price: $0.01 a picture, $2.50 per 1,000
 images segmented. Neither has run against the live API yet; the request and answer
 shapes follow Meta's docs (dev.meta.ai/docs/image-generation, dev.meta.ai/docs/sam).

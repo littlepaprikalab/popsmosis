@@ -1,16 +1,16 @@
 /**
  * The brains an admin may pick for a new topic on /learn (api/src/lib/brains.ts). Null is the teacher's own
  * setting (BRAIN_PROVIDER where the studio runs), and the only one a learner's topic gets. The brain writes and
- * fact-checks the lesson, and its provider makes the art: Claude draws it, Muse Image paints it on Meta's models.
+ * fact-checks the lesson; the art is Muse Image's whichever is picked (STUDIO_ART where the studio runs).
  */
 
 export type Brain = 'claude' | 'muse-wonder' | 'muse-spark';
 
 export const BRAIN_OPTIONS: { value: Brain | null; label: string; note: string }[] = [
   { value: null, label: 'Default', note: 'Whatever the teacher is set to (BRAIN_PROVIDER where the studio runs).' },
-  { value: 'claude', label: 'Claude', note: 'Claude Opus 5.5 writes, checks and draws it. Billed to the Anthropic key.' },
-  { value: 'muse-wonder', label: 'Muse Wonder', note: 'Muse Wonder 1.0 writes and checks it; Muse Image paints the art. Billed to the Meta key.' },
-  { value: 'muse-spark', label: 'Muse Spark', note: 'Muse Spark 1.3 writes and checks it, at about a quarter of Wonder’s price; Muse Image paints the art. Billed to the Meta key.' },
+  { value: 'claude', label: 'Claude', note: 'Claude Opus 5.5 writes and checks it, billed to the Anthropic key. Muse Image still paints the art, for cents.' },
+  { value: 'muse-wonder', label: 'Muse Wonder', note: 'Muse Wonder 1.0 writes and checks it, billed to the Meta key. Muse Image paints the art.' },
+  { value: 'muse-spark', label: 'Muse Spark', note: 'Muse Spark 1.3 writes and checks it, at about a quarter of Wonder’s price, billed to the Meta key. Muse Image paints the art.' },
 ];
 
 export function brainLabel(value: string | null | undefined): string | null {

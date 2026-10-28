@@ -18,8 +18,9 @@ attempt this machine has. A render that goes quiet past VIDEO_STALE_MINUTES is h
 to a later run by `python -m studio recover`, which rebuilds the job here from what
 the API stored.
 
-The art is made by the provider of the topic's brain (brain.json, which `run` keeps from
-the claim, and `recover` from the API), so the videos run on the brain the lesson did.
+The videos run on the topic's brain (brain.json, which `run` keeps from the claim, and
+`recover` from the API), as the lesson did. The art is STUDIO_ART's whatever the brain:
+Muse Image and SAM 3.1 unless it says svg.
 
 It ends with one line, like `run`:
 
@@ -74,7 +75,7 @@ def unavailable() -> str | None:
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
-    problem = brain.settings_problem()  # the art is the brain's, or Meta's on its key
+    problem = brain.settings_problem() or brain.art_problem()  # the brain's key, and Meta's for Muse Image's art
     if problem:
         return f"the studio's settings are wrong: {problem}"
     return None
@@ -408,7 +409,7 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "bundle.json", bundle)
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
-    keep_brain(job, item.get("brain"))  # the art is made by the topic's brain's provider
+    keep_brain(job, item.get("brain"))  # the topic's brain, as the lesson's
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
 
 

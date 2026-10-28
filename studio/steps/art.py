@@ -1,9 +1,10 @@
-"""Step 3: the art. BRAIN_PROVIDER picks who makes it (docs/PLAN.md, section 5):
+"""Step 3: the art. STUDIO_ART picks who makes it, whatever the brain (docs/PLAN.md, section 5):
 
-    claude   the brain draws each scene as SVG, every structure a named group, so the
-             drawing says where each one is and this step writes the masks too
-    meta     Muse Image paints each scene and the helper checks it; the locate step then
-             finds the structures in it with SAM 3.1 (studio/steps/locate.py)
+    muse     the default. Muse Image paints each scene and the helper (Muse Spark) checks it;
+             the locate step then finds the structures in it with SAM 3.1 (studio/steps/locate.py)
+    svg      the brain draws each scene as SVG, every structure a named group, so the
+             drawing says where each one is and this step writes the masks too. For an
+             environment with no Meta key
 
 Switching makes the art again on the next run, as SONG_PROVIDER does the song.
 
@@ -66,7 +67,7 @@ MAX_TRIES = 3
 
 
 def run(job: Path, ask=brain.ask) -> str:
-    if brain.provider() == "meta":
+    if brain.art() == "muse":
         return run_muse(job, ask)
     bundle = checks.load(job / "bundle.json")
     resume = located(job) is None
@@ -89,12 +90,12 @@ def run(job: Path, ask=brain.ask) -> str:
 
 
 def is_done(job: Path) -> bool:
-    """The art is there for this bundle, made by the provider BRAIN_PROVIDER names."""
+    """The art is there for this bundle, made the way STUDIO_ART names."""
     try:
         bundle = checks.load(job / "bundle.json")
     except (OSError, ValueError):
         return False
-    if brain.provider() == "meta":
+    if brain.art() == "muse":
         return all(_painted(job, bundle, scene) for scene in bundle.scenes)
     return located(job) is not None and all(_saved(job, bundle, scene) is not None for scene in bundle.scenes)
 
@@ -279,7 +280,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     return "\n\n".join(parts)
 
 
-# --- the Muse Image art (BRAIN_PROVIDER=meta) -----------------------------------------------
+# --- the Muse Image art (STUDIO_ART=muse) ---------------------------------------------------
 
 # The house style (docs/PLAN.md, section 5, step 3), after every scene's prompt.
 STYLE = ("Textbook illustration in the style of OpenStax/Campbell: shaded vector, soft gradients, clean outlines, "
