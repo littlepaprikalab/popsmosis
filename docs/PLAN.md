@@ -267,6 +267,12 @@ fixes and re-checks only the changed lines, up to 3 rounds; if any line still fa
 job fails with the reason shown on the droplet. Nothing is posted or sung that has not
 passed.
 
+The same call checks each video's hashtags and its marked motions ("H⁺ travels from
+Stroma to Cytochrome b6f to Thylakoid lumen": what a line's particles carry and their
+route), each once however many lines show it. Neither is ever rewritten or fails the job:
+a tag that fails is dropped, and a motion that fails is left out of the video. Motions
+add about $0.02 a lesson.
+
 There is no teacher approval step: the fact-check is the gate.
 
 The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):

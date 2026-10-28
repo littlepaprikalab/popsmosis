@@ -10,6 +10,12 @@ is searched by: a tag the checker does not pass is dropped from both videos, nev
 rewritten, and never fails the job. A tag that gets no verdict in three rounds is dropped
 too, so only checked tags are posted.
 
+It checks the marked motions the same way: what a line's particles carry and the route
+they take ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"), since the video
+shows it as a claim. A motion that fails is left out of the video (no particles on its
+lines), never rewritten, and never fails the job; one shown on several lines is checked
+once. Unmarked particles (an analogy's water, a signal) are not sent.
+
 Writes factcheck.json. When the check passes after corrections or dropped tags,
 bundle.json is rewritten with them and the writer's version is kept as bundle.draft.json.
 """
@@ -33,6 +39,8 @@ PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").r
 MAX_ROUNDS = 3
 KINDS = ("lyric", "narration", "lesson")  # the lines a correction rewrites
 TAG = "tag"  # a video's hashtag: passed, or dropped
+MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
+KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
 PASSING = ("SUPPORTED", "FILLER")
 
 
@@ -70,7 +78,18 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines = [Line("lyric", lyric.id, lyric.text) for lyric in bundle.lyrics]
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
-    return lines + tag_lines(bundle)
+    return lines + tag_lines(bundle) + motion_lines(bundle)
+
+
+def motion_text(carries: str, particles: list[str]) -> str:
+    """A marked motion as the checker reads it: "H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"."""
+    return f"{carries} travels from " + " to ".join(particles)
+
+
+def motion_lines(bundle: Bundle) -> list[Line]:
+    """What each line's particles show moving, when they are marked with what they carry."""
+    return [Line(MOTION, d.line_id, motion_text(d.carries, d.particles))
+            for d in bundle.direction if d.carries and len(d.particles) >= 2]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -87,9 +106,18 @@ def about(bundle: Bundle) -> dict[str, str]:
 
 def dropped_tags(report: FactCheckReport) -> list[CheckedLine]:
     """The tags the check did not pass, each once, as the report has them."""
+    return _dropped(report, TAG)
+
+
+def dropped_motions(report: FactCheckReport) -> list[CheckedLine]:
+    """The marked motions the check did not pass, each once: they are left out of the video."""
+    return _dropped(report, MOTION)
+
+
+def _dropped(report: FactCheckReport, kind: str) -> list[CheckedLine]:
     seen: dict[str, CheckedLine] = {}
     for line in report.lines:
-        if line.kind == TAG and line.verdict not in PASSING:
+        if line.kind == kind and line.verdict not in PASSING:
             seen.setdefault(line.text, line)
     return list(seen.values())
 
@@ -125,8 +153,9 @@ def check_bundle(
             # A missing verdict, or SUPPORTED without a real source, is asked again next round.
             if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)):
                 verdicts[(line.kind, line.text)] = (check, round_no)
-        # A tag that fails is dropped below, never corrected: only the other lines get fixes.
-        wrong = [line for line in pending if line.kind != TAG and _verdict(verdicts, line) == "UNSUPPORTED"]
+        # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
+        wrong = [line for line in pending
+                 if line.kind not in KEPT_OR_DROPPED and _verdict(verdicts, line) == "UNSUPPORTED"]
         if not wrong or round_no == max_rounds:
             continue
 
@@ -165,7 +194,15 @@ def check_bundle(
         bundle = bundle.model_copy(update={"tags": tags.model_copy(update={
             "song": [t for t in tags.song if t in passed_tags],
             "lesson": [t for t in tags.lesson if t in passed_tags]})})
-    failing = [c for c in checked if c.kind != TAG and c.verdict not in PASSING]
+    # Only checked motions are shown: one that failed, or never got a verdict, has its particles taken out.
+    passed_motions = {c.text for c in checked if c.kind == MOTION and c.verdict in PASSING}
+    if any(line.text not in passed_motions for line in motion_lines(bundle)):
+        data = bundle.model_dump()
+        for d in data["direction"]:
+            if d["carries"] and len(d["particles"]) >= 2 and motion_text(d["carries"], d["particles"]) not in passed_motions:
+                d["particles"], d["carries"] = [], ""
+        bundle = Bundle.model_validate(data)
+    failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED and c.verdict not in PASSING]
     if failing and not reason:
         reason = f"after {rounds} round(s), {len(failing)} line(s) still fail: " + "; ".join(
             _describe(c, verdicts) for c in failing[:3]

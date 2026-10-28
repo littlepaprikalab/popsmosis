@@ -279,9 +279,9 @@ class FactCheck(Strict):
 
 
 class CheckedLine(Strict):
-    # A tag is dropped when it fails, never corrected. "frq" is a line of the exam question, in a
-    # fact-check made before it left the videos on Oct 28.
-    kind: Literal["lyric", "narration", "lesson", "frq", "tag"]
+    # A tag or a motion (what a line's particles show moving) is dropped when it fails, never corrected.
+    # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
+    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict

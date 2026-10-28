@@ -411,7 +411,9 @@ order, keyed by `line_id`:
   must be what really travels that path (protons through ATP synthase, electrons along the
   chain). "" when there are no particles, for what has no chemical name (a nerve signal,
   light), and on the analogy scene, where what moves is the everyday thing (its water
-  stands for the protons, so marking it "H₂O" would mislead).
+  stands for the protons, so marking it "H₂O" would mislead). The fact-check holds each
+  marked motion to the facts, as it does a line, and leaves out one they do not support:
+  every route a marked particle takes must follow from the facts.
   Where a failure scene shows the flow stopped, it has none.
 - `caption`: almost always "". At most one short caption (a few words) per song section,
   for a term worth seeing written.

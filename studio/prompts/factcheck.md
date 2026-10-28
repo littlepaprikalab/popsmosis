@@ -9,7 +9,8 @@ You get JSON with:
   comes from: "lyric:..." is a sung line, "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
   row's cells are separated by " | "). "tag:..." is a hashtag under one of the videos,
-  judged by its own rules (Tags, below). Lines come in order, so read each one in the
+  and "motion:..." is what a video shows moving across its diagram, each judged by its
+  own rules (Tags and Motions, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only.
 - `about`, only when there are tags: the lesson's `course` and `topic` and the song's
@@ -97,3 +98,22 @@ judge a tag by one question: would a student searching for it be right to find t
   find this video ("#fyp", "#foryou", "#viral"); or anything not right for a classroom.
   `problem` says why in a few words, and `corrected` is "": a tag that fails is dropped,
   never rewritten.
+
+## Motions
+
+A line whose id starts with "motion:" is what a video shows moving: dots marked with what
+they are, travelling between the parts of its diagram in order ("H⁺ travels from Stroma to
+Cytochrome b6f to Thylakoid lumen"). A student watches the marked dot go, so it is a claim
+about what moves, where from, through what and where to.
+
+- **SUPPORTED**: the facts say this thing moves along this route, in this direction. A
+  route that leaves out a step the facts name between two of its stops is fine (electrons
+  from photosystem II to cytochrome b6f, though they pass through plastoquinone on the
+  way). `source` is the fact id.
+- **UNSUPPORTED**: the wrong thing moving (electrons where the facts move protons), the
+  wrong direction (protons into the stroma where the facts pump them out of it), a stop
+  the facts do not put on its route, or a route the facts never give. `problem` says what
+  is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
+  video, never rewritten.
+
+A motion is never FILLER.

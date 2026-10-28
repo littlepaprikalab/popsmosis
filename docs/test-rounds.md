@@ -548,9 +548,13 @@ for two tries), and both were rendered silent.
   stands for the protons; the rule now leaves an analogy's particles unmarked.
 - **The badges read at full size** once they were made 44 pixels across: at 36 the "⁺" and
   "⁻" were hard to see.
-- **`carries` is not fact-checked**: like the particles' path, it is direction, which the
-  fact-check does not see. A wrong marker (e⁻ where protons move) would teach something
-  wrong; the next step is to show the fact-check each moving line with what it carries.
+- **The marked motions are now fact-checked** in the same call as the lines, each distinct
+  motion once ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"); one that
+  fails is left out of the video. Checked live on its own, it passed 12 of the two
+  lessons' 13 and caught one the writer got wrong: "pyruvate travels from glycolysis to
+  the Krebs cycle", where the facts say pyruvate becomes acetyl CoA first and only its
+  acetyl group enters the cycle. Inside the fact-check's one call that is about $0.02 a
+  lesson more (alone, $0.04, mostly the facts sent again).
 
 ## Not tested
 

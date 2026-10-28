@@ -5,7 +5,7 @@ import pytest
 from studio.jobs import read, write
 from studio.schemas import Bundle, FactCheck, FactCheckReport, Request
 from studio.steps import factcheck
-from studio.steps.factcheck import check_bundle, cites, dropped_tags, lines_of
+from studio.steps.factcheck import check_bundle, cites, dropped_motions, dropped_tags, lines_of
 from studio.tests.sample import CHORUS, bundle_data
 
 SEEDED = "Every electron hand-off pumps a proton"
@@ -259,6 +259,51 @@ def test_a_tag_that_fails_leaves_both_videos_and_never_fails_the_check():
     assert [(t.text, t.verdict, t.problem) for t in dropped_tags(report)] == [
         ("#lightreactions", "UNSUPPORTED", "wrong"), ("#apbio", None, "")]
     assert FactCheckReport.model_validate_json(report.model_dump_json()) == report
+
+
+ELECTRONS = "e⁻ travels from Thylakoid to Cytochrome b6f"
+PROTONS = "H⁺ travels from Cytochrome b6f to Thylakoid"
+
+
+def moving(data):
+    """Electrons on a verse line and on every chorus line, protons on another, and an unmarked flow."""
+    for d in data["direction"]:
+        if d["line_id"] in ("v1-2", "c1-1", "c2-1", "c3-1"):
+            d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+        elif d["line_id"] == "v2-1":
+            d.update(particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")
+        elif d["line_id"] == "b-1":
+            d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="")
+
+
+def test_each_marked_motion_is_checked_once_and_unmarked_ones_are_not_sent():
+    fake = FakeChecker(supported)
+    report, checked = check_bundle(bundle(moving), "", fake)
+    motions = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")]
+    assert motions == [("motion:v1-2", ELECTRONS), ("motion:v2-1", PROTONS)]  # after the tags, the chorus once
+    assert report.status == "passed" and checked == bundle(moving) and dropped_motions(report) == []
+
+
+def test_a_motion_that_fails_is_left_out_of_the_video_and_never_fails_the_check():
+    def rule(text):
+        if text == PROTONS:
+            return "UNSUPPORTED", "", ""  # left out: a motion is never rewritten
+        return supported(text)
+
+    report, checked = check_bundle(bundle(moving), "", FakeChecker(rule))
+    assert report.status == "passed" and report.corrections == []
+    shown = {d.line_id: (d.particles, d.carries) for d in checked.direction if d.particles}
+    assert shown == {line: (["Thylakoid", "Cytochrome b6f"], "e⁻") for line in ("v1-2", "c1-1", "c2-1", "c3-1")} | {
+        "b-1": (["Thylakoid", "Cytochrome b6f"], "")}  # an unmarked flow is not the check's
+    assert [(m.text, m.verdict) for m in dropped_motions(report)] == [(PROTONS, "UNSUPPORTED")]
+
+
+def test_a_motion_with_no_verdict_is_asked_again_then_left_out():
+    fake = FakeChecker(lambda text: None if text == ELECTRONS else supported(text))
+    report, checked = check_bundle(bundle(moving), "", fake)
+    assert fake.ids(2) == ["motion:v1-2"] and fake.ids(3) == ["motion:v1-2"]
+    assert report.status == "passed"
+    assert {d.line_id for d in checked.direction if d.particles} == {"v2-1", "b-1"}
 
 
 def test_a_tag_never_rides_along_with_a_corrected_line():
