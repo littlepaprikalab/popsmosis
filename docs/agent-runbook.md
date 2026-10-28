@@ -38,12 +38,17 @@ The runner needs these in its environment:
 |---|---|
 | `POPSMOSIS_API_KEY` | the popsmosis agent's `sk_pop_…` key from step 2. Not an Inkmory key: see below |
 | `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
-| `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
-| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`: Meta's models write and check each lesson. Who paints its art goes by the brain, as an admin sets it on `/admin/studio` (by default Gemini 3.1 Flash Image for Claude, Muse Image for Meta), and SAM 3.1 finds the structures in it. README, [Choosing the models](../README.md#choosing-the-models), has this and the next three with every value they take |
-| `GEMINI_API_KEY` | when Gemini 3.1 Flash Image paints the art (the default with `claude`; `/admin/studio` picks it), and for Lyria songs: a Gemini API key |
-| `MODEL_API_KEY` | for the art (SAM 3.1, and Muse Image when it paints) with either brain, with `BRAIN_PROVIDER=meta`, and to make the topics an admin sends to Muse Wonder or Muse Spark on `/learn`: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it. Likewise `POPSMOSIS_ANTHROPIC_API_KEY` for the topics sent to Claude: a topic sent to a brain whose key is missing is given up with that reason (README, [One topic on another brain](../README.md#one-topic-on-another-brain)) |
-| `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson. A Claude model with `BRAIN_PROVIDER=claude` (default `claude-opus-5-5`), a Muse model with `meta` (default `muse-wonder-1.0`; `muse-spark-1.3` to vet changes for about a quarter of the price). Never a Contributor model (`-contributor`) here: Meta may train on what it is sent, and the routine sends learners' requests |
-| `STUDIO_BRAIN_EFFORT` | optional, with `BRAIN_PROVIDER=claude`: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | Claude's brain and its picture checks. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
+| `MODEL_API_KEY` | a Muse brain and its picture checks, Muse Image, and SAM 3.1, which finds the structures in any painted picture: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
+| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria songs: a Gemini API key |
+
+These are keys only. Which brain writes the lessons, Claude's effort and who paints each
+brain's pictures are set by an admin on **STUDIO** in the web app (`/admin/studio`), and the
+studio reads them from the API: README, [Choosing the models](../README.md#choosing-the-models).
+`BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` are no longer read, so remove
+them from the environment. Give it the key of every brain and painter picked there: a default
+brain or painter whose key is missing stops each run with `the studio's settings are wrong`,
+and a topic an admin sent to a brain whose key is missing is given up with that reason.
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
@@ -152,8 +157,8 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
      warm run's hook takes seconds.
    - **Network policy:** allow
      - your API host, `api.anthropic.com`, `api.elevenlabs.io`, the Supabase host and
-       the Inkmory host (and `api.meta.ai` with `BRAIN_PROVIDER=meta`, and
-       `generativelanguage.googleapis.com` with `SONG_PROVIDER=gemini`): what a run calls;
+       the Inkmory host, `api.meta.ai` (a Muse brain, Muse Image, SAM 3.1) and
+       `generativelanguage.googleapis.com` (Gemini 3.1 Flash Image, Lyria): what a run calls;
      - `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` (PyTorch's CPU
        wheels), `registry.npmjs.org`, and `archive.ubuntu.com` with `security.ubuntu.com`
        (ffmpeg and libEGL, when the image lacks them): what the session hook installs;

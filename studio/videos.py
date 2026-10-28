@@ -55,8 +55,8 @@ from pydantic import ValidationError
 
 from studio import brain, jobs, ledger, media
 from studio.api import Api, ApiError
-from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, job_brain, job_dir, keep_brain, logged_ask,
-                        one_line, only_run, read_jsonl, record_interrupted)
+from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, job_chosen, job_dir, keep_brain,
+                        logged_ask, one_line, only_run, read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -69,15 +69,16 @@ WAIT_MINUTES = 9.0  # under the 10 minutes one tool command may take
 REPO = Path(__file__).resolve().parent.parent
 
 
-def unavailable(job: Path | None = None) -> str | None:
+def unavailable(job: Path | None = None, studio: dict | None = None) -> str | None:
     """Why the videos cannot be made here, or None. Checks the step modules exist without importing them, and the
-    keys the brain and the art's painter need: the job's painter, or without a job, the default one."""
+    keys the brain in force and the art's painter need: the job's painter, or without a job, the one the studio
+    settings name (the defaults without them)."""
     if os.environ.get("STUDIO_VIDEOS", "").strip().lower() in ("off", "0", "false", "no"):
         return "the videos are turned off here (STUDIO_VIDEOS)"
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
-    art = jobs.studio_settings(job).get("art") if job else None
+    art = (jobs.studio_settings(job) if job else studio or {}).get("art")
     problem = brain.settings_problem() or brain.art_problem(art)
     if problem:
         return f"the studio's settings are wrong: {problem}"
@@ -194,7 +195,7 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
         if not mine:
             return STOPPED, "videos", "a run of this topic is still going"
         record_interrupted(job)
-        with brain.chosen(job_brain(job)):
+        with job_chosen(job):
             return _videos(job, api, ask or logged_ask(job))
 
 
@@ -286,7 +287,7 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
     job = job_dir(question_id)
     if not (job / "posted.json").exists():
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
-    with brain.chosen(job_brain(job)):  # the detached run reads brain.json itself
+    with job_chosen(job):  # the detached run reads brain.json itself
         why = unavailable(job)
     if why:
         return STOPPED, "videos", why
@@ -372,10 +373,15 @@ def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -
 
 def recover(api: Api | None = None) -> tuple[str, str, str]:
     """Take one droplet whose render went quiet from the API's queue and rebuild its job here."""
-    why = unavailable()
+    try:
+        api = api or Api.from_env()
+        studio = api.studio_settings()
+    except ApiError as e:
+        return _outcome(e, "recover")
+    with brain.chosen(*default_brain(studio)):
+        why = unavailable(studio=studio)
     if why:  # taking one would spend an attempt this machine cannot use
         return NONE, "recover", why
-    api = api or Api.from_env()
     try:
         handed = api.videos_queue(1)
     except ApiError as e:
@@ -417,7 +423,8 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "bundle.json", bundle)
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
-    keep_brain(job, item.get("brain"))  # the topic's brain, as the lesson's
+    default, effort = default_brain(item.get("studio"))
+    keep_brain(job, item.get("brain") or default, effort)  # the topic's own brain, else today's default
     jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
 

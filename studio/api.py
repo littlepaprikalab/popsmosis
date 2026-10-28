@@ -100,6 +100,16 @@ class Api:
 
     # --- the endpoints --------------------------------------------------------
 
+    def studio_settings(self) -> dict:
+        """The settings an admin sets on /admin/studio: {brain: {default, effort}, art: {claude, meta}}. {} from an
+        API too old to have them, and the studio's own defaults apply."""
+        try:
+            return self.request("GET", "/api/studio/settings")
+        except ApiError as e:
+            if e.status == 404:
+                return {}
+            raise
+
     def claim(self, question_id: str) -> dict:
         """Take or renew the lease on one question; returns it with its attachments."""
         return self.request("POST", f"/api/questions/{question_id}/claim", {})

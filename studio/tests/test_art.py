@@ -43,7 +43,6 @@ class FakeArtist:
 def svg_art(monkeypatch):
     """These are the brain's SVG art, as an admin can set it for Claude's brain; studio/tests/test_muse.py and
     test_gemini.py have the painted art."""
-    monkeypatch.delenv("BRAIN_PROVIDER", raising=False)
     monkeypatch.setattr(art, "painter", lambda job: "svg")
 
 

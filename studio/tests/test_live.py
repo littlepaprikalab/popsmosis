@@ -1,7 +1,8 @@
-"""Live checks against the real brain. Skipped unless the studio has an Anthropic key
-(POPSMOSIS_ANTHROPIC_API_KEY, or ANTHROPIC_API_KEY on a laptop).
+"""Live checks against the real brain. They spend Anthropic credit, so they run only when asked for, with
+STUDIO_LIVE=1 and the studio's Anthropic key (POPSMOSIS_ANTHROPIC_API_KEY, or ANTHROPIC_API_KEY on a laptop):
+a key in the environment alone never runs them.
 
-    POPSMOSIS_ANTHROPIC_API_KEY=... python -m pytest studio/tests/test_live.py -s
+    STUDIO_LIVE=1 POPSMOSIS_ANTHROPIC_API_KEY=... python -m pytest studio/tests/test_live.py -s
 """
 
 import os
@@ -11,11 +12,9 @@ import pytest
 from studio import brain
 from studio.steps.factcheck import Line, ask_checker
 
-MODEL = os.environ.get("STUDIO_BRAIN_MODEL", "").strip()
 pytestmark = [
+    pytest.mark.skipif(os.environ.get("STUDIO_LIVE") != "1", reason="needs STUDIO_LIVE=1 (spends Anthropic credit)"),
     pytest.mark.skipif(not brain.claude_key(), reason="needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY"),
-    # Set to a Muse model to vet the Meta brain: these are the Claude brain's checks.
-    pytest.mark.skipif(bool(MODEL) and not MODEL.startswith("claude-"), reason=f"STUDIO_BRAIN_MODEL={MODEL} is not Claude"),
 ]
 
 PHOTOSYNTHESIS = {
@@ -30,7 +29,6 @@ PHOTOSYNTHESIS = {
 
 
 def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
     lines = [
         Line("lyric", "v1-1", "Photosystem II splits water for electrons"),
         Line("lyric", "v1-2", "Every electron hand-off pumps a proton"),
@@ -50,11 +48,10 @@ def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
 
 
 def test_the_brain_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
-    """One scene of the sample bundle, drawn live. STUDIO_BRAIN_MODEL=claude-haiku-5-5 to try it cheaply."""
+    """One scene of the sample bundle, drawn live by Claude Opus 5.5, as when an admin has Claude draw the art."""
     from studio.steps import art
     from studio.tests import sample_media
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
     bundle = sample_media.bundle()
     scene = next(s for s in bundle.scenes if s.id == "overview")
     (tmp_path / "art").mkdir()

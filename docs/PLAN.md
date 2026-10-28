@@ -94,26 +94,21 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 - **Two agents keep a public record on Inkmory.** Claude, the operator, and Muse Wonder,
   the planner, each read who they are before a run and write down what happened after it
   (section 11).
-- **The brain is swappable.** `BRAIN_PROVIDER` picks the brain's model. It defaults to
-  `claude`. Switch to `meta` once the key is in the routine's environment: this is a Meta
-  hackathon, so the submission runs on Meta. Who paints the art goes by the brain's
-  provider, as an admin sets it on `/admin/studio`: by default Gemini 3.1 Flash Image for
-  `claude` and Muse Image for `meta`, SAM 3.1 finding the structures in either; Claude can
-  instead draw it as SVG.
+- **The brain is swappable.** An admin picks the default brain on `/admin/studio`: Claude
+  Opus 5.5 (the default for now), Muse Wonder 1.0 or Muse Spark 1.3. Switch to a Muse once
+  the key is in the routine's environment: this is a Meta hackathon, so the submission runs
+  on Meta. The environment holds only the keys. Who paints the art goes by the brain's
+  provider, set there too: by default Gemini 3.1 Flash Image for Claude and Muse Image for
+  Muse, SAM 3.1 finding the structures in either; Claude can instead draw it as SVG.
 
-| Role | `BRAIN_PROVIDER=claude` (default for now) | `BRAIN_PROVIDER=meta` |
+| Role | Claude (default for now) | Muse |
 |---|---|---|
-| **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` | Muse Wonder (`muse-wonder-1.0`) |
+| **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` (set on `/admin/studio`) | Muse Wonder (`muse-wonder-1.0`) or Muse Spark (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to vet a change) |
 | **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
-`STUDIO_BRAIN_MODEL` changes the brain's model on either provider: a Claude model with
-`claude`, a Muse model with `meta` (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to
-vet a change; its Contributor version is cheaper still, but Meta may train on what it is
-sent, so test topics only). `STUDIO_BRAIN_EFFORT` changes the effort with `claude`.
-Unset, they are the defaults above. The helper's models are set in `studio/brain.py`.
-An admin can also send one topic to its own brain on `/learn` (Claude, Muse Wonder or Muse
-Spark), which wins over both for that topic, the painter its provider's: README, "One
-topic on another brain".
+The helper's models are set in `studio/brain.py`. An admin can also send one topic to its own
+brain on `/learn` (Claude, Muse Wonder or Muse Spark), which wins over the default for that
+topic, the painter its provider's: README, "One topic on another brain".
 
 The other jobs:
 
@@ -516,9 +511,9 @@ takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
   `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SONG_PROVIDER` (with
-  `GEMINI_API_KEY` for `gemini`), `BRAIN_PROVIDER` (with
-  `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` with
-  `BRAIN_PROVIDER=meta`. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
+  `GEMINI_API_KEY` for `gemini` and for Gemini 3.1 Flash Image), and `MODEL_API_KEY` for a
+  Muse brain, Muse Image and SAM 3.1; the brain and the painters are chosen on
+  `/admin/studio`, not here. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
 - **Setup:** the repository's session hook (`.claude/hooks/session-start.sh`) installs
   `studio/requirements.txt` (PyTorch for CPU, torchaudio, demucs, skia-python, anthropic,
@@ -874,8 +869,8 @@ seams, which no lane owns:
 
 ## 13. Risks and fallbacks
 
-- **No Meta key in time, or Meta's API misbehaves:** `BRAIN_PROVIDER=claude` with
-  the SVG art (`/admin/studio`) runs the whole pipeline on Claude alone. Nothing
+- **No Meta key in time, or Meta's API misbehaves:** Claude as the default brain with
+  the SVG art (both on `/admin/studio`) runs the whole pipeline on Claude alone. Nothing
   downstream changes.
 - **SAM misses illustrated anatomy:** a helper box plus a SAM box prompt; a structure
   neither finds goes unlabelled.

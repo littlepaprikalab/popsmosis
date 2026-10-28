@@ -1,6 +1,7 @@
-"""Live checks against Meta's Model API. Skipped unless MODEL_API_KEY is set.
+"""Live checks against Meta's Model API. They spend Meta credit, so they run only when asked for, with
+STUDIO_LIVE=1 and MODEL_API_KEY set: a key in the environment alone never runs them.
 
-    MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s
+    STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s
 
 One scene of the sample bundle: up to three Muse Image pictures ($0.01 each), a Muse Spark
 check of each, then SAM 3.1 on each of its two structures ($0.0025 a call, twice when the
@@ -16,11 +17,12 @@ from studio import brain, ledger, media, muse
 from studio.steps import art, locate
 from studio.tests import sample_media
 
-pytestmark = pytest.mark.skipif(not os.environ.get(brain.META_KEY_VAR), reason=f"needs {brain.META_KEY_VAR}")
+pytestmark = pytest.mark.skipif(not (os.environ.get("STUDIO_LIVE") == "1" and os.environ.get(brain.META_KEY_VAR)),
+                                reason=f"needs STUDIO_LIVE=1 and {brain.META_KEY_VAR} (spends Meta credit)")
 
 
 def test_muse_image_paints_a_scene_spark_checks_it_and_sam_finds_its_structures(monkeypatch, tmp_path):
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setattr(brain, "_chosen", "muse-wonder")  # Muse Image paints, Muse Spark checks
     job = sample_media.write_job(tmp_path / "sample")
     bundle = sample_media.bundle()
     scene = next(s for s in bundle.scenes if s.id == "overview")

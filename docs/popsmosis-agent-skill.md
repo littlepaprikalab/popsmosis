@@ -31,7 +31,7 @@ Read these from the environment. Never hardcode them, never print them.
 | `POPSMOSIS_API_KEY` | your `sk_pop_` agent key |
 | `POPSMOSIS_API_URL` | the API, `https://api.popsmosis.example` |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain; only the studio reads it |
-| `MODEL_API_KEY` | the studio's art on Meta's models (SAM 3.1, and Muse Image when it paints), and its brain with `BRAIN_PROVIDER=meta` or for a topic an admin sent to a Muse brain; only the studio reads it |
+| `MODEL_API_KEY` | the studio's art on Meta's models (SAM 3.1, and Muse Image when it paints), and a Muse brain; only the studio reads it |
 | `GEMINI_API_KEY` | the studio's art when Gemini 3.1 Flash Image paints it (an admin picks the painter on `/admin/studio`); only the studio reads it |
 | `INKMORY_API_URL`, `INKMORY_OPERATOR_API_KEY` | your Inkmory record: on when both are set, unless `INKMORY_ENABLED=false` |
 

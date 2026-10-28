@@ -92,7 +92,8 @@ model Question {
   progress Json?
 
   // The brain an admin picked for this topic on /learn (api/src/lib/brains.ts): claude, muse-wonder or muse-spark.
-  // Null: the teacher's own setting (BRAIN_PROVIDER where the studio runs). The studio reads it from the claim.
+  // Null: the default brain an admin sets on /admin/studio (api/src/lib/studio-settings.ts). The studio reads both
+  // from the claim.
   brain String?
 
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -21,23 +21,18 @@ Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every model call is logg
 to the job's calls.jsonl with its step, tokens, cost and time (studio/ledger.py), and
 `show` ends with each step's time, cost and models, as the droplet's page shows them.
 
-STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's model and effort on the
-Claude provider (defaults claude-opus-5-5 and high). To try a prompt draft cheaply, run
-the brain on Haiku first:
-STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief
-With BRAIN_PROVIDER=meta, STUDIO_BRAIN_MODEL takes a Muse model (default muse-wonder-1.0):
-STUDIO_BRAIN_MODEL=muse-spark-1.3 vets a change for about a quarter of the price.
-
-A topic an admin sent to a brain of its own on /learn runs on that one instead (studio/run.py):
-`run` keeps it in the job's brain.json, and `videos` and `step` use it. `plan --brain`
-does the same for a local job: claude, muse-wonder or muse-spark.
+The brain is set by an admin, never by the environment, which holds only the keys: the
+default brain and Claude's effort on /admin/studio, or a topic's own on /learn. `run` reads
+them from the API and keeps the topic's in the job's brain.json, and `videos` and `step` use
+it (studio/run.py). A local job takes `plan --brain claude|muse-wonder|muse-spark` and
+`--effort` (default Claude Opus 5.5 at high); muse-spark vets a prompt change for about a
+quarter of Muse Wonder's price.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import textwrap
 import time
@@ -82,7 +77,8 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--image", type=Path, action="append", default=[], help="a photo of notes; repeatable")
     plan.add_argument("--job", help="the job id (default: made from the topic and the time)")
     plan.add_argument("--brain", choices=list(brain.CHOICES),
-                      help="the topic's own brain, as an admin picks it on /learn (default: the environment's)")
+                      help=f"the brain, as an admin picks it on /learn (default: {brain.DEFAULT_BRAIN})")
+    plan.add_argument("--effort", choices=list(brain.EFFORTS), help=f"Claude's effort (default: {brain.DEFAULT_EFFORT})")
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=[*STEPS, *media.MEDIA_STEPS])
     step.add_argument("job")
@@ -93,9 +89,9 @@ def main(argv: list[str] | None = None) -> int:
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
     args = parser.parse_args(argv)
-    overrides = {k: os.environ[k] for k in ("STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT") if os.environ.get(k)}
-    if overrides and args.command in ("run", "plan", "step") and not getattr(args, "brain", None):
-        print(f"note: the brain is set by the environment: {overrides}", file=sys.stderr)
+    retired = brain.retired_note()
+    if retired and args.command in ("run", "videos", "recover", "plan", "step"):
+        print(retired, file=sys.stderr)
 
     if args.command == "recover":
         result, question, reason = operator_videos.recover()
@@ -149,16 +145,16 @@ def main(argv: list[str] | None = None) -> int:
             images=[str(path.resolve()) for path in args.image],
         )
         jobs.write(job / "request.json", request)
-        if args.brain:
-            operator_run.keep_brain(job, args.brain)
+        if args.brain or args.effort:
+            operator_run.keep_brain(job, args.brain, args.effort)
         print(f"job {job.name}", file=sys.stderr)
-        with brain.chosen(args.brain):
+        with brain.chosen(args.brain, args.effort):
             ok = run_steps(job, ["bundle", "factcheck"])
     else:
         job = jobs.ROOT / args.job
         if not job.is_dir():
             parser.error(f"no job folder {job}")
-        with brain.chosen(operator_run.job_brain(job)):  # the topic's own, when it asked for one
+        with operator_run.job_chosen(job):  # the brain the job was made on
             ok = run_steps(job, [args.name]) if args.command == "step" else True
     print_job(job, brief=args.brief)
     return 0 if ok else 1

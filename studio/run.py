@@ -14,12 +14,13 @@ failure retries the step that failed. Before each step but the post it claims th
 topic again (POST /api/questions/:id/claim), which renews the queue's lease, so a
 slow step or a retry keeps it out of an overlapping run's queue.
 
-The claim also says which brain the topic asks for, when an admin picked one on /learn
-(studio/brain.py, CHOICES). It is kept in brain.json, so `videos`, `step` and a retry
-make the rest of the droplet on the same brain, and it wins over BRAIN_PROVIDER and
-STUDIO_BRAIN_MODEL for this topic. A brain the studio cannot run here (its key is not
-set) fails the step with the reason, so the topic is given up with it rather than
-holding up the queue.
+The brain (studio/brain.py) is the one an admin picked for the topic on /learn, else the
+default brain set on /admin/studio, both as the claim says; never the environment, which
+holds only the keys. Before it claims anything, `run` reads the settings with the agent
+key and checks the default brain can run here: if not (its key missing, say), it stops,
+as every topic would fail the same way. A topic's own brain that cannot run here fails
+the step with the reason, so the topic is given up with it rather than holding up the
+queue. The brain is kept in brain.json, so `videos`, `step` and a retry stay on it.
 
 Every run appends what it did to runs.jsonl and prints one line, its outcome:
 
@@ -68,7 +69,7 @@ IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "
 IMAGE_MAX_BYTES = 5 * 1024 * 1024 * 3 // 4
 # A line of the question that starts "Style:" (or "Song style:") is the style the learner wants the song in.
 STYLE_LINE = re.compile(r"^[ \t]*(?:song[ \t]+)?style[ \t]*:(.*)$", re.IGNORECASE | re.MULTILINE)
-BRAIN_FILE = "brain.json"  # {"brain": a key of brain.CHOICES, or null}: the brain the topic asks for
+BRAIN_FILE = "brain.json"  # {"brain": a key of brain.CHOICES, "effort": Claude's}: the brain the claim said
 
 
 class Stop(Exception):
@@ -132,8 +133,14 @@ def record_interrupted(job: Path) -> None:
 
 def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
-    if ask is None:  # the real brain: the teacher's own settings are checked before the topic is claimed
-        problem = brain.settings_problem()
+    if ask is None:  # the real brain: the default brain is checked before the topic is claimed
+        try:
+            api = api or Api.from_env()
+            studio = api.studio_settings()
+        except ApiError as e:
+            return _first(api_outcome(e))
+        with brain.chosen(*default_brain(studio)):
+            problem = brain.settings_problem()
         if problem:
             return STOPPED, "run", f"the studio's settings are wrong: {problem}"
     job = job_dir(question_id)
@@ -142,38 +149,73 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
         if not mine:
             return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
         record_interrupted(job)
-        with brain.chosen(job_brain(job)):
+        with job_chosen(job):
             return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None)
 
 
-def job_brain(job: Path) -> str | None:
-    """The brain the topic asks for, as its claim said (brain.json); None: the environment's."""
+def _first(outcome: tuple[str, str]) -> tuple[str, str, str]:
+    result, reason = outcome
+    return result, "run", reason
+
+
+def default_brain(studio: dict | None) -> tuple[str | None, str | None]:
+    """The default brain and Claude's effort an admin set on /admin/studio, as the API said ({} from an older API:
+    the studio's own defaults)."""
+    settings = (studio or {}).get("brain") if isinstance(studio, dict) else None
+    settings = settings if isinstance(settings, dict) else {}
+    return settings.get("default") or None, settings.get("effort") or None
+
+
+def _brain_file(job: Path) -> dict:
     try:
-        return json.loads((job / BRAIN_FILE).read_text(encoding="utf-8"))["brain"] or None
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
+        data = json.loads((job / BRAIN_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
-def keep_brain(job: Path, name: str | None) -> None:
-    """Save the brain the topic asks for with its job, for `videos`, `step` and a retry."""
-    name = name or None
-    if not (job / BRAIN_FILE).exists() or job_brain(job) != name:
-        jobs.write(job / BRAIN_FILE, {"brain": name})
+def job_brain(job: Path) -> str | None:
+    """The brain the job is made on, as its claim said (brain.json); None: the studio's default."""
+    return _brain_file(job).get("brain") or None
+
+
+def job_effort(job: Path) -> str | None:
+    """Claude's effort for the job, as its claim said; None: the default."""
+    return _brain_file(job).get("effort") or None
+
+
+def job_chosen(job: Path):
+    """brain.chosen() for the job's brain and effort."""
+    return brain.chosen(job_brain(job), job_effort(job))
+
+
+def keep_brain(job: Path, name: str | None, effort: str | None = None) -> None:
+    """Save the brain the job is made on with it, for `videos`, `step` and a retry."""
+    record = {"brain": name or None, "effort": effort or None}
+    if not (job / BRAIN_FILE).exists() or _brain_file(job) != record:
+        jobs.write(job / BRAIN_FILE, record)
 
 
 def use_brain(job: Path, question: dict, check: bool) -> None:
-    """Make the rest of this run on the brain the claimed topic asks for. With check, a brain that cannot
-    run here fails the step: the topic is given up with the reason, and the queue moves on."""
-    name = question.get("brain") or None
-    if name and name != job_brain(job):  # said once, when the job first learns it
-        print(f"brain: {brain.CHOICES.get(name, {}).get('name', name)}, picked for this topic", file=sys.stderr)
-    keep_brain(job, name)
-    jobs.keep_studio_settings(job, question.get("studio"))  # who paints, for `videos`
-    brain.choose(name)
-    if check and name:
+    """Make the rest of this run on the brain the claim says: the topic's own, else the default brain. With check,
+    one that cannot run here stops the run when it is the default, since every topic would fail the same way,
+    and fails the step when it is the topic's own, so the topic is given up with the reason and the queue moves on."""
+    studio = question.get("studio")
+    default, effort = default_brain(studio)
+    own = question.get("brain") or None
+    name = own or default
+    if (name or brain.DEFAULT_BRAIN) != (job_brain(job) or brain.DEFAULT_BRAIN) or not (job / BRAIN_FILE).exists():
+        label = brain.CHOICES.get(name or brain.DEFAULT_BRAIN, {}).get("name", name)
+        print(f"brain: {label}, {'picked for this topic' if own else 'the default'}", file=sys.stderr)
+    keep_brain(job, name, effort)
+    jobs.keep_studio_settings(job, studio)  # who paints, for `videos`
+    brain.choose(name, effort)
+    if check:
         problem = brain.settings_problem()
-        if problem:
+        if problem and own:
             raise StepFailed(f"the studio cannot run this topic's brain here: {problem}")
+        if problem:
+            raise Stop(f"the studio's settings are wrong: {problem}")
 
 
 def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False) -> tuple[str, str, str]:

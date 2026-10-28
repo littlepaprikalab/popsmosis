@@ -25,7 +25,7 @@ SPOTS = {"Thylakoid": (500, 500, 150), "Cytochrome b6f": (1300, 500, 100), "ATP 
 
 @pytest.fixture(autouse=True)
 def meta(monkeypatch):
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")  # Muse Image paints, the default for Muse's brain
+    monkeypatch.setattr(brain, "_chosen", "muse-wonder")  # Muse Image paints, the default for Muse's brain
     monkeypatch.setenv("MODEL_API_KEY", "meta-test-key")
     monkeypatch.setattr(muse, "sleep", lambda s: None)
 
@@ -210,7 +210,7 @@ def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
 def test_switching_the_art_makes_it_again(job, monkeypatch):
     from studio.tests.test_art import FakeArtist
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")  # the SVG art is Claude's brain's to draw
+    monkeypatch.setattr(brain, "_chosen", "claude")  # the SVG art is Claude's brain's to draw
     jobs.keep_studio_settings(job, {"art": {"claude": "muse"}})
     FakeMuse().install(monkeypatch)
     art.run(job, FakeHelper())
@@ -315,7 +315,7 @@ def test_locate_without_muse_art_says_what_to_do(job, monkeypatch):
         locate.run(job, FakeHelper())
     painted(job, monkeypatch)
     locate.run(job, FakeHelper())
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    monkeypatch.setattr(brain, "_chosen", "claude")
     jobs.keep_studio_settings(job, {"art": {"claude": "svg"}})  # Muse Image's art is not the SVG art Claude would draw
     with pytest.raises(media.StepFailed, match="no SVG art and locations.json for this bundle; run the art step"):
         locate.run(job, FakeHelper())

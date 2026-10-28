@@ -165,89 +165,72 @@ python -m studio step upload <job-id>    # videos and posters public, the rest p
 
 ### Choosing the models
 
-These variables pick the models the studio runs and the accounts they bill to. The studio
-reads them from its own environment, not from `.env`: on the routine, set them in its
+The routine's environment holds only the keys, which bill each provider's account. The
+studio reads them from its own environment, not from `.env`: on the routine, set them in its
 environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 1).
 
-| Variable | Values | Default | What it does |
-|---|---|---|---|
-| `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson (the next table) |
-| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | none | Needed with `claude`. `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
-| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`, and for SAM 3.1 (and Muse Image) in the art with either. Every Meta model the studio calls bills to it |
-| `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | none | Needed when Gemini 3.1 Flash Image paints the art (the default for Claude's brain), and for Lyria songs |
-| `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. Change it when you change `BRAIN_PROVIDER`: a model from the other provider stops the run (below) |
-| `STUDIO_BRAIN_EFFORT` | `low`, `medium`, `high`, `xhigh`, `max` | `high` | How hard the brain thinks, with `claude` only; `meta` ignores it |
-
-What each brain's provider runs, with the art at its defaults:
-
-| Job | `claude` | `meta` |
+| Variable | Value | Needed for |
 |---|---|---|
-| Brain: writes and fact-checks the lesson | Claude Opus 5.5, or `STUDIO_BRAIN_MODEL` | Muse Wonder 1.0, or `STUDIO_BRAIN_MODEL` |
-| Art: paints each scene, up to three tries | Gemini 3.1 Flash Image, about $0.07 a picture | Muse Image 1.0, $0.01 a picture |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Haiku 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
+| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | a Muse brain and its picture checks (Muse Spark 1.3), Muse Image, and SAM 3.1 with any painter but the SVG |
+| `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
+
+Everything else is chosen by an admin on **STUDIO** in the nav (`/admin/studio`), kept in the
+database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, and who
+paints each brain's pictures. The studio reads them from the API, with its agent key, before
+it claims a topic and from every claim after, so a change applies from the next run with no
+change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`,
+which used to pick the brain, are no longer read: the commands say so when one is still set.
+
+| Setting | Choices | Default |
+|---|---|---|
+| Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
+| Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
+| Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
+| Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
+
+What runs, by the brain's provider:
+
+| Job | Claude's brain | Muse's brain |
+|---|---|---|
+| Brain: writes and fact-checks the lesson | Claude Opus 5.5 | Muse Wonder 1.0 or Muse Spark 1.3 |
+| Art: paints each scene, up to three tries | the painter set for Claude topics | the painter set for Muse topics |
 | Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
-| Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images | SAM 3.1 |
+| Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images (none for the SVG, which says where each one is) | SAM 3.1 |
 
-#### Who paints: the Studio page
+Gemini's picture is 1K at 16:9 (1376 x 768), fitted to the art (`studio/gemini.py`).
+Switching the painter makes a job's art again on its next run; a lesson already written
+stays as it is.
 
-The painter is not an environment variable: an admin picks it for each brain's provider on
-**STUDIO** in the nav (`/admin/studio`), and it is kept in the database
-(`api/src/lib/studio-settings.ts`). The studio reads it from the claim that starts a
-droplet's videos, so a change applies from the next run with no change to the routine's
-environment. The keys stay in the environment, never on the page.
-
-| Brain | Painters | Default |
-|---|---|---|
-| Claude | Gemini 3.1 Flash Image, Muse Image, or Claude draws it as SVG | Gemini 3.1 Flash Image |
-| Muse | Muse Image or Gemini 3.1 Flash Image | Muse Image |
-
-Gemini's and Muse Image's pictures go to SAM 3.1 to find each structure; the SVG art says
-where each one is, so it needs no Gemini or Meta key. Gemini's picture is 1K at 16:9 (1376 x
-768), fitted to the art (`studio/gemini.py`). Switching the painter makes a job's art again
-on its next run; a lesson already written stays as it is.
-
-`run`, `videos` and `recover` check these settings before they claim anything. A wrong one
-(an unknown provider, its key missing, a model from the other provider, a misspelled
-effort; for `videos` and `recover`, a key the painter or SAM needs) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
-`videos`), and the teacher stops and reports it, so no topic is failed or given up over a
-setting.
-
-The brain's models, for `STUDIO_BRAIN_MODEL`:
-
-| `STUDIO_BRAIN_MODEL` | With | Price per million tokens (in / out) | Use it for |
-|---|---|---|---|
-| `claude-opus-5-5` (the default) | `claude` | $4.00 / $20.00 | the real lessons, about 70 cents a topic |
-| `claude-haiku-5-5` | `claude` | $0.10 / $0.50 | trying a change, about 2 cents a topic |
-| `muse-wonder-1.0` (the default) | `meta` | $4.00 / $20.00 | the real lessons |
-| `muse-spark-1.3` | `meta` | $1.25 / $4.25 | vetting a change, on any topic |
-| `muse-spark-1.3-contributor` | `meta` | $0.10 / $0.20 | test topics only (`python -m studio plan`): Meta may train on everything it is sent, learners' requests included. Never on the routine |
-
-Any other model of the provider's works too (another Claude model id, or a Muse one such
-as `muse-spark-1.2`); a model the bill has no price for shows as unpriced. To try a prompt
-change on a local job: `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`,
-or with `BRAIN_PROVIDER=meta`, `STUDIO_BRAIN_MODEL=muse-spark-1.3`.
+`run` and `recover` read the settings before they claim anything, and `videos` checks the
+job's: a brain or painter whose key is missing ends the command with `STOPPED run: the
+studio's settings are wrong: ...` (or `videos`), and the teacher stops and reports it, so no
+topic is failed or given up over a setting. For a local job, `python -m studio plan ...
+--brain muse-spark --effort medium` (the default: Claude Opus 5.5 at high); Muse Spark vets
+a prompt change for about a quarter of Muse Wonder's price.
 
 The Meta calls follow Meta's docs but have not run against the live API yet: check them
-first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
-scene, a few cents). Gemini's has: `STUDIO_LIVE_ART=1 GEMINI_API_KEY=... python -m pytest
+first with `STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s`
+(one scene, a few cents). Gemini's has: `STUDIO_LIVE=1 GEMINI_API_KEY=... python -m pytest
 studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 
 #### One topic on another brain
 
 An admin can send one topic to a brain of its own: the **Brain** buttons under the box on
-`/learn` (admins only; a learner's topic is always made by the teacher's own). The pick is
+`/learn` (admins only; a learner's topic is always made by the default brain). The pick is
 remembered on that browser, and the topic's card shows it.
 
 | Button | Brain: writes and fact-checks the lesson | Brain bills to |
 |---|---|---|
-| Default | whatever `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL` say | the same |
+| Default | the default brain on the Studio page (the note under the buttons names it) | its key |
 | Claude | Claude Opus 5.5 (`claude-opus-5-5`) | `POPSMOSIS_ANTHROPIC_API_KEY` |
 | Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
 | Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | `MODEL_API_KEY` |
 
 The pictures are painted by the Studio page's painter for the pick's provider: by default
 Gemini 3.1 Flash Image for Claude, Muse Image for the Muses. For that topic the pick wins
-over `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL` (`STUDIO_BRAIN_EFFORT` still sets Claude's
-effort). The studio keeps it in the job's `brain.json`, so a retry, `videos`, `recover` and
+over the default brain (Claude's effort is still the Studio page's). The studio keeps the
+brain a topic is made on in the job's `brain.json`, so a retry, `videos`, `recover` and
 `step` stay on it, and the bill shows the models that ran. The environment needs the key of
 the pick's provider: a topic sent to a brain whose key is missing fails at its first step
 with `the studio cannot run this topic's brain here: ...`, and the teacher gives it up with
@@ -262,8 +245,10 @@ npm --workspace api test                  # unit tests, no database
 INTEGRATION=1 npm --workspace api test    # plus the end-to-end flow against DATABASE_URL
 npm --workspace web run build
 npm run e2e                               # Playwright browser tests; needs api + web running (see web/e2e/README.md)
-python -m pytest studio                   # the studio, offline; test_live.py also runs when POPSMOSIS_ANTHROPIC_API_KEY is set,
-                                          # and test_live_meta.py when MODEL_API_KEY is
+python -m pytest studio                   # the studio, offline: never a paid call, whatever keys are set
+STUDIO_LIVE=1 python -m pytest studio/tests/test_live.py studio/tests/test_live_meta.py studio/tests/test_live_gemini.py
+                                          # the live checks, on the real APIs: they spend Anthropic, Meta and Gemini
+                                          # credit, each only with its key set (STUDIO_LIVE_AUDIO=1 for the audio ones)
 ```
 
 CI runs all of it: API typecheck and tests against a Postgres service, the web build,

@@ -24,7 +24,7 @@ import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
 import { Wordmark } from '@/components/Wordmark';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
-import { BRAIN_OPTIONS, brainLabel, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
+import { BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
 
 const PAGE_SIZE = 20;
 const POLL_MS = 10_000;
@@ -359,6 +359,7 @@ function LearnContent() {
   const [newQuestion, setNewQuestion] = useState('');
   // An admin's pick of the brain for the next topic (lib/brains.ts), remembered on this browser; null: the teacher's own.
   const [brain, setBrain] = useState<Brain | null>(null);
+  const [defaultBrain, setDefaultBrain] = useState<Brain | null>(null); // the Studio page's, for the Default button
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const { submitting, guard } = useGuardedSubmit();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -395,7 +396,9 @@ function LearnContent() {
   }, [authLoading, user, load]);
 
   useEffect(() => {
-    if (isAdmin) setBrain(rememberedBrain());
+    if (!isAdmin) return;
+    setBrain(rememberedBrain());
+    api.getStudioSettings().then((s) => setDefaultBrain(s.brain.default)).catch(() => {}); // the note says less without it
   }, [isAdmin]);
 
   const pickBrain = (value: Brain | null) => {
@@ -654,6 +657,7 @@ function LearnContent() {
             </div>
             <p className="text-[10px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="brain-note">
               Admins only. {BRAIN_OPTIONS.find((o) => o.value === brain)?.note}
+              {brain === null && defaultBrain && ` Now: ${BRAIN_MODELS[defaultBrain]}.`}
             </p>
           </div>
         )}

@@ -415,7 +415,9 @@ test.describe('studio settings', () => {
 
   test('an admin picks who paints each brain\'s pictures, and the teacher\'s next claim carries it', async ({ page, context, request }) => {
     // From the defaults, whatever an earlier run left.
-    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini', meta: 'muse' } } });
+    await request.put(apiUrl('/api/studio/settings'), {
+      headers: asAda(), data: { brain: { default: 'claude', effort: 'high' }, art: { claude: 'gemini', meta: 'muse' } },
+    });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
     const claude = page.getByTestId('art-claude');
@@ -434,9 +436,30 @@ test.describe('studio settings', () => {
     const text = `E2E ${Date.now()}: studio settings`;
     const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
-    expect((await claimed.json()).studio).toEqual({ art: { claude: 'muse', meta: 'muse' } });
+    expect((await claimed.json()).studio).toEqual({ brain: { default: 'claude', effort: 'high' }, art: { claude: 'muse', meta: 'muse' } });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
+  });
+
+  test('an admin sets the default brain and Claude\'s effort, and the teacher reads them with its key', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const brains = page.getByTestId('brain-default');
+    await expect(brains.getByRole('radio', { name: /Claude Opus 5.5/ })).toHaveAttribute('aria-checked', 'true');
+    await brains.getByRole('radio', { name: /Muse Spark 1.3/ }).click();
+    await expect(brains.getByRole('radio', { name: /Muse Spark 1.3/ })).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('brain-effort').getByRole('radio', { name: 'medium' }).click();
+    await expect(page.getByTestId('brain-effort').getByRole('radio', { name: 'medium' })).toHaveAttribute('aria-checked', 'true');
+
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).brain).toEqual({ default: 'muse-spark', effort: 'medium' });
+
+    // The LEARN page's Default button says which brain it is now.
+    await page.goto('/learn');
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
+    await expect(page.getByTestId('brain-note')).toContainText('Now: Muse Spark 1.3.');
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
   });
 
   test('is for admins only', async ({ page, context }) => {

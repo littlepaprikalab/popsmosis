@@ -15,7 +15,7 @@ import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { parseBrain } from '../lib/brains.js';
-import { studioForClaim } from '../lib/studio-settings.js';
+import { studioForAgent } from '../lib/studio-settings.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -267,7 +267,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
     }
     // With the studio's settings (lib/studio-settings.ts), so an admin's change reaches the run.
-    return { ...serializeQuestion(question), studio: await studioForClaim() };
+    return { ...serializeQuestion(question), studio: await studioForAgent() };
   });
 
   // PUT /api/questions/:id/progress — agent: where the studio is while it writes the lesson (lib/progress.ts):

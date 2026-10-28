@@ -1,10 +1,10 @@
 /**
  * The brains an admin may pick for a topic on /learn, so a test topic can run on a cheaper model, or on
- * another account's credit, than the teacher's own setting. Stored on the question as `brain`; null, as
- * every learner's topic is, leaves the choice to the teacher (BRAIN_PROVIDER where the studio runs).
+ * another account's credit, than the default. Stored on the question as `brain`; null, as every learner's
+ * topic is, leaves it to the default brain an admin sets on /admin/studio (lib/studio-settings.ts).
  *
- * The studio maps each key to its provider and model (studio/brain.py, CHOICES), and the art follows the
- * provider: the brain draws it on claude, Muse Image paints it on meta. Keep the two lists the same.
+ * The studio maps each key to its provider and model (studio/brain.py, CHOICES), and the painter follows the
+ * provider, as set on /admin/studio. Keep the two lists the same.
  */
 
 export const BRAINS = ['claude', 'muse-wonder', 'muse-spark'] as const;

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { api, ArtSettings, Painter, StudioSettings } from '@/lib/api';
+import { api, ArtSettings, BrainSettings, Effort, Painter, StudioSettings } from '@/lib/api';
+import { BRAIN_MODELS, type Brain } from '@/lib/brains';
 import { useAuth } from '@/lib/auth';
 import PageContainer from '@/components/PageContainer';
 import { LoadingMessage } from '@/components/LoadingMessage';
@@ -17,9 +18,18 @@ const PAINTERS: Record<Painter, { label: string; note: string }> = {
 };
 
 const BRAINS: { provider: keyof ArtSettings; title: string; who: string }[] = [
-  { provider: 'claude', title: 'Claude topics', who: 'Sent to Claude on the LEARN page, or on Default while the teacher runs on Claude. Claude Haiku 5.5 checks each picture.' },
-  { provider: 'meta', title: 'Muse topics', who: 'Sent to Muse Wonder or Muse Spark, or on Default while the teacher runs on Muse. Muse Spark 1.3 checks each picture.' },
+  { provider: 'claude', title: 'Pictures for Claude topics', who: 'Sent to Claude on the LEARN page, or on Default while the default brain is Claude. Claude Haiku 5.5 checks each picture.' },
+  { provider: 'meta', title: 'Pictures for Muse topics', who: 'Sent to Muse Wonder or Muse Spark, or on Default while the default brain is a Muse. Muse Spark 1.3 checks each picture.' },
 ];
+
+// What each brain costs and bills to (studio/brain.py, PRICES), per million tokens in / out.
+const BRAIN_NOTES: Record<Brain, string> = {
+  claude: '$4 / $20 per million tokens, on the Anthropic key (POPSMOSIS_ANTHROPIC_API_KEY). About 70¢ a topic at high effort.',
+  'muse-wonder': '$4 / $20 per million tokens, on the Meta key (MODEL_API_KEY).',
+  'muse-spark': '$1.25 / $4.25 per million tokens, on the Meta key (MODEL_API_KEY): about a quarter of Wonder’s price.',
+};
+
+const EFFORT_NOTE = 'How hard Claude thinks when it writes and checks a lesson; thinking is billed as output. Muse ignores it.';
 
 /**
  * Admin page: the studio's settings (api/src/lib/studio-settings.ts). Who paints each droplet's pictures, by the
@@ -31,7 +41,7 @@ export default function AdminStudioPage() {
   const { showToast } = useToast();
   const [settings, setSettings] = useState<StudioSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<keyof ArtSettings | null>(null);
+  const [saving, setSaving] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,17 +59,30 @@ export default function AdminStudioPage() {
     if (me?.role === 'ADMIN') load(); else setLoading(false);
   }, [authLoading, me, load]);
 
-  const pick = async (provider: keyof ArtSettings, painter: Painter) => {
-    if (!settings || settings.art[provider] === painter || saving) return;
-    setSaving(provider);
+  const save = async (what: string, change: { brain?: Partial<BrainSettings>; art?: Partial<ArtSettings> }, done: string) => {
+    if (saving) return;
+    setSaving(what);
     try {
-      setSettings(await api.setStudioArt({ [provider]: painter }));
-      showToast(`${provider === 'claude' ? 'Claude' : 'Muse'} topics: ${PAINTERS[painter].label} paints from the next run.`, 'success');
+      setSettings(await api.setStudioSettings(change));
+      showToast(done, 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save', 'error');
     } finally {
       setSaving(null);
     }
+  };
+  const pick = (provider: keyof ArtSettings, painter: Painter) => {
+    if (settings?.art[provider] === painter) return;
+    save(provider, { art: { [provider]: painter } },
+      `${provider === 'claude' ? 'Claude' : 'Muse'} topics: ${PAINTERS[painter].label} paints from the next run.`);
+  };
+  const pickBrain = (brain: Brain) => {
+    if (settings?.brain.default === brain) return;
+    save('brain', { brain: { default: brain } }, `${BRAIN_MODELS[brain]} writes the next topics sent on Default.`);
+  };
+  const pickEffort = (effort: Effort) => {
+    if (settings?.brain.effort === effort) return;
+    save('effort', { brain: { effort } }, `Claude thinks at ${effort} effort from the next run.`);
   };
 
   if (authLoading || (loading && me?.role === 'ADMIN')) return <LoadingMessage />;
@@ -85,8 +108,8 @@ export default function AdminStudioPage() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">STUDIO</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          Who paints each droplet&rsquo;s pictures, by the brain that writes its lesson. The teacher reads this when it
-          starts a droplet&rsquo;s videos, so a change applies from the next run.
+          The brain that writes each lesson and who paints its pictures. The teacher reads this as it starts each topic
+          and each droplet&rsquo;s videos, so a change applies from the next run. Its machine holds only the API keys.
         </p>
         <p className="text-[10px] uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }} data-testid="studio-updated">
           {settings.updatedAt ? `Last changed ${timeAgo(settings.updatedAt)}` : 'The defaults: never changed'}
@@ -94,34 +117,52 @@ export default function AdminStudioPage() {
       </div>
 
       <div className="space-y-4">
+        <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+          data-testid="brain-default">
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Default brain</h3>
+          <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+            Writes and fact-checks every topic sent on Default, learners&rsquo; included. An admin can still send one topic
+            to another brain on the LEARN page.
+          </p>
+          <div className="space-y-2" role="radiogroup" aria-label="Default brain">
+            {settings.choices.brain.default.map((brain) => (
+              <Choice key={brain} on={settings.brain.default === brain} disabled={saving !== null}
+                label={BRAIN_MODELS[brain]} note={BRAIN_NOTES[brain]} isDefault={settings.defaults.brain.default === brain}
+                onClick={() => pickBrain(brain)} />
+            ))}
+          </div>
+          <div className="mt-4" data-testid="brain-effort">
+            <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Claude's effort">
+              <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}>Claude&rsquo;s effort:</span>
+              {settings.choices.brain.effort.map((effort) => {
+                const on = settings.brain.effort === effort;
+                return (
+                  <button key={effort} type="button" role="radio" aria-checked={on} disabled={saving !== null}
+                    onClick={() => pickEffort(effort)}
+                    className={`px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider transition-colors rounded-full border ${
+                      on ? 'text-[var(--btn-filled-text)] border-transparent' : 'text-[var(--accent-purple)] border-[var(--accent-purple)] hover:bg-[var(--accent-purple)]/10'
+                    }`}
+                    style={on ? { background: 'var(--accent-purple)' } : {}}>
+                    {effort}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-muted)' }}>{EFFORT_NOTE} Default: {settings.defaults.brain.effort}.</p>
+          </div>
+        </section>
+
         {BRAINS.map(({ provider, title, who }) => (
           <section key={provider} className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
             data-testid={`art-${provider}`}>
             <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>{title}</h3>
             <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>{who}</p>
             <div className="space-y-2" role="radiogroup" aria-label={`Who paints the pictures for ${title}`}>
-              {settings.choices.art[provider].map((painter) => {
-                const on = settings.art[provider] === painter;
-                return (
-                  <button key={painter} type="button" role="radio" aria-checked={on} disabled={saving !== null}
-                    onClick={() => pick(provider, painter)}
-                    className="w-full text-left rounded-md px-3 py-2 transition-colors disabled:cursor-wait"
-                    style={{
-                      background: on ? 'rgba(175, 82, 222, 0.10)' : 'var(--bg-tertiary)',
-                      border: `1px solid ${on ? 'var(--accent-purple)' : 'var(--border)'}`,
-                    }}>
-                    <span className="flex items-center gap-2">
-                      <span className="inline-block w-3 h-3 rounded-full shrink-0"
-                        style={{ border: '2px solid var(--accent-purple)', background: on ? 'var(--accent-purple)' : 'transparent' }} />
-                      <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{PAINTERS[painter].label}</span>
-                      {settings.defaults.art[provider] === painter && (
-                        <span className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>default</span>
-                      )}
-                    </span>
-                    <span className="block text-[11px] mt-1 ml-5" style={{ color: 'var(--text-secondary)' }}>{PAINTERS[painter].note}</span>
-                  </button>
-                );
-              })}
+              {settings.choices.art[provider].map((painter) => (
+                <Choice key={painter} on={settings.art[provider] === painter} disabled={saving !== null}
+                  label={PAINTERS[painter].label} note={PAINTERS[painter].note}
+                  isDefault={settings.defaults.art[provider] === painter} onClick={() => pick(provider, painter)} />
+              ))}
             </div>
           </section>
         ))}
@@ -133,5 +174,27 @@ export default function AdminStudioPage() {
         the next time its videos run.
       </p>
     </PageContainer>
+  );
+}
+
+/** One option of a setting: a radio row with its name, a note on what it costs, and whether it is the default. */
+function Choice({ on, disabled, label, note, isDefault, onClick }: {
+  on: boolean; disabled: boolean; label: string; note: string; isDefault: boolean; onClick: () => void;
+}) {
+  return (
+    <button type="button" role="radio" aria-checked={on} disabled={disabled} onClick={onClick}
+      className="w-full text-left rounded-md px-3 py-2 transition-colors disabled:cursor-wait"
+      style={{
+        background: on ? 'rgba(175, 82, 222, 0.10)' : 'var(--bg-tertiary)',
+        border: `1px solid ${on ? 'var(--accent-purple)' : 'var(--border)'}`,
+      }}>
+      <span className="flex items-center gap-2">
+        <span className="inline-block w-3 h-3 rounded-full shrink-0"
+          style={{ border: '2px solid var(--accent-purple)', background: on ? 'var(--accent-purple)' : 'transparent' }} />
+        <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{label}</span>
+        {isDefault && <span className="text-[9px] uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>default</span>}
+      </span>
+      <span className="block text-[11px] mt-1 ml-5" style={{ color: 'var(--text-secondary)' }}>{note}</span>
+    </button>
   );
 }

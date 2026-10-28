@@ -120,9 +120,8 @@ class FakeGemini:
 
 
 @pytest.fixture
-def job(tmp_path, monkeypatch):
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
-    path = sample_media.write_job(tmp_path / "sample")
+def job(tmp_path):
+    path = sample_media.write_job(tmp_path / "sample")  # the brain is Claude's: nothing else is in force
     (path / media.LOCATIONS).unlink()  # the sample's own, made of ellipses
     return path
 
@@ -166,7 +165,7 @@ def test_the_admins_setting_picks_the_painter_and_switching_it_paints_again(job,
 
 
 def test_on_muses_brain_the_admin_can_have_gemini_paint(job, monkeypatch):
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setattr(brain, "_chosen", "muse-spark")
     jobs.keep_studio_settings(job, {"art": {"meta": "gemini"}})
     assert art.painter(job) == "gemini"
     jobs.keep_studio_settings(job, {"art": {"meta": "svg"}})  # not Muse's to have: its default instead

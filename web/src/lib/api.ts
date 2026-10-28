@@ -312,12 +312,16 @@ export interface Question {
 /** Who paints a droplet's pictures, by the provider of the brain that wrote it (api/src/lib/studio-settings.ts). */
 export type Painter = 'gemini' | 'muse' | 'svg';
 export type ArtSettings = { claude: Painter; meta: Painter };
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+// The brain that writes a topic no admin sent to a brain of its own, and Claude's effort when it is Claude's.
+export type BrainSettings = { default: Brain; effort: Effort };
 
 export interface StudioSettings {
+  brain: BrainSettings;
   art: ArtSettings;
   updatedAt: string | null; // null: never changed, the defaults
-  defaults: { art: ArtSettings };
-  choices: { art: { claude: Painter[]; meta: Painter[] } };
+  defaults: { brain: BrainSettings; art: ArtSettings };
+  choices: { brain: { default: Brain[]; effort: Effort[] }; art: { claude: Painter[]; meta: Painter[] } };
 }
 
 /** A droplet on the public tab (api/src/lib/droplet.ts). Nothing about who asked for it. */
@@ -472,6 +476,6 @@ export const api = {
 
   // Admin: the studio's settings (api/src/routes/studio.ts). A change reaches the teacher's next run.
   getStudioSettings: () => request<StudioSettings>('/studio/settings'),
-  setStudioArt: (art: Partial<ArtSettings>) =>
-    request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify({ art }) }),
+  setStudioSettings: (change: { brain?: Partial<BrainSettings>; art?: Partial<ArtSettings> }) =>
+    request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify(change) }),
 };
