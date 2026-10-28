@@ -23,7 +23,7 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `API_BASE_URL` | `https://popsmosis-api.onrender.com` | your API hostname; goes into the downloaded skill file |
 | `ADMIN_EMAILS` | `you@yourcompany.com` | Google emails that get the admin role on sign-in. **Set this**: somebody has to manage the agents. Anyone else with a Google account can sign in and use the site |
 | `SUPABASE_URL` | `https://<project-ref>.supabase.co` | Supabase > Project Settings > API > Project URL. Where the studio uploads the droplet videos; see [Supabase Storage](#6-supabase-storage-the-droplet-videos). Unset, the upload endpoint answers 503 and no droplet gets videos |
-| `SUPABASE_SERVICE_ROLE_KEY` | the `service_role` key | Supabase > Project Settings > API Keys. Signs each upload; it stays on the API and is never sent to the studio or a browser |
+| `SUPABASE_SERVICE_ROLE_KEY` | the secret key (`sb_secret_…`), never the publishable one | Supabase > Project Settings > API Keys. Signs each upload; it stays on the API and is never sent to the studio or a browser. The legacy `service_role` JWT also works until the end of 2026 |
 | `NODE_ENV` | `production` | set by the blueprint |
 | `PORT` | `3001` | set by the blueprint |
 
@@ -201,13 +201,18 @@ be deleted by hand.
    a modest bitrate stays under; on a paid plan raise the limit (Storage > Settings, then
    each bucket's own) if a video is refused. Leave the bucket policies alone: the signed
    URLs need none, and a public bucket is readable without one.
-3. **Give the API the keys.** Supabase > Project Settings > API: copy the **Project URL** to
-   `SUPABASE_URL`, and the **`service_role`** key (under API Keys; on newer projects, the
-   legacy keys tab) to `SUPABASE_SERVICE_ROLE_KEY`, both on `popsmosis-api` only. The API
-   sends the key as both `apikey` and a bearer token, which is what the `service_role` JWT
-   takes; a newer `sb_secret_…` key has not been tried. On an existing service add the two
-   by hand in Render > popsmosis-api > Environment: a Blueprint sync never adds a
-   `sync: false` variable to a service that already exists. Redeploy the API.
+3. **Give the API the keys.** Set `SUPABASE_URL` to the **Project URL**,
+   `https://<project-ref>.supabase.co` with the ref in the dashboard's address bar, and
+   `SUPABASE_SERVICE_ROLE_KEY` to a **secret key** (Project Settings > API Keys, under
+   Secret keys: `sb_secret_…`), both on `popsmosis-api` only. Not the
+   **publishable** key (`sb_publishable_…`): that one is for browsers, and storage refuses
+   it every upload. The legacy `service_role` JWT (`eyJ…`, on the Legacy API Keys tab) also
+   works until Supabase retires the legacy keys at the end of 2026; the legacy `anon` key
+   does not. The API sends a secret key as `apikey` only, since Supabase refuses one sent as
+   a bearer token, and a key that cannot upload is named in the API log at boot and in every
+   upload-url answer. On an existing service add the two by hand in Render > popsmosis-api >
+   Environment: a Blueprint sync never adds a `sync: false` variable to a service that
+   already exists. Redeploy the API.
 4. **Check it.** With the agent key:
 
    ```bash
@@ -217,8 +222,9 @@ be deleted by hand.
    # {"uploadUrl":"https://<ref>.supabase.co/storage/v1/object/upload/sign/droplets/...?token=...","publicUrl":"..."}
    ```
 
-   A 503 means the two variables are not set on the running API; a 503 that says storage
-   did not give an upload URL means Supabase refused: check the key and the bucket name.
+   A 503 says what is wrong: the two variables are not set on the running API, the key is
+   not one that can upload, or Supabase refused, with Supabase's reason (such as
+   `Bucket not found`).
 5. **The routine's network policy** must allow the Supabase host (`<ref>.supabase.co`), since
    the studio uploads straight to it (docs/PLAN.md, section 9).
 
@@ -333,7 +339,9 @@ do not. Roll forward instead.
 | `P1001: Can't reach database server at db.<ref>.supabase.co:5432` | `DATABASE_URL` is the **direct** connection string, which is IPv6-only and unreachable from Render. Replace it with the **Session pooler** string: host `aws-0-<region>.pooler.supabase.com`, port `5432`, user `postgres.<project-ref>`. Supabase > Project Settings > Database > Connection string > Session pooler. Update it in the Render dashboard (Environment) and redeploy — it is a `sync: false` var, so editing `render.yaml` will not change it |
 | `password authentication failed` | the pooler user is `postgres.<project-ref>`, not `postgres` |
 | The studio's upload step fails with `503 UNAVAILABLE: File storage is not configured` | `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are not on the running API. Add both in the Render dashboard and redeploy (section 6) |
-| Upload fails with `503 UNAVAILABLE: File storage did not give an upload URL` | the API reached Supabase and was refused; the API log has `signed upload URL failed` with Supabase's status. Usually the `droplets` or `studio` bucket does not exist or is named differently, or the key is not the `service_role` one (section 6) |
+| Upload fails with `503 UNAVAILABLE: File storage is misconfigured on this API` | `SUPABASE_SERVICE_ROLE_KEY` holds a key that cannot upload, most often the publishable key (`sb_publishable_…`). The message names which; the API log says the same at boot. Set the secret key (`sb_secret_…`) and redeploy (section 6) |
+| Upload fails with `503 UNAVAILABLE: File storage refused to give an upload URL (storage answered 4xx: …)` | Supabase refused, and the message ends with its reason. `Bucket not found`: the `droplets` or `studio` bucket does not exist in the project `SUPABASE_URL` names, or is named differently. A JWT, signature or row-level security message: the key is from another project, or is not the secret or `service_role` one (section 6). Waiting does not fix these, so the studio does not retry them |
+| Upload fails with `503 UNAVAILABLE: File storage did not give an upload URL (…); try again` | Supabase did not answer, or answered 429 or 5xx. The studio retries it twice; if it keeps happening, check Supabase's status page and that `SUPABASE_URL` is the bare `https://<ref>.supabase.co` |
 | Upload fails with `storage answered 4xx` on one file | Supabase refused the bytes: most often the file is over the bucket's size limit or its type is not in the bucket's allowed MIME types. Raise or extend them on the bucket |
 | A video shows on `/learn` but does not play | the `droplets` bucket is not public, so its public URL answers 400. Make it public (section 6) |
 | Visitors to `/droplets` get `Too many requests` | each visitor may make 60 requests a minute, keyed by the address the edge saw (`CF-Connecting-IP`, `True-Client-IP`, then the first `X-Forwarded-For` entry, believed only on requests that carry the proxy secret), and all of them together 1200 a minute per API instance (`api/src/lib/public-limit.ts`). If every visitor seems to share one limit, the API is seeing none of those headers |

@@ -28,22 +28,80 @@ export function fileError(file: unknown): string | null {
   return null;
 }
 
-export type StorageConfig = { url: string; key: string };
+/**
+ * SUPABASE_SERVICE_ROLE_KEY takes one of the two keys that may write to storage, and
+ * each is sent the way Supabase takes it:
+ *   sb_secret_…  the secret key (Project Settings > API Keys). Only as apikey: it is not
+ *                a JWT, and Supabase refuses one sent as a bearer token.
+ *   eyJ…         the legacy service_role JWT, as apikey and as a bearer token. Supabase
+ *                retires the legacy keys by the end of 2026.
+ * The publishable key (sb_publishable_…) and the legacy anon JWT are browser keys that
+ * storage refuses every upload, so they are named as the problem before any upload.
+ */
+export type StorageConfig = { url: string; headers: Record<string, string> };
+export type StorageProblem = { problem: string };
 
-/** SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, or null when uploads are not set up. */
-export function storageConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig | null {
-  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, '');
-  const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  return url && key ? { url, key } : null;
+const NEEDS = 'set it to the secret key (sb_secret_…) from Supabase > Project Settings > API Keys';
+
+/** The legacy JWT's role claim, or null when the key is not a JWT. */
+function jwtRole(key: string): string | null {
+  const parts = key.split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8')) as { role?: unknown } | null;
+    return typeof claims?.role === 'string' ? claims.role : null;
+  } catch {
+    return null;
+  }
 }
 
-export class StorageError extends Error {}
+function keyHeaders(key: string): { headers: Record<string, string> } | StorageProblem {
+  if (key.startsWith('sb_secret_')) return { headers: { apikey: key } };
+  if (key.startsWith('sb_publishable_')) {
+    return { problem: `SUPABASE_SERVICE_ROLE_KEY is the publishable key, which cannot upload; ${NEEDS}` };
+  }
+  const role = jwtRole(key);
+  if (role === 'service_role') return { headers: { apikey: key, authorization: `Bearer ${key}` } };
+  if (role) return { problem: `SUPABASE_SERVICE_ROLE_KEY is the legacy ${role} key, which cannot upload; ${NEEDS}` };
+  return { problem: `SUPABASE_SERVICE_ROLE_KEY is not a Supabase secret key; ${NEEDS}` };
+}
+
+/**
+ * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY: null when uploads are not set up, the
+ * problem when the key cannot sign them.
+ */
+export function storageConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig | StorageProblem | null {
+  const url = env.SUPABASE_URL?.trim().replace(/\/+$/, '');
+  const key = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key) return null;
+  const auth = keyHeaders(key);
+  return 'problem' in auth ? auth : { url, headers: auth.headers };
+}
+
+/** Supabase did not give an upload URL. retryable: a moment may fix it (no answer, 429, a 5xx). */
+export class StorageError extends Error {
+  retryable: boolean;
+  constructor(message: string, retryable: boolean) {
+    super(message);
+    this.retryable = retryable;
+  }
+}
 
 export type SignedUpload = {
   uploadUrl: string; // PUT the file's bytes here, with its Content-Type
   path: string; // bucket/answerId/file
   publicUrl: string | null; // where anyone can read it, for the public bucket only
 };
+
+// Storage's error bodies come in a few shapes: { statusCode, error, message },
+// { code, message } and { httpStatusCode, code, message }.
+async function refusal(res: Response): Promise<StorageError> {
+  const body = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  const said = [body?.message, body?.error, body?.code].find((v): v is string => typeof v === 'string' && v !== '');
+  const inner = Number(body?.statusCode ?? body?.httpStatusCode);
+  const transient = [res.status, inner].some((s) => s === 429 || s >= 500);
+  return new StorageError(`storage answered ${res.status}${said ? `: ${said.slice(0, 200)}` : ''}`, transient);
+}
 
 export async function signUpload(
   config: StorageConfig,
@@ -57,22 +115,17 @@ export async function signUpload(
   try {
     res = await fetchImpl(`${config.url}/storage/v1/object/upload/sign/${object}`, {
       method: 'POST',
-      headers: {
-        authorization: `Bearer ${config.key}`,
-        apikey: config.key,
-        'content-type': 'application/json',
-        'x-upsert': 'true',
-      },
+      headers: { ...config.headers, 'content-type': 'application/json', 'x-upsert': 'true' },
       body: '{}',
       signal: AbortSignal.timeout(10_000),
     });
   } catch (err) {
-    throw new StorageError(`storage unreachable: ${(err as Error).message}`);
+    throw new StorageError(`storage unreachable: ${(err as Error).message}`, true);
   }
-  if (!res.ok) throw new StorageError(`storage answered ${res.status}`);
+  if (!res.ok) throw await refusal(res);
   const body = (await res.json().catch(() => null)) as { url?: unknown } | null;
   // A path relative to /storage/v1, carrying the upload token as ?token=.
-  if (typeof body?.url !== 'string' || !body.url.startsWith('/')) throw new StorageError('storage sent no upload URL');
+  if (typeof body?.url !== 'string' || !body.url.startsWith('/')) throw new StorageError('storage sent no upload URL', true);
   return {
     uploadUrl: `${config.url}/storage/v1${body.url}`,
     path: object,
