@@ -2,7 +2,7 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from studio.brain import SCHEMA_KEYWORDS, strict_schema
-from studio.schemas import Bundle, FactCheck
+from studio.schemas import Bundle, FactCheck, tag_of
 from studio.tests.sample import bundle_data
 
 
@@ -28,7 +28,7 @@ def test_schema_uses_only_what_both_providers_accept(model):
 def test_bundle_fields_are_in_the_order_the_model_writes_them():
     assert list(strict_schema(Bundle)["properties"]) == [
         "course", "topic", "audience", "core_idea", "facts", "misconception", "frq",
-        "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction",
+        "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction", "tags",
     ]
     facts = strict_schema(Bundle)["properties"]["facts"]["items"]
     assert list(facts["properties"]) == ["id", "text", "source_quote"]
@@ -52,6 +52,29 @@ def test_constraints_that_would_reach_the_schema_are_refused():
 def test_sample_bundle_is_valid_and_colours_are_normalised():
     bundle = Bundle.model_validate(bundle_data())
     assert bundle.scenes[0].structures[0].color_hex == "#2E8B57"
+
+
+def test_tags_are_written_as_hashtags_are_searched():
+    data = bundle_data()
+    data["tags"]["song"] = ["#AP Bio", "apbio", "#Light-Reactions", "#", "#" + "x" * 41, "#Révolution_Française",
+                            *[f"#t{n}" for n in range(12)]]
+    tags = Bundle.model_validate(data).tags
+    assert tags.song == ["apbio", "lightreactions", "révolution_française", "t0", "t1", "t2", "t3", "t4", "t5", "t6"]
+    assert tags.lesson == ["photosynthesis", "lightreactions", "apbio", "explained"]
+
+
+def test_a_tag_reads_the_same_cleaned_twice():
+    # A spacing accent leaves a combining mark beside the letter, which composes only at the end.
+    for raw in ["A¨", "#A´b", "J̌ǰ", "ΐΪ́", "ﬁzz", "#Straße", "İstanbul", "ΟΔΟΣ_Σ"]:
+        assert tag_of(tag_of(raw)) == tag_of(raw)
+    assert tag_of("A¨") == "\u00e4"
+
+
+def test_a_bundle_written_before_tags_has_none():
+    data = bundle_data()
+    del data["tags"]
+    tags = Bundle.model_validate(data).tags
+    assert tags.song == [] and tags.lesson == []
 
 
 def test_a_bundle_from_before_the_audience_reads_as_high_school():

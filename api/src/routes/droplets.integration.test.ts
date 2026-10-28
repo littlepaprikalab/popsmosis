@@ -98,6 +98,7 @@ d('the Droplets tab', () => {
       id: newer, title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase',
       excerpt: 'Lesson 10: ATP synthase spins.',
       video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null },
+      tags: { song: [], lesson: [] }, // a droplet made before there were tags
       likeCount: 0, commentCount: 0, liked: false,
       createdAt: expect.any(String),
     });
@@ -107,6 +108,79 @@ d('the Droplets tab', () => {
     const second = (await get(`/api/droplets?limit=1&cursor=${first.nextCursor}`)).json();
     expect(second.data.map((x: { id: string }) => x.id)).toEqual([older]);
     expect((await get(`/api/droplets?limit=1&cursor=${second.nextCursor}`)).json()).toEqual({ data: [], nextCursor: null });
+  });
+
+  it("keeps each video's hashtags from the bundle, shows them, and finds a droplet by one", async () => {
+    // The studio posts the lesson with its bundle, and the tags come in it, written however the brain wrote them.
+    const q = await prisma.question.create({ data: { userId: learnerId, content: 'photosynthesis for my AP Bio exam on Friday' } });
+    const tags = { song: ['#Photosynthesis', '#APBio', '#K-pop', '#photosynthesis'], lesson: ['#Photosynthesis', '#APBio', '#Explained'] };
+    const posted = await app.inject({
+      method: 'POST', url: `/api/questions/${q.id}/answer`, headers: { authorization: `Bearer ${agentKey}` },
+      payload: { content: 'Light makes ATP.', bundle: { ...BUNDLE, topic: 'the light reactions', tags }, factcheck: FACTCHECK },
+    });
+    expect(posted.statusCode).toBe(201);
+    const id = posted.json().id as string;
+    const cleaned = { song: ['photosynthesis', 'apbio', 'kpop'], lesson: ['photosynthesis', 'apbio', 'explained'] };
+    expect(await prisma.answer.findUnique({ where: { id }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: cleaned.song, lessonTags: cleaned.lesson });
+    // The learner sees them on /learn as soon as the lesson is up.
+    const mine = await get(`/api/questions/${q.id}`, { cookie: learnerCookie });
+    expect(mine.json().answer.tags).toEqual(cleaned);
+
+    const ids = async (url: string) => (await get(url)).json().data.map((x: { id: string }) => x.id);
+    // Not on the tab until its videos are READY, so no search finds it before then.
+    expect(await ids('/api/droplets?tag=photosynthesis')).toEqual([]);
+    await prisma.answer.update({ where: { id }, data: { videoStatus: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON } });
+    const another = await droplet(20, { videoStatus: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON, lessonTags: ['apbio'] });
+    const untagged = await droplet(30);
+
+    expect((await get(`/api/droplets/${id}`)).json().tags).toEqual(cleaned);
+    expect((await get('/api/droplets')).json().data[0].tags).toEqual(cleaned);
+    expect(await ids('/api/droplets')).toEqual([id, another, untagged]);
+    expect(await ids(`/api/droplets?tag=${encodeURIComponent('#APBio')}`)).toEqual([id, another]);
+    expect(await ids('/api/droplets?tag=kpop')).toEqual([id]); // the song's own
+    expect(await ids('/api/droplets?tag=explained')).toEqual([id]); // the lesson's own
+    expect(await ids('/api/droplets?tag=photo')).toEqual([]); // the whole tag, as a hashtag search is
+    expect(await ids(`/api/droplets?tag=${'x'.repeat(300)}`)).toEqual([]);
+    expect(await ids('/api/droplets?tag=%23')).toEqual([id, another, untagged]); // "#" names no tag
+
+    // A search pages like the list.
+    const first = (await get('/api/droplets?tag=apbio&limit=1')).json();
+    expect(first.data.map((x: { id: string }) => x.id)).toEqual([id]);
+    expect(await ids(`/api/droplets?tag=apbio&limit=1&cursor=${first.nextCursor}`)).toEqual([another]);
+
+    // A hidden droplet leaves the search with the tab.
+    await prisma.answer.update({ where: { id }, data: { hiddenAt: new Date() } });
+    expect(await ids('/api/droplets?tag=apbio')).toEqual([another]);
+  });
+
+  it('copies the tags when the videos go READY, for a lesson posted to an API older than them', async () => {
+    const patchVideo = (id: string, payload: object) => app.inject({
+      method: 'PATCH', url: `/api/answers/${id}/video`, headers: { authorization: `Bearer ${agentKey}` }, payload,
+    });
+    const ids = async (url: string) => (await get(url)).json().data.map((x: { id: string }) => x.id);
+    // As an older API stored it: the tags in the bundle, none in the columns.
+    const tags = { song: ['#Osmosis', '#PopPunk'], lesson: ['#Osmosis', '#Explained'] };
+    const old = await droplet(10, { videoStatus: 'RENDERING', bundle: { ...BUNDLE, tags } });
+    expect((await patchVideo(old, { status: 'RENDERING', songVideoUrl: SONG })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: old }, select: { songTags: true } })).toEqual({ songTags: [] });
+    expect((await patchVideo(old, { status: 'READY', lessonVideoUrl: LESSON })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: old }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: ['osmosis', 'poppunk'], lessonTags: ['osmosis', 'explained'] });
+    expect(await ids('/api/droplets?tag=poppunk')).toEqual([old]);
+
+    // Tags the lesson already has are never written over, and a bundle without any changes nothing.
+    const kept = await droplet(20, { videoStatus: 'RENDERING', bundle: { ...BUNDLE, tags }, songTags: ['kept'] });
+    expect((await patchVideo(kept, { status: 'READY', songVideoUrl: SONG })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: kept }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: ['kept'], lessonTags: [] });
+    const none = await droplet(30, { videoStatus: 'RENDERING' });
+    expect((await patchVideo(none, { status: 'READY', songVideoUrl: SONG })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: none }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: [], lessonTags: [] });
+
+    // A query naming two tags searches the first, never everything.
+    expect(await ids('/api/droplets?tag=poppunk&tag=kept')).toEqual([old]);
   });
 
   it('shows one droplet with its lesson and lyrics, and 404s anything not on the tab', async () => {

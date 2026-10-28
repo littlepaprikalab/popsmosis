@@ -237,7 +237,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 <div className="md text-sm" style={{ color: 'var(--text-primary)' }}>
                   <Markdown>{answer.content}</Markdown>
                 </div>
-                <LessonVideos video={answer.video} />
+                <LessonVideos video={answer.video} tags={answer.tags} />
                 {(answer.video?.status === 'READY' || notesUrl) && (
                   <p className="text-[10px] mt-2 flex flex-wrap items-center gap-x-3 gap-y-1" style={{ color: 'var(--text-muted)' }}>
                     {answer.video?.status === 'READY' && (

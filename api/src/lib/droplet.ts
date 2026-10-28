@@ -5,8 +5,10 @@
  * The API stores the bundle and the fact-check as the studio wrote them and does not
  * re-validate their schema (the studio's pydantic models own that). It checks only
  * what it relies on: that they are objects of a sane size, that the fact-check
- * passed, and, for the reply queue, the few fields it reads back out.
+ * passed, and, for the reply queue, the few fields it reads back out. Each video's
+ * hashtags are copied out of the bundle when it is stored (lib/tags.ts).
  */
+import { serializeTags } from './tags.js';
 
 // Tens of KB in practice; the cap keeps one answer from filling a list response or a row.
 export const DROPLET_JSON_MAX_BYTES = 256 * 1024;
@@ -130,6 +132,8 @@ export const publicDropletSelect = {
   lessonPosterUrl: true,
   likeCount: true,
   commentCount: true,
+  songTags: true,
+  lessonTags: true,
 } as const;
 
 /** What the Droplets tab may list: the videos are READY and no admin hid it. */
@@ -146,6 +150,8 @@ type PublicDropletRow = {
   lessonPosterUrl: string | null;
   likeCount: number;
   commentCount: number;
+  songTags: string[];
+  lessonTags: string[];
 };
 
 const EXCERPT_LENGTH = 200;
@@ -182,9 +188,9 @@ function publicVideo(a: PublicDropletRow) {
 }
 
 /**
- * A card on the list: the title, a few lines of the lesson, the videos, and how many
- * people liked it and commented. `liked` is the viewer's own thumbs-up: false for
- * anyone not signed in.
+ * A card on the list: the title, a few lines of the lesson, the videos and their
+ * hashtags, and how many people liked it and commented. `liked` is the viewer's own
+ * thumbs-up: false for anyone not signed in.
  */
 export function serializeDropletCard(a: PublicDropletRow, liked = false) {
   return {
@@ -192,6 +198,7 @@ export function serializeDropletCard(a: PublicDropletRow, liked = false) {
     ...dropletTitle(a.bundle),
     excerpt: excerptOf(a.content),
     video: publicVideo(a),
+    tags: serializeTags(a), // each video's hashtags; the tab searches by them (lib/tags.ts)
     likeCount: a.likeCount,
     commentCount: a.commentCount,
     liked,

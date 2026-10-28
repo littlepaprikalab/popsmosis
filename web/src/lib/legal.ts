@@ -23,7 +23,7 @@ export const GOVERNING_LAW = 'the State of Washington, USA';
 /** Where a dispute is heard, unless a consumer's own law lets them go to their local courts (Terms, section 15). */
 export const COURTS = 'the state and federal courts located in King County, Washington';
 
-export const LAST_UPDATED = '27 October 2026';
+export const LAST_UPDATED = '28 October 2026';
 
 /** The youngest someone may be to have an account. Watching the Droplets tab needs none. */
 export const MIN_AGE = 13;

@@ -5,6 +5,7 @@ import { requireAdmin, requireAgent } from '../middleware/auth.js';
 import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoField, type VideoStatus } from '../lib/droplet.js';
 import { BUCKETS, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
 import { breakdownError } from '../lib/breakdown.js';
+import { bundleTags } from '../lib/tags.js';
 import type { Prisma } from '../generated/prisma/client.js';
 
 // The agent's half of a droplet's videos (docs/PLAN.md, section 10), for the agent's
@@ -26,6 +27,21 @@ export default async function answerRoutes(app: FastifyInstance) {
       return null;
     }
     return answer;
+  }
+
+  // The tags are copied out of the bundle when the lesson is posted (routes/questions.ts). A
+  // lesson posted to an API older than the tags (a deploy in between) has them only in its
+  // bundle: these are the ones to copy as it joins the tab, or null when there is nothing to
+  // copy. Reads only the bundle's tags, and only for READY.
+  async function tagsToCopy(id: string) {
+    const rows = await prisma.$queryRaw<{ tags: unknown }[]>`
+      SELECT bundle->'tags' AS tags FROM answers
+      WHERE id = ${id} AND jsonb_typeof(bundle->'tags') = 'object'
+        AND COALESCE(cardinality("songTags"), 0) = 0 AND COALESCE(cardinality("lessonTags"), 0) = 0
+    `;
+    if (!rows[0]) return null;
+    const tags = bundleTags({ tags: rows[0].tags });
+    return tags.songTags.length || tags.lessonTags.length ? tags : null;
   }
 
   // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
@@ -77,6 +93,9 @@ export default async function answerRoutes(app: FastifyInstance) {
       return sendError(reply, 'VALIDATION_ERROR', 'READY needs songVideoUrl or lessonVideoUrl, sent now or before');
     }
 
+    // Read before the write, so a failed read fails the request before anything changed.
+    const tags = status === 'READY' ? await tagsToCopy(id) : null;
+
     // One conditional write, so the attempt check and the update cannot be split by another run.
     const current = attempt === undefined ? {} : { videoAttempts: attempt as number, videoStatus: 'RENDERING' as const };
     const { count } = await prisma.answer.updateMany({
@@ -89,6 +108,7 @@ export default async function answerRoutes(app: FastifyInstance) {
         videoError: status === 'FAILED' ? (error as string).trim() : null,
         videoUpdatedAt: new Date(),
         ...(breakdown !== undefined && { videoBreakdown: breakdown as Prisma.InputJsonObject }),
+        ...tags,
       },
     });
     await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });

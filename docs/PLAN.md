@@ -222,6 +222,12 @@ parts build on the facts it has already written.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
    from the alignment.
+8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
+   tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
+   then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
+   written knowing the whole plan. Code cleans them to one lowercase word each and never
+   fails a bundle over one; the fact-check (step 2) passes or drops each one (README,
+   "Tags").
 
 Code checks then hold each line's `names` and its direction together
 (`studio/checks.py`): a line names only structures its scene draws, and a spotlight
@@ -246,6 +252,14 @@ job fails with the reason shown on the droplet. Nothing is posted or sung that h
 passed.
 
 There is no teacher approval step: the fact-check is the gate.
+
+The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):
+SUPPORTED when a tag names something the facts cover, FILLER when it names only the topic,
+a subject containing it, the course or the video itself (with `about`, the course, topic
+and song style, sent for the tags alone), UNSUPPORTED otherwise. A tag that fails, or gets
+no verdict in 3 rounds, is dropped from both videos, never rewritten, and never fails the
+job; the posted bundle carries only the tags that passed. They add a few hundred tokens to
+the call, not a call of their own.
 
 Regression test: "Every electron hand-off pumps a proton" must be flagged (only
 cytochrome b6f pumps).
@@ -561,6 +575,8 @@ model Answer {
   hiddenAt       DateTime?    // an admin took it off the Droplets tab
   likeCount      Int          // thumbs-up on the Droplets tab (DropletLike), kept by a trigger
   commentCount   Int          // comments on it (DropletComment), likewise
+  songTags       String[]     // each video's hashtags, from the bundle when the lesson is posted; GIN-indexed
+  lessonTags     String[]     // for the tab's search by tag
 }
 
 enum QuestionStatus { PENDING ANSWERED FAILED }
@@ -586,7 +602,7 @@ the videos' (`videoStatus`).
 | Agent | POST | `/api/questions/:id/fail` | `{ reason }`; the agent that last claimed it only |
 | Agent | PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, error? }`; the agent's own answers only |
 | Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` on the API) |
-| Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=` |
+| Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=`; `?tag=` those tagged with it |
 | Anyone | GET | `/api/droplets/:id` | One droplet |
 | Admin | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the tab, or put it back |
 | Anyone | GET | `/api/droplets/:id/comments` | Its comments, newest first, `?cursor=` |
@@ -605,7 +621,9 @@ account.
   are rate limited per visitor, and all visitors together per API instance
   (`api/src/lib/public-limit.ts`).
 - **Public:** a title made from the bundle (`course` and `topic`), the lesson text, both
-  videos and the lyrics.
+  videos with their hashtags, and the lyrics.
+- **Searchable by tag.** Every hashtag under a video is a link to the tab searched by it,
+  and a box at the top searches by one typed in.
 - **Never public:** the learner's name or avatar, the request in their own words (it can
   say more than they meant to share), the files they attached, and follow-up threads.
 - **Private on /learn too.** A learner sees only their own topics, and only they post

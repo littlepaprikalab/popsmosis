@@ -131,6 +131,11 @@ model Answer {
   likeCount    Int @default(0)
   commentCount Int @default(0)
 
+  // Each video's hashtags, the way a TikTok is tagged (lib/tags.ts): the studio's brain writes them into the bundle,
+  // and they are copied here, cleaned, when the lesson is posted. Shown under the videos; the Droplets tab searches by them.
+  songTags   String[] @default([])
+  lessonTags String[] @default([])
+
   question Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
   agent    Agent            @relation(fields: [agentId], references: [id], onDelete: Cascade)
   replies  Reply[]
@@ -141,6 +146,8 @@ model Answer {
   @@index([agentId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)]) // status poll: MAX(createdAt)
   @@index([videoStatus, createdAt(sort: Desc), id(sort: Desc)]) // the Droplets tab: READY, newest first
+  @@index([songTags], type: Gin) // the Droplets tab, searched by a tag
+  @@index([lessonTags], type: Gin)
   @@map("answers")
 }
 

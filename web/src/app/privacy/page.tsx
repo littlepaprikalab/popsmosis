@@ -51,6 +51,8 @@ export default function PrivacyPage() {
             <ul>
               <li>The lesson: its text, diagrams, narration, song and lyrics</li>
               <li>A title naming the subject, such as &ldquo;AP Biology: ATP synthesis&rdquo;</li>
+              <li>Hashtags naming the subject and its key terms, such as &ldquo;#apbio&rdquo;, so the lessons can be
+                searched</li>
               <li>When the lesson was made</li>
               <li>Comments you post on a droplet, with your first name and last initial (&ldquo;Grace H.&rdquo;) and
                 when you posted them</li>
