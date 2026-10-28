@@ -151,6 +151,10 @@ R&B, dance-pop, pop-punk), at a tempo that fits the topic's mood, unless the lea
 asks for their own: a line of their question that starts `Style:` becomes the song's
 starting point. Locally, pass it as `--style "K-pop with hip-hop verses, 98 bpm"`.
 
+A prototype in `studio/schematic3d` draws molecular machines as textbook-style 3D schematics
+(smooth shapes fitted to the real structure, a rotor turning in true 3D) at about 50 ms a frame on
+a CPU. Nothing in the pipeline uses it yet; [docs/SCHEMATIC3D.md](docs/SCHEMATIC3D.md) is the plan.
+
 Once a job has its rendered videos and a posted lesson (`posted.json`), the upload step
 (step 9) copies them to Supabase and marks them READY, which lists the droplet on the
 Droplets tab. It uses the same two variables, and the API needs Supabase set up
