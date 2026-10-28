@@ -40,15 +40,16 @@ way a teacher asks for a standard textbook diagram, each structure's colour by n
 Live tests (docs/test-rounds.md) found the plain request right 8 times in 12 where the
 earlier prompt, with hex codes, a list of shapes and one biology style for every subject,
 was right once in 6. The helper looks at each
-picture for text and for anything missing or wrong; a picture with either is asked for
-again with what was wrong, up to MAX_TRIES pictures in all. A picture with text in it is
+picture for text and for anything missing or wrong, told what kind of scene it is (an
+analogy is meant not to show the topic's own parts); a picture with either is asked for
+again with what was wrong, up to MAX_PAINTS pictures in all. A picture with text in it is
 never used (the renderer draws every label); after the last try the scene keeps the
 text-free picture with the fewest problems, and the step fails if there is none.
 
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
-art/<scene>.json, last: the key (as above), the model, the prompt and the helper's
-check, so the picture counts as done only for this bundle. A refused picture is kept as
-art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
+art/<scene>.json, last: the key (as above), the model, the prompt, the helper's check of
+the kept picture and what was wrong with each try, so the picture counts as done only for
+this bundle. A refused picture is kept as art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
 pictures. Resuming and redrawing work as for the SVG art.
 """
 
@@ -72,7 +73,10 @@ from studio.jobs import read, write
 from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
-MAX_TRIES = 3
+MAX_TRIES = 3  # SVG drawings a scene may take
+# Muse Image pictures a scene may take. Two since Oct 28: in round 6 a third picture rarely fixed what
+# the second had not, and every one costs a picture and a check.
+MAX_PAINTS = 2
 
 
 @dataclass(frozen=True)
@@ -334,8 +338,11 @@ numbers, labels, captions, legends, watermarks, even a single letter. Leave it e
 
 List in `wrong` anything that would mislead a learner, each in a few words: a structure below that is \
 missing or hard to make out, a part in the wrong place or of the wrong shape, or anything scientifically \
-wrong for what the scene should show. Leave it empty when the picture is right. Do not list matters of \
-taste or style."""
+wrong for what the scene should show. Judge it as the kind of scene it is, against what it should show, \
+not the whole topic: what the scene leaves out is not missing. The video animates each flow itself, as dots \
+moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
+wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
+is right. Do not list matters of taste or style."""
 
 
 class ArtCheck(Strict):
@@ -378,36 +385,38 @@ def run_painted(job: Path, ask) -> str:
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
-    """The scene's picture: the best of up to MAX_TRIES from the job's painter, saved as its art. Returns it and
+    """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
     how many pictures were asked for."""
     by = painter_of(job)
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
         old.unlink()
-    best, problems, n = None, [], 0
-    for n in range(1, MAX_TRIES + 1):
+    best, problems, n, tries = None, [], 0, []
+    for n in range(1, MAX_PAINTS + 1):
         prompt = paint_prompt(bundle, scene, problems)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
             picture = by.make(job, label, prompt)
         except by.declined as e:
             problems = [f"{e}; describe the scene plainly, as a textbook diagram"]
+            tries.append({"try": n, "declined": str(e)})
             continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
         check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
                                label=f"art check {scene.id}" + (f" try {n}" if n > 1 else "")))
         painting = Painting(path, prompt, n, check)
+        tries.append({"try": n, **check.model_dump()})
         if not check.text and (best is None or len(check.wrong) < len(best.check.wrong)):
             best = painting
         problems = painting.problems()
         if not problems:
             break
     if best is None:
-        raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_TRIES} tries: {problems[0]}"
+        raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_PAINTS} tries: {problems[0]}"
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
-                                  "try": best.attempt, "check": best.check.model_dump()})
+                                  "try": best.attempt, "check": best.check.model_dump(), "tries": tries})
     _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
 
@@ -462,9 +471,24 @@ def colour_word(color_hex: str) -> str:
     return name
 
 
+# What each kind of scene is for, by the ids the bundle prompt gives them (studio/prompts/bundle.md), so the
+# helper judges it as what it is. Told only the topic, it refused both round 6 analogies on every try for
+# "a dam, not cellular respiration".
+SCENE_KINDS = {
+    "hook": ("the video's opening: where it can, an everyday sight from the learner's world where the topic "
+             "turns up, rather than a diagram of the topic."),
+    "analogy": ("the lesson's analogy: an everyday object standing in for the real thing, each of its parts "
+                "in the colour of the structure it stands for. It is meant to show that object, not the "
+                "topic's own parts. Judge it as a picture of the object."),
+    "overview": "the overview: the whole system at once, each part in its place.",
+}
+DETAIL = "a close-up of one part of the topic."
+
+
 def check_prompt(bundle: Bundle, scene: Scene) -> str:
     lines = [f"- {s.name}: {s.sam_phrase}" for s in scene.structures]
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
+            + f"\nThe scene is {SCENE_KINDS.get(scene.id, DETAIL)}"
             + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
 
 

@@ -180,34 +180,51 @@ def test_a_picture_on_a_dark_background_is_fitted_on_that_colour():
 
 def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wrong(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"hook": [{"text": ["ATP", "H+"], "wrong": []},
-                                  {"text": [], "wrong": ["no thylakoid stack"]},
-                                  {"text": [], "wrong": []}]})
+    helper = FakeHelper({"hook": [{"text": ["ATP", "H+"], "wrong": []}, {"text": [], "wrong": []}],
+                         "synthase": [{"text": [], "wrong": ["no thylakoid stack"]}, {"text": [], "wrong": []}]})
     result = art.run(job, helper)
     assert result == "painted 3 scenes with Muse Image in 5 tries"
     hook = [prompt for label, prompt in fake.painted if label.split()[1] == "hook"]
-    assert len(hook) == 3
+    synthase = [prompt for label, prompt in fake.painted if label.split()[1] == "synthase"]
+    assert len(hook) == len(synthase) == 2
     assert "refused" not in hook[0]
     assert "it has writing in it ('ATP', 'H+'); it must have none" in hook[1]
-    assert "no thylakoid stack" in hook[2] and "writing" not in hook[2]
-    assert json.loads((job / "art" / "hook.json").read_text())["try"] == 3
-    assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png", "hook.try2.png"]
+    assert "no thylakoid stack" in synthase[1] and "writing" not in synthase[1]
+    made = json.loads((job / "art" / "hook.json").read_text())
+    assert made["try"] == 2
+    # What each try was refused for is kept, not only the next prompt's quote of it.
+    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "wrong": []}, {"try": 2, "text": [], "wrong": []}]
+    assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png"]
 
 
 def test_after_the_last_try_the_scene_keeps_its_best_picture_without_writing(job, monkeypatch):
-    FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"synthase": [{"text": [], "wrong": ["stalk missing", "wrong membrane"]},
-                                      {"text": [], "wrong": ["stalk missing"]},
-                                      {"text": ["ATP"], "wrong": []}]})
+    fake = FakeMuse().install(monkeypatch)
+    helper = FakeHelper({"overview": [{"text": [], "wrong": ["no b6f"]}, {"text": ["ATP"], "wrong": []}],
+                         "synthase": [{"text": [], "wrong": ["stalk missing", "wrong membrane"]},
+                                      {"text": [], "wrong": ["stalk missing"]}]})
     result = art.run(job, helper)
-    assert result.endswith("; the helper still saw: synthase: stalk missing")
-    assert json.loads((job / "art" / "synthase.json").read_text())["try"] == 2
+    assert result.endswith("; the helper still saw: overview: no b6f; synthase: stalk missing")
+    assert json.loads((job / "art" / "overview.json").read_text())["try"] == 1  # the other has writing
+    assert json.loads((job / "art" / "synthase.json").read_text())["try"] == 2  # fewer problems
+    assert len(fake.painted) == 5  # two pictures a scene at most
+
+
+def test_the_helper_is_told_what_kind_of_scene_it_checks():
+    bundle = sample_media.bundle()
+    hook, overview, synthase = (art.check_prompt(bundle, scene) for scene in bundle.scenes)
+    assert "The scene is the video's opening" in hook
+    assert "The scene is the overview" in overview
+    assert "The scene is a close-up of one part of the topic." in synthase
+    analogy = bundle.scenes[2].model_copy(update={"id": "analogy"})
+    told = art.check_prompt(bundle, analogy)
+    assert "The scene is the lesson's analogy" in told and "not the topic's own parts" in told
+    assert told.index("The scene is") < told.index("What the scene should show")
 
 
 def test_a_scene_with_writing_in_every_picture_fails_the_step_and_keeps_the_others(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
     helper = FakeHelper({"overview": [{"text": ["e-"], "wrong": []}]})
-    with pytest.raises(media.StepFailed, match=r"scene overview: no usable picture in 3 tries: it has writing"):
+    with pytest.raises(media.StepFailed, match=r"scene overview: no usable picture in 2 tries: it has writing"):
         art.run(job, helper)
     # The other scenes were painted at the same time, and are kept.
     assert (job / "art" / "hook.json").exists() and (job / "art" / "synthase.json").exists()
@@ -228,7 +245,7 @@ def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
     assert "Muse Image declined the picture: unsafe; describe the scene plainly" in second
 
     FakeMuse({"hook": [muse.Declined("no")]}).install(monkeypatch)
-    with pytest.raises(media.StepFailed, match="scene hook: no usable picture in 3 tries: no; describe"):
+    with pytest.raises(media.StepFailed, match="scene hook: no usable picture in 2 tries: no; describe"):
         art.run(job, FakeHelper())
 
 

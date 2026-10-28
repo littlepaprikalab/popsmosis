@@ -294,9 +294,10 @@ subject, hex colours and a list of shapes were right once in 6 on the seasons sc
 plain request 8 in 12: [test-rounds.md](test-rounds.md).) Disable Muse Image's web search and shell
 (`tool_enablement`); turning them on made no difference. Keep
 structures away from the edges so vertical crops work later. The helper looks at each
-image; if any text is visible or the anatomy is wrong, regenerate (max 3) with what was
-wrong. A picture with text is never used; after the third, the scene keeps the text-free
-picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`); first
+image, told what kind of scene it is (hook, overview, analogy or close-up) and that the
+video animates the flows; if any text is visible or the anatomy is wrong, regenerate
+(max 2, since Oct 28) with what was wrong. A picture with text is never used; after the
+second, the scene keeps the text-free picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`); first
 run live on Oct 28 ([test-rounds.md](test-rounds.md)).
 
 **Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure

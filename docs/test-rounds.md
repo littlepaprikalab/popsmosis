@@ -90,7 +90,7 @@ the plan's 15 minutes. Credits are ElevenLabs' (narration and exam question); se
 
 ### It can teach something wrong
 
-1. **A picture the helper says is wrong is used anyway.** After three tries the art step
+1. **A picture the helper says is wrong is used anyway.** After its last try (two since Oct 28) the art step
    keeps "the text-free picture with the fewest problems" (PLAN step 3), whatever the
    problems are. Round 1's seasons "sunlight detail" was kept with rays coming out of the
    poles, an axis not perpendicular to the equator and a Sun no bigger than Earth: in a
@@ -157,7 +157,7 @@ the plan's 15 minutes. Credits are ElevenLabs' (narration and exam question); se
     and `step` write no `runs.jsonl`; the bill's times look broken.
 15. **The note "the brain is set by the environment" lists `STUDIO_BRAIN_EFFORT`** on
     `BRAIN_PROVIDER=meta`, which ignores it.
-16. **A refused picture's check is not kept**: only the next try's prompt quotes it, so
+16. *(Fixed: `art/<scene>.json` keeps each try's check under `tries`.)* **A refused picture's check is not kept**: only the next try's prompt quotes it, so
     working out why a scene took three tries means reading prompts.
 
 ## Why the diagrams come out wrong
@@ -445,6 +445,33 @@ where each step happens, art only, on AP Bio cellular respiration and the light 
   space (whole regions) and the cyanide and herbicide markers went unlocated.
 - **Claude's chorus, too, was "Split the water, catch the light"**: three brains of three
   have now written Split the Water's title line.
+
+## Round 7: the art checker on Sonnet, and a picture without actions
+
+No new lessons: round 6's 28 pictures (kept and refused) checked again by the helper, now
+Sonnet, with the old check prompt and the new one ($0.45), and one scene painted from a
+prompt Gemini suggested ($0.02, and $0.01 to check).
+
+- **Haiku refused both analogies for not being the topic** ("a dam, not cellular
+  respiration") on every try. The checker is now told each scene's kind (hook, overview,
+  analogy or close-up), that what a scene leaves out is not missing, and that the video
+  animates the flows. On Sonnet, no complaint was about an analogy not being the topic;
+  what it listed about them was real (the water held in a bubble beside the dam).
+- **Sonnet finds 2 to 8 problems in nearly every picture**, where Haiku passed some. Many
+  are real (round 6's respiration overview: the oxygen outside the mitochondrion, the
+  pyruvate arrows ending in the intermembrane space). Some are wrong: it called the
+  herbicide scene's ATP synthase upside down when its head is in the stroma, where it
+  belongs. So nearly every scene now takes its two pictures, about $0.04 a scene.
+- **A picture with no actions in it comes out clean.** Round 6's chain close-up asked for
+  ions pumped up, crowding, flowing back and oxygen turning into water, and came back
+  crowded with gold dots. Gemini's rewrite asks only for the layout: the membrane across
+  the middle, a blue space above and a pink matrix below, three purple complexes and a
+  green ATP synthase in it. Both of its pictures were clean and well spaced, with room for
+  labels and for the video's moving dots. Sonnet passed one and found one problem in the other.
+- **But what the prompt leaves out, the painter invents.** That prompt does not say which
+  way ATP synthase faces, and both pictures put its mushroom head in the intermembrane
+  space instead of the matrix. A still layout needs the facts of where things are and
+  which way they face; it is the actions that crowd it.
 
 ## Not tested
 
