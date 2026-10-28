@@ -85,6 +85,26 @@ test.describe('the Droplets tab, signed out', () => {
     await expect(card.getByTestId('tags').getByRole('link')).toHaveCount(4);
   });
 
+  test('a search that fails shows no cards from the last one, and can be tried again', async ({ page }) => {
+    await page.goto('/droplets');
+    const cards = page.getByTestId('droplet-card');
+    await expect(cards.filter({ hasText: 'ATP synthesis' })).toHaveCount(1);
+    const broken = (url: URL) => url.pathname.endsWith('/api/droplets') && url.searchParams.get('tag') === 'broken';
+    await page.route(broken, (route) => route.fulfill({
+      status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'INTERNAL', message: 'Something broke' } }),
+    }));
+    const box = page.getByRole('searchbox', { name: 'Search droplets by tag' });
+    await box.fill('#broken');
+    await box.press('Enter');
+    await expect(page.getByTestId('droplets-failed')).toContainText('The droplets tagged #broken did not load.');
+    await expect(cards).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Load more' })).toHaveCount(0);
+
+    await page.unroute(broken);
+    await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByText('No droplets are tagged #broken yet.')).toBeVisible();
+  });
+
   test('a droplet not on the tab is a 404 page, and the API needs no cookie', async ({ page, request }) => {
     await page.goto('/droplets/not-a-droplet');
     await expect(page.getByText('This droplet is not on the tab')).toBeVisible();
@@ -131,6 +151,17 @@ test.describe('videos on /learn', () => {
     await card.getByTestId('toggle-hidden').click();
     await expect(card.getByRole('link', { name: 'On the public Droplets tab' })).toBeVisible();
     expect(await onTab()).toBe(true);
+  });
+
+  test("a finished lesson shows each video's tags under it, each a search of the tab", async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
+    await expect(card.getByRole('list', { name: 'Song tags' }).getByRole('link', { name: '#kpop', exact: true })).toBeVisible();
+    await expect(card.getByRole('list', { name: 'Lesson tags' }).getByRole('link', { name: '#explained', exact: true })).toBeVisible();
+    await card.getByRole('list', { name: 'Lesson tags' }).getByRole('link', { name: '#explained', exact: true }).click();
+    await expect(page).toHaveURL(/\/droplets\?tag=explained$/);
+    await expect(page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' })).toHaveCount(1);
   });
 
   test('a finished droplet carries its bill of materials: each step, its models and tools, their makers, time and cost', async ({ page, context }) => {

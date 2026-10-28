@@ -2,7 +2,7 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from studio.brain import SCHEMA_KEYWORDS, strict_schema
-from studio.schemas import Bundle, FactCheck
+from studio.schemas import Bundle, FactCheck, tag_of
 from studio.tests.sample import bundle_data
 
 
@@ -61,6 +61,13 @@ def test_tags_are_written_as_hashtags_are_searched():
     tags = Bundle.model_validate(data).tags
     assert tags.song == ["apbio", "lightreactions", "révolution_française", "t0", "t1", "t2", "t3", "t4", "t5", "t6"]
     assert tags.lesson == ["photosynthesis", "lightreactions", "apbio", "explained"]
+
+
+def test_a_tag_reads_the_same_cleaned_twice():
+    # A spacing accent leaves a combining mark beside the letter, which composes only at the end.
+    for raw in ["A¨", "#A´b", "J̌ǰ", "ΐΪ́", "ﬁzz", "#Straße", "İstanbul", "ΟΔΟΣ_Σ"]:
+        assert tag_of(tag_of(raw)) == tag_of(raw)
+    assert tag_of("A¨") == "\u00e4"
 
 
 def test_a_bundle_written_before_tags_has_none():

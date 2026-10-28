@@ -259,11 +259,15 @@ start with the topic, its key terms, the subject and the course ("#photosynthesi
 "#studysong"), or what the lesson does ("#explained"). No extra model call: they cost a
 few dozen tokens of the bundle's.
 
-A tag is one word as a search matches it: lowercase letters, digits and underscores, no
-"#" (the page adds it back), at most 40 characters, at most 10 to a video. The studio
-cleans them that way (`tag_of` in `studio/schemas.py`) and so does the API when the lesson
-is posted (`api/src/lib/tags.ts`), which keeps each video's on the answer (`songTags`,
-`lessonTags`, each with a GIN index). They read back as
+A tag is one word as a search matches it: lowercase letters (accents kept), digits and
+underscores, no "#" (the page adds it back), at most 40 characters, at most 10 to a video,
+and never one that reads as a phone number. The studio cleans them that way (`tag_of` in
+`studio/schemas.py`) and so do the API (`api/src/lib/tags.ts`) and the search box
+(`web/src/lib/tags.ts`), alike for every Unicode character and the same when cleaned twice,
+so a tag clicked on the page always finds its own droplet. The API keeps each video's on
+the answer (`songTags`, `lessonTags`, each with a GIN index) when the lesson is posted, and
+again when its videos go READY if they are still missing (a lesson posted to an API older
+than the tags, during a deploy). They read back as
 
 ```json
 "tags": { "song": ["photosynthesis", "thylakoid", "apbio", "kpop", "studysong"],
@@ -273,7 +277,9 @@ is posted (`api/src/lib/tags.ts`), which keeps each video's on the answer (`song
 The page shows each video's under it, a card its first four, and every tag is a link to
 `/droplets?tag=<tag>`; the box at the top of the tab searches by a tag typed in any form.
 A search matches whole tags, as a hashtag search does: `#photo` does not find
-`#photosynthesis`. Droplets posted before tags existed have none.
+`#photosynthesis`. Droplets posted before tags existed have none. A common tag walks the
+newest-first index and stops at a page; a rare one reads the GIN indexes: on 200,000
+droplets, under a millisecond either way.
 
 ### Bill of materials
 

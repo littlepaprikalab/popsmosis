@@ -154,6 +154,35 @@ d('the Droplets tab', () => {
     expect(await ids('/api/droplets?tag=apbio')).toEqual([another]);
   });
 
+  it('copies the tags when the videos go READY, for a lesson posted to an API older than them', async () => {
+    const patchVideo = (id: string, payload: object) => app.inject({
+      method: 'PATCH', url: `/api/answers/${id}/video`, headers: { authorization: `Bearer ${agentKey}` }, payload,
+    });
+    const ids = async (url: string) => (await get(url)).json().data.map((x: { id: string }) => x.id);
+    // As an older API stored it: the tags in the bundle, none in the columns.
+    const tags = { song: ['#Osmosis', '#PopPunk'], lesson: ['#Osmosis', '#Explained'] };
+    const old = await droplet(10, { videoStatus: 'RENDERING', bundle: { ...BUNDLE, tags } });
+    expect((await patchVideo(old, { status: 'RENDERING', songVideoUrl: SONG })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: old }, select: { songTags: true } })).toEqual({ songTags: [] });
+    expect((await patchVideo(old, { status: 'READY', lessonVideoUrl: LESSON })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: old }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: ['osmosis', 'poppunk'], lessonTags: ['osmosis', 'explained'] });
+    expect(await ids('/api/droplets?tag=poppunk')).toEqual([old]);
+
+    // Tags the lesson already has are never written over, and a bundle without any changes nothing.
+    const kept = await droplet(20, { videoStatus: 'RENDERING', bundle: { ...BUNDLE, tags }, songTags: ['kept'] });
+    expect((await patchVideo(kept, { status: 'READY', songVideoUrl: SONG })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: kept }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: ['kept'], lessonTags: [] });
+    const none = await droplet(30, { videoStatus: 'RENDERING' });
+    expect((await patchVideo(none, { status: 'READY', songVideoUrl: SONG })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: none }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: [], lessonTags: [] });
+
+    // A query naming two tags searches the first, never everything.
+    expect(await ids('/api/droplets?tag=poppunk&tag=kept')).toEqual([old]);
+  });
+
   it('shows one droplet with its lesson and lyrics, and 404s anything not on the tab', async () => {
     const id = await droplet(10);
     const one = await get(`/api/droplets/${id}`);

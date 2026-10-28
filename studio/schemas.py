@@ -122,9 +122,12 @@ def tag_of(value: str) -> str:
     Lowercase letters (with their accents), digits and underscores, with no "#" (the page
     adds it back), as TikTok's are: one word that matches however it was typed. "" when
     nothing is left. The API keeps the same characters (tagOf in api/src/lib/tags.ts).
+    Normalised again at the end, so a tag cleaned twice reads the same: a spacing accent
+    ("A¨") leaves its combining mark beside the letter, which only then composes ("ä").
     """
-    return "".join(c for c in unicodedata.normalize("NFKC", value).lower()
+    kept = "".join(c for c in unicodedata.normalize("NFKC", value).lower()
                    if c == "_" or unicodedata.category(c)[0] in "LMN")
+    return unicodedata.normalize("NFKC", kept)
 
 
 def clean_tags(values: list[str]) -> list[str]:

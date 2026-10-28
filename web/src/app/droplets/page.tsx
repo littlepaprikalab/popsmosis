@@ -42,6 +42,8 @@ function Droplets() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [unreachable, setUnreachable] = useState(false);
+  // The first page of this search did not load: never leave another search's cards under its name.
+  const [failed, setFailed] = useState(false);
   // The search the list now shows: a page that comes back after the search changed is dropped.
   const current = useRef(tag);
 
@@ -54,10 +56,16 @@ function Droplets() {
       setDroplets(res.data);
       setCursor(res.nextCursor);
       setUnreachable(false);
+      setFailed(false);
     } catch (err) {
       if (current.current !== tag) return;
+      setDroplets([]);
+      setCursor(null);
       if (isUnreachable(err)) setUnreachable(true);
-      else showToast(err instanceof Error ? err.message : 'Failed to load droplets', 'error');
+      else {
+        setFailed(true);
+        showToast(err instanceof Error ? err.message : 'Failed to load droplets', 'error');
+      }
     } finally {
       if (current.current === tag) setLoading(false);
     }
@@ -126,6 +134,11 @@ function Droplets() {
 
       {loading ? (
         <LoadingMessage />
+      ) : failed ? (
+        <div className="text-center py-20" style={{ color: 'var(--text-muted)' }} data-testid="droplets-failed">
+          <p>{tag ? `The droplets tagged #${tag} did not load.` : 'The droplets did not load.'}</p>
+          <button onClick={load} className="text-xs mt-2 underline hover-text">Try again</button>
+        </div>
       ) : droplets.length === 0 ? (
         <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>
           {tag ? (

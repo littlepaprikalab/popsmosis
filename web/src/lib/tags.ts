@@ -3,7 +3,7 @@
  * so what someone types in the search box reads back as the tag it finds.
  */
 export function tagOf(value: string): string {
-  return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{M}\p{N}_]+/gu, '');
+  return value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{M}\p{N}_]+/gu, '').normalize('NFKC');
 }
 
 /** The droplets tab searched by one tag. */

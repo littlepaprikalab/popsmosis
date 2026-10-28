@@ -11,6 +11,15 @@ describe('tagOf', () => {
     expect(tagOf('Ｋｐｏｐ')).toBe('kpop');
     expect(tagOf('#')).toBe('');
   });
+  it('reads the same cleaned twice, so a tag sent back as a search finds itself', () => {
+    // A spacing accent leaves a combining mark beside the letter, which composes only at the end.
+    for (const raw of ['A¨', '#A´b', 'J̌ǰ', 'ΐΪ́', 'ﬁzz', '#Straße', 'İstanbul', 'ΟΔΟΣ_Σ']) {
+      const tag = tagOf(raw);
+      expect(tagOf(tag)).toBe(tag);
+      expect(tagQueryOf(tag)).toBe(tag);
+    }
+    expect(tagOf('A¨')).toBe('\u00e4'); // composed, as a search for "#ä" writes it
+  });
 });
 
 describe('cleanTags', () => {
@@ -19,6 +28,9 @@ describe('cleanTags', () => {
     const many = Array.from({ length: 15 }, (_, n) => `#t${n}`);
     expect(cleanTags(many)).toHaveLength(TAGS_PER_VIDEO);
     expect(cleanTags(many)[9]).toBe('t9');
+  });
+  it('leaves out a tag that reads as a phone number: tags are public', () => {
+    expect(cleanTags(['#555-123-4567', '#5551234567', '#apbio', '#2026', '#unit7'])).toEqual(['apbio', '2026', 'unit7']);
   });
   it('takes only a list', () => {
     expect(cleanTags('apbio')).toEqual([]);
@@ -36,8 +48,9 @@ describe('bundleTags', () => {
     expect(bundleTags({ tags: ['#atp'] })).toEqual({ songTags: [], lessonTags: [] });
     expect(bundleTags(undefined)).toEqual({ songTags: [], lessonTags: [] });
   });
-  it('reads back as each video\'s list', () => {
+  it('reads back as each video\'s list, and a NULL column as none', () => {
     expect(serializeTags({ songTags: ['a'], lessonTags: ['b'] })).toEqual({ song: ['a'], lesson: ['b'] });
+    expect(serializeTags({ songTags: null, lessonTags: null })).toEqual({ song: [], lesson: [] });
   });
 });
 
@@ -50,7 +63,10 @@ describe('tagQueryOf', () => {
     expect(tagQueryOf('')).toBeNull();
     expect(tagQueryOf('#  ')).toBeNull();
     expect(tagQueryOf(undefined)).toBeNull();
-    expect(tagQueryOf(['apbio'])).toBeNull();
+    expect(tagQueryOf([])).toBeNull();
+  });
+  it('searches the first tag a query names twice', () => {
+    expect(tagQueryOf(['#APBio', 'kpop'])).toBe('apbio');
   });
   it('still searches for a tag too long to exist, so it finds nothing rather than everything', () => {
     expect(tagQueryOf('x'.repeat(5000))).toBe('x'.repeat(200));

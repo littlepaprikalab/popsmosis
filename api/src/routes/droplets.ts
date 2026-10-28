@@ -54,7 +54,8 @@ export default async function dropletRoutes(app: FastifyInstance) {
   // ?tag= only those whose song or lesson video carries that hashtag ("#APBio" and "apbio" alike).
   app.get('/api/droplets', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
-    const { limit, cursor, tag } = request.query as Record<string, string | undefined>;
+    const { limit, cursor } = request.query as Record<string, string | undefined>;
+    const { tag } = request.query as Record<string, unknown>; // a string, or a list when named twice
     const take = parseLimit(limit, 12, 24);
     const after = decodeCursor(cursor ?? '');
     const at = typeof after?.createdAt === 'string' ? new Date(after.createdAt) : null;
