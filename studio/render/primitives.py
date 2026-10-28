@@ -260,6 +260,37 @@ def draw_label(canvas: skia.Canvas, lb: Label, font_size: float) -> None:
     draw_text(canvas, lb.name, lb.x - tw / 2, lb.y + cap_height(f) / 2, f, argb(darken(lb.color), lb.alpha))
 
 
+# --- particles ------------------------------------------------------------------------------
+
+PARTICLE_R = 13.0  # the lead particle, in frame pixels
+STREAM_R = 5.5  # the dots streaming along the path
+HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any colour
+
+
+def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[float, float], float]],
+                   lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float) -> None:
+    """What travels between structures: dots streaming along the path (each with its own fade,
+    0-1), and the lead particle with its trail, the newest position first."""
+    halo, fill = skia.Paint(AntiAlias=True), skia.Paint(AntiAlias=True)
+    for (x, y), fade in stream:
+        if alpha * fade <= 0.01:
+            continue
+        halo.setColor(with_alpha(0xFFFFFFFF, 0.8 * alpha * fade))
+        canvas.drawCircle(x, y, STREAM_R + HALO, halo)
+        fill.setColor(argb(color, alpha * fade))
+        canvas.drawCircle(x, y, STREAM_R, fill)
+    # The trail is solid dots that shrink with age: fading them would muddy them with the colour under them.
+    fill.setColor(argb(color, alpha))
+    for k, (x, y) in reversed(list(enumerate(trail, 1))):
+        canvas.drawCircle(x, y, 0.8 * PARTICLE_R * (1 - k / (len(trail) + 1)), fill)
+    halo.setColor(with_alpha(0xFFFFFFFF, alpha))
+    canvas.drawCircle(lead[0], lead[1], PARTICLE_R + HALO, halo)
+    canvas.drawCircle(lead[0], lead[1], PARTICLE_R, fill)
+    ring = skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2.5,
+                      Color=argb(darken(color, 3.0), alpha))
+    canvas.drawCircle(lead[0], lead[1], PARTICLE_R - 1.25, ring)
+
+
 # --- the lyric band ------------------------------------------------------------------------
 
 

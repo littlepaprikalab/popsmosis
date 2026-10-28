@@ -1,6 +1,7 @@
 """The renderer on the sample job: a few frames, and a two-second video."""
 
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -22,6 +23,7 @@ from studio.schemas import (
     FrqSegment,
     FrqStep,
     Locations,
+    Particles,
     Reveal,
     Timeline,
     TimelineCamera,
@@ -206,6 +208,79 @@ def test_a_label_is_drawn_only_while_its_dot_is_on_screen(job, monkeypatch, dot_
         assert alphas["Thylakoid"] == pytest.approx(1)
     else:
         assert alphas.get("Thylakoid", 0) < 0.3  # its dot is (partly) cut off: it has faded out
+
+
+PALETTE = {"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"}
+FLOW = ["Thylakoid", "Cytochrome b6f"]
+
+
+def flowing(beats: list[Beat]) -> Timeline:
+    """A song of these beats on the overview, then a short exam question."""
+    end = beats[-1].t1
+    frq = FrqSegment(t0=end, t1=end + 1, scene="overview", labels=["Thylakoid"], prompt="Explain it.",
+                     predict_question="Which pumps?", predict_t=end + 0.1, predict_pause_s=0.4,
+                     steps=[FrqStep(t=end + 0.5, text="b6f pumps.", spotlight=None)])
+    return Timeline(video="song", duration=end + 1, fps=30, audio=[], beats=beats, frq=frq, palette=PALETTE)
+
+
+def flow_beat(t0, t1, path=FLOW, labels=(), reveal=()):
+    particles = [Particles(path=list(path), color="#F2C230", trail=True)] if path else []
+    return Beat(t0=t0, t1=t1, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=list(reveal),
+                spotlight=None, labels=list(labels), particles=particles, caption=None, line_id=f"v{t0}",
+                line="protons flow", words=[Word(word="protons", start=t0 + 0.1, end=t0 + 0.5)])
+
+
+def test_the_lead_particle_holds_at_each_stop_and_eases_between_them():
+    points = [(0.0, 0.0), (520.0, 0.0), (520.0, 260.0)]
+    pause = renderer_module.FLOW_PAUSE_S
+    first = 520 / renderer_module.FLOW_SPEED
+    second = max(260 / renderer_module.FLOW_SPEED, renderer_module.FLOW_MIN_LEG_S)
+    assert renderer_module.lead_at(points, 0.1) == ((0.0, 0.0), 0)
+    assert renderer_module.lead_at(points, pause + first / 2)[0] == pytest.approx((260, 0))  # halfway
+    assert renderer_module.lead_at(points, pause + first + 0.1)[0] == pytest.approx((520, 0))  # holding at the second stop
+    assert renderer_module.lead_at(points, 3 * pause + first + second + 0.1) == ((0.0, 0.0), 1)  # its next trip
+
+
+def test_particles_stop_beside_the_label_dots():
+    anchors = [(0.0, 0.0), (300.0, 0.0), (300.0, 60.0)]
+    off = renderer_module.STOP_OFFSET
+    stops = [c for point in renderer_module.stop_points(anchors) for c in point]
+    assert stops == pytest.approx([off, 0, 300 - off, 0, 300, 40])  # the last is a third of its short leg in
+
+
+def test_the_stream_spreads_evenly_and_fades_at_the_ends():
+    dots = renderer_module.stream_at([(0.0, 0.0), (900.0, 0.0)], 0.0)
+    assert [q[0] for q, _ in dots] == pytest.approx([90 * j for j in range(10)])
+    assert dots[0][1] == 0 and dots[5][1] == 1
+    assert renderer_module.stream_at([(5.0, 5.0), (5.0, 5.0)], 1.0) == []
+
+
+def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
+    reveal_b6f = Reveal(name="Cytochrome b6f", t=2.0)
+    plans = Renderer(job, flowing([
+        flow_beat(0, 4, labels=FLOW, reveal=[reveal_b6f]), flow_beat(4, 8, labels=FLOW),  # one run of two lines
+        flow_beat(8, 10, path=[], labels=FLOW), flow_beat(10, 12, labels=FLOW),  # a break, then a new run
+    ])).plans
+    assert (plans[0].flow_in, plans[0].flow_out) == (2.0, 8.0)  # from the reveal of its last stop
+    assert (plans[1].flow_in, plans[1].flow_out) == (2.0, 8.0)
+    assert (plans[3].flow_in, plans[3].flow_out) == (10.0, 12.0)
+
+
+def test_particles_travel_between_the_structures_and_fade_in(job):
+    flow = Renderer(job, flowing([flow_beat(0, 8)]))  # no labels, so nothing is drawn over the particle
+    still = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
+    anchors = [(a.x, a.y) for a in (located(job, "overview", name).label_anchor for name in FLOW)]
+    stops = renderer_module.stop_points(anchors)
+    leg = max(math.dist(*stops) / renderer_module.FLOW_SPEED, renderer_module.FLOW_MIN_LEG_S)
+    held = renderer_module.FLOW_PAUSE_S + leg + 0.2  # the lead particle is holding at cytochrome b6f
+    gold = p.rgb("#F2C230")
+    at_b6f = flow.art_to_frame(held, *stops[1])
+    frame = flow.frame(held).copy()
+    assert pixel(frame, *at_b6f) == pytest.approx(gold, abs=6)
+    assert pixel(still.frame(held), *at_b6f) != pytest.approx(gold, abs=40)
+    assert (flow.frame(0.0) == still.frame(0.0)).all()  # they fade in: nothing yet at the start
+    flow.frame(1.0)
+    assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
 
 
 def test_label_text_is_dark_enough_to_read_on_white():
