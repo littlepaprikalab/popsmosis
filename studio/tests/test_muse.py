@@ -252,6 +252,23 @@ def test_art_painted_for_an_earlier_bundle_is_not_done(job, monkeypatch):
 # --- locate ---------------------------------------------------------------------------------
 
 
+def test_claude_as_the_brain_can_have_muse_image_paint(job, monkeypatch):
+    """ART_PROVIDER=muse with BRAIN_PROVIDER=claude: the lesson is Claude's, the art Muse Image's,
+    found by SAM 3.1, and checked by the helper the art step is given."""
+    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    monkeypatch.setenv("ART_PROVIDER", "muse")
+    fake = FakeMuse().install(monkeypatch)
+    helper = FakeHelper()
+    art.run(job, helper)
+    assert art.is_done(job) and len(fake.painted) == 3  # one picture a scene, none drawn as SVG
+    assert not list((job / "art").glob("*.svg"))
+    assert len(helper.asked) == 3  # each picture checked by the helper
+    locate.run(job, helper)
+    assert locate.is_done(job) and fake.segmented
+    monkeypatch.setenv("ART_PROVIDER", "svg")
+    assert not art.is_done(job)  # Muse Image's pictures are not the SVG art
+
+
 def painted(job, monkeypatch, **muse_args) -> FakeMuse:
     fake = FakeMuse(**muse_args).install(monkeypatch)
     art.run(job, FakeHelper())

@@ -40,6 +40,7 @@ from pydantic import BaseModel, ValidationError
 
 ROLES = ("brain", "helper")
 PROVIDERS = ("claude", "meta")
+ART_PROVIDERS = ("svg", "muse")
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
@@ -287,6 +288,15 @@ def painter(art: dict | None = None) -> str:
     allowed = ART_CHOICES[provider()]
     picked = (art or {}).get(provider()) if isinstance(art, dict) else None
     return picked if picked in allowed else allowed[0]
+
+
+def art_provider() -> str:
+    """ART_PROVIDER: svg (the brain draws the art) or muse (Muse Image paints it). Unset or
+    empty, it follows BRAIN_PROVIDER: svg on claude, muse on meta."""
+    name = os.environ.get("ART_PROVIDER", "").strip() or ("muse" if provider() == "meta" else "svg")
+    if name not in ART_PROVIDERS:
+        raise ValueError(f"ART_PROVIDER must be svg or muse, not {name!r}")
+    return name
 
 
 def meta_key() -> str:

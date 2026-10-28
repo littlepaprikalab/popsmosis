@@ -390,6 +390,23 @@ helper, or the better of two), and the art step's edit call in place of its pain
 Split the Water's prompt has two things worth taking into the redraw prompt: each part's
 colour by name, and "leave clear space around each protein for labels".
 
+**None of it looks like Campbell Biology.** Round 4's prompt asked for "soft flat shading and
+thin dark outlines", and a redraw keeps its reference's style, so everything so far looks
+like OpenStax: flat, outlined, dotted lobes. Campbell's figures are polished, airbrushed 3D:
+the membrane a slab with depth seen slightly from above, sculpted glossy proteins lit from
+one side, soft colour washes. Asked for that look in words (two pictures each):
+
+| Asked for | What came back |
+|---|---|
+| Campbell's look in words, the prompt alone | The look, at last; but the science drifts: proteins sit on the membrane instead of passing through it, no small carriers |
+| Campbell's look, redrawing the OpenStax figure | The figure kept its flat OpenStax style, a little shading added |
+| Two pictures to the edit call: the OpenStax redraw for what goes where, a Campbell-look picture for the look | 1 of 2 both: the textbook layout, every complex through the membrane in order, in the 3D glossy look; the other stayed flat |
+| The same, the membrane as one wide strip | Both copied the style picture, layout and all |
+
+So the look needs a style picture of our own, made once per kind of diagram and approved by
+eye (never a Campbell figure itself, which is copyrighted), passed with each scene's layout
+reference, two tries a scene and the better kept.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
@@ -407,6 +424,12 @@ python -m studio show <id> --brief
 ```
 
 For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
+
+`ART_PROVIDER` picks who makes the art apart from the brain: `BRAIN_PROVIDER=claude
+ART_PROVIDER=muse STUDIO_BRAIN_MODEL=` writes the lesson with Claude and paints it with Muse
+Image (the empty `STUDIO_BRAIN_MODEL` clears a Muse model the environment may set). Tried
+live on round 5's seasons plan: Claude Haiku checked each picture for under a tenth of a
+cent, and SAM found 28 of 29 structures.
 
 The jobs from these rounds were `r1-*` and `r2-*` in `jobs/` (git-ignored, gone with the
 container). To look at a video, take a still every few seconds (`ffmpeg -ss <t> -i
