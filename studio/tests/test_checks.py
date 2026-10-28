@@ -132,6 +132,19 @@ def test_what_builds_up_is_where_marked_particles_start_or_end():
     assert building(("H⁺", "the lumen")) == ([], left_out)  # no such structure
 
 
+def test_what_turns_is_where_particles_flow_in_or_through():
+    def turning(*spins):
+        def change(data):
+            direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+            data["spins"] = [{"structure": s} for s in spins]
+        bundle, found, _ = review(change)
+        return [s.structure for s in bundle.spins], found
+
+    assert turning("cytochrome B6F") == (["Cytochrome b6f"], [])  # particles flow into it
+    assert turning("Thylakoid") == ([], [("spins", "spins", True)])  # they only leave it
+    assert turning("the rotor") == ([], [("spins", "spins", True)])  # no such structure
+
+
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
     data = bundle_data()
     for item in [*data["lyrics"], *data["narration"]]:

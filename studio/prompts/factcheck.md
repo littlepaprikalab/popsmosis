@@ -120,4 +120,9 @@ A motion that says something "builds up" in a space ("H⁺ builds up in Thylakoi
 is the video filling that space with it as it arrives: SUPPORTED when the facts say it
 piles up or accumulates there, UNSUPPORTED otherwise, judged as above.
 
+A motion that says something "spins" as particles flow ("ATP synthase spins as H⁺ flows
+through it") is the video turning that part while they pass: SUPPORTED when the facts say
+that flow turns it (an analogy's part by what the facts say of the analogy), UNSUPPORTED
+otherwise.
+
 A motion is never FILLER.

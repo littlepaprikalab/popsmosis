@@ -210,6 +210,26 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
         level = crowd.end
 
 
+def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    data["spins"] = [{"structure": "Cytochrome b6f"}]
+    write_bundle(job, data)
+    song = make(job)["song"]
+    before = None
+    for beat in song.beats:
+        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
+            assert beat.turning == []
+            continue
+        [turn] = beat.turning
+        assert turn.speed == (step.SPIN_SPEED if beat.line_id == "v1-2" else 0.0)
+        if before is not None:  # it runs on from where the beat before left it, never jumping
+            turns, speed = before[0].at(before[1])
+            assert turn.from_speed == pytest.approx(speed) and turn.turns == pytest.approx(turns % 1, abs=1e-5)
+        before = (turn, beat.t1 - beat.t0)
+    assert any(b.turning and b.turning[0].turns > 0 for b in song.beats)
+
+
 def test_what_particles_carry_is_written_as_a_textbook_prints_it():
     printed = {"H+": "H⁺", "e-": "e⁻", "O2": "O₂", "H2O": "H₂O", "CO2": "CO₂", "Ca2+": "Ca²⁺", "Cl-": "Cl⁻",
                "NAD+": "NAD⁺", "2H+": "2H⁺", "H +": "H⁺", "H⁺": "H⁺", "HCO₃⁻": "HCO₃⁻", "glucose": "glucose", "": ""}

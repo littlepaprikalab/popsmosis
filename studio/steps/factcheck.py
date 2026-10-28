@@ -90,12 +90,24 @@ def build_up_text(carries: str, region: str) -> str:
     return f"{carries} builds up in {region}"
 
 
+def spin_text(bundle: Bundle, structure: str) -> str:
+    """What the video shows turning, and what drives it: "ATP synthase spins as H⁺ flows through it", or for
+    unmarked particles (an analogy's water) "Water wheel spins as particles flow into it from Reservoir"."""
+    flows = [d for d in bundle.direction if structure in d.particles[1:]]
+    marked = sorted({d.carries for d in flows if d.carries})
+    if marked:
+        return f"{structure} spins as {' and '.join(marked)} flows through it"
+    sources = sorted({d.particles[0] for d in flows})
+    return f"{structure} spins as particles flow into it from {' and '.join(sources)}"
+
+
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving, when they are marked with what they carry, and what the
-    video shows piling up."""
+    video shows piling up and turning."""
     return [Line(MOTION, d.line_id, motion_text(d.carries, d.particles))
             for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
-        Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)]
+        Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
+        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -209,6 +221,7 @@ def check_bundle(
                 d["particles"], d["carries"] = [], ""
         data["builds_up"] = [b for b in data["builds_up"]
                              if build_up_text(b["carries"], b["region"]) in passed_motions]
+        data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
         bundle = Bundle.model_validate(data)
     failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED and c.verdict not in PASSING]
     if failing and not reason:

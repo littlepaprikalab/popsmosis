@@ -58,8 +58,25 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             heard |= _check_names(line, canon, scene, drawn[scene], problems) & drawn[scene]  # heard where drawn
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
+    _check_spins(data, canon, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+def _check_spins(data: dict, canon: dict[str, str], problems: list) -> None:
+    """Each spin names a structure, as its name, that particles flow into or through: they are what turn it
+    in the video. Any other is left out."""
+    driven = {canon.get(fold(stop)) for d in data["direction"] for stop in d["particles"][1:]}
+    kept = []
+    for spin in data["spins"]:
+        name = canon.get(fold(spin["structure"]))
+        why = "names no structure" if not name else "is not where any particles flow" if name not in driven else ""
+        if why:
+            problems.append(Problem(line_id="spins", rule="spins", repaired=True,
+                                    detail=f"{spin['structure']} turning {why}; left out"))
+            continue
+        kept.append({"structure": name})
+    data["spins"] = kept
 
 
 def _check_builds_up(data: dict, canon: dict[str, str], problems: list) -> None:

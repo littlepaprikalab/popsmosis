@@ -28,6 +28,7 @@ from studio.schemas import (
     Timeline,
     TimelineCamera,
     Timing,
+    Turning,
     Word,
 )
 from studio.render import renderer as renderer_module
@@ -351,6 +352,34 @@ def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
     assert empty == (0, 0) and 0 < low[0] < lots[0]
     assert lots[1] > 0.9 * lots[0]  # the dots sit on the space
     assert (full.frame(4.0) == full.frame(4.0)).all()
+
+
+def test_a_round_part_seen_face_on_turns_in_place_and_nothing_outside_it_moves(job):
+    def turned(turns):
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"turning": [
+            Turning(structure="Cytochrome b6f", turns=turns, from_speed=0.0, speed=0.0)]})
+        return Renderer(job, flowing([beat]))
+
+    still, quarter = turned(0.0), turned(0.25)
+    a, b = still.frame(4.0).copy(), quarter.frame(4.0).copy()
+    cx, cy, r = quarter.scene("overview").spin_disc("Cytochrome b6f")
+    scale, dx, dy = renderer_module.to_frame(quarter.plans[0].cam(4.0, quarter.layout.view, quarter.scene("overview")),
+                                             quarter.layout.view, quarter.scene("overview"))
+    ys, xs = np.nonzero((a != b).any(-1))
+    assert len(xs) > 500  # it turned
+    assert (np.hypot(xs - (cx * scale + dx), ys - (cy * scale + dy)) <= r * scale + 2).all()  # inside its disc only
+
+
+def test_a_part_that_is_not_round_gets_an_arrow_round_it_while_it_turns(job):
+    def turning(speed):  # the overview's thylakoid is a long band: no disc to turn in place
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"turning": [
+            Turning(structure="Thylakoid", turns=0.1, from_speed=speed, speed=speed)]})
+        return Renderer(job, flowing([beat])).frame(4.0).copy()
+
+    plain = Renderer(job, flowing([flow_beat(0, 8, path=[])])).frame(4.0).copy()
+    drawn = lambda frame: int((frame != plain).any(-1).sum())  # the sample art is on white: count what changed
+    assert drawn(turning(0.45)) > 1500  # the arrow
+    assert drawn(turning(0.0)) == 0  # stopped: no arrow
 
 
 def test_label_text_is_dark_enough_to_read_on_white():

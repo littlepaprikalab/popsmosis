@@ -319,6 +319,44 @@ def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label:
     draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
 
 
+ARROW_SWEEP = 280.0  # degrees of the ellipse a turning arrow covers
+ARROW_STROKE = 6.0  # frame pixels, inside a dark edge ARROW_EDGE wider
+ARROW_EDGE = 4.0
+ARROW_HEAD = 15.0
+ARROW_BEHIND = 0.35  # how strong the arrow is where it passes behind the part
+
+
+def draw_turning_arrow(canvas: skia.Canvas, centre: tuple[float, float], rx: float, ry: float, turns: float,
+                       alpha: float) -> None:
+    """A curved arrow round an ellipse, the way a textbook shows a rotor turning about an axis in the page:
+    its far half (the top) faint, as if behind the part; it goes round as the part turns."""
+    cx, cy = centre
+    start = 360.0 * turns
+    steps = 48
+    points = [(cx + rx * math.cos(math.radians(start + ARROW_SWEEP * k / steps)),
+               cy + ry * math.sin(math.radians(start + ARROW_SWEEP * k / steps))) for k in range(steps + 1)]
+    for width, color in ((ARROW_STROKE + ARROW_EDGE, 0xFF1A1A1A), (ARROW_STROKE, 0xFFFFFFFF)):
+        paint = skia.Paint(AntiAlias=True, StrokeWidth=width, Style=skia.Paint.kStroke_Style,
+                           StrokeCap=skia.Paint.kRound_Cap)
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            behind = (y0 + y1) / 2 < cy
+            paint.setColor(with_alpha(color, alpha * (ARROW_BEHIND if behind else 1.0) * (0.6 if color == 0xFF1A1A1A else 1)))
+            canvas.drawLine(x0, y0, x1, y1, paint)
+    (x0, y0), (x1, y1) = points[-2], points[-1]
+    length = math.hypot(x1 - x0, y1 - y0) or 1.0
+    ux, uy = (x1 - x0) / length, (y1 - y0) / length
+    head = skia.Path()
+    head.moveTo(x1 + ux * ARROW_HEAD, y1 + uy * ARROW_HEAD)
+    head.lineTo(x1 - uy * ARROW_HEAD * 0.7, y1 + ux * ARROW_HEAD * 0.7)
+    head.lineTo(x1 + uy * ARROW_HEAD * 0.7, y1 - ux * ARROW_HEAD * 0.7)
+    head.close()
+    behind = y1 < cy
+    shade = ARROW_BEHIND if behind else 1.0
+    canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFF1A1A1A, 0.6 * alpha * shade),
+                                     Style=skia.Paint.kStrokeAndFill_Style, StrokeWidth=ARROW_EDGE))
+    canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * shade)))
+
+
 CROWD_R = 8.5  # a crowd's unmarked dots, in frame pixels: bigger than the stream's, smaller than the lead's
 
 

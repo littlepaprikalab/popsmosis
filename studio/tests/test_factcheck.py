@@ -320,6 +320,22 @@ def test_what_builds_up_is_checked_too_and_left_out_when_it_fails():
     assert [m.text for m in dropped_motions(report)] == ["e⁻ builds up in Cytochrome b6f"]
 
 
+def test_what_turns_is_checked_with_what_drives_it():
+    def spinning(data):
+        moving(data)
+        data["spins"] = [{"structure": "Cytochrome b6f"}, {"structure": "Thylakoid"}]
+        for d in data["direction"]:
+            if d["line_id"] == "b-1":  # unmarked: an analogy's water, say
+                d.update(particles=["Cytochrome b6f", "Thylakoid"])
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text.startswith("Thylakoid spins") else supported(text))
+    report, checked = check_bundle(bundle(spinning), "", fake)
+    sent = [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:spins")]
+    assert sent == ["Cytochrome b6f spins as e⁻ flows through it",
+                    "Thylakoid spins as H⁺ flows through it"]
+    assert [s.structure for s in checked.spins] == ["Cytochrome b6f"]
+
+
 def test_a_tag_never_rides_along_with_a_corrected_line():
     fake = FakeChecker(seeded_is_wrong)
     report, _ = check_bundle(bundle(), "", fake)

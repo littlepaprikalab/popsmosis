@@ -25,6 +25,9 @@ No model calls, so it is free to run again:
   end there and empties while they start from it: FILL_S seconds of them fill it from
   empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
   on across scenes, so a close-up of the same space shows it as full as the overview left it.
+- A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
+  through it, and eases to a stop when they stop; how far round it is runs on from beat
+  to beat, so it never jumps.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
@@ -56,6 +59,7 @@ from studio.schemas import (
     Timeline,
     TimelineCamera,
     Timing,
+    Turning,
     Word,
     timeline_problems,
     timing_problems,
@@ -76,6 +80,7 @@ FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
 DRAIN_S = 10.0  # seconds of them leaving that would empty it
 CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
+SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
@@ -294,6 +299,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     duration = round(max(cursor, voice.duration) + TAIL_S, 3)
     beats[-1]["t1"] = duration
     _fill_crowds(beats, bundle, located)
+    _turn(beats, bundle, located)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
@@ -319,6 +325,24 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label),
                                     start=round(start, 4), end=round(end, 4)))
         beat["crowds"] = crowds
+
+
+def _turn(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
+    """How each spinning part turns on each beat: easing up to SPIN_SPEED while particles flow into or through
+    it, and to a stop when none do, its turns carried on from beat to beat. A beat shows the parts located
+    on its scene."""
+    state = {s.structure: (0.0, 0.0) for s in bundle.spins}  # turns, speed
+    for beat in beats:
+        turning = []
+        for spin in bundle.spins:
+            driven = any(spin.structure in f.path[1:] for f in beat["particles"])
+            turns, speed = state[spin.structure]
+            turn = Turning(structure=spin.structure, turns=round(turns % 1, 6), from_speed=speed,
+                           speed=SPIN_SPEED if driven else 0.0)
+            state[spin.structure] = turn.at(beat["t1"] - beat["t0"])
+            if spin.structure in located.get(beat["scene"], set()):
+                turning.append(turn)
+        beat["turning"] = turning
 
 
 def intro_skip(timing: Timing) -> float:

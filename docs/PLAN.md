@@ -235,7 +235,8 @@ parts build on the facts it has already written.
    (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
    "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
    from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
-   (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties.
+   (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties,
+   and `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`).
 8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
@@ -517,6 +518,13 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     mask, drift a few pixels in place, and stay bright while particles fill or empty the
     space, whatever the spotlight. The pictures paint no loose ions, so nothing painted
     looks like them.
+  - **Parts that turn:** for what the bundle's `spins` names (a rotor, a turbine, a water
+    wheel), the part eases up to turning while particles flow into or through it and eases
+    to a stop when they stop, so the flow is seen to drive it. How it turns is read off the
+    picture: one that looks the same turned a quarter and a half turn (a wheel seen
+    face-on) turns in place, the disc of the picture around it; any other (a rotor seen
+    edge-on, a mushroom-shaped ATP synthase, which turned in place would stand on its head)
+    gets a white curved arrow going round it, its far half faint, as textbooks draw one.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and

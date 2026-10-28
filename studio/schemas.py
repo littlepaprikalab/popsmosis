@@ -116,6 +116,12 @@ class BuildUp(Strict):
     region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
 
 
+class Spin(Strict):
+    # How it turns on screen is read off its shape in the picture (renderer: SceneArt.spin_disc), which the
+    # writer never sees: Claude called a turbine painted face-on "side".
+    structure: str = Field(description="The structure that turns while particles flow into or through it, by its name")
+
+
 def tag_of(value: str) -> str:
     """A hashtag as it is stored and searched: "#AP Bio" -> "apbio".
 
@@ -168,6 +174,8 @@ class Bundle(Strict):
     # What piles up where as the lesson goes (a gradient), filled and emptied by the marked particles.
     # A bundle written before Oct 28 has none.
     builds_up: list[BuildUp] = Field(default_factory=list, description="What piles up in which space; [] for none")
+    # What turns while particles drive it. A bundle written before Oct 28 has none.
+    spins: list[Spin] = Field(default_factory=list, description="What turns while particles flow through it; [] for none")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -260,7 +268,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "tempo"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -554,6 +562,27 @@ class Crowd(Strict):
         return _hex_color(value)
 
 
+SPIN_EASE_S = 0.8  # a part speeds up to its turning speed, or slows to a stop, over this long
+
+
+class Turning(Strict):
+    """A part that turns (Bundle.spins), as one beat shows it: how far round it is, and how fast it goes."""
+
+    structure: str  # located on the beat's scene
+    turns: float  # how far round it has turned when the beat starts, in turns
+    from_speed: float  # turns a second when the beat starts
+    speed: float  # turns a second it eases to over SPIN_EASE_S, and keeps
+
+    def at(self, dt: float) -> tuple[float, float]:
+        """How far round it is and how fast it turns, dt seconds into the beat."""
+        dt = max(dt, 0.0)
+        ease = min(dt, SPIN_EASE_S)
+        # The speed changes evenly over the ease, then holds: turns are its integral.
+        turned = self.from_speed * ease + (self.speed - self.from_speed) * ease * ease / (2 * SPIN_EASE_S)
+        turned += self.speed * (dt - ease)
+        return self.turns + turned, self.from_speed + (self.speed - self.from_speed) * ease / SPIN_EASE_S
+
+
 class Beat(Strict):
     t0: float
     t1: float
@@ -566,6 +595,7 @@ class Beat(Strict):
     labels: list[str]
     particles: list[Particles]
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
+    turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
@@ -654,7 +684,7 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
         named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path] + [
-            c.region for c in beat.crowds]
+            c.region for c in beat.crowds] + [s.structure for s in beat.turning]
         for crowd in beat.crowds:
             if not (0 <= crowd.start <= 1 and 0 <= crowd.end <= 1):
                 problems.append(f"{where} fills {crowd.region} to {crowd.start}-{crowd.end}, outside 0-1")

@@ -439,6 +439,15 @@ empties it as they leave, so the learner watches the gradient build and run down
 only what the facts say piles up there; the fact-check holds each one to them. [] when
 nothing does.
 
+## What turns
+
+`spins` lists the parts that turn while particles flow into or through them (a rotor, a
+turbine, a water wheel): `[{"structure": "ATP synthase"}]`. The video turns it while
+particles flow into or through it, and lets it stop when they stop, so the flow is seen to
+drive it: a round part (a wheel seen face-on) turns in place, any other gets a curved arrow
+going round it. List only what the facts say turns; the fact-check
+holds each one to them. [] when nothing does.
+
 ## Tags
 
 `tags` are hashtags for each video, the way a creator tags a TikTok, so that someone

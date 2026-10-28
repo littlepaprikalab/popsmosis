@@ -63,6 +63,16 @@ CROWD_SPACING = 46.0
 CROWD_DRIFT = 5.0
 CROWD_MARKED = 3
 CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
+# A part that turns (Beat.turning). One that looks the same turned a quarter and a half turn (its outline
+# overlaps itself so turned by SPIN_SAME or more, and its box is at most SPIN_ROUND times wider than tall, or
+# taller than wide), as a wheel seen face-on does, turns in place: the disc of the picture round it. Any other
+# (a rotor seen edge-on; a mushroom-shaped ATP synthase, which turned in place would stand on its head) gets a
+# curved arrow going round it, ARROW_WIDTH of its width across and ARROW_TILT as deep as wide, while it turns.
+# The picture decides, not the bundle: its writer never sees the picture.
+SPIN_ROUND = 1.45
+SPIN_SAME = 0.6
+ARROW_WIDTH = 1.2
+ARROW_TILT = 0.28
 
 Point = tuple[float, float]
 
@@ -111,6 +121,7 @@ class SceneArt:
         self.masks: dict[str, skia.Image] = {}
         self._mask_files: dict[str, Path] = {}
         self._crowd_points: dict[str, list[Point]] = {}
+        self._discs: dict[str, tuple[float, float, float] | None] = {}
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -184,6 +195,21 @@ class SceneArt:
             self._crowd_points[name] = picked
         return self._crowd_points[name]
 
+    def spin_disc(self, name: str) -> tuple[float, float, float] | None:
+        """The disc a face-on part turns in: its centre and a radius taking in all of it but stray
+        specks; None when it is not round enough to turn in place."""
+        if name not in self._discs:
+            ys, xs = np.nonzero(_read(self._mask_files[name], skia.kGray_8_ColorType) > 127)
+            disc = None
+            if len(xs):
+                w, h = xs.max() - xs.min() + 1, ys.max() - ys.min() + 1
+                cx, cy = float(xs.mean()), float(ys.mean())
+                r = float(np.percentile(np.hypot(xs - cx, ys - cy), 97)) * 1.04
+                if max(w, h) <= SPIN_ROUND * min(w, h) and _looks_the_same_turned(xs - cx, ys - cy, r):
+                    disc = (cx, cy, r)
+            self._discs[name] = disc
+        return self._discs[name]
+
     def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[tuple, skia.Image]:
         """The art with each ghost and spotlight wash at its level (0-1), kept for reuse; and its key."""
         key = (tuple(sorted((n, round(v, 3)) for n, v in ghosts.items() if v > 0.002 and n in self.masks)),
@@ -207,6 +233,20 @@ class SceneArt:
         while len(self._composed) > 6:
             self._composed.popitem(last=False)
         return key, image
+
+
+def _looks_the_same_turned(dx: np.ndarray, dy: np.ndarray, r: float) -> bool:
+    """Whether a shape (its pixels, from its centre) overlaps itself turned a quarter and a half turn by
+    SPIN_SAME or more, as a wheel does and a mushroom does not."""
+    size = int(math.ceil(r)) + 1
+    grid = np.zeros((2 * size + 1, 2 * size + 1), bool)
+    keep = (np.abs(dx) <= size) & (np.abs(dy) <= size)
+    grid[np.round(dy[keep]).astype(int) + size, np.round(dx[keep]).astype(int) + size] = True
+    for turned in (np.rot90(grid), np.rot90(grid, 2)):
+        overlap = (grid & turned).sum() / max((grid | turned).sum(), 1)
+        if overlap < SPIN_SAME:
+            return False
+    return True
 
 
 # --- the camera ----------------------------------------------------------------------------
@@ -508,8 +548,12 @@ class Renderer:
         reveals = self.revealed.get(beat.scene, {})
         ghosts = self._ghosts(beat.scene, reveals, t)
         self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
+        if beat.turning:
+            self._turning(canvas, beat, cam, view, t, ghosts, spots, face=True)
         if beat.crowds:
             self._crowds(canvas, beat, cam, view, t, ghosts, spots)
+        if beat.turning:
+            self._turning(canvas, beat, cam, view, t, ghosts, spots, face=False)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
 
@@ -523,6 +567,47 @@ class Renderer:
             p.draw_caption(canvas, beat.caption, layout.width / 2, layout.margin + 8, layout.caption_font, caption_alpha)
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _turning(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
+                 ghosts: dict[str, float], spots: dict[str, float], face: bool) -> None:
+        """The parts that turn: a face-on, round one as the disc of the picture around it turned in place (drawn
+        first, over the background, as the picture itself); any other as a curved arrow going round it while it
+        turns (drawn over the crowds), fading in and out with its speed."""
+        art = self.scene(beat.scene)
+        scale, dx, dy = to_frame(cam, view, art)
+        located = self.locations.scene(beat.scene)
+        for turn in beat.turning:
+            loc = located.get(turn.structure)
+            if loc is None or turn.structure not in art.masks:
+                continue
+            turns, speed = turn.at(t - beat.t0)
+            disc = art.spin_disc(turn.structure)
+            if face and disc is not None:
+                if turns % 1 == 0:
+                    continue  # as painted
+                cx, cy, r = disc
+                _, composed = art.compose(ghosts, spots)
+                canvas.save()
+                canvas.clipRect(skia.Rect.MakeLTRB(*view))
+                canvas.translate(cx * scale + dx, cy * scale + dy)
+                canvas.rotate(360 * turns)
+                canvas.clipPath(skia.Path.Circle(0, 0, r * scale), doAntiAlias=True)
+                canvas.scale(scale, scale)
+                canvas.translate(-cx, -cy)
+                canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
+                canvas.restore()
+            elif not face and disc is None:
+                top = max(turn.from_speed, turn.speed)
+                alpha = (speed / top if top > 0 else 0.0) * (1 - ghosts.get(turn.structure, 0.0))
+                if alpha <= 0.01:
+                    continue
+                box = loc.box
+                rx = ARROW_WIDTH * (box.x1 - box.x0) / 2 * scale
+                at = ((box.x0 + box.x1) / 2 * scale + dx, loc.centroid.y * scale + dy)
+                canvas.save()
+                canvas.clipRect(skia.Rect.MakeLTRB(*view))
+                p.draw_turning_arrow(canvas, at, rx, ARROW_TILT * rx, turns, alpha)
+                canvas.restore()
 
     def _crowds(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
                 ghosts: dict[str, float], spots: dict[str, float]) -> None:

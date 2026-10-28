@@ -619,6 +619,29 @@ the chain close-up's second go, $0.11, checks $0.09), and only those five were l
   head is in stroma, correct") and so painted the herbicide close-up a second time for
   nothing.
 
+## Round 12: parts that turn
+
+The motion engine's third piece, on the same two lessons. The bundle says what turns
+(`spins`); the timeline eases each part up to 0.45 turns a second while particles flow into
+or through it and down to a stop after, its turns carried on from line to line; the renderer
+turns a wheel seen face-on in place and puts a curved arrow round anything else. Claude,
+asked on its own, named ATP synthase and the turbine or water wheel in each lesson ($0.04).
+
+- **Claude cannot know how a part looks in the picture**: it called the respiration dam's
+  turbine "side" though it is painted face-on, a round wheel. The bundle no longer says;
+  the renderer reads it off the picture.
+- **Round is not enough**: the light reactions' ATP synthase close-up is about as wide as
+  tall, and turned in place it would stand on its head every half turn. A part now turns in
+  place only if its outline overlaps itself turned a quarter and a half turn by 60% or more:
+  the respiration turbine did (0.79, 0.76); every ATP synthase (0.12 to 0.56) and the water
+  wheel, painted at an angle on a wooden frame (0.50, 0.52), get the arrow instead, which
+  still shows them turning.
+- **The arrow lands well on the rotor**: in the ATP synthase close-up it wraps the rotor
+  ring in the membrane while the H⁺ badge passes through.
+- **It waits for its part's name**: a part not yet named is a pale ghost, and so is its
+  arrow; in the chain close-up "ATP synthase" is said at the end of the line about it, so
+  its arrow shows only then. The particles wait for their stops the same way.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
