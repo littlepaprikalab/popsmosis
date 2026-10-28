@@ -11,6 +11,7 @@ import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 import { breakdownError } from '../lib/breakdown.js';
+import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
@@ -332,7 +333,10 @@ export default async function questionRoutes(app: FastifyInstance) {
         const created = await tx.answer.create({
           data: {
             questionId: id, agentId, content: (content as string).trim(), model: typeof model === 'string' ? model : null,
-            ...(bundle !== undefined && { bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject }),
+            // Each video's hashtags come with the bundle, and are kept on their own to be searched (lib/tags.ts).
+            ...(bundle !== undefined && {
+              bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject, ...bundleTags(bundle),
+            }),
             ...(breakdown !== undefined && { lessonBreakdown: breakdown as Prisma.InputJsonObject }),
           },
           include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },

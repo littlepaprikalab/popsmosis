@@ -10,6 +10,7 @@ import {
 } from '../lib/engagement.js';
 import { PUBLIC_PER_CLIENT_PER_MINUTE, PUBLIC_PER_INSTANCE_PER_MINUTE, WindowCounter, publicClientKey } from '../lib/public-limit.js';
 import { requireUser, sessionSubject } from '../middleware/auth.js';
+import { tagQueryOf } from '../lib/tags.js';
 
 // Likes are one row each way and cost little, but each is a write on the droplet's row, so one
 // person flipping a thumb as fast as they can click is held to a pace no real use reaches.
@@ -49,10 +50,11 @@ export default async function dropletRoutes(app: FastifyInstance) {
     return viewer;
   };
 
-  // GET /api/droplets — READY and not hidden, newest first; ?cursor=, ?limit= (default 12, max 24).
+  // GET /api/droplets — READY and not hidden, newest first; ?cursor=, ?limit= (default 12, max 24);
+  // ?tag= only those whose song or lesson video carries that hashtag ("#APBio" and "apbio" alike).
   app.get('/api/droplets', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
-    const { limit, cursor } = request.query as Record<string, string | undefined>;
+    const { limit, cursor, tag } = request.query as Record<string, string | undefined>;
     const take = parseLimit(limit, 12, 24);
     const after = decodeCursor(cursor ?? '');
     const at = typeof after?.createdAt === 'string' ? new Date(after.createdAt) : null;
@@ -60,6 +62,11 @@ export default async function dropletRoutes(app: FastifyInstance) {
       ? (typeof after?.id === 'string'
         ? Prisma.sql`AND ("createdAt" < ${at} OR ("createdAt" = ${at} AND id < ${after.id}))`
         : Prisma.sql`AND "createdAt" < ${at}`)
+      : Prisma.empty;
+    // Each video's tags have a GIN index, so a search reads only the droplets that carry it.
+    const searched = tagQueryOf(tag);
+    const tagged = searched
+      ? Prisma.sql`AND ("songTags" @> ARRAY[${searched}]::text[] OR "lessonTags" @> ARRAY[${searched}]::text[])`
       : Prisma.empty;
     // The viewer's own thumbs-up, one primary-key probe per card, in the same statement.
     const liked = viewer
@@ -72,9 +79,9 @@ export default async function dropletRoutes(app: FastifyInstance) {
       SELECT id, left(content, ${EXCERPT_SOURCE_LENGTH}) AS content, "createdAt",
              jsonb_build_object('course', bundle->'course', 'topic', bundle->'topic') AS bundle,
              "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl",
-             "likeCount", "commentCount", ${liked} AS liked
+             "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked
       FROM answers
-      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${from}
+      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${tagged} ${from}
       ORDER BY "createdAt" DESC, id DESC
       LIMIT ${take}
     `;

@@ -198,6 +198,9 @@ def print_job(job: Path, brief: bool = False) -> None:
                 print(f"[{section}]")
             names = f"  [{', '.join(lyric.names)}]" if lyric.names else ""
             print(f"  {lyric.id:<6} {lyric.fact_id:<7} {lyric.text}{names}")
+        print("\n## Tags\n")
+        for video, tags in (("song", bundle.tags.song), ("lesson", bundle.tags.lesson)):
+            print(_wrap(f"{video:<7}" + (" ".join(f"#{t}" for t in tags) or "none"), indent=7))
     if (job / "checks.json").exists():
         problems = jobs.read(job / "checks.json", CheckReport).problems
         left = [p for p in problems if not p.repaired]

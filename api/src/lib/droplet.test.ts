@@ -88,6 +88,7 @@ describe('the public droplet', () => {
     },
     songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null,
     likeCount: 3, commentCount: 1,
+    songTags: ['atpsynthase', 'apbio', 'studysong'], lessonTags: ['atpsynthase', 'apbio'],
   };
 
   it('is titled from the bundle, never the request', () => {
@@ -100,7 +101,8 @@ describe('the public droplet', () => {
     const card = serializeDropletCard(row);
     expect(card.excerpt).toBe('ATP synthase A rotary motor in the inner membrane. A B 1 2');
     expect(card.video).toEqual({ songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null });
-    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'title', 'topic', 'video']);
+    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'tags', 'title', 'topic', 'video']);
+    expect(card.tags).toEqual({ song: ['atpsynthase', 'apbio', 'studysong'], lesson: ['atpsynthase', 'apbio'] });
     expect(card).toMatchObject({ likeCount: 3, commentCount: 1, liked: false }); // nobody signed in
     expect(serializeDropletCard(row, true).liked).toBe(true);
     expect(excerptOf('word '.repeat(100), 20)).toBe('word word word word…');

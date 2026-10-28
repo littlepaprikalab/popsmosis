@@ -83,4 +83,8 @@ def bundle_data() -> dict:
              "spotlight": "", "particles": [], "caption": ""}
             for i in line_ids
         ],
+        "tags": {
+            "song": ["#photosynthesis", "#lightreactions", "#apbio", "#studysong", "#pop"],
+            "lesson": ["#photosynthesis", "#lightreactions", "#apbio", "#explained"],
+        },
     })

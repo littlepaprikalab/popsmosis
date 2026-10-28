@@ -12,6 +12,7 @@ import bisect
 import functools
 import math
 import re
+import unicodedata
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -24,6 +25,8 @@ LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
 BPM_RANGE = (80, 160)  # the tempos the song may take; a line is two bars, so 6.0 s down to 3.0 s
 DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
 BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
+TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
+TAG_MAX_CHARS = 40  # a longer one is dropped, since cutting it short would make a word nobody searches for
 
 
 class Strict(BaseModel):
@@ -113,6 +116,39 @@ class Direction(Strict):
     caption: str = Field(description='Usually ""')
 
 
+def tag_of(value: str) -> str:
+    """A hashtag as it is stored and searched: "#AP Bio" -> "apbio".
+
+    Lowercase letters (with their accents), digits and underscores, with no "#" (the page
+    adds it back), as TikTok's are: one word that matches however it was typed. "" when
+    nothing is left. The API keeps the same characters (tagOf in api/src/lib/tags.ts).
+    """
+    return "".join(c for c in unicodedata.normalize("NFKC", value).lower()
+                   if c == "_" or unicodedata.category(c)[0] in "LMN")
+
+
+def clean_tags(values: list[str]) -> list[str]:
+    """Each tag as tag_of() writes it, the first of each kept, at most TAGS_PER_VIDEO.
+
+    Never a reason to fail a bundle: a tag that does not fit is dropped, not sent back.
+    """
+    tags: list[str] = []
+    for value in values:
+        tag = tag_of(value)
+        if tag and len(tag) <= TAG_MAX_CHARS and tag not in tags:
+            tags.append(tag)
+    return tags[:TAGS_PER_VIDEO]
+
+
+class Tags(Strict):
+    """Hashtags for each video, the way a TikTok is tagged, so the Droplets tab can be searched by them."""
+
+    song: Annotated[list[str], AfterValidator(clean_tags)] = Field(
+        default_factory=list, description='The song video\'s hashtags, most useful first: "#photosynthesis", "#kpop"')
+    lesson: Annotated[list[str], AfterValidator(clean_tags)] = Field(
+        default_factory=list, description="The lesson video's hashtags, most useful first")
+
+
 class Bundle(Strict):
     course: str
     topic: str
@@ -126,6 +162,9 @@ class Bundle(Strict):
     lyrics: list[Lyric]
     narration: list[Narration]
     direction: list[Direction]
+    # Last, so they are written knowing the whole lesson and the song's style. A bundle
+    # written before there were tags has none.
+    tags: Tags = Field(default_factory=Tags)
 
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:

@@ -1,16 +1,18 @@
 'use client';
 
-import type { DropletVideos, Video } from '@/lib/api';
+import type { DropletTags, DropletVideos, Video } from '@/lib/api';
+import { TagList } from '@/components/TagList';
 
 /**
- * A droplet's two videos: the karaoke song and the narrated lesson. H.264 with
- * +faststart, so a plain <video> starts playing before the file has downloaded;
- * preload="none" keeps a page of them from fetching anything until one is played.
+ * A droplet's two videos: the karaoke song and the narrated lesson, each with its
+ * hashtags under it. H.264 with +faststart, so a plain <video> starts playing before
+ * the file has downloaded; preload="none" keeps a page of them from fetching anything
+ * until one is played.
  */
-export function DropletPlayers({ video }: { video: DropletVideos }) {
+export function DropletPlayers({ video, tags }: { video: DropletVideos; tags?: DropletTags }) {
   const players = [
-    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)' },
-    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)' },
+    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)', tags: tags?.song ?? [], tagsLabel: 'Song tags' },
+    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)', tags: tags?.lesson ?? [], tagsLabel: 'Lesson tags' },
   ].filter((p): p is typeof p & { src: string } => !!p.src);
   if (players.length === 0) return null;
   return (
@@ -28,6 +30,7 @@ export function DropletPlayers({ video }: { video: DropletVideos }) {
             className="w-full rounded-md aspect-video"
             style={{ background: '#000', border: '1px solid var(--border)' }}
           />
+          <TagList tags={p.tags} label={p.tagsLabel} className="mt-1.5" />
         </figure>
       ))}
     </div>
@@ -35,10 +38,10 @@ export function DropletPlayers({ video }: { video: DropletVideos }) {
 }
 
 /** Under a lesson on /learn: the players once READY, else where the render stands. */
-export function LessonVideos({ video }: { video: Video | null }) {
+export function LessonVideos({ video, tags }: { video: Video | null; tags?: DropletTags }) {
   if (!video) return null;
   if (video.status === 'READY') {
-    return <div className="mt-3"><DropletPlayers video={video} /></div>;
+    return <div className="mt-3"><DropletPlayers video={video} tags={tags} /></div>;
   }
   if (video.status === 'RENDERING') {
     return (

@@ -218,6 +218,12 @@ parts build on the facts it has already written.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
    from the alignment.
+8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
+   tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
+   then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
+   written knowing the whole plan. Code cleans them to one lowercase word each and never
+   fails a bundle over one; they are search words, not claims, so the fact-check does not
+   read them (README, "Tags").
 
 Code checks then hold each line's `names` and its direction together
 (`studio/checks.py`): a line names only structures its scene draws, and a spotlight
@@ -545,6 +551,8 @@ model Answer {
   hiddenAt       DateTime?    // an admin took it off the Droplets tab
   likeCount      Int          // thumbs-up on the Droplets tab (DropletLike), kept by a trigger
   commentCount   Int          // comments on it (DropletComment), likewise
+  songTags       String[]     // each video's hashtags, from the bundle when the lesson is posted; GIN-indexed
+  lessonTags     String[]     // for the tab's search by tag
 }
 
 enum QuestionStatus { PENDING ANSWERED FAILED }
@@ -570,7 +578,7 @@ the videos' (`videoStatus`).
 | Agent | POST | `/api/questions/:id/fail` | `{ reason }`; the agent that last claimed it only |
 | Agent | PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, error? }`; the agent's own answers only |
 | Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` on the API) |
-| Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=` |
+| Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=`; `?tag=` those tagged with it |
 | Anyone | GET | `/api/droplets/:id` | One droplet |
 | Admin | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the tab, or put it back |
 | Anyone | GET | `/api/droplets/:id/comments` | Its comments, newest first, `?cursor=` |
@@ -589,7 +597,9 @@ account.
   are rate limited per visitor, and all visitors together per API instance
   (`api/src/lib/public-limit.ts`).
 - **Public:** a title made from the bundle (`course` and `topic`), the lesson text, both
-  videos and the lyrics.
+  videos with their hashtags, and the lyrics.
+- **Searchable by tag.** Every hashtag under a video is a link to the tab searched by it,
+  and a box at the top searches by one typed in.
 - **Never public:** the learner's name or avatar, the request in their own words (it can
   say more than they meant to share), the files they attached, and follow-up threads.
 - **Private on /learn too.** A learner sees only their own topics, and only they post

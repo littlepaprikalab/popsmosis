@@ -45,6 +45,46 @@ test.describe('the Droplets tab, signed out', () => {
     expect(played).toBeGreaterThan(0);
   });
 
+  test('tags each video, and finds droplets by a tag', async ({ page }) => {
+    await page.goto(`/droplets/${S.droplet}`);
+    // Each video has its own tags under it.
+    const songTags = page.getByRole('list', { name: 'Song tags' });
+    const lessonTags = page.getByRole('list', { name: 'Lesson tags' });
+    await expect(songTags.getByRole('link', { name: '#kpop', exact: true })).toBeVisible();
+    await expect(lessonTags.getByRole('link', { name: '#explained', exact: true })).toBeVisible();
+    await expect(lessonTags.getByRole('link', { name: '#kpop', exact: true })).toHaveCount(0);
+
+    // A tag opens the tab searched by it.
+    await songTags.getByRole('link', { name: '#kpop', exact: true }).click();
+    await expect(page).toHaveURL(/\/droplets\?tag=kpop$/);
+    await expect(page.getByTestId('tag-search')).toContainText('Tagged #kpop');
+    const cards = page.getByTestId('droplet-card');
+    await expect(cards).toHaveCount(1);
+    await expect(cards.first()).toContainText('ATP synthesis');
+
+    // Typed in the box, written any way, a tag finds every droplet that carries it.
+    const box = page.getByRole('searchbox', { name: 'Search droplets by tag' });
+    await expect(box).toHaveValue('#kpop');
+    await box.fill('#Bio logy');
+    await box.press('Enter');
+    await expect(page).toHaveURL(/\/droplets\?tag=biology$/);
+    await expect(cards.filter({ hasText: 'ATP synthesis' })).toHaveCount(1);
+    // Cal's, which a run before this one may have left on the tab once it deleted Cal's account.
+    await expect(cards.filter({ hasText: 'Osmosis' }).first()).toBeVisible();
+
+    // A tag no droplet has, and the way back to all of them.
+    await box.fill('#nosuchtag');
+    await page.getByRole('button', { name: 'Search' }).click();
+    await expect(page.getByText('No droplets are tagged #nosuchtag yet.')).toBeVisible();
+    await page.getByRole('link', { name: 'Show all droplets' }).click();
+    await expect(page).toHaveURL(/\/droplets$/);
+    await expect(box).toHaveValue('');
+    // A card shows its first few tags, each a search of its own.
+    const card = cards.filter({ hasText: 'ATP synthesis' }).first();
+    await expect(card.getByRole('link', { name: '#atpsynthesis', exact: true })).toBeVisible();
+    await expect(card.getByTestId('tags').getByRole('link')).toHaveCount(4);
+  });
+
   test('a droplet not on the tab is a 404 page, and the API needs no cookie', async ({ page, request }) => {
     await page.goto('/droplets/not-a-droplet');
     await expect(page.getByText('This droplet is not on the tab')).toBeVisible();

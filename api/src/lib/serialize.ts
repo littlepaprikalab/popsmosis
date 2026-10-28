@@ -4,6 +4,7 @@
  */
 import { serializeVideo, type VideoStatus } from './droplet.js';
 import { serializeBreakdown } from './breakdown.js';
+import { serializeTags } from './tags.js';
 import { termsCurrent } from './terms.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
@@ -70,6 +71,8 @@ type AnswerRow = {
   hiddenAt: Date | null;
   lessonBreakdown: unknown;
   videoBreakdown: unknown;
+  songTags: string[];
+  lessonTags: string[];
   agent: { id: string; name: string };
   replies: ReplyRow[];
 };
@@ -124,6 +127,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string) {
     model: a.model,
     createdAt: a.createdAt.toISOString(),
     video: serializeVideo(a), // null: a text-only droplet
+    tags: serializeTags(a), // each video's hashtags (lib/tags.ts); none for a lesson posted without a bundle
     // Each step's time, cost and models (lib/breakdown.ts); null when the studio sent none.
     breakdown: serializeBreakdown(a.lessonBreakdown, a.videoBreakdown),
     hidden: a.hiddenAt !== null, // an admin took it off the public Droplets tab

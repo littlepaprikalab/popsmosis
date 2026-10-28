@@ -92,8 +92,8 @@ export default function TermsPage() {
           <li>When the teacher makes a lesson from your request, it is published on the Droplets tab for anyone to
             watch, share and learn from. That is the point of Popsmosis: a lesson made for one learner helps everyone who
             comes after them.</li>
-          <li>What is published is the lesson (its text, diagrams, videos, song and lyrics) and a title naming the
-            subject. Never your name, photo, email address, your request, your files or your follow-up questions.</li>
+          <li>What is published is the lesson (its text, diagrams, videos, song and lyrics), a title naming the
+            subject, and hashtags naming the subject for searching. Never your name, photo, email address, your request, your files or your follow-up questions.</li>
           <li>A lesson made from your request is not yours. Other people may ask for the same topic and be shown the
             same lesson. To the extent you have any rights in a lesson because of what you asked for, you give us a
             permanent, irrevocable, worldwide, royalty-free license to use, publish and adapt it, and to let others use
