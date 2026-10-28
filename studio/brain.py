@@ -1,17 +1,21 @@
 """The brain: one ask() that every studio step calls, whatever the provider.
 
-BRAIN_PROVIDER picks the models behind the two thinking roles (docs/PLAN.md, section 3):
+The brain is one of CHOICES, and an admin sets it, never the environment, which holds only the
+keys: the default brain and Claude's effort on /admin/studio, or a topic's own brain on /learn
+(api/src/lib/studio-settings.ts, api/src/lib/brains.ts). The studio reads them from the API, and
+the runners put the one in force with chosen() and choose(). With none in force, as for a local
+`python -m studio plan` without --brain, it is Claude Opus 5.5 at high effort. Each brain's
+provider has its helper (docs/PLAN.md, section 3):
 
-    role     claude (the default)              meta
-    brain    claude-opus-5-5, effort high      muse-wonder-1.0
-    helper   claude-haiku-5-5, effort low      muse-spark-1.3
+    brain          provider   model              helper
+    claude         claude     claude-opus-5-5    claude-haiku-5-5, effort low
+    muse-wonder    meta       muse-wonder-1.0    muse-spark-1.3
+    muse-spark     meta       muse-spark-1.3     muse-spark-1.3
 
-STUDIO_BRAIN_MODEL sets the brain's model on either provider: a Claude model on claude, a
-Muse model on meta (muse-spark-1.3 vets a change for about a quarter of Muse Wonder's
-price). STUDIO_BRAIN_EFFORT sets its effort, on claude only. Unset or empty, each keeps
-the default above, and the helper has no such setting. BRAIN_PROVIDER also picks who
-makes the art: the brain draws SVG on claude, Muse Image paints it on meta
-(studio/steps/art.py).
+Who paints the art goes by the brain's provider, as an admin sets it on /admin/studio too
+(painter()): by default Gemini 3.1 Flash Image for Claude's brain and Muse Image for Muse's,
+and SAM 3.1 then finds the structures in either. Claude's brain may instead draw the art as
+SVG. The helper, which checks each picture and boxes a structure SAM missed, is the brain's.
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -49,9 +53,28 @@ META = {
 }
 META_BASE_URL = "https://api.meta.ai/v1"
 META_KEY_VAR = "MODEL_API_KEY"
+# Who paints the art, by the brain's provider (painter()). An admin changes it on /admin/studio, and the API keeps
+# the same lists (api/src/lib/studio-settings.ts): each provider's default is first.
+ART_CHOICES = {"claude": ("gemini", "muse", "svg"), "meta": ("muse", "gemini")}
+PAINTER_NAMES = {"gemini": "Gemini 3.1 Flash Image", "muse": "Muse Image", "svg": "the brain, as SVG"}
+# The keys each painter's art needs: SAM 3.1 finds the structures in a painted picture, on Meta's key.
+PAINTER_KEYS = {"gemini": ("GEMINI_API_KEY", META_KEY_VAR), "muse": (META_KEY_VAR,), "svg": ()}
+
+# The brains an admin may set as the default on /admin/studio or pick for one topic on /learn: each one's
+# provider and model. The API holds the same keys (api/src/lib/brains.ts); keep the two lists the same.
+CHOICES = {
+    "claude": {"provider": "claude", "model": "claude-opus-5-5", "name": "Claude Opus 5.5"},
+    "muse-wonder": {"provider": "meta", "model": "muse-wonder-1.0", "name": "Muse Wonder 1.0"},
+    "muse-spark": {"provider": "meta", "model": "muse-spark-1.3", "name": "Muse Spark 1.3"},
+}
 
 # The effort levels Claude accepts (output_config.effort).
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
+# With none set: the API's defaults too (api/src/lib/studio-settings.ts).
+DEFAULT_BRAIN, DEFAULT_EFFORT = "claude", "high"
+# What picked the brain and the singer before /admin/studio did. Still set, they stop `run`, `videos` and `recover`
+# until they are removed (retired_problem()), so nothing changes without the admin seeing why.
+RETIRED_VARS = ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "SONG_PROVIDER")
 
 # Where the studio finds its Anthropic key, first match wins. In a Claude Code cloud
 # environment a variable named ANTHROPIC_API_KEY never reached the session (the name is
@@ -79,9 +102,6 @@ PRICES = {
     "muse-spark-1.3-contributor": (0.10, 0.20),
     "muse-spark-1.2-contributor": (0.10, 0.20),
 }
-# What each provider's model ids start with, so a STUDIO_BRAIN_MODEL left over from the
-# other provider is caught before anything is claimed or sent (settings_problem()).
-MODEL_PREFIXES = {"claude": "claude-", "meta": "muse-"}
 
 MEDIA_TYPES = {
     ".png": "image/png",
@@ -138,6 +158,74 @@ class Call:
 
 calls: list[Call] = []
 _local = threading.local()  # the calls each thread is collecting (collect())
+# The brain in force while a runner works on a topic (a key of CHOICES) and Claude's effort, as the API said; None:
+# the defaults. One per process, not per thread: the art and audio branches of `videos` run in threads of their own,
+# and both need it.
+_chosen: str | None = None
+_effort: str | None = None
+
+
+@contextlib.contextmanager
+def chosen(name: str | None, effort: str | None = None):
+    """Run the block on a brain (a key of CHOICES) at an effort (Claude's); None for either is its default.
+    choose() inside the block lasts until the block ends."""
+    global _chosen, _effort
+    outer = _chosen, _effort
+    _chosen, _effort = name or None, effort or None
+    try:
+        yield
+    finally:
+        _chosen, _effort = outer
+
+
+def choose(name: str | None, effort: str | None = None) -> None:
+    """Put a brain in force from here on, as `run` does once the claim says which it is. A name CHOICES does not
+    have is taken too, and fails every call, with settings_problem() saying why."""
+    global _chosen, _effort
+    _chosen, _effort = name or None, effort or None
+
+
+def chosen_name() -> str | None:
+    """The brain put in force, or None when none is (the default)."""
+    return _chosen
+
+
+def current() -> dict:
+    """The brain in force (CHOICES): the one chosen, else Claude Opus 5.5."""
+    name = _chosen or DEFAULT_BRAIN
+    if name not in CHOICES:
+        raise BrainError(f"the brain {name!r} is not one this studio has ({', '.join(CHOICES)}): update the studio")
+    return CHOICES[name]
+
+
+def _who() -> str:
+    """The brain in force, by name, for an error message."""
+    return current()["name"]
+
+
+def retired_problem() -> str | None:
+    """Why a variable that used to pick the brain, still set in the environment, must go first; or None. The
+    studio no longer reads them, so a run that went on would quietly change from the brain they named to the one
+    on /admin/studio."""
+    left = [name for name in RETIRED_VARS if os.environ.get(name, "").strip()]
+    if not left:
+        return None
+    them = "it" if len(left) == 1 else "them"
+    return (f"{', '.join(left)} {'is' if len(left) == 1 else 'are'} still set, but the studio no longer reads {them}: "
+            f"the brain and the song are set on /admin/studio now. Set them there, then remove {them} from the "
+            "environment")
+
+
+def choice_for_model(model: str | None) -> str | None:
+    """The brain (a key of CHOICES) a model id belongs to: the one that wrote a lesson, as the answer records it.
+    A fallback model or a dated id goes by its family; None for a model none of them is."""
+    if not model:
+        return None
+    for name, picked in CHOICES.items():
+        if model == picked["model"]:
+            return name
+    families = {"claude-": "claude", "muse-wonder": "muse-wonder", "muse-spark": "muse-spark"}
+    return next((name for prefix, name in families.items() if model.startswith(prefix)), None)
 
 
 def _record(call: Call) -> None:
@@ -188,34 +276,54 @@ def ask(
 
 
 def provider() -> str:
-    """BRAIN_PROVIDER: claude (the default) or meta. It also picks who makes the art (studio/steps/art.py)."""
-    name = os.environ.get("BRAIN_PROVIDER", "claude")
-    if name not in PROVIDERS:
-        raise ValueError(f"BRAIN_PROVIDER must be claude or meta, not {name!r}")
-    return name
+    """The provider of the brain in force: claude or meta. Who paints the art goes by it (painter())."""
+    return current()["provider"]
+
+
+def painter(art: dict | None = None) -> str:
+    """Who paints the art for the brain in force: gemini, muse or svg. art is the admin's setting as the API's claim
+    said ({"claude": ..., "meta": ...}); a provider it leaves out, or a painter that provider may not use, gets the
+    default: Gemini 3.1 Flash Image for Claude's brain, Muse Image for Muse's."""
+    allowed = ART_CHOICES[provider()]
+    picked = (art or {}).get(provider()) if isinstance(art, dict) else None
+    return picked if picked in allowed else allowed[0]
 
 
 def meta_key() -> str:
     """The Meta API key every Meta model here takes: the brain's, Muse Image's and SAM's."""
     key = os.environ.get(META_KEY_VAR)
     if not key:
-        raise BrainError(f"BRAIN_PROVIDER=meta needs {META_KEY_VAR}")
+        who = _who() if provider() == "meta" else "SAM 3.1 (and Muse Image, when it paints)"
+        raise BrainError(f"{who} needs {META_KEY_VAR}")
     return key
 
 
+def art_problem(art: dict | None = None) -> str | None:
+    """What the art's painter (painter(art)) needs and this environment does not have, or None. The videos ask
+    before they claim anything, as for settings_problem()."""
+    try:
+        name = painter(art)
+    except (ValueError, BrainError) as e:
+        return str(e)
+    missing = [var for var in PAINTER_KEYS[name] if not os.environ.get(var)]
+    if not missing:
+        return None
+    return (f"the art needs {' and '.join(missing)}: {PAINTER_NAMES[name]} paints it and SAM 3.1 finds its "
+            "structures (an admin can pick another painter on /admin/studio)")
+
+
 def settings_problem() -> str | None:
-    """What is wrong with the brain's settings (BRAIN_PROVIDER, its key, STUDIO_BRAIN_MODEL and
-    STUDIO_BRAIN_EFFORT), or None. The runners ask before they claim anything, so a setting
-    left wrong stops the run instead of failing, and giving up, one topic after another."""
+    """What keeps the brain in force from running here (a name this studio does not have, an effort Claude does
+    not take, its provider's key missing), or None. The runners ask about the default brain before they claim
+    anything, so a setting left wrong stops the run instead of failing, and giving up, one topic after another."""
     try:
         if provider() == "meta":
-            brain_model("meta")
             meta_key()
         else:
             claude_brain()
             if not claude_key():
-                raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
-    except (ValueError, BrainError) as e:
+                raise BrainError(f"{_who()} needs {' or '.join(CLAUDE_KEY_VARS)}")
+    except BrainError as e:
         return str(e)
     return None
 
@@ -293,23 +401,17 @@ def claude_key() -> str | None:
     return next((os.environ[name] for name in CLAUDE_KEY_VARS if os.environ.get(name)), None)
 
 
-def brain_model(provider_name: str) -> str:
-    """The brain's model on a provider: STUDIO_BRAIN_MODEL, else that provider's default."""
-    defaults = {"claude": CLAUDE, "meta": META}[provider_name]
-    model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or defaults["brain"]["model"]
-    if not model.startswith(MODEL_PREFIXES[provider_name]):
-        raise BrainError(f"STUDIO_BRAIN_MODEL={model} is not a {'Claude' if provider_name == 'claude' else 'Muse'} "
-                         f"model, and BRAIN_PROVIDER is {provider_name}: change one or unset STUDIO_BRAIN_MODEL")
-    return model
+def brain_model() -> str:
+    """The model of the brain in force."""
+    return current()["model"]
 
 
 def claude_brain() -> tuple[str, str]:
-    """The brain's model and effort: STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT, else the defaults."""
-    model = brain_model("claude")
-    effort = os.environ.get("STUDIO_BRAIN_EFFORT", "").strip() or CLAUDE["brain"]["effort"]
+    """Claude's brain's model and effort: the brain in force, at the effort set on /admin/studio (high by default)."""
+    effort = _effort or DEFAULT_EFFORT
     if effort not in EFFORTS:
-        raise BrainError(f"STUDIO_BRAIN_EFFORT must be one of {', '.join(EFFORTS)}, not {effort!r}")
-    return model, effort
+        raise BrainError(f"Claude's effort must be one of {', '.join(EFFORTS)}, not {effort!r} (/admin/studio)")
+    return brain_model(), effort
 
 
 def claude_request(
@@ -351,7 +453,7 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
         # whatever other credential the machine happens to hold.
         key = claude_key()
         if not key:
-            raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
+            raise BrainError(f"{_who()} needs {' or '.join(CLAUDE_KEY_VARS)}")
         _clients["claude"] = anthropic.Anthropic(api_key=key)
     started = time.monotonic()
     try:
@@ -418,7 +520,7 @@ def claude_texts(message) -> list[str]:
 
 # --- Meta ---------------------------------------------------------------------
 # Untested until MODEL_API_KEY exists. Muse takes OpenAI-style chat completions. No
-# effort is sent: STUDIO_BRAIN_EFFORT is Claude's, and Muse keeps its own default.
+# effort is sent: the effort on /admin/studio is Claude's, and Muse keeps its own default.
 
 
 def meta_request(
@@ -432,7 +534,7 @@ def meta_request(
     content.append({"type": "text", "text": prompt})
     messages = [{"role": "system", "content": system}] if system else []
     messages.append({"role": "user", "content": content})
-    model = brain_model("meta") if role == "brain" else META[role]["model"]
+    model = brain_model() if role == "brain" else META[role]["model"]
     request = {"model": model, "messages": messages}
     if schema is not None:
         request["response_format"] = {

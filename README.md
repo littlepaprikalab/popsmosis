@@ -121,11 +121,11 @@ python -m studio recover                 # take a render that died with its mach
 ```
 
 `videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
-the timeline, render and upload. `SONG_PROVIDER` picks who sings the song: `elevenlabs`
-(the default, Eleven Music, with `ELEVENLABS_API_KEY`) or `gemini` (Lyria 3.5 on the Gemini
-API, with `GEMINI_API_KEY`; `GEMINI_SONG_MODEL` picks another Lyria model). The narration
-is ElevenLabs either way. Switching it makes a job's song again on its next run, and only
-the song. `run` claims the videos as soon as it posts the lesson,
+the timeline, render and upload. Who sings the song is picked on the Studio page
+([Choosing the models](#choosing-the-models)): ElevenLabs' Eleven Music (the default, with
+`ELEVENLABS_API_KEY`) or Lyria 3.5 on the Gemini API (with `GEMINI_API_KEY`;
+`GEMINI_SONG_MODEL` picks another Lyria model). The narration is ElevenLabs either way.
+Switching it makes a job's song again on its next run, and only the song. `run` claims the videos as soon as it posts the lesson,
 and `videos` renews the claim before every step, so a render whose machine dies is handed
 to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=off` makes
 text-only droplets.
@@ -165,54 +165,80 @@ python -m studio step upload <job-id>    # videos and posters public, the rest p
 
 ### Choosing the models
 
-These variables pick the models the studio runs and the accounts they bill to. The studio
-reads them from its own environment, not from `.env`: on the routine, set them in its
+The routine's environment holds only the keys, which bill each provider's account. The
+studio reads them from its own environment, not from `.env`: on the routine, set them in its
 environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 1).
 
-| Variable | Values | Default | What it does |
-|---|---|---|---|
-| `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson, and who makes its art (the next table) |
-| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | none | Needed with `claude`. `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
-| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`. Every Meta model the studio calls bills to it |
-| `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. Change it when you change `BRAIN_PROVIDER`: a model from the other provider stops the run (below) |
-| `STUDIO_BRAIN_EFFORT` | `low`, `medium`, `high`, `xhigh`, `max` | `high` | How hard the brain thinks, with `claude` only; `meta` ignores it |
-
-What each `BRAIN_PROVIDER` runs:
-
-| Job | `claude` | `meta` |
+| Variable | Value | Needed for |
 |---|---|---|
-| Brain: writes and fact-checks the lesson | Claude Opus 5.5, or `STUDIO_BRAIN_MODEL` | Muse Wonder 1.0, or `STUDIO_BRAIN_MODEL` |
-| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 (not called: code checks the SVG art) | Muse Spark 1.3 |
-| Art | the brain draws each scene as SVG | Muse Image 1.0 paints it, $0.01 a picture, up to three a scene |
-| Finding each structure in the art | the SVG says where each one is | SAM 3.1, $2.50 per 1,000 images |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Haiku 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
+| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | a Muse brain and its picture checks (Muse Spark 1.3), Muse Image, and SAM 3.1 with any painter but the SVG |
+| `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
 
-Switching `BRAIN_PROVIDER` makes a job's art again on its next run; a lesson already
-written stays as it is.
+Everything else is chosen by an admin on **STUDIO** in the nav (`/admin/studio`), kept in the
+database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, who sings
+the song, and who paints each brain's pictures. The studio reads them from the API, with its agent key, before
+it claims a topic and from every claim after, so a change applies from the next run with no
+change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `STUDIO_BRAIN_EFFORT` and
+`SONG_PROVIDER`, which used to pick these, are no longer read: while one is still set, `run`,
+`videos` and `recover` stop with `the studio's settings are wrong` and say to set it on the
+page and remove it, so nothing changes without anyone seeing why.
 
-`run`, `videos` and `recover` check these settings before they claim anything. A wrong one
-(an unknown provider, its key missing, a model from the other provider, a misspelled
-effort) ends the command with `STOPPED run: the studio's settings are wrong: ...` (or
-`videos`), and the teacher stops and reports it, so no topic is failed or given up over a
-setting.
+| Setting | Choices | Default |
+|---|---|---|
+| Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
+| Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
+| Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
+| Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
+| Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 
-The brain's models, for `STUDIO_BRAIN_MODEL`:
+What runs, by the brain's provider:
 
-| `STUDIO_BRAIN_MODEL` | With | Price per million tokens (in / out) | Use it for |
-|---|---|---|---|
-| `claude-opus-5-5` (the default) | `claude` | $4.00 / $20.00 | the real lessons, about 70 cents a topic |
-| `claude-haiku-5-5` | `claude` | $0.10 / $0.50 | trying a change, about 2 cents a topic |
-| `muse-wonder-1.0` (the default) | `meta` | $4.00 / $20.00 | the real lessons |
-| `muse-spark-1.3` | `meta` | $1.25 / $4.25 | vetting a change, on any topic |
-| `muse-spark-1.3-contributor` | `meta` | $0.10 / $0.20 | test topics only (`python -m studio plan`): Meta may train on everything it is sent, learners' requests included. Never on the routine |
+| Job | Claude's brain | Muse's brain |
+|---|---|---|
+| Brain: writes and fact-checks the lesson | Claude Opus 5.5 | Muse Wonder 1.0 or Muse Spark 1.3 |
+| Art: paints each scene, up to three tries | the painter set for Claude topics | the painter set for Muse topics |
+| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
+| Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images (none for the SVG, which says where each one is) | SAM 3.1 |
 
-Any other model of the provider's works too (another Claude model id, or a Muse one such
-as `muse-spark-1.2`); a model the bill has no price for shows as unpriced. To try a prompt
-change on a local job: `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`,
-or with `BRAIN_PROVIDER=meta`, `STUDIO_BRAIN_MODEL=muse-spark-1.3`.
+Gemini's picture is 1K at 16:9 (1376 x 768), fitted to the art (`studio/gemini.py`).
+Switching the painter makes a job's art again on its next run; a lesson already written
+stays as it is.
+
+`run` and `recover` read the settings before they claim anything, and `videos` checks the
+job's: a brain or painter whose key is missing ends the command with `STOPPED run: the
+studio's settings are wrong: ...` (or `videos`), and the teacher stops and reports it, so no
+topic is failed or given up over a setting. For a local job, `python -m studio plan ...
+--brain muse-spark --effort medium` (the default: Claude Opus 5.5 at high); Muse Spark vets
+a prompt change for about a quarter of Muse Wonder's price.
 
 The Meta calls follow Meta's docs but have not run against the live API yet: check them
-first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
-scene, a few cents).
+first with `STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s`
+(one scene, a few cents). Gemini's has: `STUDIO_LIVE=1 GEMINI_API_KEY=... python -m pytest
+studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
+
+#### One topic on another brain
+
+An admin can send one topic to a brain of its own: the **Brain** buttons under the box on
+`/learn` (admins only; a learner's topic is always made by the default brain). The pick is
+remembered on that browser, and the topic's card shows it.
+
+| Button | Brain: writes and fact-checks the lesson | Brain bills to |
+|---|---|---|
+| Default | the default brain on the Studio page (the note under the buttons names it) | its key |
+| Claude | Claude Opus 5.5 (`claude-opus-5-5`) | `POPSMOSIS_ANTHROPIC_API_KEY` |
+| Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | `MODEL_API_KEY` |
+| Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | `MODEL_API_KEY` |
+
+The pictures are painted by the Studio page's painter for the pick's provider: by default
+Gemini 3.1 Flash Image for Claude, Muse Image for the Muses. For that topic the pick wins
+over the default brain (Claude's effort is still the Studio page's). The studio keeps the
+brain a topic is made on in the job's `brain.json`, so a retry, `videos`, `recover` and
+`step` stay on it, and the bill shows the models that ran. The environment needs the key of
+the pick's provider: a topic sent to a brain whose key is missing fails at its first step
+with `the studio cannot run this topic's brain here: ...`, and the teacher gives it up with
+that reason, so the queue moves on. For a local job, `python -m studio plan ... --brain muse-spark`.
+Follow-ups are answered by the teacher itself, whatever the brain.
 
 ## Tests
 
@@ -222,8 +248,10 @@ npm --workspace api test                  # unit tests, no database
 INTEGRATION=1 npm --workspace api test    # plus the end-to-end flow against DATABASE_URL
 npm --workspace web run build
 npm run e2e                               # Playwright browser tests; needs api + web running (see web/e2e/README.md)
-python -m pytest studio                   # the studio, offline; test_live.py also runs when POPSMOSIS_ANTHROPIC_API_KEY is set,
-                                          # and test_live_meta.py when MODEL_API_KEY is
+python -m pytest studio                   # the studio, offline: never a paid call, whatever keys are set
+STUDIO_LIVE=1 python -m pytest studio/tests/test_live.py studio/tests/test_live_meta.py studio/tests/test_live_gemini.py
+                                          # the live checks, on the real APIs: they spend Anthropic, Meta and Gemini
+                                          # credit, each only with its key set (STUDIO_LIVE_AUDIO=1 for the audio ones)
 ```
 
 CI runs all of it: API typecheck and tests against a Postgres service, the web build,
@@ -268,7 +296,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments? }` 3–2000 chars; `attachments` see [Attachments](#attachments) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars |
 | DELETE | `/api/replies/:id` | own reply |
@@ -284,13 +312,13 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 |---|---|---|
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES` |
-| POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it; 409 if answered, failed, or leased to another agent |
+| POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own); 409 if answered, failed, or leased to another agent |
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
 | PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until storage is set up (`SUPABASE_URL` and a secret key in `SUPABASE_SERVICE_ROLE_KEY`), with `retryable: true` only when waiting may fix it |
-| POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, bundle, factcheck }`; 409 when another run holds them, they are READY, or the attempts are used up |
+| POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
 | POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |
 | PUT | `/api/answers/:id/video/progress` | own answers: `{ attempt?, running: [{ step, seconds }], failed?, breakdown? }`, where the render is, its `breakdown` the videos' bill so far; 204; 409 unless they are RENDERING under that attempt. Not the heartbeat: the claim is |

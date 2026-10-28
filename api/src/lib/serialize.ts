@@ -90,6 +90,7 @@ type QuestionRow = {
   createdAt: Date;
   claimedAt: Date | null;
   progress: unknown;
+  brain: string | null;
   user: { id: string; name: string | null; avatarUrl: string | null } | null;
   answers: AnswerRow[];
   attachments: AttachmentRow[];
@@ -174,6 +175,8 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new D
     content: q.content,
     status: q.status,
     failedReason: q.status === 'FAILED' ? q.failedReason : null,
+    // The brain an admin picked for it (lib/brains.ts); null: the teacher's own. The studio reads it from the claim.
+    brain: q.brain,
     attachments: q.attachments.map(serializeAttachment),
     createdAt: q.createdAt.toISOString(),
     user: q.user,

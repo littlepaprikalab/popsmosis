@@ -91,6 +91,11 @@ model Question {
   // far, and whether the videos' steps come after. Sent before each step (PUT /api/questions/:id/progress).
   progress Json?
 
+  // The brain an admin picked for this topic on /learn (api/src/lib/brains.ts): claude, muse-wonder or muse-spark.
+  // Null: the default brain an admin sets on /admin/studio (api/src/lib/studio-settings.ts). The studio reads both
+  // from the claim.
+  brain String?
+
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers     Answer[]
   attachments Attachment[]
@@ -234,4 +239,14 @@ model DropletComment {
   @@index([answerId, createdAt(sort: Desc), id(sort: Desc)]) // a droplet's comments, newest first, by cursor
   @@index([userId, createdAt]) // the hourly limit; a deleted user's comments go with them
   @@map("droplet_comments")
+}
+
+// Settings an admin changes on /admin/studio (api/src/lib/studio-settings.ts), one row per key, its value JSON. The
+// studio reads them from its claims, so a change reaches the next run with no redeploy.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
 }

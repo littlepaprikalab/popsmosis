@@ -223,6 +223,27 @@ d('question / answer / reply flow', () => {
     expect(await prisma.question.count({ where: { id: other.json().id } })).toBe(0);
   });
 
+  it('lets an admin pick the brain for a topic, and hands it to the studio with the claim', async () => {
+    // A learner cannot: they would be spending on a costlier model.
+    const learner = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(cookieA), payload: { content: `${tag} brain picked by a learner`, brain: 'muse-wonder' } });
+    expect(learner.statusCode).toBe(403);
+    expect(await prisma.question.count({ where: { content: `${tag} brain picked by a learner` } })).toBe(0);
+    const unknown = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(adminCookie), payload: { content: `${tag} brain unknown`, brain: 'muse-spark-1.3' } });
+    expect(unknown.statusCode).toBe(400);
+
+    const picked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(adminCookie), payload: { content: `${tag} brain picked by an admin`, brain: 'muse-spark' } });
+    expect(picked.statusCode).toBe(201);
+    expect(picked.json().brain).toBe('muse-spark');
+    const claim = await app.inject({ method: 'POST', url: `/api/questions/${picked.json().id}/claim`, headers: asAgent(agentKey) });
+    expect(claim.statusCode).toBe(200);
+    expect(claim.json().brain).toBe('muse-spark');
+
+    // Left out, the topic is the teacher's to make on its own brain.
+    const own = await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser(cookieA) });
+    expect(own.json().brain).toBeNull();
+    await prisma.question.delete({ where: { id: picked.json().id } });
+  });
+
   it('threads: the asker follows up, agent owes a response, agent replies once', async () => {
     const empty = await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(agentKey) });
     expect(empty.json().data).toEqual([]);

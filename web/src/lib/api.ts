@@ -1,3 +1,5 @@
+import type { Brain } from './brains';
+
 const API_BASE = '/api';
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -294,6 +296,8 @@ export interface Question {
   content: string;
   status: 'PENDING' | 'ANSWERED' | 'FAILED';
   failedReason: string | null; // FAILED: why the teacher gave up
+  // The brain an admin picked for it (lib/brains.ts); null: the teacher's own. Absent from an API older than this page.
+  brain?: Brain | null;
   attachments: Attachment[];
   createdAt: string;
   user: PublicUser | null; // null once the learner took it back: only an admin still sees it, with content ''
@@ -303,6 +307,28 @@ export interface Question {
   progress?: Progress | null;
   isOwner: boolean;
   canDelete: boolean;
+}
+
+/** Who paints a droplet's pictures, by the provider of the brain that wrote it (api/src/lib/studio-settings.ts). */
+export type Painter = 'gemini' | 'muse' | 'svg';
+export type ArtSettings = { claude: Painter; meta: Painter };
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+// The brain that writes a topic no admin sent to a brain of its own, and Claude's effort when it is Claude's.
+export type BrainSettings = { default: Brain; effort: Effort };
+// Who sings the song: ElevenLabs' Eleven Music or Lyria on the Gemini API. The narration is ElevenLabs' either way.
+export type SongProvider = 'elevenlabs' | 'gemini';
+export type SongSettings = { provider: SongProvider };
+
+export interface StudioSettings {
+  brain: BrainSettings;
+  song: SongSettings;
+  art: ArtSettings;
+  updatedAt: string | null; // null: never changed, the defaults
+  defaults: { brain: BrainSettings; song: SongSettings; art: ArtSettings };
+  choices: {
+    brain: { default: Brain[]; effort: Effort[] }; song: { provider: SongProvider[] };
+    art: { claude: Painter[]; meta: Painter[] };
+  };
 }
 
 /** A droplet on the public tab (api/src/lib/droplet.ts). Nothing about who asked for it. */
@@ -393,7 +419,9 @@ export const api = {
   getQuestion: (id: string) => request<Question>(`/questions/${id}`).then(localClock),
   getQuestionsByIds: (ids: string[]) =>
     request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`).then(onLocalClock),
-  askQuestion: (content: string) => request<Question>('/questions', { method: 'POST', body: JSON.stringify({ content }) }).then(localClock),
+  // brain: an admin's pick for the topic (lib/brains.ts); left out, the teacher's own makes it.
+  askQuestion: (content: string, brain?: Brain | null) =>
+    request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
   deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh
@@ -452,4 +480,9 @@ export const api = {
   listUsers: (q?: string) => request<{ data: User[] }>(`/users?${new URLSearchParams(q ? { q } : {})}`),
   setUserRole: (id: string, role: 'ADMIN' | 'USER') =>
     request<User>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+
+  // Admin: the studio's settings (api/src/routes/studio.ts). A change reaches the teacher's next run.
+  getStudioSettings: () => request<StudioSettings>('/studio/settings'),
+  setStudioSettings: (change: { brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings> }) =>
+    request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify(change) }),
 };

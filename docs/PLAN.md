@@ -95,28 +95,29 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 - **Two agents keep a public record on Inkmory.** Claude, the operator, and Muse Wonder,
   the planner, each read who they are before a run and write down what happened after it
   (section 11).
-- **The brain is swappable.** `BRAIN_PROVIDER` picks the models for the thinking roles,
-  and who makes the art (step 3). It defaults to `claude`. Switch to `meta` once the key
-  is in the routine's environment: this is a Meta hackathon, so the submission runs on Meta.
+- **The brain is swappable.** An admin picks the default brain on `/admin/studio`: Claude
+  Opus 5.5 (the default for now), Muse Wonder 1.0 or Muse Spark 1.3. Switch to a Muse once
+  the key is in the routine's environment: this is a Meta hackathon, so the submission runs
+  on Meta. The environment holds only the keys. Who paints the art goes by the brain's
+  provider, set there too: by default Gemini 3.1 Flash Image for Claude and Muse Image for
+  Muse, SAM 3.1 finding the structures in either; Claude can instead draw it as SVG.
 
-| Role | `BRAIN_PROVIDER=claude` (default for now) | `BRAIN_PROVIDER=meta` |
+| Role | Claude (default for now) | Muse |
 |---|---|---|
-| **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` | Muse Wonder (`muse-wonder-1.0`) |
+| **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` (set on `/admin/studio`) | Muse Wonder (`muse-wonder-1.0`) or Muse Spark (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to vet a change) |
 | **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
-`STUDIO_BRAIN_MODEL` changes the brain's model on either provider: a Claude model with
-`claude`, a Muse model with `meta` (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to
-vet a change; its Contributor version is cheaper still, but Meta may train on what it is
-sent, so test topics only). `STUDIO_BRAIN_EFFORT` changes the effort with `claude`.
-Unset, they are the defaults above. The helper's models are set in `studio/brain.py`.
+The helper's models are set in `studio/brain.py`. An admin can also send one topic to its own
+brain on `/learn` (Claude, Muse Wonder or Muse Spark), which wins over the default for that
+topic, the painter its provider's: README, "One topic on another brain".
 
 The other jobs:
 
 | Job | Made by |
 |---|---|
-| Diagrams | Muse Image (`muse-image-1.0`) with `BRAIN_PROVIDER=meta`; brain-drawn SVG with `claude` (step 3) |
-| Structure masks | SAM 3.1 (`sam-3.1`) on Muse Image's art, with a helper box as the fallback; the SVG art's own groups with `claude` |
-| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API with `SONG_PROVIDER=gemini` |
+| Diagrams | Gemini 3.1 Flash Image (`gemini-3.1-flash-image`) with `claude`, Muse Image (`muse-image-1.0`) with `meta`, by default; or brain-drawn SVG with `claude` (`/admin/studio`; step 3) |
+| Structure masks | SAM 3.1 (`sam-3.1`) on the painted art, with a helper box as the fallback; the SVG art's own groups |
+| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API, picked on `/admin/studio` |
 | Narration | ElevenLabs text-to-speech with timestamps |
 | Word timing (song) | Demucs (vocals) + Meta's MMS forced aligner, both open source, run locally |
 | Timeline | Code |
@@ -171,8 +172,8 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | 1 | Bundle | Brain, one call | `bundle.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
-| 3 | Art | Muse Image + helper (`meta`); the brain's SVG (`claude`) | `art/<scene>.png` |
-| 4 | Locate | SAM 3.1 + helper (`meta`); nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
+| 3 | Art | Gemini 3.1 Flash Image or Muse Image + helper; or the brain's SVG (`/admin/studio`) | `art/<scene>.png` |
+| 4 | Locate | SAM 3.1 + helper on painted art; nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
 | 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
 | 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
@@ -271,7 +272,7 @@ cytochrome b6f pumps).
 
 ### Step 3: art
 
-**With `BRAIN_PROVIDER=meta`:** Muse Image (`/v1/images/generations`), size `1792x1024`
+**Painted, by Gemini 3.1 Flash Image or Muse Image** (`/admin/studio`; Gemini by default with `claude`, Muse Image with `meta`). Gemini: `generateContent` at 16:9, 1K (1376 x 768), about $0.07 a picture, run live. Muse Image (`/v1/images/generations`), size `1792x1024`
 (an aspect ratio: the picture is fitted to the art on white). The prompt suffix is always:
 "textbook illustration in the style of OpenStax/Campbell, shaded vector, soft gradients,
 clean outlines, white background, scientifically accurate, absolutely no text, no labels,
@@ -282,11 +283,11 @@ wrong. A picture with text is never used; after the third, the scene keeps the t
 picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`), not
 yet run against the live API.
 
-**With `BRAIN_PROVIDER=claude`**, the brain draws each scene as SVG, with every structure
+**Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure
 as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
 time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
 Image, but it writes the same files, so everything downstream is built and tested against
-it unchanged. Switching the provider makes a job's art again on its next run.
+it unchanged. Switching the painter makes a job's art again on its next run.
 
 ### Step 4: locate
 
@@ -307,7 +308,7 @@ against the live API.
   studio's code makes this call, only after the fact-check passes. Section durations come
   from the line count and the styles' "<n> bpm" tag (two bars per line: 4.8 s at 100
   bpm, 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
-- **Or the song from Lyria** (`SONG_PROVIDER=gemini`): `POST
+- **Or the song from Lyria** (picked on `/admin/studio`): `POST
   https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent` with
   one text prompt: the style tags (the same tempo tag), the length, the planned structure
   as timestamp ranges (`[0:09 - 0:13] Chorus`) and the lyrics under section tags, to sing
@@ -516,10 +517,9 @@ The routine runs the studio in its own container, so there is no worker to host.
 takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
-  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SONG_PROVIDER` (with
-  `GEMINI_API_KEY` for `gemini`), `BRAIN_PROVIDER` (with
-  `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`, both optional), and `MODEL_API_KEY` with
-  `BRAIN_PROVIDER=meta`. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
+  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `GEMINI_API_KEY` (for Lyria and
+  Gemini 3.1 Flash Image), and `MODEL_API_KEY` for a Muse brain, Muse Image and SAM 3.1; the
+  brain, the singer and the painters are chosen on `/admin/studio`, not here. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
 - **Setup:** the repository's session hook (`.claude/hooks/session-start.sh`) installs
   `studio/requirements.txt` (PyTorch for CPU, torchaudio, demucs, skia-python, anthropic,
@@ -668,7 +668,7 @@ account.
 - **Later:** when someone asks for a topic that already has a droplet, offer that one
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs
-  publicly, and Google's terms for Lyria's when `SONG_PROVIDER=gemini` (they carry a
+  publicly, and Google's terms for Lyria's when Lyria sings (they carry a
   SynthID watermark). Keep the bitrate modest (flat diagrams compress well) to hold down
   Supabase egress. Done: the videos are encoded with `-movflags +faststart`, so one starts
   playing before it has downloaded.
@@ -811,7 +811,7 @@ Rules that follow from Inkmory's code:
 - **Name, personality and skills are permanent**, even for the sponsor. Set each agent's
   `llmModel` on the sponsor dashboard: the routine's Claude model for the operator,
   `muse-wonder-1.0` for the planner.
-- **The planner's real record starts with `BRAIN_PROVIDER=meta`**, so every entry in it
+- **The planner's real record starts with a Muse brain** (`/admin/studio`), so every entry in it
   is Muse's. Until then, build and test its beat against a local Inkmory (sparksinfra's
   `LOCAL_DEV.md`, with `ADOPTION_COOLDOWN_DAYS=0`).
 - **Both keys live in the routine's environment**, because the studio runs in the
@@ -830,7 +830,7 @@ Rules that follow from Inkmory's code:
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
 | 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; agent credits |
-| 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch to `BRAIN_PROVIDER=meta` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
+| 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch the default brain to a Muse on `/admin/studio` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them. Particles built early (Oct 28). The contact sheet can be made (`python -m studio.render sheet`); the helper's check on it is not built. Left: the vertical layout, the QA check |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
 
@@ -899,9 +899,10 @@ To build:
 To run live (day 8):
 
 - The real song, narration and exam question, and the chorus drift on a sung song.
-- Muse Image and SAM 3.1 with `BRAIN_PROVIDER=meta`.
+- Muse Image and Gemini 3.1 Flash Image, each with SAM 3.1 (`/admin/studio`; Gemini's
+  answer and price already checked live).
 - `run` and `videos` end to end, with the upload.
-- The topics that mean done (section 1); `meta` against `claude`; the planner's persona
+- The topics that mean done (section 1); a Muse brain against Claude's (`/admin/studio`); the planner's persona
   in the lesson voice, one topic each way (section 14).
 
 Then the stretch (day 9): the vertical layout and the QA check. Before launch: the song
@@ -909,8 +910,9 @@ terms (section 10). Day 10: the demo and the submission.
 
 ## 13. Risks and fallbacks
 
-- **No Meta key in time, or Meta's API misbehaves:** `BRAIN_PROVIDER=claude` runs the
-  whole pipeline on the Claude brain and the SVG art. Nothing downstream changes.
+- **No Meta key in time, or Meta's API misbehaves:** Claude as the default brain with
+  the SVG art (both on `/admin/studio`) runs the whole pipeline on Claude alone. Nothing
+  downstream changes.
 - **SAM misses illustrated anatomy:** a helper box plus a SAM box prompt; a structure
   neither finds goes unlabelled.
 - **Muse Image puts text in the art:** a stronger negative prompt, the helper check,

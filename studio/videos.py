@@ -18,6 +18,11 @@ attempt this machine has. A render that goes quiet past VIDEO_STALE_MINUTES is h
 to a later run by `python -m studio recover`, which rebuilds the job here from what
 the API stored.
 
+The videos run on the topic's brain (brain.json, which `run` keeps from the claim, and
+`recover` from the API), as the lesson did. Who paints the art is the admin's setting for
+that brain's provider (settings.json, kept from the claim that starts each run): Gemini
+3.1 Flash Image or Muse Image, with SAM 3.1 finding the structures, or Claude's own SVG.
+
 It ends with one line, like `run`:
 
     DONE upload: <what the last step did>
@@ -50,8 +55,8 @@ from pydantic import ValidationError
 
 from studio import brain, jobs, ledger, media
 from studio.api import Api, ApiError
-from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, job_dir, logged_ask, one_line, only_run,
-                        read_jsonl, record_interrupted)
+from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, job_chosen, job_dir,
+                        keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -64,17 +69,37 @@ WAIT_MINUTES = 9.0  # under the 10 minutes one tool command may take
 REPO = Path(__file__).resolve().parent.parent
 
 
-def unavailable() -> str | None:
-    """Why the videos cannot be made here, or None. Checks the step modules exist without importing them."""
+def unavailable(job: Path | None = None, studio: dict | None = None) -> str | None:
+    """Why the videos cannot be made here, or None. Checks the step modules exist without importing them, and the
+    keys the brain in force and the art's painter need: the job's painter, or without a job, the one the studio
+    settings name (the defaults without them)."""
     if os.environ.get("STUDIO_VIDEOS", "").strip().lower() in ("off", "0", "false", "no"):
         return "the videos are turned off here (STUDIO_VIDEOS)"
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
-    problem = brain.settings_problem()  # the art is the brain's, or Meta's on its key
+    settings = jobs.studio_settings(job) if job else studio or {}
+    problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(settings.get("art"))
+    song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
+    if not problem and song.get("provider") == "gemini" and not os.environ.get("GEMINI_API_KEY"):
+        problem = ("the song needs GEMINI_API_KEY: Lyria sings it (an admin can pick ElevenLabs on /admin/studio)")
     if problem:
         return f"the studio's settings are wrong: {problem}"
     return None
+
+
+def refresh_settings(job: Path, api: Api | None) -> Api | None:
+    """Keep the studio's settings as they are now with the job, before its keys are checked: the painter the
+    lesson's last claim named may have been changed since, because this machine lacked its key. Best effort: the
+    claim after it says the same, or fails with the reason. Returns the Api, made from the environment if need be."""
+    try:
+        api = api or Api.from_env()
+        studio = api.studio_settings()
+    except ApiError:
+        return api
+    if studio:  # {} from an API too old to have them: keep what the job has
+        jobs.keep_studio_settings(job, studio)
+    return api
 
 
 def answer_of(job: Path) -> str | None:
@@ -108,7 +133,7 @@ def claim(api: Api, job: Path) -> dict:
 def start_after_post(job: Path, api: Api) -> str:
     """`run` calls this once the lesson is posted: claim the first attempt, so the page says the videos
     are coming and a routine that dies before `videos` starts is still recovered later. Best effort."""
-    why = unavailable()
+    why = unavailable(job)
     if why:
         return f"no videos: {why}"
     try:
@@ -187,23 +212,35 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
         if not mine:
             return STOPPED, "videos", "a run of this topic is still going"
         record_interrupted(job)
-        return _videos(job, api, ask or logged_ask(job))
+        with job_chosen(job):
+            return _videos(job, api, ask or logged_ask(job))
 
 
 def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
     record = Record(job)
-    why = unavailable()
+    api = refresh_settings(job, api)
+    why = unavailable(job)
     if why:
         return record.finish(STOPPED, "videos", why)
     try:
         api = api or Api.from_env()
-        claim(api, job)
+        claimed = claim(api, job)
     except Stop as e:
         return record.finish(STOPPED, "claim", str(e))
     except media.StepFailed as e:
         return record.finish(FAILED, "claim", str(e))
     except ApiError as e:  # not configured
         return record.finish(*_outcome(e, "claim"))
+    # Who paints is the admin's setting as of this claim, for the whole run: the heartbeats do not change it.
+    jobs.keep_studio_settings(job, claimed.get("studio"))
+    if not (job / BRAIN_FILE).exists():  # a job from before the brain was kept: the one its lesson was written on
+        default, effort = default_brain(claimed.get("studio"))
+        name = claimed.get("brain") or brain.choice_for_model(lesson_model(job) or claimed.get("model")) or default
+        keep_brain(job, name, effort)
+        brain.choose(name, effort)
+    why = unavailable(job)  # a painter the setting just changed to may need a key this machine lacks
+    if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
+        return record.finish(STOPPED, "videos", why)
 
     with ThreadPoolExecutor(len(BRANCHES)) as pool:
         branches = list(pool.map(lambda steps: _run_steps(job, steps, api, ask, record), BRANCHES))
@@ -273,7 +310,9 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
     job = job_dir(question_id)
     if not (job / "posted.json").exists():
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
-    why = unavailable()
+    api = refresh_settings(job, api)
+    with job_chosen(job):  # the detached run reads brain.json itself
+        why = unavailable(job)
     if why:
         return STOPPED, "videos", why
     if _alive(_background_pid(job)):
@@ -358,10 +397,15 @@ def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -
 
 def recover(api: Api | None = None) -> tuple[str, str, str]:
     """Take one droplet whose render went quiet from the API's queue and rebuild its job here."""
-    why = unavailable()
+    try:
+        api = api or Api.from_env()
+        studio = api.studio_settings()
+    except ApiError as e:
+        return _outcome(e, "recover")
+    with brain.chosen(*default_brain(studio)):
+        why = unavailable(studio=studio)
     if why:  # taking one would spend an attempt this machine cannot use
         return NONE, "recover", why
-    api = api or Api.from_env()
     try:
         handed = api.videos_queue(1)
     except ApiError as e:
@@ -403,6 +447,10 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "bundle.json", bundle)
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
+    # The brain the lesson was written on: the topic's own, else the one its answer records, else today's default.
+    default, effort = default_brain(item.get("studio"))
+    keep_brain(job, item.get("brain") or brain.choice_for_model(item.get("model")) or default, effort)
+    jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
 
 

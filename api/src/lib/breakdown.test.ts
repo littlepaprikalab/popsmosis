@@ -129,6 +129,7 @@ describe('makerOf', () => {
     expect(makerOf('claude-opus-5-5')).toBe('Anthropic');
     expect(makerOf('claude-haiku-5-5')).toBe('Anthropic');
     expect(makerOf('muse-wonder-1.0')).toBe('Meta');
+    expect(makerOf('gemini-3.1-flash-image')).toBe('Google');
     expect(makerOf('muse-image-1.0')).toBe('Meta');
     expect(makerOf('sam-3.1')).toBe('Meta');
     expect(makerOf('htdemucs')).toBe('Meta');

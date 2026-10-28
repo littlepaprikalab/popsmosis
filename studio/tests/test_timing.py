@@ -61,7 +61,6 @@ def test_speech_timings_survive_characters_the_tts_dropped_or_changed():
 def made(tmp_path, monkeypatch):
     """The sample job with fake audio: the plan and character timings a real run would leave."""
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
-    monkeypatch.delenv("SONG_PROVIDER", raising=False)
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
     job = tmp_path / "sample"
@@ -101,7 +100,6 @@ def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
     lines are looked for in the whole song at once rather than where each was planned."""
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
     monkeypatch.setattr(audio, "send", FakeGemini())
     monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)
     monkeypatch.setattr(audio, "duration", lambda path: 41.0)  # longer than the 30.1s planned
@@ -109,6 +107,7 @@ def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
     job.mkdir()
     bundle = sample_media.bundle()
     jobs.write(job / "bundle.json", bundle)
+    jobs.keep_studio_settings(job, {"song": {"provider": "gemini"}})  # as an admin sets it on /admin/studio
     audio.run(job)
 
     calls = []

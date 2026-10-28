@@ -7,6 +7,7 @@ import { videoMaxAttempts } from '../lib/video-claim.js';
 import { parseLimit, validateString } from '../lib/validation.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { progressError, storedProgress } from '../lib/progress.js';
+import { studioForAgent } from '../lib/studio-settings.js';
 
 // The claim on a droplet's videos (lib/video-claim.ts): who is rendering them, which
 // attempt this is, and the queue that hands a render whose machine died to a later run.
@@ -14,22 +15,28 @@ import { progressError, storedProgress } from '../lib/progress.js';
 
 // Only what these routes read: the page's view of the videos (lib/droplet.ts) is not theirs.
 const answerSelect = {
-  id: true, questionId: true, agentId: true, bundle: true, factcheck: true,
+  id: true, questionId: true, agentId: true, model: true, bundle: true, factcheck: true,
   videoAttempts: true, videoStatus: true, videoError: true,
+  question: { select: { brain: true } },
 } as const;
 
 type ClaimedAnswer = {
-  id: string; questionId: string; bundle: unknown; factcheck: unknown; videoAttempts: number; videoStatus: string | null;
+  id: string; questionId: string; model: string | null; bundle: unknown; factcheck: unknown; videoAttempts: number;
+  videoStatus: string | null;
+  question: { brain: string | null };
 };
 
 // What a run needs to make the videos on a machine that has never seen the topic. A renewal,
 // the heartbeat before every step, leaves out the bundle and fact-check its run already has.
-function serializeClaim(a: ClaimedAnswer, renewal = false) {
+function serializeClaim(a: ClaimedAnswer, studio: Awaited<ReturnType<typeof studioForAgent>>, renewal = false) {
   return {
     answerId: a.id,
     questionId: a.questionId,
     attempt: a.videoAttempts,
     status: a.videoStatus,
+    brain: a.question.brain, // the topic's own brain (lib/brains.ts); null: it was the default's
+    model: a.model, // the model that wrote the lesson, so a machine that never saw it knows whose brain it was
+    studio, // the studio's settings (lib/studio-settings.ts): who paints the art, by the brain's provider
     ...(!renewal && { bundle: a.bundle, factcheck: a.factcheck }),
   };
 }
@@ -89,7 +96,7 @@ export default async function videoRoutes(app: FastifyInstance) {
       }
       return sendError(reply, 'CONFLICT', `The videos were given up after ${answer.videoAttempts} attempt(s)`);
     }
-    return serializeClaim(answer, renewed);
+    return serializeClaim(answer, await studioForAgent(), renewed);
   });
 
   // GET /api/videos/queue?limit=N — agent: its own droplets whose render went quiet
@@ -126,7 +133,8 @@ export default async function videoRoutes(app: FastifyInstance) {
       select: answerSelect,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    return { data: answers.map((a) => serializeClaim(a)) };
+    const studio = await studioForAgent();
+    return { data: answers.map((a) => serializeClaim(a, studio)) };
   });
 
   // PUT /api/answers/:id/video/progress — { attempt?, running: [{ step, seconds }], failed?, breakdown? }: where

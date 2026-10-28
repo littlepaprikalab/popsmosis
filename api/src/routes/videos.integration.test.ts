@@ -33,8 +33,8 @@ d('video claim and queue', () => {
   const goQuiet = (id: string) =>
     prisma.answer.update({ where: { id }, data: { videoUpdatedAt: new Date(Date.now() - 2 * 60 * 60_000) } });
 
-  async function lesson(opts: { bundle?: boolean; agentId?: string } = {}) {
-    const q = await prisma.question.create({ data: { userId, content: 'ATP synthesis', status: 'ANSWERED' } });
+  async function lesson(opts: { bundle?: boolean; agentId?: string; brain?: string } = {}) {
+    const q = await prisma.question.create({ data: { userId, content: 'ATP synthesis', status: 'ANSWERED', brain: opts.brain } });
     const a = await prisma.answer.create({
       data: {
         questionId: q.id, agentId: opts.agentId ?? agentA, content: 'A lesson.',
@@ -73,7 +73,7 @@ d('video claim and queue', () => {
     const id = await lesson();
     const first = await claim(id);
     expect(first.statusCode).toBe(200);
-    expect(first.json()).toMatchObject({ answerId: id, attempt: 1, status: 'RENDERING', bundle: BUNDLE, factcheck: FACTCHECK });
+    expect(first.json()).toMatchObject({ answerId: id, attempt: 1, status: 'RENDERING', bundle: BUNDLE, factcheck: FACTCHECK, brain: null });
     expect((await row(id)).videoAttempts).toBe(1);
 
     const before = (await row(id)).videoUpdatedAt!;
@@ -93,6 +93,15 @@ d('video claim and queue', () => {
     expect((await row(id)).videoAttempts).toBe(1);
   });
 
+  it('carries the brain an admin picked for the topic, so a machine that recovers the render paints its art the same way', async () => {
+    const id = await lesson({ brain: 'muse-spark' });
+    await prisma.answer.update({ where: { id }, data: { model: 'muse-spark-1.3' } });
+    expect((await claim(id)).json()).toMatchObject({ brain: 'muse-spark', model: 'muse-spark-1.3' });
+    expect((await claim(id, { attempt: 1 })).json().brain).toBe('muse-spark');
+    await goQuiet(id);
+    expect((await queue()).json().data[0]).toMatchObject({ answerId: id, attempt: 2, brain: 'muse-spark', model: 'muse-spark-1.3' });
+  });
+
   it('refuses another agent, a lesson with no bundle, finished videos and a bad attempt', async () => {
     const id = await lesson();
     expect((await claim(id, {}, keyB)).statusCode).toBe(403);
@@ -110,7 +119,7 @@ d('video claim and queue', () => {
     await goQuiet(id);
     const recovered = (await queue()).json().data;
     expect(recovered).toHaveLength(1);
-    expect(recovered[0]).toMatchObject({ answerId: id, attempt: 2, status: 'RENDERING', bundle: BUNDLE });
+    expect(recovered[0]).toMatchObject({ answerId: id, attempt: 2, status: 'RENDERING', bundle: BUNDLE, brain: null });
     expect((await queue()).json().data).toEqual([]); // just claimed: alive again
 
     // The run that went quiet comes back: its attempt is no longer the current one.

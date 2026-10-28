@@ -19,6 +19,11 @@ FACTCHECK = {"status": "passed", "reason": "", "rounds": 1, "lines": [], "correc
 REAL_UNAVAILABLE = videos.unavailable  # the setup fixture stands in for it
 
 
+def claims(api) -> list[str]:
+    """What the run asked the API for beyond reading the studio's settings: a claim, the queue, a give-up."""
+    return [name for name in api.names() if name != "studio_settings"]
+
+
 class VideoApi(FakeApi):
     """FakeApi plus the video claim: attempts count up, and `taken` makes every claim a 409."""
 
@@ -30,6 +35,7 @@ class VideoApi(FakeApi):
         self.given_up = None
         self.video_reports = []  # (attempt, progress) for each report, as sent
         self.lock = threading.Lock()
+        self.studio = None  # the studio's settings the claim carries (api/src/lib/studio-settings.ts)
 
     def claim_videos(self, answer_id, attempt=None):
         self._call("claim_videos", answer_id, attempt)
@@ -37,7 +43,7 @@ class VideoApi(FakeApi):
             raise ApiError(409, "CONFLICT", "Another run is making these videos")
         if attempt is None or attempt != self.attempt:
             self.attempt += 1
-        return {"answerId": answer_id, "attempt": self.attempt}
+        return {"answerId": answer_id, "attempt": self.attempt, **({"studio": self.studio} if self.studio else {})}
 
     def report_video_progress(self, answer_id, attempt, progress):
         with self.lock:
@@ -81,7 +87,7 @@ class Steps:
 @pytest.fixture(autouse=True)
 def setup(tmp_path, monkeypatch):
     monkeypatch.setattr(jobs, "ROOT", tmp_path)
-    monkeypatch.setattr(videos, "unavailable", lambda: None)
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: None)
     steps = Steps()
     monkeypatch.setattr(media, "step_module", steps.module)
     return steps
@@ -200,9 +206,9 @@ def test_nothing_to_make_without_a_posted_lesson_or_the_steps(setup, monkeypatch
     api = VideoApi()
     assert videos.videos("q1", api=api)[0] == "STOPPED"
     posted()
-    monkeypatch.setattr(videos, "unavailable", lambda: "the media steps are not all built yet (art)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the media steps are not all built yet (art)")
     assert videos.videos("q1", api=api) == ("STOPPED", "videos", "the media steps are not all built yet (art)")
-    assert api.calls == []
+    assert claims(api) == []
 
 
 def test_a_run_cut_off_mid_step_counts_as_a_failure_that_fail_gives_up(setup):
@@ -259,9 +265,9 @@ def test_recover_rebuilds_the_job_from_what_the_api_stored_never_the_learners_wo
 def test_recover_takes_nothing_where_the_videos_cannot_be_made(setup, monkeypatch):
     api = VideoApi()
     api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]
-    monkeypatch.setattr(videos, "unavailable", lambda: "the videos are turned off here (STUDIO_VIDEOS)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the videos are turned off here (STUDIO_VIDEOS)")
     assert videos.recover(api=api)[0] == "NONE"
-    assert api.calls == []
+    assert api.names() == ["studio_settings"]  # read the settings; took nothing from the queue
 
 
 def test_recover_gives_up_a_droplet_whose_stored_lesson_cannot_be_read(setup):
@@ -282,7 +288,7 @@ def test_a_failed_video_claim_never_changes_the_lessons_outcome(setup, monkeypat
     api = VideoApi()
     api.taken = True
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
-    monkeypatch.setattr(videos, "unavailable", lambda: "the videos are turned off here (STUDIO_VIDEOS)")
+    monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: "the videos are turned off here (STUDIO_VIDEOS)")
     api = VideoApi()
     assert operator_run.run("q2", api=api, ask=FakeBrain())[0] == "DONE"
     assert "claim_videos" not in api.names()
@@ -371,9 +377,7 @@ def meta_job(setup, monkeypatch):
     from studio.tests.test_art import FakeArtist
     from studio.tests.test_muse import FakeHelper, FakeMuse
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
     monkeypatch.setenv("MODEL_API_KEY", "meta-test-key")
-    monkeypatch.delenv("STUDIO_BRAIN_MODEL", raising=False)
     setup.barrier = threading.Barrier(1)  # the real art step does not wait for the audio
     real = {"art": art, "locate": locate}
     stand_ins = setup.module
@@ -391,6 +395,7 @@ def meta_job(setup, monkeypatch):
 
     monkeypatch.setattr(brain, "ask", ask)
     job = sample_media.write_job(jobs.ROOT / "q1")
+    operator_run.keep_brain(job, "muse-wonder")  # the lesson was Muse's: Muse Image paints, by default
     (job / media.LOCATIONS).unlink()  # the sample's own, made of ellipses
     jobs.write(job / "posted.json", {"id": "ans1", "questionId": "q1"})
     fake.job = job
@@ -428,18 +433,20 @@ def test_on_meta_a_failed_locate_keeps_the_pictures_and_the_retry_only_locates(m
     assert meta_job.muse.painted == []  # the pictures were paid for once
 
 
-def test_switching_the_provider_between_runs_remakes_the_art_and_everything_after_it(meta_job, monkeypatch):
+def test_switching_the_art_between_runs_remakes_it_and_everything_after_it(meta_job, monkeypatch):
     setup = meta_job
     job = meta_job.job
     videos.videos("q1", api=VideoApi())
     assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "the videos were already made")
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
-    assert videos.videos("q1", api=VideoApi())[0] == "DONE"
+    operator_run.keep_brain(job, "claude")
+    api = VideoApi()
+    api.studio = {"art": {"claude": "svg", "meta": "muse"}}  # an admin has Claude draw it
+    assert videos.videos("q1", api=api)[0] == "DONE"
     assert [label for label in meta_job.artist.labels()] == ["art hook", "art overview", "art synthase"]
     assert not (job / "art" / "hook.json").exists() and (job / "art" / "hook.svg").exists()
 
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    operator_run.keep_brain(job, "muse-wonder")
     meta_job.muse.painted.clear()
     assert videos.videos("q1", api=VideoApi())[0] == "DONE"
     assert len(meta_job.muse.painted) == 3 and not (job / "art" / "hook.svg").exists()
@@ -448,14 +455,168 @@ def test_switching_the_provider_between_runs_remakes_the_art_and_everything_afte
 
 def test_wrong_brain_settings_stop_the_videos_before_anything_is_claimed(setup, monkeypatch):
     monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
-    for name in ("MODEL_API_KEY", "STUDIO_BRAIN_MODEL", "STUDIO_VIDEOS"):
+    for name in ("MODEL_API_KEY", "STUDIO_VIDEOS"):
         monkeypatch.delenv(name, raising=False)
     api = VideoApi()
     api.queue = [{"questionId": "q2", "answerId": "ans2", "attempt": 2}]
-    posted()
-    wrong = "the studio's settings are wrong: BRAIN_PROVIDER=meta needs MODEL_API_KEY"
+    operator_run.keep_brain(posted(), "muse-wonder")
+    wrong = "the studio's settings are wrong: Muse Wonder 1.0 needs MODEL_API_KEY"
     assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
     assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
+    api.studio_settings = lambda: {"brain": {"default": "muse-wonder"}}  # recover checks the default brain
     assert videos.recover(api=api) == ("NONE", "recover", wrong)
-    assert api.calls == [] and setup.ran == []  # no claim, no attempt taken from the queue, no step
+    assert claims(api) == [] and setup.ran == []  # no claim, no attempt taken from the queue, no step
+
+
+# --- a topic's own brain, picked by an admin on /learn ----------------------------------------
+
+
+def test_a_topic_sent_to_claude_is_painted_by_gemini_and_sam_finds_its_structures(meta_job, monkeypatch):
+    """Claude writes and checks the lesson; Gemini 3.1 Flash Image paints the art by default, and SAM 3.1 finds the
+    structures in it, while the teacher's own brain is Muse's."""
+    from studio import brain
+    from studio.tests.test_gemini import FakeGemini
+
+    painter = FakeGemini().install(monkeypatch)
+    operator_run.keep_brain(meta_job.job, "claude")
+    assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "upload made")
+    assert len(painter.painted) == 3 and meta_job.muse.painted == [] and len(meta_job.muse.segmented) == 4
+    assert meta_job.artist.labels() == []  # not the SVG artist either
+    assert brain.chosen_name() is None
+
+
+def test_a_job_from_before_the_brain_was_kept_takes_it_from_the_claim(meta_job):
+    """Its lesson was written before brain.json existed: the videos run on the topic's own brain if it has one, else
+    on the default the claim names, not on the studio's own fallback."""
+    (meta_job.job / operator_run.BRAIN_FILE).unlink()
+    api = VideoApi()
+    api.studio = {"brain": {"default": "muse-wonder", "effort": "high"}, "art": {"claude": "gemini", "meta": "muse"}}
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert operator_run.job_brain(meta_job.job) == "muse-wonder"
+    assert len(meta_job.muse.painted) == 3  # Muse's painter, as the default brain is a Muse
+
+
+def test_the_claim_that_starts_a_run_sets_its_painter_for_the_whole_run(meta_job, monkeypatch):
+    from studio.tests.test_gemini import FakeGemini
+
+    painter = FakeGemini().install(monkeypatch)
+    api = VideoApi()
+    api.studio = {"art": {"claude": "gemini", "meta": "gemini"}}  # an admin has Gemini paint for Muse's brain too
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert len(painter.painted) == 3 and meta_job.muse.painted == []
+    assert jobs.studio_settings(meta_job.job) == api.studio
+
+
+def test_recover_keeps_the_topics_brain_so_the_new_machine_makes_the_art_the_same_way(setup):
+    api = VideoApi()
+    api.attempt = 2
+    api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK,
+                  "brain": "muse-spark", "studio": {"art": {"claude": "gemini", "meta": "gemini"}}}]
+    assert videos.recover(api=api)[0] == "RECOVER"
+    assert operator_run.job_brain(jobs.ROOT / "q9") == "muse-spark"
+    assert jobs.studio_settings(jobs.ROOT / "q9") == {"art": {"claude": "gemini", "meta": "gemini"}}
+
+    # A topic with no brain of its own is rebuilt on the default brain the settings name.
+    api.queue = [{"answerId": "ans8", "questionId": "q8", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK,
+                  "brain": None, "studio": {"brain": {"default": "muse-wonder", "effort": "high"}}}]
+    assert videos.recover(api=api)[0] == "RECOVER"
+    assert operator_run.job_brain(jobs.ROOT / "q8") == "muse-wonder"
+
+
+def test_the_videos_need_the_keys_of_the_painter_and_sam(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    for name in ("MODEL_API_KEY", "GEMINI_API_KEY",
+                 "STUDIO_VIDEOS"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")  # Claude's brain is set up; the art's keys are not
+    api = VideoApi()
+    job = posted()
+    wrong = ("the studio's settings are wrong: the art needs GEMINI_API_KEY and MODEL_API_KEY: Gemini 3.1 Flash Image "
+             "paints it and SAM 3.1 finds its structures (an admin can pick another painter on /admin/studio)")
+    assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert claims(api) == [] and setup.ran == []
+
+    # The claim says an admin has Claude draw it, which needs neither key: the setting kept, the run goes on.
+    jobs.keep_studio_settings(job, {"art": {"claude": "svg"}})
+    assert videos.videos("q1", api=api)[0] == "DONE"
+
+    # A claim that switches to a painter this machine has no key for stops before any step, the attempt held.
+    for step in media.MEDIA_STEPS:
+        (job / f".{step}.done").unlink(missing_ok=True)
+    api.studio, setup.ran = {"art": {"claude": "gemini"}}, []
+    result, step, reason = videos.videos("q1", api=api)
+    assert (result, step) == ("STOPPED", "videos") and "GEMINI_API_KEY" in reason and setup.ran == []
+
+
+def test_the_videos_check_the_settings_of_the_topics_brain(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    for name in ("MODEL_API_KEY", "STUDIO_VIDEOS"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    api = VideoApi()
+    operator_run.keep_brain(posted(), "muse-spark")
+    wrong = "the studio's settings are wrong: Muse Spark 1.3 needs MODEL_API_KEY"
+    assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert claims(api) == [] and setup.ran == []
+
+
+def test_a_painter_changed_on_the_page_since_the_lesson_unblocks_the_videos(setup, monkeypatch):
+    """The lesson's last claim said Gemini paints, and this machine has no Gemini key, so the videos stopped. The
+    admin picks Claude's SVG on the page: the next `videos` reads the settings as they are now, before it checks
+    the keys, and goes on, rather than stopping on the old ones for good."""
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    job = posted()
+    operator_run.keep_brain(job, "claude")
+    jobs.keep_studio_settings(job, {"art": {"claude": "gemini", "meta": "muse"}})
+    api = VideoApi()
+    assert videos.videos("q1", api=api)[:2] == ("STOPPED", "videos")
+    api.studio_settings = lambda: {"brain": {"default": "claude"}, "art": {"claude": "svg", "meta": "muse"}}
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert jobs.studio_settings(job)["art"]["claude"] == "svg"
+    api2 = VideoApi()  # and the background start reads them too
+    for step in media.MEDIA_STEPS:
+        (job / f".{step}.done").unlink(missing_ok=True)
+    jobs.keep_studio_settings(job, {"art": {"claude": "gemini", "meta": "muse"}})
+    api2.studio_settings = api.studio_settings
+    monkeypatch.setattr(videos.subprocess, "Popen", lambda *a, **k: SimpleNamespace(pid=999999))
+    assert videos.background("q1", api=api2)[0] == "STARTED"
+
+
+def test_recover_takes_the_brain_from_the_model_that_wrote_the_lesson(setup):
+    """A topic on the default brain has no brain of its own on the answer: the model that wrote its lesson says
+    whose it was, so a new machine paints with that brain's painter, whatever the default is today."""
+    api = VideoApi()
+    api.attempt = 2
+    api.queue = [{"answerId": "ans7", "questionId": "q7", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK,
+                  "brain": None, "model": "muse-wonder-1.0", "studio": {"brain": {"default": "claude"}}}]
+    assert videos.recover(api=api)[0] == "RECOVER"
+    assert operator_run.job_brain(jobs.ROOT / "q7") == "muse-wonder"
+
+
+def test_a_job_from_before_the_brain_was_kept_takes_the_one_its_lesson_was_written_on(meta_job):
+    (meta_job.job / operator_run.BRAIN_FILE).unlink()
+    (meta_job.job / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "muse-spark-1.3"}) + "\n")
+    api = VideoApi()
+    api.studio = {"brain": {"default": "claude"}, "art": {"claude": "gemini", "meta": "muse"}}
+    assert videos.videos("q1", api=api)[0] == "DONE"
+    assert operator_run.job_brain(meta_job.job) == "muse-spark"
+    assert len(meta_job.muse.painted) == 3
+
+
+def test_a_song_lyria_sings_needs_the_gemini_key_before_anything_is_claimed(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    job = posted()
+    operator_run.keep_brain(job, "claude")
+    jobs.keep_studio_settings(job, {"art": {"claude": "svg"}, "song": {"provider": "gemini"}})
+    api = VideoApi()
+    result, step, reason = videos.videos("q1", api=api)
+    assert (result, step) == ("STOPPED", "videos")
+    assert reason == ("the studio's settings are wrong: the song needs GEMINI_API_KEY: Lyria sings it "
+                      "(an admin can pick ElevenLabs on /admin/studio)")
+    assert claims(api) == [] and setup.ran == []
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    assert videos.videos("q1", api=api)[0] == "DONE"

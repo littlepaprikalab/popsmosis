@@ -74,13 +74,14 @@ const round = (v: number, places: number) => Math.round(v * 10 ** places) / 10 *
  */
 const MAKERS: [prefix: string, maker: string][] = [
   ['claude-', 'Anthropic'],
-  ['muse-', 'Meta'], // with BRAIN_PROVIDER=meta: the brain, the helper and Muse Image (studio/brain.py, studio/muse.py)
-  ['sam-', 'Meta'], // SAM 3.1, which finds the structures in Muse Image's art (studio/steps/locate.py)
+  ['muse-', 'Meta'], // a Muse brain, its helper and Muse Image (studio/brain.py, studio/muse.py)
+  ['sam-', 'Meta'], // SAM 3.1, which finds the structures in painted art (studio/steps/locate.py)
   ['htdemucs', 'Meta'], // Demucs, the model and its package, from Meta AI Research (facebookresearch/demucs)
   ['demucs', 'Meta'],
   ['mms-', 'Meta'], // the forced aligner from Meta's Massively Multilingual Speech
   ['torch', 'Meta'], // PyTorch and torchaudio: started at Meta, run by the PyTorch Foundation since 2022
   ['lyria-', 'Google'],
+  ['gemini-', 'Google'], // Gemini 3.1 Flash Image, when it paints the art (studio/gemini.py)
   ['skia-python', 'Google'], // Python bindings for Google's Skia
   ['eleven_', 'ElevenLabs'],
   ['music_', 'ElevenLabs'], // Eleven Music

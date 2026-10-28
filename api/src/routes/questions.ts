@@ -14,6 +14,8 @@ import { breakdownError } from '../lib/breakdown.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
+import { parseBrain } from '../lib/brains.js';
+import { studioForAgent } from '../lib/studio-settings.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -121,11 +123,17 @@ export default async function questionRoutes(app: FastifyInstance) {
 
   // POST /api/questions — signed-in user asks a question. `attachments` are
   // files sent with it (lib/attachments.ts), which is why the body may be
-  // large — and why the caller is checked before it is read.
+  // large — and why the caller is checked before it is read. An admin may
+  // pick the `brain` that makes it (lib/brains.ts); anyone else's topic is
+  // made by the teacher's own.
   app.post('/api/questions', { onRequest: [requireUser], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
-    const { content, attachments: rawAttachments } = (request.body ?? {}) as { content?: unknown; attachments?: unknown };
+    const { content, attachments: rawAttachments, brain: rawBrain } = (request.body ?? {}) as {
+      content?: unknown; attachments?: unknown; brain?: unknown;
+    };
     const err = validateString(content, 'content', { required: true, minLength: QUESTION_MIN_LENGTH, maxLength: QUESTION_MAX_LENGTH });
     if (err) return sendError(reply, 'VALIDATION_ERROR', err);
+    const { brain, error: brainError, forbidden } = parseBrain(rawBrain, request.viewer!.role === 'ADMIN');
+    if (brainError) return sendError(reply, forbidden ? 'FORBIDDEN' : 'VALIDATION_ERROR', brainError);
     const { attachments, error: attachmentsError } = parseAttachments(rawAttachments);
     if (attachmentsError) return sendError(reply, 'VALIDATION_ERROR', attachmentsError);
     const text = (content as string).trim();
@@ -143,7 +151,7 @@ export default async function questionRoutes(app: FastifyInstance) {
     let question;
     try {
       question = await prisma.question.create({
-        data: { userId: request.viewer!.id, content: text, attachments: attachmentsCreate(attachments) },
+        data: { userId: request.viewer!.id, content: text, brain, attachments: attachmentsCreate(attachments) },
         include: questionInclude,
       });
     } catch (err) {
@@ -258,7 +266,8 @@ export default async function questionRoutes(app: FastifyInstance) {
       if (question.status === 'FAILED') return sendError(reply, 'CONFLICT', 'Question was marked failed');
       return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
     }
-    return serializeQuestion(question);
+    // With the studio's settings (lib/studio-settings.ts), so an admin's change reaches the run.
+    return { ...serializeQuestion(question), studio: await studioForAgent() };
   });
 
   // PUT /api/questions/:id/progress — agent: where the studio is while it writes the lesson (lib/progress.ts):

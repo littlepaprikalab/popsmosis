@@ -1,4 +1,4 @@
-"""The Muse Image art and the SAM 3.1 locate step (BRAIN_PROVIDER=meta), with Meta's API stood in for."""
+"""The Muse Image art and the SAM 3.1 locate step (Muse's brain, by default), with Meta's API stood in for."""
 
 import base64
 import json
@@ -25,7 +25,7 @@ SPOTS = {"Thylakoid": (500, 500, 150), "Cytochrome b6f": (1300, 500, 100), "ATP 
 
 @pytest.fixture(autouse=True)
 def meta(monkeypatch):
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setattr(brain, "_chosen", "muse-wonder")  # Muse Image paints, the default for Muse's brain
     monkeypatch.setenv("MODEL_API_KEY", "meta-test-key")
     monkeypatch.setattr(muse, "sleep", lambda s: None)
 
@@ -151,7 +151,7 @@ def test_a_picture_of_another_shape_is_fitted_to_the_art_on_white():
     assert pixels.shape == (media.ART_HEIGHT, media.ART_WIDTH, 3)
     assert (pixels[512, 10] == 255).all()  # the white either side of a square picture
     assert pixels[512, 896, 0] > 150 and pixels[512, 896, 1] < 60  # its red middle, in the middle
-    with pytest.raises(muse.MuseError, match="not an image"):
+    with pytest.raises(media.StepFailed, match="not an image"):
         art.fit(b"not a picture")
 
 
@@ -207,18 +207,20 @@ def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
         art.run(job, FakeHelper())
 
 
-def test_switching_the_provider_makes_the_art_again(job, monkeypatch):
+def test_switching_the_art_makes_it_again(job, monkeypatch):
     from studio.tests.test_art import FakeArtist
 
+    monkeypatch.setattr(brain, "_chosen", "claude")  # the SVG art is Claude's brain's to draw
+    jobs.keep_studio_settings(job, {"art": {"claude": "muse"}})
     FakeMuse().install(monkeypatch)
     art.run(job, FakeHelper())
     assert art.is_done(job)
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    jobs.keep_studio_settings(job, {"art": {"claude": "svg"}})
     assert not art.is_done(job)  # Muse Image's pictures are not the brain's SVG
     art.run(job, FakeArtist())
     assert art.is_done(job) and locate.is_done(job)
     assert not (job / "art" / "hook.json").exists()
-    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    jobs.keep_studio_settings(job, {"art": {"claude": "muse"}})
     assert not art.is_done(job) and not locate.is_done(job)  # nor the SVG Muse Image's
     art.run(job, FakeHelper())
     assert art.is_done(job) and not (job / "art" / "hook.svg").exists()
@@ -313,7 +315,8 @@ def test_locate_without_muse_art_says_what_to_do(job, monkeypatch):
         locate.run(job, FakeHelper())
     painted(job, monkeypatch)
     locate.run(job, FakeHelper())
-    monkeypatch.setenv("BRAIN_PROVIDER", "claude")  # Muse Image's art is not the SVG art the brain would draw
+    monkeypatch.setattr(brain, "_chosen", "claude")
+    jobs.keep_studio_settings(job, {"art": {"claude": "svg"}})  # Muse Image's art is not the SVG art Claude would draw
     with pytest.raises(media.StepFailed, match="no SVG art and locations.json for this bundle; run the art step"):
         locate.run(job, FakeHelper())
 

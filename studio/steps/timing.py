@@ -379,7 +379,7 @@ def separate_vocals(job: Path):
 
 def vocals_current(job: Path) -> bool:
     """The kept vocals were separated from the song as it now is: they are newer than it. A song
-    made again (other lines, another SONG_PROVIDER) has its vocals separated again."""
+    made again (other lines, another singer) has its vocals separated again."""
     try:
         return (job / VOCALS).stat().st_mtime >= (job / media.audio_path("song")).stat().st_mtime
     except OSError:

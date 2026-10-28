@@ -38,21 +38,29 @@ The runner needs these in its environment:
 |---|---|
 | `POPSMOSIS_API_KEY` | the popsmosis agent's `sk_pop_…` key from step 2. Not an Inkmory key: see below |
 | `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
-| `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
-| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`: Meta's models write and check each lesson, Muse Image paints its art and SAM 3.1 finds the structures in it. README, [Choosing the models](../README.md#choosing-the-models), has this and the next three with every value they take |
-| `MODEL_API_KEY` | with `BRAIN_PROVIDER=meta`: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
-| `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson. A Claude model with `BRAIN_PROVIDER=claude` (default `claude-opus-5-5`), a Muse model with `meta` (default `muse-wonder-1.0`; `muse-spark-1.3` to vet changes for about a quarter of the price). Never a Contributor model (`-contributor`) here: Meta may train on what it is sent, and the routine sends learners' requests |
-| `STUDIO_BRAIN_EFFORT` | optional, with `BRAIN_PROVIDER=claude`: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | Claude's brain and its picture checks. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
+| `MODEL_API_KEY` | a Muse brain and its picture checks, Muse Image, and SAM 3.1, which finds the structures in any painted picture: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
-| `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless `SONG_PROVIDER` is `gemini` (the audio step). Its calls bill to that ElevenLabs account |
+| `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless Lyria sings it (the audio step). Its calls bill to that ElevenLabs account |
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
-| `SONG_PROVIDER` | optional: who sings the song, `elevenlabs` (the default) or `gemini` (Lyria 3.5 on the Gemini API) |
-| `GEMINI_API_KEY` | with `SONG_PROVIDER=gemini`: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
-| `GEMINI_SONG_MODEL` | optional: the Lyria model, with `SONG_PROVIDER=gemini`. Default `lyria-3.5` |
+| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria when it sings: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
+| `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
+
+The brain, the singer and the painters are not set here. Which brain writes the lessons,
+Claude's effort, who sings the song and who paints each brain's pictures are set by an admin
+on **STUDIO** in the web app
+(`/admin/studio`), and the studio reads them from the API: README, [Choosing the
+models](../README.md#choosing-the-models). `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`,
+`STUDIO_BRAIN_EFFORT` and `SONG_PROVIDER` are no longer read: while one is still set, each run
+stops with `the studio's settings are wrong` and says to set it there and remove it, so
+nothing changes without you seeing why. Give the environment the key of every brain and
+painter picked there: a default brain or painter whose key is missing stops each run the
+same way, and a topic an admin sent to a brain whose key is missing is given up with that
+reason.
 
 Inkmory takes back an adopted agent that logs no cycle for 3 days. So when the queues are
 empty and the operator's last cycle log is two days old, an idle run logs a quiet cycle
@@ -151,8 +159,8 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
      warm run's hook takes seconds.
    - **Network policy:** allow
      - your API host, `api.anthropic.com`, `api.elevenlabs.io`, the Supabase host and
-       the Inkmory host (and `api.meta.ai` with `BRAIN_PROVIDER=meta`, and
-       `generativelanguage.googleapis.com` with `SONG_PROVIDER=gemini`): what a run calls;
+       the Inkmory host, `api.meta.ai` (a Muse brain, Muse Image, SAM 3.1) and
+       `generativelanguage.googleapis.com` (Gemini 3.1 Flash Image, Lyria): what a run calls;
      - `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` (PyTorch's CPU
        wheels), `registry.npmjs.org`, and `archive.ubuntu.com` with `security.ubuntu.com`
        (ffmpeg and libEGL, when the image lacks them): what the session hook installs;

@@ -260,6 +260,46 @@ test.describe('signed in', () => {
     await expect(card.locator('.badge-agent')).toHaveCount(2);
   });
 
+  test('an admin sends a topic to a brain of their own: the card and the teacher\'s claim say which, and the pick is remembered', async ({ page, context, request }) => {
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    const picker = page.getByTestId('brain-picker');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await picker.getByRole('radio', { name: 'Muse Spark' }).click();
+    await expect(picker.getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByTestId('brain-note')).toContainText('Muse Spark 1.3');
+
+    const text = `E2E ${Date.now()}: osmosis, on Muse Spark`;
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('topic-brain')).toHaveText('Muse Spark');
+
+    // The studio learns the topic's brain from its claim (studio/run.py).
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asAda })).json();
+    const sent = own.data.find((q: { content: string }) => q.content === text);
+    expect(sent.brain).toBe('muse-spark');
+    const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim(sent.id);
+    expect((await claimed.json()).brain).toBe('muse-spark');
+
+    // Remembered on this browser, so a run of test topics stays on it.
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asAda })).status()).toBe(204);
+  });
+
+  test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(page.getByPlaceholder('A topic, e.g. ATP synthesis')).toBeVisible();
+    await expect(page.getByTestId('brain-picker')).toHaveCount(0);
+  });
+
   test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {
     // Asked straight to the API with the files in the body; Ben, whose day of questions the other tests leave room in.
     const text = `E2E ${Date.now()}: explain this diagram of a neuron`;
@@ -370,6 +410,82 @@ test.describe('admin', () => {
 // The API is a separate Render service that spins down when idle and goes
 // unroutable for a moment mid-deploy. Render answers those windows itself with
 // an HTML error page, which must never be read as "this user is signed out".
+test.describe('studio settings', () => {
+  const asAda = () => ({ cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' });
+
+  test('an admin picks who paints each brain\'s pictures, and the teacher\'s next claim carries it', async ({ page, context, request }) => {
+    // From the defaults, whatever an earlier run left.
+    await request.put(apiUrl('/api/studio/settings'), {
+      headers: asAda(),
+      data: { brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' } },
+    });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const claude = page.getByTestId('art-claude');
+    const meta = page.getByTestId('art-meta');
+    await expect(claude.getByRole('radio', { name: /Gemini 3.1 Flash Image/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(meta.getByRole('radio', { name: /Muse Image/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(meta.getByRole('radio', { name: /Claude draws it/ })).toHaveCount(0); // the SVG art is Claude's only
+
+    await claude.getByRole('radio', { name: /Muse Image/ }).click();
+    await expect(claude.getByRole('radio', { name: /Muse Image/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('studio-updated')).toContainText('Last changed');
+    await page.reload();
+    await expect(page.getByTestId('art-claude').getByRole('radio', { name: /Muse Image/ })).toHaveAttribute('aria-checked', 'true');
+
+    // The studio reads it from its claim of a topic.
+    const text = `E2E ${Date.now()}: studio settings`;
+    const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
+    const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
+    expect((await claimed.json()).studio).toEqual({
+      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' },
+    });
+    expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
+  });
+
+  test('an admin sets the default brain and Claude\'s effort, and the teacher reads them with its key', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const brains = page.getByTestId('brain-default');
+    await expect(brains.getByRole('radio', { name: /Claude Opus 5.5/ })).toHaveAttribute('aria-checked', 'true');
+    await brains.getByRole('radio', { name: /Muse Spark 1.3/ }).click();
+    await expect(brains.getByRole('radio', { name: /Muse Spark 1.3/ })).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('brain-effort').getByRole('radio', { name: 'medium' }).click();
+    await expect(page.getByTestId('brain-effort').getByRole('radio', { name: 'medium' })).toHaveAttribute('aria-checked', 'true');
+
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).brain).toEqual({ default: 'muse-spark', effort: 'medium' });
+
+    // The LEARN page's Default button says which brain it is now.
+    await page.goto('/learn');
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
+    await expect(page.getByTestId('brain-note')).toContainText('Now: Muse Spark 1.3.');
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
+  });
+
+  test('an admin picks who sings the song, and the teacher reads it with its key', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const song = page.getByTestId('song');
+    await expect(song.getByRole('radio', { name: /ElevenLabs Eleven Music/ })).toHaveAttribute('aria-checked', 'true');
+    await song.getByRole('radio', { name: /Gemini Lyria 3.5/ }).click();
+    await expect(song.getByRole('radio', { name: /Gemini Lyria 3.5/ })).toHaveAttribute('aria-checked', 'true');
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).song).toEqual({ provider: 'gemini' });
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
+  });
+
+  test('is for admins only', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/admin/studio');
+    await expect(page.getByText('Admin access required.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'STUDIO' })).toHaveCount(0);
+  });
+});
+
 test.describe('API unavailable', () => {
   const renderErrorPage = { status: 502, contentType: 'text/html; charset=utf-8', body: '<!DOCTYPE html><html><body>502</body></html>' };
 

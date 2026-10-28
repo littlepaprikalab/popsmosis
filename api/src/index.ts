@@ -19,6 +19,7 @@ import attachmentRoutes from './routes/attachments.js';
 import answerRoutes from './routes/answers.js';
 import dropletRoutes from './routes/droplets.js';
 import videoRoutes from './routes/videos.js';
+import studioRoutes from './routes/studio.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -179,6 +180,7 @@ export async function buildApp() {
   await app.register(answerRoutes);
   await app.register(dropletRoutes);
   await app.register(videoRoutes);
+  await app.register(studioRoutes);
 
   // A storage setting that cannot upload is said once at boot, where whoever set it looks;
   // the rest of the API works without storage, so it still starts. So is a key on borrowed time.

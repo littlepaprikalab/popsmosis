@@ -14,6 +14,14 @@ failure retries the step that failed. Before each step but the post it claims th
 topic again (POST /api/questions/:id/claim), which renews the queue's lease, so a
 slow step or a retry keeps it out of an overlapping run's queue.
 
+The brain (studio/brain.py) is the one an admin picked for the topic on /learn, else the
+default brain set on /admin/studio, both as the claim says; never the environment, which
+holds only the keys. Before it claims anything, `run` reads the settings with the agent
+key and checks the default brain can run here: if not (its key missing, say), it stops,
+as every topic would fail the same way. A topic's own brain that cannot run here fails
+the step with the reason, so the topic is given up with it rather than holding up the
+queue. The brain is kept in brain.json, so `videos`, `step` and a retry stay on it.
+
 Every run appends what it did to runs.jsonl and prints one line, its outcome:
 
     DONE post: lesson posted as answer <id>
@@ -61,6 +69,7 @@ IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "
 IMAGE_MAX_BYTES = 5 * 1024 * 1024 * 3 // 4
 # A line of the question that starts "Style:" (or "Song style:") is the style the learner wants the song in.
 STYLE_LINE = re.compile(r"^[ \t]*(?:song[ \t]+)?style[ \t]*:(.*)$", re.IGNORECASE | re.MULTILINE)
+BRAIN_FILE = "brain.json"  # {"brain": a key of brain.CHOICES, "effort": Claude's}: the brain the claim said
 
 
 class Stop(Exception):
@@ -124,8 +133,19 @@ def record_interrupted(job: Path) -> None:
 
 def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
-    if ask is None:  # the real brain: its settings are checked before the topic is claimed
-        problem = brain.settings_problem()
+    if ask is None:  # the real brain: the default brain is checked before the topic is claimed
+        retired = brain.retired_problem()
+        if retired:
+            return STOPPED, "run", f"the studio's settings are wrong: {retired}"
+        try:
+            api = api or Api.from_env()
+            studio = api.studio_settings()
+        except ApiError as e:
+            result, reason = api_outcome(e)
+            # Down or failing, the API is no reason to fail this topic: nothing about it was tried.
+            return STOPPED, "run", reason if result == STOPPED else f"the studio's settings could not be read: {reason}"
+        with brain.chosen(*default_brain(studio)):
+            problem = brain.settings_problem()
         if problem:
             return STOPPED, "run", f"the studio's settings are wrong: {problem}"
     job = job_dir(question_id)
@@ -134,10 +154,88 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
         if not mine:
             return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
         record_interrupted(job)
-        return _run(job, question_id, api, ask or logged_ask(job))
+        with job_chosen(job):
+            return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None)
 
 
-def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, str]:
+def default_brain(studio: dict | None) -> tuple[str | None, str | None]:
+    """The default brain and Claude's effort an admin set on /admin/studio, as the API said ({} from an older API:
+    the studio's own defaults)."""
+    settings = (studio or {}).get("brain") if isinstance(studio, dict) else None
+    settings = settings if isinstance(settings, dict) else {}
+    return settings.get("default") or None, settings.get("effort") or None
+
+
+def _brain_file(job: Path) -> dict:
+    try:
+        data = json.loads((job / BRAIN_FILE).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def job_brain(job: Path) -> str | None:
+    """The brain the job is made on, as its claim said (brain.json); None: the studio's default."""
+    return _brain_file(job).get("brain") or None
+
+
+def job_effort(job: Path) -> str | None:
+    """Claude's effort for the job, as its claim said; None: the default."""
+    return _brain_file(job).get("effort") or None
+
+
+def job_chosen(job: Path):
+    """brain.chosen() for the job's brain and effort."""
+    return brain.chosen(job_brain(job), job_effort(job))
+
+
+def keep_brain(job: Path, name: str | None, effort: str | None = None) -> None:
+    """Save the brain the job is made on with it, for `videos`, `step` and a retry."""
+    record = {"brain": name or None, "effort": effort or None}
+    if not (job / BRAIN_FILE).exists() or _brain_file(job) != record:
+        jobs.write(job / BRAIN_FILE, record)
+
+
+def use_brain(job: Path, question: dict, check: bool) -> None:
+    """Make the rest of this run on the brain the claim says: the topic's own, else the default brain, except that
+    a lesson already begun (its bundle written) stays on the brain that began it, so its fact-check and its videos
+    are that brain's whatever the default has become since. With check, a brain that cannot run here stops the run
+    when it is the default, since every topic would fail the same way, and fails the step when it is the topic's
+    own, so the topic is given up with the reason and the queue moves on. A lesson whose brain can no longer run
+    here goes on with the default."""
+    studio = question.get("studio")
+    default, effort = default_brain(studio)
+    own = question.get("brain") or None
+    if own and own not in brain.CHOICES:  # an API newer than this studio: not this topic's fault
+        raise Stop(f"the studio's settings are wrong: this topic asks for the brain {own!r}, which this studio does "
+                   f"not have ({', '.join(brain.CHOICES)}): update the studio")
+    begun = job_brain(job) if not own and (job / BRAIN_FILE).exists() and is_done(job, "bundle") else None
+    _put_brain(job, own or begun or default, effort, "picked for this topic" if own else
+               "the brain that began this lesson" if begun else "the default")
+    jobs.keep_studio_settings(job, studio)  # who paints, for `videos`
+    if not check:
+        return
+    problem = brain.settings_problem()
+    if problem and begun and begun != (default or brain.DEFAULT_BRAIN):
+        print(f"brain: {problem}; the lesson goes on with the default", file=sys.stderr)
+        _put_brain(job, default, effort, "the default")
+        problem = brain.settings_problem()
+    if problem and own:
+        raise StepFailed(f"the studio cannot run this topic's brain here: {problem}")
+    if problem:
+        raise Stop(f"the studio's settings are wrong: {problem}")
+
+
+def _put_brain(job: Path, name: str | None, effort: str | None, why: str) -> None:
+    """Keep the brain with the job and put it in force, saying so when the job first has it or it changes."""
+    if not (job / BRAIN_FILE).exists() or (name or brain.DEFAULT_BRAIN) != (job_brain(job) or brain.DEFAULT_BRAIN):
+        label = brain.CHOICES.get(name or brain.DEFAULT_BRAIN, {}).get("name", name)
+        print(f"brain: {label}, {why}", file=sys.stderr)
+    keep_brain(job, name, effort)
+    brain.choose(name, effort)
+
+
+def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False) -> tuple[str, str, str]:
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
@@ -152,6 +250,8 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
             api = api or Api.from_env()
             with ledger.at_step(step):
                 question = claim(api, question_id) if step != "post" else None
+                if question is not None:
+                    use_brain(job, question, check_brain)
                 if step != "post":  # the post makes the answer, which the videos' reports go on
                     report_progress(reporter, job, api, {step: step_clock})
                 reason = STEP_RUNNERS[step](job, api, question, ask)
@@ -200,7 +300,7 @@ def report_progress(reporter: ledger.Reporter, job: Path, api: Api, running: dic
 
     def send():
         report = ledger.progress(job, "lesson", running, failed, ending)
-        report["videos"] = videos.unavailable() is None
+        report["videos"] = videos.unavailable(job) is None
         api.report_progress(job.name, report)
 
     reporter.send(send)

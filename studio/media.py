@@ -24,9 +24,10 @@ as they are: file_name() makes each one safe for the job folder and for the API'
 upload paths, and distinct ("α subunit" and "β subunit" do not share a mask).
 Always build paths with the functions below.
 
-The brain's SVG art (BRAIN_PROVIDER=claude) writes the masks and locations.json itself,
-so locate has nothing left to do. Muse Image's art (BRAIN_PROVIDER=meta) is pictures
-only: locate writes the masks and locations.json from SAM 3.1.
+The brain's SVG art (an admin's setting for Claude's brain) writes the masks and
+locations.json itself, so locate has nothing left to do. Painted art, Gemini 3.1 Flash
+Image's or Muse Image's, is pictures only: locate writes the masks and locations.json
+from SAM 3.1.
 
 A step is a module studio/steps/<name>.py, for each name in MEDIA_STEPS, with
 
