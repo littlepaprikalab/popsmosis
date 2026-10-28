@@ -27,6 +27,7 @@ class FakeServer:
         self.flaky_puts = 0  # this many PUTs answer 503 first, then storage recovers
         self.patch_status = 200
         self.upload_url_status = 200
+        self.upload_url_error = {"code": "UNAVAILABLE", "message": "File storage is not configured"}
         self.uploaded_at_patch = None
 
     def __call__(self, method, url, headers, body):
@@ -34,7 +35,7 @@ class FakeServer:
         if url.startswith(API + "/api/answers/") and url.endswith("/upload-url"):
             assert headers["Authorization"] == f"Bearer {KEY}"
             if self.upload_url_status != 200:
-                return self.upload_url_status, json.dumps({"error": {"code": "UNAVAILABLE", "message": "File storage is not configured"}}).encode()
+                return self.upload_url_status, json.dumps({"error": self.upload_url_error}).encode()
             answer = url.split("/")[-2]
             req = json.loads(body)
             path = f"{req['bucket']}/{answer}/{req['file']}"
@@ -301,6 +302,25 @@ def test_storage_not_set_up_is_not_retried(job, server):
     with pytest.raises(media.StepFailed):
         upload.run(job, api=api_for(server))
     assert len([c for c in server.calls if c[1].endswith("/upload-url")]) == 1
+
+
+def test_the_apis_retryable_flag_decides_whether_a_storage_failure_is_retried(job, server):
+    # The two 503s the API's upload-url sends once storage is set up (api/src/routes/answers.ts).
+    signs = lambda: len([c for c in server.calls if c[1].endswith("/upload-url")])
+    server.upload_url_status = 503
+    server.upload_url_error = {"code": "UNAVAILABLE", "message": "File storage refused to give an upload URL "
+                               "(storage answered 400: Bucket not found); check the bucket, SUPABASE_URL and "
+                               "SUPABASE_SERVICE_ROLE_KEY on the API"}
+    with pytest.raises(media.StepFailed, match="storage answered 400: Bucket not found"):
+        upload.run(job, api=api_for(server))
+    assert signs() == 1  # waiting will not fix a refusal
+
+    server.calls.clear()
+    server.upload_url_error = {"code": "UNAVAILABLE", "message": "File storage did not give an upload URL "
+                               "(storage answered 503); try again", "retryable": True}
+    with pytest.raises(media.StepFailed, match="try again"):
+        upload.run(job, api=api_for(server))
+    assert signs() == 1 + len(upload.RETRY_DELAYS_S)
 
 
 def test_each_attempt_uploads_to_its_own_folder_and_reports_with_its_attempt(job, server):
