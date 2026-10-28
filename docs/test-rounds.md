@@ -663,6 +663,25 @@ blocks and a first try at glows, $0.07 for the glows again).
   water pump"; it is the reservoir's water that turns it. The sentence now names the stop
   just before the part.
 
+## Round 14: repairing a picture in code before painting it again
+
+Built after asking whether the model could repair a wrong picture itself: it cannot paint,
+but code can change a picture using the outlines locate finds, and the helper can judge
+the result. Two repairs, run in the locate step (`studio/repair.py`); tried live for $0.05.
+
+- **Turning a part over works, and so does undoing it.** On round 11's chain close-up the
+  helper named ATP synthase as upside down; code turned it over about the middle of its
+  stalk and filled where it had been from the membrane beside it, cleanly. But that
+  picture's ATP synthase has two heads, a mushroom cap above the membrane and a ball below,
+  and turned over it still has two; the check still found it wrong, and the picture was
+  put back as it was. A part drawn upside down can be fixed this way; one drawn wrong
+  cannot.
+- **Clearing specks first erased a space's own edge**: 64 "specks" in the light
+  reactions' lumen were its anti-aliased lower edge, which came out ragged. A speck must
+  now lie wholly inside the space. With that, the lumen had none to clear: the stray
+  spheres in that picture sit on the background below it, which is left alone, since a
+  small thing on the background may be a structure SAM did not find.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

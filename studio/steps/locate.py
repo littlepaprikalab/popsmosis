@@ -30,6 +30,9 @@ live runs a box drawn around two Earths came back as one Earth's northern half, 
 "Southern Hemisphere", and a "gray plug" as the pale sky above a membrane. A structure left
 out is better than one labelled wrong.
 
+Then each scene's picture is repaired where code can (studio/repair.py): stray specks cleared from a
+space that fills, a part the art check found upside down turned over; the masks follow.
+
 Writes masks/<scene>/<structure>.png, then locations.json, last. Each mask is everything
 SAM marked, so two structures that overlap in the picture share those pixels.
 """
@@ -43,9 +46,18 @@ from pathlib import Path
 
 import numpy as np
 
-from studio import brain, checks, ledger, media, muse, svg
+from studio import brain, checks, ledger, media, muse, repair, svg
 from studio.jobs import write
-from studio.schemas import Box, Location, Locations, Scene, SceneLocations, Strict, Structure, locations_problems
+from studio.schemas import (
+    Box,
+    Location,
+    Locations,
+    Scene,
+    SceneLocations,
+    Strict,
+    Structure,
+    locations_problems,
+)
 from studio.steps import art
 from studio.steps.art import colour_word
 
@@ -96,8 +108,10 @@ def run(job: Path, ask=brain.ask) -> str:
     media.restart(job, media.LOCATIONS)
     scenes, left_out, boxed, dropped = [], [], [], 0
     # The scenes at the same time: each waits on SAM and the helper, one structure after another.
-    found_all = ledger.parallel(lambda scene: find_all(job, scene, ask), bundle.scenes, WORKERS)
-    for scene, (located, how, wrong) in zip(bundle.scenes, found_all):
+    found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), bundle.scenes, WORKERS)
+    repaired = []
+    for scene, (located, how, wrong, done) in zip(bundle.scenes, found_all):
+        repaired += [f"{scene.id}: {what}" for what in done]
         dropped += wrong
         if len(located) < max(1, math.ceil(len(scene.structures) / 2)):
             missing = [s.name for s in scene.structures if s.name not in located]
@@ -117,11 +131,24 @@ def run(job: Path, ask=brain.ask) -> str:
             + (f", {len(boxed)} in the helper's box" if boxed else "")
             + (f"; dropped {dropped} match{'es' if dropped != 1 else ''} in another structure's colour"
                if dropped else "")
-            + (f"; left out {', '.join(left_out)}" if left_out else ""))
+            + (f"; left out {', '.join(left_out)}" if left_out else "")
+            + (f"; repaired {'; '.join(repaired)}" if repaired else ""))
 
 
 def is_done(job: Path) -> bool:
     return art.located(job) is not None and art.is_done(job)
+
+
+def find_and_repair(job: Path, bundle, scene: Scene, ask):
+    """find_all, then the scene's picture repaired where code can (studio/repair.py), its masks with it."""
+    located, how, wrong = find_all(job, scene, ask)
+
+    def check(job: Path, bundle, scene: Scene) -> art.ArtCheck:
+        return art.ArtCheck(**ask("helper", art.check_prompt(bundle, scene), art.ArtCheck,
+                                  [job / media.art_path(scene.id)], system=art.CHECK_PROMPT,
+                                  label=f"repair check {scene.id}"))
+
+    return located, how, wrong, repair.repair(job, bundle, scene, located, ask, check)
 
 
 def find_all(job: Path, scene: Scene, ask) -> tuple[dict[str, tuple[np.ndarray, svg.Found]], dict[str, str], int]:

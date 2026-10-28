@@ -316,6 +316,16 @@ picture with text is never used; after the second, the scene keeps the text-free
 with the fewest structures out of place. Built (`studio/steps/art.py`, `studio/muse.py`); first
 run live on Oct 28 ([test-rounds.md](test-rounds.md)).
 
+**Repair before repainting** (`studio/repair.py`, run by the locate step once the
+structures are found): code fixes what it can for at most a helper look or two, where a
+repaint costs a picture, its check and locating it again, and is a gamble. A space the
+bundle fills (`builds_up`) is cleared of small specks painted wholly inside it, for free;
+a structure the art check found out of place, which the helper then names as upside down,
+is turned over about the middle of its narrow stretch (a stalk in its membrane), its old
+place filled from beside it; the art check looks again, and the flip is kept only if
+fewer structures are out of place. Code cannot redraw a part drawn wrong (a protein with
+two heads): those wait for a repaint, or are reported.
+
 **Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure
 as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
 time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
