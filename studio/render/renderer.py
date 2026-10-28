@@ -247,7 +247,8 @@ class SchematicArt:
 
     def washes(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[dict[str, float], float]:
         """Each structure's wash and the rest's, from the ghost levels (1: unrevealed) and spotlight levels."""
-        washes = {name: _combined(SCHEMATIC_GHOST_WASH * ghosts.get(name, 0.0),
+        compartments = set(self.machine.sides.values())  # context, not a part being built up: never a ghost
+        washes = {name: _combined(0.0 if name in compartments else SCHEMATIC_GHOST_WASH * ghosts.get(name, 0.0),
                                   *(SPOT_WASH * level for other, level in spots.items() if other != name))
                   for name in self.machine.names}
         return washes, _combined(*(SPOT_WASH * level for level in spots.values()))
@@ -265,24 +266,30 @@ class SchematicArt:
         canvas.scale(scale, scale)
         self.machine.draw(canvas, washes, other, bounds=bounds, resolution=resolution)
         canvas.restore()
-        self._name_compartments(canvas, view, self.machine.split_y() * scale + dy, other, font_size, margin)
+        # A compartment the scene labels is named by its label once it is revealed, and in its corner until then.
+        labelled = {side for side, name in self.machine.sides.items() if ghosts.get(name, 1.0) < 1.0}
+        self._name_compartments(canvas, view, self.machine.split_y() * scale + dy, washes, other, font_size, margin,
+                                labelled)
         canvas.restore()
 
-    def _name_compartments(self, canvas: skia.Canvas, view: Rect, split: float, wash: float, font_size: float,
-                           margin: float) -> None:
+    def _name_compartments(self, canvas: skia.Canvas, view: Rect, split: float, washes: dict[str, float], wash: float,
+                           font_size: float, margin: float, labelled: set[str]) -> None:
         """Each compartment's name in its own corner of the view: the one above at the top left, the one
-        below at the bottom left; left out where too little of it is in view to hold it."""
+        below at the bottom left; left out where too little of it is in view to hold it, or once its label
+        shows."""
         font = p.font("SemiBold", font_size)
         cap = p.cap_height(font)
         x = view[0] + margin + 16
         if self.page.below is None:
-            regions = [(self.page.above, view[1], view[3], "top")]
+            regions = [(self.page.above, view[1], view[3], "top", "above")]
         else:
             split = min(max(split, view[1]), view[3])
-            regions = [(self.page.above, view[1], split, "top"), (self.page.below, split, view[3], "bottom")]
-        for compartment, top, bottom, corner in regions:
-            if not compartment.name or bottom - top < cap * 3 + 2 * margin:
+            regions = [(self.page.above, view[1], split, "top", "above"), (self.page.below, split, view[3], "bottom", "below")]
+        for compartment, top, bottom, corner, side in regions:
+            if not compartment.name or side in labelled or bottom - top < cap * 3 + 2 * margin:
                 continue
+            if side in self.machine.sides:  # washed with its compartment by the spotlight
+                wash = washes.get(self.machine.sides[side], wash)
             y = top + margin + 16 + cap if corner == "top" else bottom - margin - 16
             r, g, b = (round(c * 0.25) for c in p.rgb(compartment.color))
             ink = skia.ColorSetARGB(round(255 * 0.85 * (1 - wash)), r, g, b)

@@ -302,7 +302,7 @@ def test_a_compartment_the_scene_names_is_labelled_washed_and_masked_like_a_part
     machine = building.build(LESSON, toy.MACHINE, parts, toy.FakeBrain(), tmp_path, key="k")
     stroma = next(s for s in machine.structures if s.name == "Stroma")
     assert stroma.kind == "compartment" and stroma.side == "below" and not stroma.chains
-    assert machine.page.below.name == "" and machine.page.above.name == "LUMEN"  # its label names it, not the page
+    assert machine.page.below.name == "STROMA" and machine.page.above.name == "LUMEN"
     assert "Protons not found in 1TOY" in machine.notes and "Stroma is the compartment below the membrane" in machine.notes
     drawn = Machine(machine)
     masks = drawn.masks()
@@ -314,6 +314,21 @@ def test_a_compartment_the_scene_names_is_labelled_washed_and_masked_like_a_part
     plain = _pixels(drawn)[..., :3].astype(int)
     assert ghost[below].mean() > plain[below].mean() + 10
     assert abs(ghost[masks["Rotor"]].mean() - plain[masks["Rotor"]].mean()) < 1  # only its edge meets the page
+
+
+def test_a_compartment_is_never_a_ghost_and_its_corner_name_gives_way_to_its_label(job, monkeypatch):
+    from studio.render import primitives
+    from studio.render.renderer import Renderer
+
+    song = jobs.read(job / media.timeline_path("song"), Timeline)
+    hook = Renderer(job, song).scene("hook")
+    washes, _ = hook.washes({"Stroma": 1.0, "Rotor": 1.0}, {})
+    assert washes["Stroma"] == 0 and washes["Rotor"] > 0.5  # unrevealed: the part is pale, the compartment is not
+    written = []
+    monkeypatch.setattr(primitives, "draw_text", lambda canvas, text, *rest: written.append(text))
+    hook.paint(skia.Surface(1920, 1080).getCanvas(), (0, 0, 1920, 970), 1.0, 0, 0, {"Lumen": 1.0, "Stroma": 0.0}, {},
+               34, 20)
+    assert written == ["LUMEN"]  # the stroma's label is showing; the lumen is not named yet
 
 
 def test_on_the_exam_question_the_schematic_stays_in_its_panel(job):

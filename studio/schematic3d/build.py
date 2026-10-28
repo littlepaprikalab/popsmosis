@@ -157,10 +157,9 @@ def build(lesson: dict, machine: str, structures: list[tuple[str, str]], ask, fo
     colors = dict(structures)
     shapes = [Shape(chain=s["chain"], structure=s["structure"] if s["structure"] in kept else None, kind=s["kind"],
                     points=s["points"], radius=s["radius"]) for s in fitted.shapes]
-    if placement:  # a compartment the scene labels is named by its label, not on the page
-        labelled = set(sides.values())
-        page = Page(above=Compartment(name="" if "above" in labelled else review.above.strip().upper(), color=ABOVE),
-                    below=Compartment(name="" if "below" in labelled else review.below.strip().upper(), color=BELOW))
+    if placement:
+        page = Page(above=Compartment(name=review.above.strip().upper(), color=ABOVE),
+                    below=Compartment(name=review.below.strip().upper(), color=BELOW))
     else:
         page = Page(above=Compartment(name="", color=AROUND))
     camera, half_width = frame(shapes, placement.half_thickness if placement else None, set(sides.values()))

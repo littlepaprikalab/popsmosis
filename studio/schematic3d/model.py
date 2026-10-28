@@ -40,7 +40,7 @@ class Structure(Model):
 
 
 class Compartment(Model):
-    name: str  # written on the page; "" for none, or when the scene labels it as a structure
+    name: str  # written in its corner of the page (until a label names it); "" for none
     color: str
 
 

@@ -73,8 +73,9 @@ Nothing is written for one machine or one topic, and nothing is kept between les
      one, a tube for a long thin one. OPM's frame puts the membrane in the plane z = 0; without
      OPM, the machine stands along its longest axis.
    - *Review.* A fresh brain call judges the entry and each structure's subunits against the
-     lesson's facts, and names the compartments above and below the membrane from where code found
-     the parts. When it objects, the choice is made once more with its objections and reviewed
+     lesson's facts, names the compartments above and below the membrane from where code found
+     the parts, and says which of them the scene's other structures are ("cytoplasm": below). When
+     it objects, the choice is made once more with its objections and reviewed
      again; a structure still judged wrong is drawn but never labelled.
    - *Frame.* The camera fits the machine with room for labels.
    - The result (`art/<scene>.schematic.json`) is kept with the job and uploaded with the art, so a
@@ -84,8 +85,10 @@ Nothing is written for one machine or one topic, and nothing is kept between les
      that does not answer: the scene is drawn as an illustration, and the step says why.
 3. **Render.** `SchematicArt` draws the machine live under the scene's camera, so it stays sharp
    at any zoom. Unrevealed parts are washed 55% toward white (not the 85% of drawn art), so the
-   machine reads from the first frame; the spotlight washes everything but its structure. Labels
-   sit beside the machine rather than on it. A frame whose camera and washes repeat is reused.
+   machine reads from the first frame; a compartment the scene labels is context and never washed,
+   and its name stays in its corner until a line names it and its label shows. The spotlight
+   washes everything but its structure. Labels sit beside the machine rather than on it. A frame
+   whose camera and washes repeat is reused.
 
 ### 3.1 Why it stands still
 
