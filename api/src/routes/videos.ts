@@ -16,10 +16,12 @@ import { progressError, storedProgress } from '../lib/progress.js';
 const answerSelect = {
   id: true, questionId: true, agentId: true, bundle: true, factcheck: true,
   videoAttempts: true, videoStatus: true, videoError: true,
+  question: { select: { brain: true } },
 } as const;
 
 type ClaimedAnswer = {
   id: string; questionId: string; bundle: unknown; factcheck: unknown; videoAttempts: number; videoStatus: string | null;
+  question: { brain: string | null };
 };
 
 // What a run needs to make the videos on a machine that has never seen the topic. A renewal,
@@ -30,6 +32,7 @@ function serializeClaim(a: ClaimedAnswer, renewal = false) {
     questionId: a.questionId,
     attempt: a.videoAttempts,
     status: a.videoStatus,
+    brain: a.question.brain, // the topic's brain (lib/brains.ts): the art is its provider's
     ...(!renewal && { bundle: a.bundle, factcheck: a.factcheck }),
   };
 }

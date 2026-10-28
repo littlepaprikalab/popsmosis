@@ -14,6 +14,13 @@ failure retries the step that failed. Before each step but the post it claims th
 topic again (POST /api/questions/:id/claim), which renews the queue's lease, so a
 slow step or a retry keeps it out of an overlapping run's queue.
 
+The claim also says which brain the topic asks for, when an admin picked one on /learn
+(studio/brain.py, CHOICES). It is kept in brain.json, so `videos`, `step` and a retry
+make the rest of the droplet on the same brain, and it wins over BRAIN_PROVIDER and
+STUDIO_BRAIN_MODEL for this topic. A brain the studio cannot run here (its key is not
+set) fails the step with the reason, so the topic is given up with it rather than
+holding up the queue.
+
 Every run appends what it did to runs.jsonl and prints one line, its outcome:
 
     DONE post: lesson posted as answer <id>
@@ -61,6 +68,7 @@ IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "
 IMAGE_MAX_BYTES = 5 * 1024 * 1024 * 3 // 4
 # A line of the question that starts "Style:" (or "Song style:") is the style the learner wants the song in.
 STYLE_LINE = re.compile(r"^[ \t]*(?:song[ \t]+)?style[ \t]*:(.*)$", re.IGNORECASE | re.MULTILINE)
+BRAIN_FILE = "brain.json"  # {"brain": a key of brain.CHOICES, or null}: the brain the topic asks for
 
 
 class Stop(Exception):
@@ -124,7 +132,7 @@ def record_interrupted(job: Path) -> None:
 
 def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
-    if ask is None:  # the real brain: its settings are checked before the topic is claimed
+    if ask is None:  # the real brain: the teacher's own settings are checked before the topic is claimed
         problem = brain.settings_problem()
         if problem:
             return STOPPED, "run", f"the studio's settings are wrong: {problem}"
@@ -134,10 +142,40 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
         if not mine:
             return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
         record_interrupted(job)
-        return _run(job, question_id, api, ask or logged_ask(job))
+        with brain.chosen(job_brain(job)):
+            return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None)
 
 
-def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, str]:
+def job_brain(job: Path) -> str | None:
+    """The brain the topic asks for, as its claim said (brain.json); None: the environment's."""
+    try:
+        return json.loads((job / BRAIN_FILE).read_text(encoding="utf-8"))["brain"] or None
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def keep_brain(job: Path, name: str | None) -> None:
+    """Save the brain the topic asks for with its job, for `videos`, `step` and a retry."""
+    name = name or None
+    if not (job / BRAIN_FILE).exists() or job_brain(job) != name:
+        jobs.write(job / BRAIN_FILE, {"brain": name})
+
+
+def use_brain(job: Path, question: dict, check: bool) -> None:
+    """Make the rest of this run on the brain the claimed topic asks for. With check, a brain that cannot
+    run here fails the step: the topic is given up with the reason, and the queue moves on."""
+    name = question.get("brain") or None
+    if name and name != job_brain(job):  # said once, when the job first learns it
+        print(f"brain: {brain.CHOICES.get(name, {}).get('name', name)}, picked for this topic", file=sys.stderr)
+    keep_brain(job, name)
+    brain.choose(name)
+    if check and name:
+        problem = brain.settings_problem()
+        if problem:
+            raise StepFailed(f"the studio cannot run this topic's brain here: {problem}")
+
+
+def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False) -> tuple[str, str, str]:
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
@@ -152,6 +190,8 @@ def _run(job: Path, question_id: str, api: Api | None, ask) -> tuple[str, str, s
             api = api or Api.from_env()
             with ledger.at_step(step):
                 question = claim(api, question_id) if step != "post" else None
+                if question is not None:
+                    use_brain(job, question, check_brain)
                 if step != "post":  # the post makes the answer, which the videos' reports go on
                     report_progress(reporter, job, api, {step: step_clock})
                 reason = STEP_RUNNERS[step](job, api, question, ask)

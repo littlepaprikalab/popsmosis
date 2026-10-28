@@ -1,3 +1,5 @@
+import type { Brain } from './brains';
+
 const API_BASE = '/api';
 const REQUEST_TIMEOUT_MS = 30_000;
 
@@ -294,6 +296,8 @@ export interface Question {
   content: string;
   status: 'PENDING' | 'ANSWERED' | 'FAILED';
   failedReason: string | null; // FAILED: why the teacher gave up
+  // The brain an admin picked for it (lib/brains.ts); null: the teacher's own. Absent from an API older than this page.
+  brain?: Brain | null;
   attachments: Attachment[];
   createdAt: string;
   user: PublicUser | null; // null once the learner took it back: only an admin still sees it, with content ''
@@ -393,7 +397,9 @@ export const api = {
   getQuestion: (id: string) => request<Question>(`/questions/${id}`).then(localClock),
   getQuestionsByIds: (ids: string[]) =>
     request<{ data: Question[]; nextCursor: null }>(`/questions?ids=${encodeURIComponent(ids.join(','))}`).then(onLocalClock),
-  askQuestion: (content: string) => request<Question>('/questions', { method: 'POST', body: JSON.stringify({ content }) }).then(localClock),
+  // brain: an admin's pick for the topic (lib/brains.ts); left out, the teacher's own makes it.
+  askQuestion: (content: string, brain?: Brain | null) =>
+    request<Question>('/questions', { method: 'POST', body: JSON.stringify(brain ? { content, brain } : { content }) }).then(localClock),
   deleteQuestion: (id: string) => request<void>(`/questions/${id}`, { method: 'DELETE' }),
   // mine scopes latestAt to the viewer's own questions, matching the list the
   // page is showing, so the "new activity" banner cannot promise a refresh

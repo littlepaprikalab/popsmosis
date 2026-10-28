@@ -18,6 +18,9 @@ attempt this machine has. A render that goes quiet past VIDEO_STALE_MINUTES is h
 to a later run by `python -m studio recover`, which rebuilds the job here from what
 the API stored.
 
+The art is made by the provider of the topic's brain (brain.json, which `run` keeps from
+the claim, and `recover` from the API), so the videos run on the brain the lesson did.
+
 It ends with one line, like `run`:
 
     DONE upload: <what the last step did>
@@ -50,8 +53,8 @@ from pydantic import ValidationError
 
 from studio import brain, jobs, ledger, media
 from studio.api import Api, ApiError
-from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, job_dir, logged_ask, one_line, only_run,
-                        read_jsonl, record_interrupted)
+from studio.run import (DONE, FAILED, STOPPED, Stop, api_outcome, job_brain, job_dir, keep_brain, logged_ask,
+                        one_line, only_run, read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
@@ -187,7 +190,8 @@ def videos(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str
         if not mine:
             return STOPPED, "videos", "a run of this topic is still going"
         record_interrupted(job)
-        return _videos(job, api, ask or logged_ask(job))
+        with brain.chosen(job_brain(job)):
+            return _videos(job, api, ask or logged_ask(job))
 
 
 def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
@@ -273,7 +277,8 @@ def background(question_id: str, api: Api | None = None) -> tuple[str, str, str]
     job = job_dir(question_id)
     if not (job / "posted.json").exists():
         return STOPPED, "videos", "no lesson for this topic was posted from this machine"
-    why = unavailable()
+    with brain.chosen(job_brain(job)):  # the detached run reads brain.json itself
+        why = unavailable()
     if why:
         return STOPPED, "videos", why
     if _alive(_background_pid(job)):
@@ -403,6 +408,7 @@ def rebuild(job: Path, item: dict) -> None:
     jobs.write(job / "bundle.json", bundle)
     jobs.write(job / "factcheck.json", factcheck)
     jobs.write(job / "posted.json", {"id": item["answerId"], "questionId": item["questionId"], "recovered": True})
+    keep_brain(job, item.get("brain"))  # the art is made by the topic's brain's provider
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
 
 

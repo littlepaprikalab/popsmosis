@@ -91,6 +91,10 @@ model Question {
   // far, and whether the videos' steps come after. Sent before each step (PUT /api/questions/:id/progress).
   progress Json?
 
+  // The brain an admin picked for this topic on /learn (api/src/lib/brains.ts): claude, muse-wonder or muse-spark.
+  // Null: the teacher's own setting (BRAIN_PROVIDER where the studio runs). The studio reads it from the claim.
+  brain String?
+
   user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
   answers     Answer[]
   attachments Attachment[]

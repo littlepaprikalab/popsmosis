@@ -108,6 +108,9 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 vet a change; its Contributor version is cheaper still, but Meta may train on what it is
 sent, so test topics only). `STUDIO_BRAIN_EFFORT` changes the effort with `claude`.
 Unset, they are the defaults above. The helper's models are set in `studio/brain.py`.
+An admin can also send one topic to its own brain on `/learn` (Claude, Muse Wonder or Muse
+Spark), which wins over both for that topic's droplet, its art included: README, "One
+topic on another brain".
 
 The other jobs:
 

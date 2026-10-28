@@ -260,6 +260,46 @@ test.describe('signed in', () => {
     await expect(card.locator('.badge-agent')).toHaveCount(2);
   });
 
+  test('an admin sends a topic to a brain of their own: the card and the teacher\'s claim say which, and the pick is remembered', async ({ page, context, request }) => {
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    const picker = page.getByTestId('brain-picker');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    await picker.getByRole('radio', { name: 'Muse Spark' }).click();
+    await expect(picker.getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+    await expect(picker.getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByTestId('brain-note')).toContainText('Muse Spark 1.3');
+
+    const text = `E2E ${Date.now()}: osmosis, on Muse Spark`;
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill(text);
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('topic-brain')).toHaveText('Muse Spark');
+
+    // The studio learns the topic's brain from its claim (studio/run.py).
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const own = await (await request.get(apiUrl('/api/questions?mine=true&limit=5'), { headers: asAda })).json();
+    const sent = own.data.find((q: { content: string }) => q.content === text);
+    expect(sent.brain).toBe('muse-spark');
+    const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim(sent.id);
+    expect((await claimed.json()).brain).toBe('muse-spark');
+
+    // Remembered on this browser, so a run of test topics stays on it.
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Muse Spark' })).toHaveAttribute('aria-checked', 'true');
+    await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
+    await page.reload();
+    await expect(page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' })).toHaveAttribute('aria-checked', 'true');
+    expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asAda })).status()).toBe(204);
+  });
+
+  test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(page.getByPlaceholder('A topic, e.g. ATP synthesis')).toBeVisible();
+    await expect(page.getByTestId('brain-picker')).toHaveCount(0);
+  });
+
   test('a topic asked with files shows them: a picture as its thumbnail, a text file as a link', async ({ page, context, request }) => {
     // Asked straight to the API with the files in the body; Ben, whose day of questions the other tests leave room in.
     const text = `E2E ${Date.now()}: explain this diagram of a neuron`;

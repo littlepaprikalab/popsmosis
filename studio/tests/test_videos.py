@@ -459,3 +459,38 @@ def test_wrong_brain_settings_stop_the_videos_before_anything_is_claimed(setup, 
     assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
     assert videos.recover(api=api) == ("NONE", "recover", wrong)
     assert api.calls == [] and setup.ran == []  # no claim, no attempt taken from the queue, no step
+
+
+# --- a topic's own brain, picked by an admin on /learn ----------------------------------------
+
+
+def test_the_art_is_made_on_the_topics_brain_whatever_the_environment_says(meta_job, monkeypatch):
+    from studio import brain
+
+    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    operator_run.keep_brain(meta_job.job, "muse-spark")
+    assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "upload made")
+    assert len(meta_job.muse.painted) == 3 and meta_job.artist.labels() == []  # Muse Image, not the SVG artist
+    assert brain.topic_brain() is None
+
+
+def test_recover_keeps_the_topics_brain_so_the_new_machine_makes_the_art_the_same_way(setup):
+    api = VideoApi()
+    api.attempt = 2
+    api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK,
+                  "brain": "muse-spark"}]
+    assert videos.recover(api=api)[0] == "RECOVER"
+    assert operator_run.job_brain(jobs.ROOT / "q9") == "muse-spark"
+
+
+def test_the_videos_check_the_settings_of_the_topics_brain(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    for name in ("BRAIN_PROVIDER", "MODEL_API_KEY", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "STUDIO_VIDEOS"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    api = VideoApi()
+    operator_run.keep_brain(posted(), "muse-spark")
+    wrong = "the studio's settings are wrong: this topic's brain, Muse Spark 1.3, needs MODEL_API_KEY"
+    assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert videos.background("q1", api=api) == ("STOPPED", "videos", wrong)
+    assert api.calls == [] and setup.ran == []

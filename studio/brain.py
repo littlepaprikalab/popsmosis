@@ -13,6 +13,11 @@ the default above, and the helper has no such setting. BRAIN_PROVIDER also picks
 makes the art: the brain draws SVG on claude, Muse Image paints it on meta
 (studio/steps/art.py).
 
+A topic can carry a brain of its own, picked by an admin on /learn (CHOICES). The runners
+put it in force with chosen() and choose(), and for that topic's whole droplet, its art
+included, it wins over BRAIN_PROVIDER and STUDIO_BRAIN_MODEL; STUDIO_BRAIN_EFFORT still
+sets Claude's effort.
+
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
 validated against the model before it is returned.
@@ -49,6 +54,14 @@ META = {
 }
 META_BASE_URL = "https://api.meta.ai/v1"
 META_KEY_VAR = "MODEL_API_KEY"
+
+# The brains an admin may pick for one topic on /learn: its provider and brain model. The API holds the same
+# keys (api/src/lib/brains.ts); keep the two lists the same.
+CHOICES = {
+    "claude": {"provider": "claude", "model": "claude-opus-5-5", "name": "Claude Opus 5.5"},
+    "muse-wonder": {"provider": "meta", "model": "muse-wonder-1.0", "name": "Muse Wonder 1.0"},
+    "muse-spark": {"provider": "meta", "model": "muse-spark-1.3", "name": "Muse Spark 1.3"},
+}
 
 # The effort levels Claude accepts (output_config.effort).
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
@@ -138,6 +151,44 @@ class Call:
 
 calls: list[Call] = []
 _local = threading.local()  # the calls each thread is collecting (collect())
+# The topic's own brain while a runner works on it (a key of CHOICES), else None: the environment's. One per
+# process, not per thread: the art and audio branches of `videos` run in threads of their own, and both need it.
+_chosen: str | None = None
+
+
+@contextlib.contextmanager
+def chosen(name: str | None):
+    """Run the block on a topic's brain (a key of CHOICES); None runs it on the environment's.
+    choose() inside the block lasts until the block ends."""
+    global _chosen
+    outer, _chosen = _chosen, name or None
+    try:
+        yield
+    finally:
+        _chosen = outer
+
+
+def choose(name: str | None) -> None:
+    """Put a topic's brain in force from here on, as `run` does once the claim says which it is. A name
+    CHOICES does not have is taken too, and fails every call, with settings_problem() saying why."""
+    global _chosen
+    _chosen = name or None
+
+
+def topic_brain() -> dict | None:
+    """The topic's brain in force (CHOICES), or None when the environment's is."""
+    if _chosen is None:
+        return None
+    if _chosen not in CHOICES:
+        raise BrainError(f"this topic asks for the brain {_chosen!r}, which this studio does not have "
+                         f"({', '.join(CHOICES)}): update the studio")
+    return CHOICES[_chosen]
+
+
+def _who() -> str:
+    """What asked for the provider, for an error message: the topic's brain or BRAIN_PROVIDER."""
+    picked = topic_brain()
+    return f"this topic's brain, {picked['name']}," if picked else f"BRAIN_PROVIDER={provider()}"
 
 
 def _record(call: Call) -> None:
@@ -188,7 +239,11 @@ def ask(
 
 
 def provider() -> str:
-    """BRAIN_PROVIDER: claude (the default) or meta. It also picks who makes the art (studio/steps/art.py)."""
+    """The topic's brain's provider, else BRAIN_PROVIDER: claude (the default) or meta. It also picks who makes
+    the art (studio/steps/art.py)."""
+    picked = topic_brain()
+    if picked:
+        return picked["provider"]
     name = os.environ.get("BRAIN_PROVIDER", "claude")
     if name not in PROVIDERS:
         raise ValueError(f"BRAIN_PROVIDER must be claude or meta, not {name!r}")
@@ -199,14 +254,15 @@ def meta_key() -> str:
     """The Meta API key every Meta model here takes: the brain's, Muse Image's and SAM's."""
     key = os.environ.get(META_KEY_VAR)
     if not key:
-        raise BrainError(f"BRAIN_PROVIDER=meta needs {META_KEY_VAR}")
+        raise BrainError(f"{_who()} needs {META_KEY_VAR}")
     return key
 
 
 def settings_problem() -> str | None:
     """What is wrong with the brain's settings (BRAIN_PROVIDER, its key, STUDIO_BRAIN_MODEL and
     STUDIO_BRAIN_EFFORT), or None. The runners ask before they claim anything, so a setting
-    left wrong stops the run instead of failing, and giving up, one topic after another."""
+    left wrong stops the run instead of failing, and giving up, one topic after another.
+    Inside chosen() it is the topic's brain that is checked: its name and its provider's key."""
     try:
         if provider() == "meta":
             brain_model("meta")
@@ -214,7 +270,7 @@ def settings_problem() -> str | None:
         else:
             claude_brain()
             if not claude_key():
-                raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
+                raise BrainError(f"{_who()} needs {' or '.join(CLAUDE_KEY_VARS)}")
     except (ValueError, BrainError) as e:
         return str(e)
     return None
@@ -294,7 +350,10 @@ def claude_key() -> str | None:
 
 
 def brain_model(provider_name: str) -> str:
-    """The brain's model on a provider: STUDIO_BRAIN_MODEL, else that provider's default."""
+    """The brain's model on a provider: the topic's brain's, else STUDIO_BRAIN_MODEL, else that provider's default."""
+    picked = topic_brain()
+    if picked and picked["provider"] == provider_name:
+        return picked["model"]
     defaults = {"claude": CLAUDE, "meta": META}[provider_name]
     model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or defaults["brain"]["model"]
     if not model.startswith(MODEL_PREFIXES[provider_name]):
@@ -304,7 +363,7 @@ def brain_model(provider_name: str) -> str:
 
 
 def claude_brain() -> tuple[str, str]:
-    """The brain's model and effort: STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT, else the defaults."""
+    """The brain's model and effort: the topic's brain or STUDIO_BRAIN_MODEL, and STUDIO_BRAIN_EFFORT, else the defaults."""
     model = brain_model("claude")
     effort = os.environ.get("STUDIO_BRAIN_EFFORT", "").strip() or CLAUDE["brain"]["effort"]
     if effort not in EFFORTS:
@@ -351,7 +410,7 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
         # whatever other credential the machine happens to hold.
         key = claude_key()
         if not key:
-            raise BrainError(f"BRAIN_PROVIDER=claude needs {' or '.join(CLAUDE_KEY_VARS)}")
+            raise BrainError(f"{_who()} needs {' or '.join(CLAUDE_KEY_VARS)}")
         _clients["claude"] = anthropic.Anthropic(api_key=key)
     started = time.monotonic()
     try:

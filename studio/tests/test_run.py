@@ -502,3 +502,61 @@ def test_wrong_brain_settings_stop_the_run_before_the_topic_is_claimed(jobs_root
     assert (result, step) == ("STOPPED", "run")
     assert reason.startswith("the studio's settings are wrong: STUDIO_BRAIN_MODEL=claude-haiku-5-5 is not a Muse")
     assert api.calls == [] and not (jobs_root / "q1").exists()
+
+
+# --- a topic's own brain, picked by an admin on /learn ----------------------------------------
+
+
+class SpyBrain(FakeBrain):
+    """FakeBrain that notes the provider and brain model in force at each call."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.brains = []
+
+    def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+        self.brains.append((brain.provider(), brain.brain_model(brain.provider())))
+        return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+
+def test_a_topic_sent_to_its_own_brain_is_made_on_it_and_its_job_keeps_it(jobs_root, monkeypatch):
+    monkeypatch.setenv("BRAIN_PROVIDER", "claude")
+    api, ask = FakeApi({**QUESTION, "brain": "muse-spark"}), SpyBrain()
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert ask.brains == [("meta", "muse-spark-1.3")] * 2  # the bundle and the fact-check
+    assert operator_run.job_brain(jobs_root / "q1") == "muse-spark"
+    assert brain.topic_brain() is None  # the environment's again once the run ends
+
+
+def test_a_retry_keeps_the_topics_brain(jobs_root, monkeypatch):
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    api = FakeApi({**QUESTION, "brain": "claude"})
+    ask = SpyBrain(bundle_error=brain.BrainError("overloaded"))
+    assert operator_run.run("q1", api=api, ask=ask)[:2] == ("FAILED", "bundle")
+    ask.bundle_error = None
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert {provider for provider, _ in ask.brains} == {"claude"}
+
+
+def test_a_topic_without_a_brain_of_its_own_is_made_on_the_environments(jobs_root, monkeypatch):
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.delenv("STUDIO_BRAIN_MODEL", raising=False)
+    api, ask = FakeApi({**QUESTION, "brain": None}), SpyBrain()
+    assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
+    assert ask.brains == [("meta", "muse-wonder-1.0")] * 2
+    assert operator_run.job_brain(jobs_root / "q1") is None
+
+
+def test_a_topics_brain_the_studio_cannot_run_fails_the_topic_rather_than_holding_up_the_queue(jobs_root, monkeypatch):
+    """The teacher's own brain is set up (Claude here), so the run starts; the topic asks for Muse Wonder, whose key
+    is missing. That is this topic's problem, not every topic's: the step fails with the reason, before anything
+    is downloaded or sent to a model, and `fail` gives the topic up with it, so the next topic gets its turn."""
+    for name in ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "MODEL_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    api = FakeApi({**QUESTION, "brain": "muse-wonder"})
+    result, step, reason = operator_run.run("q1", api=api)
+    assert (result, step) == ("FAILED", "request")
+    assert reason == "the studio cannot run this topic's brain here: this topic's brain, Muse Wonder 1.0, needs MODEL_API_KEY"
+    assert "download" not in api.names() and not (jobs_root / "q1" / "calls.jsonl").exists()
+    assert operator_run.mark_failed("q1", api=api) == ("DONE", f"request failed: {reason}")

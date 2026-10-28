@@ -214,6 +214,28 @@ The Meta calls follow Meta's docs but have not run against the live API yet: che
 first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
 scene, a few cents).
 
+#### One topic on another brain
+
+An admin can send one topic to a brain of its own: the **Brain** buttons under the box on
+`/learn` (admins only; a learner's topic is always made by the teacher's own). The pick is
+remembered on that browser, and the topic's card shows it.
+
+| Button | Brain | Art | Bills to |
+|---|---|---|---|
+| Default | whatever the variables above say | the same | the same |
+| Claude | Claude Opus 5.5 (`claude-opus-5-5`) | the brain draws it as SVG | `POPSMOSIS_ANTHROPIC_API_KEY` |
+| Muse Wonder | Muse Wonder 1.0 (`muse-wonder-1.0`) | Muse Image paints it | `MODEL_API_KEY` |
+| Muse Spark | Muse Spark 1.3 (`muse-spark-1.3`) | Muse Image paints it | `MODEL_API_KEY` |
+
+For that topic the pick wins over `BRAIN_PROVIDER` and `STUDIO_BRAIN_MODEL`, for the whole
+droplet: the lesson, its fact-check and the art (`STUDIO_BRAIN_EFFORT` still sets Claude's
+effort). The studio keeps it in the job's `brain.json`, so a retry, `videos`, `recover` and
+`step` stay on it, and the bill shows the models that ran. The environment needs the key of
+the pick's provider: a topic sent to a brain whose key is missing fails at its first step
+with `the studio cannot run this topic's brain here: ...`, and the teacher gives it up with
+that reason, so the queue moves on. For a local job, `python -m studio plan ... --brain muse-spark`.
+Follow-ups are answered by the teacher itself, whatever the brain.
+
 ## Tests
 
 ```bash
@@ -268,7 +290,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments? }` 3–2000 chars; `attachments` see [Attachments](#attachments) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars |
 | DELETE | `/api/replies/:id` | own reply |
@@ -284,13 +306,13 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 |---|---|---|
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES` |
-| POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it; 409 if answered, failed, or leased to another agent |
+| POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own); 409 if answered, failed, or leased to another agent |
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
 | PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until storage is set up (`SUPABASE_URL` and a secret key in `SUPABASE_SERVICE_ROLE_KEY`), with `retryable: true` only when waiting may fix it |
-| POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, bundle, factcheck }`; 409 when another run holds them, they are READY, or the attempts are used up |
+| POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
 | POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |
 | PUT | `/api/answers/:id/video/progress` | own answers: `{ attempt?, running: [{ step, seconds }], failed?, breakdown? }`, where the render is, its `breakdown` the videos' bill so far; 204; 409 unless they are RENDERING under that attempt. Not the heartbeat: the claim is |

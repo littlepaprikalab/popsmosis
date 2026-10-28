@@ -269,3 +269,76 @@ def test_bad_role_provider_or_image_is_refused(monkeypatch, tmp_path):
     (tmp_path / "notes.bmp").write_bytes(b"BM")
     with pytest.raises(ValueError, match="notes.bmp"):
         brain.claude_request("brain", "Hi", None, [tmp_path / "notes.bmp"], None)
+
+
+# --- a topic's own brain, picked by an admin on /learn ------------------------------------
+
+
+def test_a_topics_brain_wins_over_the_environment_until_its_block_ends(monkeypatch):
+    monkeypatch.setenv("BRAIN_PROVIDER", "meta")
+    monkeypatch.setenv("STUDIO_BRAIN_MODEL", "muse-spark-1.3")
+    monkeypatch.setenv("STUDIO_BRAIN_EFFORT", "medium")
+    with brain.chosen("claude"):
+        assert brain.provider() == "claude"
+        request = brain.claude_request("brain", "Write.", None, [], None)
+        assert request["model"] == "claude-opus-5-5"
+        assert request["output_config"] == {"effort": "medium"}  # the effort is still the environment's
+        with brain.chosen("muse-wonder"):
+            assert brain.provider() == "meta"
+            assert brain.meta_request("brain", "Write.", None, [], None)["model"] == "muse-wonder-1.0"
+            assert brain.meta_request("helper", "Look.", None, [], None)["model"] == "muse-spark-1.3"
+        assert brain.provider() == "claude"
+    assert brain.provider() == "meta" and brain.topic_brain() is None
+    assert brain.meta_request("brain", "Write.", None, [], None)["model"] == "muse-spark-1.3"
+
+
+def test_choose_puts_a_brain_in_force_until_the_block_around_it_ends():
+    with brain.chosen(None):
+        assert brain.topic_brain() is None
+        brain.choose("muse-spark")
+        assert (brain.provider(), brain.brain_model("meta")) == ("meta", "muse-spark-1.3")
+        brain.choose("")
+        assert brain.topic_brain() is None
+        brain.choose("muse-wonder")
+    assert brain.topic_brain() is None
+
+
+@pytest.mark.parametrize("name, settings, problem", [
+    ("muse-spark", {"MODEL_API_KEY": "k"}, None),
+    # A model left in STUDIO_BRAIN_MODEL for the other provider is not this topic's concern.
+    ("muse-wonder", {"MODEL_API_KEY": "k", "STUDIO_BRAIN_MODEL": "claude-haiku-5-5"}, None),
+    ("claude", {"BRAIN_PROVIDER": "meta", "POPSMOSIS_ANTHROPIC_API_KEY": "k"}, None),
+    ("muse-spark", {"POPSMOSIS_ANTHROPIC_API_KEY": "k"}, "this topic's brain, Muse Spark 1.3, needs MODEL_API_KEY"),
+    ("claude", {"BRAIN_PROVIDER": "meta", "MODEL_API_KEY": "k"},
+     "this topic's brain, Claude Opus 5.5, needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY"),
+    ("claude", {"POPSMOSIS_ANTHROPIC_API_KEY": "k", "STUDIO_BRAIN_EFFORT": "hihg"}, "STUDIO_BRAIN_EFFORT must be one of"),
+    ("haiku", {"POPSMOSIS_ANTHROPIC_API_KEY": "k"},
+     "this topic asks for the brain 'haiku', which this studio does not have (claude, muse-wonder, muse-spark)"),
+])
+def test_a_topics_brain_is_checked_by_its_own_provider(monkeypatch, name, settings, problem):
+    for var in (*brain.CLAUDE_KEY_VARS, "MODEL_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    for var, value in settings.items():
+        monkeypatch.setenv(var, value)
+    with brain.chosen(name):
+        found = brain.settings_problem()
+    assert found is None if problem is None else problem in found
+
+
+def test_a_brain_the_studio_does_not_have_fails_the_call_before_anything_is_sent(monkeypatch):
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    with brain.chosen("muse-spark-2"), pytest.raises(brain.BrainError, match="does not have"):
+        brain.ask("brain", "Hi")
+
+
+def test_the_brains_are_the_ones_the_api_and_the_page_offer():
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    api = (root / "api" / "src" / "lib" / "brains.ts").read_text(encoding="utf-8")
+    web = (root / "web" / "src" / "lib" / "brains.ts").read_text(encoding="utf-8")
+    assert re.findall(r"'([^']+)'", re.search(r"BRAINS = \[(.*?)\] as const", api).group(1)) == list(brain.CHOICES)
+    assert re.findall(r"'([^']+)'", re.search(r"type Brain = (.*);", web).group(1)) == list(brain.CHOICES)
+    for picked in brain.CHOICES.values():
+        assert picked["model"] in brain.PRICES  # each shows its cost on the bill
