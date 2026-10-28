@@ -100,10 +100,10 @@ See [docs/agent-runbook.md](docs/agent-runbook.md) for the hosted options.
 ### The studio
 
 The studio (Python 3.13) turns a topic into a droplet; so far it writes the bundle,
-fact-checks it and posts the lesson. It reads `POPSMOSIS_ANTHROPIC_API_KEY` (or
-`ANTHROPIC_API_KEY`, which a Claude Code cloud environment does not pass through), and its
-calls bill per token to that API account ([docs/PLAN.md](docs/PLAN.md), section 4). Each
-job writes into `jobs/<id>/`.
+fact-checks it and posts the lesson. Its models, and the keys they bill to, are set by
+the variables in [Choosing the models](#choosing-the-models): Claude's by default, on
+`POPSMOSIS_ANTHROPIC_API_KEY` ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes
+into `jobs/<id>/`.
 
 The teacher runs it on a topic from the queue, by the question's id. That needs
 `POPSMOSIS_API_URL` and `POPSMOSIS_API_KEY` too, and is what the skill file does:
@@ -160,32 +160,50 @@ Droplets tab. It uses the same two variables, and the API needs Supabase set up
 python -m studio step upload <job-id>    # videos and posters public, the rest private; again sends only what changed
 ```
 
-`STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` set the brain's model and effort (defaults
-`claude-opus-5-5` and `high`; effort is one of `low`, `medium`, `high`, `xhigh`, `max`).
-To try a prompt change cheaply, run the brain on Haiku first (about 2 cents a topic
-instead of 70): `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
+### Choosing the models
 
-With `BRAIN_PROVIDER=meta`, `STUDIO_BRAIN_MODEL` takes a Muse model instead (default
-`muse-wonder-1.0`), and `STUDIO_BRAIN_EFFORT` does nothing. To vet a change cheaply:
+These variables pick the models the studio runs and the accounts they bill to. The studio
+reads them from its own environment, not from `.env`: on the routine, set them in its
+environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 1).
 
-| `STUDIO_BRAIN_MODEL` | Price per million tokens (in / out) | Use it for |
+| Variable | Values | Default | What it does |
+|---|---|---|---|
+| `BRAIN_PROVIDER` | `claude` or `meta`, in lowercase | `claude` | Whose models write and fact-check each lesson, and who makes its art (the next table) |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | none | Needed with `claude`. `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
+| `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | none | Needed with `meta`. Every Meta model the studio calls bills to it |
+| `STUDIO_BRAIN_MODEL` | with `claude`, a Claude model id; with `meta`, a Muse model id (the last table) | `claude-opus-5-5` with `claude`, `muse-wonder-1.0` with `meta` | The brain's model. A model from the other provider fails the call before anything is sent, so change it when you change `BRAIN_PROVIDER` |
+| `STUDIO_BRAIN_EFFORT` | `low`, `medium`, `high`, `xhigh`, `max` | `high` | How hard the brain thinks, with `claude` only; `meta` ignores it |
+
+What each `BRAIN_PROVIDER` runs:
+
+| Job | `claude` | `meta` |
 |---|---|---|
-| `muse-wonder-1.0` (the default) | $4.00 / $20.00 | the real lessons |
-| `muse-spark-1.3` | $1.25 / $4.25 | vetting, on any topic |
-| `muse-spark-1.3-contributor` | $0.10 / $0.20 | test topics only: Meta may train on everything it is sent, learners' requests included |
+| Brain: writes and fact-checks the lesson | Claude Opus 5.5, or `STUDIO_BRAIN_MODEL` | Muse Wonder 1.0, or `STUDIO_BRAIN_MODEL` |
+| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 (not called: code checks the SVG art) | Muse Spark 1.3 |
+| Art | the brain draws each scene as SVG | Muse Image 1.0 paints it, $0.01 a picture, up to three a scene |
+| Finding each structure in the art | the SVG says where each one is | SAM 3.1, $2.50 per 1,000 images |
 
-A model from the other provider (a Claude model with `meta`, a Muse one with `claude`)
-fails the call before anything is sent.
+Switching `BRAIN_PROVIDER` makes a job's art again on its next run; a lesson already
+written stays as it is.
 
-`BRAIN_PROVIDER=meta` moves the studio onto Meta's models, all on `MODEL_API_KEY`: Muse
-Wonder writes and fact-checks the lesson, Muse Spark is the helper, Muse Image paints each
-scene's art ($0.01 a picture; the helper checks it for text and mistakes, up to three
-pictures a scene), and SAM 3.1 finds each structure in it for the labels and the camera
-(the locate step, with the helper's box as a fallback). With `claude`, the default, the
-brain draws the art as SVG and no Meta model is called. Switching makes a job's art again
-on its next run. The Meta calls follow Meta's docs but have not run against the live API
-yet: check them first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s`
-(one scene, a few cents).
+The brain's models, for `STUDIO_BRAIN_MODEL`:
+
+| `STUDIO_BRAIN_MODEL` | With | Price per million tokens (in / out) | Use it for |
+|---|---|---|---|
+| `claude-opus-5-5` (the default) | `claude` | $4.00 / $20.00 | the real lessons, about 70 cents a topic |
+| `claude-haiku-5-5` | `claude` | $0.10 / $0.50 | trying a change, about 2 cents a topic |
+| `muse-wonder-1.0` (the default) | `meta` | $4.00 / $20.00 | the real lessons |
+| `muse-spark-1.3` | `meta` | $1.25 / $4.25 | vetting a change, on any topic |
+| `muse-spark-1.3-contributor` | `meta` | $0.10 / $0.20 | test topics only (`python -m studio plan`): Meta may train on everything it is sent, learners' requests included. Never on the routine |
+
+Any other model of the provider's works too (another Claude model id, or a Muse one such
+as `muse-spark-1.2`); a model the bill has no price for shows as unpriced. To try a prompt
+change on a local job: `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`,
+or with `BRAIN_PROVIDER=meta`, `STUDIO_BRAIN_MODEL=muse-spark-1.3`.
+
+The Meta calls follow Meta's docs but have not run against the live API yet: check them
+first with `MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
+scene, a few cents).
 
 ## Tests
 

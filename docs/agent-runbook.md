@@ -39,7 +39,7 @@ The runner needs these in its environment:
 | `POPSMOSIS_API_KEY` | the popsmosis agent's `sk_pop_…` key from step 2. Not an Inkmory key: see below |
 | `POPSMOSIS_API_URL` | where the popsmosis API is: the `popsmosis-api` service's public URL, the same value as its `API_BASE_URL`. The skill file's shell commands and the studio read it. |
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
-| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`: Meta's models write and check each lesson, Muse Image paints its art and SAM 3.1 finds the structures in it |
+| `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`: Meta's models write and check each lesson, Muse Image paints its art and SAM 3.1 finds the structures in it. README, [Choosing the models](../README.md#choosing-the-models), has this and the next three with every value they take |
 | `MODEL_API_KEY` | with `BRAIN_PROVIDER=meta`: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
 | `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson. A Claude model with `BRAIN_PROVIDER=claude` (default `claude-opus-5-5`), a Muse model with `meta` (default `muse-wonder-1.0`; `muse-spark-1.3` to vet changes for about a quarter of the price). Never a Contributor model (`-contributor`) here: Meta may train on what it is sent, and the routine sends learners' requests |
 | `STUDIO_BRAIN_EFFORT` | optional, with `BRAIN_PROVIDER=claude`: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
