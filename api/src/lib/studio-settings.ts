@@ -7,6 +7,9 @@
  * `brain`: the brain that writes and fact-checks a topic no admin sent to a brain of its own (lib/brains.ts), and
  * how hard Claude thinks when it is Claude's (studio/brain.py).
  *
+ * `song`: who sings the song (studio/steps/audio.py): ElevenLabs' Eleven Music, or Lyria 3.5 on the Gemini API.
+ * The narration and the exam question are ElevenLabs' either way.
+ *
  * `art`: who paints the droplet's pictures, by the provider of the brain that wrote the lesson. Whoever paints,
  * SAM 3.1 on Meta's API finds each structure in the picture (studio/steps/locate.py), except in the brain's own
  * SVG, which says where each one is.
@@ -26,6 +29,9 @@ export type ArtSettings = Record<Provider, Painter>;
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
 export type Effort = (typeof EFFORTS)[number];
 export type BrainSettings = { default: Brain; effort: Effort };
+export const SONG_PROVIDERS = ['elevenlabs', 'gemini'] as const;
+export type SongProvider = (typeof SONG_PROVIDERS)[number];
+export type SongSettings = { provider: SongProvider };
 
 // What each brain's provider may paint with, its default first.
 export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
@@ -34,9 +40,11 @@ export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
 };
 export const DEFAULT_ART: ArtSettings = { claude: 'gemini', meta: 'muse' };
 export const DEFAULT_BRAIN: BrainSettings = { default: 'claude', effort: 'high' };
+export const DEFAULT_SONG: SongSettings = { provider: 'elevenlabs' };
 
 const ART_KEY = 'art';
 const BRAIN_KEY = 'brain';
+const SONG_KEY = 'song';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
@@ -62,6 +70,20 @@ export function brainFrom(stored: unknown): BrainSettings {
     if (oneOf(EFFORTS, stored.effort)) brain.effort = stored.effort;
   }
   return brain;
+}
+
+/** The stored song settings over the defaults, as artFrom(). */
+export function songFrom(stored: unknown): SongSettings {
+  return isObject(stored) && oneOf(SONG_PROVIDERS, stored.provider) ? { provider: stored.provider } : { ...DEFAULT_SONG };
+}
+
+/** An admin's change to the song, `{ provider }`, or why it cannot be taken. */
+export function parseSongSettings(value: unknown): { song?: SongSettings; error?: string } {
+  if (!isObject(value)) return { error: 'song must be an object' };
+  const extra = Object.keys(value).find((key) => key !== 'provider');
+  if (extra) return { error: `song takes provider, not ${extra}` };
+  if (!oneOf(SONG_PROVIDERS, value.provider)) return { error: `song.provider must be one of ${SONG_PROVIDERS.join(', ')}` };
+  return { song: { provider: value.provider } };
 }
 
 /** An admin's change to the art, `{ claude?, meta? }`: the painters to set, or why it cannot be taken. */
@@ -98,11 +120,12 @@ export function parseBrainSettings(value: unknown): { brain?: Partial<BrainSetti
 }
 
 export async function readStudioSettings(db: Pick<typeof prisma, 'setting'> = prisma) {
-  const rows = await db.setting.findMany({ where: { key: { in: [ART_KEY, BRAIN_KEY] } } });
+  const rows = await db.setting.findMany({ where: { key: { in: [ART_KEY, BRAIN_KEY, SONG_KEY] } } });
   const row = (key: string) => rows.find((r) => r.key === key);
   const times = rows.map((r) => r.updatedAt.getTime());
   return {
     brain: brainFrom(row(BRAIN_KEY)?.value),
+    song: songFrom(row(SONG_KEY)?.value),
     art: artFrom(row(ART_KEY)?.value),
     updatedAt: times.length ? new Date(Math.max(...times)).toISOString() : null,
   };
@@ -110,18 +133,21 @@ export async function readStudioSettings(db: Pick<typeof prisma, 'setting'> = pr
 
 /** What the studio reads: the settings in force, nothing about when they changed. */
 export async function studioForAgent() {
-  const { brain, art } = await readStudioSettings();
-  return { brain, art };
+  const { brain, song, art } = await readStudioSettings();
+  return { brain, song, art };
 }
 
 /**
  * Apply an admin's change: only the fields it names, merged into what is stored by Postgres itself (jsonb ||), so
- * two admins saving different fields at once both keep their change. Both keys in one transaction, so a change to
- * the brain and the art lands whole or not at all.
+ * two admins saving different fields at once both keep their change. Every key in one transaction, so a change to
+ * the brain, the song and the art lands whole or not at all.
  */
-export async function writeStudioSettings(change: { brain?: Partial<BrainSettings>; art?: Partial<ArtSettings> }) {
+export async function writeStudioSettings(change: {
+  brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>;
+}) {
   const writes = [
     ...(change.brain ? [[BRAIN_KEY, change.brain] as const] : []),
+    ...(change.song ? [[SONG_KEY, change.song] as const] : []),
     ...(change.art ? [[ART_KEY, change.art] as const] : []),
   ].map(([key, value]) => prisma.$executeRaw`
     INSERT INTO settings (key, value, "updatedAt") VALUES (${key}, ${JSON.stringify(value)}::jsonb, now())

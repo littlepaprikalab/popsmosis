@@ -604,3 +604,19 @@ def test_a_job_from_before_the_brain_was_kept_takes_the_one_its_lesson_was_writt
     assert videos.videos("q1", api=api)[0] == "DONE"
     assert operator_run.job_brain(meta_job.job) == "muse-spark"
     assert len(meta_job.muse.painted) == 3
+
+
+def test_a_song_lyria_sings_needs_the_gemini_key_before_anything_is_claimed(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "k")
+    job = posted()
+    operator_run.keep_brain(job, "claude")
+    jobs.keep_studio_settings(job, {"art": {"claude": "svg"}, "song": {"provider": "gemini"}})
+    api = VideoApi()
+    result, step, reason = videos.videos("q1", api=api)
+    assert (result, step) == ("STOPPED", "videos")
+    assert reason == ("the studio's settings are wrong: the song needs GEMINI_API_KEY: Lyria sings it "
+                      "(an admin can pick ElevenLabs on /admin/studio)")
+    assert claims(api) == [] and setup.ran == []
+    monkeypatch.setenv("GEMINI_API_KEY", "k")
+    assert videos.videos("q1", api=api)[0] == "DONE"

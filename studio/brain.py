@@ -72,9 +72,9 @@ CHOICES = {
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
 # With none set: the API's defaults too (api/src/lib/studio-settings.ts).
 DEFAULT_BRAIN, DEFAULT_EFFORT = "claude", "high"
-# What picked the brain before /admin/studio did. Still set, they stop `run`, `videos` and `recover` until they are
-# removed (retired_problem()), so a brain or painter never changes without the admin seeing why.
-RETIRED_VARS = ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT")
+# What picked the brain and the singer before /admin/studio did. Still set, they stop `run`, `videos` and `recover`
+# until they are removed (retired_problem()), so nothing changes without the admin seeing why.
+RETIRED_VARS = ("BRAIN_PROVIDER", "STUDIO_BRAIN_MODEL", "STUDIO_BRAIN_EFFORT", "SONG_PROVIDER")
 
 # Where the studio finds its Anthropic key, first match wins. In a Claude Code cloud
 # environment a variable named ANTHROPIC_API_KEY never reached the session (the name is
@@ -212,7 +212,8 @@ def retired_problem() -> str | None:
         return None
     them = "it" if len(left) == 1 else "them"
     return (f"{', '.join(left)} {'is' if len(left) == 1 else 'are'} still set, but the studio no longer reads {them}: "
-            f"the brain is set on /admin/studio now. Set it there, then remove {them} from the environment")
+            f"the brain and the song are set on /admin/studio now. Set them there, then remove {them} from the "
+            "environment")
 
 
 def choice_for_model(model: str | None) -> str | None:

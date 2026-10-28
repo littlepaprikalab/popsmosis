@@ -117,7 +117,7 @@ The other jobs:
 |---|---|
 | Diagrams | Gemini 3.1 Flash Image (`gemini-3.1-flash-image`) with `claude`, Muse Image (`muse-image-1.0`) with `meta`, by default; or brain-drawn SVG with `claude` (`/admin/studio`; step 3) |
 | Structure masks | SAM 3.1 (`sam-3.1`) on the painted art, with a helper box as the fallback; the SVG art's own groups |
-| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API with `SONG_PROVIDER=gemini` |
+| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API, picked on `/admin/studio` |
 | Narration | ElevenLabs text-to-speech with timestamps |
 | Word timing (song) | Demucs (vocals) + Meta's MMS forced aligner, both open source, run locally |
 | Timeline | Code |
@@ -308,7 +308,7 @@ against the live API.
   studio's code makes this call, only after the fact-check passes. Section durations come
   from the line count and the styles' "<n> bpm" tag (two bars per line: 4.8 s at 100
   bpm, 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
-- **Or the song from Lyria** (`SONG_PROVIDER=gemini`): `POST
+- **Or the song from Lyria** (picked on `/admin/studio`): `POST
   https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent` with
   one text prompt: the style tags (the same tempo tag), the length, the planned structure
   as timestamp ranges (`[0:09 - 0:13] Chorus`) and the lyrics under section tags, to sing
@@ -517,10 +517,9 @@ The routine runs the studio in its own container, so there is no worker to host.
 takes some setup in the routine's environment:
 
 - **Environment variables:** `POPSMOSIS_API_KEY` and `POPSMOSIS_API_URL` (as today),
-  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `SONG_PROVIDER` (with
-  `GEMINI_API_KEY` for `gemini` and for Gemini 3.1 Flash Image), and `MODEL_API_KEY` for a
-  Muse brain, Muse Image and SAM 3.1; the brain and the painters are chosen on
-  `/admin/studio`, not here. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
+  `POPSMOSIS_ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `GEMINI_API_KEY` (for Lyria and
+  Gemini 3.1 Flash Image), and `MODEL_API_KEY` for a Muse brain, Muse Image and SAM 3.1; the
+  brain, the singer and the painters are chosen on `/admin/studio`, not here. For Inkmory (section 11): `INKMORY_ENABLED`, `INKMORY_API_URL`,
   `INKMORY_OPERATOR_API_KEY`, and `INKMORY_PLANNER_API_KEY` once the planner is adopted.
 - **Setup:** the repository's session hook (`.claude/hooks/session-start.sh`) installs
   `studio/requirements.txt` (PyTorch for CPU, torchaudio, demucs, skia-python, anthropic,
@@ -669,7 +668,7 @@ account.
 - **Later:** when someone asks for a topic that already has a droplet, offer that one
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs
-  publicly, and Google's terms for Lyria's when `SONG_PROVIDER=gemini` (they carry a
+  publicly, and Google's terms for Lyria's when Lyria sings (they carry a
   SynthID watermark). Keep the bitrate modest (flat diagrams compress well) to hold down
   Supabase egress. Done: the videos are encoded with `-movflags +faststart`, so one starts
   playing before it has downloaded.

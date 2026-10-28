@@ -66,7 +66,9 @@ def test_the_environment_no_longer_picks_the_brain(monkeypatch):
     assert (brain.provider(), request["model"], request["output_config"]) == ("claude", "claude-opus-5-5", {"effort": "high"})
     assert brain.retired_problem() == (
         "BRAIN_PROVIDER, STUDIO_BRAIN_MODEL, STUDIO_BRAIN_EFFORT are still set, but the studio no longer reads them: "
-        "the brain is set on /admin/studio now. Set it there, then remove them from the environment")
+        "the brain and the song are set on /admin/studio now. Set them there, then remove them from the environment")
+    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    assert brain.retired_problem().startswith("BRAIN_PROVIDER, STUDIO_BRAIN_MODEL, STUDIO_BRAIN_EFFORT, SONG_PROVIDER are")
     for name in brain.RETIRED_VARS:
         monkeypatch.delenv(name)
     assert brain.retired_problem() is None
@@ -320,6 +322,12 @@ def test_the_studio_settings_agree_with_the_api():
     default = re.search(r"DEFAULT_BRAIN: BrainSettings = \{ default: '([\w-]+)', effort: '(\w+)' \}", source)
     assert default.groups() == (brain.DEFAULT_BRAIN, brain.DEFAULT_EFFORT)
     assert ts_list(re.search(r"EFFORTS = \[(.*?)\] as const", source).group(1)) == brain.EFFORTS
+
+    from studio.steps import audio
+
+    assert ts_list(re.search(r"SONG_PROVIDERS = \[(.*?)\] as const", source).group(1)) == audio.SONG_PROVIDERS
+    song = re.search(r"DEFAULT_SONG: SongSettings = \{ provider: '(\w+)' \}", source).group(1)
+    assert song == audio.song_provider(Path("/nonexistent-job"))  # the studio's own default, with no settings
 
 
 # --- who paints the art, by the brain and the admin's setting -------------------------------

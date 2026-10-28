@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { api, ArtSettings, BrainSettings, Effort, Painter, StudioSettings } from '@/lib/api';
+import { api, ArtSettings, BrainSettings, Effort, Painter, SongProvider, SongSettings, StudioSettings } from '@/lib/api';
 import { BRAIN_MODELS, type Brain } from '@/lib/brains';
 import { useAuth } from '@/lib/auth';
 import PageContainer from '@/components/PageContainer';
@@ -33,6 +33,13 @@ const BRAIN_NOTES: Record<Brain, string> = {
   'muse-spark': '$1.25 / $4.25 per million tokens, on the Meta key (MODEL_API_KEY): about a quarter of Wonder’s price.',
 };
 
+// Who sings the song (studio/steps/audio.py). The narration and the exam question are ElevenLabs' either way.
+const SINGERS: Record<SongProvider, { label: string; note: string }> = {
+  elevenlabs: { label: 'ElevenLabs Eleven Music', note: 'Sings each section to its planned length, so the words line up with the video closely. In ElevenLabs credits, on the ElevenLabs key (ELEVENLABS_API_KEY) the narration uses anyway.' },
+  gemini: { label: 'Gemini Lyria 3.5', note: '$0.08 a song, on the Gemini key (GEMINI_API_KEY). Sings the whole song from one prompt and keeps to the planned timing only roughly; the studio finds each line in it.' },
+};
+const singerOf = (provider: string) => SINGERS[provider as SongProvider] ?? { label: provider, note: '' };
+
 const EFFORT_NOTE = 'How hard Claude thinks when it writes and checks a lesson; thinking is billed as output. Muse ignores it.';
 
 /**
@@ -63,7 +70,7 @@ export default function AdminStudioPage() {
     if (me?.role === 'ADMIN') load(); else setLoading(false);
   }, [authLoading, me, load]);
 
-  const save = async (what: string, change: { brain?: Partial<BrainSettings>; art?: Partial<ArtSettings> }, done: string) => {
+  const save = async (what: string, change: { brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings> }, done: string) => {
     if (saving) return;
     setSaving(what);
     try {
@@ -83,6 +90,10 @@ export default function AdminStudioPage() {
   const pickBrain = (brain: Brain) => {
     if (settings?.brain.default === brain) return;
     save('brain', { brain: { default: brain } }, `${brainOf(brain).label} writes the next topics sent on Default.`);
+  };
+  const pickSinger = (provider: SongProvider) => {
+    if (settings?.song.provider === provider) return;
+    save('song', { song: { provider } }, `${singerOf(provider).label} sings from the next droplet's videos.`);
   };
   const pickEffort = (effort: Effort) => {
     if (settings?.brain.effort === effort) return;
@@ -112,7 +123,7 @@ export default function AdminStudioPage() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">STUDIO</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          The brain that writes each lesson and who paints its pictures. The teacher reads this as it starts each topic
+          The brain that writes each lesson, who sings its song and who paints its pictures. The teacher reads this as it starts each topic
           and each droplet&rsquo;s videos, so a change applies from the next run. Its machine holds only the API keys.
         </p>
         <p className="text-[10px] uppercase tracking-wider mt-2" style={{ color: 'var(--text-muted)' }} data-testid="studio-updated">
@@ -153,6 +164,22 @@ export default function AdminStudioPage() {
               })}
             </div>
             <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-muted)' }}>{EFFORT_NOTE} Default: {settings.defaults.brain.effort}.</p>
+          </div>
+        </section>
+
+        <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+          data-testid="song">
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Song</h3>
+          <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+            Who sings each droplet&rsquo;s song, whatever the brain. The narration and the exam question are ElevenLabs&rsquo;
+            either way. A droplet whose song another singer made has it made again the next time its videos run.
+          </p>
+          <div className="space-y-2" role="radiogroup" aria-label="Who sings the song">
+            {settings.choices.song.provider.map((provider) => (
+              <Choice key={provider} on={settings.song.provider === provider} disabled={saving !== null}
+                label={singerOf(provider).label} note={singerOf(provider).note}
+                isDefault={settings.defaults.song.provider === provider} onClick={() => pickSinger(provider)} />
+            ))}
           </div>
         </section>
 

@@ -58,11 +58,15 @@ d('studio settings', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({
       brain: { default: 'claude', effort: 'high' },
+      song: { provider: 'elevenlabs' },
       art: { claude: 'gemini', meta: 'muse' },
       updatedAt: null,
-      defaults: { brain: { default: 'claude', effort: 'high' }, art: { claude: 'gemini', meta: 'muse' } },
+      defaults: {
+        brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+      },
       choices: {
         brain: { default: ['claude', 'muse-wonder', 'muse-spark'], effort: ['low', 'medium', 'high', 'xhigh', 'max'] },
+        song: { provider: ['elevenlabs', 'gemini'] },
         art: { claude: ['gemini', 'muse', 'svg'], meta: ['muse', 'gemini'] },
       },
     });
@@ -71,7 +75,9 @@ d('studio settings', () => {
   it('lets the teacher read them with its agent key, and only admins change them', async () => {
     const asTeacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
     expect(asTeacher.statusCode).toBe(200);
-    expect(asTeacher.json()).toEqual({ brain: { default: 'claude', effort: 'high' }, art: { claude: 'gemini', meta: 'muse' } });
+    expect(asTeacher.json()).toEqual({
+      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+    });
     expect((await app.inject({ method: 'PUT', url: '/api/studio/settings', headers: asAgent, payload: { art: { claude: 'muse' } } })).statusCode).toBe(401);
     expect((await get(learnerCookie)).statusCode).toBe(403);
     expect((await put(learnerCookie, { art: { claude: 'muse' } })).statusCode).toBe(403);
@@ -105,6 +111,13 @@ d('studio settings', () => {
     expect((await get(adminCookie)).json().art).toEqual({ claude: 'muse', meta: 'gemini' });
   });
 
+  it('keeps who sings the song, and refuses a provider it does not have', async () => {
+    expect((await put(adminCookie, { song: { provider: 'gemini' } })).json().song).toEqual({ provider: 'gemini' });
+    expect((await put(adminCookie, { song: { provider: 'suno' } })).statusCode).toBe(400);
+    const teacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
+    expect(teacher.json().song).toEqual({ provider: 'gemini' });
+  });
+
   it('keeps both of two changes saved at the same moment', async () => {
     const saves = await Promise.all([
       put(adminCookie, { art: { claude: 'muse' } }),
@@ -128,16 +141,17 @@ d('studio settings', () => {
     const pending = await prisma.question.create({ data: { userId, content: 'ATP synthesis' } });
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
     const brain = { default: 'claude', effort: 'high' };
-    expect((await claim()).json().studio).toEqual({ brain, art: { claude: 'gemini', meta: 'muse' } });
+    const song = { provider: 'elevenlabs' };
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' } });
     await put(adminCookie, { art: { claude: 'svg' } });
-    expect((await claim()).json().studio).toEqual({ brain, art: { claude: 'svg', meta: 'muse' } });
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' } });
 
     const answered = await prisma.question.create({ data: { userId, content: 'Osmosis', status: 'ANSWERED' } });
     const answer = await prisma.answer.create({
       data: { questionId: answered.id, agentId, content: 'A lesson.', bundle: { topic: 'osmosis' }, factcheck: { status: 'passed' } },
     });
     const videos = await app.inject({ method: 'POST', url: `/api/answers/${answer.id}/video/claim`, headers: asAgent, payload: {} });
-    expect(videos.json().studio).toEqual({ brain, art: { claude: 'svg', meta: 'muse' } });
+    expect(videos.json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' } });
   });
 
   it('never shows a learner the studio settings on their own topics', async () => {

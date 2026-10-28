@@ -121,11 +121,11 @@ python -m studio recover                 # take a render that died with its mach
 ```
 
 `videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
-the timeline, render and upload. `SONG_PROVIDER` picks who sings the song: `elevenlabs`
-(the default, Eleven Music, with `ELEVENLABS_API_KEY`) or `gemini` (Lyria 3.5 on the Gemini
-API, with `GEMINI_API_KEY`; `GEMINI_SONG_MODEL` picks another Lyria model). The narration
-is ElevenLabs either way. Switching it makes a job's song again on its next run, and only
-the song. `run` claims the videos as soon as it posts the lesson,
+the timeline, render and upload. Who sings the song is picked on the Studio page
+([Choosing the models](#choosing-the-models)): ElevenLabs' Eleven Music (the default, with
+`ELEVENLABS_API_KEY`) or Lyria 3.5 on the Gemini API (with `GEMINI_API_KEY`;
+`GEMINI_SONG_MODEL` picks another Lyria model). The narration is ElevenLabs either way.
+Switching it makes a job's song again on its next run, and only the song. `run` claims the videos as soon as it posts the lesson,
 and `videos` renews the claim before every step, so a render whose machine dies is handed
 to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=off` makes
 text-only droplets.
@@ -176,18 +176,19 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 | `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
 
 Everything else is chosen by an admin on **STUDIO** in the nav (`/admin/studio`), kept in the
-database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, and who
-paints each brain's pictures. The studio reads them from the API, with its agent key, before
+database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, who sings
+the song, and who paints each brain's pictures. The studio reads them from the API, with its agent key, before
 it claims a topic and from every claim after, so a change applies from the next run with no
-change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT`,
-which used to pick the brain, are no longer read: while one is still set, `run`, `videos` and
-`recover` stop with `the studio's settings are wrong` and say to set the brain on the page and
-remove it, so a brain never changes without anyone seeing why.
+change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `STUDIO_BRAIN_EFFORT` and
+`SONG_PROVIDER`, which used to pick these, are no longer read: while one is still set, `run`,
+`videos` and `recover` stop with `the studio's settings are wrong` and say to set it on the
+page and remove it, so nothing changes without anyone seeing why.
 
 | Setting | Choices | Default |
 |---|---|---|
 | Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
+| Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 

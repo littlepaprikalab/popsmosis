@@ -8,7 +8,8 @@
     audio/frq.mp3                 character timings the TTS returned (step 6 turns them
     audio/frq.chars.json          into words without an aligner)
 
-SONG_PROVIDER picks who makes the song: elevenlabs (the default) or gemini. Eleven Music
+Who makes the song is an admin's setting on /admin/studio, as the claim said (the job's
+settings.json, song_provider()): elevenlabs (the default) or gemini. Eleven Music
 makes each section a chunk of the length asked for, so step 6 looks for each section's
 lines where it was planned. Lyria takes the whole song as one prompt and keeps to the
 planned times only roughly, so its plan says the sections are not pinned and step 6 looks
@@ -16,8 +17,8 @@ for its lines across the whole song. The narration and the exam question are alw
 ElevenLabs text-to-speech, whose character timings step 6 turns into words.
 
 Every call costs credits, so a file that is already there is never asked for again,
-unless the bundle's lines have changed since it was made, or for the song, SONG_PROVIDER
-since (its .json says what it was made from and by whom). To redo one by hand, delete its
+unless the bundle's lines have changed since it was made, or for the song, who sings it
+(its .json says what it was made from and by whom). To redo one by hand, delete its
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
 the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
 Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model.
@@ -101,9 +102,10 @@ def plan_path(kind: str) -> str:
 def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     todo = [kind for kind in media.TIMED if not _current(job, bundle, kind)]
-    provider = song_provider()
+    provider = song_provider(job)
     if "song" in todo and provider not in SONG_PROVIDERS:
-        raise media.StepFailed(f"SONG_PROVIDER must be {' or '.join(SONG_PROVIDERS)}, not {provider!r}")
+        raise media.StepFailed(f"the song's provider {provider!r} is not one this studio has "
+                               f"({', '.join(SONG_PROVIDERS)}): update the studio")
     _check_keys(todo, provider)  # before anything is spent: the song is paid for even if the narration then fails
     made = []
     for kind in todo:
@@ -134,15 +136,16 @@ def _current(job: Path, bundle: Bundle, kind: str) -> bool:
         made_from = json.loads((job / plan_path(kind)).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False  # step 6 needs what it was made from, so it is made again
-    if kind == "song" and made_from.get("provider", "elevenlabs") != song_provider():
-        return False  # SONG_PROVIDER was switched since: the one now chosen makes it again
+    if kind == "song" and made_from.get("provider", "elevenlabs") != song_provider(job):
+        return False  # who sings was switched since: the one now chosen makes it again
     wanted = song_lines(bundle) if kind == "song" else speech_lines(bundle, kind)
     return [[i, t] for i, t in made_from.get("source", [])] == [[i, t] for i, t in wanted]
 
 
-def song_provider() -> str:
-    """Who makes the song: SONG_PROVIDER, elevenlabs when it is not set."""
-    return os.environ.get("SONG_PROVIDER", "").strip().lower() or "elevenlabs"
+def song_provider(job: Path) -> str:
+    """Who makes the song: the admin's setting on /admin/studio as the job's last claim said, else elevenlabs."""
+    song = jobs.studio_settings(job).get("song")
+    return (song.get("provider") if isinstance(song, dict) else None) or "elevenlabs"
 
 
 def _check_keys(todo: list[str], provider: str) -> None:

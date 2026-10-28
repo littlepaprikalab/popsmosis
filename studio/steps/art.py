@@ -9,7 +9,7 @@
 A painted picture is checked by the helper, and the locate step then finds the structures in it
 with SAM 3.1 (studio/steps/locate.py), whoever painted it.
 
-Switching makes the art again on the next run, as SONG_PROVIDER does the song.
+Switching makes the art again on the next run, as switching who sings does the song.
 
 The SVG art. One brain call per scene draws it (studio/prompts/art.md), every structure in one group
 marked with its name. Code checks the drawing (studio/svg.py); if anything is wrong it

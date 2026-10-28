@@ -65,11 +65,16 @@ class FakeGemini(FakeEleven):
         return [r for r in self.requests if "generativelanguage.googleapis.com" in r[0]]
 
 
+def sing(job, provider):
+    """Who sings the song, as an admin sets it on /admin/studio and the claim keeps it with the job."""
+    jobs.keep_studio_settings(job, {**jobs.studio_settings(job), "song": {"provider": provider}})
+
+
 @pytest.fixture
 def job(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    for name in ("ELEVENLABS_VOICE_ID", "SONG_PROVIDER", "GEMINI_SONG_MODEL", audio.ELEVENLABS_PRICE_VAR):
+    for name in ("ELEVENLABS_VOICE_ID", "GEMINI_SONG_MODEL", audio.ELEVENLABS_PRICE_VAR):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(audio, "duration", lambda path: 30.0)
     monkeypatch.setattr(audio, "sleep", lambda seconds: None)
@@ -229,13 +234,13 @@ def test_speech_too_long_for_one_call_fails_before_spending_anything(job, monkey
     assert not any("text-to-speech" in url for url in fake.urls())
 
 
-# --- the song from Lyria on the Gemini API (SONG_PROVIDER=gemini) ---------------------------------
+# --- the song from Lyria on the Gemini API (set to gemini on /admin/studio) -------------------------
 
 
 def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     summary = audio.run(job)
     assert "song (gemini)" in summary
     (url, headers, body), = fake.gemini()
@@ -267,13 +272,13 @@ def test_switching_the_provider_makes_only_the_song_again(job, monkeypatch):
     audio.run(job)
     assert len(fake.requests) == 3 and json.loads((job / audio.plan_path("song")).read_text())["provider"] == "elevenlabs"
 
-    monkeypatch.setenv("SONG_PROVIDER", "Gemini ")
+    sing(job, "gemini")
     assert not audio.is_done(job)
     audio.run(job)
     assert len(fake.requests) == 4 and len(fake.gemini()) == 1  # the speech was kept
     assert "nothing" in audio.run(job) and len(fake.requests) == 4
 
-    monkeypatch.setenv("SONG_PROVIDER", "elevenlabs")
+    sing(job, "elevenlabs")
     audio.run(job)
     assert len(fake.requests) == 5 and "/v1/music" in fake.requests[-1][0]
 
@@ -285,14 +290,14 @@ def test_a_song_made_before_there_was_a_choice_counts_as_elevenlabs(job, monkeyp
     del plan["provider"], plan["sections_pinned"]
     jobs.write(job / audio.plan_path("song"), plan)
     assert audio.is_done(job)
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     assert not audio.is_done(job)
 
 
 def test_the_lyria_model_can_be_changed(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     monkeypatch.setenv("GEMINI_SONG_MODEL", "lyria-3-clip-preview")
     audio.run(job)
     assert fake.gemini()[0][0].endswith("/models/lyria-3-clip-preview:generateContent")
@@ -309,7 +314,7 @@ def test_the_lyria_model_can_be_changed(job, monkeypatch):
 ])
 def test_a_gemini_refusal_or_block_fails_the_step_and_keeps_nothing(job, monkeypatch, fake, reason):
     monkeypatch.setattr(audio, "send", fake)
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     with pytest.raises(media.StepFailed, match=reason):
         audio.run(job)
     assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
@@ -319,7 +324,7 @@ def test_a_gemini_refusal_or_block_fails_the_step_and_keeps_nothing(job, monkeyp
 def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     monkeypatch.delenv("GEMINI_API_KEY")
     with pytest.raises(media.StepFailed, match="^GEMINI_API_KEY is not set"):
         audio.run(job)
@@ -335,8 +340,8 @@ def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monke
 def test_an_unknown_provider_fails_before_any_call(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
-    monkeypatch.setenv("SONG_PROVIDER", "suno")
-    with pytest.raises(media.StepFailed, match="SONG_PROVIDER must be elevenlabs or gemini, not 'suno'"):
+    sing(job, "suno")
+    with pytest.raises(media.StepFailed, match="the song's provider 'suno' is not one this studio has .elevenlabs, gemini.: update the studio"):
         audio.run(job)
     assert fake.requests == []
 
@@ -368,7 +373,7 @@ def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, m
         assert abs(DURATION_OF(song) - 6.0) > 0.15  # as sent, its length reads wrong (3% here)
     monkeypatch.setattr(audio, "as_mp3", AS_MP3)
     monkeypatch.setattr(audio, "send", FakeGemini(song=song, mime_type=mime_type))
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     audio.run(job)
     assert _probe(job / "audio/song.mp3") == ("mp3", "192000")
     assert abs(DURATION(job / "audio/song.mp3") - 6.0) < 0.1  # the MP3's own padding, a few hundredths
@@ -379,7 +384,7 @@ def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, m
 def test_a_song_ffmpeg_cannot_read_fails_the_step_and_keeps_nothing(job, monkeypatch):
     monkeypatch.setattr(audio, "as_mp3", AS_MP3)
     monkeypatch.setattr(audio, "send", FakeGemini(song=b"not audio at all", mime_type="audio/mpeg"))
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     with pytest.raises(media.StepFailed, match="cannot keep Gemini's song .audio/mpeg. as an MP3"):
         audio.run(job)
     assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
@@ -398,7 +403,7 @@ def DURATION_OF(data):
 def test_a_gemini_quota_error_waits_as_long_as_it_asks(job, monkeypatch):
     fake, waits = FakeGemini(), []
     monkeypatch.setattr(audio, "sleep", waits.append)
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     quota = {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "Quota exceeded", "details": [
         {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "33s"}]}}
 
@@ -452,7 +457,7 @@ def test_a_price_that_is_not_one_leaves_the_credits_alone(job, monkeypatch, valu
 
 def test_a_lyria_song_is_logged_at_its_models_price(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeGemini())
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     audio.run(job)
     song = _logged(job)[0]
     assert (song["label"], song["model"], song["cost_usd"]) == ("song", "lyria-3.5", 0.08)
@@ -474,7 +479,7 @@ def test_a_credit_count_that_is_not_one_is_not_kept(header):
 
 def test_a_lyria_answer_with_no_song_is_not_logged_as_one(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeGemini(answer={"promptFeedback": {"blockReason": "OTHER"}}))
-    monkeypatch.setenv("SONG_PROVIDER", "gemini")
+    sing(job, "gemini")
     with pytest.raises(media.StepFailed, match="blocked"):
         audio.run(job)
     assert not (job / "calls.jsonl").exists()

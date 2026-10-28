@@ -78,8 +78,11 @@ def unavailable(job: Path | None = None, studio: dict | None = None) -> str | No
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
-    art = (jobs.studio_settings(job) if job else studio or {}).get("art")
-    problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(art)
+    settings = jobs.studio_settings(job) if job else studio or {}
+    problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(settings.get("art"))
+    song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
+    if not problem and song.get("provider") == "gemini" and not os.environ.get("GEMINI_API_KEY"):
+        problem = ("the song needs GEMINI_API_KEY: Lyria sings it (an admin can pick ElevenLabs on /admin/studio)")
     if problem:
         return f"the studio's settings are wrong: {problem}"
     return None

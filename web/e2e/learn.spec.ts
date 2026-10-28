@@ -416,7 +416,8 @@ test.describe('studio settings', () => {
   test('an admin picks who paints each brain\'s pictures, and the teacher\'s next claim carries it', async ({ page, context, request }) => {
     // From the defaults, whatever an earlier run left.
     await request.put(apiUrl('/api/studio/settings'), {
-      headers: asAda(), data: { brain: { default: 'claude', effort: 'high' }, art: { claude: 'gemini', meta: 'muse' } },
+      headers: asAda(),
+      data: { brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' } },
     });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
@@ -436,7 +437,9 @@ test.describe('studio settings', () => {
     const text = `E2E ${Date.now()}: studio settings`;
     const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
-    expect((await claimed.json()).studio).toEqual({ brain: { default: 'claude', effort: 'high' }, art: { claude: 'muse', meta: 'muse' } });
+    expect((await claimed.json()).studio).toEqual({
+      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' },
+    });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
   });
@@ -460,6 +463,19 @@ test.describe('studio settings', () => {
     await page.getByTestId('brain-picker').getByRole('radio', { name: 'Default' }).click();
     await expect(page.getByTestId('brain-note')).toContainText('Now: Muse Spark 1.3.');
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
+  });
+
+  test('an admin picks who sings the song, and the teacher reads it with its key', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const song = page.getByTestId('song');
+    await expect(song.getByRole('radio', { name: /ElevenLabs Eleven Music/ })).toHaveAttribute('aria-checked', 'true');
+    await song.getByRole('radio', { name: /Gemini Lyria 3.5/ }).click();
+    await expect(song.getByRole('radio', { name: /Gemini Lyria 3.5/ })).toHaveAttribute('aria-checked', 'true');
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).song).toEqual({ provider: 'gemini' });
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
   });
 
   test('is for admins only', async ({ page, context }) => {

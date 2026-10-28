@@ -43,21 +43,21 @@ The runner needs these in its environment:
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
-| `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless `SONG_PROVIDER` is `gemini` (the audio step). Its calls bill to that ElevenLabs account |
+| `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless Lyria sings it (the audio step). Its calls bill to that ElevenLabs account |
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
-| `SONG_PROVIDER` | optional: who sings the song, `elevenlabs` (the default) or `gemini` (Lyria 3.5 on the Gemini API) |
-| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria with `SONG_PROVIDER=gemini`: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
-| `GEMINI_SONG_MODEL` | optional: the Lyria model, with `SONG_PROVIDER=gemini`. Default `lyria-3.5` |
+| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria when it sings: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
+| `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
 
-The brain and the painters are not set here. Which brain writes the lessons, Claude's effort
-and who paints each brain's pictures are set by an admin on **STUDIO** in the web app
+The brain, the singer and the painters are not set here. Which brain writes the lessons,
+Claude's effort, who sings the song and who paints each brain's pictures are set by an admin
+on **STUDIO** in the web app
 (`/admin/studio`), and the studio reads them from the API: README, [Choosing the
-models](../README.md#choosing-the-models). `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL` and
-`STUDIO_BRAIN_EFFORT` are no longer read: while one is still set, each run stops with `the
-studio's settings are wrong` and says to set the brain there and remove them, so the brain
-never changes without you seeing why. Give the environment the key of every brain and
+models](../README.md#choosing-the-models). `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`,
+`STUDIO_BRAIN_EFFORT` and `SONG_PROVIDER` are no longer read: while one is still set, each run
+stops with `the studio's settings are wrong` and says to set it there and remove it, so
+nothing changes without you seeing why. Give the environment the key of every brain and
 painter picked there: a default brain or painter whose key is missing stops each run the
 same way, and a topic an admin sent to a brain whose key is missing is given up with that
 reason.

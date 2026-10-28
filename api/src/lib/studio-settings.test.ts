@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { artFrom, brainFrom, parseArt, parseBrainSettings, DEFAULT_ART, DEFAULT_BRAIN, ART_CHOICES } from './studio-settings.js';
+import {
+  artFrom, brainFrom, songFrom, parseArt, parseBrainSettings, parseSongSettings, DEFAULT_ART, DEFAULT_BRAIN, DEFAULT_SONG,
+  ART_CHOICES,
+} from './studio-settings.js';
 
 describe('artFrom', () => {
   it('is the defaults with nothing stored: Gemini paints for Claude, Muse Image for Muse', () => {
@@ -59,5 +62,20 @@ describe('parseBrainSettings', () => {
     expect(parseBrainSettings({ model: 'x' }).error).toBe('brain takes default and effort, not model');
     expect(parseBrainSettings({}).error).toBe('brain names nothing to change');
     expect(parseBrainSettings('claude').error).toBe('brain must be an object');
+  });
+});
+
+describe('songFrom and parseSongSettings', () => {
+  it('is ElevenLabs with nothing stored, and takes Lyria when stored', () => {
+    expect(DEFAULT_SONG).toEqual({ provider: 'elevenlabs' });
+    for (const stored of [undefined, null, 'gemini', { provider: 'suno' }]) expect(songFrom(stored)).toEqual(DEFAULT_SONG);
+    expect(songFrom({ provider: 'gemini' })).toEqual({ provider: 'gemini' });
+  });
+
+  it('takes a provider it has, and refuses anything else', () => {
+    expect(parseSongSettings({ provider: 'gemini' })).toEqual({ song: { provider: 'gemini' } });
+    expect(parseSongSettings({ provider: 'suno' }).error).toBe('song.provider must be one of elevenlabs, gemini');
+    expect(parseSongSettings({ provider: 'gemini', model: 'lyria-3.5' }).error).toBe('song takes provider, not model');
+    expect(parseSongSettings('gemini').error).toBe('song must be an object');
   });
 });
