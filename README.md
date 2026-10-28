@@ -162,9 +162,20 @@ python -m studio step upload <job-id>    # videos and posters public, the rest p
 
 `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` set the brain's model and effort (defaults
 `claude-opus-5-5` and `high`; effort is one of `low`, `medium`, `high`, `xhigh`, `max`).
-They apply with `BRAIN_PROVIDER=claude` only. To try a prompt change cheaply, run the brain on
-Haiku first (about 2 cents a topic instead of 70):
-`STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
+To try a prompt change cheaply, run the brain on Haiku first (about 2 cents a topic
+instead of 70): `STUDIO_BRAIN_MODEL=claude-haiku-5-5 python -m studio plan ... --brief`.
+
+With `BRAIN_PROVIDER=meta`, `STUDIO_BRAIN_MODEL` takes a Muse model instead (default
+`muse-wonder-1.0`), and `STUDIO_BRAIN_EFFORT` does nothing. To vet a change cheaply:
+
+| `STUDIO_BRAIN_MODEL` | Price per million tokens (in / out) | Use it for |
+|---|---|---|
+| `muse-wonder-1.0` (the default) | $4.00 / $20.00 | the real lessons |
+| `muse-spark-1.3` | $1.25 / $4.25 | vetting, on any topic |
+| `muse-spark-1.3-contributor` | $0.10 / $0.20 | test topics only: Meta may train on everything it is sent, learners' requests included |
+
+A model from the other provider (a Claude model with `meta`, a Muse one with `claude`)
+fails the call before anything is sent.
 
 `BRAIN_PROVIDER=meta` moves the studio onto Meta's models, all on `MODEL_API_KEY`: Muse
 Wonder writes and fact-checks the lesson, Muse Spark is the helper, Muse Image paints each

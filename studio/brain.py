@@ -6,10 +6,12 @@ BRAIN_PROVIDER picks the models behind the two thinking roles (docs/PLAN.md, sec
     brain    claude-opus-5-5, effort high      muse-wonder-1.0
     helper   claude-haiku-5-5, effort low      muse-spark-1.3
 
-On the Claude provider, STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT set the brain's
-model and effort; unset or empty, each keeps the default above. The meta provider
-ignores both, and the helper has no such setting. BRAIN_PROVIDER also picks who makes
-the art: the brain draws SVG on claude, Muse Image paints it on meta (studio/steps/art.py).
+STUDIO_BRAIN_MODEL sets the brain's model on either provider: a Claude model on claude, a
+Muse model on meta (muse-spark-1.3 vets a change for about a quarter of Muse Wonder's
+price). STUDIO_BRAIN_EFFORT sets its effort, on claude only. Unset or empty, each keeps
+the default above, and the helper has no such setting. BRAIN_PROVIDER also picks who
+makes the art: the brain draws SVG on claude, Muse Image paints it on meta
+(studio/steps/art.py).
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -62,15 +64,24 @@ CLAUDE_KEY_VARS = ("POPSMOSIS_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY")
 # fallback, so only the brain asks for one, and not when it runs on Haiku.
 FALLBACK_BETA = "server-side-fallback-2026-07-01"
 
-# USD per million tokens (input, output). Opus 5 and Opus 4.8 are fallback targets.
-# Muse Spark's price is not known yet, so its calls report no cost.
+# USD per million tokens (input, output). Opus 5 and Opus 4.8 are fallback targets. A Muse
+# Spark Contributor model is Muse Spark at a discount for letting Meta train on all it is
+# sent (dev.meta.ai/docs/pricing-rate-limits).
 PRICES = {
     "claude-opus-5-5": (4.00, 20.00),
     "claude-opus-5": (5.00, 25.00),
     "claude-opus-4-8": (5.00, 25.00),
     "claude-haiku-5-5": (0.10, 0.50),
     "muse-wonder-1.0": (4.00, 20.00),
+    "muse-spark-1.3": (1.25, 4.25),
+    "muse-spark-1.2": (1.25, 4.25),
+    "muse-spark-1.1": (1.25, 4.25),
+    "muse-spark-1.3-contributor": (0.10, 0.20),
+    "muse-spark-1.2-contributor": (0.10, 0.20),
 }
+# What each provider's model ids start with, so a STUDIO_BRAIN_MODEL left over from the
+# other provider fails at once, before anything is sent.
+MODEL_PREFIXES = {"claude": "claude-", "meta": "muse-"}
 
 MEDIA_TYPES = {
     ".png": "image/png",
@@ -265,9 +276,19 @@ def claude_key() -> str | None:
     return next((os.environ[name] for name in CLAUDE_KEY_VARS if os.environ.get(name)), None)
 
 
+def brain_model(provider_name: str) -> str:
+    """The brain's model on a provider: STUDIO_BRAIN_MODEL, else that provider's default."""
+    defaults = {"claude": CLAUDE, "meta": META}[provider_name]
+    model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or defaults["brain"]["model"]
+    if not model.startswith(MODEL_PREFIXES[provider_name]):
+        raise BrainError(f"STUDIO_BRAIN_MODEL={model} is not a {'Claude' if provider_name == 'claude' else 'Muse'} "
+                         f"model, and BRAIN_PROVIDER is {provider_name}: change one or unset STUDIO_BRAIN_MODEL")
+    return model
+
+
 def claude_brain() -> tuple[str, str]:
     """The brain's model and effort: STUDIO_BRAIN_MODEL and STUDIO_BRAIN_EFFORT, else the defaults."""
-    model = os.environ.get("STUDIO_BRAIN_MODEL", "").strip() or CLAUDE["brain"]["model"]
+    model = brain_model("claude")
     effort = os.environ.get("STUDIO_BRAIN_EFFORT", "").strip() or CLAUDE["brain"]["effort"]
     if effort not in EFFORTS:
         raise BrainError(f"STUDIO_BRAIN_EFFORT must be one of {', '.join(EFFORTS)}, not {effort!r}")
@@ -379,8 +400,8 @@ def claude_texts(message) -> list[str]:
 
 
 # --- Meta ---------------------------------------------------------------------
-# Untested until MODEL_API_KEY exists. Muse takes OpenAI-style chat completions;
-# whether it accepts an effort setting is not known yet, so none is sent.
+# Untested until MODEL_API_KEY exists. Muse takes OpenAI-style chat completions. No
+# effort is sent: STUDIO_BRAIN_EFFORT is Claude's, and Muse keeps its own default.
 
 
 def meta_request(
@@ -394,7 +415,8 @@ def meta_request(
     content.append({"type": "text", "text": prompt})
     messages = [{"role": "system", "content": system}] if system else []
     messages.append({"role": "user", "content": content})
-    request = {"model": META[role]["model"], "messages": messages}
+    model = brain_model("meta") if role == "brain" else META[role]["model"]
+    request = {"model": model, "messages": messages}
     if schema is not None:
         request["response_format"] = {
             "type": "json_schema",
@@ -420,8 +442,11 @@ def _ask_meta(role, prompt, schema, images, system, label) -> list[str]:
     usage = response.usage
     input_tokens = usage.prompt_tokens if usage else 0
     output_tokens = usage.completion_tokens if usage else 0
-    _record(Call(label, role, model, input_tokens, output_tokens, cost(model, input_tokens, output_tokens),
-                      round(seconds, 1), choice.finish_reason or ""))
+    # Priced as answered, or as asked if Meta names the model some other way (a dated id).
+    price = cost(model, input_tokens, output_tokens)
+    if price is None:
+        price = cost(request["model"], input_tokens, output_tokens)
+    _record(Call(label, role, model, input_tokens, output_tokens, price, round(seconds, 1), choice.finish_reason or ""))
     if choice.message.refusal or choice.finish_reason == "content_filter":
         raise Refused(model, explanation=choice.message.refusal)
     if choice.finish_reason == "length":

@@ -101,9 +101,11 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` | Muse Wonder (`muse-wonder-1.0`) |
 | **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
-With `BRAIN_PROVIDER=claude`, `STUDIO_BRAIN_MODEL` and `STUDIO_BRAIN_EFFORT` change the
-brain's model and effort; unset, they are the defaults above. The helper and the Meta
-models are set in `studio/brain.py`.
+`STUDIO_BRAIN_MODEL` changes the brain's model on either provider: a Claude model with
+`claude`, a Muse model with `meta` (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to
+vet a change; its Contributor version is cheaper still, but Meta may train on what it is
+sent, so test topics only). `STUDIO_BRAIN_EFFORT` changes the effort with `claude`.
+Unset, they are the defaults above. The helper's models are set in `studio/brain.py`.
 
 The other jobs:
 

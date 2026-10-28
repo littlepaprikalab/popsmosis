@@ -41,8 +41,8 @@ The runner needs these in its environment:
 | `POPSMOSIS_ANTHROPIC_API_KEY` | the studio's brain. Its calls bill per token to this Anthropic API account, not to the plan running the routine ([PLAN.md](PLAN.md), section 4) |
 | `BRAIN_PROVIDER` | optional: `claude` (the default) or `meta`: Meta's models write and check each lesson, Muse Image paints its art and SAM 3.1 finds the structures in it |
 | `MODEL_API_KEY` | with `BRAIN_PROVIDER=meta`: the Meta API key, from dev.meta.ai. Every Meta model the studio calls bills to it |
-| `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson, with `BRAIN_PROVIDER=claude`. Default `claude-opus-5-5` |
-| `STUDIO_BRAIN_EFFORT` | optional: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
+| `STUDIO_BRAIN_MODEL` | optional: the model that writes and fact-checks each lesson. A Claude model with `BRAIN_PROVIDER=claude` (default `claude-opus-5-5`), a Muse model with `meta` (default `muse-wonder-1.0`; `muse-spark-1.3` to vet changes for about a quarter of the price). Never a Contributor model (`-contributor`) here: Meta may train on what it is sent, and the routine sends learners' requests |
+| `STUDIO_BRAIN_EFFORT` | optional, with `BRAIN_PROVIDER=claude`: that model's effort, one of `low`, `medium`, `high`, `xhigh`, `max`. Default `high` |
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |

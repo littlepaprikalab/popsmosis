@@ -4,12 +4,19 @@
     POPSMOSIS_ANTHROPIC_API_KEY=... python -m pytest studio/tests/test_live.py -s
 """
 
+import os
+
 import pytest
 
 from studio import brain
 from studio.steps.factcheck import Line, ask_checker
 
-pytestmark = pytest.mark.skipif(not brain.claude_key(), reason="needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY")
+MODEL = os.environ.get("STUDIO_BRAIN_MODEL", "").strip()
+pytestmark = [
+    pytest.mark.skipif(not brain.claude_key(), reason="needs POPSMOSIS_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY"),
+    # Set to a Muse model to vet the Meta brain: these are the Claude brain's checks.
+    pytest.mark.skipif(bool(MODEL) and not MODEL.startswith("claude-"), reason=f"STUDIO_BRAIN_MODEL={MODEL} is not Claude"),
+]
 
 PHOTOSYNTHESIS = {
     "f1": "In the light reactions, photosystem II uses light energy to split water, releasing oxygen, "
