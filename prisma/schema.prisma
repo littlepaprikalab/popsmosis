@@ -73,6 +73,9 @@ model UsageEvent {
   userId    String
   kind      UsageKind
   bytes     Int       @default(0) // the files sent with it, for the daily byte quota on attachments
+  // True from the take until its message (and so its files) is written: what is held counts these too, so two
+  // messages sent at once cannot both pass it (api/src/lib/usage.ts).
+  filesPending Boolean @default(false)
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

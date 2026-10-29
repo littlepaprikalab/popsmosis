@@ -16,7 +16,7 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
-import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed } from '../lib/usage.js';
+import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed, filesWritten } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -173,6 +173,9 @@ export default async function questionRoutes(app: FastifyInstance) {
     // Wake the teacher now rather than at its next scheduled firing. Not
     // awaited: the asker's 201 does not wait on Anthropic's API.
     notifyRoutine(FIRE_REASON_QUESTION, request.log);
+    if (attachments.length > 0) {
+      await filesWritten(usageId).catch((err) => request.log.warn({ err }, 'usage files not marked written'));
+    }
     pruneUsage(prisma).catch((pruneErr) => request.log.warn({ err: pruneErr }, 'usage prune failed'));
     reply.status(201);
     return serializeQuestion(question, request.viewer!.id);

@@ -7,7 +7,7 @@ import { replyInclude, serializeReply, serializeReplyForAgent, serializeAnswer, 
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
 import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { followUpContext } from '../lib/droplet.js';
-import { takeReply, giveBack, replyAllowed, filesAllowed } from '../lib/usage.js';
+import { takeReply, giveBack, replyAllowed, filesAllowed, filesWritten } from '../lib/usage.js';
 
 export const REPLY_MAX_LENGTH = 2000;
 
@@ -170,6 +170,9 @@ export default async function replyRoutes(app: FastifyInstance) {
       await giveBack(usageId).catch(() => {}); // never written, so it used nothing
       if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
       throw err;
+    }
+    if (attachments.length > 0) {
+      await filesWritten(usageId).catch((err) => request.log.warn({ err }, 'usage files not marked written'));
     }
     // A human reply always puts this thread on the reply queue, so wake the
     // teacher. The agent branch above deliberately does not: an agent reply

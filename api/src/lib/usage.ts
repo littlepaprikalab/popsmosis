@@ -27,6 +27,9 @@ import prisma, { runTransaction, type TxClient } from './prisma.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 const MB = 1024 * 1024;
+// How long a take's files count as on their way when nothing says they arrived (a crash between the take and the
+// write): a body is read and parsed before the take, so only the insert itself (seconds for 8 MB) falls in between.
+const IN_FLIGHT_MS = 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const KEEP_MS = 2 * DAY_MS;
 
@@ -63,20 +66,28 @@ async function bytesRefusal(db: Db, userId: string, bytes: number, env: NodeJS.P
     }
   }
   if (held > 0) {
-    // The files of this learner's requests and follow-ups that popsmosis still holds, each found by its index.
+    // The files of this learner's requests and follow-ups that popsmosis still holds, each found by its index; and the
+    // bytes of each take whose message is not written yet (filesPending, cleared by filesWritten()): the write follows
+    // the take, outside the lock, so two messages sent at once would otherwise each miss the other's files. A take
+    // left pending by a crash stops counting after IN_FLIGHT_MS.
     const days = attachmentRetentionDays(env);
     const fresh = days > 0 ? new Date(Date.now() - days * DAY_MS) : new Date(0);
-    const [row] = await db.$queryRaw<{ total: bigint | number | null }[]>`
+    const inFlight = new Date(Date.now() - IN_FLIGHT_MS);
+    const [row] = await db.$queryRaw<{ total: bigint | number | null; pending: bigint | number | null }[]>`
       SELECT
         COALESCE((SELECT SUM(a.size) FROM attachments a JOIN questions q ON q.id = a."questionId"
                   WHERE q."userId" = ${userId} AND a."purgedAt" IS NULL AND a."createdAt" >= ${fresh}), 0)
       + COALESCE((SELECT SUM(a.size) FROM attachments a JOIN replies r ON r.id = a."replyId"
-                  WHERE r."userId" = ${userId} AND a."purgedAt" IS NULL AND a."createdAt" >= ${fresh}), 0) AS total
+                  WHERE r."userId" = ${userId} AND a."purgedAt" IS NULL AND a."createdAt" >= ${fresh}), 0)
+      AS total,
+      COALESCE((SELECT SUM(bytes) FROM usage_events
+                WHERE "userId" = ${userId} AND "filesPending" AND "createdAt" >= ${inFlight}), 0) AS pending
     `;
     const kept = Number(row?.total ?? 0);
-    if (kept + bytes > held * MB) {
+    const pending = Number(row?.pending ?? 0);
+    if (kept + pending + bytes > held * MB) {
       return new AppError('RATE_LIMITED',
-        `Popsmosis keeps up to ${held} MB of your files at a time and is keeping ${mb(kept)}. `
+        `Popsmosis keeps up to ${held} MB of your files at a time and is keeping ${mb(kept + pending)}. `
         + (days > 0 ? `Each file goes ${days} days after you send it; ` : '')
         + 'deleting an old request lets its files go now. Or send this without files.',
         { retryable: false });
@@ -143,7 +154,7 @@ export async function takeTopic(userId: string, bytes = 0, env: NodeJS.ProcessEn
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${userId}`}))`;
     const refusal = (await topicRefusal(tx, userId, env)) ?? (await bytesRefusal(tx, userId, bytes, env));
     if (refusal) throw refusal;
-    return (await tx.usageEvent.create({ data: { userId, kind: 'TOPIC', bytes }, select: { id: true } })).id;
+    return (await tx.usageEvent.create({ data: { userId, kind: 'TOPIC', bytes, filesPending: bytes > 0 }, select: { id: true } })).id;
   });
 }
 
@@ -153,8 +164,14 @@ export async function takeReply(userId: string, bytes = 0, env: NodeJS.ProcessEn
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${userId}`}))`;
     const refusal = (await replyRefusal(tx, userId, env)) ?? (await bytesRefusal(tx, userId, bytes, env));
     if (refusal) throw refusal;
-    return (await tx.usageEvent.create({ data: { userId, kind: 'REPLY', bytes }, select: { id: true } })).id;
+    return (await tx.usageEvent.create({ data: { userId, kind: 'REPLY', bytes, filesPending: bytes > 0 }, select: { id: true } })).id;
   });
+}
+
+/** The take's message is written, its files with it: they count as held from the files now. Best-effort: a take left
+ * pending stops counting after IN_FLIGHT_MS. */
+export async function filesWritten(usageId: string): Promise<void> {
+  await prisma.usageEvent.updateMany({ where: { id: usageId, filesPending: true }, data: { filesPending: false } });
 }
 
 /** Give a take back: the request it was for was never written. Best-effort; a row left behind only costs one place. */

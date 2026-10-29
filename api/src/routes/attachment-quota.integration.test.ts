@@ -101,6 +101,20 @@ d('attachment quota and retention', () => {
     await prisma.agent.delete({ where: { id: agent.id } }).catch(() => {});
   });
 
+  it('counts what a learner holds across two messages sent at once', async () => {
+    process.env.ATTACHMENT_MB_PER_USER_PER_DAY = '0';
+    process.env.ATTACHMENT_MB_HELD_PER_USER = '1';
+    const { takeTopic } = await import('./../lib/usage.js');
+    // Two takes before either message's files are written: the second sees the first's bytes on its way.
+    const results = await Promise.allSettled([takeTopic(userId, Math.floor(0.6 * MB)), takeTopic(userId, Math.floor(0.6 * MB))]);
+    expect(results.map((r) => r.status).sort()).toEqual(['fulfilled', 'rejected']);
+    // Through the route: two messages at once, either alone fits beside the 0.6 MB on its way, both together do not.
+    const both = await Promise.all([ask('one', [file(0.3 * MB)]), ask('two', [file(0.3 * MB)])]);
+    expect(both.map((r) => r.statusCode).sort()).toEqual([201, 429]);
+    // Once a message is written its take is no longer pending: its files count once, from the files.
+    expect(await prisma.usageEvent.count({ where: { userId, filesPending: true } })).toBe(1); // the bare take above
+  });
+
   it('refuses a body too large for what is left before reading it', async () => {
     process.env.ATTACHMENT_MB_PER_USER_PER_DAY = '1';
     expect((await ask('fills the day', [file(0.9 * MB)])).statusCode).toBe(201);
