@@ -69,7 +69,8 @@ def user_prompt(request: Request, rotation: str = "") -> str:
     elif rotation:
         parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. Use it for a high "
                      "school or older audience, as the starting point for `positive_styles` (its tempo is the "
-                     "tempo); a younger audience gets the younger style below.")
+                     "tempo); a younger audience gets the younger style below, and a grave topic (a genocide, "
+                     "slavery) the grave topic's own slow style.")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")
     if request.study_guide:

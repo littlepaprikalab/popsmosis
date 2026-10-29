@@ -304,6 +304,19 @@ explanation to the narration, and every word of it is easy to hear.
     all sound alike: build `positive_styles` from it, keeping its genre, voices and tempo. With
     none, choose a vocals-first pop style a teenager plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A
     faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
+  - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
+    death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities). A
+    dance beat under it sounds like a celebration. Write a slow, respectful song instead:
+    80 to 90 bpm, a solemn, reflective mood, a sparse piano ballad with one solo cello or
+    violin, verses in a slow, plain rap or sung, and a sung chorus that is memorable without
+    being euphoric. Keep it sparse, so the words stay clear: never a full or epic orchestra
+    (brass, timpani, a swelling choir), which sounds like a war film's victory. An
+    instrument from a culture only when it belongs to the people the topic is about (an
+    erhu for the Nanjing Massacre); borrowed for anyone else's tragedy it sounds like a
+    stereotype. No dance beat, drops, claps or party sounds; "dance beat", "euphoric",
+    "upbeat", "party" and "epic orchestral" go in `negative_styles`. The rest of history
+    keeps the rotation: a revolution's causes or a war's alliances are not grave in this
+    sense.
   - Only when there is neither, for high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
     pop-punk and their neighbours. These styles work well, slowest first; write in their
     spirit rather than copying one:

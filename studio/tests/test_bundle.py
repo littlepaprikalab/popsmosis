@@ -45,6 +45,17 @@ def test_the_facts_say_the_misconception_is_a_common_one():
     assert "and that the mistake is a common one" in prompt
 
 
+def test_a_grave_topic_sets_its_own_slow_style_over_the_rotation():
+    # On Oct 29 the Holocaust droplet kept the rotation's 112 bpm and its four-on-the-floor beat, since the rotation's
+    # tempo was the tempo.
+    prompt = bundle_step.user_prompt(Request(topic="Why the Holocaust happened"), "dance-pop with a four-on-the-floor "
+                                     "beat, 112 bpm")
+    assert "a grave topic (a genocide, slavery) the grave topic's own slow style" in prompt
+    rules = " ".join(bundle_step.PROMPT.split())
+    assert "A grave topic sets its own style**, whatever the rotation says" in rules
+    assert "80 to 90 bpm" in rules and "No dance beat" in rules and "never a full or epic orchestra" in rules
+
+
 def test_the_prompt_carries_the_request_and_study_guide():
     prompt = bundle_step.user_prompt(Request(topic="ATP", request="for my exam", study_guide="ATP is made.",
                                              images=["/notes.png"]))
