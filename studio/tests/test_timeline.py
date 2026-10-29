@@ -449,3 +449,15 @@ def test_the_lesson_shows_the_core_idea_from_the_sentence_that_says_it():
     assert step._says_core_idea(Bundle.model_validate(data)) == len(data["narration"]) - 1  # none says it: the last
     data["narration"][0]["text"] = "So remember: " + data["core_idea"]
     assert step._says_core_idea(Bundle.model_validate(data)) == 0
+
+
+def test_a_second_flow_moves_on_the_same_beat_in_its_own_colour(job):
+    data = bundle_data()
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺",
+           also=[{"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "O₂"}])
+    write_bundle(job, data)
+    beat = lines(make(job)["song"])["v2-1"]
+    assert [(f.path, f.label) for f in beat.particles] == [(["Cytochrome b6f", "Thylakoid"], "H⁺"),
+                                                           (["Cytochrome b6f", "Thylakoid"], "O₂")]
+    assert beat.particles[0].color != beat.particles[1].color
+    assert {r.label for r in beat.routes} >= {"H⁺", "O₂"}

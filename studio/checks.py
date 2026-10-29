@@ -20,6 +20,7 @@ from studio.jobs import write
 from studio.schemas import BPM_TAG, Bundle, CheckReport, Problem
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
+ALSO_MAX = 1  # second flows on one line: two things moving at once is as much as a learner can follow
 SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
 SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
 
@@ -84,7 +85,7 @@ def _check_stages(data: dict, problems: list) -> None:
 def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
     """Each block names a structure, as its name, that particles end at: they pile up there in the video.
     Any other is left out."""
-    ends = {canon.get(fold(d["particles"][-1])) for d in data["direction"] if d["particles"]}
+    ends = {canon.get(fold(f["particles"][-1])) for d in data["direction"] for f in flows_of(d)}
     kept = []
     for block in data["blocks"]:
         name = canon.get(fold(block["structure"]))
@@ -229,11 +230,11 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
 
     for line in bundle.lyrics:
         d = directions.get(line.id)
-        if d and d.scene not in still and not d.particles and (not run or directions[run[0]].scene == d.scene):
+        if d and d.scene not in still and not d.flows() and (not run or directions[run[0]].scene == d.scene):
             run.append(line.id)
         else:
             close_run()
-            if d and d.scene not in still and not d.particles:
+            if d and d.scene not in still and not d.flows():
                 run.append(line.id)
     close_run()
 
@@ -247,7 +248,7 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     for later in choruses[1:]:
         for first_id, later_id in zip(reversed(choruses[0]), reversed(later)):
             a, b = directions.get(first_id), directions.get(later_id)
-            if a and b and (a.particles, a.carries) != (b.particles, b.carries):
+            if a and b and a.flows() != b.flows():
                 problems.append(Problem(line_id=later_id, rule="motion", repaired=False,
                                         detail=f"chorus line {later_id} moves differently from {first_id}"))
     return problems
@@ -279,7 +280,7 @@ def _check_conversions(data: dict, canon: dict[str, str], problems: list) -> Non
 def _check_spins(data: dict, canon: dict[str, str], problems: list) -> None:
     """Each spin names a structure, as its name, that particles flow into or through: they are what turn it
     in the video. Any other is left out."""
-    driven = {canon.get(fold(stop)) for d in data["direction"] for stop in d["particles"][1:]}
+    driven = {canon.get(fold(stop)) for d in data["direction"] for f in flows_of(d) for stop in f["particles"][1:]}
     kept = []
     for spin in data["spins"]:
         name = canon.get(fold(spin["structure"]))
@@ -298,8 +299,8 @@ def _check_builds_up(data: dict, canon: dict[str, str], problems: list) -> None:
     kept = []
     for build in data["builds_up"]:
         carries, region = notation(build["carries"]), canon.get(fold(build["region"]))
-        ends = {canon.get(fold(d["particles"][k])) for d in data["direction"]
-                if d["particles"] and notation(d["carries"]) == carries for k in (0, -1)}
+        ends = {canon.get(fold(f["particles"][k])) for d in data["direction"] for f in flows_of(d)
+                if notation(f["carries"]) == carries for k in (0, -1)}
         why = ("is not marked" if not carries or len(carries) > MARKER_MAX else
                "names no structure" if not region else
                f"is not where any particles carrying {carries} start or end" if region not in ends else "")
@@ -327,6 +328,12 @@ def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
 
 
 # Curly quotes and long dashes read as plain ones, so "Broca’s area" is "Broca's area".
+def flows_of(direction: dict) -> list[dict]:
+    """Everything moving on a line, as data: the main flow first (Direction.flows)."""
+    main = [{"particles": direction["particles"], "carries": direction["carries"]}] if direction["particles"] else []
+    return main + [f for f in direction.get("also", []) if f["particles"]]
+
+
 def notation(carries: str) -> str:
     """What the particles carry, as a textbook prints it. The bundle asks for it so ("H⁺", "Ca²⁺");
     plain text is turned into it: a charge at the end is raised, with the digit just before it
@@ -468,3 +475,19 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         problems.append(Problem(line_id=line_id, rule="carries", repaired=True,
                                 detail=f"carries {carries!r} {why}; unmarked"))
         direction["carries"] = ""
+    # A second flow is held to the same: stops the scene draws, a marker that fits. One that keeps fewer than two
+    # stops is left out, and so is any after the first.
+    also = []
+    for flow in direction.get("also", []):
+        stops = [p for p in flow["particles"] if canon.get(fold(p)) in drawn]
+        if len(stops) < 2 or len(also) == ALSO_MAX:
+            why = "names fewer than two structures the scene draws" if len(stops) < 2 else f"is over {ALSO_MAX} more"
+            problems.append(Problem(line_id=line_id, rule="particles", repaired=True,
+                                    detail=f"a second flow {why}; left out"))
+            continue
+        marked = flow["carries"] if len(flow["carries"]) <= MARKER_MAX else ""
+        if marked != flow["carries"]:
+            problems.append(Problem(line_id=line_id, rule="carries", repaired=True,
+                                    detail=f"carries {flow['carries']!r} is over {MARKER_MAX} characters; unmarked"))
+        also.append({"particles": stops, "carries": marked})
+    direction["also"] = also

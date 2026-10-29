@@ -346,3 +346,18 @@ def test_key_lines_are_recorded_when_too_few_or_too_long():
     assert found == ["1 key lines, not 3 to 10", "no key line is placed in the narration, so the lesson video shows none",
                      f'the key line "{" ".join(["word"] * 11)}" runs 11 words, over 10']
     assert checks.key_line_problems(Bundle.model_validate(bundle_data())) == []  # before the why chain
+
+
+def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_kept():
+    def change(data):
+        direction(data, "v1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺", also=[
+            {"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "plastoquinone"},  # kept, unmarked
+            {"particles": ["Thylakoid", "Cytochrome b6f"], "carries": "O₂"}])  # a third thing: left out
+    bundle, found, _ = review(change)
+    line = next(d for d in bundle.direction if d.line_id == "v1-1")
+    assert [(f.particles, f.carries) for f in line.flows()] == [
+        (["Thylakoid", "Cytochrome b6f"], "H⁺"), (["Cytochrome b6f", "Thylakoid"], "")]
+    assert sorted(found) == [("v1-1", "carries", True), ("v1-1", "particles", True)]
+    _, found, _ = review(lambda d: direction(d, "v1-1").update(also=[{"particles": ["Thylakoid", "ATP synthase"],
+                                                                       "carries": "O₂"}]))
+    assert found == [("v1-1", "particles", True)]  # ATP synthase is not on the hook: fewer than two stops

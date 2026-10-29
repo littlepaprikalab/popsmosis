@@ -101,9 +101,9 @@ def motion_text(carries: str, particles: list[str], blocked: bool = False) -> st
     return f"{carries} travels from " + " to ".join(particles)
 
 
-def _motion(bundle: Bundle, d) -> str:
+def _motion(bundle: Bundle, flow) -> str:
     blockers = {b.structure for b in bundle.blocks}
-    return motion_text(d.carries, d.particles, d.particles[-1] in blockers)
+    return motion_text(flow.carries, flow.particles, flow.particles[-1] in blockers)
 
 
 def build_up_text(carries: str, region: str) -> str:
@@ -113,7 +113,7 @@ def build_up_text(carries: str, region: str) -> str:
 def spin_text(bundle: Bundle, structure: str) -> str:
     """What the video shows turning, and what drives it: "ATP synthase spins as H⁺ flows through it", or for
     unmarked particles (an analogy's water) "Water wheel spins as particles flow into it from Reservoir"."""
-    flows = [d for d in bundle.direction if structure in d.particles[1:]]
+    flows = [f for d in bundle.direction for f in d.flows() if structure in f.particles[1:]]
     marked = sorted({d.carries for d in flows if d.carries})
     if marked:
         return f"{structure} spins as {' and '.join(marked)} flows through it"
@@ -131,8 +131,10 @@ def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> st
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving, when they are marked with what they carry, and what the
     video shows piling up and turning."""
-    return [Line(MOTION, d.line_id, _motion(bundle, d))
-            for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
+    return [Line(MOTION, d.line_id, _motion(bundle, d)) for d in bundle.direction
+            if d.carries and len(d.particles) >= 2] + [
+        Line(MOTION, f"{d.line_id}+{k}", _motion(bundle, f)) for d in bundle.direction
+        for k, f in enumerate(d.also, 1) if f.carries and len(f.particles) >= 2] + [
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
         Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
         Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
@@ -252,6 +254,9 @@ def check_bundle(
             if (d["carries"] and len(d["particles"]) >= 2
                     and motion_text(d["carries"], d["particles"], blocked) not in passed_motions):
                 d["particles"], d["carries"] = [], ""
+            stoppers = {b["structure"] for b in data["blocks"]}
+            d["also"] = [f for f in d["also"] if not f["carries"] or len(f["particles"]) < 2
+                         or motion_text(f["carries"], f["particles"], f["particles"][-1] in stoppers) in passed_motions]
         data["builds_up"] = [b for b in data["builds_up"]
                              if build_up_text(b["carries"], b["region"]) in passed_motions]
         data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]

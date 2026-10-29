@@ -688,3 +688,27 @@ def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
     last = max(i for i, b in enumerate(beats) if b.scene == "overview")
     renderer.frame(beats[last].t1 - 0.01)
     assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
+
+
+def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    path = ["Cytochrome b6f", "Thylakoid"]
+    flows = [Particles(path=path, color="#F2C230", label="H⁺", trail=True),
+             Particles(path=list(reversed(path)), color="#7FD1FF", label="H₂O", trail=True)]
+    beats = list(timeline.beats)
+    beats[i] = beats[i].model_copy(update={"particles": flows})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert renderer._lanes[("overview", tuple(path), "H⁺")] == 0
+    assert renderer._lanes[("overview", tuple(reversed(path)), "H₂O")] == 1  # the same stops, the other way: beside
+    first = renderer._path_points("overview", path)
+    beside = renderer._path_points("overview", path, lane=1)
+    assert all(math.dist(a, b) == pytest.approx(renderer_module.LANE_GAP) for a, b in zip(first, beside))
+    b6f = located(job, "overview", "Cytochrome b6f")
+    assert renderer._is_space("overview", located(job, "overview", "Thylakoid"))
+    x, y = first[0]  # leaving a part for a space: from its edge, where the arrow starts, not from inside it
+    box = b6f.box
+    on_edge = min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1))
+    assert on_edge == pytest.approx(0, abs=1e-6) and box.x0 <= x <= box.x1 and box.y0 <= y <= box.y1
+    x, y = renderer._path_points("overview", list(reversed(path)))[-1]  # and arriving from a space, at its edge too
+    assert min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1)) == pytest.approx(0, abs=1e-6)

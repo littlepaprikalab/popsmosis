@@ -365,11 +365,14 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         spotlight = _shown(direction.spotlight, scene_names, labels) if direction else None
         target = _shown(direction.camera.target, scene_names, labels) if direction else None
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
-        stops = [s for s in (scene_names.canonical(p) for p in (direction.particles if direction else [])) if s]
-        stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
-        label = notation(direction.carries) if direction else ""
-        particles = [Particles(path=stops, color=marker_colour(label), trail=True, label=label,
-                               blocked=stops[-1] in blockers)] if len(stops) >= 2 else []
+        particles = []
+        for flow in direction.flows() if direction else []:  # the main flow, and one moving with it
+            stops = [s for s in (scene_names.canonical(p) for p in flow.particles) if s]
+            stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
+            label = notation(flow.carries)
+            if len(stops) >= 2:
+                particles.append(Particles(path=stops, color=marker_colour(label), trail=True, label=label,
+                                           blocked=stops[-1] in blockers))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
         if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
             target, zoom = None, 1.0

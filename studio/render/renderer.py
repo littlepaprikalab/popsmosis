@@ -34,6 +34,7 @@ REVEAL_S = 0.4  # ghost to full
 LABEL_IN_S = 0.35
 SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
 SPACE_REACH = 55.0  # art pixels: a path's stop in a space sits this far past its neighbour's edge
+LANE_GAP = 46.0  # art pixels between two things travelling the same stops side by side
 SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
 SPOT_S = 0.6
 MOVE_S = 1.8  # a camera move between two stations
@@ -561,6 +562,16 @@ class Renderer:
                 for name, at in now.items():
                     if at == beat.t0 and before.get(name, math.inf) <= beat.t0:
                         now[name] = beat.t0 - max(REVEAL_S, LABEL_IN_S)
+        # Two things travelling the same stops on a scene (H⁺ and O₂ leaving Photosystem II for the lumen) would
+        # run one on top of the other: each after the first gets a lane of its own, beside it.
+        self._lanes: dict[tuple[str, tuple[str, ...], str], int] = {}
+        taken: dict[tuple[str, frozenset], list[str]] = {}
+        for beat in timeline.beats:
+            for flow in beat.particles:
+                labels = taken.setdefault((beat.scene, frozenset(flow.path)), [])
+                if flow.label not in labels:
+                    labels.append(flow.label)
+                self._lanes.setdefault((beat.scene, tuple(flow.path), flow.label), labels.index(flow.label))
         self.keyed = any(beat.key_line for beat in timeline.beats)  # a key band only in a video with key lines
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
@@ -1020,12 +1031,13 @@ class Renderer:
         wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         return wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
 
-    def _path_stops(self, scene_id: str, path: list[str]) -> list[tuple[Point, object]]:
+    def _path_stops(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[Point, object]]:
         """Where particles stop along a path, in art pixels, each with the structure it is in: a structure's label
         point, but a space's point just past the edge of the structure next to it on the path, on the space's side,
         so a flow into the lumen ends just under the complex that pumps it rather than across the picture. A space
         in the middle of a path has two points, one beside the part before it and one beside the part after it,
-        so the flow runs along the space between them instead of cutting across the picture."""
+        so the flow runs along the space between them instead of cutting across the picture. In lane 1 or 2 (a
+        second thing travelling the same stops, _lanes) every point moves aside, so the two run side by side."""
         located = self.locations.scene(scene_id)
         stops = [loc for name in path if (loc := located.get(name)) is not None]
 
@@ -1051,16 +1063,37 @@ class Renderer:
             return [(point, loc) for point, loc, _ in out]
         # A label point is moved a little toward its neighbour, to keep the label's dot in sight; a space's point
         # has no dot, and moving it would pull it back toward the edge it was put past.
-        return [(a if space else q, loc) for (a, loc, space), q in zip(out, stop_points(anchors))]
+        pairs = [(a if space else q, loc) for (a, loc, space), q in zip(out, stop_points(anchors))]
+        if lane:
+            (x0, y0), (x1, y1) = anchors[0], anchors[-1]
+            length = math.hypot(x1 - x0, y1 - y0) or 1.0
+            side = LANE_GAP * (1 if lane % 2 else -1) * ((lane + 1) // 2)
+            nx, ny = -(y1 - y0) / length * side, (x1 - x0) / length * side
+            pairs = [((x + nx, y + ny), loc) for (x, y), loc in pairs]
+        return pairs
 
-    def _path_points(self, scene_id: str, path: list[str]) -> list[Point]:
-        return [point for point, _ in self._path_stops(scene_id, path)]
+    def _path_points(self, scene_id: str, path: list[str], blocked: bool = False, lane: int = 0) -> list[Point]:
+        """Where the particles travel, in art pixels: the path's stops, except that a flow between a part and a
+        space leaves or enters the part at its edge on the space's side, where the arrow does (water is split at
+        Photosystem II's lumen face: an H⁺ set off from the middle of the complex looked to fall through it). A
+        blocked flow still runs into its blocker, where it piles up."""
+        pairs = self._path_stops(scene_id, path, lane)
+        points = [point for point, _ in pairs]
+        if len(pairs) < 2:
+            return points
+        (a, first), (b, second) = pairs[0], pairs[1]
+        if not self._is_space(scene_id, first) and self._is_space(scene_id, second):
+            points[0] = _leave(a, b, first.box)
+        (y, before), (z, last) = pairs[-2], pairs[-1]
+        if not blocked and self._is_space(scene_id, before) and not self._is_space(scene_id, last):
+            points[-1] = _leave(z, y, last.box)
+        return points
 
-    def _bends(self, scene_id: str, path: list[str]) -> list[Point | None]:
+    def _bends(self, scene_id: str, path: list[str], lane: int = 0) -> list[Point | None]:
         """Each leg's bend, in art pixels: a hop from one part to the next (both stops parts, not spaces) curves
         up in a gentle arc, the hand-off a textbook draws; a flow into, out of or through a space runs straight.
         The particles ride the same curve as the arrow."""
-        pairs = self._path_stops(scene_id, path)
+        pairs = self._path_stops(scene_id, path, lane)
         points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
         bends: list[Point | None] = []
         for i, (a, b) in enumerate(zip(points, points[1:])):
@@ -1075,14 +1108,14 @@ class Renderer:
             bends.append((mid[0] + nx * ROUTE_BEND * length, mid[1] + ny * ROUTE_BEND * length))
         return bends
 
-    def _legs(self, scene_id: str, path: list[str]) -> list[tuple[list[Point], bool, int, int, object]]:
+    def _legs(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[list[Point], bool, int, int, object]]:
         """A route's arrows, in art pixels: (the line it draws, ends in a space, its first stop, its last stop, the
         part it passes through or None). A
         leg leaves the edge of the part it starts from and ends at the edge of the part it reaches, curved when it
         is a hop from part to part; a flow through a part from one space to the other is one straight leg."""
-        pairs = self._path_stops(scene_id, path)
+        pairs = self._path_stops(scene_id, path, lane)
         points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
-        bends = self._bends(scene_id, path)
+        bends = self._bends(scene_id, path, lane)
         space = [self._is_space(scene_id, loc) for loc in stops]
         legs, i = [], 0
         while i < len(points) - 1:
@@ -1116,8 +1149,9 @@ class Renderer:
                         routes.append((route.path, route.label, route.color))
             samples, drawn = [], set()
             for path, label, color in routes:
-                pairs = self._path_stops(scene_id, path)
-                for line, _, first, last, _ in self._legs(scene_id, path):
+                lane = self._lanes.get((scene_id, tuple(path), label), 0)
+                pairs = self._path_stops(scene_id, path, lane)
+                for line, _, first, last, _ in self._legs(scene_id, path, lane):
                     hop = (pairs[first][1].name, pairs[last][1].name, label, color)
                     if hop in drawn:
                         continue  # drawn once, by the route that first has it (_routes)
@@ -1143,15 +1177,16 @@ class Renderer:
         badges: list[tuple[Point, str, str, float]] = []
         drawn: set[tuple] = set()  # the hops drawn so far, so a later route never draws one again beside it
         for route in beat.routes:
-            pairs = self._path_stops(beat.scene, route.path)
-            points = [pt for pt, _ in pairs]
+            lane = self._lanes.get((beat.scene, tuple(route.path), route.label), 0)
+            pairs = self._path_stops(beat.scene, route.path, lane)
+            points = self._path_points(beat.scene, route.path, lane=lane)  # where its particles go: it grows behind them
             # The arrow grows behind the lead particle on its first trip, then stays whole.
             set_off = self.plans[self.beat_index(route.since)].flow_in
-            lead, at, done = lead_leg(points, t - set_off, self._bends(beat.scene, route.path))
+            lead, at, done = lead_leg(points, t - set_off, self._bends(beat.scene, route.path, lane))
             if t < set_off:
                 continue
             grown = []
-            for line, into_space, first, last, crossed in self._legs(beat.scene, route.path):
+            for line, into_space, first, last, crossed in self._legs(beat.scene, route.path, lane):
                 hop = (pairs[first][1].name, pairs[last][1].name, route.label, route.color)
                 if hop in drawn:
                     continue  # an earlier route on the scene draws it, from when its own particles passed
@@ -1207,8 +1242,9 @@ class Renderer:
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         for flow in beat.particles:
-            points = self._path_points(beat.scene, flow.path)
-            bends = None if flow.blocked else self._bends(beat.scene, flow.path)
+            lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
+            points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
+            bends = None if flow.blocked else self._bends(beat.scene, flow.path, lane)
             if len(points) < 2:
                 continue
             if flow.blocked:

@@ -427,3 +427,19 @@ def test_a_key_line_that_never_passes_leaves_the_screen_and_the_report_keeps_it(
     assert report.status == "passed"
     assert [k.text for k in checked.key_lines] == ["How does light make ATP?"]
     assert any(c.kind == "keyline" and c.verdict == "UNSUPPORTED" for c in report.lines)
+
+
+def test_a_second_flow_is_its_own_motion_and_one_that_fails_leaves_only_itself():
+    OXYGEN = "O₂ travels from Cytochrome b6f to Thylakoid"
+
+    def change(data):
+        moving(data)
+        next(d for d in data["direction"] if d["line_id"] == "v2-1")["also"] = [
+            {"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "O₂"}]
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == OXYGEN else supported(text))
+    report, checked = check_bundle(bundle(change), "", fake)
+    assert ("motion:v2-1+1", OXYGEN) in [(line["id"], line["text"]) for line in fake.payloads[0]["lines"]]
+    line = next(d for d in checked.direction if d.line_id == "v2-1")
+    assert report.status == "passed" and line.also == [] and (line.particles, line.carries) == (
+        ["Cytochrome b6f", "Thylakoid"], "H⁺")

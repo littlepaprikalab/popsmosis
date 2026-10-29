@@ -113,6 +113,11 @@ class Camera(Strict):
     zoom: float
 
 
+class Flow(Strict):
+    particles: list[str] = Field(description="Structure names they travel between, in order")
+    carries: str = Field(description='What they are, as a textbook prints it ("O₂")')
+
+
 class Direction(Strict):
     line_id: str = Field(description="The id of a lyric line or a narration sentence")
     scene: str
@@ -123,6 +128,15 @@ class Direction(Strict):
                                      '"" for none')
     glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
+    # A second thing moving on the line at the same time, when it names both: what one structure gives off together
+    # (H⁺ and O₂ from Photosystem II), or two ways at once (Na⁺ out, K⁺ in). [] in a bundle written before Oct 29.
+    also: list[Flow] = Field(default_factory=list, description="A second thing moving on this line at the same time, "
+                                                               "when the line names both; [] for none, at most one")
+
+    def flows(self) -> list[Flow]:
+        """Everything moving on the line, the main flow first; a flow with no path is left out."""
+        main = [Flow(particles=self.particles, carries=self.carries)] if self.particles else []
+        return main + [f for f in self.also if f.particles]
 
 
 class BuildUp(Strict):

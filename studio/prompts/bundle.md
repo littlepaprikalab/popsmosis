@@ -481,6 +481,13 @@ order, keyed by `line_id`:
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.
+- `also`: a second thing moving on the same line, when the line names both and they move
+  at the same time: what one structure gives off together ("Protons in the lumen, oxygen
+  out": H⁺ and O₂ each from Photosystem II to the lumen), or two ways at once (the pump's
+  Na⁺ out while its K⁺ comes in). One at most, with its own `particles` and `carries`
+  under the same rules; the video draws each in its own colour, side by side where they
+  share a path. [] on every other line: one thing moving is easier to follow, so add the
+  second only when the line sings or says it.
 - `glow`: a structure that lights up on this line because an outside cause switches it on:
   light excites photosystem II, a signal makes a neuron fire, a hormone reaches its
   receptor. Rare: only the lines where that happens, a handful in a whole lesson, and ""
