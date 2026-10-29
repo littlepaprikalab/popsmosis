@@ -23,8 +23,8 @@ SONG_STYLES = (
     "the chorus, bright and breezy, 110 bpm",
     "Latin pop with a light dembow groove, rapped verses, clear male vocal, plucked guitar, handclaps, catchy sung chorus, "
     "96 bpm",
-    "dance-pop with a four-on-the-floor beat, energetic female vocal, bright plucked synths, handclaps, "
-    "sing-along chorus, 112 bpm",
+    "dance-pop with a four-on-the-floor beat and short rapped verses, energetic female vocal, bright plucked "
+    "synths, handclaps, sing-along chorus, 112 bpm",
 )
 
 

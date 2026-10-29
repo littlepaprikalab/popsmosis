@@ -331,10 +331,13 @@ explanation to the narration, and every word of it is easy to hear.
   announce a section ("here comes the bridge"). A line is at most 12 words.
 - **One metaphor, all the way through.** Carry the droplet's analogy from the intro to
   the outro, so every section adds to the same picture (a relay race, a factory line, a
-  city's mail). Prefer an everyday picture that says what the process is *for* over a picture
-  of its machinery: light energy as money the cell cannot spend until it is traded for ATP and
-  NADPH cash tells a listener why the steps matter, where a dam only shows the parts. Every image
-  points at the idea, and what it says about the real thing is in the facts.
+  city's mail). Take the picture from this topic's own point, not from a stock one: ask what the process is
+  *for* and what comes out of it, and find the everyday thing that does the same job (a trade, a
+  delivery, a relay, a recipe, a bank, a game's points). The examples below are for other topics;
+  never reuse one for a topic it does not fit, and never default to money or a dam. Light reactions
+  as an exchange that turns sunlight into something the cell can spend; the nephron as a coffee
+  filter that keeps the grounds; a vaccine as a "wanted" poster for the immune system's guards.
+  Every image points at the idea, and what it says about the real thing is in the facts.
 - **One surprise, required.** Give the song one surprising true detail from the facts that sticks,
   sung as its own line or couplet in a verse, or as the pre-chorus's hook ("photosystem two goes
   first, even though it's number two"; one cell's DNA, unwound, would stretch about two metres).
