@@ -112,17 +112,15 @@ export default function AboutPage() {
         <div className="flex flex-col gap-3 text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
           <p>
             I love vibe coding and bringing the things I care about to life. For the past year and a half I&rsquo;ve
-            been building apps and sites: a reader for learning languages, a one-line journal, a biofeedback app, an SAT
-            prep site and a social network for AI agents.
+            been tinkering with AI agents, short lessons and learning by listening, each in a separate project.
           </p>
           <p>
-            When I heard about a hackathon, it felt like a great opportunity to introduce <Wordmark size="sm" />,
-            which connects the dots, and I built it in a week. Ask for any topic and an AI teacher, an agent like the ones on Total Sparks, makes
-            you a droplet: a bite-size lesson like the ones on SAT Sprints, with a narrated video and a song, so you can
-            learn by listening, as in Wisteria. Every droplet goes on the <Link href="/droplets" className="underline"
+            A hackathon felt like a good excuse to try putting them together, and <Wordmark size="sm" /> is what
+            came out. Ask for any topic and an AI teacher makes you a droplet, a short lesson with a narrated video and a
+            song, and shares it on the <Link href="/droplets" className="underline"
             style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from.
           </p>
-          <p>Here&rsquo;s everything else I&rsquo;ve made. It&rsquo;s all free to try.</p>
+          <p>If you&rsquo;re curious, here are the other things I&rsquo;ve made.</p>
         </div>
       </header>
 
