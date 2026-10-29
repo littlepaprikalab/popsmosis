@@ -8,6 +8,7 @@ from studio import brain, inkmory, ledger
 from studio import run as operator_run
 from studio.api import Api, ApiError
 from studio.schemas import PlannerRecord
+from studio.steps import audit as audit_step
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 from studio.tests.test_run import QUESTION, FakeApi, FakeBrain
@@ -110,7 +111,7 @@ def run(ask=None, api=None):
 def test_a_beat_reads_the_context_writes_the_record_after_the_run_and_logs_the_cycle_last(ink, jobs_root):
     ask = PlannerBrain()
     assert run(ask) == ("DONE", "post", "lesson posted as answer ans1")
-    assert ask.labels == ["bundle", "factcheck round 1", "planner record"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1", "planner record"]
     # No life story yet, so there is no journal to count: the first is due.
     assert ink.paths() == ["GET /api/agents/me/context", "POST /api/agents/me/journal",
                            "POST /api/agents/me/life-story", "POST /api/agents/me/cycle-log"]
@@ -127,10 +128,12 @@ def test_a_beat_reads_the_context_writes_the_record_after_the_run_and_logs_the_c
     assert facts["job"] == "q1"
     assert facts["topic"] == {"course": "AP Biology", "topic": "the light reactions", "audience": "high school"}
     assert facts["factcheck"]["status"] == "passed" and facts["factcheck"]["corrections"] == []
+    assert facts["audit"] == {"status": "passed", "judged_against": "study guide", "corrected": [], "unsure": []}
     assert facts["life_story"].startswith("due")
     assert [(r["result"], r["last_step"]) for r in facts["runs"]] == [("DONE", "post")]
-    # The persona stays out of the lesson by default, and the fact-check never sees it.
+    # The persona stays out of the lesson by default, and the audit and the fact-check never see it.
     assert ask.asked["bundle"][1] == bundle_step.PROMPT
+    assert ask.asked["fact audit"][1] == audit_step.PROMPT
     assert ask.asked["factcheck round 1"][1] == factcheck_step.PROMPT
     # The learner's words never reach the record call, so never Inkmory.
     assert LEARNERS_WORDS not in prompt + system and LEARNERS_WORDS not in json.dumps(ink.sent)
@@ -145,6 +148,7 @@ def test_with_the_persona_in_the_lesson_it_ends_the_bundle_prompt_and_never_reac
     system = ask.asked["bundle"][1]
     assert system.startswith(bundle_step.PROMPT + inkmory.LESSON_VOICE)
     assert "Name: Boojum" in system and '<journal date="2026-10-27">\nThe fact-check caught my lobe.' in system
+    assert ask.asked["fact audit"][1] == audit_step.PROMPT
     assert ask.asked["factcheck round 1"][1] == factcheck_step.PROMPT
 
 
@@ -161,7 +165,7 @@ def test_no_beat_when_it_is_off_and_the_run_is_the_same(ink, monkeypatch, capsys
             monkeypatch.setenv(name, value)
     ask = PlannerBrain()
     assert run(ask) == ("DONE", "post", "lesson posted as answer ans1")
-    assert ink.sent == [] and ask.labels == ["bundle", "factcheck round 1"]
+    assert ink.sent == [] and ask.labels == ["bundle", "fact audit", "factcheck round 1"]
     assert why in capsys.readouterr().err
 
 
@@ -283,7 +287,7 @@ def test_inkmory_down_costs_the_record_never_the_lesson(ink):
     ink.errors[("GET", "/api/agents/me/context")] = ApiError(0, "UNREACHABLE", "the API did not answer: timed out")
     ask = PlannerBrain()
     assert run(ask) == ("DONE", "post", "lesson posted as answer ans1")
-    assert ask.labels == ["bundle", "factcheck round 1"]  # no record call without the context
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]  # no record call without the context
 
 
 def test_after_inkmory_stops_answering_the_rest_of_the_record_is_skipped(ink, capsys):

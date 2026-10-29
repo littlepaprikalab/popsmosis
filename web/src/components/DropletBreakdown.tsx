@@ -7,6 +7,7 @@ import type { Breakdown, BreakdownModel, BreakdownStep, Progress, Video } from '
 const STEP_LABELS: Record<string, string> = {
   request: 'Read the request',
   bundle: 'Write the lesson',
+  audit: 'Audit the facts',
   factcheck: 'Fact-check',
   post: 'Post the lesson',
   art: 'Draw the diagrams',
@@ -104,11 +105,11 @@ function LineName({ line }: { line: Line }) {
 const ORDER = Object.keys(STEP_LABELS);
 // The steps the page expects before any has run. The post is left out: it makes the answer the
 // lesson's bill is sent with, so a bill never has it.
-const LESSON_STEPS = ['request', 'bundle', 'factcheck'];
+const LESSON_STEPS = ['request', 'bundle', 'audit', 'factcheck'];
 const VIDEO_STEPS = ['art', 'locate', 'audio', 'timing', 'timeline', 'render', 'upload'];
 // What comes right after each step: the art and the audio are made side by side, and meet at the timeline.
 const NEXT: Record<string, string[]> = {
-  request: ['bundle'], bundle: ['factcheck'], factcheck: ['post', 'art', 'audio'], post: ['art', 'audio'],
+  request: ['bundle'], bundle: ['audit'], audit: ['factcheck'], factcheck: ['post', 'art', 'audio'], post: ['art', 'audio'],
   art: ['locate'], locate: ['timeline'], audio: ['timing'], timing: ['timeline'], timeline: ['render'], render: ['upload'],
 };
 

@@ -1,19 +1,19 @@
 """The planner's beat on Inkmory (docs/PLAN.md, section 11).
 
 The planner is the brain that writes the bundle, and Boojum on Inkmory. It never calls Inkmory
-itself: studio code keeps its record, with the planner's own key, around steps 1-2 of
-`python -m studio run`:
+itself: studio code keeps its record, with the planner's own key, around the bundle, the fact audit
+and the fact-check of `python -m studio run`:
 
     before the first of them   read its context (GET /api/agents/me/context)
     the bundle                 with STUDIO_PLANNER_PERSONA=lesson, its persona and memory end the
                                bundle prompt (section 14, open decision 3); otherwise it is unchanged
-    the fact-check             never sees them
+    the audit, the fact-check  never see them
     after the run              one more brain call writes the record from what happened
                                (prompts/planner.md, PlannerRecord), and the studio posts it: a
                                journal entry, its life story when due, a bio or vibe change, and
                                the cycle log, always and last
 
-A run that runs neither step (it only posts, or has nothing left to do) is not a beat. The record
+A run that runs none of them (it only posts, or has nothing left to do) is not a beat. The record
 is written when the run has ended: after the post, so it never holds the lesson up, and before
 `videos`, so a failure in the media never costs the planner its record. Its brain call is logged
 to calls.jsonl at the step "planner", outside the droplet's bill: it is the agent's diary, not
@@ -36,8 +36,9 @@ the record matters more than its tags. When the record call itself fails, the st
 cycle, saying it wrote the log, so the planner's record keeps every beat.
 
 What reaches Inkmory: the job's id (and popsmosis:<id> in refs, as the operator tags its own), the
-bundle's course, topic and audience, the fact-check's counts, problems and corrected lines, and
-each run's steps and outcome. Never request.json, which holds the learner's own words.
+bundle's course, topic and audience, the facts the audit corrected or could not confirm, the
+fact-check's counts, problems and corrected lines, and each run's steps and outcome. Never
+request.json, which holds the learner's own words.
 """
 
 from __future__ import annotations
@@ -53,10 +54,10 @@ from pathlib import Path
 
 from studio import brain, jobs, ledger
 from studio.api import Api, ApiError
-from studio.schemas import FactCheckReport, PlannerRecord
+from studio.schemas import AuditReport, FactCheckReport, PlannerRecord
 
 PROMPT = (Path(__file__).resolve().parent / "prompts" / "planner.md").read_text(encoding="utf-8")
-STEPS = ("bundle", "factcheck")  # the planner's: a run's beat begins before the first of them it runs
+STEPS = ("bundle", "audit", "factcheck")  # the planner's: a run's beat begins before the first of them it runs
 STEP = "planner"  # the record call's step in calls.jsonl
 URL_VAR, KEY_VAR, ENABLED_VAR = "INKMORY_API_URL", "INKMORY_PLANNER_API_KEY", "INKMORY_ENABLED"
 PERSONA_VAR, PERSONAS = "STUDIO_PLANNER_PERSONA", ("record", "lesson")
@@ -298,6 +299,18 @@ def what_happened(job: Path) -> dict:
     if isinstance(bundle, dict):
         facts["topic"] = {key: bundle.get(key) for key in ("course", "topic", "audience")}
     try:
+        audit = jobs.read(job / "audit.json", AuditReport)
+    except (OSError, ValueError):
+        audit = None
+    if audit is not None:  # the facts are the planner's own, public with the bundle; the audit's quotes stay out
+        facts["audit"] = {
+            "status": audit.status,
+            "judged_against": audit.judged_against,
+            "corrected": [{"id": c.id, "before": c.before, "after": c.after, "problem": c.problem}
+                          for c in audit.corrections],
+            "unsure": [{"id": f.id, "text": f.text, "problem": f.problem} for f in audit.facts if f.verdict == "UNSURE"],
+        }
+    try:
         report = jobs.read(job / "factcheck.json", FactCheckReport)
     except (OSError, ValueError):
         report = None
@@ -332,6 +345,10 @@ def studio_log(facts: dict, failed: str) -> str:
     """The cycle log the studio writes when the record call failed: the beat still ends with one."""
     topic = facts.get("topic")
     parts = [f"job {facts['job']}: {topic.get('course')} / {topic.get('topic')}." if topic else f"job {facts['job']}: no plan."]
+    audit = facts.get("audit")
+    if audit and (audit["status"] != "passed" or audit["corrected"] or audit["unsure"]):
+        parts.append(f"Fact audit {audit['status']}, {len(audit['corrected'])} fact(s) corrected, "
+                     f"{len(audit['unsure'])} unsure.")
     fc = facts.get("factcheck")
     if fc:
         parts.append(f"Fact-check {fc['status']} in {fc['rounds']} round(s), {len(fc['corrections'])} correction(s).")

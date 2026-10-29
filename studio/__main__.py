@@ -10,9 +10,9 @@
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio plan --topic "..." --videos  # and then its videos: a whole test round in one command
     python -m studio make <job-id>               # a local job's videos, in `videos`' order, with no API
-    python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
+    python -m studio step factcheck <job-id>     # re-run one step: bundle, check, audit, factcheck
     python -m studio step render <job-id>        # or a media step, once it is built (studio/media.py)
-    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
+    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, audit, fact-check, timing, runs, calls
     python -m studio fallback <job-id>           # the ffmpeg karaoke video, once the song is timed
 
 `run`, `fail`, `summary`, `videos`, `wait` and `recover` are the operator's
@@ -45,12 +45,13 @@ from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
 from studio.run import logged_ask
-from studio.schemas import CheckReport, FactCheckReport, Request, Timing
+from studio.schemas import AuditReport, CheckReport, FactCheckReport, Request, Timing
+from studio.steps import audit as audit_step
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 from studio.steps import timing as timing_step
 
-STEPS = {"bundle": bundle_step.run, "check": checks.run, "factcheck": factcheck_step.run}
+STEPS = {"bundle": bundle_step.run, "check": checks.run, "audit": audit_step.run, "factcheck": factcheck_step.run}
 # STARTED: the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
 EXIT_CODES = {**operator_run.EXIT_CODES, operator_videos.STARTED: 0, operator_videos.RECOVER: 0,
               operator_videos.NONE: 0, operator_videos.RUNNING: 4}
@@ -74,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     waiting.add_argument("question")
     waiting.add_argument("--minutes", type=float, default=operator_videos.WAIT_MINUTES)
     commands.add_parser("recover", help="take one render that died with its machine and rebuild its job here")
-    plan = commands.add_parser("plan", help="start a job: the bundle, then the fact-check")
+    plan = commands.add_parser("plan", help="start a job: the bundle, the fact audit, then the fact-check")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--course", default="")
     plan.add_argument("--request", default="", help="the learner's request in their own words")
@@ -92,7 +93,7 @@ def main(argv: list[str] | None = None) -> int:
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=[*STEPS, *media.MEDIA_STEPS])
     step.add_argument("job")
-    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check, runs and calls")
+    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, audit, fact-check, runs and calls")
     show.add_argument("job")
     fallback = commands.add_parser("fallback", help="make the karaoke fallback video from the art, the song and its timing")
     fallback.add_argument("job")
@@ -167,7 +168,7 @@ def main(argv: list[str] | None = None) -> int:
             operator_run.keep_brain(job, args.brain, args.effort)
         print(f"job {job.name}", file=sys.stderr)
         with brain.chosen(args.brain, args.effort):
-            ok = run_steps(job, ["bundle", "factcheck"])
+            ok = run_steps(job, ["bundle", "audit", "factcheck"])
         if ok and args.videos:
             print_job(job, brief=args.brief)
             result, step, reason = operator_videos.local(job)  # on the job's brain, as `make` is
@@ -201,7 +202,9 @@ def run_steps(job: Path, names: list[str]) -> bool:
         took = time.monotonic() - started
         if isinstance(result, str):
             print(f"{name}: {result}", file=sys.stderr)
-        if isinstance(result, FactCheckReport) and result.status == "failed":
+        if isinstance(result, AuditReport) and result.status == "passed":
+            print(f"{name}: {audit_step.describe(result)}", file=sys.stderr)
+        if isinstance(result, (AuditReport, FactCheckReport)) and result.status == "failed":
             print(f"{name}: failed after {took:.0f}s: {result.reason}", file=sys.stderr)
             return False
         print(f"{name}: done in {took:.0f}s", file=sys.stderr)
@@ -239,6 +242,19 @@ def print_job(job: Path, brief: bool = False) -> None:
               f"{len(left)} for the prompt\n")
         for p in sorted(problems, key=lambda p: p.repaired):
             print(_wrap(f"{'  ' if p.repaired else '! '}{p.line_id:<6} {p.rule:<13} {p.detail}", indent=23))
+    if (job / "audit.json").exists():
+        audit = jobs.read(job / "audit.json", AuditReport)
+        print(f"\n## Fact audit: {audit.status} in {audit.calls} call(s), at the {audit.audience} level\n")
+        if audit.reason:
+            print(_wrap(f"Reason: {audit.reason}") + "\n")
+        for fact in audit.facts:
+            print(_wrap(f"  {fact.id:<4} {fact.verdict or '-':<8} {fact.basis or '-':<17} {fact.problem}", indent=32))
+        if audit.corrections:
+            print()
+            for c in audit.corrections:
+                print(_wrap(f"{c.id}, cited by {', '.join(c.cited_by) or 'no line'}: {c.problem}", indent=2, first=2))
+                print(_wrap(f"- {c.before}", indent=4, first=4))
+                print(_wrap(f"+ {c.after}", indent=4, first=4) + "\n")
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
         said = [line for line in report.lines if line.kind not in factcheck_step.KEPT_OR_DROPPED]
