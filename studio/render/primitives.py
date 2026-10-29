@@ -328,33 +328,50 @@ def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label:
     draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
 
 
-ROUTE_STROKE = 5.0  # a route's arrows, in frame pixels, on a white edge ROUTE_EDGE wider
-ROUTE_EDGE = 3.0
-ROUTE_HEAD = 16.0
-ROUTE_ALPHA = 0.85
+ROUTE_STROKE = 6.0  # a route's arrows, in frame pixels
+ROUTE_HEAD = 26.0  # the head's length...
+ROUTE_HEAD_W = 13.0  # ...and half its width; its back is swept in by ROUTE_NOTCH of its length
+ROUTE_NOTCH = 0.3
+ROUTE_ALPHA = 0.95
+
+
+def _route_ink(color: str) -> str:
+    """A route's colour: the particles' own, a shade deeper, so a line reads as firmly as a printed one."""
+    r, g, b = rgb(color)
+    return "#{:02X}{:02X}{:02X}".format(*(round(c * 0.92) for c in (r, g, b)))
 
 
 def draw_route_leg(canvas: skia.Canvas, a: tuple[float, float], b: tuple[float, float], color: str,
                    alpha: float) -> None:
-    """One leg of a route: a line from a to b with its head at b, on a white edge so it reads on any colour."""
+    """One leg of a route, as a textbook prints an arrow: a solid line from a, and a swept-back head with its
+    tip at b, under a soft shadow."""
     length = math.dist(a, b)
-    if alpha <= 0.01 or length < ROUTE_HEAD * 1.5:
+    if alpha <= 0.01 or length < ROUTE_HEAD * 1.4:
         return
     ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
-    neck = (b[0] - ux * ROUTE_HEAD, b[1] - uy * ROUTE_HEAD)
-    head = skia.Path()
-    head.moveTo(*b)
-    head.lineTo(neck[0] - uy * ROUTE_HEAD * 0.6, neck[1] + ux * ROUTE_HEAD * 0.6)
-    head.lineTo(neck[0] + uy * ROUTE_HEAD * 0.6, neck[1] - ux * ROUTE_HEAD * 0.6)
-    head.close()
-    a_alpha = alpha * ROUTE_ALPHA
-    for width, ink in ((ROUTE_STROKE + 2 * ROUTE_EDGE, with_alpha(0xFFFFFFFF, a_alpha)), (ROUTE_STROKE, argb(color, a_alpha))):
-        canvas.drawLine(a[0], a[1], neck[0], neck[1], skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width,
-                                                               Style=skia.Paint.kStroke_Style,
-                                                               StrokeCap=skia.Paint.kRound_Cap))
-        canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width - ROUTE_STROKE,
-                                         Style=skia.Paint.kStrokeAndFill_Style if width > ROUTE_STROKE
-                                         else skia.Paint.kFill_Style, StrokeJoin=skia.Paint.kRound_Join))
+    back = (b[0] - ux * ROUTE_HEAD, b[1] - uy * ROUTE_HEAD)
+    notch = (b[0] - ux * ROUTE_HEAD * (1 - ROUTE_NOTCH), b[1] - uy * ROUTE_HEAD * (1 - ROUTE_NOTCH))
+    arrow = skia.Path()
+    arrow.moveTo(*b)
+    arrow.lineTo(back[0] - uy * ROUTE_HEAD_W, back[1] + ux * ROUTE_HEAD_W)
+    arrow.lineTo(*notch)
+    arrow.lineTo(back[0] + uy * ROUTE_HEAD_W, back[1] - ux * ROUTE_HEAD_W)
+    arrow.close()
+    ink = argb(_route_ink(color), alpha * ROUTE_ALPHA)
+    stroke = skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=ROUTE_STROKE, Style=skia.Paint.kStroke_Style,
+                        StrokeCap=skia.Paint.kRound_Cap)
+    fill = skia.Paint(AntiAlias=True, Color=ink, Style=skia.Paint.kFill_Style)
+    shadow = skia.Paint(AntiAlias=True, Color=with_alpha(0xFF000000, 0.28 * alpha), StrokeWidth=ROUTE_STROKE,
+                        Style=skia.Paint.kStroke_Style, StrokeCap=skia.Paint.kRound_Cap,
+                        MaskFilter=skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, 3.0))
+    canvas.save()
+    canvas.translate(0, 2.5)
+    canvas.drawLine(a[0], a[1], notch[0], notch[1], shadow)
+    shadow.setStyle(skia.Paint.kFill_Style)
+    canvas.drawPath(arrow, shadow)
+    canvas.restore()
+    canvas.drawLine(a[0], a[1], notch[0], notch[1], stroke)
+    canvas.drawPath(arrow, fill)
 
 
 CONVERT_FONT = 30.0

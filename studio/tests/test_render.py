@@ -314,10 +314,11 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
     badge, dot = marked.frame(held).copy(), plain.frame(held).copy()
 
     def cyan_across(frame):  # how wide the cyan runs across the particle, above its word
-        row = frame[round(y) - 14, round(x) - 60:round(x) + 60, 2::-1]  # BGRA to RGB
+        row = frame[round(y) - 19, round(x) - 60:round(x) + 60, 2::-1]  # BGRA to RGB; above any letter
         return int((np.abs(row.astype(int) - p.rgb(cyan)).max(1) < 12).sum())
 
-    assert cyan_across(dot) == 0 and cyan_across(badge) > 15  # bigger than the plain dot
+    # Bigger than the plain dot (whose path, into a space, may run along this column and cross the row).
+    assert cyan_across(badge) > cyan_across(dot) + 10
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
