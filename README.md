@@ -481,8 +481,10 @@ without one, rather than shown as the total. The question reads it back as
 
 with each running step's start by the API's clock, and the bill in the shape above. `seconds`
 is how long the droplet has been made so far: the bill's time, and while a step runs, the time
-since the report that sent the bill (the API keeps when each report came), `null` while a step
-runs on a report stored before that. The card on `/learn` shows it as the bill of materials
+since the bill came (the API keeps when each bill came; a videos' report without one keeps the
+one before). It is never less than the bill's time, nor than the lesson's time and the longest
+a step running now has run, which stands in when no bill came or the report is older than
+that. The card on `/learn` shows it as the bill of materials
 open, one line per step: done (its time and cost), running (a pulsing dot, its time counting
 up, what it has spent so far), failed and waiting for the retry, or still to come. A step still
 to come that a later one has gone past is left out; so is the post, which the lesson's bill

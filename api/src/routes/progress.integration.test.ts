@@ -189,6 +189,12 @@ d('progress reports', () => {
     // The lesson's 196.4 seconds and the art's 76, and the time since the videos' report.
     expect(q.progress.seconds).toBeGreaterThanOrEqual(272.4);
     expect(q.progress.seconds).toBeLessThan(282.4);
+    // A report without a bill keeps the bill before and when it came, so the time so far never drops back.
+    await new Promise((r) => setTimeout(r, 1100));
+    expect((await videoReport(answerId, { attempt: 1, running: [{ step: 'audio', seconds: 6 }] })).statusCode).toBe(204);
+    const kept = (await card()).progress.seconds;
+    expect(kept).toBeGreaterThanOrEqual(q.progress.seconds + 1);
+    expect(kept).toBeLessThan(282.4);
 
     // READY with the last bill: the text shows with the videos, and nothing is in progress any more. (One sent
     // without a bill drops the bill so far, which would read as the total: tested below.)
