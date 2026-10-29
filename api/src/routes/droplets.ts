@@ -61,9 +61,12 @@ export default async function dropletRoutes(app: FastifyInstance) {
     const take = parseLimit(limit, 12, 24);
     const after = decodeCursor(cursor ?? '');
     const at = typeof after?.createdAt === 'string' ? new Date(after.createdAt) : null;
+    // A row comparison, not "createdAt" < at OR ("createdAt" = at AND id < after): Postgres seeks
+    // the (createdAt DESC, id DESC) indexes to it, where the OR form is a filter that rereads every
+    // droplet above the cursor, so a page deep in the list cost as much as all the pages before it.
     const from = at && !Number.isNaN(at.getTime())
       ? (typeof after?.id === 'string'
-        ? Prisma.sql`AND ("createdAt" < ${at} OR ("createdAt" = ${at} AND id < ${after.id}))`
+        ? Prisma.sql`AND ("createdAt", id) < (${at}, ${after.id})`
         : Prisma.sql`AND "createdAt" < ${at}`)
       : Prisma.empty;
     // Each video's tags have a GIN index, so a search reads only the droplets that carry it.
