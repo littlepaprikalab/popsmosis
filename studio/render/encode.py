@@ -134,13 +134,22 @@ class _Video:
     folder: Path  # its own temporary folder: the timeline the workers read, its ranges, the joined video
     chunks: list[tuple[int, int]]
     left: int
+    started: float | None = None  # when its first range started, by time.monotonic(): its time limit runs from then
 
     def part(self, k: int) -> Path:
         return self.folder / f"part{k:03d}.mp4"
 
 
 def _finish(job: Path, video: _Video) -> float:
-    """Join a video's ranges, add its audio, and move it into place; return when it was, by time.monotonic()."""
+    """Join a video's ranges, add its audio, and move it into place; return when it was, by time.monotonic().
+    A failure is an EncodeError naming the video by its index."""
+    try:
+        return _join(job, video)
+    except (EncodeError, OSError) as e:
+        raise EncodeError(str(e), video.index) from e
+
+
+def _join(job: Path, video: _Video) -> float:
     timeline, tmp_dir = video.timeline, video.folder
     listing = tmp_dir / "parts.txt"
     listing.write_text("".join(f"file '{video.part(k).name}'\n" for k in range(len(video.chunks))))
@@ -160,6 +169,7 @@ def _finish(job: Path, video: _Video) -> float:
     partial = video.out.with_name(f".{video.out.name}.partial")
     shutil.move(str(final), partial)
     os.replace(partial, video.out)
+    shutil.rmtree(tmp_dir, ignore_errors=True)  # its ranges, now in the video: the others' still need the disk
     return time.monotonic()
 
 
@@ -178,15 +188,19 @@ def _render_ranges(job: Path, made: list[_Video], n_workers: int, finishing: Thr
     # The longest video's ranges first: the shortest's are what is left to share out at the end.
     order = sorted(made, key=lambda v: -v.timeline.frame_count)
     waiting = [(video, k) for video in order for k in range(len(video.chunks))]
-    limit = sum(time_limit(video.timeline) for video in made)
-    deadline = time.monotonic() + limit
     running: list[tuple[subprocess.Popen, Path, _Video, int]] = []
     # A video with no frames has no ranges to wait for (and its join fails, saying so).
-    finished: dict[int, Future] = {v.index: finishing.submit(_finish, job, v) for v in made if not v.left}
+    finished: dict[int, Future] = {}
+    for video in made:
+        if not video.left:
+            video.started = time.monotonic()
+            finished[video.index] = finishing.submit(_finish, job, video)
     try:
         while waiting or running or not all(f.done() for f in finished.values()):
             while waiting and len(running) < n_workers:
                 video, k = waiting.pop(0)
+                if video.started is None:
+                    video.started = time.monotonic()
                 (first, last), path = video.chunks[k], video.part(k)
                 log = path.with_suffix(".worker.log")
                 with open(log, "wb") as err:
@@ -209,13 +223,16 @@ def _render_ranges(job: Path, made: list[_Video], n_workers: int, finishing: Thr
                 video.left -= 1
                 if not video.left:
                     finished[video.index] = finishing.submit(_finish, job, video)
-            for index, future in finished.items():
+            for future in finished.values():
                 if future.done() and future.exception():
-                    error = future.exception()
-                    raise EncodeError(str(error), index) from error
-            if time.monotonic() > deadline:
-                index = running[0][2].index if running else 0
-                raise EncodeError(f"the render took over {limit:.0f} s; its workers were stopped", index)
+                    raise future.exception()  # an EncodeError naming its video (_finish)
+            # Each video's own time limit, from its first range to its file: one that hangs is caught as soon
+            # as it would have been alone.
+            for video in made:
+                over = video.started is not None and time.monotonic() > video.started + time_limit(video.timeline)
+                if over and not (video.index in finished and finished[video.index].done()):
+                    raise EncodeError(f"the render took over {time_limit(video.timeline):.0f} s; its workers were "
+                                      "stopped", video.index)
             time.sleep(0.05)
     finally:
         for proc, _, _, _ in running:

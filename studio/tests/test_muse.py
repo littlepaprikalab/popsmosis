@@ -448,6 +448,9 @@ def test_the_structures_of_a_scene_are_asked_for_at_the_same_time_and_kept_in_or
     assert locate.run(job, FakeHelper()) == "located 4 of 4 structures with SAM 3.1"
     overview = jobs.read(job / media.LOCATIONS, Locations).scene("overview")
     assert [s.name for s in overview.structures] == ["Thylakoid", "Cytochrome b6f"]  # the scene's order
+    for where in overview.structures:  # each with its own match, not another's answered at the same time
+        x, y, r = SPOTS[where.name]
+        assert (where.box.x0, where.box.y0) == (x - r, y - r)
 
 
 def test_an_unsure_match_asks_the_helper_for_a_box_and_sam_for_what_is_in_it(job, monkeypatch):
@@ -699,6 +702,40 @@ def test_segment_sends_the_phrase_and_the_art_and_puts_each_mask_back_on_it(tmp_
     assert found[0].mask.shape == (media.ART_HEIGHT, media.ART_WIDTH)
     assert (xs.min(), xs.max(), ys.min(), ys.max()) == (211, 270, 228, 254)
     assert calls(tmp_path) == [("locate hook Thylakoid", "sam-3.1", 0.0025)]
+
+
+def test_no_more_sam_calls_wait_on_meta_at_once_than_its_slots_however_many_ask(tmp_path, monkeypatch):
+    art_file = tmp_path / "hook.png"
+    art_file.write_bytes(picture(media.ART_WIDTH, media.ART_HEIGHT))
+    monkeypatch.setattr(muse, "_sam_slots", threading.BoundedSemaphore(2))
+    counting, waiting, most = threading.Lock(), [0], [0]
+
+    def send(method, url, headers, body):
+        with counting:
+            waiting[0] += 1
+            most[0] = max(most[0], waiting[0])
+        time.sleep(0.05)
+        with counting:
+            waiting[0] -= 1
+        return 200, {}, json.dumps({"status": "completed", "output": []}).encode()
+
+    monkeypatch.setattr(muse, "send", send)
+    ledger.parallel(lambda i: muse.segment(tmp_path, f"locate hook Thylakoid {i}", art_file, phrase="green disc"),
+                    range(8), 8)
+    assert most[0] == 2
+    assert len(calls(tmp_path)) == 8
+
+
+def test_a_sam_call_keeps_its_slot_while_it_waits_to_ask_again(tmp_path, monkeypatch):
+    art_file = tmp_path / "hook.png"
+    art_file.write_bytes(picture(media.ART_WIDTH, media.ART_HEIGHT))
+    monkeypatch.setattr(muse, "_sam_slots", threading.BoundedSemaphore(1))
+    held = []
+    monkeypatch.setattr(muse, "sleep", lambda s: held.append(not muse._sam_slots.acquire(blocking=False)))
+    monkeypatch.setattr(muse, "send", FakeSend((429, {"error": {"message": "busy"}}),
+                                               (200, {"status": "completed", "output": []})))
+    assert muse.segment(tmp_path, "locate hook Thylakoid", art_file, phrase="green disc") == []
+    assert held == [True]  # a busy Meta slows the others down rather than letting another call in
 
 
 def test_segment_with_a_box_sends_sams_box_prompt(tmp_path, monkeypatch):

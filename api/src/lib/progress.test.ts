@@ -56,6 +56,8 @@ describe('awaitingVideos', () => {
     expect(lessonHoldMinutes()).toBe(0);
     expect(awaitingVideos(lesson(0, 0), null, true, NOW)).toBe(false);
     expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, true, NOW)).toBe(false);
+    // Stamped by a database whose clock runs a little ahead of this server's: still shown.
+    expect(awaitingVideos(lesson(-0.1), { status: 'RENDERING' }, true, NOW)).toBe(false);
   });
 });
 

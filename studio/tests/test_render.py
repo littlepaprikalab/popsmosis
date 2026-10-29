@@ -506,6 +506,19 @@ def test_a_video_that_cannot_be_made_is_named_by_its_place_in_the_list(job, tmp_
 
 
 @needs_ffmpeg
+def test_a_video_whose_audio_cannot_be_added_is_named_by_its_place_and_the_others_are_kept(job, tmp_path):
+    work = tmp_path / "job"
+    shutil.copytree(job, work)
+    song, lesson = short_timeline(work, "song"), short_timeline(work, "lesson")
+    (work / "audio" / "broken.mp3").write_bytes(b"not audio")
+    lesson.audio[0] = AudioClip(path="audio/broken.mp3", at=0, end=1.0)  # fails in its join, the last to finish
+    with pytest.raises(EncodeError) as raised:
+        encode_all(work, [(song, tmp_path / "song.mp4", "h"), (lesson, tmp_path / "lesson.mp4", "h")], parts=2)
+    assert raised.value.index == 1
+    assert (tmp_path / "song.mp4").stat().st_size and not (tmp_path / "lesson.mp4").exists()
+
+
+@needs_ffmpeg
 def test_the_render_step_writes_both_videos_and_posters(job, tmp_path, monkeypatch):
     work = tmp_path / "job"
     shutil.copytree(job, work)

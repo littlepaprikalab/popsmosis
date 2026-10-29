@@ -166,7 +166,8 @@ def stand_in(scale: float) -> None:
         return painting(label.split()[1])
 
     def segment(job, label, art_path, *, phrase=None, box=None):
-        wait("sam", scale)
+        with muse._sam_slots:  # as many at once as the real call lets through
+            wait("sam", scale)
         scene, name = label.split()[1], label.split(" ", 2)[2].removesuffix(" box").split(" try ")[0]
         x, y, r = SPOTS[(scene, name)]
         ys, xs = np.ogrid[:media.ART_HEIGHT, :media.ART_WIDTH]
@@ -217,15 +218,16 @@ def digests(job: Path) -> dict[str, str]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m studio.bench", description=__doc__.split("\n\n")[0])
-    parser.add_argument("root", type=Path, help="a folder for the bench's job (emptied first)")
+    parser.add_argument("root", type=Path, help=f"a folder for the bench's job, <root>/{QUESTION} (made afresh)")
     parser.add_argument("--scale", type=float, default=10.0, help="each stand-in waits its live time divided by this")
     parser.add_argument("--keep", action="store_true", help="keep the job folder afterwards")
     args = parser.parse_args(argv)
-    for name in (*brain.CLAUDE_KEY_VARS, brain.META_KEY_VAR, "GEMINI_API_KEY"):
-        os.environ.pop(name, None)  # nothing here may reach a paid API
+    # Nothing here may reach a paid API, nor the planner's record on Inkmory.
+    for name in (*brain.CLAUDE_KEY_VARS, brain.META_KEY_VAR, "GEMINI_API_KEY", "INKMORY_PLANNER_API_KEY"):
+        os.environ.pop(name, None)
     os.environ["ELEVENLABS_API_KEY"] = "bench"  # the audio step checks one is set; the stand-in answers
-    shutil.rmtree(args.root, ignore_errors=True)
-    args.root.mkdir(parents=True)
+    shutil.rmtree(args.root / QUESTION, ignore_errors=True)  # its own job only: the folder may hold others
+    args.root.mkdir(parents=True, exist_ok=True)
     jobs.ROOT = args.root
     stand_in(args.scale)
     api = Api(question={"id": QUESTION, "content": "the light reactions", "status": "PENDING", "answer": None,

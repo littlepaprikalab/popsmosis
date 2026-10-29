@@ -67,7 +67,7 @@ from studio.steps.art import colour_word
 
 MIN_CONFIDENCE = 0.5
 WORKERS = 4  # scenes located at once
-STRUCTURE_WORKERS = 4  # structures of a scene asked for at once: at most 16 SAM calls in flight
+STRUCTURE_WORKERS = 4  # structures of a scene asked for at once; muse.SAM_IN_FLIGHT caps the calls to Meta
 # A match is the structure's own when, of its pixels that are some structure's colour, at
 # least this share are its own. On the first live runs every right match scored 0.58 or more,
 # and the one that would have been labelled wrong 0.40.

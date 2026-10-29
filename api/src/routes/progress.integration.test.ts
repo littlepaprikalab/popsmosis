@@ -55,6 +55,7 @@ d('progress reports', () => {
     await app.ready();
   });
   afterAll(async () => {
+    delete process.env.LESSON_HOLD_MINUTES; // a test that holds the text sets it
     await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
     await app.close();
     await prisma.$disconnect();

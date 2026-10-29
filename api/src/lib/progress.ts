@@ -133,6 +133,7 @@ export function awaitingVideos(
   // Never past the stale limit either: a render quiet that long reads FAILED and shows the text, and a late
   // heartbeat that makes it RENDERING again must not hide it.
   const hold = Math.min(lessonHoldMinutes(), videoStaleMinutes());
+  if (hold <= 0) return false; // even when the database's clock is a moment ahead of this server's
   if (now.getTime() - answer.createdAt.getTime() >= hold * 60_000) return false;
   return !video || (video.status === 'RENDERING' && answer.videoAttempts <= 1);
 }
