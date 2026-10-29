@@ -353,6 +353,13 @@ def test_the_summary_never_quotes_a_rejected_line_or_what_a_step_found(jobs_root
     inside = operator_run.summary("q1").split("\n\n")[1]
     assert "Ben" not in inside and "P3" not in inside
     assert "writing in it …" in inside and "Broca's area" in inside  # an apostrophe is not a quote
+    # A quote the cut left open, and a provider's own words, go too.
+    assert operator_run.unquoted("s2: writing in it ('Mrs Patel period 4…', 'Ben Okafor notes page 3 photosynthe…") == (
+        "s2: writing in it …")
+    assert operator_run.unquoted("hook: the label says 'Ben Oka…") == "hook: the label says …"
+    assert operator_run.unquoted("1 picture refused: hook: Muse Image declined the picture: a chloroplast for Ben; "
+                                 "overview: students' notes") == (
+        "1 picture refused: hook: Muse Image declined the picture; overview: students' notes")
 
 
 def test_every_run_that_does_not_end_done_keeps_a_fixed_code(jobs_root):

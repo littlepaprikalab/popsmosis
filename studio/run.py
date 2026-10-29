@@ -764,13 +764,16 @@ def inside_steps(runs: list[dict]) -> str:
 
 
 # A quotation: in single quotes (never an apostrophe, which has a letter before it), double or curly quotes, or a
-# parenthesis holding one ("writing in it ('ATP', 'Ben')").
-QUOTED = re.compile(r"\([^()]*(?<!\w)'[^()]*\)|(?<!\w)'[^']*'(?!\w)|\"[^\"]*\"|“[^”]*”|‘[^’]*’")
+# parenthesis holding one ("writing in it ('ATP', 'Ben')"); and one a cut left open, which runs to the end of the line.
+QUOTED = re.compile(r"\([^()]*(?<!\w)'[^()]*(?:\)|$)|(?<!\w)'[^']*(?:'(?!\w)|$)|\"[^\"]*(?:\"|$)|“[^”]*(?:”|$)|‘[^’]*(?:’|$)")
+# What a provider said when it would not make a picture: its words, which may echo the description it was given.
+PROVIDER_WORDS = re.compile(r"(declined the picture|refused the picture|refused the song|blocked the song's prompt):[^;]*")
 
 
 def unquoted(text: str) -> str:
-    """A step's line without what it quotes (the writing found in a picture, a provider's words), for Inkmory."""
-    return " ".join(QUOTED.sub("…", text).split())
+    """A step's line without what it quotes (the writing found in a picture) or a provider's own words, for Inkmory:
+    each is cut short on the way, so a quote can arrive with no end, and runs to the end of the line then."""
+    return " ".join(QUOTED.sub("…", PROVIDER_WORDS.sub(r"\1", text)).split())
 
 
 # --- shared with python -m studio ---------------------------------------------------
