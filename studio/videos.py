@@ -92,14 +92,18 @@ def unavailable(job: Path | None = None, studio: dict | None = None) -> str | No
 def refresh_settings(job: Path, api: Api | None) -> Api | None:
     """Keep the studio's settings as they are now with the job, before its keys are checked: the painter the
     lesson's last claim named may have been changed since, because this machine lacked its key. Best effort: the
-    claim after it says the same, or fails with the reason. Returns the Api, made from the environment if need be."""
+    claim after it says the same, or fails with the reason. Without them, the knobs the job's last claim carried
+    are in force, never this machine's environment alone (a detached run starts with none). Returns the Api, made
+    from the environment if need be."""
     try:
         api = api or Api.from_env()
         studio = api.studio_settings()
     except ApiError:
-        return api
-    if studio:  # {} from an API too old to have them: keep what the job has
+        studio = {}
+    if studio:  # {} from an API too old to have them, or one that did not answer: keep what the job has
         jobs.keep_studio_settings(job, studio)
+    else:
+        knobs.use(jobs.studio_settings(job))
     return api
 
 

@@ -494,6 +494,21 @@ def test_the_studio_page_turns_the_videos_off_or_on_whatever_this_machine_says(m
     assert REAL_UNAVAILABLE(studio={}) == "the videos are turned off here (STUDIO_VIDEOS, set on /admin/studio)"
 
 
+def test_a_run_whose_settings_cannot_be_read_keeps_the_knobs_its_last_claim_carried(setup, monkeypatch):
+    """A detached `videos` starts with no knobs in force; the API not answering must not leave this machine's
+    STUDIO_VIDEOS=off to stop videos the page turned on."""
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.setenv("STUDIO_VIDEOS", "off")
+    job = posted()
+    jobs.keep_studio_settings(job, {"knobs": {"STUDIO_VIDEOS": "on"}})
+    knobs.use({"knobs": {}})  # a new process: nothing in force yet
+    api = VideoApi()
+    api.errors["studio_settings"] = ApiError(503, "UNAVAILABLE", "down")
+    videos.refresh_settings(job, api)
+    assert knobs.env("STUDIO_VIDEOS") == "on"
+    assert "turned off" not in (videos.unavailable(job) or "")
+
+
 def test_recover_takes_nothing_once_the_studio_page_turns_the_videos_off(setup, monkeypatch):
     monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
     monkeypatch.delenv("STUDIO_VIDEOS", raising=False)

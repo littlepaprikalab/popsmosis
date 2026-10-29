@@ -24,7 +24,7 @@
 import prisma from './prisma.js';
 import { BRAINS, type Brain } from './brains.js';
 import {
-  KNOBS, knobsFrom, knobsStale, putKnobs, reloadKnobsWith, type KnobName, type KnobValue, type Knobs,
+  KNOBS, knobsFrom, putKnobs, reloadKnobsWith, type KnobName, type KnobValue, type Knobs,
 } from './knobs.js';
 
 export const PROVIDERS = ['claude', 'meta'] as const;
@@ -150,16 +150,12 @@ export async function studioForAgent() {
   return { brain, song, art, knobs: studioKnobs(knobs) };
 }
 
-const loadKnobs = async () => (await prisma.setting.findUnique({ where: { key: KNOBS_KEY } }))?.value;
+/** The knobs as stored, for lib/knobs.ts to put in force. */
+export const loadKnobs = async () => (await prisma.setting.findUnique({ where: { key: KNOBS_KEY } }))?.value;
 
 /** Read the stored knobs again and put them in force on this instance (lib/knobs.ts). */
 export function reloadKnobs(): Promise<void> {
   return reloadKnobsWith(loadKnobs);
-}
-
-/** Once this instance's knobs are REFRESH_MS old, read them again in the background: never what a request waits on. */
-export function refreshKnobs(log: { warn(obj: object, msg: string): void }): void {
-  if (knobsStale()) reloadKnobs().catch((err) => log.warn({ err }, 'could not read the knobs; keeping those in force'));
 }
 
 /**

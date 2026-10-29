@@ -1,5 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { KNOBS, KNOB_NAMES, knob, knobsFrom, knobsStale, parseKnobs, putKnobs, reloadKnobsWith, storedKnobs, REFRESH_MS } from './knobs.js';
+import {
+  KNOBS, KNOB_NAMES, REFRESH_MS, keepKnobsFresh, knob, knobsFrom, parseKnobs, putKnobs, reloadKnobsWith, storedKnobs,
+} from './knobs.js';
 import { claimMinutes } from './claim.js';
 import { videoStaleMinutes } from './droplet.js';
 import { commentsPerUserPerHour } from './engagement.js';
@@ -103,13 +105,9 @@ describe('knob', () => {
 });
 
 describe('reloadKnobsWith', () => {
-  it('puts what it read in force, and is stale again REFRESH_MS later', async () => {
-    vi.useFakeTimers({ now: 1_000_000 });
+  it('puts what it read in force', async () => {
     await reloadKnobsWith(async () => ({ VIDEO_STALE_MINUTES: 15 }));
     expect(storedKnobs()).toEqual({ VIDEO_STALE_MINUTES: 15 });
-    expect(knobsStale()).toBe(false);
-    vi.setSystemTime(1_000_000 + REFRESH_MS);
-    expect(knobsStale()).toBe(true);
   });
 
   it('reads once for callers that ask at the same time', async () => {
@@ -128,12 +126,42 @@ describe('reloadKnobsWith', () => {
     expect(storedKnobs()).toEqual({ VIDEO_MAX_ATTEMPTS: 4 });
   });
 
-  it('keeps what is in force when the read fails, and waits REFRESH_MS before the next', async () => {
-    vi.useFakeTimers({ now: 2_000_000 });
+  it('keeps what is in force when the read fails', async () => {
     putKnobs({ LESSON_HOLD_MINUTES: 0 });
-    vi.setSystemTime(2_000_000 + REFRESH_MS);
     await expect(reloadKnobsWith(async () => { throw new Error('the database did not answer'); })).rejects.toThrow();
     expect(storedKnobs()).toEqual({ LESSON_HOLD_MINUTES: 0 });
-    expect(knobsStale()).toBe(false);
+  });
+});
+
+describe('keepKnobsFresh', () => {
+  const log = { warn: vi.fn() };
+  afterEach(() => log.warn.mockClear());
+
+  it('has another instance\'s change in force within REFRESH_MS, with no request to wait on it', async () => {
+    vi.useFakeTimers();
+    let row: unknown = { QUESTION_CLAIM_MINUTES: 30 };
+    const timer = keepKnobsFresh(async () => row, log);
+    expect(claimMinutes()).toBe(20); // nothing read yet: the environment's, else the default
+    await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    expect(claimMinutes()).toBe(30);
+    row = {}; // cleared through another instance
+    await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    expect(claimMinutes()).toBe(20);
+    clearInterval(timer);
+  });
+
+  it('reads one at a time while the database is slow, warns once for a read that fails, and keeps what is in force', async () => {
+    vi.useFakeTimers();
+    putKnobs({ VIDEO_MAX_ATTEMPTS: 3 });
+    let fail: (err: Error) => void = () => {};
+    const load = vi.fn(() => new Promise((_, reject) => { fail = reject; }));
+    const timer = keepKnobsFresh(load, log);
+    await vi.advanceTimersByTimeAsync(REFRESH_MS * 3); // three ticks while the first read hangs
+    expect(load).toHaveBeenCalledTimes(1);
+    fail(new Error('the database did not answer'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(log.warn).toHaveBeenCalledTimes(1);
+    expect(videoMaxAttempts()).toBe(3);
+    clearInterval(timer);
   });
 });

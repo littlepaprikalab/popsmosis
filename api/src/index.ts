@@ -11,7 +11,8 @@ import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } f
 import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
 import { storageConfig } from './lib/storage.js';
-import { refreshKnobs, reloadKnobs } from './lib/studio-settings.js';
+import { keepKnobsFresh } from './lib/knobs.js';
+import { loadKnobs, reloadKnobs } from './lib/studio-settings.js';
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
 import replyRoutes from './routes/replies.js';
@@ -44,11 +45,11 @@ export async function buildApp() {
   await app.register(cookie);
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginEmbedderPolicy: false });
 
-  // ---- The knobs an admin set on /admin/studio (lib/knobs.ts): read again once they are a few seconds old ----
-  // In the background: a request never waits on it, and one that lands first reads the knobs as they were.
-  app.addHook('onRequest', async (request) => {
-    refreshKnobs(request.log);
-  });
+  // ---- The knobs an admin set on /admin/studio (lib/knobs.ts): read again every REFRESH_MS ----
+  // On a timer rather than on requests: another instance's change is in force here within REFRESH_MS whatever the
+  // traffic, and no request waits on the read.
+  const knobTimer = keepKnobsFresh(loadKnobs, app.log);
+  app.addHook('onClose', async () => clearInterval(knobTimer));
 
   // ---- Resolve agent keys first: the proxy gate and the rate limit below both ask whether a key is real ----
   // A well-formed key is looked up (cached both ways for AGENT_TTL_MS, middleware/auth.ts); per-route guards then
@@ -247,8 +248,13 @@ if (isMain) {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 
-  // The knobs set on /admin/studio in force before the first request; unread, the environment's are.
-  await reloadKnobs().catch((err) => app.log.warn({ err }, 'could not read the knobs; the environment\'s are in force'));
+  // The knobs set on /admin/studio in force before the first request. A database that does not answer within
+  // KNOB_START_WAIT_MS never keeps the API from starting: the environment's are in force until the timer reads them.
+  const KNOB_START_WAIT_MS = 5000;
+  const late = new Promise<'late'>((resolve) => setTimeout(() => resolve('late'), KNOB_START_WAIT_MS).unref());
+  await Promise.race([reloadKnobs(), late])
+    .then((read) => { if (read === 'late') app.log.warn('the knobs were not read in time; the environment\'s are in force until they are'); })
+    .catch((err) => app.log.warn({ err }, 'could not read the knobs; the environment\'s are in force'));
   const port = parseInt(process.env.PORT || '3001', 10);
   try {
     await app.listen({ port, host: '0.0.0.0' });

@@ -5,10 +5,11 @@
  * `knobs` (lib/studio-settings.ts reads and writes the row).
  *
  * The API's own are read where they always were, synchronously and often (in SQL, on every question it
- * serializes), so each instance keeps the stored values in memory: read at start, replaced by every change it
- * takes, and read again in the background once they are REFRESH_MS old (index.ts), so a change taken by another
- * instance reaches this one within seconds. The studio's are sent to the studio with its other settings, and it
- * puts them over its own environment (studio/knobs.py) from its next run.
+ * serializes), so each instance keeps the stored values in memory: read before it listens, replaced by every
+ * change it takes, and read again every REFRESH_MS on a timer (keepKnobsFresh), so a change taken by another
+ * instance is in force on this one within REFRESH_MS whatever the traffic, and no request waits on a read. The
+ * studio's are sent to the studio with its other settings, and it puts them over its own environment
+ * (studio/knobs.py) from its next run.
  *
  * Not knobs: the keys and secrets, the URLs, what is read once at start (the database pool, the port), and
  * ATTACHMENT_RETENTION_DAYS, which the Privacy Policy states (web/src/lib/legal.ts), so it changes with the policy.
@@ -60,11 +61,10 @@ export type ApiKnob = { [K in KnobName]: (typeof KNOBS)[K]['where'] extends 'api
 export type Knobs = Partial<Record<KnobName, KnobValue>>;
 export const KNOB_NAMES = Object.keys(KNOBS) as KnobName[];
 
-// How old this instance's copy of the stored knobs may get before a request has it read again.
+// How often each instance reads the stored knobs again: the most a change on another instance takes to reach it.
 export const REFRESH_MS = 10_000;
 
 let stored: Knobs = {};
-let storedAt = 0; // when it was last read or changed, by this instance's clock; 0: never
 let changes = 0; // counts every change put in force, so a read begun before one does not undo it
 
 const isKnob = (name: string): name is KnobName => Object.prototype.hasOwnProperty.call(KNOBS, name);
@@ -125,26 +125,38 @@ export function storedKnobs(): Knobs {
 /** Put the stored knobs in force on this instance: what a change just wrote, or what a read found. */
 export function putKnobs(value: unknown): void {
   stored = knobsFrom(value);
-  storedAt = Date.now();
   changes += 1;
-}
-
-export function knobsStale(now = Date.now()): boolean {
-  return now - storedAt >= REFRESH_MS;
 }
 
 let reading: Promise<void> | null = null;
 
 /**
  * Read the stored knobs again with load() and put them in force: one read at a time, and a change put in force
- * while it reads wins over what it read. A read that fails leaves what is in force, and the next waits REFRESH_MS.
+ * while it reads wins over what it read. A read that fails leaves what is in force.
  */
 export function reloadKnobsWith(load: () => Promise<unknown>): Promise<void> {
   if (reading) return reading;
   const before = changes;
   reading = load()
     .then((value) => { if (changes === before) putKnobs(value); })
-    .catch((err) => { storedAt = Date.now(); throw err; })
     .finally(() => { reading = null; });
   return reading;
+}
+
+/**
+ * Read the stored knobs again every REFRESH_MS until the timer it returns is cleared. A read the database is slow
+ * to answer is not started again until it ends, and one that fails is a warning: what is in force stays. The timer
+ * never holds the process open.
+ */
+export function keepKnobsFresh(load: () => Promise<unknown>, log: { warn(obj: object, msg: string): void }): NodeJS.Timeout {
+  let waiting = false;
+  const timer = setInterval(() => {
+    if (waiting) return;
+    waiting = true;
+    reloadKnobsWith(load)
+      .catch((err) => log.warn({ err }, 'could not read the knobs; keeping those in force'))
+      .finally(() => { waiting = false; });
+  }, REFRESH_MS);
+  timer.unref();
+  return timer;
 }
