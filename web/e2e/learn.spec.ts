@@ -24,6 +24,22 @@ test.describe('signed out', () => {
     await expect(page).toHaveURL(/\/learn$/);
   });
 
+  test('sign-in keeps a page of this site to come back to, and never another site', async ({ page }) => {
+    const kept = async (returnTo: string) => {
+      await page.goto(`/auth/callback?returnTo=${encodeURIComponent(returnTo)}`);
+      await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+      const saved = await page.evaluate(() => sessionStorage.getItem('auth_return_to'));
+      await page.evaluate(() => sessionStorage.removeItem('auth_return_to'));
+      return saved;
+    };
+    expect(await kept('/droplets/abc?tab=song#comments')).toBe('/droplets/abc?tab=song#comments');
+    // A backslash reads as a slash, and tabs and newlines are dropped: each of these resolves off-site.
+    for (const offSite of ['/\\evil.example', '//evil.example', '/\t/evil.example', '/\n/evil.example', 'https://evil.example/',
+      '/\\/evil.example/learn']) {
+      expect(await kept(offSite), offSite).toBeNull();
+    }
+  });
+
   test('admin page refuses anonymous visitors', async ({ page }) => {
     await page.goto('/admin/agents');
     await expect(page.getByText('Admin access required.')).toBeVisible();
