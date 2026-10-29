@@ -32,6 +32,8 @@ EDGE_BLUR = 3.0  # sigma of a ghost's edge, in art pixels
 SPOT_BLUR = 1.2  # a spotlight's edge stays crisp, so the bright structure keeps its outline
 REVEAL_S = 0.4  # ghost to full
 LABEL_IN_S = 0.35
+SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
+SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
 SPOT_S = 0.6
 MOVE_S = 1.8  # a camera move between two stations
 SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
@@ -627,8 +629,10 @@ class Renderer:
             alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(ax, ay, view)
             if alpha > 0.01:
                 box = (loc.box.x0 * scale + dx, loc.box.y0 * scale + dy, loc.box.x1 * scale + dx, loc.box.y1 * scale + dy)
+                wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
+                big = wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
                 labels.append(p.Label(name=name, color=self.timeline.palette[name], anchor=(ax, ay), box=box, alpha=alpha,
-                                      emphasis=spots.get(name, 0.0)))
+                                      big=big, emphasis=spots.get(name, 0.0)))
         centre = (art.centre[0] * scale + dx, art.centre[1] * scale + dy)
         p.place_labels(labels, bounds, centre, self.layout.label_font)
         for lb in sorted(labels, key=lambda lb: lb.emphasis):  # the spotlit one on top

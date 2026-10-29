@@ -138,7 +138,7 @@ def shadow(canvas: skia.Canvas, rrect: skia.RRect, alpha: float, blur: float = 8
 LABEL_PAD_X, LABEL_H = 20.0, 50.0
 LABEL_OUTLINE = 3.5
 DOT_R = 6.0
-LEADER = 36.0  # from the structure's edge to the pill, before the placement pass
+TOUCH = 8.0  # from a structure's edge to its pill: it sits against the structure, with no line
 MAX_REACH = 200.0  # a big structure's label stays this close to its dot, on top of it
 GAP = 12.0  # between pills
 
@@ -150,6 +150,7 @@ class Label:
     anchor: tuple[float, float]  # the dot, in frame pixels
     box: Rect  # the structure's box, in frame pixels: the pill starts just outside it
     alpha: float
+    big: bool = False  # a space (the stroma, a lumen): it has no edge to sit against, so its pill sits inside it
     emphasis: float = 0.0  # 1 while spotlit: a little larger
     x: float = 0.0  # the pill's centre, set by place_labels
     y: float = 0.0
@@ -182,7 +183,10 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
         exit_x = ((bx1 - ax) / dx if dx > 0 else (bx0 - ax) / dx) if abs(dx) > 1e-6 else 1e9
         exit_y = ((by1 - ay) / dy if dy > 0 else (by0 - ay) / dy) if abs(dy) > 1e-6 else 1e9
         out = min(max(min(exit_x, exit_y), 0.0), MAX_REACH)
-        reach = out + LEADER + min(abs(w / 2 / dx) if abs(dx) > 1e-6 else 1e9, abs(h / 2 / dy) if abs(dy) > 1e-6 else 1e9)
+        if lb.big:  # a space's pill sits inside it, at its label point, with no line
+            homes.append(lb.anchor)
+            continue
+        reach = out + TOUCH + min(abs(w / 2 / dx) if abs(dx) > 1e-6 else 1e9, abs(h / 2 / dy) if abs(dy) > 1e-6 else 1e9)
         homes.append((lb.anchor[0] + dx * reach, lb.anchor[1] + dy * reach))
     pos = [list(h) for h in homes]
     x0, y0, x1, y1 = bounds
@@ -194,7 +198,7 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
 
     for i in range(len(labels)):
         clamp(i)
-    dots = [lb.anchor for lb in labels] + list(avoid)
+    dots = list(avoid)  # a label's own dot is drawn only when its pill ends up far from it, so it is not avoided
     for _ in range(40):
         moved = False
         for i in range(len(labels)):
@@ -241,13 +245,18 @@ def draw_label(canvas: skia.Canvas, lb: Label, font_size: float) -> None:
     color = argb(lb.color, lb.alpha)
     ink = argb(darken(lb.color), lb.alpha)  # the leader and dot sit on the structure, so they are darker
     ax, ay = lb.anchor
+    # A pill against its structure, or inside its space, needs no line; one the placement pass pushed away keeps it.
+    bx0, by0, bx1, by1 = lb.box
+    gap = math.hypot(max(bx0 - rect[2], rect[0] - bx1, 0.0), max(by0 - rect[3], rect[1] - by1, 0.0))
+    leader = not lb.big and gap > h
     # The leader runs from the dot to the nearest point on the pill.
     ex, ey = min(max(ax, rect[0] + h / 2), rect[2] - h / 2), min(max(ay, rect[1]), rect[3])
     line = skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=3.0, Style=skia.Paint.kStroke_Style,
                       StrokeCap=skia.Paint.kRound_Cap)
-    canvas.drawLine(ax, ay, ex, ey, line)
-    canvas.drawCircle(ax, ay, DOT_R + 2.5, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, lb.alpha)))
-    canvas.drawCircle(ax, ay, DOT_R, skia.Paint(AntiAlias=True, Color=ink))
+    if leader:
+        canvas.drawLine(ax, ay, ex, ey, line)
+        canvas.drawCircle(ax, ay, DOT_R + 2.5, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, lb.alpha)))
+        canvas.drawCircle(ax, ay, DOT_R, skia.Paint(AntiAlias=True, Color=ink))
     rrect = rounded(rect, h / 2)
     shadow(canvas, rrect, lb.alpha)
     canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, lb.alpha)))
