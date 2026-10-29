@@ -369,3 +369,19 @@ def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_i
     assert timelines["song"].ai_pictures == ["hook", "overview"]
     os.utime(job / "art" / "synthase.json")  # a new check makes the timelines out of date
     assert not step.is_done(job)
+
+
+def test_a_path_stays_drawn_on_its_scene_from_when_its_particles_set_off_and_a_blocked_one_never_is():
+    from studio.schemas import Particles, TimelineCamera
+    from studio.steps.timeline import _route
+
+    def beat(scene, t0, *flows):
+        return {"scene": scene, "t0": t0, "particles": list(flows), "camera": TimelineCamera(target=None, zoom=1.0)}
+
+    chain = Particles(path=["PSII", "b6f"], color="#33CCFF", trail=True, label="e⁻")
+    stopped = Particles(path=["PSII", "Herbicide"], color="#33CCFF", trail=True, label="e⁻", blocked=True)
+    beats = [beat("membrane", 0.0), beat("membrane", 2.0, chain), beat("membrane", 4.0),
+             beat("hook", 6.0), beat("membrane", 8.0, stopped)]
+    _route(beats)
+    assert [[(r.path, r.since) for r in b["routes"]] for b in beats] == [
+        [], [(["PSII", "b6f"], 2.0)], [(["PSII", "b6f"], 2.0)], [], [(["PSII", "b6f"], 2.0)]]

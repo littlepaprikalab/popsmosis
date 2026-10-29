@@ -328,6 +328,35 @@ def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label:
     draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
 
 
+ROUTE_STROKE = 5.0  # a route's arrows, in frame pixels, on a white edge ROUTE_EDGE wider
+ROUTE_EDGE = 3.0
+ROUTE_HEAD = 16.0
+ROUTE_ALPHA = 0.85
+
+
+def draw_route_leg(canvas: skia.Canvas, a: tuple[float, float], b: tuple[float, float], color: str,
+                   alpha: float) -> None:
+    """One leg of a route: a line from a to b with its head at b, on a white edge so it reads on any colour."""
+    length = math.dist(a, b)
+    if alpha <= 0.01 or length < ROUTE_HEAD * 1.5:
+        return
+    ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
+    neck = (b[0] - ux * ROUTE_HEAD, b[1] - uy * ROUTE_HEAD)
+    head = skia.Path()
+    head.moveTo(*b)
+    head.lineTo(neck[0] - uy * ROUTE_HEAD * 0.6, neck[1] + ux * ROUTE_HEAD * 0.6)
+    head.lineTo(neck[0] + uy * ROUTE_HEAD * 0.6, neck[1] - ux * ROUTE_HEAD * 0.6)
+    head.close()
+    a_alpha = alpha * ROUTE_ALPHA
+    for width, ink in ((ROUTE_STROKE + 2 * ROUTE_EDGE, with_alpha(0xFFFFFFFF, a_alpha)), (ROUTE_STROKE, argb(color, a_alpha))):
+        canvas.drawLine(a[0], a[1], neck[0], neck[1], skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width,
+                                                               Style=skia.Paint.kStroke_Style,
+                                                               StrokeCap=skia.Paint.kRound_Cap))
+        canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width - ROUTE_STROKE,
+                                         Style=skia.Paint.kStrokeAndFill_Style if width > ROUTE_STROKE
+                                         else skia.Paint.kFill_Style, StrokeJoin=skia.Paint.kRound_Join))
+
+
 CONVERT_FONT = 30.0
 CONVERT_PAD = 16.0
 

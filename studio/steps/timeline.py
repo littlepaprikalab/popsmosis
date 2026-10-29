@@ -28,6 +28,9 @@ No model calls, so it is free to run again:
 - A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
   that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
   it stays on every later beat of the scene.
+- A path particles travel on a scene is drawn as arrows from stop to stop from when they first set off, and
+  the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
+  A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
 - The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
   line, so the learner sees where a close-up sits before it is shown.
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
@@ -64,6 +67,7 @@ from studio.schemas import (
     Locations,
     Particles,
     Reveal,
+    Route,
     TimedLine,
     Timeline,
     TimelineCamera,
@@ -325,6 +329,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _fill_crowds(beats, bundle, located)
     _turn(beats, bundle, located)
     _convert(beats, bundle, located)
+    _route(beats)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
@@ -370,6 +375,18 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
                        since=scene[c.structure])
             for c in bundle.conversions if c.structure in scene]
+
+
+def _route(beats: list[dict]) -> None:
+    """The paths each beat draws as arrows: every unblocked path its scene's particles have travelled so far."""
+    shown: dict[str, dict[tuple, Route]] = {}  # per scene: (path, label) -> its route, as first drawn
+    for beat in beats:
+        routes = shown.setdefault(beat["scene"], {})
+        for f in beat["particles"]:
+            key = (tuple(f.path), f.label)
+            if not f.blocked and key not in routes:
+                routes[key] = Route(path=list(f.path), color=f.color, label=f.label, since=beat["t0"])
+        beat["routes"] = list(routes.values())
 
 
 def _turn(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:

@@ -291,8 +291,7 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
 def test_particles_travel_between_the_structures_and_fade_in(job):
     flow = Renderer(job, flowing([flow_beat(0, 8)]))  # no labels, so nothing is drawn over the particle
     still = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
-    anchors = [(a.x, a.y) for a in (located(job, "overview", name).label_anchor for name in FLOW)]
-    stops = renderer_module.stop_points(anchors)
+    stops = flow._path_points("overview", FLOW)  # a stop in a space sits beside its neighbour on the path
     leg = max(math.dist(*stops) / renderer_module.FLOW_SPEED, renderer_module.FLOW_MIN_LEG_S)
     held = renderer_module.FLOW_PAUSE_S + leg + 0.2  # the lead particle is holding at cytochrome b6f
     gold = p.rgb("#F2C230")
@@ -309,7 +308,7 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
-    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    stops = marked._path_points("overview", FLOW)
     held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
     x, y = marked.art_to_frame(held, *stops[0])
     badge, dot = marked.frame(held).copy(), plain.frame(held).copy()

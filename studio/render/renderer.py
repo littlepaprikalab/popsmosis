@@ -33,6 +33,7 @@ SPOT_BLUR = 1.2  # a spotlight's edge stays crisp, so the bright structure keeps
 REVEAL_S = 0.4  # ghost to full
 LABEL_IN_S = 0.35
 SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
+SPACE_INSET = 0.3  # a path's stop in a space sits this share of the space's height inside it
 SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
 SPOT_S = 0.6
 MOVE_S = 1.8  # a camera move between two stations
@@ -60,6 +61,7 @@ FLOW_PAUSE_S = 0.5  # the lead particle holds at each stop
 FLOW_MIN_LEG_S = 0.8  # a short hop still takes this long, so it reads as a move
 FLOW_IN_S = 0.4
 STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
+ROUTE_GAP = 26.0  # frame pixels a route's arrows stop short of each stop
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
@@ -632,8 +634,7 @@ class Renderer:
             alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(ax, ay, view)
             if alpha > 0.01:
                 box = (loc.box.x0 * scale + dx, loc.box.y0 * scale + dy, loc.box.x1 * scale + dx, loc.box.y1 * scale + dy)
-                wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
-                big = wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
+                big = self._is_space(scene_id, loc)
                 labels.append(p.Label(name=name, color=self.timeline.palette[name], anchor=(ax, ay), box=box, alpha=alpha,
                                       big=big, emphasis=spots.get(name, 0.0)))
         centre = (art.centre[0] * scale + dx, art.centre[1] * scale + dy)
@@ -676,6 +677,8 @@ class Renderer:
             self._crowds(canvas, beat, cam, view, t, ghosts, spots)
         if beat.turning:
             self._turning(canvas, beat, cam, view, t, ghosts, spots, face=False)
+        if beat.routes:
+            self._routes(canvas, beat, cam, view, t)
         if beat.glow:
             self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
@@ -856,6 +859,51 @@ class Renderer:
                 else:
                     p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
 
+    def _is_space(self, scene_id: str, loc) -> bool:
+        """A space (the stroma, a lumen): a box covering much of its picture, or spanning most of its width."""
+        art = self.scene(scene_id)
+        wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
+        return wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
+
+    def _path_points(self, scene_id: str, path: list[str]) -> list[Point]:
+        """Where particles stop along a path, in art pixels: a structure's label point, but a space's point beside
+        the structure next to it on the path, a little inside the space, so a flow into the lumen ends just
+        under the complex that pumps it rather than across the picture."""
+        located = self.locations.scene(scene_id)
+        stops = [loc for name in path if (loc := located.get(name)) is not None]
+        anchors = []
+        for i, loc in enumerate(stops):
+            if self._is_space(scene_id, loc) and len(stops) > 1:
+                near = stops[i - 1] if i else stops[1]
+                nx, ny = near.label_anchor.x, near.label_anchor.y
+                x = min(max(nx, loc.box.x0), loc.box.x1)
+                inset = (loc.box.y1 - loc.box.y0) * SPACE_INSET
+                y = loc.box.y0 + inset if ny < loc.box.y0 + inset else loc.box.y1 - inset if ny > loc.box.y1 - inset else ny
+                anchors.append((x, y))
+            else:
+                anchors.append((loc.label_anchor.x, loc.label_anchor.y))
+        return stop_points(anchors) if len(anchors) >= 2 else anchors
+
+    def _routes(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float) -> None:
+        """Each path the scene's particles have travelled, as arrows from stop to stop along the same line they
+        ride, stopping short of each stop so the particle holding there stays in sight."""
+        scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        for route in beat.routes:
+            points = self._path_points(beat.scene, route.path)
+            frame = [(x * scale + dx, y * scale + dy) for x, y in points]
+            alpha = p.ease((t - route.since) / LABEL_IN_S)
+            for a, b in zip(frame, frame[1:]):
+                length = math.dist(a, b)
+                if length < 1:
+                    continue
+                ux, uy = (b[0] - a[0]) / length, (b[1] - a[1]) / length
+                gap = min(ROUTE_GAP, length / 4)
+                start, end = (a[0] + ux * gap, a[1] + uy * gap), (b[0] - ux * gap, b[1] - uy * gap)
+                p.draw_route_leg(canvas, start, end, route.color, alpha * edge_fade(*end, view))
+        canvas.restore()
+
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),
         over the diagram and under the labels; they stop beside each label's dot."""
@@ -872,8 +920,7 @@ class Renderer:
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         for flow in beat.particles:
-            stops = [located.get(name) for name in flow.path]
-            points = stop_points([(s.label_anchor.x, s.label_anchor.y) for s in stops if s is not None])
+            points = self._path_points(beat.scene, flow.path)
             if len(points) < 2:
                 continue
             if flow.blocked:

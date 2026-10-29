@@ -632,6 +632,20 @@ class Turning(Strict):
         return self.turns + turned, self.from_speed + (self.speed - self.from_speed) * ease / SPIN_EASE_S
 
 
+class Route(Strict):
+    """A path particles have travelled on this scene, drawn as arrows from stop to stop, staying on."""
+
+    path: list[str]  # the structures, in order, each located on the beat's scene
+    color: str
+    label: str = ""  # what travels it ("e⁻"); "" for unmarked particles
+    since: float = 0.0  # when its particles first set off on this scene: the arrows fade in then
+
+    @field_validator("color")
+    @classmethod
+    def _color(cls, value: str) -> str:
+        return _hex_color(value)
+
+
 class Converting(Strict):
     """A conversion (Bundle.conversions) as one beat shows it: written beside the structure where it happens."""
 
@@ -654,6 +668,7 @@ class Beat(Strict):
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
     conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
+    routes: list[Route] = []  # the paths drawn as arrows on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     caption: str | None
     line_id: str | None  # None: an instrumental gap
@@ -750,7 +765,8 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
         named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path] + [
-            c.region for c in beat.crowds] + [s.structure for s in beat.turning] + [beat.glow]
+            c.region for c in beat.crowds] + [s.structure for s in beat.turning] + [beat.glow] + [
+            n for r in beat.routes for n in r.path]
         for crowd in beat.crowds:
             if not (0 <= crowd.start <= 1 and 0 <= crowd.end <= 1):
                 problems.append(f"{where} fills {crowd.region} to {crowd.start}-{crowd.end}, outside 0-1")
