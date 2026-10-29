@@ -206,6 +206,21 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
     return problems
 
 
+def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
+    """The song's style against the bundle prompt's rule: one free-form description, not tags, and the learner's
+    own words as they wrote them when they asked for a style. Recorded, not repaired: the writer may have had to
+    describe an artist they named, or leave out what does not suit a classroom."""
+    styles = bundle.music.positive_styles
+    problems = []
+    if len(styles) > 1:
+        problems.append(Problem(line_id="music", rule="song-style", repaired=False,
+                                detail=f"the style is {len(styles)} tags, not one free-form description"))
+    if asked.strip() and fold(asked.strip().rstrip(".")) not in fold(" ".join(styles)):
+        problems.append(Problem(line_id="music", rule="song-style", repaired=False,
+                                detail=f'the style does not keep the learner\'s words: "{asked.strip()}"'))
+    return problems
+
+
 ESSENCE_WORDS_MAX = 20
 WHY_LINKS = (3, 5)
 KEY_TERMS_MAX = 8
@@ -404,8 +419,8 @@ def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
     bpm = bundle.music.bpm
     styles = [BPM_TAG.sub(lambda found: found[0] if round(float(found[1])) == bpm else f"{bpm} bpm", style)
               for style in music["positive_styles"]]
-    if not any(BPM_TAG.search(style) for style in styles):
-        styles.append(f"{bpm} bpm")
+    if not any(BPM_TAG.search(style) for style in styles):  # said at the end of the description, not as a tag
+        styles = [*styles[:-1], f"{styles[-1].rstrip(' .,;')}, {bpm} bpm"] if styles else [f"{bpm} bpm"]
     if styles == music["positive_styles"]:
         return []
     music["positive_styles"] = styles

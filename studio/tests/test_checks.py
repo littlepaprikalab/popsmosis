@@ -281,9 +281,24 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
 
     assert styles(["K-pop", "98 BPM"]) == (["K-pop", "98 BPM"], [])
     repaired = [("music", "tempo", True)]
-    assert styles(["bright pop"]) == (["bright pop", "112 bpm"], repaired)  # none named: what songs used to be
+    assert styles(["bright pop."]) == (["bright pop, 112 bpm"], repaired)  # none named: what songs used to be, said
+    # at the end of the description
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+
+
+def test_the_song_style_is_one_description_in_the_learners_own_words():
+    def found(styles, asked=""):
+        data = bundle_data()
+        data["music"]["positive_styles"] = styles
+        return [p.detail for p in checks.style_problems(Bundle.model_validate(data), asked)]
+
+    asked = "Bright pop with hip-hop verses; buoyant 104 bpm beat"
+    assert found([asked], asked) == [] and found([asked + ", 104 bpm"], asked + ".") == []
+    assert found(["bright pop with hip-hop verses; buoyant 104 bpm beat"], asked) == []  # its case aside
+    assert found(["bright pop", "hip-hop verses", "104 bpm"]) == ["the style is 3 tags, not one free-form description"]
+    assert found(["Bright pop with rap verses at 104 bpm"], asked) == [
+        f'the style does not keep the learner\'s words: "{asked}"']
 
 
 def test_a_process_needs_two_stages_or_more():
