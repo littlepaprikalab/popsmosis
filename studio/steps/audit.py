@@ -54,12 +54,15 @@ def run(job: Path, ask=brain.ask) -> AuditReport:
     request = read(job / "request.json", Request)
     (job / "factcheck.json").unlink(missing_ok=True)
     report, audited = audit_bundle(bundle, request.study_guide, ask)
+    # audit.json first: a run stopped before bundle.json takes the corrections finds its facts are not the ones
+    # the audit passed (is_done) and audits again, where the other order would pass the corrected facts with no
+    # record of what they corrected.
+    write(job / "audit.json", report)
     if report.status == "passed" and audited != bundle:
         draft = job / "bundle.draft.json"
         if not draft.exists():
             draft.write_text((job / "bundle.json").read_text(encoding="utf-8"), encoding="utf-8")
         write(job / "bundle.json", audited)
-    write(job / "audit.json", report)
     return report
 
 
@@ -111,6 +114,9 @@ def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bu
                                                   problem=judgement.problem, basis=judgement.basis,
                                                   cited_by=cited.get(fact_id, [])))
                 texts[fact_id] = after
+                # The writer's quote was for the wrong version: the correction keeps only a quote the audit found
+                # in the guide for it.
+                quotes[fact_id] = judgement.quote if judgement.basis == "study guide" else ""
                 del verdicts[fact_id]  # the correction is judged on its own, in the next call
                 again.append(fact_id)
         pending = again
@@ -131,7 +137,7 @@ def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bu
         return report, bundle
     data = bundle.model_dump()
     for fact in data["facts"]:
-        fact["text"] = texts[fact["id"]]
+        fact["text"], fact["source_quote"] = texts[fact["id"]], quotes[fact["id"]]
     return report, Bundle.model_validate(data)
 
 

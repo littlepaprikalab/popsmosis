@@ -296,6 +296,32 @@ def test_with_a_study_guide_a_fact_is_judged_by_it_and_its_quote_must_be_in_it(j
     assert audit.describe(report) == "3 fact(s) judged, 1 by the study guide, in 1 call(s)"
 
 
+def test_a_corrected_fact_keeps_only_a_quote_the_audit_found_for_it(job):
+    write(job / "request.json", Request(topic="the light reactions", study_guide=GUIDE))
+    data = seeded_data()
+    data["facts"][1]["source_quote"] = "ATP synthase makes ATP"  # the writer's quote, for the wrong version
+    write(job / "bundle.json", Bundle.model_validate(data))
+
+    def by_the_guide(text):
+        if "Every electron hand-off" in text:
+            return {"verdict": "WRONG", "problem": "only b6f pumps", "corrected": RIGHT, "basis": "study guide",
+                    "quote": "only cytochrome b6f pumps protons into the lumen"}
+        return {"verdict": "CORRECT"}
+
+    auditor = FakeAuditor(by_the_guide)
+    assert audit.run(job, ask=auditor).status == "passed"
+    assert auditor.payloads[1]["facts"] == [{"id": "f2", "text": RIGHT,
+                                             "source_quote": "only cytochrome b6f pumps protons into the lumen"}]
+    fact = Bundle.model_validate_json((job / "bundle.json").read_text()).facts[1]
+    assert (fact.text, fact.source_quote) == (RIGHT, "only cytochrome b6f pumps protons into the lumen")
+
+    write(job / "bundle.json", Bundle.model_validate(data))  # judged by course knowledge: no quote stands
+    auditor = FakeAuditor()
+    audit.run(job, ask=auditor)
+    assert "source_quote" not in auditor.payloads[1]["facts"][0]
+    assert Bundle.model_validate_json((job / "bundle.json").read_text()).facts[1].source_quote == ""
+
+
 def test_without_a_study_guide_every_fact_is_judged_by_course_knowledge_and_the_report_says_so(job):
     auditor = FakeAuditor(lambda text: {"verdict": "CORRECT", "basis": "study guide",
                                         "quote": "only cytochrome b6f pumps protons"})
@@ -326,6 +352,26 @@ def test_an_audit_makes_an_earlier_fact_check_stale_and_a_new_bundle_an_earlier_
     assert not (job / "factcheck.json").exists() and (job / "audit.json").exists()
     bundle_step.run(job, ask=lambda *args, **kwargs: bundle_data())
     assert not (job / "audit.json").exists() and not (job / "bundle.draft.json").exists()
+
+
+@pytest.mark.parametrize("killed_at", ["audit.json", "bundle.json"])
+def test_an_audit_stopped_while_it_writes_is_done_again_and_keeps_its_corrections(job, monkeypatch, killed_at):
+    real = audit.write
+
+    def stopped(path, data):
+        if path.name == killed_at:
+            raise KeyboardInterrupt  # killed as it writes this file, after any written before it
+        real(path, data)
+
+    monkeypatch.setattr(audit, "write", stopped)
+    with pytest.raises(KeyboardInterrupt):
+        audit.run(job, ask=FakeAuditor())
+    monkeypatch.setattr(audit, "write", real)
+    assert not audit.is_done(job)  # no audit.json, or one that passed other facts than bundle.json has
+    report = audit.run(job, ask=FakeAuditor())
+    assert [c.id for c in report.corrections] == ["f2"] and audit.is_done(job)
+    assert factcheck.audit_corrections(job, Bundle.model_validate_json((job / "bundle.json").read_text())) == {
+        "f2": WRONG}
 
 
 def test_a_run_killed_in_the_audit_audits_again(jobs_root):
