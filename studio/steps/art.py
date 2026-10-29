@@ -388,6 +388,11 @@ List in `misplaced` each structure below that is missing from the picture, in th
 the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
 wrong side of its membrane), each in a few words. A picture with any of these is painted again.
 
+List in `unnamed` each small sphere, dot, bead or blob in the picture that is not one of the structures below, \
+each in a few words ("a loose orange sphere by the membrane"). The video labels every listed structure and \
+nothing else, so a round thing that is not listed would sit unlabelled. A picture with any of these is painted \
+again. Leave it empty in an everyday scene, the opening or an analogy, where the objects are not structures.
+
 List in `wrong` anything else that would mislead a learner, each in a few words: a part of the wrong shape \
 or too hard to make out, or anything scientifically wrong for what the scene should show.
 
@@ -410,6 +415,8 @@ class ArtCheck(Strict):
 
     text: list[str]  # every piece of writing seen in it; empty when there is none
     misplaced: list[str]  # each structure missing, out of place or facing the wrong way; a repaint
+    # Each small round thing that is not a listed structure, so the video would leave it unlabelled; a repaint.
+    unnamed: list[str] = Field(default_factory=list)
     wrong: list[str]  # anything else wrong for the scene, a few words each; recorded, not repainted
     # The problems that would teach something false, as a sentence each for the student: the video shows
     # those of the picture it uses beside it (notices). [] in a check made before.
@@ -429,11 +436,12 @@ class Painting:
     def problems(self) -> list[str]:
         """What the scene is painted again for: writing in the picture, a structure missing or out of place."""
         text = [f"it has writing in it ({', '.join(repr(t) for t in self.check.text)}); it must have none"]
-        return (text if self.check.text else []) + self.check.misplaced
+        unnamed = [f"{u}: draw no small sphere, dot or blob that is not a listed structure" for u in self.check.unnamed]
+        return (text if self.check.text else []) + self.check.misplaced + unnamed
 
     def score(self) -> tuple[int, int]:
         """Lower is better, among pictures without writing."""
-        return len(self.check.misplaced), len(self.check.wrong)
+        return len(self.check.misplaced) + len(self.check.unnamed), len(self.check.wrong)
 
 
 def run_painted(job: Path, ask) -> str:
@@ -458,7 +466,7 @@ def run_painted(job: Path, ask) -> str:
     todo = first + later
     painted, tries = len(results), sum(attempts for _, attempts in results)
     left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results)
-            for p in best.check.misplaced + best.check.wrong]
+            for p in best.check.misplaced + best.check.unnamed + best.check.wrong]
     refused = [f"{scene.id}: {why}" for scene, (best, _) in zip(todo, results) for why in best.refused]
     return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
@@ -489,7 +497,7 @@ def refusal(tried: dict) -> str | None:
         return None
     if tried.get("text"):
         return f"writing in it ({', '.join(repr(t) for t in tried['text'])})"
-    found = (tried.get("misplaced") or []) + (tried.get("wrong") or [])
+    found = (tried.get("misplaced") or []) + (tried.get("unnamed") or []) + (tried.get("wrong") or [])
     return str(found[0]) if found else None
 
 

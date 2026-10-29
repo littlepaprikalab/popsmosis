@@ -259,10 +259,10 @@ explanation to the narration, and every word of it is easy to hear.
     what they left out in the same spirit. It may come on its own line ("The song style
     the learner asked for") or anywhere in the topic or request, in their own words
     ("ATP synthesis. Style: pop-punk", "make the song K-pop").
-  - **Otherwise**, choose a style the audience listens to, and let the topic's mood pick
-    the style and its tempo: a calm or reflective topic suits a slower, smoother song,
-    and one full of action or change suits a faster one. Use the whole range of tempos
-    rather than settling near 100 bpm out of habit.
+  - **Otherwise**, the request carries a style from the studio's rotation, so droplets do not
+    all sound alike: build `positive_styles` from it, keeping its genre, voices and tempo. With
+    none, choose a vocals-first pop style a teenager plays for fun, between 92 and 112 bpm. A
+    faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
   - For high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
     pop-punk and their neighbours. These styles work well, slowest first; write in their
     spirit rather than copying one:
@@ -282,7 +282,7 @@ explanation to the narration, and every word of it is easy to hear.
       vocal, shimmering synths, claps, 104 bpm, clear diction
     - dance-pop with a four-on-the-floor beat, energetic male vocal, euphoric sing-along
       chorus, bright plucked synths, handclaps, pulsing bass, 124 bpm, clear diction
-    - pop-punk anthem at 150 bpm with a driving straight-ahead pulse, energetic male lead
+    - (only when the learner asks) pop-punk anthem at 150 bpm with a driving straight-ahead pulse, energetic male lead
       vocal and gang vocals on the chorus, bright radio-ready master, driving electric
       guitars and punchy live drums, clear diction
   - For a younger audience: bright, playful pop with a big sing-along chorus, a clear
@@ -326,12 +326,19 @@ explanation to the narration, and every word of it is easy to hear.
   signal, a ray of sunlight), each line causing the next, with verbs that move ("the
   signal hits, the gates fly open"). Give it a reason to move ("crowded outside, the sodium
   wants in"). Things the listener can picture and count beat abstract words.
+- **Lines that are sung, never directions.** Every line is something a singer says to the listener. Never
+  narrate the picture or the camera ("zoom inside to the chloroplast", "now look at the membrane"), never
+  announce a section ("here comes the bridge"). A line is at most 12 words.
 - **One metaphor, all the way through.** Carry the droplet's analogy from the intro to
   the outro, so every section adds to the same picture (a relay race, a factory line, a
-  city's mail). Every image points at the idea, and what
-  it says about the real thing is in the facts.
-- **One surprise.** Give the song one surprising true detail from the facts that sticks
-  (one cell's DNA, unwound, would stretch about two metres).
+  city's mail). Prefer an everyday picture that says what the process is *for* over a picture
+  of its machinery: light energy as money the cell cannot spend until it is traded for ATP and
+  NADPH cash tells a listener why the steps matter, where a dam only shows the parts. Every image
+  points at the idea, and what it says about the real thing is in the facts.
+- **One surprise, required.** Give the song one surprising true detail from the facts that sticks,
+  sung as its own line or couplet in a verse, or as the pre-chorus's hook ("photosystem two goes
+  first, even though it's number two"; one cell's DNA, unwound, would stretch about two metres).
+  Choose it from the facts before writing, and make it a line a listener repeats to a friend.
 - **Attitude.** A short tag that makes no claim ("that's the trick", "you see", "for real")
   can finish a line or land a rhyme, a few times in the song, never in place of the idea.
 - **Repetition.** What is repeated is what sticks: the title line, the chorus, and a key
@@ -354,7 +361,8 @@ In this order, each section a run of lines with its own `section` value:
 - **Verse**, 8 lines (12 below 130 bpm): the first half of the story, in order, one step a
   line or a couplet.
 - **Pre-chorus**, 2 lines: bust the misconception. Sing the right idea, and the mistake
-  only as what it is not; the chorus that follows lands the right idea.
+  only as what it is not; the chorus that follows lands the right idea. Say it with a fact, not a
+  filler ("that isn't true"): "the oxygen you breathe came from water, not CO2".
 - **Chorus**, 4 or 5 lines: `core_idea` as a chant. Sum up the whole pathway or idea, the
   steps in order where the topic is a process, each line built like the one before so the
   rhythm repeats ("Open the gates, let sodium in / Flip the charge and the spike

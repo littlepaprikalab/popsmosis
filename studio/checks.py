@@ -62,6 +62,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
     _check_conversions(data, canon, problems)
+    _check_lyric_style(data, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
@@ -93,6 +94,23 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
             continue
         kept.append({"structure": name})
     data["blocks"] = kept
+
+
+LYRIC_WORDS_MAX = 12
+# A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast").
+DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+(?:we|comes)|next\s+up)\b", re.I)
+
+
+def _check_lyric_style(data: dict, problems: list) -> None:
+    """A sung line is not a stage direction and is not long: both are only recorded (a better bundle, by the
+    prompt, is the fix), so the operator sees which droplets sing them."""
+    for line in data["lyrics"]:
+        text = line["text"]
+        why = ("narrates the picture instead of being sung" if DIRECTION_LINE.match(text) else
+               f"runs {len(text.split())} words, over {LYRIC_WORDS_MAX}" if len(text.split()) > LYRIC_WORDS_MAX else "")
+        if why:
+            problems.append(Problem(line_id=line["id"], rule="lyric-style", repaired=False,
+                                    detail=f'"{text}" {why}'))
 
 
 CONVERT_MAX = 4  # species on one side of a conversion

@@ -2,6 +2,7 @@ import pytest
 
 from studio import brain
 from studio.jobs import read, write
+from studio.styles import style_for
 from studio.schemas import Bundle, Request
 from studio.steps import bundle as bundle_step
 from studio.tests.sample import bundle_data
@@ -19,7 +20,9 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
     bundle = bundle_step.run(tmp_path, ask=fake_ask)
     assert seen["role"] == "brain" and seen["schema"] is Bundle and seen["label"] == "bundle"
     assert seen["system"] == bundle_step.PROMPT and "Big picture first" in seen["system"]
-    assert seen["prompt"] == "Topic: the light reactions\n\nCourse: AP Bio"
+    assert seen["prompt"].startswith("Topic: the light reactions\n\nCourse: AP Bio\n\nThe song style for this droplet, "
+                                     "from the studio's rotation: ")
+    assert style_for(tmp_path.name) in seen["prompt"]
     assert read(tmp_path / "bundle.json", Bundle) == bundle
     assert not (tmp_path / "factcheck.json").exists()
 
@@ -48,3 +51,8 @@ def test_an_answer_that_does_not_validate_is_kept_for_a_look(tmp_path):
         bundle_step.run(tmp_path, ask=fake_ask)
     assert (tmp_path / "bundle.invalid.json").read_text() == '{"course": "x"}'
     assert not (tmp_path / "bundle.json").exists()
+
+
+def test_the_learners_own_song_style_wins_over_the_rotation():
+    prompt = bundle_step.user_prompt(Request(topic="atp", song_style="K-pop"), "indie-pop singalong, 110 bpm")
+    assert "The song style the learner asked for: K-pop" in prompt and "rotation" not in prompt

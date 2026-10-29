@@ -12,6 +12,7 @@ from pathlib import Path
 from studio import brain, checks
 from studio.jobs import read, write
 from studio.schemas import Bundle, Request
+from studio.styles import style_for
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
 # The operator's note (python -m studio run <id> --note): what it has seen go wrong in recent droplets.
@@ -37,7 +38,7 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
     request = read(job / "request.json", Request)
     system = PROMPT + persona + (NOTE.format(note=note) if note.strip() else "")
     try:
-        answer = ask("brain", user_prompt(request), Bundle, request.images, system=system, label="bundle")
+        answer = ask("brain", user_prompt(request, style_for(job.name)), Bundle, request.images, system=system, label="bundle")
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
@@ -49,7 +50,7 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
     return bundle
 
 
-def user_prompt(request: Request) -> str:
+def user_prompt(request: Request, rotation: str = "") -> str:
     parts = [f"Topic: {request.topic}"]
     if request.course:
         parts.append(f"Course: {request.course}")
@@ -57,6 +58,10 @@ def user_prompt(request: Request) -> str:
         parts.append(f"The learner's request, in their words: {request.request}")
     if request.song_style:
         parts.append(f"The song style the learner asked for: {request.song_style}")
+    elif rotation:
+        parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. Use it for a high "
+                     "school or older audience, as the starting point for `positive_styles` (its tempo is the "
+                     "tempo); a younger audience gets the younger style below.")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")
     if request.study_guide:

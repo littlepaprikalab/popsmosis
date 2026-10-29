@@ -292,8 +292,8 @@ def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wro
     made = json.loads((job / "art" / "hook.json").read_text())
     assert made["try"] == 2
     # What each try was refused for is kept, not only the next prompt's quote of it.
-    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "wrong": [], "notes": []},
-                             {"try": 2, "text": [], "misplaced": [], "wrong": [], "notes": []}]
+    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "unnamed": [], "wrong": [], "notes": []},
+                             {"try": 2, "text": [], "misplaced": [], "unnamed": [], "wrong": [], "notes": []}]
     assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png"]
 
 

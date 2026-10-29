@@ -161,6 +161,17 @@ def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
     assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
 
 
+def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
+    def change(data):
+        data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"
+        data["lyrics"][1]["text"] = " ".join(["la"] * 13)
+        data["lyrics"][2]["text"] = "Light hits the leaf and the race begins"
+
+    _, found, _ = review(change)
+    assert [(line, repaired) for line, rule, repaired in found if rule == "lyric-style"] == [
+        ("v1-1", False), ("v1-2", False)]
+
+
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     def change(data):
         direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
@@ -274,3 +285,11 @@ def test_a_process_needs_two_stages_or_more():
 
     assert staging("overview", "synthase") == (["", "photosynthesis", "photosynthesis"], [])
     assert staging("synthase") == (["", "", ""], [("scene:synthase", "stages", True)])  # an ordinary scene
+
+
+def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours_differ():
+    from studio.styles import SONG_STYLES, style_for
+
+    assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
+    assert len({style_for(f"job{i}") for i in range(40)}) > 4
+    assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
