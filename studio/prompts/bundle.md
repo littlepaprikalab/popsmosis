@@ -339,7 +339,7 @@ explanation to the narration, and every word of it is easy to hear.
   three times. Below 130 bpm each line is one bar, short and punchy: about 2.4 seconds at
   100 bpm. From 130 bpm it is two bars: about 3.2 seconds at 150. Either way a sung line
   is roughly 6 to 10 syllables; a rapped line can carry a few more, up to about 14. The
-  song runs 2 to 3 minutes, so below 130 bpm, where lines are shorter, each verse has 16
+  song runs 2 to 2½ minutes, so below 130 bpm, where lines are shorter, each verse has 16
   lines instead of 8, so the song comes to about 2 minutes 15 seconds.
 
 ### How it sounds
@@ -432,7 +432,7 @@ catchy lines.
 
 ## The narration
 
-`narration` is the voice-over of the lesson video: about 2 to 3 minutes spoken (300 to
+`narration` is the voice-over of the lesson video: about 2½ to 3¼ minutes spoken (350 to
 450 words), one sentence per item, ids "n1", "n2" and on. Give each sentence its
 `names` and `fact_id` the way the lyrics have them. The narration explains what the song
 only names: it teaches every fact, step by step, in the order the scenes show them, and

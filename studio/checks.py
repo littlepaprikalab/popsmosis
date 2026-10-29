@@ -113,7 +113,7 @@ def _check_lyric_style(data: dict, problems: list) -> None:
                                     detail=f'"{text}" {why}'))
 
 
-SONG_MIN_S, SONG_MAX_S = 120, 190  # the prompt asks for 2 to 3 minutes; a song outside this is only recorded
+SONG_MIN_S, SONG_MAX_S = 120, 160  # the prompt asks for 2 to 2½ minutes; a song outside this is only recorded
 
 
 def song_length_problems(bundle: Bundle) -> list[Problem]:

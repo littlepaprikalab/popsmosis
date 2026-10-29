@@ -44,7 +44,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Literal, TypeVar
 
@@ -185,10 +187,24 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
     api = api or Api.from_env()
     attempt = held_attempt(job, answer)
 
-    sent = 0
-    for bucket, files in ((PRIVATE, private), (PUBLIC, public)):
-        for file in files:
-            sent += upload_file(api, job, answer, bucket, file)[1]
+    # The first file alone, so storage that is not set up fails on one request; then the rest several at once, since
+    # each waits on the network, not on this machine. One that fails stops the ones not yet started and fails the
+    # step; a retry sends only what is not there yet.
+    todo = [(bucket, file) for bucket, files in ((PRIVATE, private), (PUBLIC, public)) for file in files]
+    sent = upload_file(api, job, answer, *todo[0])[1] if todo else 0
+    stop = threading.Event()
+
+    def one(item: tuple[str, str]) -> int:
+        if stop.is_set():
+            return 0
+        try:
+            return upload_file(api, job, answer, *item)[1]
+        except Exception:
+            stop.set()
+            raise
+
+    with ThreadPoolExecutor(UPLOAD_WORKERS) as pool:
+        sent += sum(pool.map(one, todo[1:]))
 
     progress = _progress(job, answer, attempt)
 
@@ -228,6 +244,10 @@ def _progress(job: Path, answer: str, attempt: int | None) -> Progress:
     return Progress(answer_id=answer, attempt=attempt)
 
 
+UPLOAD_WORKERS = 8
+_PROGRESS_LOCK = threading.Lock()
+
+
 def upload_file(api: Api, job: Path, answer_id: str, bucket: Bucket, path: str) -> tuple[UploadedFile, int]:
     """Upload one file of the job to <bucket>/<answer_id>/[a<attempt>/]<path>, unless this
     exact file is already there, and record it in upload.progress.json. Returns the record
@@ -256,6 +276,8 @@ def upload_file(api: Api, job: Path, answer_id: str, bucket: Bucket, path: str) 
     if bucket == PUBLIC and not public_url:
         raise media.StepFailed(f"{bucket}/{remote}: the API sent no public URL")
     entry = UploadedFile(bucket=bucket, remote=remote, sha256=digest, size=len(data), public_url=public_url)
-    progress.files[path] = entry
-    jobs.write(job / PROGRESS, progress)
+    with _PROGRESS_LOCK:  # uploads run side by side: each adds its record to the file as it stands now
+        progress = _progress(job, answer_id, attempt)
+        progress.files[path] = entry
+        jobs.write(job / PROGRESS, progress)
     return entry, 1
