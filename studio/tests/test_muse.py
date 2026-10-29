@@ -765,3 +765,39 @@ def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
 
     monkeypatch.setattr(muse, "send", drops_once)
     assert muse.paint(tmp_path, "art hook", "a leaf") == picture() and len(tries) == 2
+
+
+def test_writing_painted_out_reaches_the_videos_as_a_clean_picture_with_only_its_science_notes(job, monkeypatch):
+    # Across the steps: the picture's writing is painted out in the art step, before locate reads it; the re-check's
+    # note for the student reaches both timelines as a notice, and the writing never does; the upright hook cut
+    # puts that card above the picture, which keeps the frame's width, and the wide song puts it at the right.
+    from studio.render import primitives as p
+    from studio.render.renderer import NOTICE_GAP, NOTICE_W, Renderer
+    from studio.steps import timeline as timeline_step
+
+    note = "Cytochrome b6f sits on the membrane here; in truth it spans it."
+    FakeMuse({"overview": [lettered("overview")]}).install(monkeypatch)
+    helper = FakeHelper({"overview": [{"text": ["T"]}, {"notes": [note]}]}, writing={"overview": [T_BOX]})
+    art.run(job, helper)
+    assert sample_media_image(job / media.art_path("overview"))[152, 900].min() > 240  # gone before locate runs
+    locate.run(job, helper)
+    timeline_step.run(job)
+    song = jobs.read(job / media.timeline_path("song"), Timeline)
+    lesson = jobs.read(job / media.timeline_path("lesson"), Timeline)
+    assert song.notices == {"overview": [note]}
+    assert lesson.notices == ({"overview": [note]} if any(b.scene == "overview" for b in lesson.beats) else {})
+    hook_path = job / media.timeline_path(media.HOOK)
+    amber = p.rgb("#F59E0B")
+    hook = jobs.read(hook_path, Timeline)  # the sample's first chorus and the verse line before it
+    upright = Renderer(job, hook, "v")
+    beat = next(b for b in hook.beats if b.scene == "overview")
+    view = upright.view("overview")
+    assert view[0] == 0 and view[2] == upright.layout.width and view[1] > upright.layout.title_h + NOTICE_GAP
+    frame = upright.frame((beat.t0 + beat.t1) / 2)
+    b, g, r, _ = frame[round(upright.layout.title_h + NOTICE_GAP + 40), round(upright.layout.margin + 3)]
+    assert np.allclose((r, g, b), amber, atol=12)
+    wide = Renderer(job, song)
+    beat = next(b for b in song.beats if b.scene == "overview")
+    edge = wide.layout.width - NOTICE_W
+    b, g, r, _ = wide.frame((beat.t0 + beat.t1) / 2)[round(wide.view("overview")[1] + wide.layout.margin + 48), edge + 3]
+    assert np.allclose((r, g, b), amber, atol=12)

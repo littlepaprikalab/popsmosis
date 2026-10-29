@@ -628,6 +628,10 @@ def test_a_notice_card_sits_below_the_key_band_and_upright_above_the_picture(job
     frame = upright.frame(2.0)
     card_top = tall[1] + renderer_module.NOTICE_GAP
     assert np.allclose(pixel(frame, upright.layout.margin + 3, card_top + 40), amber, atol=12)
+    # The hook cut carries the song's notices; one for a scene it never shows keeps no room above the picture.
+    elsewhere = Renderer(job, keyed.model_copy(update={"notices": {"synthase": notices["overview"] * 3},
+                                                       "title": "the light reactions"}), "v")
+    assert elsewhere.view("overview") == tall
     assert np.allclose(pixel(frame, upright.layout.width - upright.layout.margin - 20, card_top + 40),
                        (255, 255, 255), atol=12)  # white across the frame
 

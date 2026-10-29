@@ -324,13 +324,14 @@ def test_every_section_is_asked_for_the_songs_own_style_with_nothing_added():
     from studio.steps import audio
 
     data = bundle_data()
-    data["music"]["positive_styles"] = ["Pop with clear rapped verses, rising into a sung chorus; 100 bpm"]
+    data["music"]["positive_styles"] = ["Pop with clear rapped verses, rising into a sung chorus; 100 bpm."]
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
     assert all(c["positive_styles"] == bundle.music.positive_styles for c in plan["chunks"])
     assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
     prompt, _ = audio.song_prompt(bundle)
-    assert "never rapped" not in prompt and prompt.startswith(f"Style: {bundle.music.positive_styles[0]}.")
+    assert "never rapped" not in prompt and prompt.startswith(f"Style: {bundle.music.positive_styles[0]}\n")
+    assert ".." not in prompt  # the description's own full stop is the sentence's
 
 
 def test_a_scene_where_things_travel_and_the_song_stands_still_is_recorded():

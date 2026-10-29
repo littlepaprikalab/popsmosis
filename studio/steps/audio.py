@@ -270,10 +270,10 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     end_ms = planned[-1]["start_ms"] + planned[-1]["duration_ms"] if planned else 0
     music = bundle.music
     head = []
-    if music.positive_styles:
-        head.append(f"Style: {', '.join(music.positive_styles)}.")
+    if music.positive_styles:  # a free-form style may end on its own full stop
+        head.append(f"Style: {', '.join(style.rstrip(' .') for style in music.positive_styles)}.")
     if music.negative_styles:
-        head.append(f"Avoid: {', '.join(music.negative_styles)}.")
+        head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
     head += [
         f"Length: about {_clock(end_ms)}. The singing starts within the first two seconds, with no long "
         "intro, and the song ends soon after the last line.",

@@ -560,8 +560,9 @@ class Renderer:
         # An upright frame has no room beside the picture: there the card goes across the frame above it, and the
         # picture starts below the tallest card, so every scene with one keeps the same framing.
         self._card_h = 0.0
-        if self.portrait and timeline.notices:
-            self._card_h = max(self._card_height(notes) for notes in timeline.notices.values()) + 2 * NOTICE_GAP
+        shown = [notes for scene_id, notes in timeline.notices.items() if scene_id in scene_ids]  # the hook cut
+        if self.portrait and shown:  # carries the song's notices, scenes it never shows included
+            self._card_h = max(self._card_height(notes) for notes in shown) + 2 * NOTICE_GAP
         for i, beat in enumerate(timeline.beats):
             if i and self.staged(timeline.beats[i - 1].scene, beat.scene):
                 before, now = self.revealed.get(timeline.beats[i - 1].scene, {}), self.revealed.get(beat.scene, {})
