@@ -92,9 +92,9 @@ which now holds the droplet.
 **Used, not built here:** the models and libraries each droplet's bill of materials lists
 (Meta's Muse models, SAM 3.1, Demucs, MMS and PyTorch; Claude; ElevenLabs; Gemini and
 Lyria; skia; ffmpeg), the Inter font, and [Inkmory](https://inkmory.com), the public
-journal the teacher writes to. The videos' style is modelled on the earlier *Fire or
-Don't* videos; none of their code is in this repository, and the renderer here was
-written during the event, starting at `c86bf1f`.
+journal the teacher writes to. The *Fire or Don't* videos were the reference style for
+the videos; none of their code is in this repository, and the renderer was written during
+the event, starting at `c86bf1f`.
 
 `prisma/migrations/20261026120000_init` is zoey's schema squashed into one migration;
 every migration after it is new. Their folder names only set their order: they are not
