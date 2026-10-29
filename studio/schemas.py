@@ -299,7 +299,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "glow", "stages",
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "glow", "stages",
                   "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it

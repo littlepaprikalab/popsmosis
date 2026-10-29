@@ -459,6 +459,36 @@ order, keyed by `line_id`:
 - `caption`: almost always "". At most one short caption (a few words) per song section,
   for a term worth seeing written.
 
+### Plan the motion like an animator
+
+The picture never moves; the particles, the camera and the spotlight are all the video
+has. Plan them across the whole song before writing any one line's direction:
+
+- **Something moves on almost every line of a diagram scene.** A line that tells a step of
+  the process has particles for that step. Never leave more than two lines in a row on a
+  diagram scene with no particles: when a line only comments ("that's the payout"), carry
+  on the flow it is about, or move the camera. A failure scene is the exception: after the
+  block, what has stopped stays still, and that stillness is the point.
+- **What goes in and what comes out move too.** A line that says something is taken in,
+  split, made or released has particles for it: the input travelling from where it comes
+  from into the structure that uses it, the product travelling out to where it goes
+  ("H₂O" from the lumen into photosystem II and "O₂" back out; "Na⁺" from outside the cell
+  in through its channel; "glucose" from the blood into the muscle cell). Each of `conversions`' inputs and outputs
+  that the facts place in a space is shown moving this way at least once.
+- **Build the pathway up, one step at a time.** The verses show each flow first on the
+  line that teaches it, one step a line, in the order it happens; the chain grows as the
+  verses go. The chorus and the summary lines show the whole pathway at once (the longest
+  path, every stop in order).
+- **The chorus is directed the same way every time it is sung**: the same scene where it
+  can be, the same flows on the same lines, so the picture repeats with the words.
+- **Camera:** wide (zoom 1.0) on lines that sum up or link steps; close (about 1.6 to 2.0)
+  on the part a line is about. Stay close for at most three lines, then pull back or move
+  on to the next part: a close-up held through a whole verse loses where the part sits.
+  Move the camera with the story (along the chain, the way the particles go), not back
+  and forth.
+- **Spotlight** the part each step is about while its particles move, and none on the
+  lines that sum up, so the whole pathway reads at once.
+
 Give no times: code adds them from the audio.
 
 ## What builds up

@@ -204,9 +204,10 @@ def test_the_bundle_step_saves_the_repaired_bundle_and_the_checks(tmp_path):
     bundle_step.run(tmp_path, ask=lambda *args, **kwargs: data)
     assert read(tmp_path / "bundle.json", Bundle).direction[2].spotlight == ""
     problems = read(tmp_path / "checks.json", CheckReport).problems
-    # The sample song is a few lines long, so the bundle step also records that it is short.
-    assert [(p.line_id, p.rule, p.repaired) for p in problems] == [("c1-1", "spotlight", True),
-                                                                   ("music", "lyric-style", False)]
+    # The bundle step also records what only a better bundle fixes: the sample song is short, and still in places.
+    assert (problems[0].line_id, problems[0].rule, problems[0].repaired) == ("c1-1", "spotlight", True)
+    assert ("music", "lyric-style", False) in [(p.line_id, p.rule, p.repaired) for p in problems]
+    assert all(not p.repaired for p in problems[1:])
 
 
 def test_curly_quotes_and_dashes_match_plain_ones():
@@ -312,3 +313,14 @@ def test_only_the_verses_are_asked_to_rap_and_the_rest_to_sing():
     data["music"]["positive_styles"] = ["bright pop", "100 bpm"]  # no rap asked for: nothing added
     plan, _ = audio.composition_plan(Bundle.model_validate(data))
     assert all("rapp" not in " ".join(c["positive_styles"] + c["negative_styles"]) for c in plan["chunks"])
+
+
+def test_a_song_that_stands_still_or_directs_its_choruses_differently_is_recorded():
+    data = bundle_data()
+    for d in data["direction"]:
+        d.update(particles=[], carries="")
+    found = [(p.line_id, p.detail) for p in checks.motion_problems(Bundle.model_validate(data))]
+    still = [line for line, detail in found if "nothing moving" in detail]
+    assert still, "a song with nothing moving on its diagram scenes is recorded"
+    assert all(next(d.scene for d in Bundle.model_validate(data).direction if d.line_id == line) != "hook"
+               for line in still)  # the hook need not move

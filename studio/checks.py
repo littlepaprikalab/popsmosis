@@ -129,6 +129,52 @@ def song_length_problems(bundle: Bundle) -> list[Problem]:
                            f"{seconds:.0f} s, outside {SONG_MIN_S} to {SONG_MAX_S}")]
 
 
+STILL_LINES_MAX = 2  # lines in a row on a diagram scene with nothing moving
+STILL_SCENES = ("hook", "analogy")  # scenes where nothing needs to move
+
+
+def motion_problems(bundle: Bundle) -> list[Problem]:
+    """The song's direction against the planning rules a check can count: no more than STILL_LINES_MAX lines in a
+    row on a diagram scene with no particles, and every chorus directed alike (compared from its end, since the
+    last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them."""
+    directions = {d.line_id: d for d in bundle.direction}
+    blockers = {b.structure for b in bundle.blocks}
+    # A failure scene (one that draws a blocker) holds still after the block on purpose: what stopped stays stopped.
+    still = set(STILL_SCENES) | {s.id for s in bundle.scenes if blockers & {x.name for x in s.structures}}
+    problems, run = [], []
+
+    def close_run() -> None:
+        if len(run) > STILL_LINES_MAX:
+            problems.append(Problem(line_id=run[0], rule="motion", repaired=False,
+                                    detail=f"{len(run)} lines in a row from {run[0]} on a diagram scene with nothing moving"))
+        run.clear()
+
+    for line in bundle.lyrics:
+        d = directions.get(line.id)
+        if d and d.scene not in still and not d.particles and (not run or directions[run[0]].scene == d.scene):
+            run.append(line.id)
+        else:
+            close_run()
+            if d and d.scene not in still and not d.particles:
+                run.append(line.id)
+    close_run()
+
+    choruses, current = [], []
+    for i, line in enumerate(bundle.lyrics):
+        if line.section == "chorus":
+            current.append(line.id)
+        if current and (i + 1 == len(bundle.lyrics) or bundle.lyrics[i + 1].section != "chorus"):
+            choruses.append(current)
+            current = []
+    for later in choruses[1:]:
+        for first_id, later_id in zip(reversed(choruses[0]), reversed(later)):
+            a, b = directions.get(first_id), directions.get(later_id)
+            if a and b and (a.particles, a.carries) != (b.particles, b.carries):
+                problems.append(Problem(line_id=later_id, rule="motion", repaired=False,
+                                        detail=f"chorus line {later_id} moves differently from {first_id}"))
+    return problems
+
+
 CONVERT_MAX = 4  # species on one side of a conversion
 
 
