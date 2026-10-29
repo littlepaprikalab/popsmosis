@@ -38,6 +38,13 @@ def test_the_prompt_holds_for_topics_outside_science():
     assert "the bridge takes the other case the facts give" in prompt and "another case the same idea explains" in prompt
 
 
+def test_the_facts_say_the_misconception_is_a_common_one():
+    # The lesson names the common mistake; with no fact saying it is common, the fact-check rewrote "Many students
+    # think..." in two of six droplets on Oct 29 (Newton's third law, p-values).
+    prompt = " ".join(bundle_step.PROMPT.split())
+    assert "and that the mistake is a common one" in prompt
+
+
 def test_the_prompt_carries_the_request_and_study_guide():
     prompt = bundle_step.user_prompt(Request(topic="ATP", request="for my exam", study_guide="ATP is made.",
                                              images=["/notes.png"]))

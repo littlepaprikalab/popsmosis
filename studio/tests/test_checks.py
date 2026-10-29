@@ -172,6 +172,13 @@ def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired
         ("v1-1", False), ("v1-2", False)]
 
 
+def test_next_up_announces_a_section_but_also_links_to_the_next_topic():
+    narrates = [bool(checks.DIRECTION_LINE.match(text)) for text in (
+        "Next up, the bridge", "Now next up is the chorus", "Here comes the bridge",
+        "Next up, the power rule, with no limit to compute", "Next up: estar plus an -ando, the present progressive")]
+    assert narrates == [True, True, True, False, False]
+
+
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     def change(data):
         direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")

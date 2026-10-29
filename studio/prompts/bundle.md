@@ -93,7 +93,9 @@ Then:
   out: a learner can hold a handful of new names, and each extra one pushes out the idea.
 - `misconception`: the most common misunderstanding of the topic at this level and its
   correction, in one or two sentences. The facts must state the correction, because the
-  lesson, the song and the narration each correct it once.
+  lesson, the song and the narration each correct it once, and that the mistake is a common
+  one ("A common mistake is to think the two forces cancel"): the lesson names it as one,
+  and the fact-check rewrites a "many students think" that no fact supports.
 
 ## Scenes and structures
 

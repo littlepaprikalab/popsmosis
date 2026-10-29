@@ -99,8 +99,12 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
 
 
 LYRIC_WORDS_MAX = 12
-# A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast").
-DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+(?:we|comes)|next\s+up)\b", re.I)
+# A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
+# announces a section ("next up, the bridge"); before anything else it is the link to the next topic that the second
+# pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), as two droplets did on Oct 29.
+SECTION_NAMES = r"(?:intro|verse|pre-chorus|chorus|bridge|hook|outro)"
+DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+(?:we|comes)"
+                            rf"|next\s+up\W+(?:(?:is|comes|the|a)\s+)*{SECTION_NAMES}\b)\b", re.I)
 
 
 def _check_lyric_style(data: dict, problems: list) -> None:
