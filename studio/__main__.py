@@ -7,6 +7,8 @@
     python -m studio wait <question-id>          # the background videos' outcome, waiting up to 9 minutes
     python -m studio recover                     # take a render that died with its machine, rebuild its job
     python -m studio fetch <attachment-id> ...   # a follow-up's files, saved by id (studio/files.py)
+    python -m studio reply <answer-id> <reply-to-id> --file F   # post the teacher's follow-up answer from a file
+    python -m studio answer <question-id> --model M --file F    # post its answer to a request that is not a topic
 
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio plan --topic "..." --videos  # and then its videos: a whole test round in one command
@@ -16,8 +18,8 @@
     python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
     python -m studio fallback <job-id>           # the ffmpeg karaoke video, once the song is timed
 
-`run`, `fail`, `summary`, `videos`, `wait`, `recover` and `fetch` are the operator's
-(studio/run.py, studio/videos.py, studio/files.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
+`run`, `fail`, `summary`, `videos`, `wait`, `recover`, `fetch`, `reply` and `answer` are the operator's
+(studio/run.py, studio/videos.py, studio/files.py, studio/post.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
 and use the question id as the job id.
 
 Jobs live in jobs/<id>/ (STUDIO_JOBS_DIR overrides it). Every model call is logged
@@ -41,7 +43,7 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, files, jobs, ledger, media
+from studio import ass_fallback, brain, checks, files, jobs, ledger, media, post
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
@@ -77,6 +79,14 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("recover", help="take one render that died with its machine and rebuild its job here")
     fetch = commands.add_parser("fetch", help="a follow-up's files, by attachment id, saved under their ids")
     fetch.add_argument("attachment", nargs="+")
+    replying = commands.add_parser("reply", help="post the teacher's answer to a follow-up, from a file it wrote")
+    replying.add_argument("answer")
+    replying.add_argument("reply_to")
+    replying.add_argument("--file", type=Path, required=True)
+    answering = commands.add_parser("answer", help="post the teacher's answer to a request that is not a topic, from a file")
+    answering.add_argument("question")
+    answering.add_argument("--model", required=True)
+    answering.add_argument("--file", type=Path, required=True)
     plan = commands.add_parser("plan", help="start a job: the bundle, then the fact-check")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--course", default="")
@@ -106,6 +116,13 @@ def main(argv: list[str] | None = None) -> int:
     if retired and args.command in ("plan", "step"):  # `run`, `videos` and `recover` stop and say so
         print(f"note: {retired}", file=sys.stderr)
 
+    if args.command in ("reply", "answer"):
+        if args.command == "reply":
+            result, detail = post.reply(args.answer, args.reply_to, args.file)
+        else:
+            result, detail = post.answer(args.question, args.model, args.file)
+        print(f"{result} {detail}" if result in (post.POSTED, post.DONE) else f"{result}: {detail}")
+        return post.EXIT_CODES[result]
     if args.command == "fetch":
         lines, ok = files.fetch(args.attachment)
         print("\n".join(lines))

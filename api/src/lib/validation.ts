@@ -47,9 +47,14 @@ const SECRET_PATTERNS: RegExp[] = [
   /sb_secret_[A-Za-z0-9_-]{10,}/, // Supabase
   /sk_inkmory_[A-Za-z0-9_-]{10,}/, // Inkmory
   /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\./, // a JWT
-  /-----BEGIN [A-Z ]*PRIVATE KEY-----/,
-  // An environment variable that names a key, token, secret or password, with a value: what `printenv` prints.
-  /\b[A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)\s*=\s*\S{8,}/,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----(?:\s|\\n)*[A-Za-z0-9+/=]{40,}/, // a private key with its body, raw or inside JSON; a header alone is a lesson
+  // One of this system's own secrets with a value, as `printenv` or a .env file shows it. Named one by one: a lesson
+  // that teaches `API_KEY=...` or `PASSWORD = "..."` is a lesson, and refusing it would fail a learner's topic for good.
+  new RegExp(`\\b(?:${[
+    'POPSMOSIS_API_KEY', 'POPSMOSIS_ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY', 'MODEL_API_KEY', 'GEMINI_API_KEY',
+    'ELEVENLABS_API_KEY', 'INKMORY_OPERATOR_API_KEY', 'INKMORY_PLANNER_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
+    'JWT_SECRET', 'PROXY_SECRET', 'GOOGLE_CLIENT_SECRET', 'POPSMOSIS_ROUTINE_FIRE_TOKEN', 'DATABASE_URL', 'DIRECT_URL',
+  ].join('|')})["']?\\s*[=:]\\s*["']?[^\\s"']{8,}`),
 ];
 
 export function containsSecret(text: string): boolean {

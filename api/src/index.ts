@@ -53,8 +53,11 @@ export async function buildApp() {
       const result = await resolveAgentToken(token);
       if ('agent' in result) request.agent = result.agent;
       request.agentKeyKnown = 'agent' in result || result.errorCode === 'FORBIDDEN'; // FORBIDDEN: real, but disabled
-    } catch {
-      // requireAgent reports the error on gated routes
+    } catch (err) {
+      // The database did not answer. The route's own guard looks again and answers a 5xx the studio retries; a
+      // refusal here would read as a bad key, and stop the teacher's run over a blip.
+      request.agentKeyLookupFailed = true;
+      request.log.warn({ err }, 'agent key lookup failed');
     }
   });
 
@@ -64,7 +67,7 @@ export async function buildApp() {
     app.addHook('onRequest', async (request, reply) => {
       // Agents call the API directly, with a key that is really theirs (a disabled one still reaches its route, which
       // says so). Anything that only looks like a key comes through the proxy like everyone else.
-      if (request.agentKeyKnown) return;
+      if (request.agentKeyKnown || request.agentKeyLookupFailed) return;
       if (request.url === '/api/health') return;
       // A key in the right shape that is no agent's (revoked, rotated, made up) gets the answer requireAgent gives it,
       // so a runner with an old key reads it as a bad key, not as a disabled agent or a blocked caller.
@@ -124,7 +127,8 @@ export async function buildApp() {
     max: (req: FastifyRequest) => {
       if (req.agent) return 300;
       if (subOf(req)) return 200;
-      return 60;
+      // Per address, and a school's students share one: a class loading the site together stays well under it.
+      return 120;
     },
   });
 

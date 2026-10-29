@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import prisma, { runTransaction } from '../lib/prisma.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
@@ -16,7 +16,7 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
-import { takeTopic, pruneUsage } from '../lib/usage.js';
+import { takeTopic, giveBack, pruneUsage, topicAllowed } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -126,7 +126,13 @@ export default async function questionRoutes(app: FastifyInstance) {
   // large — and why the caller is checked before it is read. An admin may
   // pick the `brain` that makes it (lib/brains.ts); anyone else's topic is
   // made by the teacher's own.
-  app.post('/api/questions', { onRequest: [requireUser], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
+  // A caller already at a limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
+  const topicOpen = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.viewer) return; // requireUser replied
+    const refusal = await topicAllowed(request.viewer.id);
+    if (refusal) return sendError(reply, refusal.code, refusal.message, refusal.extra);
+  };
+  app.post('/api/questions', { onRequest: [requireUser, topicOpen], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
     const { content, attachments: rawAttachments, brain: rawBrain } = (request.body ?? {}) as {
       content?: unknown; attachments?: unknown; brain?: unknown;
     };
@@ -141,19 +147,25 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a question');
     }
 
-    // The learner's 24 hours and the site's (lib/usage.ts), taken in the same transaction as the topic: a topic
-    // taken back or deleted later does not hand its place back.
-    let question;
+    // The learner's 24 hours and the site's (lib/usage.ts), taken before the topic is written and kept after: a
+    // topic taken back or deleted later does not hand its place back. Taken in a short transaction of its own, so the
+    // files' write below holds no lock and no pooled connection while it runs.
+    let usageId: string;
     try {
-      question = await runTransaction(async (tx) => {
-        await takeTopic(tx, request.viewer!.id);
-        return tx.question.create({
-          data: { userId: request.viewer!.id, content: text, brain, attachments: attachmentsCreate(attachments) },
-          include: questionInclude,
-        });
-      });
+      usageId = await takeTopic(request.viewer!.id);
     } catch (err) {
       if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
+      if (await accountGone(err, request.viewer!.id)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
+      throw err;
+    }
+    let question;
+    try {
+      question = await prisma.question.create({
+        data: { userId: request.viewer!.id, content: text, brain, attachments: attachmentsCreate(attachments) },
+        include: questionInclude,
+      });
+    } catch (err) {
+      await giveBack(usageId).catch(() => {}); // never written, so it used nothing
       if (await accountGone(err, request.viewer!.id)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
       throw err;
     }

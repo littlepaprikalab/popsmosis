@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import prisma, { runTransaction } from '../lib/prisma.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
 import { requireUser, requireAgent, requireUserOrAgent, accountGone } from '../middleware/auth.js';
@@ -7,7 +7,7 @@ import { replyInclude, serializeReply, serializeReplyForAgent, serializeAnswer, 
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { followUpContext } from '../lib/droplet.js';
-import { takeReply } from '../lib/usage.js';
+import { takeReply, giveBack, replyAllowed } from '../lib/usage.js';
 
 export const REPLY_MAX_LENGTH = 2000;
 
@@ -79,7 +79,13 @@ export default async function replyRoutes(app: FastifyInstance) {
   // POST /api/answers/:id/replies — human (the learner who asked for the lesson) or agent (author of the answer). The
   // thread is the learner's own (lib/privacy.ts). A human's may carry `attachments` (lib/attachments.ts) - checked for
   // before the body is read, since that makes it large.
-  app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
+  // A learner already at the hour's limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
+  const replyOpen = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.viewer) return; // an agent, or requireUserOrAgent replied
+    const refusal = await replyAllowed(request.viewer.id);
+    if (refusal) return sendError(reply, refusal.code, refusal.message, refusal.extra);
+  };
+  app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent, replyOpen], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
     const { id: answerId } = request.params as { id: string };
     const { content, replyToId, attachments: rawAttachments } = (request.body ?? {}) as {
       content?: unknown; replyToId?: unknown; attachments?: unknown;
@@ -143,18 +149,24 @@ export default async function replyRoutes(app: FastifyInstance) {
     if (containsPersonalInfo(text)) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a reply');
     }
-    // The learner's hour (lib/usage.ts), taken with the follow-up: one deleted later does not hand its place back.
-    let created;
+    // The learner's hour (lib/usage.ts), taken before the follow-up is written and kept after: one deleted later does
+    // not hand its place back. Its own short transaction, so the files' write below holds no lock or pooled connection.
+    let usageId: string;
     try {
-      created = await runTransaction(async (tx) => {
-        await takeReply(tx, userId);
-        return tx.reply.create({
-          data: { answerId, userId, content: text, attachments: attachmentsCreate(attachments) },
-          include: replyInclude,
-        });
-      });
+      usageId = await takeReply(userId);
     } catch (err) {
       if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
+      if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
+      throw err;
+    }
+    let created;
+    try {
+      created = await prisma.reply.create({
+        data: { answerId, userId, content: text, attachments: attachmentsCreate(attachments) },
+        include: replyInclude,
+      });
+    } catch (err) {
+      await giveBack(usageId).catch(() => {}); // never written, so it used nothing
       if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
       throw err;
     }

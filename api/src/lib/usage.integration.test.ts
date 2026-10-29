@@ -96,6 +96,29 @@ describe.runIf(RUN)('usage limits', () => {
     expect((await ask(di.cookie)).statusCode).toBe(201);
   });
 
+  it('turns away a learner at the limit before reading what they sent', async () => {
+    process.env.QUESTIONS_PER_USER_PER_DAY = '1';
+    const hal = await learner('hal');
+    expect((await ask(hal.cookie)).statusCode).toBe(201);
+    // A body past MESSAGE_BODY_LIMIT would be a 413 if it were read: the 429 says it never was.
+    const { MESSAGE_BODY_LIMIT } = await import('./attachments.js');
+    const huge = await app.inject({
+      method: 'POST', url: '/api/questions', headers: { ...asUser(hal.cookie), 'content-type': 'application/json' },
+      payload: JSON.stringify({ content: 'x', pad: 'y'.repeat(MESSAGE_BODY_LIMIT + 1) }),
+    });
+    expect(huge.statusCode).toBe(429);
+  });
+
+  it('gives a take back when the request it was for is never written', async () => {
+    process.env.QUESTIONS_PER_USER_PER_DAY = '1';
+    const gus = await learner('gus');
+    const { takeTopic, giveBack } = await import('./usage.js');
+    const taken = await takeTopic(gus.id);
+    await expect(takeTopic(gus.id)).rejects.toMatchObject({ code: 'RATE_LIMITED' });
+    await giveBack(taken);
+    expect((await ask(gus.cookie)).statusCode).toBe(201); // the place came back
+  });
+
   it('lets go of rows no limit reads any more, and keeps the rest', async () => {
     const fay = await learner('fay');
     await prisma.usageEvent.createMany({ data: [

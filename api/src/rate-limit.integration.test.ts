@@ -43,7 +43,7 @@ describe.runIf(RUN)('rate-limit keys', () => {
   });
 
   it('gives each visitor their own sign-in limit, so one cannot lock everyone out', async () => {
-    for (let i = 0; i < 10; i++) expect((await signIn('203.0.113.1')).statusCode).toBe(400); // no code: refused, but counted
+    for (let i = 0; i < 30; i++) expect((await signIn('203.0.113.1')).statusCode).toBe(400); // no code: refused, but counted
     expect((await signIn('203.0.113.1')).statusCode).toBe(429);
     expect((await signIn('203.0.113.2')).statusCode).toBe(400); // another visitor is untouched
   });
@@ -57,17 +57,17 @@ describe.runIf(RUN)('rate-limit keys', () => {
       return `popsmosis_session=${head}.${createHmac('sha256', 'not-the-secret').update(head).digest('base64url')}`;
     };
     const codes: number[] = [];
-    for (let i = 0; i < 61; i++) codes.push((await me(viaProxy('198.51.100.7', { cookie: forged(i) }))).statusCode);
-    expect(codes.slice(0, 60).every((c) => c === 401)).toBe(true);
-    expect(codes[60]).toBe(429);
+    for (let i = 0; i < 121; i++) codes.push((await me(viaProxy('198.51.100.7', { cookie: forged(i) }))).statusCode);
+    expect(codes.slice(0, 120).every((c) => c === 401)).toBe(true);
+    expect(codes[120]).toBe(429);
   });
 
   it('gives a made-up agent key no bucket of its own, nor a way past the proxy', async () => {
     const codes: number[] = [];
-    for (let i = 0; i < 61; i++) {
+    for (let i = 0; i < 121; i++) {
       codes.push((await me(viaProxy('198.51.100.8', { authorization: `Bearer sk_pop_${i}` }))).statusCode);
     }
-    expect(codes[60]).toBe(429);
+    expect(codes[120]).toBe(429);
 
     // A key in the right shape that is no agent's is refused at the gate, even on a page anyone may read.
     const fake = `Bearer sk_pop_${'e'.repeat(64)}`;
@@ -75,5 +75,20 @@ describe.runIf(RUN)('rate-limit keys', () => {
     expect(direct.statusCode).toBe(401);
     // The real key still reaches the API directly.
     expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: { authorization: `Bearer ${agentKey}` } })).statusCode).toBe(200);
+  });
+
+  it('answers a database blip on the key lookup with a 5xx the studio retries, never a 401 that stops the run', async () => {
+    const { generateApiKey } = await import('./lib/apikey.js');
+    const k = generateApiKey(); // never looked up, so not cached
+    await prisma.agent.create({ data: { name: `${tag}-blip`, apiKeyHash: k.hashed } });
+    const { vi } = await import('vitest');
+    const spy = vi.spyOn(prisma.agent, 'findUnique').mockRejectedValue(new Error('connection terminated unexpectedly'));
+    try {
+      const res = await app.inject({ method: 'GET', url: '/api/agents/me', headers: { authorization: `Bearer ${k.raw}` } });
+      expect(res.statusCode).toBeGreaterThanOrEqual(500);
+    } finally {
+      spy.mockRestore();
+    }
+    expect((await app.inject({ method: 'GET', url: '/api/agents/me', headers: { authorization: `Bearer ${k.raw}` } })).statusCode).toBe(200);
   });
 });

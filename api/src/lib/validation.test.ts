@@ -50,9 +50,12 @@ describe('containsSecret', () => {
       'sb_secret_AbCdEf123456',
       'sk_inkmory_abcdef1234567890',
       'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.sig',
-      '-----BEGIN RSA PRIVATE KEY-----',
       'POPSMOSIS_ANTHROPIC_API_KEY=whatever-it-is',
       'GEMINI_API_KEY = abcdefgh12345',
+      '{"MODEL_API_KEY": "LLM|1234567890|abcdef"}',
+      'DATABASE_URL=postgresql://postgres:pw@db.example.supabase.co:5432/postgres',
+      `-----BEGIN PRIVATE KEY-----\n${'MIIEvQIBADANBgkqhkiG9w0BAQEFAASC'.repeat(2)}`,
+      JSON.stringify({ lesson: `-----BEGIN PRIVATE KEY-----\n${'MIIEvQIBADANBgkqhkiG9w0BAQEFAASC'.repeat(2)}` }),
     ]) {
       expect(containsSecret(leak), leak).toBe(true);
     }
@@ -64,6 +67,12 @@ describe('containsSecret', () => {
       'In RSA, KEY = (n, e) is the public half.',
       'The sk_ prefix in this lesson is just an example.',
       'Set API_KEY=<yours> in your own .env file.',
+      // A computer science lesson may show a variable or a key's shape: it is a lesson, never refused.
+      'API_KEY=your_key_here',
+      'PASSWORD = "hunter2234"',
+      'SECRET_KEY = os.environ["SECRET_KEY"]',
+      'A PEM file begins with -----BEGIN RSA PRIVATE KEY----- and ends with its END line.',
+      'GEMINI_API_KEY is read from the environment.',
     ]) {
       expect(containsSecret(text), text).toBe(false);
     }
