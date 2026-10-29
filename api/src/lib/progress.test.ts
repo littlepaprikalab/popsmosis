@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { awaitingVideos, lessonHoldMinutes, lessonProgress, progressError, readProgress, storedProgress, videoProgress } from './progress.js';
 
 const NOW = new Date('2026-11-03T12:00:00Z');
@@ -52,6 +52,18 @@ describe('awaitingVideos', () => {
   afterEach(() => { delete process.env.LESSON_HOLD_MINUTES; });
   const lesson = (minutes: number, attempts = 1) => ({ createdAt: minutesAgo(minutes), videoAttempts: attempts });
 
+  it('shows the text as soon as the lesson is posted, by default, while its videos are still to come or rendering', () => {
+    expect(lessonHoldMinutes()).toBe(0);
+    expect(awaitingVideos(lesson(0, 0), null, true, NOW)).toBe(false);
+    expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, true, NOW)).toBe(false);
+  });
+});
+
+describe('awaitingVideos, with LESSON_HOLD_MINUTES=20', () => {
+  beforeEach(() => { process.env.LESSON_HOLD_MINUTES = '20'; });
+  afterEach(() => { delete process.env.LESSON_HOLD_MINUTES; });
+  const lesson = (minutes: number, attempts = 1) => ({ createdAt: minutesAgo(minutes), videoAttempts: attempts });
+
   it('holds the text back while the first attempt renders, for 20 minutes after the lesson was posted', () => {
     expect(lessonHoldMinutes()).toBe(20);
     expect(awaitingVideos(lesson(5), { status: 'RENDERING' }, true, NOW)).toBe(true);
@@ -91,7 +103,7 @@ describe('awaitingVideos', () => {
     process.env.LESSON_HOLD_MINUTES = '0';
     expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, true, NOW)).toBe(false);
     process.env.LESSON_HOLD_MINUTES = 'soon';
-    expect(lessonHoldMinutes()).toBe(20);
+    expect(lessonHoldMinutes()).toBe(0);
   });
 });
 

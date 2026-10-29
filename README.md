@@ -15,10 +15,10 @@ The teacher does not write the lessons itself: it runs the **studio**, a Python
 pipeline in this repo, which writes each lesson, fact-checks every line and posts it.
 Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
-in Supabase and shown above the text. The learner meets a droplet through its videos: while
-they are made, `/learn` holds the text back and shows the droplet's bill of materials filling
-in, step by step ([While a droplet is made](#while-a-droplet-is-made)), and shows the text
-with the videos once they are done. Once a droplet's videos are done it is listed on the
+in Supabase and shown above the text. The learner reads the text as soon as it passes the
+fact-check: while the videos are made, `/learn` shows it with the droplet's bill of materials
+filling in under it, step by step ([While a droplet is made](#while-a-droplet-is-made)), and
+puts the videos above it once they are done. Once a droplet's videos are done it is listed on the
 public **Droplets** tab (`/droplets`), where anyone can watch it without an account, and
 anyone signed in can give it a thumbs-up and comment on it. The plan, and where the pipeline stands, is in
 [docs/PLAN.md](docs/PLAN.md).
@@ -364,7 +364,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
-`awaitingVideos`, true while the page holds the text back for the videos (below); and
+`awaitingVideos`, true while the page holds the text back for the videos (only with `LESSON_HOLD_MINUTES`, below); and
 `hidden`, true when an admin took it off the Droplets tab. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
@@ -479,18 +479,20 @@ cost), running (a pulsing dot, its time counting up, what it has spent so far), 
 waiting for the retry, or still to come. A step still to come that a later one has gone past
 is left out; so is the post, which the lesson's bill never has.
 
-The lesson text waits for the videos, so a learner meets the droplet through them rather than
-through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill
-and no text, its badge still says BREWING, and follow-ups wait. Only a lesson whose studio
-said, before posting it, that videos follow is held. The text shows, with the videos above
-it, as soon as one of these is true: the videos are READY or FAILED (a render gone quiet
-reads as FAILED), a second attempt has started, or `LESSON_HOLD_MINUTES` (default 20; 0
-never waits) have passed since the lesson was posted, so a stuck render never holds it for
-long. Each only ever turns true, so a lesson once shown is never hidden again. A lesson
-whose studio said no videos follow (`STUDIO_VIDEOS=off`, or the media steps not built here),
-or that was posted without saying (a studio older than the reports, a lesson by hand, a
-report that never got through), shows at once and stays shown when its videos start. Past
-the 20 minutes the bill under the text keeps filling in until the videos are done.
+The lesson text shows as soon as the lesson is posted, which the studio does the moment its
+fact-check passes: the learner reads it while the videos are made, the card says they are
+rendering and its bill keeps filling in under the text, and the players appear above the text
+when they are READY (20 to 30 minutes later). `LESSON_HOLD_MINUTES` (default 0) holds the text
+back instead, so a learner meets the droplet through its videos rather than through a text the
+videos then repeat: while `awaitingVideos` is true the card shows the bill and no text, its
+badge still says BREWING, and follow-ups wait. Only a lesson whose studio said, before posting
+it, that videos follow is held, and the text shows as soon as one of these is true: the videos
+are READY or FAILED (a render gone quiet reads as FAILED), a second attempt has started, or
+`LESSON_HOLD_MINUTES` have passed since the lesson was posted. Each only ever turns true, so a
+lesson once shown is never hidden again. A lesson whose studio said no videos follow
+(`STUDIO_VIDEOS=off`, or the media steps not built here), or that was posted without saying (a
+studio older than the reports, a lesson by hand, a report that never got through), shows at
+once and stays shown when its videos start.
 
 Each report counts against a rate limit of its own (300 a minute for the agent key, beside
 the 300 its other calls have), so reports from many renders at once can never use up what

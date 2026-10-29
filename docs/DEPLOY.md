@@ -44,8 +44,8 @@ Optional API tuning: `DATABASE_POOL_SIZE` (default 5), `QUESTIONS_PER_USER_PER_D
 (default 30; comments on the Droplets tab), `ATTACHMENT_RETENTION_DAYS` (default
 30; how long the files sent with messages keep their bytes in Postgres, 0 for good),
 `VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
-failed), `LESSON_HOLD_MINUTES` (default 20; how long after a lesson is posted `/learn` waits
-for its videos before it shows the text anyway, 0 never waits).
+failed), `LESSON_HOLD_MINUTES` (default 0: `/learn` shows a lesson's text as soon as it is posted;
+a number of minutes holds the text back that long for its videos).
 
 Nothing else. There is no Supabase Auth or Redis in popsmosis; Supabase is the Postgres
 and, for the droplet videos, Storage.

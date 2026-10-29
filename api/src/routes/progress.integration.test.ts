@@ -163,7 +163,30 @@ d('progress reports', () => {
     expect((await card()).answer.awaitingVideos).toBe(false); // nobody said videos follow: a text-only droplet
   });
 
-  it('holds the lesson text back while its videos are made, then shows it with them', async () => {
+  it('shows the lesson text as soon as it is posted, with the bill filling in under it while the videos are made', async () => {
+    expect((await claim()).statusCode).toBe(200);
+    expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
+    const answerId = (await post()).json().id;
+
+    // Posted, its videos not claimed yet: the text shows already.
+    let q = await card();
+    expect(q.answer.video).toBeNull();
+    expect(q.answer.awaitingVideos).toBe(false);
+    expect(q.answer.content).toBe('The lesson text.');
+
+    // Claimed and rendering: still shown, and the bill under it fills in as the videos are made.
+    expect((await claimVideos(answerId)).json().attempt).toBe(1);
+    const sent = await videoReport(answerId, { attempt: 1, running: [{ step: 'art', seconds: 5 }, { step: 'audio', seconds: 5 }], breakdown: ART_BILL });
+    expect(sent.statusCode).toBe(204);
+    q = await card();
+    expect(q.answer.awaitingVideos).toBe(false);
+    expect(q.answer.video.status).toBe('RENDERING');
+    expect(q.progress.running.map((r: { step: string }) => r.step)).toEqual(['art', 'audio']);
+    expect(q.progress.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle', 'art']);
+  });
+
+  it('with LESSON_HOLD_MINUTES set, holds the lesson text back while its videos are made, then shows it with them', async () => {
+    process.env.LESSON_HOLD_MINUTES = '20';
     expect((await claim()).statusCode).toBe(200);
     expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: true })).statusCode).toBe(204);
     const answerId = (await post()).json().id;
@@ -197,7 +220,8 @@ d('progress reports', () => {
     expect((await videoReport(answerId, { attempt: 1, running: [] })).statusCode).toBe(409);
   });
 
-  it('shows the text without waiting for a text-only droplet, and after 20 minutes whatever the videos do', async () => {
+  it('with LESSON_HOLD_MINUTES set, shows the text without waiting for a text-only droplet, and after 20 minutes whatever the videos do', async () => {
+    process.env.LESSON_HOLD_MINUTES = '20';
     expect((await claim()).statusCode).toBe(200);
     expect((await lessonReport({ running: [{ step: 'factcheck', seconds: 0 }], videos: false })).statusCode).toBe(204);
     const answerId = (await post()).json().id;
