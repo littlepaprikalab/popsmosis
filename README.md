@@ -151,6 +151,11 @@ topic is one command ([docs/test-rounds.md](docs/test-rounds.md)). `make` runs t
 in `videos`' order (art and locate alongside audio and timing, then the timeline and render)
 but claims nothing and uploads nothing; run again, it resumes at the first step not done.
 
+To tell whether a change to the bundle prompt, the checks or the brain made droplets better
+overall, run the scorecard by hand now and then: 12 fixed topics through the bundle step, scored
+and compared with the last run. It spends about $20 a run
+([docs/scorecard.md](docs/scorecard.md)).
+
 Each droplet is written for one audience: high school, unless the learner's request says
 who it is for ("I'm in 5th grade", "for my college course"). The audience sets the level
 of the lesson, the song and the narration, never the rules: every
