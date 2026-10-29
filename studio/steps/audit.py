@@ -54,12 +54,15 @@ def run(job: Path, ask=brain.ask) -> AuditReport:
     request = read(job / "request.json", Request)
     (job / "factcheck.json").unlink(missing_ok=True)
     report, audited = audit_bundle(bundle, request.study_guide, ask)
+    # audit.json first: a run stopped before bundle.json takes the corrections finds its facts are not the ones
+    # the audit passed (is_done) and audits again, where the other order would pass the corrected facts with no
+    # record of what they corrected.
+    write(job / "audit.json", report)
     if report.status == "passed" and audited != bundle:
         draft = job / "bundle.draft.json"
         if not draft.exists():
             draft.write_text((job / "bundle.json").read_text(encoding="utf-8"), encoding="utf-8")
         write(job / "bundle.json", audited)
-    write(job / "audit.json", report)
     return report
 
 

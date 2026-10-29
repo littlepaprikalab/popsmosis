@@ -321,6 +321,26 @@ def test_an_audit_makes_an_earlier_fact_check_stale_and_a_new_bundle_an_earlier_
     assert not (job / "audit.json").exists() and not (job / "bundle.draft.json").exists()
 
 
+@pytest.mark.parametrize("killed_at", ["audit.json", "bundle.json"])
+def test_an_audit_stopped_while_it_writes_is_done_again_and_keeps_its_corrections(job, monkeypatch, killed_at):
+    real = audit.write
+
+    def stopped(path, data):
+        if path.name == killed_at:
+            raise KeyboardInterrupt  # killed as it writes this file, after any written before it
+        real(path, data)
+
+    monkeypatch.setattr(audit, "write", stopped)
+    with pytest.raises(KeyboardInterrupt):
+        audit.run(job, ask=FakeAuditor())
+    monkeypatch.setattr(audit, "write", real)
+    assert not audit.is_done(job)  # no audit.json, or one that passed other facts than bundle.json has
+    report = audit.run(job, ask=FakeAuditor())
+    assert [c.id for c in report.corrections] == ["f2"] and audit.is_done(job)
+    assert factcheck.audit_corrections(job, Bundle.model_validate_json((job / "bundle.json").read_text())) == {
+        "f2": WRONG}
+
+
 def test_a_run_killed_in_the_audit_audits_again(jobs_root):
     first = Studio(lambda text: {"verdict": "WRONG", "problem": "not so"} if "hand-off" in text
                    else {"verdict": "CORRECT"})
