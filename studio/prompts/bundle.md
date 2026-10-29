@@ -561,6 +561,25 @@ particles), so the learner sees every input and output on the diagram, not only 
 says "X is made into Y" at a part of the diagram has one for it. List only what the facts say; the
 fact-check holds each to them. [] when none.
 
+## On screen
+
+The lyrics fly past faster than a learner can take them in, so the song video writes the step being
+sung above the diagram and holds it there while the lines go by. `key_lines` are those steps, 3 to 10
+of them in song order: the `why_chain` walked through the song, every link on at least one, each
+written where the song starts singing it.
+
+- `from_line` is the id of the lyric line it appears on. It stays until the next key line appears,
+  across scene changes, so put one where the song moves on to a new step, not on every line.
+- `text` is that step cut down to its cause and effect, at most 10 words, with an arrow for what
+  turns into what or what leads to what: "Light splits water → O₂ + H⁺ + e⁻", "H⁺ flowing back spins
+  ATP synthase → ATP". Use the terms from `key_terms` as the textbook writes them; the video picks
+  them out in colour. Not the lyric it appears on, and not just a label already on the diagram.
+- The first can sit on the first sung line and ask the question the song answers ("How does a leaf
+  turn light into fuel?"). The analogy's can say what stands for what ("Turnstile = ATP synthase").
+  The bridge's says what fails and why.
+- None on the last chorus: the video shows `core_idea` there by itself, so the chain ends on the
+  whole idea. Each is fact-checked like a sentence of the lesson.
+
 ## Tags
 
 `tags` are hashtags for each video, the way a creator tags a TikTok, so that someone

@@ -51,6 +51,7 @@ WHOLE_MAX_ZOOM = 2.0
 PORTRAIT_MAX_ZOOM = 2.6  # about two complexes of a membrane across an upright frame
 PORTRAIT_PAD = 1.25  # an upright frame's whole scene leaves this much room above and below what is drawn
 CAPTION_FADE_S = 0.3
+KEY_FADE_S = 0.35  # a key line fades in and out this fast at the ends of its run
 # In the song, the next line shows in the band this long before it is sung, unmarked and
 # dimmed, as karaoke does: the eye gets to its first word as the voice does, and a singer
 # who comes in early (Lyria adds a take now and then) lands on words already on screen.
@@ -515,6 +516,8 @@ class BeatPlan:
     prev_spot: str | None  # the beat before's spotlight, fading out (same scene only)
     caption_in: float  # the caption's run on screen, for its fades
     caption_out: float
+    key_in: float  # the key line's run on screen, for its fades
+    key_out: float
     flow_in: float  # the particles' run: they set off once the run starts and its stops are revealed
     flow_out: float
     fade_from: str | None = None  # the stage this one fades in over (Timeline.stages)
@@ -558,6 +561,7 @@ class Renderer:
                 for name, at in now.items():
                     if at == beat.t0 and before.get(name, math.inf) <= beat.t0:
                         now[name] = beat.t0 - max(REVEAL_S, LABEL_IN_S)
+        self.keyed = any(beat.key_line for beat in timeline.beats)  # a key band only in a video with key lines
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
@@ -571,6 +575,8 @@ class Renderer:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
         has one."""
         x0, y0, x1, y1 = self.layout.view
+        if self.keyed:
+            y0 += self.layout.key_h
         return (x0, y0, x1 - NOTICE_W, y1) if scene_id in self._beside else (x0, y0, x1, y1)
 
     def staged(self, before: str, after: str) -> bool:
@@ -649,6 +655,13 @@ class Renderer:
                 while k + 1 < len(beats) and beats[k + 1].caption == beat.caption:
                     k += 1
                 caption_in, caption_out = beats[j].t0, beats[k].t1
+            j = i
+            while j > 0 and beats[j - 1].key_line == beat.key_line:
+                j -= 1
+            k = i
+            while k + 1 < len(beats) and beats[k + 1].key_line == beat.key_line:
+                k += 1
+            key_in, key_out = beats[j].t0, beats[k].t1
             flow_in = flow_out = beat.t0
             if beat.particles:
                 # Beats in a row on one scene with the same paths are one run: the particles
@@ -667,7 +680,7 @@ class Renderer:
                 flow_out = beats[k].t1
             plans.append(BeatPlan(target=target, start=start, move_at=move_at, move_s=move_s, spot=beat.spotlight,
                                   spot_at=spot_at, prev_spot=prev_spot, caption_in=caption_in,
-                                  caption_out=caption_out, flow_in=flow_in, flow_out=flow_out,
+                                  caption_out=caption_out, key_in=key_in, key_out=key_out, flow_in=flow_in, flow_out=flow_out,
                                   fade_from=beats[i - 1].scene if staged else None))
         return plans
 
@@ -811,7 +824,7 @@ class Renderer:
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places)
         if beat.caption:
-            p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
+            p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, view[1] + layout.margin + 8, layout.caption_font,
                            caption_alpha)
         # Fading in with a stage only where the stage before had none: the same card or tag stays put.
         if tagged:
@@ -824,8 +837,16 @@ class Renderer:
             canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font, lines=layout.band_lines)
-        if layout.title_h:
+        # The key line fades in and out with its run, and stays put through it while the lyrics go by below.
+        key_alpha = p.ease((t - plan.key_in) / KEY_FADE_S) * p.ease((plan.key_out - t) / KEY_FADE_S)
+        if layout.title_h and self.keyed:
+            p.draw_title_key(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, beat.key_line,
+                             self.timeline.key_terms, layout.title_font, layout.key_font, key_alpha)
+        elif layout.title_h:
             p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font)
+        if self.keyed and layout.key_h:
+            p.draw_key_band(canvas, (0, layout.title_h, layout.width, layout.title_h + layout.key_h), beat.key_line,
+                            self.timeline.key_terms, layout.key_font, key_alpha)
 
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                      arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:

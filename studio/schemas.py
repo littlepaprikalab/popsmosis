@@ -140,6 +140,11 @@ class Spin(Strict):
     structure: str = Field(description="The structure that turns while particles flow into or through it, by its name")
 
 
+class KeyLine(Strict):
+    from_line: str = Field(description="The id of the lyric line it appears on; it stays until the next key line's")
+    text: str = Field(description='The step being sung, in at most 10 words: "Light splits water → O₂ + H⁺ + e⁻"')
+
+
 class Conversion(Strict):
     structure: str = Field(description="The structure where it happens (a complex, an enzyme, a stage), by its name")
     inputs: list[str] = Field(description='What goes in, as a textbook prints it: ["H₂O"], ["NADP⁺", "H⁺", "e⁻"]')
@@ -212,6 +217,10 @@ class Bundle(Strict):
     # A bundle written before Oct 29 has none.
     conversions: list[Conversion] = Field(default_factory=list,
                                           description="What turns into what, and where; [] for none")
+    # What the song writes above its diagram, held while the lyrics go by, so a learner who cannot keep up with
+    # them reads the step being sung. A bundle written before Oct 29 has none.
+    key_lines: list[KeyLine] = Field(default_factory=list,
+                                     description="The why chain written on screen in the song, in song order")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -305,7 +314,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "glow", "stages",
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
                   "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
@@ -335,7 +344,7 @@ class FactCheck(Strict):
 class CheckedLine(Strict):
     # A tag or a motion (what a line's particles show moving) is dropped when it fails, never corrected.
     # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
-    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion"]
+    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion", "keyline"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -346,7 +355,7 @@ class CheckedLine(Strict):
 
 class Correction(Strict):
     round: int
-    kind: Literal["lyric", "narration", "lesson", "frq"]  # "frq": as for CheckedLine
+    kind: Literal["lyric", "narration", "lesson", "frq", "keyline"]  # "frq": as for CheckedLine
     ids: list[str]
     before: str
     after: str
@@ -677,6 +686,7 @@ class Beat(Strict):
     conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
     routes: list[Route] = []  # the paths drawn as arrows on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
+    key_line: str = ""  # written above the diagram (Bundle.key_lines; the core idea on the last chorus); "" for none
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
@@ -698,6 +708,7 @@ class Timeline(Strict):
     palette: dict[str, str]  # structure name -> #RRGGBB, the same in both videos
     beats: list[Beat]
     title: str = ""  # written across the top by a layout with a title band (the hook cut's): the topic
+    key_terms: list[str] = []  # Bundle.key_terms: picked out in colour where a key line says one
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.

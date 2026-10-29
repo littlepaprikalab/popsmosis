@@ -647,3 +647,27 @@ def test_a_long_note_is_cut_so_the_card_stays_above_the_lyric_band():
     long = " ".join(["word"] * 400)
     bottom = p.draw_notice(surface.getCanvas(), 1480, 28, 1900, [long] * 3, 22)
     assert bottom < 1080 - 110
+
+
+def test_key_terms_are_found_whole_ignoring_case_longest_first():
+    text = "H⁺ flowing back spins ATP synthase → ATP"
+    spans = p.key_term_spans(text, ["ATP", "atp synthase", "back"])
+    assert [text[a:b] for a, b in spans] == ["back", "ATP synthase", "ATP"]
+    assert p.key_term_spans("synthases", ["synthase"]) == []  # whole words only
+
+
+def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = [b.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"}) for b in timeline.beats]
+    keyed = Renderer(job, timeline.model_copy(update={"beats": beats, "key_terms": ["lumen"]}))
+    plain = Renderer(job, timeline)
+    assert keyed.view("overview")[1] == plain.view("overview")[1] + keyed.layout.key_h > 0
+    frame = keyed.frame(14.0)
+    band = frame[:keyed.layout.key_h, :, :3]
+    amber = p.rgb("#FCD34D")
+    assert ((band[..., 2] == amber[0]) & (band[..., 1] == amber[1]) & (band[..., 0] == amber[2])).sum() > 50
+    assert (band[..., :] > 200).all(axis=-1).sum() > 500  # white text
+    upright = Renderer(job, keyed.timeline.model_copy(update={"title": "the light reactions"}), "v")
+    assert upright.view("overview")[1] == upright.layout.title_h  # in the title band, which keeps its height
+    top = upright.frame(14.0)[:upright.layout.title_h, :, :3]
+    assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50

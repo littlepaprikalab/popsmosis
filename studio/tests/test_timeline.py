@@ -405,3 +405,35 @@ def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(
     assert all(w.start >= 0 for b in hook.beats for w in b.words)  # ...moved to start at 0
     clip = hook.audio[0]
     assert clip.end - clip.start == pytest.approx(hook.duration, abs=0.01) and clip.fade_out > 0
+
+
+
+def keyed(data):
+    data["key_lines"] = [{"from_line": "v1-1", "text": "How does a leaf make fuel from light?"},
+                         {"from_line": "v2-1", "text": "Light pumps H⁺ into the lumen"}]
+    data["key_terms"] = ["ATP synthase", "lumen"]
+
+
+def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_the_last_chorus(job):
+    data = bundle_data()
+    keyed(data)
+    bundle = write_bundle(job, data)
+    timelines = make(job)
+    song = timelines["song"]
+    shown = {b.line_id: b.key_line for b in song.beats if b.line_id}
+    assert shown == {"v1-1": "How does a leaf make fuel from light?", "v1-2": "How does a leaf make fuel from light?",
+                     "c1-1": "How does a leaf make fuel from light?", "v2-1": "Light pumps H⁺ into the lumen",
+                     "c2-1": "Light pumps H⁺ into the lumen", "b-1": "Light pumps H⁺ into the lumen",
+                     "c3-1": bundle.core_idea}
+    for i, beat in enumerate(song.beats):  # a gap holds the line before it
+        if not beat.line_id and i:
+            assert beat.key_line == song.beats[i - 1].key_line
+    assert song.key_terms == ["ATP synthase", "lumen"]
+    assert all(b.key_line == "" for b in timelines["lesson"].beats) and timelines["lesson"].key_terms == []
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    assert any(b.key_line for b in hook.beats) and hook.key_terms == song.key_terms
+
+
+def test_a_song_from_a_bundle_without_key_lines_has_none(job):
+    song = make(job)["song"]
+    assert all(b.key_line == "" for b in song.beats)  # not even the core idea: no band at all

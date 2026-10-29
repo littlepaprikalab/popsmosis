@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import functools
 import math
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -655,6 +656,88 @@ def draw_title(canvas: skia.Canvas, rect: Rect, text: str, font_size: float) -> 
 
 
 TITLE_BG = "#34435E"  # a shade under the art's dark slate blue, so the title sits on it as a band
+KEY_TERM = 0xFFFCD34D  # amber-300: a key term in a key line, so the words the learner must know stand out
+KICKER = 0xFFCBD5E1  # slate-300: the topic, small, above the key line in an upright title band
+
+
+def key_term_spans(text: str, terms: list[str]) -> list[tuple[int, int]]:
+    """Where the key terms are in a key line, longest first and never overlapping, ignoring case."""
+    spans: list[tuple[int, int]] = []
+    low = text.casefold()
+    for term in sorted({t.strip() for t in terms if t.strip()}, key=len, reverse=True):
+        start = 0
+        while (at := low.find(term.casefold(), start)) >= 0:
+            end = at + len(term)
+            whole = (at == 0 or not low[at - 1].isalnum()) and (end == len(low) or not low[end].isalnum())
+            if whole and all(end <= a or at >= b for a, b in spans):
+                spans.append((at, end))
+            start = end
+    return sorted(spans)
+
+
+def draw_key_line(canvas: skia.Canvas, rect: Rect, text: str, terms: list[str], font_size: float, alpha: float,
+                  rows: int = 2) -> None:
+    """A key line centred in rect, white with its key terms in amber: on one row, or wrapped onto up to `rows` rows
+    of about the same width; only a line still too wide shrinks."""
+    words = [(m.group(), m.start(), m.end()) for m in re.finditer(r"\S+", text)]
+    if not words or alpha <= 0.01:
+        return
+    x0, y0, x1, y1 = rect
+    room = (x1 - x0) - 2 * KEY_PAD
+    spans = key_term_spans(text, terms)
+    marked = [any(a < end and start < b for a, b in spans) for _, start, end in words]
+    size = font_size
+    while True:
+        f = font("ExtraBold", size)
+        space = text_width(f, " ")
+        widths = [text_width(f, w) for w, _, _ in words]
+        total = sum(widths) + space * (len(words) - 1)
+        n = min(rows, max(1, math.ceil(total / room)))
+        lines, line, run = [], [], 0.0
+        for i, width in enumerate(widths):
+            if line and run + space + width > total / n + width / 2 and len(lines) < n - 1:
+                lines.append(line)
+                line, run = [], 0.0
+            run += (space if line else 0) + width
+            line.append(i)
+        lines.append(line)
+        widest = max(sum(widths[i] for i in ln) + space * (len(ln) - 1) for ln in lines)
+        step = size * 1.22
+        if (widest <= room and step * len(lines) <= (y1 - y0)) or size <= KEY_MIN_FONT:
+            break
+        size = max(KEY_MIN_FONT, size * min(room / widest, (y1 - y0) / (step * len(lines)), 0.95))
+    first = (y0 + y1) / 2 - step * (len(lines) - 1) / 2 + cap_height(f) / 2
+    for r, ln in enumerate(lines):
+        width = sum(widths[i] for i in ln) + space * (len(ln) - 1)
+        x = (x0 + x1) / 2 - width / 2
+        for i in ln:
+            draw_text(canvas, words[i][0], x, first + r * step, f, with_alpha(KEY_TERM if marked[i] else 0xFFFFFFFF, alpha))
+            x += widths[i] + space
+
+
+def draw_key_band(canvas: skia.Canvas, rect: Rect, text: str, terms: list[str], font_size: float, alpha: float) -> None:
+    """The band along the top of a wide frame that holds the scene's key line, on the title band's slate."""
+    x0, y0, x1, y1 = rect
+    canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
+    draw_key_line(canvas, (x0, y0 + 6, x1, y1 - 6), text, terms, font_size, alpha)
+
+
+def draw_title_key(canvas: skia.Canvas, rect: Rect, title: str, text: str, terms: list[str], title_font: float,
+                   font_size: float, alpha: float) -> None:
+    """An upright frame's title band with a key line: the topic small on top, the scene's key line below it."""
+    x0, y0, x1, y1 = rect
+    canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
+    kicker_h = 0.0
+    if title:
+        f = font("Bold", title_font * 0.55)
+        row = wrap(title, f, (x1 - x0) - 2 * KEY_PAD)[0]
+        kicker_h = title_font * 0.55 * 1.9
+        draw_text(canvas, row, (x0 + x1) / 2 - text_width(f, row) / 2, y0 + kicker_h * 0.72, f, KICKER)
+    draw_key_line(canvas, (x0, y0 + kicker_h, x1, y1 - 14), text, terms, font_size, alpha)
+
+
+KEY_PAD = 60  # frame px a key line keeps from each side
+KEY_MIN_FONT = 26
 
 
 # --- the caption pill ----------------------------------------------------------------------

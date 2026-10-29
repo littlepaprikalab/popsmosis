@@ -396,11 +396,37 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _turn(beats, bundle, located)
     _convert(beats, bundle, located)
     _route(beats)
+    if video == "song":
+        _key_lines(beats, bundle)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
-                    beats=[Beat(**b) for b in beats], stages=stages)
+                    beats=[Beat(**b) for b in beats], stages=stages,
+                    key_terms=bundle.key_terms if video == "song" else [])
+
+
+def _key_lines(beats: list[dict], bundle: Bundle) -> None:
+    """Each song beat's key line: the last one to start on or before its lyric, held through the gaps after it.
+    From the last chorus to the end, the core idea, the whole why chain in one line, unless a key line starts
+    after the chorus begins."""
+    order = {line.id: i for i, line in enumerate(bundle.lyrics)}
+    starts = sorted((order[k.from_line], " ".join(k.text.split())) for k in bundle.key_lines
+                    if k.from_line in order and k.text.strip())
+    if not starts:
+        return  # a bundle written before key lines: no band, the picture as it was
+    choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
+    finale = choruses[-1] if choruses and bundle.core_idea.strip() else len(bundle.lyrics)
+    while finale > 0 and finale - 1 in choruses:
+        finale -= 1  # where the last chorus starts
+    starts.append((finale, " ".join(bundle.core_idea.split())))
+    starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the chorus's first line, and wins
+    for i, beat in enumerate(beats):
+        if beat["line_id"] in order:
+            at = order[beat["line_id"]]
+            beat["key_line"] = next((text for start, text in reversed(starts) if start <= at), "")
+        else:
+            beat["key_line"] = beats[i - 1].get("key_line", "") if i else ""
 
 
 def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:

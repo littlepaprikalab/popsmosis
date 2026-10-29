@@ -63,6 +63,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_blocks(data, canon, problems)
     _check_conversions(data, canon, problems)
     _check_lyric_style(data, problems)
+    _check_key_lines(data, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
@@ -152,6 +153,44 @@ def essence_problems(bundle: Bundle) -> list[Problem]:
         problems.append(Problem(line_id="key_terms", rule="essence", repaired=False,
                                 detail=f"{len(bundle.key_terms)} key terms, over {KEY_TERMS_MAX}"))
     return problems
+
+
+KEY_LINE_WORDS_MAX = 10
+KEY_LINES = (3, 10)  # the why chain's 3 to 5 links, a link or two lines each
+
+
+def key_line_problems(bundle: Bundle) -> list[Problem]:
+    """The key lines against their limits: some to show, each at most KEY_LINE_WORDS_MAX words. Recorded, not
+    repaired (the renderer fits a long one onto two rows); the bundle step adds them. A bundle written before the
+    why chain existed has none."""
+    if not bundle.why_chain:
+        return []
+    problems = []
+    if not KEY_LINES[0] <= len(bundle.key_lines) <= KEY_LINES[1]:
+        problems.append(Problem(line_id="key_lines", rule="key-line", repaired=False,
+                                detail=f"{len(bundle.key_lines)} key lines, not {KEY_LINES[0]} to {KEY_LINES[1]}"))
+    for key in bundle.key_lines:
+        words = len(key.text.split())
+        if words > KEY_LINE_WORDS_MAX:
+            problems.append(Problem(line_id=key.from_line, rule="key-line", repaired=False,
+                                    detail=f'the key line "{key.text}" runs {words} words, over {KEY_LINE_WORDS_MAX}'))
+    return problems
+
+
+def _check_key_lines(data: dict, problems: list) -> None:
+    """Key lines in song order, one to a lyric line: one on a line the song does not have, or a second on the same
+    line, is dropped, since the screen could not show it."""
+    order = {line["id"]: i for i, line in enumerate(data["lyrics"])}
+    kept, seen = [], set()
+    for key in data["key_lines"]:
+        if key["from_line"] not in order or key["from_line"] in seen or not key["text"].strip():
+            problems.append(Problem(line_id=key["from_line"] or "key_lines", rule="key-line", repaired=True,
+                                    detail=f'dropped the key line "{key["text"]}": its lyric line is unknown, taken, '
+                                           f"or it is empty"))
+            continue
+        seen.add(key["from_line"])
+        kept.append(key)
+    data["key_lines"] = sorted(kept, key=lambda k: order[k["from_line"]])
 
 
 STILL_LINES_MAX = 2  # lines in a row on a diagram scene with nothing moving

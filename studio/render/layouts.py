@@ -23,6 +23,8 @@ class Layout:
     title_h: int = 0  # a title band along the top, with the topic in it; 0 for none
     title_font: float = 0.0
     band_lines: int = 1  # lines the lyric band wraps a sung line onto
+    key_h: int = 0  # a band along the top for the scene's key line, in a video that has them; 0: in the title band
+    key_font: float = 0.0
 
     @property
     def view(self) -> Rect:
@@ -31,10 +33,11 @@ class Layout:
 
 
 H = Layout(name="h", width=media.VIDEO_WIDTH, height=media.VIDEO_HEIGHT, band_h=110, band_font=46,
-           label_font=30, caption_font=34, margin=20)
+           label_font=30, caption_font=34, margin=20, key_h=96, key_font=40)
 
-# A phone held upright: the topic on top, the diagram across the middle, the line sung below it, on two lines.
+# A phone held upright: the topic on top (with the scene's key line under it, in a video that has them), the diagram across the middle, the line sung below it, on two lines.
 V = Layout(name="v", width=media.VIDEO_HEIGHT, height=media.VIDEO_WIDTH, band_h=300, band_font=58,
-           label_font=30, caption_font=34, margin=24, title_h=260, title_font=62, band_lines=2)
+           label_font=30, caption_font=34, margin=24, title_h=260, title_font=62, band_lines=2,
+           key_font=50)
 
 LAYOUTS = {"h": H, "v": V}
