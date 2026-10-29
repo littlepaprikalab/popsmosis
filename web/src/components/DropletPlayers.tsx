@@ -4,17 +4,18 @@ import type { DropletTags, DropletVideos, Video } from '@/lib/api';
 import { useState } from 'react';
 
 import { TagList } from '@/components/TagList';
+import { allTags } from '@/lib/tags';
 
 /**
- * A droplet's two videos: the karaoke song and the narrated lesson, each with its
- * hashtags under it. H.264 with +faststart, so a plain <video> starts playing before
- * the file has downloaded; preload="none" keeps a page of them from fetching anything
- * until one is played.
+ * A droplet's two videos: the karaoke song and the narrated lesson, with both videos'
+ * hashtags once under the pair (most are shared, and two copies took a lot of room).
+ * H.264 with +faststart, so a plain <video> starts playing before the file has
+ * downloaded; preload="none" keeps a page of them from fetching anything until one is played.
  */
 export function DropletPlayers({ video, tags, title }: { video: DropletVideos; tags?: DropletTags; title?: string }) {
   const players = [
-    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)', tags: tags?.song ?? [], tagsLabel: 'Song tags' },
-    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)', tags: tags?.lesson ?? [], tagsLabel: 'Lesson tags' },
+    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)' },
+    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)' },
   ].filter((p): p is typeof p & { src: string } => !!p.src);
   if (players.length === 0) return null;
   return (
@@ -33,10 +34,10 @@ export function DropletPlayers({ video, tags, title }: { video: DropletVideos; t
             className="w-full rounded-md aspect-video"
             style={{ background: '#000', border: '1px solid var(--border)' }}
           />
-          <TagList tags={p.tags} label={p.tagsLabel} className="mt-1.5" />
         </figure>
       ))}
     </div>
+    <TagList tags={allTags(tags)} className="mt-1.5" />
     {video.hookVideoUrl && <HookClip src={video.hookVideoUrl} poster={video.hookPosterUrl ?? null} title={title} />}
     </>
   );
