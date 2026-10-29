@@ -48,7 +48,10 @@ the whole droplet. So:
   or topic in the unit), what it resembles that the learner may already know (the same
   trick in another topic of the course), and the stakes when it goes wrong: a way it can fail, with what
   follows from it step by step, for the song's bridge ("cyanide blocks the chain's last
-  carrier, so the cell stops making most of its ATP"). Facts that hold only definitions make dry lines.
+  carrier, so the cell stops making most of its ATP"). A topic that is not a system that can
+  break (a chain of events, a writer's device) needs, for the bridge, another case the same
+  idea explains instead, worked through step by step: the same device in another play, the
+  same causes in another revolution. Facts that hold only definitions make dry lines.
 - Choose one everyday picture for the droplet, the frame for the whole idea, and put it in
   the fact it explains, saying what it matches. Choose it by what the whole thing is *for*:
   find the everyday thing that does the same job (a trade, a delivery, a relay, a recipe, a
@@ -423,7 +426,12 @@ In this order, each section a run of lines with its own `section` value:
   a toxin, a mutation, a missing part), then walk its effects in cause-and-effect order to
   the final outcome, one link a line ("no myelin, so the signal crawls"). Pick a break
   the facts describe: every effect the bridge sings must be what the facts say follows
-  from that break, not from another one.
+  from that break, not from another one. For a topic that is not a system (a chain of
+  events, a writer's device), the verses have already walked its chain, so the bridge
+  takes the other case the facts give and walks it the same way, one link a line. Either
+  way the bridge sings something new: a bridge that retells the verses' story (the same
+  letter going astray, the same king calling the same assembly) wastes the song's best
+  eight lines.
 - **Chorus**, the last: a summary couplet first, then the chorus word for word.
 - **Outro**, 3 lines: echo the intro and end on the title line.
 
@@ -459,8 +467,11 @@ markdown, no lists, nothing in parentheses. Use the droplet's analogy, and corre
 misconception once, as the song does. Build it on `why_chain`: every step says why it
 happens. Keep to `key_terms`, never more than one new name in a sentence. Ask the listener
 one question mid-way and answer it in the next sentence. Open on the hook, and end on the
-core idea, in the same words as `core_idea`, then what goes in, what comes out, and why it
-matters.
+core idea, in the same words as `core_idea`, then, for a process, what goes in and what
+comes out, or, for any other idea, its cause and its result, and why it matters. Only
+something that is really taken in and given out "goes in" or "comes out": a secret, a
+function or war debt does not ("In go war debt and costly bread, out comes a revolution"
+sounds like a formula and teaches nothing).
 
 ## Direction
 
@@ -482,19 +493,25 @@ order, keyed by `line_id`:
   zoom 1.0).
 - On the line that corrects the misconception, spotlight the structure it is about, so
   the correction lands on it.
-- `particles`: for a line about something that travels (a signal, a molecule), the
-  structures it travels between, in order; otherwise []. Use them whenever a line tells
-  how something moves through the steps: the motion is what shows how a process works,
-  and the pictures draw none of it.
+- `particles`: for a line about something that travels (a signal, a molecule, money, a
+  letter), the structures it travels between, in order; otherwise []. Use them whenever a
+  line tells how something moves through the steps: the motion is what shows how a process
+  works, and the pictures draw none of it. Only what the facts say travels that way moves:
+  never a route made up to keep the dots busy (from a character to the audience, from a
+  king to his people, from one line of a graph to another), which shows a journey nothing
+  makes. Many topics outside science have little or nothing that travels (a writer's
+  device, a graph, a chain of events); their scenes hold still, with [] here.
 - `carries`: what those particles are, written on the moving dot: the molecule or ion as a
   textbook prints it, with its superscripts and subscripts ("H⁺", "e⁻", "O₂", "Ca²⁺",
-  "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line. It
-  must be what really travels that path (protons through ATP synthase, electrons along the
-  chain). "" when there are no particles, for what has no chemical name (a nerve signal,
-  light), and on the analogy scene, where what moves is the everyday thing (its water
-  stands for the protons, so marking it "H₂O" would mislead). The fact-check holds each
-  marked motion to the facts, as it does a line, and leaves out one they do not support:
-  every route a marked particle takes must follow from the facts.
+  "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line.
+  Anything else that travels is named in a plain word ("price", "letter", "taxes"), so the
+  fact-check sees it too. It must be what really travels that path (protons through ATP
+  synthase, electrons along the chain, the price up to equilibrium). "" when there are no
+  particles, for a nerve signal or light, and on the analogy scene, where what moves is the
+  everyday thing (its water stands for the protons, so marking it "H₂O" would mislead).
+  When you cannot say what would travel a route, the facts do not give it: leave it out.
+  The fact-check holds each marked motion to the facts, as it does a line, and leaves out
+  one they do not support: every route a marked particle takes must follow from the facts.
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.
@@ -518,11 +535,15 @@ order, keyed by `line_id`:
 The picture never moves; the particles, the camera and the spotlight are all the video
 has. Plan them across the whole song before writing any one line's direction:
 
-- **Something moves on almost every line of a diagram scene.** A line that tells a step of
-  the process has particles for that step. Never leave more than two lines in a row on a
-  diagram scene with no particles: when a line only comments ("that's the payout"), carry
-  on the flow it is about, or move the camera. A failure scene is the exception: after the
-  block, what has stopped stays still, and that stillness is the point.
+- **Something moves on almost every line of a scene where things travel.** A line that
+  tells a step of the process has particles for that step. Never leave more than two lines
+  in a row with no particles on a scene where something travels: when a line only comments
+  ("that's the payout"), carry on the flow it is about, or move the camera. A failure scene
+  is the exception: after the block, what has stopped stays still, and that stillness is
+  the point. A scene where nothing travels (a graph, a stage, a map, a gathering of people)
+  has no particles on any line: the camera and the spotlight move from part to part with
+  the lines instead, and a dot sent between its parts to fill the time would teach a
+  journey that never happens.
 - **What goes in and what comes out move too.** A line that says something is taken in,
   split, made or released has particles for it: the input travelling from where it comes
   from into the structure that uses it, the product travelling out to where it goes

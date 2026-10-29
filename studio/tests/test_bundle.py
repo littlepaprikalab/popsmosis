@@ -27,6 +27,17 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
     assert not (tmp_path / "factcheck.json").exists()
 
 
+def test_the_prompt_holds_for_topics_outside_science():
+    # Six droplets on Oct 29 (literature, history, calculus, economics, chemistry, biology): outside science the
+    # planner sent unmarked dots between characters, ended the narration on "in goes a function, out comes a
+    # number", and sang the verses' story again in the bridge.
+    prompt = " ".join(bundle_step.PROMPT.split())
+    assert "never a route made up to keep the dots busy" in prompt and "their scenes hold still" in prompt
+    assert 'named in a plain word ("price", "letter", "taxes")' in prompt
+    assert "or, for any other idea, its cause and its result, and why it matters" in prompt
+    assert "the bridge takes the other case the facts give" in prompt and "another case the same idea explains" in prompt
+
+
 def test_the_prompt_carries_the_request_and_study_guide():
     prompt = bundle_step.user_prompt(Request(topic="ATP", request="for my exam", study_guide="ATP is made.",
                                              images=["/notes.png"]))

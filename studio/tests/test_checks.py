@@ -315,15 +315,19 @@ def test_only_the_verses_are_asked_to_rap_and_the_rest_to_sing():
     assert all("rapp" not in " ".join(c["positive_styles"] + c["negative_styles"]) for c in plan["chunks"])
 
 
-def test_a_song_that_stands_still_or_directs_its_choruses_differently_is_recorded():
+def test_a_scene_where_things_travel_and_the_song_stands_still_is_recorded():
     data = bundle_data()
     for d in data["direction"]:
         d.update(particles=[], carries="")
+    # Nothing travels on the overview in either video: a still picture (a graph, a stage), never asked to move.
+    assert checks.motion_problems(Bundle.model_validate(data)) == []
+    direction(data, "n1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")  # now something does
     found = [(p.line_id, p.detail) for p in checks.motion_problems(Bundle.model_validate(data))]
     still = [line for line, detail in found if "nothing moving" in detail]
-    assert still, "a song with nothing moving on its diagram scenes is recorded"
-    assert all(next(d.scene for d in Bundle.model_validate(data).direction if d.line_id == line) != "hook"
-               for line in still)  # the hook need not move
+    assert still == ["v1-1"], "a song standing still on a scene where things travel is recorded"
+    direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+    # v1-1 alone is short enough; the five still lines after v1-2 are not.
+    assert [p.line_id for p in checks.motion_problems(Bundle.model_validate(data))] == ["c1-1"]
 
 
 def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
@@ -346,6 +350,17 @@ def test_key_lines_are_recorded_when_too_few_or_too_long():
     assert found == ["1 key lines, not 3 to 10", "no key line is placed in the narration, so the lesson video shows none",
                      f'the key line "{" ".join(["word"] * 11)}" runs 11 words, over 10']
     assert checks.key_line_problems(Bundle.model_validate(bundle_data())) == []  # before the why chain
+
+
+def test_the_arrows_and_signs_in_a_key_line_are_not_words():
+    data = bundle_data()
+    data["why_chain"] = ["a", "b", "c"]
+    data["key_lines"] = [{"from_line": "v1-1", "text": "Rise over run → average rate of change = secant slope",
+                          "from_narration": "n1"},  # 9 words, an arrow and a sign: as the prompt asks
+                         {"from_line": "v1-2", "text": "One vote per estate → Third Estate outvoted two to one"},
+                         {"from_line": "v2-1", "text": "Corner: slopes 1 vs −1 → no limit → so no derivative there"}]
+    found = [p.detail for p in checks.key_line_problems(Bundle.model_validate(data))]
+    assert found == ['the key line "Corner: slopes 1 vs −1 → no limit → so no derivative there" runs 11 words, over 10']
 
 
 def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_kept():
@@ -389,6 +404,15 @@ def test_the_song_shape_check_holds_any_subject_to_its_own_idea():
                   "Debt and hunger turned the French people against the king.") == []
     assert shaped("Feel it rise, let it go",
                   "Debt and hunger turned the French people against the king.") != []
+
+
+def test_a_bridge_that_retells_the_verses_is_recorded_and_one_on_a_new_case_is_not():
+    idea = "Light splits water, and the protons it pumps make ATP."
+    retold = shaped("Split the water, catch the light", idea,
+                    [("b-1", "Light lands, and every hand-off pumps a proton")])  # verse 1 again
+    assert retold == ["the bridge retells the verses: 1 of its 1 lines sing what the verses sang (b-1)"]
+    assert shaped("Split the water, catch the light", idea,
+                  [("b-1", "A herbicide jams photosystem two, so the flow stops")]) == []
 
 
 def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded():

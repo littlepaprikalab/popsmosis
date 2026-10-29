@@ -229,14 +229,18 @@ parts build on the facts it has already written.
    and the `fact_id` it teaches or `"filler"`. The song is for memory, not a sung lesson:
    3–5 ideas, rhyming couplets, a story through the steps, a title line that opens the
    song and comes back in the chorus, and a chorus that chants `core_idea`; the bridge
-   sings what happens when a part fails. A line need not name a structure; one that does
+   sings what happens when a part fails, or, for a topic that is not a system (a chain of
+   events, a writer's device), another case the same idea explains, never the verses'
+   story again. A line need not name a structure; one that does
    uses its `name` or one of its `aliases`, because hearing that word is what reveals the
    structure on screen.
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
    what the song only names: every fact, step by step, and every structure drawn.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
-   "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
+   "e⁻", "glucose", a plain word such as "price" outside science; "" for none), `caption`.
+   Particles go only where the facts say something travels: a scene where nothing does (a
+   graph, a stage) holds still, and the camera and spotlight carry it. No times: code adds those
    from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
    (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties,
    `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
