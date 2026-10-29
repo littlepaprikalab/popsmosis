@@ -145,6 +145,33 @@ def test_what_turns_is_where_particles_flow_in_or_through():
     assert turning("the rotor") == ([], [("spins", "spins", True)])  # no such structure
 
 
+def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
+    def converting(*convs):
+        def change(data):
+            data["conversions"] = [{"structure": s, "inputs": i, "outputs": o} for s, i, o in convs]
+        bundle, found, _ = review(change)
+        return [(c.structure, c.inputs, c.outputs) for c in bundle.conversions], found
+
+    assert converting(("cytochrome B6F", ["h2o"], ["O2", "H+"])) == (
+        [("Cytochrome b6f", ["h₂o"], ["O₂", "H⁺"])], [])  # its name, and as a textbook prints them
+    left_out = [("conversions", "conversions", True)]
+    assert converting(("the rotor", ["H₂O"], ["O₂"])) == ([], left_out)  # no such structure
+    assert converting(("Thylakoid", [], ["O₂"])) == ([], left_out)  # nothing goes in
+    assert converting(("Thylakoid", ["glucose6phosphate"], ["O₂"])) == ([], left_out)  # too long to print
+    assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
+
+
+def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
+    def change(data):
+        data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"
+        data["lyrics"][1]["text"] = " ".join(["la"] * 13)
+        data["lyrics"][2]["text"] = "Light hits the leaf and the race begins"
+
+    _, found, _ = review(change)
+    assert [(line, repaired) for line, rule, repaired in found if rule == "lyric-style"] == [
+        ("v1-1", False), ("v1-2", False)]
+
+
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     def change(data):
         direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
@@ -176,8 +203,11 @@ def test_the_bundle_step_saves_the_repaired_bundle_and_the_checks(tmp_path):
 
     bundle_step.run(tmp_path, ask=lambda *args, **kwargs: data)
     assert read(tmp_path / "bundle.json", Bundle).direction[2].spotlight == ""
-    [problem] = read(tmp_path / "checks.json", CheckReport).problems
-    assert (problem.line_id, problem.rule, problem.repaired) == ("c1-1", "spotlight", True)
+    problems = read(tmp_path / "checks.json", CheckReport).problems
+    # The bundle step also records what only a better bundle fixes: the sample song is short, and still in places.
+    assert (problems[0].line_id, problems[0].rule, problems[0].repaired) == ("c1-1", "spotlight", True)
+    assert ("music", "lyric-style", False) in [(p.line_id, p.rule, p.repaired) for p in problems]
+    assert all(not p.repaired for p in problems[1:])
 
 
 def test_curly_quotes_and_dashes_match_plain_ones():
@@ -258,3 +288,117 @@ def test_a_process_needs_two_stages_or_more():
 
     assert staging("overview", "synthase") == (["", "photosynthesis", "photosynthesis"], [])
     assert staging("synthase") == (["", "", ""], [("scene:synthase", "stages", True)])  # an ordinary scene
+
+
+def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours_differ():
+    from studio.styles import SONG_STYLES, style_for
+
+    assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
+    assert len({style_for(f"job{i}") for i in range(40)}) > 4
+    assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
+
+
+def test_only_the_verses_are_asked_to_rap_and_the_rest_to_sing():
+    from studio.steps import audio
+
+    data = bundle_data()
+    data["music"]["positive_styles"] = ["pop with clear rapped verses", "100 bpm"]
+    bundle = Bundle.model_validate(data)
+    plan, _ = audio.composition_plan(bundle)
+    by_section = {c["text"].splitlines()[0]: c for c in plan["chunks"]}
+    assert "clear rapped verse" in by_section["[Verse]"]["positive_styles"]
+    assert "rapping" not in by_section["[Verse]"]["negative_styles"]
+    assert "rapping" in by_section["[Chorus]"]["negative_styles"]
+    assert "sung melodic vocal, not rapped" in by_section["[Chorus]"]["positive_styles"]
+    data["music"]["positive_styles"] = ["bright pop", "100 bpm"]  # no rap asked for: nothing added
+    plan, _ = audio.composition_plan(Bundle.model_validate(data))
+    assert all("rapp" not in " ".join(c["positive_styles"] + c["negative_styles"]) for c in plan["chunks"])
+
+
+def test_a_song_that_stands_still_or_directs_its_choruses_differently_is_recorded():
+    data = bundle_data()
+    for d in data["direction"]:
+        d.update(particles=[], carries="")
+    found = [(p.line_id, p.detail) for p in checks.motion_problems(Bundle.model_validate(data))]
+    still = [line for line, detail in found if "nothing moving" in detail]
+    assert still, "a song with nothing moving on its diagram scenes is recorded"
+    assert all(next(d.scene for d in Bundle.model_validate(data).direction if d.line_id == line) != "hook"
+               for line in still)  # the hook need not move
+
+
+def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
+    data = bundle_data()
+    data["key_lines"] = [{"from_line": "v2-1", "text": "Light pumps H⁺", "from_narration": "n2"},
+                         {"from_line": "v1-1", "text": "How?", "from_narration": "n2"},
+                         {"from_line": "nope", "text": "Lost"}, {"from_line": "v2-1", "text": "Twice"},
+                         {"from_line": "c1-1", "text": "Unspoken", "from_narration": "zz"}]
+    bundle, report = checks.review(Bundle.model_validate(data))
+    assert [(k.from_line, k.text, k.from_narration) for k in bundle.key_lines] == [
+        ("v1-1", "How?", ""), ("c1-1", "Unspoken", ""), ("v2-1", "Light pumps H⁺", "n2")]  # n2 went to the first
+    assert len([p for p in report.problems if p.rule == "key-line"]) == 4
+
+
+def test_key_lines_are_recorded_when_too_few_or_too_long():
+    data = bundle_data()
+    data["why_chain"] = ["a", "b", "c"]
+    data["key_lines"] = [{"from_line": "v1-1", "text": " ".join(["word"] * 11)}]
+    found = [p.detail for p in checks.key_line_problems(Bundle.model_validate(data))]
+    assert found == ["1 key lines, not 3 to 10", "no key line is placed in the narration, so the lesson video shows none",
+                     f'the key line "{" ".join(["word"] * 11)}" runs 11 words, over 10']
+    assert checks.key_line_problems(Bundle.model_validate(bundle_data())) == []  # before the why chain
+
+
+def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_kept():
+    def change(data):
+        direction(data, "v1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺", also=[
+            {"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "plastoquinone"},  # kept, unmarked
+            {"particles": ["Thylakoid", "Cytochrome b6f"], "carries": "O₂"}])  # a third thing: left out
+    bundle, found, _ = review(change)
+    line = next(d for d in bundle.direction if d.line_id == "v1-1")
+    assert [(f.particles, f.carries) for f in line.flows()] == [
+        (["Thylakoid", "Cytochrome b6f"], "H⁺"), (["Cytochrome b6f", "Thylakoid"], "")]
+    assert sorted(found) == [("v1-1", "carries", True), ("v1-1", "particles", True)]
+    _, found, _ = review(lambda d: direction(d, "v1-1").update(also=[{"particles": ["Thylakoid", "ATP synthase"],
+                                                                       "carries": "O₂"}]))
+    assert found == [("v1-1", "particles", True)]  # ATP synthase is not on the hook: fewer than two stops
+
+
+def shaped(chorus, core_idea, extra=(), bpm_tag="112 bpm"):
+    data = bundle_data()
+    data["core_idea"] = core_idea
+    data["why_chain"] = ["a", "b", "c"]
+    data["music"]["positive_styles"] = ["upbeat pop", bpm_tag]
+    for line in data["lyrics"]:
+        if line["section"] == "chorus":
+            line["text"] = chorus
+    for line_id, text in extra:
+        next(line for line in data["lyrics"] if line["id"] == line_id)["text"] = text
+    return [p.detail for p in checks.song_shape_problems(Bundle.model_validate(data))]
+
+
+def test_a_hook_that_names_the_idea_passes_and_one_made_of_pronouns_is_recorded():
+    idea = "Light splits water, and the protons it pumps make ATP."
+    assert shaped("Split the water, catch the light", idea) == []
+    found = shaped("Pump them in, they spin it out", idea)
+    assert any("leans on pronouns" in f for f in found) and any("too little of the core idea" in f for f in found)
+
+
+def test_the_song_shape_check_holds_any_subject_to_its_own_idea():
+    # History: the hook is held to the droplet's own core idea, not to any science words.
+    assert shaped("Bread too dear, the people rise against the king",
+                  "Debt and hunger turned the French people against the king.") == []
+    assert shaped("Feel it rise, let it go",
+                  "Debt and hunger turned the French people against the king.") != []
+
+
+def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded():
+    data = bundle_data()
+    data["why_chain"] = ["a", "b", "c"]
+    data["lyrics"] = [line for line in data["lyrics"] if line["id"] != "c2-1"]
+    data["direction"] = [d for d in data["direction"] if d["line_id"] != "c2-1"]
+    found = [p.detail for p in checks.song_shape_problems(Bundle.model_validate(data))]
+    assert "the chorus is sung 2 times, not 3" in found
+    tags = shaped("Split the water, catch the light", "Light splits water.",
+                  [("v1-1", "Light lands on the thylakoid, for real"), ("v1-2", "Protons pile up, no doubt"),
+                   ("v2-1", "Only b6f pumps them in, it's true")])
+    assert any("3 lines end on a claim-free tag" in f for f in tags)

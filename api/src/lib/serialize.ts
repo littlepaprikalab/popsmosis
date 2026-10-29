@@ -68,6 +68,8 @@ type AnswerRow = {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl: string | null;
+  hookPosterUrl: string | null;
   videoError: string | null;
   videoUpdatedAt: Date | null;
   videoAttempts: number;

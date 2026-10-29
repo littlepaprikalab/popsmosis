@@ -10,6 +10,10 @@ is searched by: a tag the checker does not pass is dropped from both videos, nev
 rewritten, and never fails the job. A tag that gets no verdict in three rounds is dropped
 too, so only checked tags are posted.
 
+It checks the key lines and the core idea, which the song writes on screen, like a lesson sentence: a
+correction rewrites one, and one still wrong with no correction is taken off the screen (a key line dropped,
+the core idea left ""), never failing the job.
+
 It checks the marked motions the same way: what a line's particles carry and the route
 they take ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"), since the video
 shows it as a claim. A motion that fails is left out of the video (no particles on its
@@ -37,7 +41,8 @@ from studio.sentences import replace_sentences, split_sentences
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KINDS = ("lyric", "narration", "lesson")  # the lines a correction rewrites
+KEY = "keyline"  # a key line, or the core idea: written on screen in the song
+KINDS = ("lyric", "narration", "lesson", KEY)  # the lines a correction rewrites
 TAG = "tag"  # a video's hashtag: passed, or dropped
 MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
 KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
@@ -78,7 +83,13 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines = [Line("lyric", lyric.id, lyric.text) for lyric in bundle.lyrics]
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
-    return lines + tag_lines(bundle) + motion_lines(bundle)
+    return lines + key_lines(bundle) + tag_lines(bundle) + motion_lines(bundle)
+
+
+def key_lines(bundle: Bundle) -> list[Line]:
+    """What the song writes above its diagram: the key lines, and the core idea over the last chorus."""
+    lines = [Line(KEY, "core_idea", bundle.core_idea)] if bundle.core_idea.strip() else []
+    return lines + [Line(KEY, k.from_line, k.text) for k in bundle.key_lines if k.text.strip()]
 
 
 def motion_text(carries: str, particles: list[str], blocked: bool = False) -> str:
@@ -90,9 +101,9 @@ def motion_text(carries: str, particles: list[str], blocked: bool = False) -> st
     return f"{carries} travels from " + " to ".join(particles)
 
 
-def _motion(bundle: Bundle, d) -> str:
+def _motion(bundle: Bundle, flow) -> str:
     blockers = {b.structure for b in bundle.blocks}
-    return motion_text(d.carries, d.particles, d.particles[-1] in blockers)
+    return motion_text(flow.carries, flow.particles, flow.particles[-1] in blockers)
 
 
 def build_up_text(carries: str, region: str) -> str:
@@ -102,7 +113,7 @@ def build_up_text(carries: str, region: str) -> str:
 def spin_text(bundle: Bundle, structure: str) -> str:
     """What the video shows turning, and what drives it: "ATP synthase spins as H⁺ flows through it", or for
     unmarked particles (an analogy's water) "Water wheel spins as particles flow into it from Reservoir"."""
-    flows = [d for d in bundle.direction if structure in d.particles[1:]]
+    flows = [f for d in bundle.direction for f in d.flows() if structure in f.particles[1:]]
     marked = sorted({d.carries for d in flows if d.carries})
     if marked:
         return f"{structure} spins as {' and '.join(marked)} flows through it"
@@ -112,13 +123,22 @@ def spin_text(bundle: Bundle, structure: str) -> str:
     return f"{structure} spins as particles flow into it from {' and '.join(sources)}"
 
 
+def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> str:
+    """What the video writes beside a structure: "At Photosystem II, H₂O is turned into O₂, H⁺ and e⁻"."""
+    return f"At {structure}, {' and '.join(inputs)} is turned into {' and '.join(outputs)}"
+
+
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving, when they are marked with what they carry, and what the
     video shows piling up and turning."""
-    return [Line(MOTION, d.line_id, _motion(bundle, d))
-            for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
+    return [Line(MOTION, d.line_id, _motion(bundle, d)) for d in bundle.direction
+            if d.carries and len(d.particles) >= 2] + [
+        Line(MOTION, f"{d.line_id}+{k}", _motion(bundle, f)) for d in bundle.direction
+        for k, f in enumerate(d.also, 1) if f.carries and len(f.particles) >= 2] + [
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
-        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)]
+        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
+        Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
+        for i, c in enumerate(bundle.conversions, 1)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -193,7 +213,9 @@ def check_bundle(
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
             after = " ".join(check.corrected.split())
-            if not after or after == line.text:
+            if line.kind == KEY and (not after or after == line.text):
+                after = ""  # taken off the screen: a key line is a help, never worth failing the droplet
+            elif not after or after == line.text:
                 reason = f"{line.kind} {line.id} is unsupported and has no correction: {check.problem}"
                 break
             fixes[(line.kind, line.text)] = after
@@ -232,11 +254,20 @@ def check_bundle(
             if (d["carries"] and len(d["particles"]) >= 2
                     and motion_text(d["carries"], d["particles"], blocked) not in passed_motions):
                 d["particles"], d["carries"] = [], ""
+            stoppers = {b["structure"] for b in data["blocks"]}
+            d["also"] = [f for f in d["also"] if not f["carries"] or len(f["particles"]) < 2
+                         or motion_text(f["carries"], f["particles"], f["particles"][-1] in stoppers) in passed_motions]
         data["builds_up"] = [b for b in data["builds_up"]
                              if build_up_text(b["carries"], b["region"]) in passed_motions]
         data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
+        data["conversions"] = [c for c in data["conversions"]
+                               if conversion_text(c["structure"], c["inputs"], c["outputs"]) in passed_motions]
         bundle = Bundle.model_validate(data)
-    failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED and c.verdict not in PASSING]
+    # A key line still not passed after the last round is taken off the screen, as one with no correction is.
+    unpassed = {(KEY, c.text): "" for c in checked if c.kind == KEY and c.verdict not in PASSING}
+    if unpassed and not reason:
+        bundle = apply_fixes(bundle, unpassed)  # the report keeps them, with their verdicts
+    failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED + (KEY,) and c.verdict not in PASSING]
     if failing and not reason:
         reason = f"after {rounds} round(s), {len(failing)} line(s) still fail: " + "; ".join(
             _describe(c, verdicts) for c in failing[:3]
@@ -275,6 +306,10 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     for kind, field in (("lyric", "lyrics"), ("narration", "narration")):
         for line in data[field]:
             line["text"] = fixes.get((kind, line["text"]), line["text"])
+    for key in data["key_lines"]:
+        key["text"] = fixes.get((KEY, key["text"]), key["text"])
+    data["key_lines"] = [key for key in data["key_lines"] if key["text"].strip()]
+    data["core_idea"] = fixes.get((KEY, data["core_idea"]), data["core_idea"])
     lesson = {before: after for (kind, before), after in fixes.items() if kind == "lesson"}
     if lesson:
         data["lesson_markdown"] = replace_sentences(data["lesson_markdown"], lesson)

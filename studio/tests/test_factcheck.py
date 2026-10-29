@@ -389,3 +389,57 @@ def test_a_report_from_before_tags_still_reads():
            "lines": [{"kind": "lyric", "id": "v1-1", "text": "x", "verdict": "SUPPORTED", "source": "f1", "round": 1}]}
     assert FactCheckReport.model_validate(old).lines[0].problem == ""
 
+
+
+KEY = "Every carrier pumps H⁺"
+
+
+def with_key_lines(data):
+    data["key_lines"] = [{"from_line": "v1-1", "text": "How does light make ATP?"}, {"from_line": "v2-1", "text": KEY}]
+
+
+def test_key_lines_and_the_core_idea_are_checked_and_a_wrong_one_corrected():
+    def rule(text):
+        return ("UNSUPPORTED", "", "Only b6f pumps H⁺") if text == KEY else supported(text)
+
+    fake = FakeChecker(rule)
+    report, checked = check_bundle(bundle(with_key_lines), "", fake)
+    assert {"keyline:core_idea", "keyline:v1-1", "keyline:v2-1"} <= set(fake.ids(1))
+    assert report.status == "passed"
+    assert [k.text for k in checked.key_lines] == ["How does light make ATP?", "Only b6f pumps H⁺"]
+    assert [(c.kind, c.ids) for c in report.corrections] == [("keyline", ["v2-1"])]
+
+
+def test_a_wrong_key_line_with_no_correction_leaves_the_screen_and_never_fails_the_check():
+    def rule(text):
+        return ("UNSUPPORTED", "", "") if text == KEY else supported(text)
+
+    report, checked = check_bundle(bundle(with_key_lines), "", FakeChecker(rule))
+    assert report.status == "passed"
+    assert [k.text for k in checked.key_lines] == ["How does light make ATP?"]
+
+
+def test_a_key_line_that_never_passes_leaves_the_screen_and_the_report_keeps_it():
+    def rule(text):
+        return ("UNSUPPORTED", "", text + "!") if text.startswith(KEY) else supported(text)
+
+    report, checked = check_bundle(bundle(with_key_lines), "", FakeChecker(rule))
+    assert report.status == "passed"
+    assert [k.text for k in checked.key_lines] == ["How does light make ATP?"]
+    assert any(c.kind == "keyline" and c.verdict == "UNSUPPORTED" for c in report.lines)
+
+
+def test_a_second_flow_is_its_own_motion_and_one_that_fails_leaves_only_itself():
+    OXYGEN = "O₂ travels from Cytochrome b6f to Thylakoid"
+
+    def change(data):
+        moving(data)
+        next(d for d in data["direction"] if d["line_id"] == "v2-1")["also"] = [
+            {"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "O₂"}]
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == OXYGEN else supported(text))
+    report, checked = check_bundle(bundle(change), "", fake)
+    assert ("motion:v2-1+1", OXYGEN) in [(line["id"], line["text"]) for line in fake.payloads[0]["lines"]]
+    line = next(d for d in checked.direction if d.line_id == "v2-1")
+    assert report.status == "passed" and line.also == [] and (line.particles, line.carries) == (
+        ["Cytochrome b6f", "Thylakoid"], "H⁺")

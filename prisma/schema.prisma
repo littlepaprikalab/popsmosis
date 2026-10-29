@@ -9,6 +9,8 @@
 generator client {
   provider = "prisma-client"
   output   = "../api/src/generated/prisma"
+  // A partial index for the Clips feed (answers_clips_idx).
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
@@ -148,6 +150,8 @@ model Answer {
   lessonVideoUrl  String?
   songPosterUrl   String? // a still for each video, shown before it plays
   lessonPosterUrl String?
+  hookVideoUrl    String? // the hook cut: the song's pre-chorus and first chorus, upright, to share
+  hookPosterUrl   String?
   videoError      String? // FAILED: why, shown on the droplet
   videoUpdatedAt  DateTime? // the last status change; RENDERING for too long reads as FAILED
   hiddenAt        DateTime? // an admin took it off the public Droplets tab; null: listed once READY
@@ -180,6 +184,9 @@ model Answer {
   @@index([agentId, createdAt(sort: Desc)])
   @@index([createdAt(sort: Desc)]) // status poll: MAX(createdAt)
   @@index([videoStatus, createdAt(sort: Desc), id(sort: Desc)]) // the Droplets tab: READY, newest first
+  // The Droplets tab's Clips feed (?clips=1): only droplets with a hook cut, newest first. Partial, so it holds
+  // just those rows and the feed reads a page of them however few of all droplets have one.
+  @@index([createdAt(sort: Desc), id(sort: Desc)], map: "answers_clips_idx", where: raw("\"hookVideoUrl\" IS NOT NULL AND \"videoStatus\" = 'READY' AND \"hiddenAt\" IS NULL"))
   @@index([songTags], type: Gin) // the Droplets tab, searched by a tag
   @@index([lessonTags], type: Gin)
   @@map("answers")

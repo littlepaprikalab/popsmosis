@@ -292,8 +292,8 @@ def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wro
     made = json.loads((job / "art" / "hook.json").read_text())
     assert made["try"] == 2
     # What each try was refused for is kept, not only the next prompt's quote of it.
-    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "wrong": [], "notes": []},
-                             {"try": 2, "text": [], "misplaced": [], "wrong": [], "notes": []}]
+    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "unnamed": [], "wrong": [], "notes": []},
+                             {"try": 2, "text": [], "misplaced": [], "unnamed": [], "wrong": [], "notes": []}]
     assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png"]
 
 
@@ -341,21 +341,22 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert told.index("The scene is") < told.index("What the scene should show")
 
 
-def test_a_scene_with_writing_in_every_picture_fails_the_step_and_keeps_the_others(job, monkeypatch):
+def test_a_scene_with_writing_in_every_picture_is_cleaned_or_kept_with_a_note(job, monkeypatch):
+    # The painter is asked once to take the writing out of the least-bad try; when that works, the cleaned one is kept.
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"overview": [{"text": ["e-"]}]})
-    with pytest.raises(media.StepFailed, match=r"scene overview: no usable picture in 2 tries: it has writing"):
-        art.run(job, helper)
-    # The other scenes were painted at the same time, and are kept.
-    assert (job / "art" / "hook.json").exists() and (job / "art" / "synthase.json").exists()
-    assert not (job / "art" / "overview.json").exists()
+    art.run(job, FakeHelper({"overview": [{"text": ["e-"]}, {"text": ["e-"]}, {}]}))
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert made["try"] == 3 and made["tries"][-1]["cleaned"] in (1, 2)
+    clean = [(label, prompt) for label, prompt in fake.painted if label == "art overview clean"]
+    assert clean and clean[0][1] == art.CLEAN_PROMPT
+    assert art.WRITING_NOTE not in made["check"]["notes"]
 
+    # When the writing stays, the least-bad try is kept rather than failing the droplet, and the video says so.
     fake.painted.clear()
-    assert art.run(job, FakeHelper()) == "painted 1 scene with Muse Image in 1 try, kept 2 painted before"
-    assert [label for label, _ in fake.painted] == ["art overview"]
-    fake.painted.clear()
-    art.run(job, FakeHelper())  # done: running it again paints every scene
-    assert len(fake.painted) == 3
+    art.run(job, FakeHelper({"overview": [{"text": ["e-"]}]}))
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert made["try"] in (1, 2) and art.WRITING_NOTE in made["check"]["notes"]
+    assert art.notices(job, checks.load(job / "bundle.json"))["overview"][-1] == art.WRITING_NOTE
 
 
 def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):

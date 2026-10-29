@@ -46,7 +46,7 @@ export default async function answerRoutes(app: FastifyInstance) {
   }
 
   // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
-  // songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }. RENDERING when the media steps
+  // songPosterUrl?, lessonPosterUrl?, hookVideoUrl?, hookPosterUrl?, error?, attempt?, breakdown? }. RENDERING when the media steps
   // start (and again as each video lands), READY when they are done, FAILED with one
   // line on why. A URL left out keeps the one already saved, so the song can be posted
   // before the lesson video exists. With the attempt a run holds (routes/videos.ts) it
@@ -134,6 +134,7 @@ export default async function answerRoutes(app: FastifyInstance) {
       where: { id },
       select: {
         videoStatus: true, songVideoUrl: true, lessonVideoUrl: true, songPosterUrl: true, lessonPosterUrl: true,
+        hookVideoUrl: true, hookPosterUrl: true,
         videoError: true, videoUpdatedAt: true,
       },
     });

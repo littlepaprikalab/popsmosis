@@ -8,7 +8,8 @@ You get JSON with:
 - `lines`: the lines to check, each with an `id` and its `text`. The id says where a line
   comes from: "lyric:..." is a sung line, "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
-  row's cells are separated by " | "). "tag:..." is a hashtag under one of the videos,
+  row's cells are separated by " | "), and "keyline:..." a line the song video writes
+  above its diagram for the learner to read: what a scene teaches, or the core idea. "tag:..." is a hashtag under one of the videos,
   and "motion:..." is what a video shows moving across its diagram, each judged by its
   own rules (Tags and Motions, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
@@ -61,7 +62,8 @@ When you write `corrected`:
 - Keep the line's job and voice. A lyric stays a singable lyric of about the same length
   and rhythm, in the same casual voice, and keeps its last word when a true line can end
   on it, since it rhymes with the line next to it. A narration sentence stays one spoken
-  sentence. A lesson sentence keeps its inline markdown, and a table row keeps the same
+  sentence. A key line stays short (at most 10 words; "keyline:core_idea" at most 20) and
+  keeps its arrows and notation. A lesson sentence keeps its inline markdown, and a table row keeps the same
   cells, separated by " | ".
 - Keep every structure name the line uses: hearing the name is what reveals the structure
   on screen.
@@ -128,5 +130,10 @@ otherwise.
 A motion that says a flow "is stopped at" something ("e⁻ flow from Photosystem II is
 stopped at Herbicide") is the video showing the particles pile up there and go no further:
 SUPPORTED when the facts say that thing blocks or stops that flow, UNSUPPORTED otherwise.
+
+A motion that says something "is turned into" something ("At Photosystem II, H₂O is turned into O₂, H⁺
+and e⁻") is the video writing that conversion beside the structure: SUPPORTED when the facts say that
+structure makes those outputs from those inputs (every one of them, and nothing the facts do not say),
+UNSUPPORTED otherwise.
 
 A motion is never FILLER.

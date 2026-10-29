@@ -152,13 +152,16 @@ def test_a_storage_failure_fails_the_step_and_a_retry_picks_up_where_it_stopped(
     with pytest.raises(media.StepFailed, match=r"droplets/out/song_h.mp4: .*storage answered 500: try later"):
         upload.run(job, api=api_for(server))
     assert not upload.is_done(job) and server.patches() == []
-    sent_before = len(server.puts())
+    stored_before = set(server.stored)
 
     server.fail_put.clear()
     server.calls.clear()
     upload.run(job, api=api_for(server))
-    # The private files went the first time; only the public ones from the song on are left.
-    assert len(server.puts()) == 4 and sent_before > 4
+    # Uploads run side by side, so which others went before the failure varies; the retry sends the song and only
+    # what was not stored the first time.
+    again = [put[1] for put in server.puts()]
+    assert any(url.endswith("out/song_h.mp4?token=t0k") for url in again)
+    assert len(again) == len({path for path in server.stored} - stored_before)
     assert upload.is_done(job)
 
 
@@ -361,3 +364,18 @@ def test_a_muse_pictures_check_goes_with_the_rerender_kit_and_a_drawing_misses_n
     (job / media.check_path("overview")).write_text("{}")
     there, missing = upload.private_files(job)
     assert media.check_path("overview") in there and media.check_path("hook") not in missing
+
+
+def test_the_hook_cut_goes_up_with_the_videos_when_it_was_made(job, server):
+    (job / "out" / "hook_v.mp4").write_bytes(b"mp4 hook")
+    (job / "out" / "hook_v.jpg").write_bytes(b"jpg hook")
+    assert {"out/hook_v.mp4", "out/hook_v.jpg"} <= set(upload.public_files(job))
+    upload.run(job, api=api_for(server))
+    ready = server.patches()[-1]
+    assert ready["hookVideoUrl"].endswith("/out/hook_v.mp4") and ready["hookPosterUrl"].endswith("/out/hook_v.jpg")
+
+
+def test_a_render_picked_up_elsewhere_gets_the_hook_cuts_timeline_too(job):
+    assert "timeline_hook.json" not in upload.private_files(job)[0]
+    (job / "timeline_hook.json").write_text("{}")
+    assert "timeline_hook.json" in upload.private_files(job)[0]

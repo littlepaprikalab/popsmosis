@@ -97,7 +97,7 @@ d('the Droplets tab', () => {
     expect(list.json().data[0]).toEqual({
       id: newer, title: 'AP Biology: ATP synthase', course: 'AP Biology', topic: 'ATP synthase',
       excerpt: 'Lesson 10: ATP synthase spins.',
-      video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null },
+      video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null },
       tags: { song: [], lesson: [] }, // a droplet made before there were tags
       likeCount: 0, commentCount: 0, liked: false,
       createdAt: expect.any(String),
@@ -109,6 +109,32 @@ d('the Droplets tab', () => {
     const second = (await get(`/api/droplets?limit=1&cursor=${first.nextCursor}`)).json();
     expect(second.data.map((x: { id: string }) => x.id)).toEqual([older]);
     expect((await get(`/api/droplets?limit=1&cursor=${second.nextCursor}`)).json()).toEqual({ data: [], nextCursor: null });
+  });
+
+  it('lists only droplets with a hook clip for the Clips feed, by cursor, ties broken by id', async () => {
+    const HOOK = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/hook_v.mp4';
+    const clip = { videoStatus: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON, hookVideoUrl: HOOK };
+    const a = await droplet(10, clip);
+    const b = await droplet(10, clip); // the same minute as a: the cursor must not skip or repeat one
+    await prisma.answer.update({ where: { id: b }, data: { createdAt: (await prisma.answer.findUniqueOrThrow({ where: { id: a } })).createdAt } });
+    const c = await droplet(20, clip);
+    await droplet(5); // no clip
+    await droplet(1, { ...clip, videoStatus: 'RENDERING' });
+    const hidden = await droplet(2, clip);
+    await prisma.answer.update({ where: { id: hidden }, data: { hiddenAt: new Date() } });
+
+    const order = [a, b].sort().reverse().concat(c);
+    expect((await get('/api/droplets?clips=1')).json().data.map((x: { id: string }) => x.id)).toEqual(order);
+    const seen: string[] = [];
+    let cursor = '';
+    for (let page = 0; page < 4; page++) {
+      const r = (await get(`/api/droplets?clips=1&limit=1${cursor ? `&cursor=${cursor}` : ''}`)).json();
+      seen.push(...r.data.map((x: { id: string }) => x.id));
+      if (!r.nextCursor) break;
+      cursor = r.nextCursor;
+    }
+    expect(seen).toEqual(order);
+    expect((await get('/api/droplets?clips=1')).json().data[0].video.hookVideoUrl).toBe(HOOK);
   });
 
   it("keeps each video's hashtags from the bundle, shows them, and finds a droplet by one", async () => {
@@ -243,7 +269,7 @@ d('the Droplets tab', () => {
     await patch({ status: 'RENDERING', songVideoUrl: SONG, songPosterUrl: POSTER });
     const ready = await patch({ status: 'READY', lessonVideoUrl: LESSON });
     expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: SONG, songPosterUrl: POSTER, lessonVideoUrl: LESSON, lessonPosterUrl: null });
-    expect((await get(`/api/droplets/${id}`)).json().video).toEqual({ songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: POSTER, lessonPosterUrl: null });
+    expect((await get(`/api/droplets/${id}`)).json().video).toEqual({ songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: POSTER, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null });
   });
 
   it('marks READY only for the attempt that holds the render, so a run that was taken over cannot', async () => {

@@ -35,7 +35,8 @@ def test_the_brain_is_opus_at_high_effort_with_the_refusal_fallback(tmp_path):
         "format": {"type": "json_schema", "schema": brain.strict_schema(FactCheck)},
     }
     assert request["fallbacks"] == "default" and request["betas"] == ["server-side-fallback-2026-07-01"]
-    assert request["system"] == "You check facts."
+    # The instructions are cached: every call of a kind sends the same ones first.
+    assert request["system"] == [{"type": "text", "text": "You check facts.", "cache_control": {"type": "ephemeral"}}]
     [content] = request["messages"]
     assert [block["type"] for block in content["content"]] == ["image", "text"]
     assert content["content"][0]["source"]["media_type"] == "image/png"
@@ -159,7 +160,7 @@ def test_ask_streams_records_the_call_and_validates(monkeypatch):
     monkeypatch.setattr(brain, "calls", [])
     answer = brain.ask("brain", "Check.", FactCheck, system="You check.", label="factcheck round 1")
     assert answer == FactCheck.model_validate_json(ANSWER).model_dump()
-    assert sent[0]["system"] == "You check." and sent[0]["model"] == "claude-opus-5-5"
+    assert sent[0]["system"][0]["text"] == "You check." and sent[0]["model"] == "claude-opus-5-5"
     [call] = brain.calls
     assert call.label == "factcheck round 1" and call.stop_reason == "end_turn"
 

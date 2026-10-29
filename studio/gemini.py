@@ -84,10 +84,15 @@ def key() -> str:
     return value
 
 
-def paint(job: Path, label: str, prompt: str) -> bytes:
-    """One picture of the prompt at the art's aspect ratio, as JPEG or PNG bytes (any size: the caller fits it)."""
+def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> bytes:
+    """One picture of the prompt at the art's aspect ratio, as JPEG or PNG bytes (any size: the caller fits it).
+    With a reference, the prompt is an edit of that picture ("remove the writing; change nothing else")."""
+    parts: list[dict] = []
+    if reference is not None:
+        parts.append({"inlineData": {"mimeType": "image/png", "data": base64.b64encode(reference.read_bytes()).decode()}})
+    parts.append({"text": prompt})
     body = {
-        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "contents": [{"role": "user", "parts": parts}],
         "generationConfig": {"responseModalities": ["IMAGE"],
                              "imageConfig": {"aspectRatio": ASPECT_RATIO, "imageSize": IMAGE_SIZE}},
     }

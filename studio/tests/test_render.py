@@ -25,6 +25,7 @@ from studio.schemas import (
     Locations,
     Particles,
     Reveal,
+    Route,
     Timeline,
     TimelineCamera,
     Timing,
@@ -291,8 +292,7 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
 def test_particles_travel_between_the_structures_and_fade_in(job):
     flow = Renderer(job, flowing([flow_beat(0, 8)]))  # no labels, so nothing is drawn over the particle
     still = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
-    anchors = [(a.x, a.y) for a in (located(job, "overview", name).label_anchor for name in FLOW)]
-    stops = renderer_module.stop_points(anchors)
+    stops = flow._path_points("overview", FLOW)  # a stop in a space sits beside its neighbour on the path
     leg = max(math.dist(*stops) / renderer_module.FLOW_SPEED, renderer_module.FLOW_MIN_LEG_S)
     held = renderer_module.FLOW_PAUSE_S + leg + 0.2  # the lead particle is holding at cytochrome b6f
     gold = p.rgb("#F2C230")
@@ -309,16 +309,16 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
-    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    stops = marked._path_points("overview", FLOW)
     held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
     x, y = marked.art_to_frame(held, *stops[0])
     badge, dot = marked.frame(held).copy(), plain.frame(held).copy()
 
-    def cyan_across(frame):  # how wide the cyan runs across the particle, above its word
-        row = frame[round(y) - 14, round(x) - 60:round(x) + 60, 2::-1]  # BGRA to RGB
-        return int((np.abs(row.astype(int) - p.rgb(cyan)).max(1) < 12).sum())
+    def cyan_across(frame):  # how wide the cyan runs across the particle at its widest, near where it holds
+        rows = frame[round(y) - 30:round(y) + 30, round(x) - 70:round(x) + 70, 2::-1]  # BGRA to RGB
+        return int((np.abs(rows.astype(int) - p.rgb(cyan)).max(2) < 12).sum(1).max())
 
-    assert cyan_across(dot) == 0 and cyan_across(badge) > 15  # bigger than the plain dot
+    assert cyan_across(badge) > cyan_across(dot) + 6  # bigger than the plain dot
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
@@ -648,3 +648,67 @@ def test_a_long_note_is_cut_so_the_card_stays_above_the_lyric_band():
     long = " ".join(["word"] * 400)
     bottom = p.draw_notice(surface.getCanvas(), 1480, 28, 1900, [long] * 3, 22)
     assert bottom < 1080 - 110
+
+
+def test_key_terms_are_found_whole_ignoring_case_longest_first():
+    text = "H⁺ flowing back spins ATP synthase → ATP"
+    spans = p.key_term_spans(text, ["ATP", "atp synthase", "back"])
+    assert [text[a:b] for a, b in spans] == ["back", "ATP synthase", "ATP"]
+    assert p.key_term_spans("synthases", ["synthase"]) == []  # whole words only
+
+
+def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = [b.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"}) for b in timeline.beats]
+    keyed = Renderer(job, timeline.model_copy(update={"beats": beats, "key_terms": ["lumen"]}))
+    plain = Renderer(job, timeline)
+    assert keyed.view("overview")[1] == plain.view("overview")[1] + keyed.layout.key_h > 0
+    frame = keyed.frame(14.0)
+    band = frame[:keyed.layout.key_h, :, :3]
+    amber = p.rgb("#FCD34D")
+    assert ((band[..., 2] == amber[0]) & (band[..., 1] == amber[1]) & (band[..., 0] == amber[2])).sum() > 50
+    assert (band[..., :] > 200).all(axis=-1).sum() > 500  # white text
+    upright = Renderer(job, keyed.timeline.model_copy(update={"title": "the light reactions"}), "v")
+    assert upright.view("overview")[1] == upright.layout.title_h  # in the title band, which keeps its height
+    top = upright.frame(14.0)[:upright.layout.title_h, :, :3]
+    assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50
+
+
+def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    first = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    since = timeline.beats[first].t0
+    one = Route(path=["Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
+    both = Route(path=["Cytochrome b6f", "Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
+    other = Route(path=["Thylakoid", "Cytochrome b6f"], color="#F2C230", label="H⁺", since=since)  # another carrier
+    beats = [b.model_copy(update={"routes": [one, both, other]}) if b.scene == "overview" else b for b in timeline.beats]
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    legs = []
+    monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append(color))
+    last = max(i for i, b in enumerate(beats) if b.scene == "overview")
+    renderer.frame(beats[last].t1 - 0.01)
+    assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
+
+
+def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    path = ["Cytochrome b6f", "Thylakoid"]
+    flows = [Particles(path=path, color="#F2C230", label="H⁺", trail=True),
+             Particles(path=list(reversed(path)), color="#7FD1FF", label="H₂O", trail=True)]
+    beats = list(timeline.beats)
+    beats[i] = beats[i].model_copy(update={"particles": flows})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert renderer._lanes[("overview", tuple(path), "H⁺")] == 0
+    assert renderer._lanes[("overview", tuple(reversed(path)), "H₂O")] == 1  # the same stops, the other way: beside
+    first = renderer._path_points("overview", path)
+    beside = renderer._path_points("overview", path, lane=1)
+    assert all(math.dist(a, b) == pytest.approx(renderer_module.LANE_GAP) for a, b in zip(first, beside))
+    b6f = located(job, "overview", "Cytochrome b6f")
+    assert renderer._is_space("overview", located(job, "overview", "Thylakoid"))
+    x, y = first[0]  # leaving a part for a space: from its edge, where the arrow starts, not from inside it
+    box = b6f.box
+    on_edge = min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1))
+    assert on_edge == pytest.approx(0, abs=1e-6) and box.x0 <= x <= box.x1 and box.y0 <= y <= box.y1
+    x, y = renderer._path_points("overview", list(reversed(path)))[-1]  # and arriving from a space, at its edge too
+    assert min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1)) == pytest.approx(0, abs=1e-6)

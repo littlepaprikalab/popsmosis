@@ -4,7 +4,7 @@ scientifically accurate.
 
 The video is built on your drawing: the renderer reveals each structure when it is first
 named, washes the others pale to spotlight one, zooms the camera onto it, and draws a
-label with a leader line that ends inside it. Code finds every structure through the
+label beside it. Code finds every structure through the
 group you put it in, so the grouping matters as much as the picture.
 
 ## What you get
@@ -48,6 +48,13 @@ art, soft gradients, clean darker outlines, on white.
   shapes and less context.
 - Never anime, faces, personified characters, clip-art, 3D molecule renders, icons or
   slide-style cards.
+
+## No unnamed things
+
+Draw no small sphere, dot, bead or blob that is not one of the listed structures: the renderer
+labels every listed structure and its label stays on, so each round thing in the picture must be
+one of them. If the request names a small molecule or carrier, draw exactly that one, once per
+place the request puts it, and no others.
 
 ## No text
 

@@ -44,7 +44,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Literal, TypeVar
 
@@ -87,6 +89,8 @@ class Uploaded(Progress):
     lesson_video_url: str
     song_poster_url: str | None = None
     lesson_poster_url: str | None = None
+    hook_video_url: str | None = None  # the hook cut's, when it was made
+    hook_poster_url: str | None = None
     missing: list[str] = []  # intermediate files the job did not have, so a re-render may need them made again
 
 
@@ -140,12 +144,14 @@ def _retrying(what: str, call: Callable[[], T]) -> T:
 
 
 def public_files(job: Path) -> list[str]:
-    """The videos, which must both be there, and the posters that are."""
+    """The videos, which must both be there, and the posters that are; the hook cut and its poster when it was made."""
     missing = [media.video_path(v) for v in media.VIDEOS if not (job / media.video_path(v)).is_file()]
     if missing:
         raise media.StepFailed(f"nothing to upload yet: {', '.join(missing)} not rendered")
     posters = [media.poster_path(v) for v in media.VIDEOS if (job / media.poster_path(v)).is_file()]
-    return [media.video_path(v) for v in media.VIDEOS] + posters
+    hook = [path(media.HOOK, media.HOOK_LAYOUT) for path in (media.video_path, media.poster_path)
+            if (job / path(media.HOOK, media.HOOK_LAYOUT)).is_file()]
+    return [media.video_path(v) for v in media.VIDEOS] + posters + hook
 
 
 def private_files(job: Path) -> tuple[list[str], list[str]]:
@@ -163,7 +169,9 @@ def private_files(job: Path) -> tuple[list[str], list[str]]:
         pass  # locations.json itself is reported missing
     named += ([media.audio_path(k) for k in media.TIMED]
               + [media.timing_path(k) for k in media.TIMED]
-              + [media.timeline_path(v) for v in media.VIDEOS])
+              + [media.timeline_path(v) for v in media.VIDEOS]
+              # The hook cut's, when the song has one, so a render picked up on another machine makes it too.
+              + ([media.timeline_path(media.HOOK)] if (job / media.timeline_path(media.HOOK)).is_file() else []))
     named = list(dict.fromkeys(named))  # the art is named by both
     there = [p for p in named if (job / p).is_file()]
     # What each Muse Image picture's check found, which the timeline discloses beside it: a timeline made
@@ -185,10 +193,24 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
     api = api or Api.from_env()
     attempt = held_attempt(job, answer)
 
-    sent = 0
-    for bucket, files in ((PRIVATE, private), (PUBLIC, public)):
-        for file in files:
-            sent += upload_file(api, job, answer, bucket, file)[1]
+    # The first file alone, so storage that is not set up fails on one request; then the rest several at once, since
+    # each waits on the network, not on this machine. One that fails stops the ones not yet started and fails the
+    # step; a retry sends only what is not there yet.
+    todo = [(bucket, file) for bucket, files in ((PRIVATE, private), (PUBLIC, public)) for file in files]
+    sent = upload_file(api, job, answer, *todo[0])[1] if todo else 0
+    stop = threading.Event()
+
+    def one(item: tuple[str, str]) -> int:
+        if stop.is_set():
+            return 0
+        try:
+            return upload_file(api, job, answer, *item)[1]
+        except Exception:
+            stop.set()
+            raise
+
+    with ThreadPoolExecutor(UPLOAD_WORKERS) as pool:
+        sent += sum(pool.map(one, todo[1:]))
 
     progress = _progress(job, answer, attempt)
 
@@ -200,6 +222,8 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
         **progress.model_dump(),
         song_video_url=url(media.video_path("song")), lesson_video_url=url(media.video_path("lesson")),
         song_poster_url=url(media.poster_path("song")), lesson_poster_url=url(media.poster_path("lesson")),
+        hook_video_url=url(media.video_path(media.HOOK, media.HOOK_LAYOUT)),
+        hook_poster_url=url(media.poster_path(media.HOOK, media.HOOK_LAYOUT)),
         missing=missing,
     )
     breakdown = ledger.try_breakdown(job, "videos", running=("upload", round(time.monotonic() - started, 1)))
@@ -207,6 +231,7 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
         answer, "READY", attempt=attempt,
         song_video_url=uploaded.song_video_url, lesson_video_url=uploaded.lesson_video_url,
         song_poster_url=uploaded.song_poster_url, lesson_poster_url=uploaded.lesson_poster_url,
+        hook_video_url=uploaded.hook_video_url, hook_poster_url=uploaded.hook_poster_url,
         breakdown=breakdown))
     jobs.write(job / UPLOADED, uploaded)  # last: done means READY was sent
 
@@ -226,6 +251,10 @@ def _progress(job: Path, answer: str, attempt: int | None) -> Progress:
         if progress.answer_id == answer and progress.attempt == attempt:
             return progress
     return Progress(answer_id=answer, attempt=attempt)
+
+
+UPLOAD_WORKERS = 8
+_PROGRESS_LOCK = threading.Lock()
 
 
 def upload_file(api: Api, job: Path, answer_id: str, bucket: Bucket, path: str) -> tuple[UploadedFile, int]:
@@ -256,6 +285,8 @@ def upload_file(api: Api, job: Path, answer_id: str, bucket: Bucket, path: str) 
     if bucket == PUBLIC and not public_url:
         raise media.StepFailed(f"{bucket}/{remote}: the API sent no public URL")
     entry = UploadedFile(bucket=bucket, remote=remote, sha256=digest, size=len(data), public_url=public_url)
-    progress.files[path] = entry
-    jobs.write(job / PROGRESS, progress)
+    with _PROGRESS_LOCK:  # uploads run side by side: each adds its record to the file as it stands now
+        progress = _progress(job, answer_id, attempt)
+        progress.files[path] = entry
+        jobs.write(job / PROGRESS, progress)
     return entry, 1

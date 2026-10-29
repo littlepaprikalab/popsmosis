@@ -58,7 +58,7 @@ GEMINI_SONG_MODEL = "lyria-3.5"  # Lyria's full-length songs, sung from lyrics g
 SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this rate
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
-DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
+DEFAULT_VOICE = "Xb7hH8MSUJpSbSDYk0k2"  # Alice: a clear, engaging British educator
 BEATS_PER_BAR = 4
 TWO_BAR_BPM = 130  # from this tempo a line is two bars, since one would be under 1.9 s (PLAN section 5, step 5)
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
@@ -220,14 +220,35 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> None:
 
 # Eleven Music: one chunk per section, each exactly as long as asked.
 
+# Told one style for every section, the song rapped all the way through: a style that says "rapped verses"
+# is read for the chorus too. So only the verses are asked to rap, and the other sections to sing.
+SUNG_SECTIONS = {"intro", "pre-chorus", "chorus", "bridge", "outro"}
+
+
+def raps(bundle: Bundle) -> bool:
+    return any("rap" in style.lower() or "hip-hop" in style.lower() for style in bundle.music.positive_styles)
+
+
+def section_styles(bundle: Bundle, section: str) -> tuple[list[str], list[str]]:
+    """The styles to ask one section for, and what to avoid in it."""
+    positive, negative = list(bundle.music.positive_styles), list(bundle.music.negative_styles)
+    if raps(bundle):
+        if section in SUNG_SECTIONS:
+            positive.append("sung melodic vocal, not rapped")
+            negative += ["rapping", "rapped vocals", "spoken word"]
+        else:
+            positive.append("clear rapped verse")
+    return positive, negative
+
+
 def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     """The music request's plan, one chunk per section, and where each section is planned to fall."""
     planned = planned_sections(bundle)
     chunks = [{
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
-        "positive_styles": list(bundle.music.positive_styles),
-        "negative_styles": list(bundle.music.negative_styles),
+        "positive_styles": section_styles(bundle, part["section"])[0],
+        "negative_styles": section_styles(bundle, part["section"])[1],
         "context_adherence": "high",
     } for part in planned]
     return {"chunks": chunks}, _placed(planned)
@@ -269,6 +290,9 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
         head.append(f"Style: {', '.join(music.positive_styles)}.")
     if music.negative_styles:
         head.append(f"Avoid: {', '.join(music.negative_styles)}.")
+    if raps(bundle):
+        head.append("The verses are rapped, clearly; the intro, pre-chorus, chorus, bridge and outro are sung "
+                    "melodically, never rapped.")
     head += [
         f"Length: about {_clock(end_ms)}. The singing starts within the first two seconds, with no long "
         "intro, and the song ends soon after the last line.",
