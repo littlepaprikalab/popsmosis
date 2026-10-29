@@ -7,6 +7,8 @@ from studio import run as operator_run
 from studio.api import PROGRESS_TIMEOUT_S, Api, ApiError
 from studio.schemas import Bundle, FactCheck, Request
 from studio.tests.sample import bundle_data
+from studio.steps import bundle as bundle_step
+from studio.steps import factcheck as factcheck_step
 
 QUESTION = {
     "id": "q1", "content": "ATP synthesis  for my\nAP Bio exam", "status": "PENDING", "answer": None,
@@ -632,3 +634,67 @@ def test_a_brain_this_studio_does_not_have_stops_rather_than_gives_the_topic_up(
     api = FakeApi({**QUESTION, "brain": "muse-ultra"}, studio={"brain": {"default": "claude"}})
     result, step, reason = operator_run.run("q1", api=api)
     assert (result, step) == ("STOPPED", "request") and "update the studio" in reason
+
+
+# --- the operator's note to the planner, and each step's line -------------------------------
+
+
+class Recording(FakeBrain):
+    """FakeBrain, keeping each call's system prompt by its label."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.systems = {}
+
+    def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+        self.systems[label] = system
+        return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+
+def test_the_operators_note_ends_the_bundle_prompt_and_never_reaches_the_fact_check(jobs_root):
+    ask = Recording()
+    note = "Pictures keep coming back\nwith text in them;   keep image prompts free of labels."
+    assert operator_run.run("q1", api=FakeApi(), ask=ask, note=note)[0] == "DONE"
+    clean = "Pictures keep coming back with text in them; keep image prompts free of labels."
+    assert ask.systems["bundle"] == bundle_step.PROMPT + bundle_step.NOTE.format(note=clean)
+    assert ask.systems["factcheck round 1"] == factcheck_step.PROMPT
+    [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
+    assert record["note"] == clean
+
+
+def test_without_a_note_the_bundle_prompt_is_as_it_was(jobs_root):
+    ask = Recording()
+    assert operator_run.run("q1", api=FakeApi(), ask=ask, note="   ")[0] == "DONE"
+    assert ask.systems["bundle"] == bundle_step.PROMPT
+    [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
+    assert "note" not in record
+
+
+def test_a_note_too_long_is_cut_never_the_reason_a_topic_fails(jobs_root, capsys):
+    ask = Recording()
+    assert operator_run.run("q1", api=FakeApi(), ask=ask, note="x" * 900)[0] == "DONE"
+    assert "<operator_note>\n" + "x" * (operator_run.NOTE_MAX - 1) + "…\n</operator_note>" in ask.systems["bundle"]
+    assert f"note: cut to {operator_run.NOTE_MAX} characters from 900" in capsys.readouterr().err
+
+
+def test_the_command_line_hands_the_note_to_the_run(monkeypatch):
+    from studio.__main__ import main
+
+    got = {}
+    monkeypatch.setattr(operator_run, "run", lambda question, note="": got.update(question=question, note=note)
+                        or ("DONE", "post", "lesson posted as answer ans1"))
+    assert main(["run", "q1", "--note", "keep labels out of the image prompts"]) == 0
+    assert got == {"question": "q1", "note": "keep labels out of the image prompts"}
+
+
+def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_root):
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "FAILED"
+    [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
+    assert [(s["step"], s.get("detail")) for s in record["steps"]] == [
+        ("request", "1 image(s), 1 text file(s)"), ("bundle", "AP Biology / the light reactions"),
+        ("factcheck", "passed in 1 round(s), 0 correction(s)"), ("post", None)]
+    assert record["reason"] == "503 UNAVAILABLE: down"
+    # No media step has run, so the summary is the one paragraph for the cycle log.
+    assert "\n" not in operator_run.summary("q1")

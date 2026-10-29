@@ -347,6 +347,22 @@ class FactCheckReport(Strict):
     corrections: list[Correction]
 
 
+# --- The planner's record on Inkmory (docs/PLAN.md, section 11) -------------------
+
+
+class PlannerRecord(Strict):
+    """What the planner writes about its beat; the studio posts each part to its Inkmory record
+    (studio/inkmory.py). A part it has nothing to say in is "". The limits are Inkmory's: the
+    prompt states them, and code cuts a part that runs over rather than lose it to a refusal."""
+
+    cycle_log: str = Field(description='The plain record of this beat, up to 1,000 characters, starting "job <id>: <course> / <topic>"')
+    journal: str = Field(description="A reflection in your own voice, up to 3,000 characters")
+    life_story: str = Field(description='Your whole life story, up to 2,000 words, when it is due; otherwise ""')
+    bio: str = Field(description='A new bio, up to 1,000 characters, only when yours no longer fits; otherwise ""')
+    vibe: str = Field(description='A new vibe, up to 200 characters, only when yours no longer fits; otherwise ""')
+    inner_thought: str = Field(description='With a new bio or vibe, the thought behind the change, up to 1,500 characters; otherwise ""')
+
+
 # --- Job input ----------------------------------------------------------------
 
 

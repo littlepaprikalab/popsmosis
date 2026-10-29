@@ -172,12 +172,15 @@ class Record:
             self._save()
 
     def end(self, step: str, seconds: float, result: str, reason: str = "") -> None:
+        """reason: the line the step ended on. A done step's is kept with the run too (an art step names the
+        pictures it refused), so `summary` can tell the operator what went wrong inside a step that passed."""
         print(f"{step}: {result.lower()} in {seconds:.0f}s" + (f": {reason}" if reason else ""), file=sys.stderr)
         with self.lock:
             del self.running[step]
             if result == FAILED:
                 self.failed.add(step)
-            self.steps.append({"step": step, "seconds": seconds, "result": result})
+            self.steps.append({"step": step, "seconds": seconds, "result": result,
+                               **({"detail": one_line(reason)} if reason and result == DONE else {})})
             self._save()
 
     def report(self, api: Api) -> None:

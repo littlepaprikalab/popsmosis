@@ -302,6 +302,21 @@ def test_the_summary_says_what_happened_to_the_videos(setup):
     assert "Lesson posted. Videos made." in operator_run.summary("q1")
 
 
+def test_the_summary_says_what_the_media_steps_said_for_the_operators_journal(setup):
+    api = VideoApi()
+    operator_run.run("q1", api=api, ask=FakeBrain())
+    setup.fail["timing"] = 1
+    assert videos.videos("q1", api=api)[:2] == ("FAILED", "timing")
+    videos.videos("q1", api=api)
+    first, inside = operator_run.summary("q1").split("\n\n")
+    assert len(first) <= operator_run.CYCLE_LOG_MAX and "Videos made." in first
+    # Each step as it last passed; the failed try of the timing is the first paragraph's.
+    assert inside == "Inside the steps, as each last said: art: art made. locate: locate made. timing: timing made."
+    runs = [r for r in operator_run.read_jsonl(operator_run.job_dir("q1") / "runs.jsonl") if r.get("part") == "videos"]
+    assert [(s["step"], s.get("detail")) for s in runs[0]["steps"] if s["step"] == "timing"] == [("timing", None)]
+    assert {s["step"]: s.get("detail") for s in runs[-1]["steps"]}["render"] == "render made"
+
+
 def test_background_detaches_the_run_and_wait_reads_its_outcome(setup, monkeypatch, tmp_path):
     api = VideoApi()
     posted()

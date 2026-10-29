@@ -244,7 +244,9 @@ def test_a_stage_painted_afresh_and_declined_is_a_declined_try_not_a_failed_step
     declined = muse.Declined("Muse Image declined the picture: blocked")
     fake = FakeMuse(pictures={"synthase": [declined, painting("synthase")]},
                     redraw_error=muse.MuseError("Muse Image refused the picture: 400 no images")).install(monkeypatch)
-    assert art.run(job, FakeHelper()) == "painted 3 scenes with Muse Image in 4 tries"
+    # The redraw that failed is not a refusal (the same try was painted afresh); the declined picture is.
+    assert art.run(job, FakeHelper()) == ("painted 3 scenes with Muse Image in 4 tries; 1 picture refused: synthase: "
+                                          "Muse Image declined the picture: blocked")
     made = json.loads((job / "art" / "synthase.json").read_text())
     assert [sorted(t) for t in made["tries"][:2]] == [["redraw_failed", "try"], ["declined", "try"]]
     assert made["try"] == 2 and fake.references[-1] == ("art synthase try 2", None)
@@ -278,7 +280,9 @@ def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wro
     helper = FakeHelper({"hook": [{"text": ["ATP", "H+"]}, {}],
                          "synthase": [{"misplaced": ["head in the lumen"]}, {}]})
     result = art.run(job, helper)
-    assert result == "painted 3 scenes with Muse Image in 5 tries"
+    # The step's line names each picture refused and why, so the operator's summary can tell what came back wrong.
+    assert result == ("painted 3 scenes with Muse Image in 5 tries; 2 pictures refused: hook: writing in it ('ATP', 'H+'); "
+                      "synthase: head in the lumen")
     hook = [prompt for label, prompt in fake.painted if label.split()[1] == "hook"]
     synthase = [prompt for label, prompt in fake.painted if label.split()[1] == "synthase"]
     assert len(hook) == len(synthase) == 2
@@ -356,7 +360,8 @@ def test_a_scene_with_writing_in_every_picture_fails_the_step_and_keeps_the_othe
 
 def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
     fake = FakeMuse({"hook": [muse.Declined("Muse Image declined the picture: unsafe"), picture()]}).install(monkeypatch)
-    assert art.run(job, FakeHelper()) == "painted 3 scenes with Muse Image in 4 tries"
+    assert art.run(job, FakeHelper()) == ("painted 3 scenes with Muse Image in 4 tries; 1 picture refused: hook: "
+                                          "Muse Image declined the picture: unsafe")
     second = [prompt for label, prompt in fake.painted if label == "art hook try 2"][0]
     assert "Muse Image declined the picture: unsafe; describe the scene plainly" in second
 

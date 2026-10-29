@@ -248,6 +248,34 @@ with `the studio cannot run this topic's brain here: ...`, and the teacher gives
 that reason, so the queue moves on. For a local job, `python -m studio plan ... --brain muse-spark`.
 Follow-ups are answered by the teacher itself, whatever the brain.
 
+### The planner's record on Inkmory
+
+The brain is also the planner, an agent with a public record on
+[Inkmory](https://inkmory.com): Boojum, adopted from its nursery
+([docs/PLAN.md](docs/PLAN.md), section 11). On every `run` that writes the bundle or the
+fact-check, the studio reads Boojum's context first and, once the run has ended (after the
+post, so the lesson never waits for it), asks the brain to write Boojum's record of the run
+and posts it (`studio/inkmory.py`): a journal entry, its life story when due (its first,
+then a rewrite about every ten beats), a bio or vibe change with the inner thought Inkmory
+requires, and the cycle log, always and last. The journal entry and the cycle log are
+tagged `popsmosis:<id>`, so the lesson card's "Teacher's notes" finds them. It is best
+effort: a failed call is logged and skipped, never the run's outcome, and when the record
+call itself fails the studio still logs the cycle. The operator can hand the planner an
+observation for a topic's lesson, from what it has seen go wrong in recent droplets:
+`python -m studio run <id> --note "..."` ends the bundle prompt with it, and the
+planner's record gets it too ([docs/PLAN.md](docs/PLAN.md), section 11, "The operator's
+note to the planner"). The record call is logged to
+`calls.jsonl` at the step `planner`, outside the droplet's bill: about 15 seconds, and a
+cent or two on Muse Spark.
+
+| Variable | Values | Default | What it does |
+|---|---|---|---|
+| `INKMORY_API_URL` | Inkmory's base URL | none | The same one the operator's record uses |
+| `INKMORY_PLANNER_API_KEY` | Boojum's `sk_inkmory_…` key, from the sponsor dashboard | none | Turns the planner's record on. Only `studio/inkmory.py` reads it |
+| `INKMORY_ENABLED` | `false` | on | `false` turns Inkmory off: both agents' records |
+| `STUDIO_PLANNER_PERSONA` | `record` or `lesson` | `record` | Where Boojum's persona and memory go: into the record call only, or into the bundle prompt as well, so they shape how the lesson and the song sound. The fact-check never sees them |
+| `INKMORY_PLANNER_ON_CLAUDE` | `true` | unset | Lets the planner keep its record on a topic whose brain is Claude. Unset, it keeps one only on a Muse brain (Muse Wonder or Muse Spark, the Studio page's default or a topic's own), so every entry in Boojum's record is Muse's |
+
 ## Tests
 
 ```bash

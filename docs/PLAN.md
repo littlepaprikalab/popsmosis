@@ -807,11 +807,13 @@ For a topic:
 1. **The operator wakes** on the trigger and checks the popsmosis queues first. If there
    is work, it reads its Inkmory context (`GET /api/agents/me/context`), claims the topic
    and runs the studio.
-2. **The planner's beat runs inside the studio, around steps 1–2:**
+2. **The planner's beat runs inside the studio, around steps 1–2** (`studio/inkmory.py`,
+   built Oct 28), on every `run` that writes the bundle or the fact-check:
    1. The studio reads the planner's context with the planner's key.
-   2. Its persona and memory (name, personality, bio, vibe, life story, latest journal
-      entries and cycle logs; not the announcement or the action list) go into the bundle
-      prompt, or only into the record call below. Which one is open (section 14).
+   2. Its persona and memory (name, personality, skills, bio, vibe, life story, latest
+      journal entries and cycle logs, and Inkmory's safety instruction; not the actions or
+      the reads) go into the record call below, and with `STUDIO_PLANNER_PERSONA=lesson`
+      into the bundle prompt as well. Which is better is open (section 14).
    3. The bundle and the fact-check run as before. The fact-check never sees the persona
       or the memory.
    4. One more planner call writes its record from what happened: the topic (the
@@ -820,10 +822,14 @@ For a topic:
       plus `journal`, `life_story`, and a new `bio` or `vibe` with the `inner_thought`
       Inkmory requires for it; each is an empty string when the planner has nothing to
       say. The studio posts each one, the journal entry and the cycle log tagged with
-      the topic (below).
+      the topic (below). The call is made once `run` has ended, after the post, so the
+      lesson never waits for it (about 15 seconds). A life story is posted only when due:
+      the first, then when its journal shows 10 beats since the last one. If the call
+      fails, the studio posts a cycle log of its own that says so, so the beat is still
+      on record.
 
-   The planner's beat ends there, so a later failure in art, audio or rendering never
-   costs it its record. Its fact-check corrections come back in its next context, which
+   The planner's beat ends there, before `videos`, so a later failure in art, audio or
+   rendering never costs it its record. Its fact-check corrections come back in its next context, which
    is the loop worth watching.
 3. **The studio makes the media** (steps 3–9). If a step fails, the operator retries it
    (below).
@@ -853,7 +859,38 @@ order, and Claude steps in only when something breaks.
   second time, mark the job failed with the reason (`python -m studio fail <id>`: the
   card shows it, as for a failed fact-check) and say so in the cycle log.
 - Never: skip or weaken the fact-check, post a line that has not passed it, write the
-  lesson or the media itself, or edit prompts or code during a run.
+  lesson or the media itself, or edit prompts or code during a run (a note to the
+  planner, below, is not an edit).
+
+### The operator's note to the planner
+
+The planner's beat ends before the videos, so it never sees what becomes of its plan: a
+picture that came back with text in it, a structure the art left out, a lyric the singer
+drifted on. The operator follows every droplet to the end, and the two divide the record:
+the operator keeps the workflow's failures and the problems inside its steps, the planner
+writes about its craft in its own voice.
+
+The operator can pass on what it saw. Its own record is the memory: its context brings
+back its latest journal entries and cycle logs at the start of every run. When something
+keeps going wrong that traces back to the plan, it hands the planner one observation as it
+starts the next topic (built Oct 29):
+
+    python -m studio run <id> --note "pictures keep coming back with text in them"
+
+- The studio ends the bundle prompt with it, whatever `STUDIO_PLANNER_PERSONA` says, as an
+  observation that changes no rule; the fact-check never sees it. At most 500 characters
+  (a longer one is cut, never the reason a topic fails), and kept with the run in
+  `runs.jsonl`.
+- The planner's record call gets it as `operator_note`, so the planner can answer it in
+  its journal. The planner may quote it in public, so it keeps the rules below.
+- Nothing is stored in between: the operator's record is the memory, and the run is the
+  handoff. Most runs pass none.
+
+What the operator sees: `python -m studio summary <id>` adds a second paragraph once the
+videos have run, with what the art, locate and timing steps said as they last passed:
+pictures refused and why, structures left out, song lines the aligner was unsure of or
+that drifted. Each step's one-line result is kept in `runs.jsonl` for it, and the art step
+names each picture or drawing it refused.
 
 ### What goes on Inkmory, and what never does
 
@@ -896,7 +933,7 @@ editors check it):
   repair", including "the checklist that keeps a pipeline honest". Its stated weakness,
   doing a broken task itself instead of fixing the process that broke it, is the exact
   temptation the retry rules forbid. Runner-up: Albedo, steady when the plan breaks.
-- **Planner: Boojum**, a maker that "researches until it can explain the subject to a
+- **Planner: Boojum** (adopted), a maker that "researches until it can explain the subject to a
   smart friend, then writes it short" and asks who the reader is first. Its weakness, a
   good opening line it defends too long, meets the 2-second hook and the fact-check.
   Runner-up: Quux, which writes for the ear (lyrics and narration).
@@ -906,14 +943,17 @@ Rules that follow from Inkmory's code:
 - **One adoption per Google account every 7 days** (`ADOPTION_COOLDOWN_DAYS`). Adopt the
   planner from a second account, or a week after the operator.
 - **An adopted agent that logs no cycle within 3 days goes back to the nursery**
-  (`RECLAIM_GRACE_DAYS`), and the cooldown is not refunded. Adopt each one when its first
-  beat can run within 3 days.
+  (`RECLAIM_GRACE_DAYS`), and the cooldown is not refunded. That is only an agent that
+  has never logged a cycle: once it has, Inkmory keeps it (`reclaimAdoptedAgents.ts`).
+  Adopt each one when its first beat can run within 3 days.
 - **Name, personality and skills are permanent**, even for the sponsor. Set each agent's
   `llmModel` on the sponsor dashboard: the routine's Claude model for the operator,
   `muse-wonder-1.0` for the planner.
 - **The planner's real record starts with a Muse brain** (`/admin/studio`), so every entry in it
-  is Muse's. Until then, build and test its beat against a local Inkmory (sparksinfra's
-  `LOCAL_DEV.md`, with `ADOPTION_COOLDOWN_DAYS=0`).
+  is Muse's. The studio holds to it: on a topic whose brain is Claude, the planner keeps no
+  record, unless `INKMORY_PLANNER_ON_CLAUDE=true`. Test its beat against a local Inkmory
+  (sparksinfra's `LOCAL_DEV.md`, with `ADOPTION_COOLDOWN_DAYS=0`); it ran there on Oct 28,
+  two beats with Muse Spark writing the record.
 - **Both keys live in the routine's environment**, because the studio runs in the
   routine's container, so Claude could post as the planner. They are kept apart by
   convention: the skill file uses only the operator's key, and only studio code reads the
@@ -926,7 +966,7 @@ Rules that follow from Inkmory's code:
 | Day | Date | Work | Status |
 |---|---|---|---|
 | 1 | Oct 26 | Port zoey; this plan; `studio/brain.py` with the Claude provider; bundle and fact-check working on "brain structures", including the seeded-error test | done. First live run on "brain structures": the fact-check passed in one round (2 Opus calls, $0.71, 4.6 min); the seeded-error test passes |
-| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days, the planner's beat against a local Inkmory (not started: there is no `studio/inkmory.py`) |
+| 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days. The planner's beat was built on Oct 28 (`studio/inkmory.py`) and run against a local Inkmory |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
 | 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; agent credits |
@@ -983,12 +1023,13 @@ Setup by hand. Until it is done, no droplet runs live from topic to videos:
 - **Supabase Storage:** the `droplets` and `studio` buckets, and `SUPABASE_URL` and
   `SUPABASE_SERVICE_ROLE_KEY` on the API (DEPLOY.md, section 6).
 - **The operator on Inkmory:** adopt it, then run its first beat within 3 days.
+- **The planner on Inkmory:** Boojum is adopted. Set its `llmModel` to
+  `muse-wonder-1.0` on the sponsor dashboard, put its key in the routine's environment
+  as `INKMORY_PLANNER_API_KEY`, and run one topic on a Muse brain within 3
+  days of the adoption: its first cycle log is what keeps Inkmory from taking it back.
 
 To build:
 
-- **The planner's beat** (section 11): `studio/inkmory.py`, reading its context before
-  step 1 and posting its record after step 2, tested against a local Inkmory. Nothing
-  reads `INKMORY_PLANNER_API_KEY` yet.
 - **A recovery that resumes:** upload each intermediate as its step finishes
   (`upload_file()` is ready for it), so a recovered render does not pay for the song and
   the art again.
@@ -1038,9 +1079,11 @@ terms (section 10). Day 10: the demo and the submission.
    planner beat per batch of follow-ups.
 2. **The planner's persona in the lesson voice.** Either its persona and memory go into
    the bundle prompt, so they shape how the lesson and the song sound, or they go only
-   into the call that writes its record. Run one topic each way and compare (day 8).
-   Personality is permanent, but the bio, vibe and life story drift, and the fact-check
-   catches wrong facts, not tone.
+   into the call that writes its record. Run one topic each way and compare (day 8):
+   `STUDIO_PLANNER_PERSONA` is `record` (the default) or `lesson`. Personality is
+   permanent, but the bio, vibe and life story drift, and the fact-check catches wrong
+   facts, not tone. Only `lesson` closes the loop of section 11: the corrections in the
+   planner's journal reach its next bundle only through the bundle prompt.
 
 Decided: the interim art is brain-drawn SVG (step 3); the videos are public, in Supabase
 Storage, on a public Droplets tab (section 10); two agents keep a public record on

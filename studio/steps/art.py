@@ -82,6 +82,7 @@ MAX_TRIES = 3  # SVG drawings a scene may take
 # Muse Image pictures a scene may take. Two since Oct 28: in round 6 a third picture rarely fixed what
 # the second had not, and every one costs a picture and a check.
 MAX_PAINTS = 2
+REFUSAL_CHARS = 120  # how much of a refused try's problem the step's line keeps
 
 
 @dataclass(frozen=True)
@@ -119,11 +120,12 @@ def run(job: Path, ask=brain.ask) -> str:
     resume = located(job) is None
     media.restart(job, media.LOCATIONS)
     (job / "art").mkdir(exist_ok=True)
-    scenes, left_out = [], []
+    scenes, left_out, refused = [], [], []
     for scene in bundle.scenes:
         drawing = draw(job, bundle, scene, ask, resume)
         scenes.append(save(job, scene, drawing))
         left_out += [f"{name} on {scene.id}" for name in drawing.left_out(scene)]
+        refused += [f"{scene.id}: {why}" for why in drawing.refused]
     locations = Locations(scenes=scenes)
     problems = locations_problems(locations, bundle)
     if problems:  # a bug here, not in the drawing
@@ -132,6 +134,7 @@ def run(job: Path, ask=brain.ask) -> str:
     total = sum(len(s.structures) for s in bundle.scenes)
     found = sum(len(s.structures) for s in scenes)
     return (f"drew {len(scenes)} scenes, located {found} of {total} structures"
+            + refusals(refused, "drawing")
             + (f"; left out {', '.join(left_out)}" if left_out else ""))
 
 
@@ -201,6 +204,7 @@ class Drawing:
     art: np.ndarray | None = None
     masks: dict[str, np.ndarray] = field(default_factory=dict)
     found: dict[str, svg.Found] = field(default_factory=dict)
+    refused: list[str] = field(default_factory=list)  # draw(): why each other try of the scene was not kept
 
     def left_out(self, scene: Scene) -> list[str]:
         return [s.name for s in scene.structures if s.name not in self.found]
@@ -251,7 +255,7 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.svg"):
         old.unlink()
 
-    best, previous = None, None
+    best, previous, drawn = None, None, []
     for n in range(1, MAX_TRIES + 1):
         try:
             answer = ask("brain", user_prompt(bundle, scene, previous), system=PROMPT,
@@ -259,6 +263,7 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
             drawing = judge(svg.extract(answer["text"]), scene)
         except brain.Truncated:
             drawing = Drawing("", ["the answer was cut off before </svg>; draw it simpler, under 40 KB"])
+        drawn.append(drawing)
         if drawing.usable and (best is None or len(drawing.found) >= len(best.found)):
             best = drawing
         if drawing.usable and not drawing.problems:
@@ -272,6 +277,7 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
                                + (f" (and {len(why) - 1} more problems)" if len(why) > 1 else ""))
     _kept(job, scene).write_text(marker + best.text, encoding="utf-8")
     _painting(job, scene).unlink(missing_ok=True)  # the art is SVG now, whatever painted it before
+    best.refused = [d.problems[0] for d in drawn if d is not best and d.problems]
     return best
 
 
@@ -418,6 +424,7 @@ class Painting:
     prompt: str
     attempt: int
     check: ArtCheck
+    refused: list[str] = field(default_factory=list)  # paint(): why each other picture of the scene was not kept
 
     def problems(self) -> list[str]:
         """What the scene is painted again for: writing in the picture, a structure missing or out of place."""
@@ -452,10 +459,38 @@ def run_painted(job: Path, ask) -> str:
     painted, tries = len(results), sum(attempts for _, attempts in results)
     left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results)
             for p in best.check.misplaced + best.check.wrong]
+    refused = [f"{scene.id}: {why}" for scene, (best, _) in zip(todo, results) for why in best.refused]
     return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
             + (f", kept {kept} painted before" if kept else "")
+            + refusals(refused, "picture")
             + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
+
+
+def refusals(refused: list[str], kind: str) -> str:
+    """Why the step's refused pictures or drawings were not kept, for its line (and so `summary`): each
+    one's first problem, cut short, since the full ones are in the art check and the kept tries."""
+    if not refused:
+        return ""
+    counted: dict[str, int] = {}  # tries refused for the same reason are named once
+    for why in refused:
+        why = why if len(why) <= REFUSAL_CHARS else why[: REFUSAL_CHARS - 1] + "…"
+        counted[why] = counted.get(why, 0) + 1
+    return (f"; {len(refused)} {kind}{'s' if len(refused) != 1 else ''} refused: "
+            + "; ".join(why + (f" (×{n})" if n > 1 else "") for why, n in counted.items()))
+
+
+def refusal(tried: dict) -> str | None:
+    """What one try in paint()'s record was refused for, said plainly; None for a redraw that failed, since
+    the same try was then painted afresh."""
+    if tried.get("declined"):
+        return str(tried["declined"])
+    if tried.get("redraw_failed"):
+        return None
+    if tried.get("text"):
+        return f"writing in it ({', '.join(repr(t) for t in tried['text'])})"
+    found = (tried.get("misplaced") or []) + (tried.get("wrong") or [])
+    return str(found[0]) if found else None
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None) -> tuple[Painting, int]:
@@ -505,6 +540,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_PAINTS} tries: {problems[0]}"
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
+    best.refused = [why for tried in tries if tried["try"] != best.attempt and (why := refusal(tried))]
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
                                   "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
                                   and stage.number > 1 else "",
