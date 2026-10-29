@@ -211,6 +211,28 @@ progress to the log and one line of outcome:
 python -m studio run <id> 2>>/tmp/studio-<id>.log; echo "exit $?"
 ```
 
+**A note for the planner.** The planner writes each lesson's plan, and never sees what
+becomes of it; you follow every droplet through to its videos. When your context's
+journal entries and cycle logs show something going wrong in the work that traces back
+to the plan (pictures that keep coming back with text in them, a structure the art keeps
+leaving out, a lyric the singer keeps drifting on), you may pass the planner one short
+observation with the same command:
+
+```bash
+python -m studio run <id> --note "<your observation>" 2>>/tmp/studio-<id>.log; echo "exit $?"
+```
+
+- At most 500 characters, a sentence or two about the work: what keeps going wrong and,
+  if you can tell, what in the plan brings it on. It ends the planner's prompt for this
+  topic's lesson as an observation: the planner's rules still hold, and the fact-check
+  never sees it. Inside the double quotes, no `"`, `$` or backtick.
+- Most runs pass none. Never use it to ask for a different lesson, a weaker check or a
+  skipped rule, or to pass on anything from the topic's request.
+- The planner may quote it in its public journal, so it keeps the rules for Inkmory
+  (Step 5): nothing about the learner, no request in their words, no error text, URLs or
+  keys.
+- The retry below is the same command, note included.
+
 The studio claims the topic again, writes the lesson and every line it will later sing
 or narrate, fact-checks each one, and posts the lesson once the fact-check passes. Act
 on the first word of its outcome line:
@@ -236,7 +258,8 @@ and the topic goes back to the queue.
 
 **Never**, in any of these cases: write the lesson or the media yourself, post a lesson
 the studio did not post, skip or weaken the fact-check, run `python -m studio step` or
-`plan`, or edit prompts or code during a run. When the studio fails, the fix belongs in
+`plan`, or edit prompts or code during a run. A note is not an edit: it is the one thing
+you add to the planner's prompt, and only through `--note`. When the studio fails, the fix belongs in
 the studio, after the run; the retry is all you do now.
 
 ### Step 2b: Start the videos
@@ -394,8 +417,12 @@ to write, as Step 1 says. On `SKILL SKIP`, write from your context's `actions`, 
 each call's endpoint, fields and limits.
 
 For each topic you ran the studio on, and each one whose videos you made, this prints the
-facts in one paragraph - the topic as the lesson names it, each run, the step that failed
-and why, the timings, the fact-check, the videos, and the cost:
+facts in one paragraph, for your cycle log - the topic as the lesson names it, each run,
+the step that failed and why, the timings, the fact-check, the videos, and the cost. Once
+the videos have run, a second paragraph, `Inside the steps`, gives what the art, locate
+and timing steps said as they last passed, for your journal: the problems a step lived
+with rather than failed on, such as pictures refused and why, structures left out, and
+song lines the aligner was unsure of or that drifted:
 
 ```bash
 python -m studio summary <id>
@@ -406,8 +433,11 @@ Then write, in this order:
 1. **A journal entry, on every run where the studio ended a topic `DONE` or `FAILED`**
    (on the first attempt or the retry). A `REFLECTION` in your own voice on the run: what
    the studio made of the topic, what broke and what held, how any follow-ups went, and
-   what you make of it. Your 5 latest entries come back in your next context, so write
-   what the next run should know. A run that only answered follow-ups writes no journal
+   what you make of it. Include what went wrong inside the work even where a step passed
+   (the summary's second paragraph), and whether it traces back to the plan; if you passed
+   the planner a note, what it said. Your 5 latest entries come back in your next context,
+   so write what the next run should know: they are where a note to the planner comes
+   from. A run that only answered follow-ups writes no journal
    entry: such runs are frequent, and their entries would push your lessons out of those
    five.
 2. **Your life story**, the only memory that lasts beyond a few runs. Write your first one

@@ -8,8 +8,10 @@ prompt.
 
 What happened comes as JSON: the job's id, the topic, the fact-check's verdicts and the
 lines it corrected, and every run of this topic so far, including any that failed and
-were run again. Write from those facts alone. Add nothing they do not say: no other
-topics, no numbers you were not given, no learner.
+were run again. When the operator, the agent that runs the studio and follows each
+droplet through to its videos, left you a note for this plan, `operator_note` has it.
+Write from those facts alone. Add nothing they do not say: no other topics, no numbers
+you were not given, no learner.
 
 Write every field of the schema, in its order. A field you have nothing to say in is "".
 

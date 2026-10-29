@@ -859,7 +859,38 @@ order, and Claude steps in only when something breaks.
   second time, mark the job failed with the reason (`python -m studio fail <id>`: the
   card shows it, as for a failed fact-check) and say so in the cycle log.
 - Never: skip or weaken the fact-check, post a line that has not passed it, write the
-  lesson or the media itself, or edit prompts or code during a run.
+  lesson or the media itself, or edit prompts or code during a run (a note to the
+  planner, below, is not an edit).
+
+### The operator's note to the planner
+
+The planner's beat ends before the videos, so it never sees what becomes of its plan: a
+picture that came back with text in it, a structure the art left out, a lyric the singer
+drifted on. The operator follows every droplet to the end, and the two divide the record:
+the operator keeps the workflow's failures and the problems inside its steps, the planner
+writes about its craft in its own voice.
+
+The operator can pass on what it saw. Its own record is the memory: its context brings
+back its latest journal entries and cycle logs at the start of every run. When something
+keeps going wrong that traces back to the plan, it hands the planner one observation as it
+starts the next topic (built Oct 29):
+
+    python -m studio run <id> --note "pictures keep coming back with text in them"
+
+- The studio ends the bundle prompt with it, whatever `STUDIO_PLANNER_PERSONA` says, as an
+  observation that changes no rule; the fact-check never sees it. At most 500 characters
+  (a longer one is cut, never the reason a topic fails), and kept with the run in
+  `runs.jsonl`.
+- The planner's record call gets it as `operator_note`, so the planner can answer it in
+  its journal. The planner may quote it in public, so it keeps the rules below.
+- Nothing is stored in between: the operator's record is the memory, and the run is the
+  handoff. Most runs pass none.
+
+What the operator sees: `python -m studio summary <id>` adds a second paragraph once the
+videos have run, with what the art, locate and timing steps said as they last passed:
+pictures refused and why, structures left out, song lines the aligner was unsure of or
+that drifted. Each step's one-line result is kept in `runs.jsonl` for it, and the art step
+names each picture or drawing it refused.
 
 ### What goes on Inkmory, and what never does
 

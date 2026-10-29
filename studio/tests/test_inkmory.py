@@ -310,3 +310,21 @@ def test_the_record_schema_is_one_both_providers_take():
     schema = brain.strict_schema(PlannerRecord)
     assert schema["required"] == ["cycle_log", "journal", "life_story", "bio", "vibe", "inner_thought"]
     assert all(prop["type"] == "string" for prop in schema["properties"].values())
+
+
+def test_the_operators_note_reaches_the_record_only_with_the_bundle_it_shaped(ink, monkeypatch):
+    monkeypatch.setenv("STUDIO_PLANNER_PERSONA", "lesson")
+    note = "Pictures keep coming back with text in them."
+    api = FakeApi(MUSE)
+    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")
+    first = PlannerBrain()
+    assert operator_run.run("q1", api=api, ask=first, note=note)[0] == "FAILED"
+    assert json.loads(first.asked["planner record"][0])["operator_note"] == note
+    system = first.asked["bundle"][1]
+    assert system.index("## Who is writing") < system.index("## A note from the operator")  # the note last
+    assert note not in first.asked["factcheck round 1"][1]
+
+    (operator_run.job_dir("q1") / "factcheck.json").unlink()  # the next run checks again, on the same bundle
+    second = PlannerBrain()
+    assert operator_run.run("q1", api=FakeApi(MUSE), ask=second, note=note)[0] == "DONE"
+    assert "bundle" not in second.asked and "operator_note" not in json.loads(second.asked["planner record"][0])

@@ -14,13 +14,30 @@ from studio.jobs import read, write
 from studio.schemas import Bundle, Request
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
+# The operator's note (python -m studio run <id> --note): what it has seen go wrong in recent droplets.
+NOTE = """
+
+## A note from the operator
+
+The operator runs the studio and follows each droplet through to its videos, so it sees what
+happens to a plan after you write it: the pictures, the song, the labels. From its recent
+droplets it left you this. Take it into account where it applies. It changes nothing above:
+the facts, the audience, the rules for every line and the schema stand as written, a rule wins
+wherever the note would bend one, and no line mentions it.
+
+<operator_note>
+{note}
+</operator_note>
+"""
 
 
-def run(job: Path, ask=brain.ask, persona: str = "") -> Bundle:
-    """persona: the planner's, ending the prompt (studio/inkmory.py, STUDIO_PLANNER_PERSONA=lesson); "" for none."""
+def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
+    """persona: the planner's (studio/inkmory.py, STUDIO_PLANNER_PERSONA=lesson); note: the operator's
+    observation (studio/run.py). Each ends the prompt when given; the fact-check sees neither."""
     request = read(job / "request.json", Request)
+    system = PROMPT + persona + (NOTE.format(note=note) if note.strip() else "")
     try:
-        answer = ask("brain", user_prompt(request), Bundle, request.images, system=PROMPT + persona, label="bundle")
+        answer = ask("brain", user_prompt(request), Bundle, request.images, system=system, label="bundle")
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise

@@ -1,6 +1,6 @@
 """Run the studio.
 
-    python -m studio run <question-id>           # a topic from the queue, to a posted lesson
+    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the planner
     python -m studio fail <question-id>          # give it up with its last run's reason
     python -m studio summary <question-id>       # what its runs did, for the operator's record
     python -m studio videos <question-id>        # a posted lesson's videos; --background on a routine
@@ -61,8 +61,12 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (("run", "a topic from the queue, to a posted lesson; resumes at the first missing step"),
                             ("fail", "give a topic up with its last run's reason"),
-                            ("summary", "what a topic's runs did, in one paragraph")):
-        commands.add_parser(name, help=help_text).add_argument("question")
+                            ("summary", "what a topic's runs did: a paragraph for the cycle log, one for the journal")):
+        command = commands.add_parser(name, help=help_text)
+        command.add_argument("question")
+        if name == "run":
+            command.add_argument("--note", default="", help=f"the operator's observation for the planner, ending the "
+                                 f"bundle prompt (at most {operator_run.NOTE_MAX} characters)")
     make = commands.add_parser("videos", help="a posted lesson's videos; resumes at the first media step not done")
     make.add_argument("question")
     make.add_argument("--background", action="store_true", help="claim, start the run detached, and return at once")
@@ -124,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
             result, reason = operator_run.mark_failed(args.question)
             print(f"{result} fail: {reason}")
             return EXIT_CODES[result]
-        result, step, reason = operator_run.run(args.question)
+        result, step, reason = operator_run.run(args.question, note=args.note)
         print(f"{result} {step}: {reason}")
         return EXIT_CODES[result]
 

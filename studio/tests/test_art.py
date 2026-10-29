@@ -126,7 +126,9 @@ def test_a_structure_still_missing_after_the_last_try_is_left_out(job):
     artist = FakeArtist({"overview": [no_b6f]})
     result = art.run(job, artist)
     assert artist.labels().count("art overview") == 1 and "art overview try 3" in artist.labels()
-    assert result.endswith("located 3 of 4 structures; left out Cytochrome b6f on overview")
+    # The two tries not kept are named once, with what they were refused for: here, the same structure.
+    assert result.endswith('located 3 of 4 structures; 2 drawings refused: overview: Cytochrome b6f is not drawn: '
+                           'no element has data-structure="Cytochrome b6f" (×2); left out Cytochrome b6f on overview')
     locations = jobs.read(job / media.LOCATIONS, Locations)
     assert [s.name for s in locations.scene("overview").structures] == ["Thylakoid"]
     assert locations_problems(locations, sample_media.bundle()) == []

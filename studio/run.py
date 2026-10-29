@@ -9,6 +9,11 @@ from the queue and runs this on its id. The steps, each done once its file exist
     factcheck  factcheck.json               done only once it has passed
     post       posted.json                  the lesson, bundle and fact-check, saved on the API
 
+`run <id> --note "..."` hands the planner an observation from the operator, from what
+it has seen in the work (a picture that keeps coming back with text in it): it ends the
+bundle prompt, and the fact-check never sees it (NOTE_MAX characters, an observation that
+changes no rule; docs/popsmosis-agent-skill.md says when to pass one).
+
 A run that runs the bundle or the fact-check is also the planner's beat on Inkmory
 (studio/inkmory.py): it reads the planner's context before the first of them, and
 writes the planner's record once the run has ended. Best effort: it never changes the
@@ -27,7 +32,9 @@ as every topic would fail the same way. A topic's own brain that cannot run here
 the step with the reason, so the topic is given up with it rather than holding up the
 queue. The brain is kept in brain.json, so `videos`, `step` and a retry stay on it.
 
-Every run appends what it did to runs.jsonl and prints one line, its outcome:
+Every run appends what it did to runs.jsonl (each step with the line it ended on, so
+`summary` can say what went wrong inside a step that passed) and prints one line, its
+outcome:
 
     DONE post: lesson posted as answer <id>
     FAILED <step>: <reason>        run again to retry that step
@@ -68,6 +75,11 @@ EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3}
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 REASON_MAX = 400  # POST /api/questions/:id/fail takes 500, with the step in front
 CYCLE_LOG_MAX = 1000  # what an Inkmory cycle log holds (docs/PLAN.md, section 11)
+NOTE_MAX = 500  # the operator's note to the planner: an observation or two, never a brief
+# The media steps whose line says what went wrong inside them even when they passed: the pictures refused,
+# the structures left out, the song lines the aligner was unsure of or that drifted.
+NOTED_STEPS = ("art", "locate", "timing")
+DETAIL_MAX = 300  # of each step's line in the summary's second paragraph
 IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp"}
 # Anthropic refuses an image over 5 MB of base64; popsmosis takes 4 MB files, so a large photo
 # is left out rather than failing the bundle on every try.
@@ -136,8 +148,10 @@ def record_interrupted(job: Path) -> None:
     current.unlink()
 
 
-def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, str]:
-    """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason)."""
+def run(question_id: str, api: Api | None = None, ask=None, note: str = "") -> tuple[str, str, str]:
+    """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason). note: the
+    operator's observation for the planner, given to the bundle if this run writes one."""
+    note = clean_note(note)
     if ask is None:  # the real brain: the default brain is checked before the topic is claimed
         retired = brain.retired_problem()
         if retired:
@@ -160,7 +174,7 @@ def run(question_id: str, api: Api | None = None, ask=None) -> tuple[str, str, s
             return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
         record_interrupted(job)
         with job_chosen(job):
-            return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None)
+            return _run(job, question_id, api, ask or logged_ask(job), check_brain=ask is None, note=note)
 
 
 def default_brain(studio: dict | None) -> tuple[str | None, str | None]:
@@ -240,7 +254,17 @@ def _put_brain(job: Path, name: str | None, effort: str | None, why: str) -> Non
     brain.choose(name, effort)
 
 
-def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False) -> tuple[str, str, str]:
+def clean_note(note: str) -> str:
+    """The note on one line, at most NOTE_MAX characters: a note too long is cut, never the reason a topic fails."""
+    note = " ".join(str(note or "").split())
+    if len(note) > NOTE_MAX:
+        print(f"note: cut to {NOTE_MAX} characters from {len(note)}", file=sys.stderr)
+        note = note[: NOTE_MAX - 1] + "…"
+    return note
+
+
+def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = False,
+         note: str = "") -> tuple[str, str, str]:
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
@@ -263,7 +287,7 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
                 if step in inkmory.STEPS:
                     planner.begin()
                 if step == "bundle":
-                    reason = make_bundle(job, api, question, ask, persona=planner.lesson_voice())
+                    reason = make_bundle(job, api, question, ask, persona=planner.lesson_voice(), note=note)
                 else:
                     reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
@@ -277,7 +301,8 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
             traceback.print_exc(file=sys.stderr)
             result, reason = FAILED, f"{type(e).__name__}: {e}"
         seconds = round(time.monotonic() - step_clock, 1)
-        done_steps.append({"step": step, "seconds": seconds, "result": result})
+        done_steps.append({"step": step, "seconds": seconds, "result": result,
+                           **({"detail": one_line(reason)} if result == DONE and reason else {})})
         print(f"{step}: {result.lower()} in {seconds:.0f}s", file=sys.stderr)
         if result == FAILED and api is not None:
             # The page says so until the retry starts it again, and bills the try that failed. A failed post
@@ -289,12 +314,15 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     if done_steps:  # a run with nothing left to do is not one the record should count
         record = {"started": started, "seconds": round(time.monotonic() - clock, 1), "result": result, "step": step,
                   "reason": reason, "steps": done_steps}
+        if note:
+            record["note"] = note
         with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
             log.write(json.dumps(record, ensure_ascii=False) + "\n")
     (job / "run.current.json").unlink(missing_ok=True)
     # Last, once the run is on record: the lesson is never held up by it, a kill now is not a failed
     # run, and the record sees this run's outcome.
-    planner.finish(job, ask)
+    # The note is the planner's to answer only when this run's bundle was written with it.
+    planner.finish(job, ask, note=note if any(s["step"] == "bundle" for s in done_steps) else "")
     return result, step, reason
 
 
@@ -382,8 +410,8 @@ def download(api: Api, url: str) -> bytes | None:
         raise
 
 
-def make_bundle(job: Path, api: Api, question: dict, ask, persona: str = "") -> str:
-    bundle = bundle_step.run(job, ask=ask, persona=persona)
+def make_bundle(job: Path, api: Api, question: dict, ask, persona: str = "", note: str = "") -> str:
+    bundle = bundle_step.run(job, ask=ask, persona=persona, note=note)
     return f"{bundle.course} / {bundle.topic}"
 
 
@@ -474,7 +502,9 @@ def mark_failed(question_id: str, api: Api | None = None) -> tuple[str, str]:
 
 
 def summary(question_id: str) -> str:
-    """What the runs did, in at most 1,000 characters, for the operator's cycle log.
+    """What the runs did, for the operator's record: a paragraph of at most 1,000 characters for its
+    cycle log, then, once a media step has run, a second one with what the art, locate and timing
+    steps said last (inside_steps()), for its journal: what went wrong inside a step that passed.
 
     It names the topic by the bundle's course and topic, never by request.json,
     which holds the learner's own words and must never reach Inkmory.
@@ -523,7 +553,23 @@ def summary(question_id: str) -> str:
     calls = [c for c in ledger.read(job) if c.get("role") != "local"]  # Demucs and MMS run here, unbilled
     if calls:
         parts.append(f"{len(calls)} model call(s), {ledger.cost_text(calls)}.")
-    return _short(" ".join(parts), CYCLE_LOG_MAX)
+    inside = inside_steps(runs)
+    return _short(" ".join(parts), CYCLE_LOG_MAX) + (f"\n\n{inside}" if inside else "")
+
+
+def inside_steps(runs: list[dict]) -> str:
+    """What the media steps said as they ended, the last time each passed: a picture refused for the text in
+    it, a structure left out, a song line the aligner was unsure of or that drifted. Their failures are in
+    the first paragraph; these are the problems a step lived with."""
+    said: dict[str, str] = {}
+    for r in runs:
+        for s in r.get("steps", []):
+            if s.get("step") in NOTED_STEPS and s.get("result") == DONE and s.get("detail"):
+                said[s["step"]] = s["detail"]
+    if not said:
+        return ""
+    return _short("Inside the steps, as each last said: " + " ".join(
+        f"{step}: {_short(said[step], DETAIL_MAX).rstrip('.')}." for step in NOTED_STEPS if step in said), CYCLE_LOG_MAX)
 
 
 # --- shared with python -m studio ---------------------------------------------------

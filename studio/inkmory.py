@@ -128,19 +128,22 @@ class Planner:
             return ""
         return LESSON_VOICE + persona(self.context)
 
-    def finish(self, job: Path, ask) -> None:
-        """Write the planner's record of this run and post it. Never raises."""
+    def finish(self, job: Path, ask, note: str = "") -> None:
+        """Write the planner's record of this run and post it; note: the operator's, when this run's bundle
+        was written with it. Never raises."""
         if self.context is None or self.inkmory is None:
             return
         started = time.monotonic()
         try:
-            self._finish(job, ask)
+            self._finish(job, ask, note)
         except Exception as e:
             say(f"record not finished: {type(e).__name__}: {e}")
         say(f"record done in {time.monotonic() - started:.0f}s")
 
-    def _finish(self, job: Path, ask) -> None:
+    def _finish(self, job: Path, ask, note: str = "") -> None:
         facts = what_happened(job)
+        if note:
+            facts["operator_note"] = note
         due, facts["life_story"] = self.life_story_due()
         record, failed = None, ""
         try:

@@ -260,7 +260,11 @@ then a rewrite about every ten beats), a bio or vibe change with the inner thoug
 requires, and the cycle log, always and last. The journal entry and the cycle log are
 tagged `popsmosis:<id>`, so the lesson card's "Teacher's notes" finds them. It is best
 effort: a failed call is logged and skipped, never the run's outcome, and when the record
-call itself fails the studio still logs the cycle. The record call is logged to
+call itself fails the studio still logs the cycle. The operator can hand the planner an
+observation for a topic's lesson, from what it has seen go wrong in recent droplets:
+`python -m studio run <id> --note "..."` ends the bundle prompt with it, and the
+planner's record gets it too ([docs/PLAN.md](docs/PLAN.md), section 11, "The operator's
+note to the planner"). The record call is logged to
 `calls.jsonl` at the step `planner`, outside the droplet's bill: about 15 seconds, and a
 cent or two on Muse Spark.
 
