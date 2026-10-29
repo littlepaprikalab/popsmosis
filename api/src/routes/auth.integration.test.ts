@@ -3,7 +3,8 @@
  *
  * Google itself is stubbed: the authorization code is the identity token's payload as JSON. Everything after it is real,
  * so this covers the route that turns a Google account into a user and a session: a first sign-in can use the site at
- * once, ADMIN_EMAILS makes an admin, and an account linked by email (a new googleId) still gets the role.
+ * once, ADMIN_EMAILS makes an admin, an address Google has not verified is refused, and a known address under a new
+ * Google identity is refused rather than linked (a reissued address must not take the old account or its role).
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -30,10 +31,11 @@ d('Google sign-in', () => {
 
   // `omit` leaves acceptTerms out of the body altogether, as an old web app would. `from` is the caller's address:
   // sign-in allows 10 tries a minute from one, and the refusals below would use up this file's share.
-  const signIn = (payload: { sub: string; email: string; name?: string }, acceptTerms: unknown = true, from?: string) =>
+  // Google's payload says whether it verified the address; a test that wants an unverified one says so.
+  const signIn = (payload: { sub: string; email: string; name?: string; email_verified?: unknown }, acceptTerms: unknown = true, from?: string) =>
     app.inject({
       method: 'POST', url: '/api/auth/google', ...(from && { remoteAddress: from }),
-      payload: { code: JSON.stringify(payload), ...(acceptTerms === 'omit' ? {} : { acceptTerms }) },
+      payload: { code: JSON.stringify({ email_verified: true, ...payload }), ...(acceptTerms === 'omit' ? {} : { acceptTerms }) },
     });
   const asUser = (res: { cookies: { name: string; value: string }[] }) => {
     const session = res.cookies.find((c) => c.name === 'popsmosis_session');
@@ -121,11 +123,34 @@ d('Google sign-in', () => {
     expect((await app.inject({ method: 'GET', url: '/api/users', headers: asUser(res) })).statusCode).toBe(200);
   });
 
-  it('links a known email under a new Google id, and still applies ADMIN_EMAILS to it', async () => {
-    const existing = await prisma.user.create({ data: { email: `${tag}-linked@example.com`, googleId: `${tag}-g-old`, name: 'Old' } });
-    const res = await signIn({ sub: `${tag}-g-replacement`, email: `${tag}-linked@example.com`, name: 'Linked' });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().user).toMatchObject({ id: existing.id, role: 'ADMIN', name: 'Linked' });
-    expect((await prisma.user.findUnique({ where: { id: existing.id } }))!.googleId).toBe(`${tag}-g-replacement`);
+  it('refuses a known email under a new Google id, so a reissued address takes neither the account nor its role', async () => {
+    const existing = await prisma.user.create({ data: { email: `${tag}-linked@example.com`, googleId: `${tag}-g-old`, name: 'Old', role: 'ADMIN' } });
+    const res = await signIn({ sub: `${tag}-g-replacement`, email: `${tag}-Linked@example.com`, name: 'Usurper' }, true, '203.0.113.8');
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.message).toMatch(/signs in with a different Google account/);
+    expect(res.cookies.find((c) => c.name === 'popsmosis_session')).toBeUndefined();
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: existing.id } });
+    expect(row).toMatchObject({ googleId: `${tag}-g-old`, name: 'Old', role: 'ADMIN' });
+    expect(await prisma.user.count({ where: { googleId: `${tag}-g-replacement` } })).toBe(0);
+    // The account's own Google identity still signs in, and keeps the role ADMIN_EMAILS gives it.
+    const owner = await signIn({ sub: `${tag}-g-old`, email: `${tag}-linked@example.com`, name: 'Old' }, true, '203.0.113.8');
+    expect(owner.json().user).toMatchObject({ id: existing.id, role: 'ADMIN' });
+  });
+
+  it('refuses an address Google has not verified, before any account is made', async () => {
+    for (const email_verified of [false, undefined, 'true']) {
+      const res = await signIn({ sub: `${tag}-g-unverified`, email: `${tag}-root@example.com`, email_verified }, true, '203.0.113.9');
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error.message).toMatch(/has not verified/);
+    }
+    expect(await prisma.user.count({ where: { googleId: `${tag}-g-unverified` } })).toBe(0);
+  });
+
+  it('makes one account of two first sign-ins of the same Google account at once', async () => {
+    const who = { sub: `${tag}-g-double`, email: `${tag}-double@example.com`, name: 'Double' };
+    const both = await Promise.all([signIn(who, true, '203.0.113.10'), signIn(who, true, '203.0.113.10')]);
+    expect(both.map((r) => r.statusCode)).toEqual([200, 200]);
+    expect(both[0].json().user.id).toBe(both[1].json().user.id);
+    expect(await prisma.user.count({ where: { googleId: who.sub } })).toBe(1);
   });
 });
