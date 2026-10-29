@@ -126,7 +126,7 @@ The other jobs:
 | Video | Code: skia-python draws, ffmpeg encodes |
 
 Prices per million tokens (input / output): Opus 5.5 $4 / $20, the same as Muse Wonder;
-Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
+Sonnet 5.5, the helper, $2 / $10. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
 
 ## 4. The brain interface
 
@@ -336,7 +336,9 @@ redrawn from the first stage's picture (`/v1/images/edits`, the first stage's pi
 with the stage's own prompt after "Redraw this picture as a later stage of mitosis: the
 same subject, at the same size and in the same place..."), and the helper is told which
 stage of how many it checks. A later stage is painted again whenever its first stage is;
-if Muse Image will not redraw a picture, the stage is painted afresh.
+if Muse Image will not redraw a picture, the stage is painted afresh. Gemini 3.1 Flash
+Image is not given the first stage's picture yet (`gemini.paint` takes a prompt only), so
+with Gemini painting each stage is painted afresh, from its own prompt.
 
 **Repair before repainting** (`studio/repair.py`, run by the locate step once the
 structures are found): code fixes what it can for at most a helper look or two, where a

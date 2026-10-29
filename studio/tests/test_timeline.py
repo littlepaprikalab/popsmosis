@@ -352,7 +352,6 @@ def test_a_processs_stages_are_listed_for_the_renderer_to_fade_between(job):
 def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_it_is_shown(job):
     import json
 
-    from studio import muse
     from studio.steps import art
 
     bundle = jobs.read(job / "bundle.json", Bundle)
@@ -361,7 +360,7 @@ def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_i
     (job / "art").mkdir(exist_ok=True)
     (job / media.art_path("synthase")).touch()  # Muse Image's picture, as far as the timeline step looks
     (job / "art" / "synthase.json").write_text(json.dumps(
-        {"key": art.key(bundle, synthase), "model": muse.IMAGE_MODEL, "check": {"notes": [note]}}))
+        {"key": art.key(bundle, synthase), "model": art.painter_of(job).model, "check": {"notes": [note]}}))
     timelines = make(job)
     assert timelines["lesson"].notices == {"synthase": [note]}  # the lesson shows the close-up
     assert timelines["song"].notices == {}  # the song never does

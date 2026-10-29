@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -480,7 +481,8 @@ def test_a_topic_sent_to_claude_is_painted_by_gemini_and_sam_finds_its_structure
     painter = FakeGemini().install(monkeypatch)
     operator_run.keep_brain(meta_job.job, "claude")
     assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "upload made")
-    assert len(painter.painted) == 3 and meta_job.muse.painted == [] and len(meta_job.muse.segmented) == 4
+    asked = {re.sub(r" try \d+$", "", label) for label, _, _ in meta_job.muse.segmented}  # in plainer words too
+    assert len(painter.painted) == 3 and meta_job.muse.painted == [] and len(asked) == 4
     assert meta_job.artist.labels() == []  # not the SVG artist either
     assert brain.chosen_name() is None
 

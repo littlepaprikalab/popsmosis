@@ -780,11 +780,13 @@ python -m studio show <id> --brief
 
 For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
 
-`ART_PROVIDER` picks who makes the art apart from the brain: `BRAIN_PROVIDER=claude
-ART_PROVIDER=muse STUDIO_BRAIN_MODEL=` writes the lesson with Claude and paints it with Muse
-Image (the empty `STUDIO_BRAIN_MODEL` clears a Muse model the environment may set). Tried
-live on round 5's seasons plan: Claude Haiku checked each picture for under a tenth of a
-cent, and SAM found 28 of 29 structures.
+These rounds set the brain and the painter with environment variables (`BRAIN_PROVIDER`,
+`ART_PROVIDER`), which the studio no longer reads: an admin sets both on `/admin/studio`
+now. A local job is written by the brain `plan --brain` names (Claude Opus 5.5 by default)
+and painted by that brain's default painter, Gemini 3.1 Flash Image for Claude's, unless the
+job's `settings.json` says otherwise: `{"art": {"claude": "muse"}}` has Muse Image paint it,
+`{"art": {"claude": "svg"}}` has Claude draw it. Write it after `plan` and before the art.
+Rounds 5 to 16 were Claude's lesson painted by Muse Image this way.
 
 The jobs from these rounds were `r1-*` and `r2-*` in `jobs/` (git-ignored, gone with the
 container). To look at a video, take a still every few seconds (`ffmpeg -ss <t> -i

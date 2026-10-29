@@ -598,7 +598,7 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
     by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
-    None for a drawing (ART_PROVIDER=svg), which is not checked this way."""
+    None for a drawing (the brain's SVG), which is not checked this way."""
     found = {}
     for scene in bundle.scenes:
         if not _painted(job, bundle, scene):

@@ -203,8 +203,8 @@ What runs, by the brain's provider:
 | Job | Claude's brain | Muse's brain |
 |---|---|---|
 | Brain: writes and fact-checks the lesson | Claude Opus 5.5 | Muse Wonder 1.0 or Muse Spark 1.3 |
-| Art: paints each scene, up to three tries | the painter set for Claude topics | the painter set for Muse topics |
-| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
+| Art: paints each scene, up to two tries | the painter set for Claude topics | the painter set for Muse topics |
+| Helper: checks each picture, boxes a structure SAM missed | Claude Sonnet 5.5, effort low | Muse Spark 1.3 |
 | Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images (none for the SVG, which says where each one is) | SAM 3.1 |
 
 Gemini's picture is 1K at 16:9 (1376 x 768), fitted to the art (`studio/gemini.py`).

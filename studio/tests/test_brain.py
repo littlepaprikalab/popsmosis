@@ -379,7 +379,7 @@ def test_the_helper_is_the_brains_whoever_paints(monkeypatch):
     monkeypatch.setitem(brain._clients, "claude", NS(beta=NS(messages=NS(stream=FakeStream(
         message([text('{"seen": true}')], model="claude-haiku-5-5"), sent)))))
     brain.ask("helper", "Any text in it?")
-    assert sent[-1]["model"] == "claude-haiku-5-5"
+    assert sent[-1]["model"] == "claude-sonnet-5-5"
     answer = NS(model="muse-spark-1.3", usage=NS(prompt_tokens=10, completion_tokens=5),
                 choices=[NS(finish_reason="stop", message=NS(content="seen", refusal=None))])
     seen = []
