@@ -15,6 +15,9 @@
     python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
     python -m studio fallback <job-id>           # the ffmpeg karaoke video, once the song is timed
 
+    python -m studio scorecard run               # a fixed set of topics through the bundle step, scored (paid)
+    python -m studio scorecard compare <run> <run>   # two scorecards side by side (studio/scorecard.py)
+
 `run`, `fail`, `summary`, `videos`, `wait` and `recover` are the operator's
 (studio/run.py, studio/videos.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
 and use the question id as the job id.
@@ -40,7 +43,7 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, jobs, ledger, media
+from studio import ass_fallback, brain, checks, jobs, ledger, media, scorecard
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
@@ -98,10 +101,26 @@ def main(argv: list[str] | None = None) -> int:
     fallback.add_argument("job")
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
+    card = commands.add_parser("scorecard", help="score the bundle prompt on a fixed set of topics, or compare two runs")
+    card_actions = card.add_subparsers(dest="action", required=True)
+    card_run = card_actions.add_parser("run", help="make and score each topic's bundle (paid calls; no art or audio)")
+    card_run.add_argument("--topics", default="", help="topic ids, comma-separated (default: all of them)")
+    card_run.add_argument("--resume", help="a run that stopped: make and score only what it is missing")
+    card_run.add_argument("--workers", type=int, default=scorecard.WORKERS, help="topics at a time")
+    card_run.add_argument("--budget", type=float, default=scorecard.BUDGET_USD,
+                          help="dollars; no topic starts once the run has spent this")
+    card_run.add_argument("--brain", choices=list(brain.CHOICES), help=f"the brain (default: {brain.DEFAULT_BRAIN})")
+    card_run.add_argument("--effort", choices=list(brain.EFFORTS), help=f"Claude's effort (default: {brain.DEFAULT_EFFORT})")
+    card_compare = card_actions.add_parser("compare", help="two runs side by side")
+    card_compare.add_argument("runs", nargs=2, help="run names (studio/scorecards/runs/) or folders")
+    card_compare.add_argument("--out", help="also write the comparison to this file")
     args = parser.parse_args(argv)
     retired = brain.retired_problem()
-    if retired and args.command in ("plan", "step"):  # `run`, `videos` and `recover` stop and say so
+    if retired and args.command in ("plan", "step", "scorecard"):  # `run`, `videos` and `recover` stop and say so
         print(f"note: {retired}", file=sys.stderr)
+
+    if args.command == "scorecard":
+        return scorecard.main(args)
 
     if args.command == "recover":
         result, question, reason = operator_videos.recover()
