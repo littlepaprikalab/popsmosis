@@ -314,9 +314,11 @@ explanation to the narration, and every word of it is easy to hear.
     instrument from a culture only when it belongs to the people the topic is about (an
     erhu for the Nanjing Massacre); borrowed for anyone else's tragedy it sounds like a
     stereotype. No dance beat, drops, claps or party sounds; "dance beat", "euphoric",
-    "upbeat", "party" and "epic orchestral" go in `negative_styles`. The rest of history
-    keeps the rotation: a revolution's causes or a war's alliances are not grave in this
-    sense.
+    "upbeat", "party" and "epic orchestral" go in `negative_styles`. The people such a
+    topic is about are never particles: dots marked "people" or "trains" carried across a
+    map make tokens of the dead. Goods, ships and money may move; the camera and the
+    spotlight show where people were taken. The rest of history keeps the rotation: a
+    revolution's causes or a war's alliances are not grave in this sense.
   - Only when there is neither, for high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
     pop-punk and their neighbours. These styles work well, slowest first; write in their
     spirit rather than copying one:
