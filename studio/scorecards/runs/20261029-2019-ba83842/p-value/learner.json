@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A p-value tells you how likely it would be to get data as extreme as yours if only chance were at work (H₀ true), and if that probability is very small, you doubt H₀.",
+      "why": "First you assume H₀ is true, like presuming the defendant is innocent, which gives a specific value to work from (for the coin, heads probability 0.5). Then the sampling distribution shows how results would vary by chance, with most near the null value and few in the tails. Next you find the tail area beyond your result, which is the p-value, the chance of a result at least this extreme if H₀ is true. For 10 heads in a row that is about 1 in 1,024, or under 0.001. A tiny p-value means data like yours would rarely happen by chance alone, so it is evidence against H₀. You compare the p-value to α chosen beforehand (often 0.05): if it is smaller, reject H₀, and if it is bigger, fail to reject, which does not prove H₀ true.",
+      "what_if": "Suppose the step of choosing α before collecting data stopped working, for example if someone picked α after seeing the p-value. The lesson does not say exactly what would go wrong with that, so I am guessing a bit, but it seems they could pick whatever cutoff gives the answer they want, which would make the decision rule meaningless. The lesson does say that with α = 0.05, a true H₀ is still rejected 5% of the time (Type I error), so about 1 in 20 tests of fake effects would look significant by chance. If the cutoff could be changed freely, it seems that would happen even more."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

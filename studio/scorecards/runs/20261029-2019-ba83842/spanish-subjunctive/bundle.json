@@ -1,0 +1,2378 @@
+{
+  "course": "Spanish 2",
+  "topic": "when Spanish uses the subjunctive",
+  "audience": "high school",
+  "core_idea": "When the main clause wishes, doubts or feels, the verb after que turns subjunctive: it's not stated as fact.",
+  "why_chain": [
+    "The main clause's verb either states a fact or expresses a wish, a doubt or a feeling.",
+    "A wish, doubt or feeling presents the que clause's action as not a stated fact, so that verb goes subjunctive.",
+    "Que only links the clauses, so 'sé que vienes' stays indicative: knowing states a fact.",
+    "The subjunctive is built from the yo form with the opposite ending, so vengo gives vengas, not vienes."
+  ],
+  "key_terms": [
+    "subjunctive",
+    "indicative",
+    "main clause",
+    "dependent clause",
+    "trigger",
+    "WEIRDO",
+    "change of subject",
+    "yo form"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Spanish verbs have moods. The indicative presents an action as a fact or as what the speaker takes to be true: 'Sé que vienes' means 'I know that you're coming.' The subjunctive presents the action not as a stated fact but as something wished for, doubted or reacted to: 'Espero que vengas' means 'I hope that you come.' The word que does not cause the subjunctive. It only links the two clauses, and the meaning of the main clause decides the mood: after 'sé que' (knowing, which states a fact) the verb stays indicative, and after 'espero que' (hoping) it is subjunctive. With emotions the event can be real, as in 'Me alegra que estés aquí' ('I'm glad you're here'): you really are here, but the speaker is reacting to it rather than reporting it, so the verb is subjunctive. The everyday picture for the whole idea is a comic. The panel shows what is really happening, like the indicative. A thought bubble above a character shows only what is in that character's head (a wish, a doubt or a feeling), like the subjunctive.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "A subjunctive sentence has a main clause containing a trigger, the word que, and a dependent clause whose verb is subjunctive. In 'Espero que vengas', 'espero' (I hope) is the main clause and 'que vengas' (that you come) is the dependent clause. Triggers are wishes and hopes (esperar, querer), emotions (alegrarse, tener miedo de), impersonal expressions (es importante que, es necesario que), recommendations and requests (recomendar, pedir), doubt and denial (dudar, no creer), and ojalá. Many Spanish classes remember them with the acronym WEIRDO. With verbs such as esperar and querer, the subjunctive needs a change of subject: one person hopes or wants something about another person's action. With the same subject, Spanish uses the infinitive and no que: 'Espero venir' means 'I hope to come.' A friend's text saying 'Espero que vengas a mi fiesta' means 'I hope you come to my party': your coming is hoped for, not yet known.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "To form the present subjunctive, take the yo form of the present indicative, drop the -o, and add the opposite ending. The vowels switch: -ar verbs take endings with e, the vowel of -er verbs (hablo → hable, hables), and -er and -ir verbs take endings with a, the vowel of -ar verbs (como → coma; vivo → viva). Because it starts from the yo form, an irregular yo form carries over. Venir is an -ir verb whose yo form is vengo, so its subjunctive is venga, and the tú form is vengas. Tengo (tener) gives tenga the same way. That is why it is 'vengas' and not 'vienes': the g comes from vengo, and the -ir verb takes an a ending, while vienes is the present indicative tú form. A few verbs are irregular, such as ser (sea) and ir (vaya). A surprising detail: you may already know these forms, because negative tú commands use the subjunctive ('No vengas', 'Don't come'), and so do usted commands ('Venga', 'Come').",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "Because the meaning of the main clause decides the mood, changing the main clause can flip it. 'No creo que venga' ('I don't think he's coming') expresses doubt, a trigger, so it takes the subjunctive. Drop the no, and 'Creo que viene' ('I think he's coming') presents the coming as true, so with no trigger left the verb goes back to the indicative. In the same way, swapping 'Espero que' for 'Sé que' turns a hope into a stated fact: 'Sé que vienes.' Using the indicative after a trigger, as in 'espero que vienes', is a grammar error: listeners still understand it, but it sounds wrong to native speakers and costs points on a test. After the present subjunctive, Spanish courses typically go on to more of its uses and to the past (imperfect) subjunctive, as in 'Esperaba que vinieras' ('I hoped you would come').",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "Many learners think the word que triggers the subjunctive. It doesn't: que only links the clauses, and the main clause decides, so 'sé que vienes' stays indicative while 'espero que vengas' goes subjunctive.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a Spanish textbook chapter opener draws it, of a smartphone lying flat on a table, seen from above, in the centre of the picture. Its screen shows a single teal chat bubble with nothing written in it. To the right of the phone is a small bunch of pink party balloons tied with a ribbon. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Text message",
+          "aliases": [
+            "text"
+          ],
+          "sam_phrase": "teal bubble",
+          "color_hex": "#26C6DA"
+        },
+        {
+          "name": "Party",
+          "aliases": [
+            "party",
+            "fiesta"
+          ],
+          "sam_phrase": "pink balloons",
+          "color_hex": "#F06292"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a language textbook draws it, of one comic-strip panel. A teenage character in an orange sweater stands on the left side of the panel. Above and to the right of the character's head floats a large blue thought bubble shaped like a cloud, with a trail of small blue circles leading down to the head. Inside the thought bubble, a friend stands at a front door. There are no speech balloons and no writing anywhere. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Character",
+          "aliases": [
+            "character"
+          ],
+          "sam_phrase": "orange sweater",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "Thought bubble",
+          "aliases": [
+            "thought bubble",
+            "bubble"
+          ],
+          "sam_phrase": "blue cloud",
+          "color_hex": "#42A5F5"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a Spanish grammar textbook draws a two-clause sentence, of two wide rounded boxes side by side in a row across the middle of the picture: an orange box on the left and a blue box on the right, the same height, with a small gap between them. Both boxes are empty, with no writing inside. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Main clause",
+          "aliases": [
+            "main clause"
+          ],
+          "sam_phrase": "orange box",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "Dependent clause",
+          "aliases": [
+            "dependent clause",
+            "que clause"
+          ],
+          "sam_phrase": "blue box",
+          "color_hex": "#42A5F5"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "verb-detail",
+      "image_prompt": "Educational diagram, as a Spanish grammar textbook draws a verb being conjugated, of two shapes level with each other across the middle of the picture: a wide purple rounded card on the left and a smaller yellow rounded tag on the right, with a short gap between them. Both are empty, with no writing on them. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Yo form",
+          "aliases": [
+            "yo form",
+            "vengo"
+          ],
+          "sam_phrase": "purple card",
+          "color_hex": "#AB47BC"
+        },
+        {
+          "name": "Opposite ending",
+          "aliases": [
+            "opposite ending"
+          ],
+          "sam_phrase": "yellow tag",
+          "color_hex": "#FFEE58"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "# Espero que vengas: why not *vienes*?\n\n**Why does Spanish say *espero que vengas* and not *espero que vienes*?**\n\nIt comes down to **mood**. When the main clause wishes, doubts or feels, the verb after *que* turns **subjunctive**: it's not stated as fact.\n\n## The panel and the thought bubble\n\nPicture a comic. The panel shows what is really happening, like the **indicative**. A thought bubble above a character shows only what's in that character's head (a wish, a doubt or a feeling), like the **subjunctive**.\n\n| Sentence | Meaning | Mood |\n|---|---|---|\n| *Sé que vienes.* | I know that you're coming. | Indicative: a stated fact |\n| *Espero que vengas.* | I hope that you come. | Subjunctive: a hope |\n\n## Why it happens\n\n1. **The main clause decides the mood.** Its verb either states a fact or expresses a wish, a doubt or a feeling. In *espero que vengas*, *espero* is the **main clause** and *que vengas* is the **dependent clause**.\n2. **A wish, doubt or feeling is a trigger.** It presents the action in the dependent clause as hoped for, doubted or reacted to, not as a stated fact, so that verb goes subjunctive.\n3. **There's a change of subject.** With verbs like *esperar*, one person hopes about another person's action. With the same subject you use the infinitive: *Espero venir* means \"I hope to come.\"\n\n## Spotting triggers: WEIRDO\n\nMany classes remember the triggers with the acronym **WEIRDO**:\n\n| Letter | Trigger | Examples |\n|---|---|---|\n| W | Wishes | *esperar, querer* |\n| E | Emotions | *alegrarse, tener miedo de* |\n| I | Impersonal expressions | *es importante que, es necesario que* |\n| R | Recommendations, requests | *recomendar, pedir* |\n| D | Doubt, denial | *dudar, no creer* |\n| O | Ojalá | *ojalá* |\n\nEmotions can be about something real: in *Me alegra que estés aquí* (\"I'm glad you're here\"), you really are here, but the speaker is reacting to it, not reporting it.\n\n## Building the form\n\nTo form the present subjunctive, take the present-tense *yo* form, drop the *-o*, and add the **opposite ending**:\n\n- *-ar* verbs take *e*: *hablo → hable*\n- *-er* and *-ir* verbs take *a*: *como → coma*, *vivo → viva*\n\nPredict: *venir*'s yo form is *vengo*. What do you think its *tú* subjunctive form is? It's *vengas*: the *g* from *vengo* carries over, and the *-ir* verb takes an *a*. *Vienes* is the indicative form, which is why it doesn't fit after *espero que*.\n\nA few verbs are irregular, like *ser* (*sea*) and *ir* (*vaya*).\n\nYou've met these forms before: negative *tú* commands (*No vengas*) and *usted* commands (*Venga*) use the subjunctive.\n\n## The common mistake\n\nMany learners think *que* triggers the subjunctive. It doesn't: *que* only links the clauses. *Sé que vienes* has *que* and stays indicative, because knowing states a fact.\n\nUsing the indicative after a trigger (*espero que vienes*) is an error: people still understand you, but it sounds wrong and costs points on a test.\n\nThis is the core rule, simplified for Spanish 2. Courses typically go on to more uses and to the past subjunctive, as in *esperaba que vinieras*.\n\n## Check yourself\n\n*No creo que venga* uses the subjunctive. Why does the verb become *viene* when you drop the *no*?\n\nGot a follow-up question? Ask away!",
+  "music": {
+    "positive_styles": [
+      "K-pop",
+      "hip-hop verses",
+      "sharp clear rapped verses",
+      "male group vocals",
+      "big catchy sung chorus",
+      "punchy synth bass",
+      "crisp claps",
+      "bright synth stabs",
+      "100 bpm",
+      "vocals start immediately",
+      "no instrumental intro",
+      "vocals upfront in the mix",
+      "bilingual English and Spanish lyrics",
+      "clear diction",
+      "educational"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "screamed vocals",
+      "slurred diction",
+      "heavy vocal distortion"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "A text says espero que vengas: hope, not news",
+      "names": [
+        "text"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "In a comic, the panel shows you what's real",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "The thought bubble shows what a character feels",
+      "names": [
+        "thought bubble",
+        "character"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Indicative's the panel, what's really there",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Subjunctive's the bubble, a wish in the air",
+      "names": [
+        "bubble"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Espero's the trigger up in the main clause",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "It's hoping, not knowing, and that's the cause",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Que links on the que clause, where you come in",
+      "names": [
+        "que clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Two different people, that's where the subjunctive begins",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-9",
+      "section": "verse",
+      "text": "Same subject twice? Then it's espero venir",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-10",
+      "section": "verse",
+      "text": "That's I hope to come, no que needed here",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-11",
+      "section": "verse",
+      "text": "Wish, emotion, impersonal, recommend",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-12",
+      "section": "verse",
+      "text": "Doubt and ojalá, that's the WEIRDO blend",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "Que is just the link, it never makes the switch",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Sé que vienes stays indicative, knowing's not a wish",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "The main clause tells the verb what to do",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Espero que vengas, a hope in your head",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Not stated as fact: subjunctive instead",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "To build it, take the yo form, like hablo or como",
+      "names": [
+        "yo form"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Drop the o at the end and you're ready to go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Then the opposite ending: ar verbs take an e",
+      "names": [
+        "opposite ending"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Er and ir take an a, from the other family",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Venir's yo form is vengo, with a g inside",
+      "names": [
+        "yo form",
+        "vengo"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "The g comes along, so it's vengas: that's why",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Tengo gives tenga, the g stays the same",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Ser and ir go solo: sea, vaya, their own game",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-9",
+      "section": "verse",
+      "text": "Plot twist: no vengas, don't come, that's subjunctive too",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-10",
+      "section": "verse",
+      "text": "And venga for usted, so it's not brand new",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-11",
+      "section": "verse",
+      "text": "Me alegra que estés aquí, you're here, that's real",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-12",
+      "section": "verse",
+      "text": "But I'm reacting, not reporting, it's a thing I feel",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Next up, the past: esperaba que vinieras",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "That's I hoped you'd come, a hope from an earlier era",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "The main clause tells the verb what to do",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Espero que vengas, a hope in your head",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Not stated as fact: subjunctive instead",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Pop quiz: no creo que venga, doubt's on the line",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "That doubt's a trigger, so venga's just fine",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Now cross out the no, and the doubt is through",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Creo que viene: you present it as true",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "No trigger left, so the indicative's back",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "Viene, not venga, it's stated as a fact",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "One little no in the main clause made the call",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "Doubt gets venga, belief gets viene, after all",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Hope in the main clause, the que clause follows suit",
+      "names": [
+        "main clause",
+        "que clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "That's why it's vengas: you hope, you don't know, that's the root",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "The main clause tells the verb what to do",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Espero que vengas, a hope in your head",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Not stated as fact: subjunctive instead",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Espero que vengas, a hope, not news",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Up in the thought bubble, not in plain view",
+      "names": [
+        "thought bubble"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Wish, doubt or feel, switch the mood",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "A friend's text says espero que vengas a mi fiesta: I hope you come to my party.",
+      "names": [
+        "text",
+        "fiesta",
+        "party"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n2",
+      "text": "So why vengas, and not vienes?",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "The answer is a mood called the subjunctive.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "In a comic, the panel shows what's really happening, like the indicative, which states facts.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "A thought bubble above a character shows only what's in that character's head: a wish, a doubt or a feeling.",
+      "names": [
+        "thought bubble",
+        "character"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "That's the subjunctive: an action wished for, doubted or reacted to, not stated as fact.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "A subjunctive sentence has a main clause and a dependent clause, joined by que.",
+      "names": [
+        "main clause",
+        "dependent clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n8",
+      "text": "In espero que vengas, espero is the main clause, and que vengas is the dependent clause.",
+      "names": [
+        "main clause",
+        "dependent clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n9",
+      "text": "The main clause decides: its verb states a fact, or expresses a wish, doubt or feeling.",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Espero expresses a hope, so it's a trigger, and the dependent clause goes subjunctive.",
+      "names": [
+        "dependent clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "Your coming is hoped for, not known.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "Classes list the triggers as WEIRDO: wishes, emotions, impersonal expressions, recommendations, doubt, and ojalá.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "With esperar there's also a change of subject: one person hopes, another comes.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "With the same subject, you use the infinitive: espero venir, I hope to come.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "Many learners think que causes the subjunctive, but sé que vienes, I know you're coming, stays indicative, because knowing states a fact.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n16",
+      "text": "So how does venir become vengas?",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n17",
+      "text": "Start with the present-tense yo form, vengo.",
+      "names": [
+        "yo form",
+        "vengo"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "Drop the o and add the opposite ending: ar verbs take e, and er and ir verbs take a.",
+      "names": [
+        "opposite ending"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "Venir is an ir verb, so you get venga, and for tú, vengas.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "The g from vengo carries over, which is why it's vengas, not vienes.",
+      "names": [
+        "vengo"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "Tengo gives tenga the same way, though ser and ir are irregular: sea and vaya.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "Surprise: you may already know some of these forms, since negative tú commands like no vengas and usted commands like venga use the subjunctive.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "Emotions are special: in me alegra que estés aquí, you are here, but the speaker reacts rather than reports.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n24",
+      "text": "Because the main clause decides, changing it can flip the mood.",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "No creo que venga, I don't think he's coming, expresses doubt, so it's subjunctive.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Drop the no, and creo que viene presents the coming as true, so it's back to the indicative.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "Saying espero que vienes is an error: people understand it, but it costs points on a test.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Courses typically move on to the past subjunctive, as in esperaba que vinieras, I hoped you would come.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "When the main clause wishes, doubts or feels, the verb after que turns subjunctive: it's not stated as fact.",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n30",
+      "text": "In goes a trigger in the main clause; out comes a subjunctive verb in the dependent clause, like vengas.",
+      "names": [
+        "main clause",
+        "dependent clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n31",
+      "text": "That's why the text says vengas: your coming is hoped for, not yet known.",
+      "names": [
+        "text"
+      ],
+      "fact_id": "f2"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Text message",
+        "zoom": 1.6
+      },
+      "spotlight": "Text message",
+      "particles": [],
+      "carries": "",
+      "glow": "Text message",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Thought bubble",
+        "zoom": 1.6
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Character",
+        "zoom": 1.6
+      },
+      "spotlight": "Character",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-9",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-10",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.8
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "WEIRDO",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.8
+      },
+      "spotlight": "Yo form",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Opposite ending",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite ending",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "-ar → e, -er/-ir → a",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Opposite ending",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-9",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Opposite ending",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite ending",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-10",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-11",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-12",
+      "scene": "analogy",
+      "camera": {
+        "target": "Character",
+        "zoom": 1.6
+      },
+      "spotlight": "Character",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 2.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.8
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Text message",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Thought bubble",
+        "zoom": 1.6
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "Text message",
+        "zoom": 1.6
+      },
+      "spotlight": "Text message",
+      "particles": [],
+      "carries": "",
+      "glow": "Text message",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "Thought bubble",
+        "zoom": 1.6
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.8
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Dependent clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Dependent clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Opposite ending",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite ending",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "verb-detail",
+      "camera": {
+        "target": "Opposite ending",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite ending",
+      "particles": [
+        "Yo form",
+        "Opposite ending"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "analogy",
+      "camera": {
+        "target": "Thought bubble",
+        "zoom": 1.6
+      },
+      "spotlight": "Thought bubble",
+      "particles": [
+        "Character",
+        "Thought bubble"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.8
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Main clause",
+        "Dependent clause"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "hook",
+      "camera": {
+        "target": "Text message",
+        "zoom": 1.6
+      },
+      "spotlight": "Text message",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [
+    {
+      "structure": "Dependent clause",
+      "inputs": [
+        "vienes"
+      ],
+      "outputs": [
+        "vengas"
+      ]
+    },
+    {
+      "structure": "Yo form",
+      "inputs": [
+        "vengo"
+      ],
+      "outputs": [
+        "venga"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "Why espero que vengas, not espero que vienes?",
+      "from_narration": "n2"
+    },
+    {
+      "from_line": "v1-2",
+      "text": "Panel = indicative; thought bubble = subjunctive",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Trigger in the main clause decides the mood",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "v1-6",
+      "text": "Hoped for, not known → subjunctive in dependent clause",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "Que only links: sé que vienes stays indicative",
+      "from_narration": "n15"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Yo form, drop -o, add opposite ending → subjunctive",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "vengo → vengas: the g carries over",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Drop the doubt → no trigger → creo que viene",
+      "from_narration": "n24"
+    }
+  ],
+  "tags": {
+    "song": [
+      "spanishsubjunctive",
+      "subjunctive",
+      "spanish",
+      "spanishgrammar",
+      "learnspanish",
+      "spanish2",
+      "indicative",
+      "kpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "spanishsubjunctive",
+      "subjunctive",
+      "spanish",
+      "spanishgrammar",
+      "learnspanish",
+      "spanish2",
+      "indicative",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Wish, doubt or feel, switch the mood\" is short, repeatable and the core idea in miniature, but it is abstract. It names no concrete actions on real things, and \"mood\" is vague to a high schooler. The lesson opens on the learner's own question, \"Why does Spanish say *espero que vengas* and not *espero que vienes*?\", and the narration opens on a friend's party text, so both openings are strong.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The comic (panel = what's really happening, thought bubble = what's in a head) fits the whole idea of fact versus wish, doubt or feeling, and it is not a stock picture. It is set up in v1-1 to v1-4, and the outro returns to it with \"Up in the thought bubble, not in plain view\". But the chorus, bridge and pre-choruses drop it. The lesson and narration set it up and then barely revisit it after n6. The \"Me alegra que estés aquí\" case, where the event is real, also strains the bubble picture.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "Links 1-3 are taught in order with causes: the main clause decides, and a wish or doubt means not stated as fact, so the verb goes subjunctive. \"Sé que vienes... because knowing states a fact\" covers the que link. The yo-form link is explained, including \"the g from vengo carries over\". The lesson spends a lot of space on change of subject, WEIRDO and commands, which pad the chain without being part of it. The song carries the gist well in the chorus and bridge.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read in order, the key lines tell the chain well: the question, the main clause deciding, hoped for not known, que only links, the yo-form recipe, the g carrying over, and dropping the doubt. Most are steps. But \"Panel = indicative; thought bubble = subjunctive\" is more a label than a cause-and-effect step. The first line starts at i-1, a slogan, not at where the question is posed in the song. The last line starts at b-1, which does not match the narration n24 it is paired with. There is no closing line stating the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson and v2-3/v2-4/n18: \"-ar verbs take e... er and ir verbs take a\" combined with \"Venir is an -ir verb, so you get venga\"",
+      "problem": "Not an error: this is correct, so nothing to list.",
+      "correction": "None"
+    }
+  ],
+  "accuracy": {
+    "reason": "The grammar is correct: vengo gives venga/vengas, hablo gives hable, ser gives sea, ir gives vaya, and no vengas and venga are subjunctive commands. The no creo / creo que contrast is right. \"Espero que vienes\" is correctly called a grammar error. One small imprecision: \"Que links on the que clause\" in v1-7 is awkward but not wrong. The key-line wording \"Hoped for, not known\" is a fair simplification. The \"errors\" entry above is a placeholder with no real problem. I found nothing to correct.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "The chorus is a strong, repeatable chant (\"Wish, doubt or feel, switch the mood\"), and the rhymes are mostly clean (feels/real, here/venir). But many verse lines run long and read like captions, such as \"Que links on the que clause, where you come in\", \"Two different people, that's where the subjunctive begins\" and \"Tengo gives tenga, the g stays the same\". Some rhymes are forced: \"era\" for \"vinieras\", \"that's the cause\" as filler, and \"the other family\". Rapped verses can take up to 14 syllables, so most fit, but p1-2 and c3-2 overrun the bar. The pre-chorus and chorus are sung and carry heavier lines.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the learner's question, gives the big picture with the comic and a contrast table, and names the misconception with its reason. It includes a predict question (\"What do you think its *tú* subjunctive form is?\") answered right after. It ends on a good check: why the verb becomes *viene* when you drop the *no*. But it carries many new terms (mood, indicative, subjunctive, main and dependent clause, trigger, WEIRDO, change of subject, opposite ending, irregulars, commands) and extra material such as the commands and past subjunctive, which a first-timer may struggle to hold. The misconception comes late, and the \"Why it happens\" step 3 reads as a side rule.",
+    "score": 3
+  }
+}

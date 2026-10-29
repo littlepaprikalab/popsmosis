@@ -1,0 +1,2198 @@
+{
+  "course": "English 9",
+  "topic": "dramatic irony in Romeo and Juliet",
+  "audience": "high school",
+  "core_idea": "In dramatic irony, the audience knows what a character doesn't, so their hopeful choices fill us with dread.",
+  "why_chain": [
+    "The Prologue reveals the ending first, so the audience knows more than the characters from the start.",
+    "The characters keep acting on what they believe, which the audience knows is wrong.",
+    "Because the audience sees where each choice leads, the gap between what we know and what they know builds suspense and dread.",
+    "The gap is widest at the tomb, where Romeo thinks Juliet is dead but the audience knows she is only asleep."
+  ],
+  "key_terms": [
+    "dramatic irony",
+    "Prologue",
+    "suspense",
+    "tragedy",
+    "situational irony",
+    "verbal irony"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Dramatic irony is when the audience knows something that a character does not. Characters keep acting on what they believe, even when the audience knows it is wrong, so the audience can see where a character's choices will lead while the character cannot. This gap between what the audience knows and what the characters know builds suspense and dread rather than surprise. It works like watching a scary movie: the viewer sees the danger behind a door the character is about to open, which is why people shout warnings at the screen. At a play, or a film of Romeo and Juliet, the audience is that viewer, shouting a warning that no character can hear. Dramatic irony is not the same as situational irony, an outcome opposite to what was expected, or verbal irony, saying the opposite of what you mean; these are the three types of irony usually studied together. In dramatic irony the character is the one surprised, not the audience.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Romeo and Juliet is a tragedy by William Shakespeare: a play that ends with the deaths of its main characters. It opens with a Prologue, a sonnet of fourteen lines spoken by the Chorus before the first scene, which tells the audience that a 'pair of star-cross'd lovers' from two feuding families in Verona will take their own lives, and that their deaths will end the feud. So from the start the audience knows the ending that the characters never know, and watches every hopeful moment, as Romeo and Juliet fall in love and marry in secret, already knowing where it leads. Knowing the ending does not remove the suspense: it creates suspense about how and when it will happen.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "After Romeo is banished from Verona for killing Tybalt, Juliet's cousin, Lady Capulet finds Juliet weeping and thinks she is grieving for Tybalt, while the audience knows Juliet is weeping because Romeo, her secret husband, has been banished. Her parents then arrange for her to marry Paris, not knowing she is already married. To escape that marriage, Juliet drinks a potion from Friar Laurence that makes her seem dead for forty-two hours, and her family mourns her and lays her in the Capulet tomb. Friar Laurence plans to send a letter telling Romeo the plan, so that he will come to the tomb when she wakes. The audience knows she is only asleep and will wake soon, while her family believes she is dead.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "Friar Laurence's letter is carried by Friar John, who is held in quarantine, shut inside a house suspected of plague, and cannot deliver it, so Romeo, in Mantua, never learns of the plan. Instead Balthasar, Romeo's servant, sees Juliet laid in the tomb and rides to Mantua to tell Romeo she is dead. Romeo buys poison and goes to the tomb, where he even notices that Juliet's lips and cheeks are still red, a sign the audience knows means she is alive; still he believes she is dead, drinks the poison from its vial and dies beside her. Moments later Juliet wakes, finds Romeo dead and ends her life with his dagger. So one undelivered letter leads to both deaths. This is the play's strongest dramatic irony: the audience knows Juliet is alive the whole time Romeo grieves. Their deaths lead the Montagues and Capulets to end their feud.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "Many students think dramatic irony means any surprising twist or ironic outcome. That is situational irony; in dramatic irony the audience already knows what is coming, so the character is the one surprised, not the audience.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a high school English textbook would show it, of a living room at night. A viewer in an orange sweater sits on a grey couch on the left, facing a television on the right. On the television screen is a film scene inside a stone tomb: Romeo in a bright blue doublet stands on the left of the screen, and Juliet in a pink gown lies asleep on a grey stone slab on the right of the screen. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Viewer",
+          "aliases": [
+            "viewer"
+          ],
+          "sam_phrase": "orange sweater",
+          "color_hex": "#F5A040"
+        },
+        {
+          "name": "Romeo",
+          "aliases": [],
+          "sam_phrase": "blue man",
+          "color_hex": "#4FA3F7"
+        },
+        {
+          "name": "Juliet",
+          "aliases": [],
+          "sam_phrase": "pink dress",
+          "color_hex": "#F27BB5"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational illustration, as a high school English textbook would show it, of a theatre seen from the side. Rows of audience members dressed in orange sit on the left, facing a stage on the right. On the stage is the inside of a grey stone tomb: Juliet in a pink gown lies asleep on a stone slab on the right, Romeo in a bright blue doublet kneels to the left of the slab, and a small green glass vial stands on the stone floor in front of Romeo. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Audience",
+          "aliases": [
+            "audience",
+            "crowd"
+          ],
+          "sam_phrase": "orange crowd",
+          "color_hex": "#F5A040"
+        },
+        {
+          "name": "Romeo",
+          "aliases": [],
+          "sam_phrase": "blue man",
+          "color_hex": "#4FA3F7"
+        },
+        {
+          "name": "Juliet",
+          "aliases": [],
+          "sam_phrase": "pink dress",
+          "color_hex": "#F27BB5"
+        },
+        {
+          "name": "Poison vial",
+          "aliases": [
+            "poison vial"
+          ],
+          "sam_phrase": "green bottle",
+          "color_hex": "#5BD16E"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "prologue-detail",
+      "image_prompt": "Educational illustration, as a high school English textbook would show it, of an Elizabethan theatre before the play begins. A single actor in a purple robe stands alone at the front centre of a bare wooden stage, holding a rolled scroll, a plain wooden wall behind him. Rows of audience members dressed in orange sit in the foreground below the stage, seen from behind. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Prologue",
+          "aliases": [],
+          "sam_phrase": "purple robe",
+          "color_hex": "#B07CF0"
+        },
+        {
+          "name": "Audience",
+          "aliases": [
+            "audience",
+            "crowd"
+          ],
+          "sam_phrase": "orange crowd",
+          "color_hex": "#F5A040"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "mother-detail",
+      "image_prompt": "Educational illustration, as a high school English textbook would show it, of a young woman's bedroom in a Renaissance Italian house. Juliet in a pink gown sits on the edge of a bed on the right, her face in her hands. Her mother, Lady Capulet, in a yellow gown stands in an open doorway on the left. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Juliet",
+          "aliases": [],
+          "sam_phrase": "pink dress",
+          "color_hex": "#F27BB5"
+        },
+        {
+          "name": "Lady Capulet",
+          "aliases": [
+            "her mother"
+          ],
+          "sam_phrase": "yellow dress",
+          "color_hex": "#F2D04B"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "letter-detail",
+      "image_prompt": "Educational illustration, as a history textbook map draws it, of the road between two Renaissance Italian towns: the walled city of Verona on the left, the smaller town of Mantua on the right, and a dirt road running between them. Friar Laurence in a tan robe stands inside Verona. A small house with a red roof and a red door sits beside the road just outside Verona. Balthasar in a lime green cloak rides a horse on the road near the middle. Romeo in a bright blue doublet stands inside Mantua. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Friar Laurence",
+          "aliases": [],
+          "sam_phrase": "tan robe",
+          "color_hex": "#D9A066"
+        },
+        {
+          "name": "Quarantine",
+          "aliases": [
+            "quarantine"
+          ],
+          "sam_phrase": "red house",
+          "color_hex": "#EF5A5A"
+        },
+        {
+          "name": "Balthasar",
+          "aliases": [],
+          "sam_phrase": "lime rider",
+          "color_hex": "#A6E05A"
+        },
+        {
+          "name": "Romeo",
+          "aliases": [],
+          "sam_phrase": "blue man",
+          "color_hex": "#4FA3F7"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "# Dramatic Irony in *Romeo and Juliet*\n\nWhy would Shakespeare tell you how his play ends before the first scene even starts?\n\n**Dramatic irony** is when the audience knows something a character does not. In *Romeo and Juliet*, it turns a story whose ending you already know into one full of **suspense**: because you know what the characters don't, their hopeful choices fill you with dread.\n\n## Like yelling at a movie\n\nEver shouted at a scary movie, *Don't open that door!*? You can see the danger behind the door, and the character can't. At a play, the audience is that viewer, shouting a warning no character can hear.\n\n## How it works\n\n1. **The Prologue gives away the ending.** Before the first scene, the Chorus speaks a fourteen-line sonnet telling the audience that a “pair of star-cross'd lovers” will take their own lives, and that their deaths will end their families' feud.\n2. **The characters act on what they believe.** They keep making choices based on what they think is true, even when the audience knows it is wrong.\n3. **You see where each choice leads.** When Lady Capulet finds Juliet weeping, she thinks Juliet is grieving for her cousin Tybalt. You know Juliet is weeping because Romeo, her secret husband, has been banished.\n4. **The gap builds suspense and dread.** Knowing the ending doesn't remove the suspense. It creates suspense about how and when it will happen.\n\n## The tomb\n\nTo escape a marriage to Paris, Juliet drinks a potion from Friar Laurence that makes her seem dead for forty-two hours, and her family lays her in the Capulet tomb. The friar's letter explaining the plan never reaches Romeo, because Friar John, who carries it, is shut in a house suspected of plague.\n\nWhat do you think Romeo believes when he finds Juliet in the tomb? He believes she is dead, even though he notices her lips and cheeks are still red. He drinks poison and dies, and moments later Juliet wakes, finds him dead, and ends her life with his dagger. This is the play's strongest dramatic irony: the audience knows Juliet is alive the whole time Romeo grieves.\n\n## Not just any twist\n\nA common mistake is to call any surprising outcome dramatic irony. An outcome opposite to what was expected is **situational irony**, and saying the opposite of what you mean is **verbal irony**. In dramatic irony, the audience isn't surprised at all; the character is.\n\n## Check yourself\n\nWhy does the tomb scene feel so tense, even though the Prologue already told you how the **tragedy** ends?\n\nGot a follow-up question? Ask away.",
+  "music": {
+    "positive_styles": [
+      "laid-back R&B",
+      "smooth rapped verses",
+      "warm electric piano",
+      "deep round bass",
+      "soft finger snaps",
+      "smooth sung chorus with stacked harmonies",
+      "big catchy sung chorus",
+      "clear female vocal",
+      "92 bpm",
+      "vocals start immediately",
+      "no instrumental intro",
+      "vocals upfront in the mix",
+      "clear diction"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "slurred words",
+      "heavy reverb on vocals"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "The whole crowd knows, the whole crowd's pleading",
+      "names": [
+        "crowd"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "You ever yell at a movie, \"Don't open that door\"?",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "'Cause you can see the danger he's not ready for",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Well, fourteen lines before a single scene begins",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "The Prologue tells you how the lovers' story ends",
+      "names": [
+        "Prologue"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "So you watch them fall in love already knowing",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "They marry in secret, and you know where it's going",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Now her mother thinks she's weeping for her cousin's sake",
+      "names": [
+        "her mother"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "You know her secret husband's banished, that's her heartbreak",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "It's no twist ending, you're not caught off guard",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "You knew from the start, he's the one left in the dark",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "That's dramatic irony, we see where it's leading",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "He thinks she's gone and we're filled with dread",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "We know the plan in the letter he never read",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Then a potion makes her look like she has died",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Forty-two hours, then she'll open up her eyes",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Her family mourns her and they lay her in the tomb",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "But you know she's only sleeping, she'll be waking soon",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "At the tomb, Romeo sees her lips and cheeks still red",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "He sees the signs, but he still believes she's dead",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Two lovers die, and the families end their feud",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Just like the opening sonnet promised you",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "That's one kind of irony, but there's verbal too",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "And situational, when the opposite comes through",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "That's dramatic irony, we see where it's leading",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "He thinks she's gone and we're filled with dread",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "We know the plan in the letter he never read",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "So what breaks it? Say the letter never lands",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Friar John's in quarantine, it's stuck in his hands",
+      "names": [
+        "quarantine"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Balthasar rides to Romeo and says that she's dead",
+      "names": [
+        "Balthasar",
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "No word about the plan, so he buys poison instead",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "He drinks it in the tomb and dies beside his bride",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "Moments later, Juliet wakes up, eyes open wide",
+      "names": [
+        "Juliet"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "She finds him dead and ends her life with his own blade",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "One lost letter, that's the price the lovers paid",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "We knew the ending, they never had a clue",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "That gap is the suspense that keeps a hold on you",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "That's dramatic irony, we see where it's leading",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "He thinks she's gone and we're filled with dread",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "We know the plan in the letter he never read",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "We shout at the stage, but he can't hear a thing",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "The whole crowd knows, the whole crowd's pleading",
+      "names": [
+        "crowd"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Wait, Romeo, she's only sleeping",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Picture a viewer on the couch, watching a film of Romeo and Juliet and wanting to shout.",
+      "names": [
+        "viewer",
+        "Romeo",
+        "Juliet"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n2",
+      "text": "That urge has a name: dramatic irony, when we know something a character does not.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "In a scary movie, you see the danger behind the door the character is about to open.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "At a play, the audience in their seats does the same, shouting a warning no character can hear.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "Romeo and Juliet is a tragedy by Shakespeare, a play ending in its main characters' deaths.",
+      "names": [
+        "Romeo",
+        "Juliet"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n6",
+      "text": "Before the first scene, the Chorus speaks the Prologue, a sonnet of just fourteen lines.",
+      "names": [
+        "Prologue"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n7",
+      "text": "It tells the audience that a pair of star-crossed lovers will take their own lives.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n8",
+      "text": "That does not kill the suspense; it creates suspense about how it will happen.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n9",
+      "text": "So the audience watches every hopeful moment, like the secret wedding, already knowing where it leads.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n10",
+      "text": "After her secret husband is banished for killing her cousin Tybalt, Juliet weeps, and Lady Capulet finds her.",
+      "names": [
+        "Juliet",
+        "Lady Capulet"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n11",
+      "text": "Lady Capulet thinks Juliet is grieving for Tybalt, but we know she is weeping for her banished husband.",
+      "names": [
+        "Lady Capulet",
+        "Juliet"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n12",
+      "text": "Because we see where each wrong belief leads, the gap fills us with dread.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n13",
+      "text": "A common mistake is calling any surprising twist dramatic irony, but an unexpected opposite outcome is situational irony.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n14",
+      "text": "In dramatic irony, the audience is not surprised at all; the character is.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n15",
+      "text": "To escape a marriage her parents arrange, Juliet drinks a potion from the friar that makes her seem dead for forty-two hours.",
+      "names": [
+        "Juliet"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n16",
+      "text": "Her family lays her in the Capulet tomb and mourns her, while the audience knows she is only asleep.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n17",
+      "text": "Romeo arrives at the tomb and even notices that Juliet's lips and cheeks are still red.",
+      "names": [
+        "Romeo",
+        "Juliet"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n18",
+      "text": "We know that is a sign she is alive, yet he believes she is dead.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n19",
+      "text": "So why does Romeo not know about the plan?",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n20",
+      "text": "Friar Laurence sends a letter explaining it, but its carrier is held in quarantine in a house suspected of plague.",
+      "names": [
+        "Friar Laurence",
+        "quarantine"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n21",
+      "text": "Instead, his servant Balthasar rides to Mantua and tells Romeo that his wife is dead.",
+      "names": [
+        "Balthasar",
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n22",
+      "text": "Believing it, Romeo buys poison and goes to the tomb.",
+      "names": [
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "There he drinks from the poison vial and dies beside her.",
+      "names": [
+        "poison vial"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n24",
+      "text": "Moments later, Juliet wakes, finds Romeo dead, and ends her life with his dagger.",
+      "names": [
+        "Juliet",
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "This is the play's strongest dramatic irony, because the audience knows Juliet is alive the whole time Romeo grieves.",
+      "names": [
+        "audience",
+        "Juliet",
+        "Romeo"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Their deaths finally end the feud between the Montagues and Capulets.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "In dramatic irony, the audience knows what a character doesn't, so their hopeful choices fill us with dread.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n28",
+      "text": "What goes in is knowledge the audience has and the characters lack, and what comes out is suspense.",
+      "names": [
+        "audience"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n29",
+      "text": "That is why a known ending can still hold you in suspense.",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Viewer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Viewer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Viewer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "Prologue",
+        "zoom": 1.6
+      },
+      "spotlight": "Prologue",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "A 14-line sonnet",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "mother-detail",
+      "camera": {
+        "target": "Lady Capulet",
+        "zoom": 1.6
+      },
+      "spotlight": "Lady Capulet",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "mother-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Romeo"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.8
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "Prologue",
+        "zoom": 1.6
+      },
+      "spotlight": "Prologue",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "Three types of irony",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Friar Laurence",
+        "Quarantine"
+      ],
+      "carries": "letter",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "Quarantine",
+        "zoom": 1.6
+      },
+      "spotlight": "Quarantine",
+      "particles": [
+        "Friar Laurence",
+        "Quarantine"
+      ],
+      "carries": "letter",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Balthasar",
+      "particles": [
+        "Balthasar",
+        "Romeo"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Poison vial",
+        "Romeo"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Juliet",
+        "zoom": 1.6
+      },
+      "spotlight": "Juliet",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "overview",
+      "camera": {
+        "target": "Juliet",
+        "zoom": 1.6
+      },
+      "spotlight": "Juliet",
+      "particles": [
+        "Romeo",
+        "Juliet"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Viewer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Viewer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "Viewer",
+        "zoom": 1.6
+      },
+      "spotlight": "Viewer",
+      "particles": [
+        "Juliet",
+        "Viewer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "overview",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "Prologue",
+        "zoom": 1.6
+      },
+      "spotlight": "Prologue",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Prologue",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "prologue-detail",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Prologue",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "mother-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Juliet",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "mother-detail",
+      "camera": {
+        "target": "Lady Capulet",
+        "zoom": 1.6
+      },
+      "spotlight": "Lady Capulet",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "mother-detail",
+      "camera": {
+        "target": "Juliet",
+        "zoom": 1.6
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "Audience",
+        "zoom": 1.6
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "Juliet",
+        "zoom": 1.6
+      },
+      "spotlight": "Juliet",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Audience",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [
+        "Juliet",
+        "Romeo"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Quarantine",
+      "particles": [
+        "Friar Laurence",
+        "Quarantine"
+      ],
+      "carries": "letter",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Balthasar",
+      "particles": [
+        "Balthasar",
+        "Romeo"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "letter-detail",
+      "camera": {
+        "target": "Romeo",
+        "zoom": 1.6
+      },
+      "spotlight": "Romeo",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "overview",
+      "camera": {
+        "target": "Poison vial",
+        "zoom": 1.6
+      },
+      "spotlight": "Poison vial",
+      "particles": [
+        "Poison vial",
+        "Romeo"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "overview",
+      "camera": {
+        "target": "Juliet",
+        "zoom": 1.6
+      },
+      "spotlight": "Juliet",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Juliet",
+        "Audience"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [
+    {
+      "structure": "Quarantine"
+    }
+  ],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "Why do we want to shout, “Wait, Romeo”?",
+      "from_narration": "n1"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Viewer yelling at a movie = audience at a play",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "Prologue reveals the ending → audience knows more than characters",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Characters act on wrong beliefs → audience sees where it leads",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "Not a twist: the character is surprised, not the audience",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "We know what they don't → suspense and dread",
+      "from_narration": "n16"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Romeo thinks Juliet is dead → we know she's asleep",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Letter blocked → Romeo hears only that Juliet is dead",
+      "from_narration": "n20"
+    }
+  ],
+  "tags": {
+    "song": [
+      "romeoandjuliet",
+      "dramaticirony",
+      "shakespeare",
+      "irony",
+      "english9",
+      "englishclass",
+      "rnb",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "romeoandjuliet",
+      "dramaticirony",
+      "shakespeare",
+      "irony",
+      "english9",
+      "englishclass",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

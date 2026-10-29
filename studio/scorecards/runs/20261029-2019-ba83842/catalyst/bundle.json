@@ -1,0 +1,2312 @@
+{
+  "course": "General Chemistry",
+  "topic": "how a catalyst speeds up a reaction",
+  "audience": "college",
+  "core_idea": "A catalyst opens a new path with lower activation energy, so more collisions react each second.",
+  "why_chain": [
+    "Molecules react only when a collision has at least the activation energy, enough to reach the transition state.",
+    "At a given temperature only a fraction of collisions have that much energy, so that fraction limits the rate.",
+    "A catalyst provides a different reaction mechanism whose highest barrier is lower.",
+    "With a lower activation energy, a much larger fraction of collisions succeed, so the rate constant rises exponentially.",
+    "The catalyst is regenerated in a later step, so it keeps working while ΔH and the equilibrium position stay the same."
+  ],
+  "key_terms": [
+    "catalyst",
+    "activation energy",
+    "transition state",
+    "reaction mechanism",
+    "rate constant",
+    "active site",
+    "enthalpy change",
+    "equilibrium"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Molecules react only when they collide with enough energy, and in the right orientation, to reach the transition state, the highest-energy arrangement at the top of the energy barrier between reactants and products. The minimum energy a collision needs is the activation energy, Ea; on an energy diagram, Ea is the height of the hump above the reactants' energy level. At a given temperature only a fraction of collisions have at least Ea, and that fraction limits the rate. The Arrhenius equation, k = A·e^(−Ea/RT), shows that the rate constant k depends exponentially on Ea: at 25 °C, room temperature, lowering Ea by about 5.7 kJ/mol, just under 6 kilojoules per mole, makes k about ten times larger if A stays the same, so at the same concentrations the rate goes up about ten times. Raising the temperature is a different way to speed a reaction: it gives more molecules at least Ea without changing Ea.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "A catalyst is a substance that speeds up a reaction without being used up. It provides a different reaction mechanism, a lower-energy path whose highest barrier is lower, so a catalyst is said to lower the activation energy. At the same temperature a much larger fraction of collisions then have enough energy, so more collisions react each second and the reaction runs faster. The catalyst does not heat the molecules or give them any extra energy: the energy they already have is enough more often because the climb is lower. It is consumed in an early step of the mechanism and regenerated in a later step, so it appears in the mechanism but not in the overall balanced equation, it comes back unchanged to work again, and a small amount of catalyst can convert a large amount of reactant. A catalyst does not change the energies of the reactants or the products, so the enthalpy change, ΔH, is the same on both paths. It lowers the forward and reverse activation energies by the same amount, so it speeds both directions equally: equilibrium is reached sooner, but the equilibrium constant and the position of equilibrium do not change. Equilibrium is the topic that follows kinetics in the course. On an energy diagram the reactants' energy level is drawn on the left and the products' on the right, and the catalyzed path is drawn as a lower hump between the same two levels as the uncatalyzed path; real catalyzed mechanisms often have more than one step, so the catalyzed curve can show more than one smaller hump.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "A catalyst works like a lower road over a mountain ridge between two valleys. The starting valley stands for the reactants, the far valley, lower down, for the products, and the height of the climb for the activation energy. On the summit road over the tall peak, only a few travellers make it over at a time. A lower road through a notch in the ridge, a lower pass, is a gentler climb that is not as steep, so many more travellers make the leap over each hour. Both roads join the same two valleys, so the drop between them, like ΔH, does not change, and the road is not used up by the traffic, just as a catalyst is regenerated and comes back for load after load. The lower road still climbs: a catalyst lowers the barrier but does not remove it. The same idea runs biology: enzymes are protein catalysts that bind their reactants at an active site, and catalase, an enzyme in blood and most tissues, breaks hydrogen peroxide into water and oxygen, which is why hydrogen peroxide fizzes on a cut.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "In a car, exhaust from the engine passes through the catalytic converter before it leaves the tailpipe. The converter holds platinum and other metals such as palladium and rhodium, a heterogeneous catalyst: a solid that speeds up reactions of gases. Carbon monoxide, CO, and oxygen, O₂, from the exhaust gas stick to active sites on the metal surface, where old bonds weaken and break: O₂ splits into oxygen atoms, and CO picks up an oxygen atom to become carbon dioxide, CO₂. The CO₂ then leaves the active site, freeing it for the next molecules, and the metal stays intact and is not used up, so harmful CO from the engine leaves the tailpipe as CO₂ every time the car runs. Lead poisons this catalyst: lead from leaded gasoline travels with the exhaust, coats the metal surface and blocks its active sites, so CO and O₂ can no longer bind there. The low-energy path is closed, the reaction falls back to its slow uncatalyzed rate, and the CO passes out of the car unchanged. That is why a car with a catalytic converter must run on unleaded gasoline.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A catalyst does not speed up a reaction by giving the molecules extra energy or by changing ΔH; it provides a different reaction mechanism with a lower activation energy, so the energy the molecules already have is enough more often.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a chemistry textbook draws it, of a car's exhaust system in a side cutaway: the car seen from the side as a simple light outline, its engine at the front on the left coloured teal, a plain pipe running back underneath the car to the catalytic converter, a rounded metal canister coloured orange under the middle of the car, and the tailpipe coloured light purple at the back on the right. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Engine",
+          "aliases": [
+            "engine"
+          ],
+          "sam_phrase": "teal engine",
+          "color_hex": "#2EC4B6"
+        },
+        {
+          "name": "Catalytic converter",
+          "aliases": [
+            "catalytic converter"
+          ],
+          "sam_phrase": "orange canister",
+          "color_hex": "#FF9F43"
+        },
+        {
+          "name": "Tailpipe",
+          "aliases": [
+            "tailpipe"
+          ],
+          "sam_phrase": "purple pipe",
+          "color_hex": "#B37DFF"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a geography textbook draws it, of a mountain ridge seen from the side between two valleys: on the left a high valley tinted blue, on the right a lower valley tinted yellow, and the ridge in the middle with one tall peak and, beside it, a lower notch. A road coloured red climbs from the left valley over the tall peak and down into the right valley; a second road coloured green climbs from the left valley through the lower notch and down into the right valley. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Starting valley",
+          "aliases": [
+            "starting valley"
+          ],
+          "sam_phrase": "blue valley",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Far valley",
+          "aliases": [
+            "far valley"
+          ],
+          "sam_phrase": "yellow valley",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Summit road",
+          "aliases": [
+            "summit road"
+          ],
+          "sam_phrase": "red road",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "Lower road",
+          "aliases": [
+            "lower road"
+          ],
+          "sam_phrase": "green road",
+          "color_hex": "#3DDC84"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws it, of a reaction energy profile: a horizontal axis along the bottom and a vertical axis on the left, drawn as plain white lines. On the left, a short flat blue line for the reactants' energy level; on the right, lower down, a short flat yellow line for the products' energy level. A red curve rises from the blue line in one tall hump and comes down to the yellow line; a green curve joins the same two lines with a lower hump below the red one. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Reactants",
+          "aliases": [
+            "reactants"
+          ],
+          "sam_phrase": "blue line",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Products",
+          "aliases": [
+            "products"
+          ],
+          "sam_phrase": "yellow line",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Uncatalyzed path",
+          "aliases": [
+            "uncatalyzed path",
+            "old path"
+          ],
+          "sam_phrase": "red curve",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "Catalyzed path",
+          "aliases": [
+            "catalyzed path",
+            "new path",
+            "lower path"
+          ],
+          "sam_phrase": "green curve",
+          "color_hex": "#3DDC84"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "surface-detail",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws heterogeneous catalysis, of a solid metal catalyst surface in cross-section: a slab of light silver metal atoms in neat rows across the lower part of the picture, a few spots on its top surface marked as pink patches, the active sites, and the space above the slab tinted cyan for the exhaust gas, an even wash with nothing in it. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Exhaust gas",
+          "aliases": [
+            "exhaust gas"
+          ],
+          "sam_phrase": "cyan area",
+          "color_hex": "#7FE0F0"
+        },
+        {
+          "name": "Platinum surface",
+          "aliases": [
+            "platinum surface",
+            "metal"
+          ],
+          "sam_phrase": "silver slab",
+          "color_hex": "#D7DDE6"
+        },
+        {
+          "name": "Active site",
+          "aliases": [
+            "active site",
+            "active sites"
+          ],
+          "sam_phrase": "pink patch",
+          "color_hex": "#FF5FD2"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "poison",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws catalyst poisoning, of the same solid metal catalyst surface in cross-section: a slab of light silver metal atoms in neat rows across the lower part of the picture, a layer of red lead atoms sitting on top of the slab and covering its top surface, and the space above tinted cyan for the exhaust gas, an even wash with nothing in it. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Exhaust gas",
+          "aliases": [
+            "exhaust gas"
+          ],
+          "sam_phrase": "cyan area",
+          "color_hex": "#7FE0F0"
+        },
+        {
+          "name": "Platinum surface",
+          "aliases": [
+            "platinum surface",
+            "metal"
+          ],
+          "sam_phrase": "silver slab",
+          "color_hex": "#D7DDE6"
+        },
+        {
+          "name": "Lead",
+          "aliases": [
+            "lead"
+          ],
+          "sam_phrase": "red layer",
+          "color_hex": "#FF5252"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "## How a catalyst speeds up a reaction\n\n**Why does hydrogen peroxide fizz the moment it touches a cut?**\n\nYour blood holds catalase, an enzyme that breaks hydrogen peroxide into water and oxygen, and that oxygen is the fizz. Catalase is a catalyst: a substance that speeds up a reaction without being used up. Here is the whole idea in one line: **a catalyst opens a new path with lower activation energy, so more collisions react each second.**\n\n### The picture: a lower road over the ridge\n\nThink of a reaction as a trip from a starting valley, the reactants, over a mountain ridge to a lower valley, the products. On the summit road over the tall peak, only a few travellers make it over at a time. A catalyst is like a lower road through a notch in the ridge: the same two valleys, a gentler climb, and many more travellers over each hour. The lower road still climbs, because a catalyst lowers the barrier but does not remove it.\n\n### Why it works, step by step\n\n1. **Collisions need enough energy.** Molecules react only when they collide with enough energy, in the right orientation, to reach the **transition state**, the highest-energy arrangement at the top of the barrier.\n2. **That energy has a name.** The minimum energy a collision needs is the **activation energy**, Eₐ, drawn as the height of the hump above the reactants on an energy diagram.\n3. **Only some collisions have it.** At a given temperature only a fraction of collisions carry at least Eₐ, and that fraction limits the rate.\n4. **A catalyst opens a different path.** It provides a new **reaction mechanism** whose highest barrier is lower, so we say it lowers the activation energy.\n\n*Predict: if the barrier drops but the temperature stays the same, what happens to the number of collisions that make it over?*\n\nA much larger fraction of them now have enough energy, so the reaction runs faster. The Arrhenius equation, k = A·e^(−Eₐ/RT), shows that the **rate constant** depends exponentially on Eₐ. At 25 °C, lowering Eₐ by about 5.7 kJ/mol makes k about ten times larger, if A stays the same.\n\n5. **The catalyst comes back.** It is consumed in an early step and regenerated in a later one, so it appears in the mechanism but not in the overall balanced equation, and a small amount can convert a large amount of reactant.\n\n### What a catalyst changes, and what it doesn't\n\n| Property | With a catalyst |\n|---|---|\n| Activation energy | Lower |\n| Rate at the same temperature | Higher |\n| Energies of reactants and products | Unchanged |\n| Enthalpy change, ΔH | Unchanged |\n| Equilibrium position | Unchanged, but reached sooner |\n| The catalyst itself | Regenerated, not used up |\n\nBecause it lowers the forward and reverse activation energies by the same amount, a catalyst speeds both directions equally. That matters for **equilibrium**, the topic that follows kinetics.\n\n### A real one: your car's catalytic converter\n\nExhaust from the engine passes over platinum and other metals before it leaves the tailpipe. Carbon monoxide and oxygen stick to **active sites** on the metal surface, where old bonds weaken and break, and CO picks up an oxygen atom to become CO₂. The CO₂ leaves the site, freeing it for the next molecules. Lead from leaded gasoline coats the metal and blocks those active sites, so the reaction falls back to its slow uncatalyzed rate and CO leaves the car unchanged. That is why cars with catalytic converters must run on unleaded gasoline.\n\nEnzymes in biology use the same trick: they are protein catalysts that bind their reactants at an active site.\n\n### The common mistake\n\nIt is tempting to think a catalyst works by giving the molecules extra energy or by changing ΔH. It does neither: it opens a lower path, so the energy the molecules already have is enough more often.\n\n*Simplified:* this lesson draws the catalyzed path as one lower hump, but real catalyzed mechanisms often have more than one step.\n\n### Check yourself\n\nIf lead covers every active site in a catalytic converter, why does the reaction slow to its uncatalyzed rate instead of stopping completely?\n\nGot a follow-up question? Ask away.",
+  "music": {
+    "positive_styles": [
+      "Latin pop",
+      "light dembow groove",
+      "rapped verses",
+      "clear male vocal",
+      "plucked guitar",
+      "handclaps",
+      "big catchy sung chorus",
+      "96 bpm",
+      "vocals start immediately",
+      "no instrumental intro",
+      "vocals upfront in the mix",
+      "clear diction",
+      "English lyrics"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "heavy reverb on vocals",
+      "slurred rap"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Your catalytic converter does it, so CO won't stay CO",
+      "names": [
+        "catalytic converter"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Leave the starting valley, there's a ridge you've got to climb",
+      "names": [
+        "starting valley"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "On the summit road, only a few get over at a time",
+      "names": [
+        "summit road"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Now a catalyst opens a lower road, the climb's not as steep",
+      "names": [
+        "lower road"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Same far valley at the end, and way more make the leap",
+      "names": [
+        "far valley"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Molecules need activation energy to react",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "On the old path, few collisions hit hard enough for that",
+      "names": [
+        "old path"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Shave just under six kilojoules a mole off the climb",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "And at room temperature, the rate goes up ten times",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "It doesn't heat them up or hand them extra energy",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "It opens a lower path, so the energy they've got is plenty",
+      "names": [
+        "lower path"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "A catalyst brings activation energy low",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "More collisions make it over, so the reaction's fast",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Reactants in, products out, and the catalyst lasts",
+      "names": [
+        "Reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "CO and oxygen hit the platinum surface and stay",
+      "names": [
+        "platinum surface"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "They grab an active site, and the old bonds give way",
+      "names": [
+        "active site"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "CO picks up an oxygen atom, now it's CO2",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Then it leaves the active site, open for the next ones through",
+      "names": [
+        "active site"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "One step takes the catalyst, a later step gives it back",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "So a little can convert a lot, and the metal stays intact",
+      "names": [
+        "metal"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "So the CO from the engine comes in under one name",
+      "names": [
+        "engine"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Leaves the tailpipe as CO2, while the catalyst stays the same",
+      "names": [
+        "tailpipe"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Next comes equilibrium, where the catalyst plays fair",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "It speeds both ways the same: same balance, faster there",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "A catalyst brings activation energy low",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "More collisions make it over, so the reaction's fast",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Reactants in, products out, and the catalyst lasts",
+      "names": [
+        "Reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Put leaded gas in the tank, and the lead rides the exhaust",
+      "names": [
+        "lead"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "It coats the metal surface, every landing spot is lost",
+      "names": [
+        "metal"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Now CO can't bind, and oxygen can't stay",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "So the low-energy path is gone, there's only the high way",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Now it's back to the uncatalyzed rate, way too slow",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "So CO stays CO, and out of the car it goes",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "That's why a car with a catalyst has to run unleaded",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "No place to bind, no lower climb, so the shortcut's dead",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Same reactants, same products, the same delta H",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Just a lower peak, so the whole thing picks up pace",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "A catalyst brings activation energy low",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "More collisions make it over, so the reaction's fast",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Reactants in, products out, and the catalyst lasts",
+      "names": [
+        "Reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Same two valleys, just a lower road",
+      "names": [
+        "lower road"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "And the catalyst comes back for the next load",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Take the low pass, the molecules go",
+      "names": [],
+      "fact_id": "f3"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Every time a car runs, the exhaust from its engine passes through the catalytic converter before it leaves the tailpipe.",
+      "names": [
+        "engine",
+        "catalytic converter",
+        "tailpipe"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n2",
+      "text": "Inside, a catalyst turns harmful carbon monoxide into carbon dioxide, and the catalyst is never used up.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n3",
+      "text": "Picture a trip from a starting valley, over a mountain ridge, down to a far valley that sits lower.",
+      "names": [
+        "starting valley",
+        "far valley"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n4",
+      "text": "On the summit road over the tall peak, only a few travellers make it over at a time.",
+      "names": [
+        "summit road"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n5",
+      "text": "A lower road through a notch is a gentler climb, so many more travellers make it over each hour.",
+      "names": [
+        "lower road"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n6",
+      "text": "On a real energy diagram, the reactants sit on the left and the products on the right.",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n7",
+      "text": "Molecules react only when they collide with enough energy, in the right orientation, to reach the transition state at the top.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "That minimum energy is the activation energy, the height of the uncatalyzed path's hump above the reactants.",
+      "names": [
+        "uncatalyzed path",
+        "reactants"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "At any temperature, only a fraction of collisions carry that much energy, which limits the rate.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "A catalyst opens a different reaction mechanism, the catalyzed path, with a lower hump.",
+      "names": [
+        "catalyzed path"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "What do you think that lower hump does to the number of collisions that succeed?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n12",
+      "text": "It raises it sharply, because a much larger fraction of collisions now have enough energy.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "The rate constant depends exponentially on activation energy, so at room temperature, a drop of just under six kilojoules per mole makes it about ten times larger.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n14",
+      "text": "But a catalyst does not heat the molecules or hand them any extra energy.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "The energy they already have is simply enough more often, because the climb is lower.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "The reactants and products keep their energies, so the enthalpy change is the same on both paths.",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "In a car's catalyst, carbon monoxide and oxygen from the exhaust gas stick to active sites on the platinum surface.",
+      "names": [
+        "exhaust gas",
+        "active sites",
+        "platinum surface"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n18",
+      "text": "There, old bonds weaken and break, and carbon monoxide picks up an oxygen atom to become carbon dioxide.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n19",
+      "text": "The carbon dioxide leaves the active site, freeing it for the next molecules.",
+      "names": [
+        "active site"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n20",
+      "text": "So the catalyst is used in one step and given back in a later one.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n21",
+      "text": "It speeds the reverse reaction just as much, so equilibrium comes sooner but does not shift, and that is the next topic.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n22",
+      "text": "Now lead from leaded gasoline coats the metal and covers the places where molecules bind.",
+      "names": [
+        "lead",
+        "metal"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "Carbon monoxide can no longer bind, so the low-energy path is closed and the reaction falls back to its slow uncatalyzed rate.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n24",
+      "text": "The carbon monoxide leaves unchanged, which is why these cars must run on unleaded gasoline.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "A catalyst opens a new path with lower activation energy, so more collisions react each second.",
+      "names": [
+        "new path"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n26",
+      "text": "Reactants go in, products come out, and the catalyst comes back unchanged to work again.",
+      "names": [
+        "Reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n27",
+      "text": "That is how your car turns carbon monoxide into carbon dioxide every time it runs, and how the enzymes in your body work.",
+      "names": [],
+      "fact_id": "f4"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Engine",
+        "Catalytic converter"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Catalytic converter",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalytic converter",
+      "particles": [
+        "Catalytic converter",
+        "Tailpipe"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Starting valley",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Summit road",
+        "zoom": 1.6
+      },
+      "spotlight": "Summit road",
+      "particles": [
+        "Starting valley",
+        "Summit road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Lower road",
+        "zoom": 1.6
+      },
+      "spotlight": "Lower road",
+      "particles": [
+        "Starting valley",
+        "Lower road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Starting valley",
+        "Lower road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Uncatalyzed path"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Uncatalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Uncatalyzed path",
+      "particles": [
+        "Reactants",
+        "Uncatalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "≈10× faster at 25 °C",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Exhaust gas",
+            "Active site"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Active site",
+        "zoom": 1.8
+      },
+      "spotlight": "Active site",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Active site",
+        "zoom": 1.8
+      },
+      "spotlight": "Active site",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Active site",
+      "particles": [
+        "Active site",
+        "Exhaust gas"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Active site",
+        "Exhaust gas"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "hook",
+      "camera": {
+        "target": "Engine",
+        "zoom": 1.6
+      },
+      "spotlight": "Engine",
+      "particles": [
+        "Engine",
+        "Catalytic converter"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Tailpipe",
+      "particles": [
+        "Catalytic converter",
+        "Tailpipe"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Products",
+            "Catalyzed path",
+            "Reactants"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "poison",
+      "camera": {
+        "target": "Lead",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "Catalyst poisoning",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "poison",
+      "camera": {
+        "target": "Lead",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Exhaust gas",
+            "Lead"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "b-4",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lead",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Starting valley",
+        "Lower road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Starting valley",
+        "Lower road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Starting valley",
+        "Lower road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Engine",
+        "Catalytic converter"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Catalytic converter",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalytic converter",
+      "particles": [
+        "Catalytic converter",
+        "Tailpipe"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Summit road",
+        "zoom": 1.6
+      },
+      "spotlight": "Summit road",
+      "particles": [
+        "Starting valley",
+        "Summit road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "Lower road",
+        "zoom": 1.6
+      },
+      "spotlight": "Lower road",
+      "particles": [
+        "Starting valley",
+        "Lower road",
+        "Far valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Uncatalyzed path"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "Uncatalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Uncatalyzed path",
+      "particles": [
+        "Reactants",
+        "Uncatalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Uncatalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyzed path",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Active site",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Exhaust gas",
+            "Active site"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "n18",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Active site",
+        "zoom": 1.8
+      },
+      "spotlight": "Active site",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Active site",
+        "zoom": 1.8
+      },
+      "spotlight": "Active site",
+      "particles": [
+        "Active site",
+        "Exhaust gas"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Active site"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "poison",
+      "camera": {
+        "target": "Lead",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "poison",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Reactants",
+        "Catalyzed path",
+        "Products"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Catalytic converter",
+        "Tailpipe"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [
+    {
+      "structure": "Lead"
+    }
+  ],
+  "conversions": [
+    {
+      "structure": "Active site",
+      "inputs": [
+        "CO",
+        "O₂"
+      ],
+      "outputs": [
+        "CO₂"
+      ]
+    },
+    {
+      "structure": "Catalytic converter",
+      "inputs": [
+        "CO",
+        "O₂"
+      ],
+      "outputs": [
+        "CO₂"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How does a catalyst speed up a reaction?",
+      "from_narration": "n2"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "Lower road = new reaction mechanism, lower barrier",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Collision needs activation energy → transition state",
+      "from_narration": "n7"
+    },
+    {
+      "from_line": "v1-6",
+      "text": "Few collisions have enough energy → rate is limited",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Lower activation energy → rate constant rises exponentially",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "No added energy; enthalpy change ΔH stays the same",
+      "from_narration": "n14"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "CO + O₂ bind at active site → CO₂",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Catalyst used, then regenerated → not in overall equation",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "Speeds both directions → same equilibrium, reached sooner",
+      "from_narration": "n21"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Lead blocks active sites → slow uncatalyzed rate",
+      "from_narration": "n22"
+    }
+  ],
+  "tags": {
+    "song": [
+      "catalyst",
+      "activationenergy",
+      "chemicalkinetics",
+      "chemistry",
+      "generalchemistry",
+      "genchem",
+      "latinpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "catalyst",
+      "activationenergy",
+      "chemicalkinetics",
+      "chemistry",
+      "generalchemistry",
+      "genchem",
+      "catalyticconverter",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "v2-1",
+      "rule": "lyric-style",
+      "detail": "\"Slopes go three, two point one, two point oh one in a row\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-6",
+      "rule": "lyric-style",
+      "detail": "\"For x squared, that's two x, the power rule just saves you time\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

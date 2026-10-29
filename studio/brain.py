@@ -17,6 +17,10 @@ Who paints the art goes by the brain's provider, as an admin sets it on /admin/s
 and SAM 3.1 then finds the structures in either. Claude's brain may instead draw the art as
 SVG. The helper, which checks each picture and boxes a structure SAM missed, is the brain's.
 
+The judge, which grades droplets for the scorecard (studio/scorecard.py), is Claude Sonnet 5.5 whatever
+the brain, so two runs on different brains are graded alike, and the brain in force by default is never
+its own judge.
+
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
 validated against the model before it is returned.
@@ -39,7 +43,7 @@ from typing import Sequence
 
 from pydantic import BaseModel, ValidationError
 
-ROLES = ("brain", "helper")
+ROLES = ("brain", "helper", "judge")
 PROVIDERS = ("claude", "meta")
 
 CLAUDE = {
@@ -50,6 +54,8 @@ CLAUDE = {
     # Sonnet, not Haiku, since Oct 28: the helper judges each picture's science, and finds the
     # parts SAM missed.
     "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
+    # The scorecard's judge, on every brain. Changing it makes earlier scorecards no longer comparable.
+    "judge": {"model": "claude-sonnet-5-5", "effort": "high", "max_tokens": 32000},
 }
 META = {
     "brain": {"model": "muse-wonder-1.0"},
@@ -265,13 +271,13 @@ def ask(
 ) -> dict:
     """Ask one question; return the answer as a dict.
 
-    role is "brain" or "helper". With a schema the answer is that model's fields;
-    without one it is {"text": ...}. images are PNG, JPEG, GIF or WebP files shown
-    before the prompt. label names the call in `calls`.
+    role is "brain", "helper" or "judge" (Claude, whatever the brain). With a schema the
+    answer is that model's fields; without one it is {"text": ...}. images are PNG, JPEG,
+    GIF or WebP files shown before the prompt. label names the call in `calls`.
     """
     if role not in ROLES:
         raise ValueError(f"role must be one of {ROLES}, not {role!r}")
-    if provider() == "claude":
+    if role == "judge" or provider() == "claude":
         texts = _ask_claude(role, prompt, schema, images, system, label or role)
     else:
         texts = _ask_meta(role, prompt, schema, images, system, label or role)
@@ -476,7 +482,8 @@ def _ask_claude(role, prompt, schema, images, system, label) -> list[str]:
         # whatever other credential the machine happens to hold.
         key = claude_key()
         if not key:
-            raise BrainError(f"{_who()} needs {' or '.join(CLAUDE_KEY_VARS)}")
+            who = "the scorecard's judge" if role == "judge" else _who()
+            raise BrainError(f"{who} needs {' or '.join(CLAUDE_KEY_VARS)}")
         _clients["claude"] = anthropic.Anthropic(api_key=key)
     started = time.monotonic()
     try:
