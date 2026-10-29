@@ -1,7 +1,13 @@
 # Design: the studio as a service that holds the provider keys
 
-Status: proposed, not built. Threat model finding T1 (prompt injection steers the teacher
-agent), fix-plan item "move the provider keys out of the agent's shell".
+Status: tabled on 29 October 2026, not built. Kept for after the hackathon. Until then the
+provider keys stay in the operator's environment, with the exposure described below; the
+per-topic spend ceiling (`/admin/studio`) bounds what the studio spends on a topic, not what
+someone holding the keys could. Threat model finding T1 (prompt injection steers the
+teacher agent), fix-plan item "move the provider keys out of the agent's shell". Since it
+was written, the planner's Inkmory record was taken out (Oct 30: there is no planner key to
+move) and the videos moved to Cloudflare R2 (the API signs R2 uploads): revise those parts
+before building it.
 
 **In one paragraph.** Today the teacher (the operator: an LLM with a shell) reads every
 learner's topics, follow-ups and files, and the same shell holds the Anthropic, Meta, Gemini

@@ -122,7 +122,7 @@ is talked into something cleverer, so keep what a hijacked run could do small:
 - **Not yet:** the studio still reads the provider keys from the operator's own
   environment. Running the studio as a separate service that holds them would keep them
   out of the operator's shell entirely: [studio-service.md](studio-service.md) is the
-  design.
+  design, tabled for after the hackathon.
 
 ### What a run costs
 
