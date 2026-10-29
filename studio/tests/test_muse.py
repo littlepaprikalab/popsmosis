@@ -4,6 +4,7 @@ import base64
 import hashlib
 import json
 import re
+import threading
 import time
 
 import numpy as np
@@ -425,6 +426,28 @@ def test_sam_finds_every_structure_and_locate_writes_the_masks_and_locations(job
     assert locate.is_done(job) and art.is_done(job)
     for video in media.VIDEOS:  # what the timeline and renderer read fits
         assert timeline_problems(jobs.read(job / media.timeline_path(video), Timeline), locations) == []
+
+
+class TogetherMuse(FakeMuse):
+    """SAM that answers the overview's two structures only once both have been asked: one after another, it
+    never would."""
+
+    def __init__(self):
+        super().__init__()
+        self.both = threading.Barrier(2, timeout=5)
+
+    def segment(self, job, label, art_path, *, phrase=None, box=None):
+        if label.startswith("locate overview "):
+            self.both.wait()
+        return super().segment(job, label, art_path, phrase=phrase, box=box)
+
+
+def test_the_structures_of_a_scene_are_asked_for_at_the_same_time_and_kept_in_order(job, monkeypatch):
+    painted(job, monkeypatch)
+    TogetherMuse().install(monkeypatch)
+    assert locate.run(job, FakeHelper()) == "located 4 of 4 structures with SAM 3.1"
+    overview = jobs.read(job / media.LOCATIONS, Locations).scene("overview")
+    assert [s.name for s in overview.structures] == ["Thylakoid", "Cytochrome b6f"]  # the scene's order
 
 
 def test_an_unsure_match_asks_the_helper_for_a_box_and_sam_for_what_is_in_it(job, monkeypatch):

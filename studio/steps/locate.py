@@ -30,6 +30,9 @@ live runs a box drawn around two Earths came back as one Earth's northern half, 
 "Southern Hemisphere", and a "gray plug" as the pale sky above a membrane. A structure left
 out is better than one labelled wrong.
 
+The scenes are located at the same time (WORKERS), and the structures of each scene too
+(STRUCTURE_WORKERS): each waits on SAM and the helper, never on another structure's answer.
+
 Then each scene's picture is repaired where code can (studio/repair.py): stray specks cleared from a
 space that fills, a part the art check found upside down turned over; the masks follow.
 
@@ -42,6 +45,7 @@ from __future__ import annotations
 import math
 import re
 import shutil
+import threading
 from pathlib import Path
 
 import numpy as np
@@ -63,6 +67,7 @@ from studio.steps.art import colour_word
 
 MIN_CONFIDENCE = 0.5
 WORKERS = 4  # scenes located at once
+STRUCTURE_WORKERS = 4  # structures of a scene asked for at once: at most 16 SAM calls in flight
 # A match is the structure's own when, of its pixels that are some structure's colour, at
 # least this share are its own. On the first live runs every right match scored 0.58 or more,
 # and the one that would have been labelled wrong 0.40.
@@ -156,9 +161,11 @@ def find_all(job: Path, scene: Scene, ask) -> tuple[dict[str, tuple[np.ndarray, 
     how many matches were dropped for being another structure's colour."""
     picture = job / media.art_path(scene.id)
     colours = Colours(picture, scene)
+    # The structures at the same time: each waits on SAM (and the helper), and none depends on another's answer.
+    results = ledger.parallel(lambda structure: find(job, scene, structure, picture, ask, colours), scene.structures,
+                              STRUCTURE_WORKERS)
     located, how = {}, {}
-    for structure in scene.structures:
-        result = find(job, scene, structure, picture, ask, colours)
+    for structure, result in zip(scene.structures, results):  # in the scene's order, as one after another
         if result is not None:
             mask, found, by = result
             located[structure.name], how[structure.name] = (mask, found), by
@@ -247,6 +254,7 @@ class Colours:
         self.refs = _lab(np.array(refs))
         self.pixels = _lab(rgb)
         self.dropped = 0
+        self._counting = threading.Lock()  # the scene's structures are judged at the same time
         sample = self.pixels[::2, ::2].reshape(-1, 3)  # every fourth pixel is plenty to see what is painted
         far = distance(sample, self.refs)
         near = np.where(far.min(1) <= CLOSE, far.argmin(1), -1)
@@ -278,7 +286,8 @@ class Colours:
         """Whether a match can be the structure: not mostly the background, nor another structure's colour."""
         background, share = self.judge(mask, structure)
         if background > MAX_BACKGROUND or (share is not None and share < MIN_OWN_COLOUR):
-            self.dropped += 1
+            with self._counting:
+                self.dropped += 1
             return False
         return True
 
