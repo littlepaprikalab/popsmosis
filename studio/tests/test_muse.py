@@ -9,7 +9,7 @@ import time
 import numpy as np
 import pytest
 
-from studio import brain, checks, jobs, ledger, media, muse, svg
+from studio import brain, checks, jobs, ledger, media, muse, repair, svg
 from studio.schemas import Box, Bundle, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
@@ -115,9 +115,10 @@ class FakeMuse:
 class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
-    def __init__(self, checks=None, boxes=None):
-        self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per try
+    def __init__(self, checks=None, boxes=None, writing=None):
+        self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check, painted out ones included
         self.boxes = boxes or {}  # structure -> a Spot dict
+        self.writing = writing or {}  # scene -> the Written dicts the helper boxes, each time it is asked
         self.asked: list[tuple[str, str]] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -129,6 +130,9 @@ class FakeHelper:
             tries = sum(1 for lab, _ in self.asked if lab.startswith(f"art check {scene}"))
             answers = self.checks.get(scene, [{}])
             return {"text": [], "misplaced": [], "wrong": [], **answers[min(tries, len(answers)) - 1]}
+        if schema is repair.Writing:
+            assert system == repair.WRITING_PROMPT and prompt.startswith("A check saw this writing: ")
+            return {"writing": self.writing.get(label.split()[2], [])}
         assert schema is locate.Spot and system == locate.BOX_PROMPT
         name = next(n for n in SPOTS if label.endswith(" " + n))
         return self.boxes.get(name, {"seen": False, "left": 0, "top": 0, "right": 1, "bottom": 1})
@@ -341,22 +345,59 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert told.index("The scene is") < told.index("What the scene should show")
 
 
-def test_a_scene_with_writing_in_every_picture_is_cleaned_or_kept_with_a_note(job, monkeypatch):
-    # The painter is asked once to take the writing out of the least-bad try; when that works, the cleaned one is kept.
-    fake = FakeMuse().install(monkeypatch)
-    art.run(job, FakeHelper({"overview": [{"text": ["e-"]}, {"text": ["e-"]}, {}]}))
-    made = json.loads((job / "art" / "overview.json").read_text())
-    assert made["try"] == 3 and made["tries"][-1]["cleaned"] in (1, 2)
-    clean = [(label, prompt) for label, prompt in fake.painted if label == "art overview clean"]
-    assert clean and clean[0][1] == art.CLEAN_PROMPT
-    assert art.WRITING_NOTE not in made["check"]["notes"]
+def lettered(scene_id: str) -> bytes:
+    """A sample scene's picture with a dark T painted on its white background, as a label would be."""
+    pixels = sample_media_image_bytes(painting(scene_id))
+    pixels[150:154, 850:950] = pixels[150:200, 898:902] = (30, 30, 30)
+    return svg.png(pixels)
 
-    # When the writing stays, the least-bad try is kept rather than failing the droplet, and the video says so.
-    fake.painted.clear()
-    art.run(job, FakeHelper({"overview": [{"text": ["e-"]}]}))
+
+def sample_media_image_bytes(data: bytes) -> np.ndarray:
+    import skia
+
+    return skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy(data)).toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
+
+
+T_BOX = {"text": "T", "left": 840 / media.ART_WIDTH, "top": 140 / media.ART_HEIGHT,
+         "right": 960 / media.ART_WIDTH, "bottom": 210 / media.ART_HEIGHT}
+
+
+def test_writing_in_a_picture_is_painted_out_and_the_picture_kept(job, monkeypatch):
+    fake = FakeMuse({"overview": [lettered("overview")]}).install(monkeypatch)
+    helper = FakeHelper({"overview": [{"text": ["T"]}, {}]}, writing={"overview": [T_BOX]})
+    assert art.run(job, helper) == "painted 3 scenes with Muse Image in 3 tries"
+    assert [label for label, _ in fake.painted if label.split()[1] == "overview"] == ["art overview"]  # not again
+    assert [label for label in helper.labels() if "overview" in label] == [
+        "art check overview", "art writing overview", "art check overview unwritten"]
     made = json.loads((job / "art" / "overview.json").read_text())
-    assert made["try"] in (1, 2) and art.WRITING_NOTE in made["check"]["notes"]
-    assert art.notices(job, checks.load(job / "bundle.json"))["overview"][-1] == art.WRITING_NOTE
+    assert made["try"] == 1 and made["tries"][0]["painted_out"] == ["T"] and made["check"]["text"] == []
+    pixels = sample_media_image(job / media.art_path("overview"))
+    assert pixels[152, 900].min() > 240 and pixels[180, 900].min() > 240  # the T, gone to the white round it
+    thylakoid = tuple(bytes.fromhex(sample_media.bundle().scenes[1].structures[0].color_hex[1:]))
+    assert tuple(pixels[500, 500]) == thylakoid  # the part, untouched
+    assert "overview" not in art.notices(job, checks.load(job / "bundle.json"))  # nothing for the video to say
+
+
+def test_writing_left_after_two_rounds_is_painted_again_and_never_said_on_screen(job, monkeypatch):
+    # The helper keeps seeing writing: painted out twice a picture, then the scene painted again; after the last
+    # try the picture with the least wrong is kept, with no note: the video's own labels sit on it anyway.
+    fake = FakeMuse({"overview": [lettered("overview")]}).install(monkeypatch)
+    helper = FakeHelper({"overview": [{"text": ["T"]}]}, writing={"overview": [T_BOX]})
+    art.run(job, helper)
+    assert [label for label in helper.labels() if label.startswith("art writing overview")] == [
+        "art writing overview", "art writing overview round 2", "art writing overview try 2",
+        "art writing overview try 2 round 2"]
+    assert len([label for label, _ in fake.painted if label.split()[1] == "overview"]) == 2
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert made["try"] in (1, 2) and made["check"]["notes"] == []
+    assert "overview" not in art.notices(job, checks.load(job / "bundle.json"))
+
+    # A helper that finds no writing to box leaves the picture as it was, and the scene is painted again.
+    fake.painted.clear()
+    helper = FakeHelper({"overview": [{"text": ["T"]}, {}]})
+    art.run(job, helper)
+    assert [label for label, _ in fake.painted if label.split()[1] == "overview"] == ["art overview", "art overview try 2"]
+    assert "art check overview unwritten" not in helper.labels()
 
 
 def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
@@ -707,9 +748,9 @@ def test_a_coarse_mask_is_stretched_over_its_box_and_clipped_to_the_art():
 
 
 def test_the_helpers_prompts_read_cleanly_and_its_answers_fit_both_providers():
-    for schema in (art.ArtCheck, locate.Spot):
+    for schema in (art.ArtCheck, locate.Spot, repair.Writing):
         brain.strict_schema(schema)  # raises on a keyword one provider would refuse
-    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.STYLE):
+    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, repair.WRITING_PROMPT, art.STYLE):
         assert "\\" not in prompt and "  " not in prompt
 
 

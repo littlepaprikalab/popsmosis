@@ -607,6 +607,31 @@ def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them
     assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
 
 
+def test_a_notice_card_sits_below_the_key_band_and_upright_above_the_picture(job):
+    beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
+    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+    keyed = flowing([beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})])
+    amber = p.rgb("#F59E0B")
+    wide = Renderer(job, keyed.model_copy(update={"notices": notices}))
+    view = wide.view("overview")
+    edge, top = view[2], view[1] + wide.layout.margin + 8
+    assert view[1] == wide.layout.key_h
+    # The card's amber side starts below the key band, which no longer hides the card's top.
+    assert np.allclose(pixel(wide.frame(2.0), edge + 3, top + 40), amber, atol=12)
+    assert not np.allclose(pixel(wide.frame(2.0), edge + 3, top - 12), amber, atol=12)
+    # Upright, the card goes across the frame above the picture, which keeps the frame's whole width.
+    upright = Renderer(job, keyed.model_copy(update={"notices": notices, "title": "the light reactions"}), "v")
+    plain = Renderer(job, keyed.model_copy(update={"title": "the light reactions"}), "v")
+    tall, short = plain.view("overview"), upright.view("overview")
+    assert short[0] == tall[0] and short[2] == tall[2] == upright.layout.width  # nothing moves over
+    assert short[1] > tall[1] + 100 and short[3] == tall[3]  # it starts below the card
+    frame = upright.frame(2.0)
+    card_top = tall[1] + renderer_module.NOTICE_GAP
+    assert np.allclose(pixel(frame, upright.layout.margin + 3, card_top + 40), amber, atol=12)
+    assert np.allclose(pixel(frame, upright.layout.width - upright.layout.margin - 20, card_top + 40),
+                       (255, 255, 255), atol=12)  # white across the frame
+
+
 def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
     beat = flow_beat(0, 4, path=[])
     plain = Renderer(job, flowing([beat]))
