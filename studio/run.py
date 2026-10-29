@@ -84,6 +84,10 @@ IMAGE_TYPES = {"image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "
 # Anthropic refuses an image over 5 MB of base64; popsmosis takes 4 MB files, so a large photo
 # is left out rather than failing the bundle on every try.
 IMAGE_MAX_BYTES = 5 * 1024 * 1024 * 3 // 4
+# The text files a learner sends become the study guide, sent whole with the bundle and every fact-check round.
+# A message may carry 8 MB of text: past this many characters (about 12,000 tokens) the rest is left out, so one
+# topic's files cannot make every brain call of its runs cost many times a lesson.
+STUDY_GUIDE_MAX_CHARS = 50_000
 # A line of the question that starts "Style:" (or "Song style:") is the style the learner wants the song in.
 STYLE_LINE = re.compile(r"^[ \t]*(?:song[ \t]+)?style[ \t]*:(.*)$", re.IGNORECASE | re.MULTILINE)
 BRAIN_FILE = "brain.json"  # {"brain": a key of brain.CHOICES, "effort": Claude's}: the brain the claim said
@@ -370,7 +374,8 @@ def make_request(job: Path, api: Api, question: dict, ask) -> str:
         if attachment.get("expired") or not readable or not ID_RE.fullmatch(str(attachment.get("id", ""))):
             skipped.append(name)
             continue
-        data = download(api, attachment["url"])
+        # The path is built from the id checked above, never from a URL the API handed back.
+        data = download(api, f"/api/attachments/{attachment['id']}")
         if data is None or (mime in IMAGE_TYPES and len(data) > IMAGE_MAX_BYTES):
             skipped.append(name)
         elif mime in IMAGE_TYPES:
@@ -382,8 +387,13 @@ def make_request(job: Path, api: Api, question: dict, ask) -> str:
             guides.append(f"{name}:\n{data.decode('utf-8', 'replace').strip()}")
     if skipped:
         print(f"request: left out {len(skipped)} file(s) the brain cannot read, too big, or expired", file=sys.stderr)
+    study_guide = "\n\n".join(guides)
+    if len(study_guide) > STUDY_GUIDE_MAX_CHARS:
+        print(f"request: the text files come to {len(study_guide):,} characters; the study guide keeps the first "
+              f"{STUDY_GUIDE_MAX_CHARS:,}", file=sys.stderr)
+        study_guide = study_guide[:STUDY_GUIDE_MAX_CHARS]
     topic, style = split_style(question["content"])
-    request = Request(topic=topic, song_style=style, study_guide="\n\n".join(guides), images=images)
+    request = Request(topic=topic, song_style=style, study_guide=study_guide, images=images)
     jobs.write(job / "request.json", request)
     return f"{len(images)} image(s), {len(guides)} text file(s)" + (", a song style" if style else "")
 

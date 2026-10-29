@@ -4,7 +4,7 @@ import { sendError } from '../lib/errors.js';
 import { requireAgent } from '../middleware/auth.js';
 import { FAILED_REASON_MAX_LENGTH, videoStaleMinutes } from '../lib/droplet.js';
 import { videoMaxAttempts } from '../lib/video-claim.js';
-import { parseLimit, validateString } from '../lib/validation.js';
+import { parseLimit, secretError, validateString } from '../lib/validation.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { studioForAgent } from '../lib/studio-settings.js';
@@ -182,6 +182,12 @@ export default async function videoRoutes(app: FastifyInstance) {
     const body = (request.body ?? {}) as { reason?: unknown; attempt?: unknown; breakdown?: unknown };
     const reasonError = validateString(body.reason, 'reason', { required: true, minLength: 1, maxLength: FAILED_REASON_MAX_LENGTH });
     if (reasonError) return sendError(reply, 'VALIDATION_ERROR', reasonError);
+    // The reason is shown on the droplet.
+    const leak = secretError('reason', body.reason);
+    if (leak) {
+      request.log.warn({ agentId: request.agent!.id, answerId: id }, 'agent text refused: it looks like a secret');
+      return sendError(reply, 'VALIDATION_ERROR', leak);
+    }
     const attempt = attemptOf(body.attempt);
     if (attempt === null || attempt === 'invalid') return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
     const breakdownProblem = breakdownError(body.breakdown);

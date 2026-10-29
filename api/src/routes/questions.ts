@@ -3,9 +3,9 @@ import prisma, { runTransaction } from '../lib/prisma.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
 import { requireUser, requireAgent, accountGone } from '../middleware/auth.js';
-import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
+import { validateString, containsPersonalInfo, parseLimit, secretError } from '../lib/validation.js';
 import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.js';
-import { questionInclude, serializeQuestion } from '../lib/serialize.js';
+import { questionInclude, serializeQuestion, serializeQuestionForAgent } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
@@ -16,11 +16,11 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
+import { takeTopic, pruneUsage } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
 export const ANSWER_MAX_LENGTH = 5000;
-const QUESTIONS_PER_USER_PER_DAY = parseInt(process.env.QUESTIONS_PER_USER_PER_DAY || '10', 10);
 
 export default async function questionRoutes(app: FastifyInstance) {
   // GET /api/questions/status — cheap "anything new?" probe for polling.
@@ -118,7 +118,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       include: questionInclude,
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    return { data: questions.map((q) => serializeQuestion(q)) };
+    return { data: questions.map((q) => serializeQuestionForAgent(q)) };
   });
 
   // POST /api/questions — signed-in user asks a question. `attachments` are
@@ -141,26 +141,26 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a question');
     }
 
-    // Rolling 24h window per user, same shape as sparks.
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recent = await prisma.question.count({ where: { userId: request.viewer!.id, createdAt: { gte: since } } });
-    if (recent >= QUESTIONS_PER_USER_PER_DAY) {
-      return sendError(reply, 'RATE_LIMITED', `Max ${QUESTIONS_PER_USER_PER_DAY} questions per 24 hours`, { retryable: false });
-    }
-
+    // The learner's 24 hours and the site's (lib/usage.ts), taken in the same transaction as the topic: a topic
+    // taken back or deleted later does not hand its place back.
     let question;
     try {
-      question = await prisma.question.create({
-        data: { userId: request.viewer!.id, content: text, brain, attachments: attachmentsCreate(attachments) },
-        include: questionInclude,
+      question = await runTransaction(async (tx) => {
+        await takeTopic(tx, request.viewer!.id);
+        return tx.question.create({
+          data: { userId: request.viewer!.id, content: text, brain, attachments: attachmentsCreate(attachments) },
+          include: questionInclude,
+        });
       });
     } catch (err) {
+      if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
       if (await accountGone(err, request.viewer!.id)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
       throw err;
     }
     // Wake the teacher now rather than at its next scheduled firing. Not
     // awaited: the asker's 201 does not wait on Anthropic's API.
     notifyRoutine(FIRE_REASON_QUESTION, request.log);
+    pruneUsage(prisma).catch((pruneErr) => request.log.warn({ err: pruneErr }, 'usage prune failed'));
     if (attachments.length > 0) {
       sweepExpiredAttachments(prisma).catch((sweepErr) => request.log.warn({ err: sweepErr }, 'attachment retention sweep failed'));
     }
@@ -267,7 +267,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'CONFLICT', 'Another agent holds the claim on this question');
     }
     // With the studio's settings (lib/studio-settings.ts), so an admin's change reaches the run.
-    return { ...serializeQuestion(question), studio: await studioForAgent() };
+    return { ...serializeQuestionForAgent(question), studio: await studioForAgent() };
   });
 
   // PUT /api/questions/:id/progress — agent: where the studio is while it writes the lesson (lib/progress.ts):
@@ -309,6 +309,12 @@ export default async function questionRoutes(app: FastifyInstance) {
     const { reason } = (request.body ?? {}) as { reason?: unknown };
     const reasonError = validateString(reason, 'reason', { required: true, minLength: 1, maxLength: FAILED_REASON_MAX_LENGTH });
     if (reasonError) return sendError(reply, 'VALIDATION_ERROR', reasonError);
+    // The reason is shown on the learner's card.
+    const leak = secretError('reason', reason);
+    if (leak) {
+      request.log.warn({ agentId, questionId: id }, 'agent text refused: it looks like a secret');
+      return sendError(reply, 'VALIDATION_ERROR', leak);
+    }
 
     try {
       await runTransaction(async (tx) => {
@@ -328,7 +334,7 @@ export default async function questionRoutes(app: FastifyInstance) {
       throw err;
     }
     const question = await prisma.question.findUniqueOrThrow({ where: { id }, include: questionInclude });
-    return serializeQuestion(question);
+    return serializeQuestionForAgent(question);
   });
 
   // POST /api/questions/:id/answer — agent answers; exactly one answer per question.
@@ -350,12 +356,18 @@ export default async function questionRoutes(app: FastifyInstance) {
     }
     const jsonError = dropletJsonError(bundle, factcheck) ?? breakdownError(breakdown);
     if (jsonError) return sendError(reply, 'VALIDATION_ERROR', jsonError);
+    // The lesson, its lyrics and its tags go public: never a key the agent was talked into pasting.
+    const leak = secretError('the lesson', content, bundle);
+    if (leak) {
+      request.log.warn({ agentId, questionId: id }, 'agent text refused: it looks like a secret');
+      return sendError(reply, 'VALIDATION_ERROR', leak);
+    }
 
     try {
       const answer = await runTransaction(async (tx) => {
         // Row lock so two concurrent answers to the same question serialize here.
-        const rows = await tx.$queryRaw<{ id: string; status: string; videos: unknown }[]>`
-          SELECT id, status, progress->'videos' AS videos FROM questions WHERE id = ${id} FOR UPDATE
+        const rows = await tx.$queryRaw<{ id: string; status: string; videos: unknown; claimedById: string | null }[]>`
+          SELECT id, status, progress->'videos' AS videos, "claimedById" FROM questions WHERE id = ${id} FOR UPDATE
         `;
         const question = rows[0];
         if (!question) throw new AppError('NOT_FOUND', 'Question not found');
@@ -367,6 +379,11 @@ export default async function questionRoutes(app: FastifyInstance) {
             existing?.agentId === agentId ? { answerId: existing.id } : undefined);
         }
         if (question.status === 'FAILED') throw new AppError('CONFLICT', 'Question was marked failed');
+        // Only the run holding the topic answers it: the queue and the claim lease it, and the studio renews the
+        // lease before every step. An agent cannot post over a topic another run is making, nor answer one it never took.
+        if (question.claimedById !== agentId) {
+          throw new AppError('CONFLICT', 'Claim this question before answering it (POST /api/questions/:id/claim)');
+        }
 
         const created = await tx.answer.create({
           data: {

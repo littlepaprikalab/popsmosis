@@ -8,6 +8,7 @@ import rateLimit from '@fastify/rate-limit';
 import prisma from './lib/prisma.js';
 import { hashApiKey, isAgentToken, isWellFormedAgentToken, bearerToken } from './lib/apikey.js';
 import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } from './lib/session.js';
+import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
 import { storageConfig } from './lib/storage.js';
 import authRoutes from './routes/auth.js';
@@ -42,13 +43,34 @@ export async function buildApp() {
   await app.register(cookie);
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginEmbedderPolicy: false });
 
+  // ---- Resolve agent keys first: the proxy gate and the rate limit below both ask whether a key is real ----
+  // A well-formed key is looked up (cached both ways for AGENT_TTL_MS, middleware/auth.ts); per-route guards then
+  // short-circuit on request.agent. A key that is not real is treated as no key at all.
+  app.addHook('onRequest', async (request) => {
+    const token = bearerToken(request.headers.authorization);
+    if (!isWellFormedAgentToken(token)) return;
+    try {
+      const result = await resolveAgentToken(token);
+      if ('agent' in result) request.agent = result.agent;
+      request.agentKeyKnown = 'agent' in result || result.errorCode === 'FORBIDDEN'; // FORBIDDEN: real, but disabled
+    } catch {
+      // requireAgent reports the error on gated routes
+    }
+  });
+
   // ---- Proxy-token gate (production): humans must come through the Next.js proxy ----
   const PROXY_SECRET = process.env.PROXY_SECRET;
   if (PROXY_SECRET) {
     app.addHook('onRequest', async (request, reply) => {
-      const token = bearerToken(request.headers.authorization);
-      if (isWellFormedAgentToken(token)) return; // agents call the API directly
+      // Agents call the API directly, with a key that is really theirs (a disabled one still reaches its route, which
+      // says so). Anything that only looks like a key comes through the proxy like everyone else.
+      if (request.agentKeyKnown) return;
       if (request.url === '/api/health') return;
+      // A key in the right shape that is no agent's (revoked, rotated, made up) gets the answer requireAgent gives it,
+      // so a runner with an old key reads it as a bad key, not as a disabled agent or a blocked caller.
+      if (isWellFormedAgentToken(bearerToken(request.headers.authorization))) {
+        return reply.status(401).send({ error: { code: 'UNAUTHORIZED', message: 'Invalid API key' } });
+      }
       if (request.headers['x-proxy-token'] !== PROXY_SECRET) {
         return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Direct API access not allowed' } });
       }
@@ -65,33 +87,43 @@ export async function buildApp() {
   }
   await app.register(jwt, { secret: process.env.JWT_SECRET });
 
-  // ---- Rate limiting keyed by agent key hash, then session subject, then IP ----
-  const subFromCookie = (req: FastifyRequest): string | null => {
+  // ---- Rate limiting keyed by a real agent key, then a verified session, then the client's address ----
+  // Only a credential that checks out gets a bucket of its own: a made-up key or cookie would otherwise be a fresh
+  // bucket on every request. Everyone else is keyed by the address the edge saw (lib/public-limit.ts), never by the
+  // web server's, which every browser's request comes from through the proxy.
+  const verifiedSub = new WeakMap<FastifyRequest, string | null>();
+  const subOf = (req: FastifyRequest): string | null => {
+    if (verifiedSub.has(req)) return verifiedSub.get(req)!;
+    let sub: string | null = null;
     const token = sessionCookieToken(req.cookies);
-    if (!token) return null;
-    try {
-      const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString());
-      return typeof payload.sub === 'string' ? payload.sub : null;
-    } catch {
-      return null;
+    if (token) {
+      try {
+        const payload = app.jwt.verify<{ sub?: unknown }>(token);
+        sub = typeof payload.sub === 'string' && payload.sub ? payload.sub : null;
+      } catch {
+        sub = null;
+      }
     }
+    verifiedSub.set(req, sub);
+    return sub;
   };
   const isProgressReport = (req: FastifyRequest) => req.method === 'PUT' && /\/progress$/.test(req.url.split('?')[0]);
   await app.register(rateLimit, {
     timeWindow: '1 minute',
     keyGenerator: (req: FastifyRequest) => {
-      const token = bearerToken(req.headers.authorization);
       // The studio's progress reports (lib/progress.ts) count in a bucket of their own: every run shares one key,
       // and a burst of reports for the page must never use up what its claims, uploads and READY need.
-      if (isAgentToken(token)) return `${isProgressReport(req) ? 'agent-progress' : 'agent'}:${hashApiKey(token).slice(0, 16)}`;
-      const sub = subFromCookie(req);
+      if (req.agent) {
+        const token = bearerToken(req.headers.authorization)!;
+        return `${isProgressReport(req) ? 'agent-progress' : 'agent'}:${hashApiKey(token).slice(0, 16)}`;
+      }
+      const sub = subOf(req);
       if (sub) return `user:${sub}`;
-      return req.ip;
+      return `ip:${clientAddress(req)}`;
     },
     max: (req: FastifyRequest) => {
-      const token = bearerToken(req.headers.authorization);
-      if (isAgentToken(token)) return 300;
-      if (hasSessionCookie(req.cookies)) return 200;
+      if (req.agent) return 300;
+      if (subOf(req)) return 200;
       return 60;
     },
   });
@@ -106,18 +138,6 @@ export async function buildApp() {
     const site = request.headers['sec-fetch-site'];
     if (hasXhrHeader || site === 'same-origin' || site === 'same-site') return;
     return reply.status(403).send({ error: { code: 'FORBIDDEN', message: 'Missing CSRF header' } });
-  });
-
-  // ---- Resolve agent keys once, early; per-route guards short-circuit when set ----
-  app.addHook('onRequest', async (request) => {
-    const token = bearerToken(request.headers.authorization);
-    if (!isAgentToken(token)) return;
-    try {
-      const result = await resolveAgentToken(token);
-      if ('agent' in result) request.agent = result.agent;
-    } catch {
-      // requireAgent reports the error on gated routes
-    }
   });
 
   // ---- Never let a Set-Cookie response be publicly cacheable ----

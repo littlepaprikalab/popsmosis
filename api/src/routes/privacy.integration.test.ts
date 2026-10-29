@@ -53,6 +53,7 @@ d('learner privacy', () => {
     });
     expect(asked.statusCode).toBe(201);
     const questionId = asked.json().id as string;
+    await app.inject({ method: 'POST', url: `/api/questions/${questionId}/claim`, headers: asAgent() });
     const answered = await app.inject({
       method: 'POST', url: `/api/questions/${questionId}/answer`, headers: asAgent(),
       payload: { content: LESSON, bundle: BUNDLE, factcheck: FACTCHECK },
@@ -267,6 +268,7 @@ d('learner privacy', () => {
     for (let round = 0; round < 12; round++) {
       const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(ben.cookie), payload: { content: `Race ${round}: tides` } });
       const id = asked.json().id as string;
+      await app.inject({ method: 'POST', url: `/api/questions/${id}/claim`, headers: asAgent() });
       const [answer, del] = await Promise.all([
         app.inject({ method: 'POST', url: `/api/questions/${id}/answer`, headers: asAgent(), payload: { content: 'The Moon pulls the oceans.' } }),
         app.inject({ method: 'DELETE', url: `/api/questions/${id}`, headers: asUser(ben.cookie) }),
@@ -282,8 +284,9 @@ d('learner privacy', () => {
         expect(answer.statusCode).toBe(404);
         expect(row).toBeNull();
       }
-      // Each user may ask 10 a day; the race is the subject here, not the quota.
-      await prisma.question.updateMany({ where: { id }, data: { createdAt: new Date(Date.now() - 2 * 86_400_000) } });
+      // Each user may ask 10 a day, counted apart from the requests (lib/usage.ts); the race is the subject here, not
+      // the quota.
+      await prisma.usageEvent.updateMany({ where: { userId: ben.id }, data: { createdAt: new Date(Date.now() - 2 * 86_400_000) } });
     }
   });
 
@@ -293,6 +296,7 @@ d('learner privacy', () => {
       const { answerId } = await lesson(learner, `Race ${round}: volcanoes`);
       const asked = await app.inject({ method: 'POST', url: '/api/questions', headers: asUser(learner.cookie), payload: { content: `Race ${round}: earthquakes` } });
       const pendingId = asked.json().id as string;
+      await app.inject({ method: 'POST', url: `/api/questions/${pendingId}/claim`, headers: asAgent() });
       const [answer, followUp, del] = await Promise.all([
         app.inject({ method: 'POST', url: `/api/questions/${pendingId}/answer`, headers: asAgent(), payload: { content: 'Plates slip.' } }),
         app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(learner.cookie), payload: { content: 'One more question' } }),

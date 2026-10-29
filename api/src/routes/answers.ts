@@ -3,7 +3,8 @@ import prisma from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireAgent } from '../middleware/auth.js';
 import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoField, type VideoStatus } from '../lib/droplet.js';
-import { BUCKETS, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
+import { secretError } from '../lib/validation.js';
+import { BUCKETS, bucketFileError, dropletFileUrlError, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { bundleTags } from '../lib/tags.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -16,7 +17,7 @@ export default async function answerRoutes(app: FastifyInstance) {
   async function ownAnswer(id: string, agentId: string, reply: FastifyReply) {
     const answer = await prisma.answer.findUnique({
       where: { id },
-      select: { id: true, agentId: true, songVideoUrl: true, lessonVideoUrl: true },
+      select: { id: true, agentId: true, songVideoUrl: true, lessonVideoUrl: true, videoStatus: true },
     });
     if (!answer) {
       sendError(reply, 'NOT_FOUND', 'Answer not found');
@@ -64,7 +65,7 @@ export default async function answerRoutes(app: FastifyInstance) {
     for (const field of VIDEO_FIELDS) {
       const value = body[field];
       if (value === undefined) continue;
-      const urlError = videoUrlError(value, field);
+      const urlError = videoUrlError(value, field) ?? dropletFileUrlError(value as string, field, id);
       if (urlError) return sendError(reply, 'VALIDATION_ERROR', urlError);
       urls[field] = value as string;
     }
@@ -75,6 +76,11 @@ export default async function answerRoutes(app: FastifyInstance) {
     if (status === 'FAILED') {
       if (typeof error !== 'string' || !error.trim()) return sendError(reply, 'VALIDATION_ERROR', 'error is required when status is FAILED');
       if (error.length > VIDEO_ERROR_MAX_LENGTH) return sendError(reply, 'VALIDATION_ERROR', `error must be ${VIDEO_ERROR_MAX_LENGTH} characters or less`);
+      const leak = secretError('error', error);
+      if (leak) {
+        request.log.warn({ agentId: request.agent!.id, answerId: id }, 'agent text refused: it looks like a secret');
+        return sendError(reply, 'VALIDATION_ERROR', leak);
+      }
     } else if (error !== undefined) {
       return sendError(reply, 'VALIDATION_ERROR', 'error is only for status FAILED');
     }
@@ -96,8 +102,12 @@ export default async function answerRoutes(app: FastifyInstance) {
     // Read before the write, so a failed read fails the request before anything changed.
     const tags = status === 'READY' ? await tagsToCopy(id) : null;
 
-    // One conditional write, so the attempt check and the update cannot be split by another run.
-    const current = attempt === undefined ? {} : { videoAttempts: attempt as number, videoStatus: 'RENDERING' as const };
+    // One conditional write, so the attempt check and the update cannot be split by another run. READY is final: a
+    // droplet on the public tab keeps the videos it was listed with, whoever holds the key (a re-render is a new
+    // attempt, which READY never gets).
+    const current = attempt === undefined
+      ? { OR: [{ videoStatus: null }, { videoStatus: { not: 'READY' as const } }] }
+      : { videoAttempts: attempt as number, videoStatus: 'RENDERING' as const };
     const { count } = await prisma.answer.updateMany({
       where: { id, ...current },
       data: {
@@ -115,7 +125,11 @@ export default async function answerRoutes(app: FastifyInstance) {
       },
     });
     await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });
-    if (count === 0) return sendError(reply, 'CONFLICT', 'Another run has taken over these videos, or they are no longer rendering');
+    if (count === 0) {
+      return sendError(reply, 'CONFLICT', attempt === undefined
+        ? 'These videos are READY and listed on the Droplets tab; they can no longer change'
+        : 'Another run has taken over these videos, or they are no longer rendering');
+    }
     const updated = await prisma.answer.findUniqueOrThrow({
       where: { id },
       select: {
@@ -133,10 +147,15 @@ export default async function answerRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string };
     const { bucket, file } = (request.body ?? {}) as { bucket?: unknown; file?: unknown };
     if (!BUCKETS.includes(bucket as Bucket)) return sendError(reply, 'VALIDATION_ERROR', `bucket must be one of ${BUCKETS.join(', ')}`);
-    const pathError = fileError(file);
+    const pathError = fileError(file) ?? bucketFileError(bucket as Bucket, file as string);
     if (pathError) return sendError(reply, 'VALIDATION_ERROR', pathError);
 
-    if (!(await ownAnswer(id, request.agent!.id, reply))) return reply;
+    const answer = await ownAnswer(id, request.agent!.id, reply);
+    if (!answer) return reply;
+    // The files of a listed droplet stay as they were listed: an upload URL would overwrite them in place.
+    if (answer.videoStatus === 'READY') {
+      return sendError(reply, 'CONFLICT', 'These videos are READY and listed on the Droplets tab; their files can no longer change');
+    }
     const config = storageConfig();
     if (!config) return sendError(reply, 'UNAVAILABLE', 'File storage is not configured on this API (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)');
     if ('problem' in config) return sendError(reply, 'UNAVAILABLE', `File storage is misconfigured on this API: ${config.problem}`);

@@ -16,16 +16,22 @@ export default async function attachmentRoutes(app: FastifyInstance) {
       select: {
         name: true,
         data: true,
-        question: { select: { userId: true } },
-        reply: { select: { userId: true, answer: { select: { question: { select: { userId: true } } } } } },
+        question: { select: { userId: true, claimedById: true, answers: { select: { agentId: true } } } },
+        reply: { select: { userId: true, answer: { select: { agentId: true, question: { select: { userId: true } } } } } },
       },
     });
-    // The teacher reads the threads it answers; a person, the ones lib/privacy.ts gives them.
-    const readable = !!attachment && (!!request.agent || canReadThread(
-      request.viewer!,
-      attachment.question?.userId ?? attachment.reply?.answer.question.userId ?? null,
-      attachment.reply?.userId ?? null,
-    ));
+    // The teacher reads the threads it works on: a topic's files while it holds the topic or once it answered it,
+    // a follow-up's under its own lesson. A person reads the ones lib/privacy.ts gives them.
+    const agentId = request.agent?.id;
+    const readable = !!attachment && (agentId
+      ? attachment.question
+        ? attachment.question.claimedById === agentId || attachment.question.answers.some((a) => a.agentId === agentId)
+        : attachment.reply?.answer.agentId === agentId
+      : canReadThread(
+        request.viewer!,
+        attachment.question?.userId ?? attachment.reply?.answer.question.userId ?? null,
+        attachment.reply?.userId ?? null,
+      ));
     if (!attachment || !readable) return sendError(reply, 'NOT_FOUND', 'Attachment not found');
     if (!attachment.data) return sendError(reply, 'GONE', 'This file is past the time attachments are kept');
     const data = Buffer.from(attachment.data);

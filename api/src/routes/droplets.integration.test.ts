@@ -114,6 +114,7 @@ d('the Droplets tab', () => {
   it("keeps each video's hashtags from the bundle, shows them, and finds a droplet by one", async () => {
     // The studio posts the lesson with its bundle, and the tags come in it, written however the brain wrote them.
     const q = await prisma.question.create({ data: { userId: learnerId, content: 'photosynthesis for my AP Bio exam on Friday' } });
+    await app.inject({ method: 'POST', url: `/api/questions/${q.id}/claim`, headers: { authorization: `Bearer ${agentKey}` } });
     const tags = { song: ['#Photosynthesis', '#APBio', '#K-pop', '#photosynthesis'], lesson: ['#Photosynthesis', '#APBio', '#Explained'] };
     const posted = await app.inject({
       method: 'POST', url: `/api/questions/${q.id}/answer`, headers: { authorization: `Bearer ${agentKey}` },

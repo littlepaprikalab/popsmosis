@@ -194,6 +194,12 @@ d('question / answer / reply flow', () => {
     const bad = await app.inject({ method: 'POST', url: `/api/questions/${questionId}/answer`, headers: asAgent(agentKey), payload: {} });
     expect(bad.statusCode).toBe(400);
 
+    // Only the run holding the topic may answer it. (Released first: another test file's agent may have leased it
+    // from the shared database.)
+    await prisma.question.update({ where: { id: questionId }, data: { claimedAt: null, claimedById: null } });
+    const unclaimed = await app.inject({ method: 'POST', url: `/api/questions/${questionId}/answer`, headers: asAgent(agentKey), payload: { content: 'Too early.' } });
+    expect(unclaimed.statusCode).toBe(409);
+    expect((await app.inject({ method: 'POST', url: `/api/questions/${questionId}/claim`, headers: asAgent(agentKey) })).statusCode).toBe(200);
     const ans = await app.inject({ method: 'POST', url: `/api/questions/${questionId}/answer`, headers: asAgent(agentKey), payload: { content: 'Use **Forgot password** on the sign-in page.', model: 'test-model' } });
     expect(ans.statusCode).toBe(201);
     answerId = ans.json().id;
@@ -300,7 +306,10 @@ d('question / answer / reply flow', () => {
     const thread = queue.json().data[0];
     // The agent gets the original question, its own answer, every reply in order, and the one to respond to.
     expect(thread.question.content).toContain('reset my password');
-    expect(thread.question.user.name).toBe('Ada');
+    // ...and never who asked, or who wrote a follow-up: the agent's key is held by an LLM that reads learner text.
+    expect(thread.question).not.toHaveProperty('user');
+    expect(thread.thread.every((r: object) => !('user' in r))).toBe(true);
+    expect(thread.replyTo).not.toHaveProperty('user');
     expect(thread.answer.content).toContain('Forgot password');
     expect(thread.thread.map((r: { authorType: string }) => r.authorType)).toEqual(['HUMAN', 'AGENT', 'HUMAN']);
     expect(thread.thread[2].content).toContain('permanent fix');

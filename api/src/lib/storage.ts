@@ -28,6 +28,41 @@ export function fileError(file: unknown): string | null {
   return null;
 }
 
+// What the public bucket serves to anyone: the two videos and their posters. Nothing else may be put there, so the
+// agent key cannot use the bucket to host a page or a file of any other kind.
+const PUBLIC_EXTENSIONS = ['.mp4', '.jpg', '.jpeg', '.png', '.webp'];
+
+/** Why a file may not go in this bucket, or null. */
+export function bucketFileError(bucket: Bucket, file: string): string | null {
+  if (bucket !== PUBLIC_BUCKET) return null;
+  const lower = file.toLowerCase();
+  return PUBLIC_EXTENSIONS.some((ext) => lower.endsWith(ext))
+    ? null
+    : `the ${PUBLIC_BUCKET} bucket takes only ${PUBLIC_EXTENSIONS.join(', ')} files`;
+}
+
+/**
+ * Why a video or poster URL is not one of this droplet's own files in the public bucket, or null. A droplet on the
+ * Droplets tab plays and shows only what this API signed an upload for, under droplets/<answerId>/, so the agent key
+ * cannot point a public page at another host. Without storage set up there is nothing to check against: a local
+ * API takes any http(s) URL (the seeded sample clips), and a production one takes none.
+ */
+export function dropletFileUrlError(
+  value: string,
+  field: string,
+  answerId: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string | null {
+  const config = storageConfig(env);
+  if (!config || 'problem' in config) {
+    return env.NODE_ENV === 'production' ? `${field}: file storage is not set up on this API, so it takes no video URLs` : null;
+  }
+  const prefix = `${config.url}/storage/v1/object/public/${PUBLIC_BUCKET}/${answerId}/`;
+  if (!value.startsWith(prefix)) return `${field} must be a file uploaded for this droplet, under ${prefix}`;
+  const file = value.slice(prefix.length);
+  return fileError(file) || bucketFileError(PUBLIC_BUCKET, file) ? `${field} must be a file uploaded for this droplet, under ${prefix}` : null;
+}
+
 /**
  * SUPABASE_SERVICE_ROLE_KEY takes one of the two keys that may write to storage, and
  * each is sent the way Supabase takes it:

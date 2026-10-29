@@ -166,6 +166,16 @@ d('attachments', () => {
     expect((await app.inject({ method: 'GET', url: replyFile, headers: asUser(cookieA) })).statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: replyFile, headers: asBearer(agentKey) })).statusCode).toBe(200);
     expect((await app.inject({ method: 'GET', url: replyFile, headers: asUser(cookieB) })).statusCode).toBe(404);
+
+    // Another agent's key reads none of it: a key reads the files of topics it holds or answered, and of the
+    // follow-ups under its own lessons, never every learner's.
+    const { generateApiKey } = await import('./../lib/apikey.js');
+    const other = generateApiKey();
+    await prisma.agent.create({ data: { name: `${tag}-other-agent`, apiKeyHash: other.hashed } });
+    for (const url of [replyFile, shotUrl]) {
+      expect((await app.inject({ method: 'GET', url, headers: asBearer(other.raw) })).statusCode).toBe(404);
+    }
+    expect((await app.inject({ method: 'GET', url: shotUrl, headers: asBearer(agentKey) })).statusCode).toBe(200);
   });
 
   it('lets the bytes go past the retention and keeps the row, which then answers 410', async () => {
