@@ -958,38 +958,48 @@ class Renderer:
         wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         return wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
 
-    def _path_points(self, scene_id: str, path: list[str]) -> list[Point]:
-        """Where particles stop along a path, in art pixels: a structure's label point, but a space's point just
-        past the edge of the structure next to it on the path, on the space's side, so a flow into the lumen ends
-        just under the complex that pumps it rather than across the picture."""
+    def _path_stops(self, scene_id: str, path: list[str]) -> list[tuple[Point, object]]:
+        """Where particles stop along a path, in art pixels, each with the structure it is in: a structure's label
+        point, but a space's point just past the edge of the structure next to it on the path, on the space's side,
+        so a flow into the lumen ends just under the complex that pumps it rather than across the picture. A space
+        in the middle of a path has two points, one beside the part before it and one beside the part after it,
+        so the flow runs along the space between them instead of cutting across the picture."""
         located = self.locations.scene(scene_id)
         stops = [loc for name in path if (loc := located.get(name)) is not None]
-        anchors, spaces = [], []
+
+        def beside(loc, near) -> Point:
+            x = min(max(near.label_anchor.x, loc.box.x0), loc.box.x1)
+            below = (loc.box.y0 + loc.box.y1) / 2 > near.label_anchor.y
+            y = near.box.y1 + SPACE_REACH if below else near.box.y0 - SPACE_REACH
+            inset = (loc.box.y1 - loc.box.y0) * 0.1
+            return x, min(max(y, loc.box.y0 + inset), loc.box.y1 - inset)
+
+        out: list[tuple[Point, object, bool]] = []
         for i, loc in enumerate(stops):
-            spaces.append(self._is_space(scene_id, loc) and len(stops) > 1)
-            if spaces[-1]:
-                near = stops[i - 1] if i else stops[1]
-                x = min(max(near.label_anchor.x, loc.box.x0), loc.box.x1)
-                below = (loc.box.y0 + loc.box.y1) / 2 > near.label_anchor.y
-                reach = SPACE_REACH
-                y = near.box.y1 + reach if below else near.box.y0 - reach
-                inset = (loc.box.y1 - loc.box.y0) * 0.1
-                anchors.append((x, min(max(y, loc.box.y0 + inset), loc.box.y1 - inset)))
-            else:
-                anchors.append((loc.label_anchor.x, loc.label_anchor.y))
+            if not (self._is_space(scene_id, loc) and len(stops) > 1):
+                out.append(((loc.label_anchor.x, loc.label_anchor.y), loc, False))
+                continue
+            near = [stops[j] for j in (i - 1, i + 1) if 0 <= j < len(stops)]
+            points = [beside(loc, n) for n in near]
+            if len(points) == 2 and math.dist(*points) < 1:
+                points = points[:1]
+            out += [(point, loc, True) for point in points]
+        anchors = [point for point, _, _ in out]
         if len(anchors) < 2:
-            return anchors
+            return [(point, loc) for point, loc, _ in out]
         # A label point is moved a little toward its neighbour, to keep the label's dot in sight; a space's point
         # has no dot, and moving it would pull it back toward the edge it was put past.
-        return [a if space else q for a, q, space in zip(anchors, stop_points(anchors), spaces)]
+        return [(a if space else q, loc) for (a, loc, space), q in zip(out, stop_points(anchors))]
+
+    def _path_points(self, scene_id: str, path: list[str]) -> list[Point]:
+        return [point for point, _ in self._path_stops(scene_id, path)]
 
     def _bends(self, scene_id: str, path: list[str]) -> list[Point | None]:
         """Each leg's bend, in art pixels: a hop from one part to the next (both stops parts, not spaces) curves
         up in a gentle arc, the hand-off a textbook draws; a flow into, out of or through a space runs straight.
         The particles ride the same curve as the arrow."""
-        located = self.locations.scene(scene_id)
-        points = self._path_points(scene_id, path)
-        stops = [loc for name in path if (loc := located.get(name)) is not None]
+        pairs = self._path_stops(scene_id, path)
+        points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
         bends: list[Point | None] = []
         for i, (a, b) in enumerate(zip(points, points[1:])):
             if self._is_space(scene_id, stops[i]) or self._is_space(scene_id, stops[i + 1]):
@@ -1007,10 +1017,9 @@ class Renderer:
         """A route's arrows, in art pixels: (the line it draws, ends in a space, its first stop, its last stop). A
         leg leaves the edge of the part it starts from and ends at the edge of the part it reaches, curved when it
         is a hop from part to part; a flow through a part from one space to the other is one straight leg."""
-        located = self.locations.scene(scene_id)
-        points = self._path_points(scene_id, path)
+        pairs = self._path_stops(scene_id, path)
+        points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
         bends = self._bends(scene_id, path)
-        stops = [loc for name in path if (loc := located.get(name)) is not None]
         space = [self._is_space(scene_id, loc) for loc in stops]
         legs, i = [], 0
         while i < len(points) - 1:
@@ -1065,8 +1074,8 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         badges: list[Point] = []
         for route in beat.routes:
-            points = self._path_points(beat.scene, route.path)
-            stops = [loc for name in route.path if (loc := located.get(name)) is not None]
+            pairs = self._path_stops(beat.scene, route.path)
+            points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
             space = [self._is_space(beat.scene, loc) for loc in stops]
             # The arrow grows behind the lead particle on its first trip, then stays whole.
             set_off = self.plans[self.beat_index(route.since)].flow_in
