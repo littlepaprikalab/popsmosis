@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
 import { Wordmark } from '@/components/Wordmark';
-import { HeartIcon } from '@heroicons/react/24/solid';
+import { HeartIcon, PlayIcon } from '@heroicons/react/24/solid';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -134,6 +134,20 @@ export default function AboutPage() {
             shares the droplet on the <Link href="/droplets" className="underline"
             style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from.
           </p>
+          {/* Try it before the other products: watching needs no account, asking does */}
+          <div className="my-3 rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={card}>
+            <p className="font-bold" style={{ color: 'var(--text-primary)' }}>Stuck on a topic?<br />Turn it into a song.</p>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              <Link href="/droplets" className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
+                style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
+                <PlayIcon aria-hidden="true" className="w-3.5 h-3.5" />Watch a droplet
+              </Link>
+              <Link href="/learn" className="inline-block px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors hover-border"
+                style={{ border: '1px solid var(--accent-brand)', color: 'var(--accent-brand)' }}>
+                Ask for a topic
+              </Link>
+            </div>
+          </div>
           <p>Might as well show you what else I&rsquo;ve made over the past year and a half, lol.</p>
         </div>
       </header>
