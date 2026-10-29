@@ -121,7 +121,8 @@ is talked into something cleverer, so keep what a hijacked run could do small:
   the provider keys in the routine's environment.
 - **Not yet:** the studio still reads the provider keys from the operator's own
   environment. Running the studio as a separate service that holds them would keep them
-  out of the operator's shell entirely.
+  out of the operator's shell entirely: [studio-service.md](studio-service.md) is the
+  design.
 
 ### What a run costs
 
