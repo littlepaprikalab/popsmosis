@@ -613,7 +613,8 @@ class Renderer:
             self._background = (key, self.surface.makeImageSnapshot())
 
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
-                spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float) -> None:
+                spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float) -> list[Rect]:
+        """Draws the labels; returns where each pill landed, for what is drawn after them to keep clear."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
         scale, dx, dy = to_frame(cam, view, art)
@@ -632,6 +633,11 @@ class Renderer:
         p.place_labels(labels, bounds, centre, self.layout.label_font)
         for lb in sorted(labels, key=lambda lb: lb.emphasis):  # the spotlit one on top
             p.draw_label(canvas, lb, self.layout.label_font)
+        rects = []
+        for lb in labels:
+            w, h = lb.size(self.layout.label_font)
+            rects.append((lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2))
+        return rects
 
     def _draw_beat(self, canvas: skia.Canvas, t: float) -> None:
         layout = self.layout
@@ -676,9 +682,9 @@ class Renderer:
         tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
         bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
-        self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
+        pills = self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
         if beat.conversions:
-            self._conversions(canvas, beat, cam, view, bounds, t)
+            self._conversions(canvas, beat, cam, view, bounds, t, pills)
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
                            caption_alpha)
@@ -694,19 +700,39 @@ class Renderer:
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
 
-    def _conversions(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, bounds: Rect, t: float) -> None:
-        """What each structure the beat is about turns into what, written just under it (over the label above)."""
+    def _conversions(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, bounds: Rect, t: float,
+                     pills: list[Rect]) -> None:
+        """What each structure the beat is about turns into what, written under it, or over it when that is
+        taken: clear of the label pills and of each other where there is room."""
         located = self.locations.scene(beat.scene)
         scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
         alpha = p.ease((t - beat.t0) / LABEL_IN_S)
+        font = self.layout.label_font * 1.25
+        taken = list(pills)
         for conv in beat.conversions:
             loc = located.get(conv.structure)
             if loc is None:
                 continue
+            w, h = p.conversion_size(conv.text, font)
             x = (loc.box.x0 + loc.box.x1) / 2 * scale + dx
-            y = loc.box.y1 * scale + dy + self.layout.label_font * 1.2
-            p.draw_conversion(canvas, (x, y), conv.text, self.timeline.palette[conv.structure],
-                              alpha * edge_fade(x, y, view), bounds, self.layout.label_font * 1.25)
+            below, above = loc.box.y1 * scale + dy, loc.box.y0 * scale + dy
+            gap = self.layout.label_font * 0.6
+            options = [below + gap + h / 2, above - gap - h / 2, below + gap + 1.5 * h + 8, above - gap - 1.5 * h - 8]
+            best = None
+            for y in options:
+                cx = min(max(x, bounds[0] + w / 2), bounds[2] - w / 2)
+                cy = min(max(y, bounds[1] + h / 2), bounds[3] - h / 2)
+                rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+                hit = sum(1 for r in taken if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
+                          and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
+                if best is None or hit < best[0]:
+                    best = (hit, cx, cy, rect)
+                if not hit:
+                    break
+            _, cx, cy, rect = best
+            taken.append(rect)
+            p.draw_conversion(canvas, (cx, cy), conv.text, self.timeline.palette[conv.structure],
+                              alpha * edge_fade(cx, cy, view), bounds, font)
 
     def _card(self, scene_id: str, view: Rect) -> tuple[skia.Image, float, float]:
         """The scene's notice card as an image and where it goes: drawn once, as wrapping its notes and blurring

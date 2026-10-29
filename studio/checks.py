@@ -113,6 +113,22 @@ def _check_lyric_style(data: dict, problems: list) -> None:
                                     detail=f'"{text}" {why}'))
 
 
+SONG_MIN_S, SONG_MAX_S = 120, 190  # the prompt asks for 2 to 3 minutes; a song outside this is only recorded
+
+
+def song_length_problems(bundle: Bundle) -> list[Problem]:
+    """How long the sung lines come to at the song's tempo (one bar a line below 130 bpm). Recorded, not repaired:
+    only a better bundle fixes it. Not part of review(): the bundle step adds it."""
+    from studio.steps.audio import line_ms
+
+    seconds = len(bundle.lyrics) * line_ms(bundle) / 1000
+    if SONG_MIN_S <= seconds <= SONG_MAX_S:
+        return []
+    return [Problem(line_id="music", rule="lyric-style", repaired=False,
+                    detail=f"{len(bundle.lyrics)} lines at {bundle.music.bpm} bpm sing for about "
+                           f"{seconds:.0f} s, outside {SONG_MIN_S} to {SONG_MAX_S}")]
+
+
 CONVERT_MAX = 4  # species on one side of a conversion
 
 

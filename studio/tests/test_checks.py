@@ -203,8 +203,10 @@ def test_the_bundle_step_saves_the_repaired_bundle_and_the_checks(tmp_path):
 
     bundle_step.run(tmp_path, ask=lambda *args, **kwargs: data)
     assert read(tmp_path / "bundle.json", Bundle).direction[2].spotlight == ""
-    [problem] = read(tmp_path / "checks.json", CheckReport).problems
-    assert (problem.line_id, problem.rule, problem.repaired) == ("c1-1", "spotlight", True)
+    problems = read(tmp_path / "checks.json", CheckReport).problems
+    # The sample song is a few lines long, so the bundle step also records that it is short.
+    assert [(p.line_id, p.rule, p.repaired) for p in problems] == [("c1-1", "spotlight", True),
+                                                                   ("music", "lyric-style", False)]
 
 
 def test_curly_quotes_and_dashes_match_plain_ones():

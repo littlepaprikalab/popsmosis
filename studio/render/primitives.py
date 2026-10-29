@@ -323,6 +323,10 @@ CONVERT_FONT = 30.0
 CONVERT_PAD = 16.0
 
 
+def conversion_size(text: str, font_size: float = CONVERT_FONT) -> tuple[float, float]:
+    return text_width(font("Bold", font_size), text) + 2 * CONVERT_PAD, font_size * 1.7
+
+
 def draw_conversion(canvas: skia.Canvas, centre: tuple[float, float], text: str, color: str, alpha: float,
                     bounds: Rect, font_size: float = CONVERT_FONT) -> None:
     """What a structure turns into what, "H₂O → O₂ + H⁺ + e⁻", on a white pill edged in its colour, centred on
@@ -330,7 +334,7 @@ def draw_conversion(canvas: skia.Canvas, centre: tuple[float, float], text: str,
     if alpha <= 0.01:
         return
     f = font("Bold", font_size)
-    width, height = text_width(f, text) + 2 * CONVERT_PAD, font_size * 1.7
+    width, height = conversion_size(text, font_size)
     x = min(max(centre[0], bounds[0] + width / 2), bounds[2] - width / 2)
     y = min(max(centre[1], bounds[1] + height / 2), bounds[3] - height / 2)
     body = rounded((x - width / 2, y - height / 2, x + width / 2, y + height / 2), height / 2)

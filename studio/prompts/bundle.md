@@ -308,8 +308,8 @@ explanation to the narration, and every word of it is easy to hear.
   three times. Below 130 bpm each line is one bar, short and punchy: about 2.4 seconds at
   100 bpm. From 130 bpm it is two bars: about 3.2 seconds at 150. Either way a sung line
   is roughly 6 to 10 syllables; a rapped line can carry a few more, up to about 14. The
-  song runs 2 to 3 minutes, so below 130 bpm, where lines are shorter, each verse has 12
-  lines instead of 8.
+  song runs 2 to 3 minutes, so below 130 bpm, where lines are shorter, each verse has 16
+  lines instead of 8, so the song comes to about 2 minutes 15 seconds.
 
 ### How it sounds
 
@@ -361,7 +361,7 @@ In this order, each section a run of lines with its own `section` value:
 - **Intro**, 2 lines: the whole idea in a catchy phrase, sung from the first second. Its
   first line is the title line: 3 to 7 words that name the big move ("Open the gates, let
   sodium in"). It is the hook, the song's name, and a line of the chorus.
-- **Verse**, 8 lines (12 below 130 bpm): the first half of the story, in order, one step a
+- **Verse**, 8 lines (16 below 130 bpm): the first half of the story, in order, one step a
   line or a couplet.
 - **Pre-chorus**, 2 lines: bust the misconception. Sing the right idea, and the mistake
   only as what it is not; the chorus that follows lands the right idea. Say it with a fact, not a
@@ -372,7 +372,7 @@ In this order, each section a run of lines with its own `section` value:
   begins"). It opens and ends on the title line. It is word for word the same each time;
   give each repeat its own ids. A learner should be able to sing it back after hearing it
   twice.
-- **Verse**, 8 lines (12 below 130 bpm): the second half of the story, ending with what it
+- **Verse**, 8 lines (16 below 130 bpm): the second half of the story, ending with what it
   makes and where that goes next.
 - **Pre-chorus**, 2 lines: link it to what comes next in the course (the next step or
   topic in the unit), as the facts give it.

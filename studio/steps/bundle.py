@@ -43,6 +43,7 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
     bundle, report = checks.review(Bundle.model_validate(answer))
+    report.problems += checks.song_length_problems(bundle)
     for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json"):
         (job / stale).unlink(missing_ok=True)
     write(job / "bundle.json", bundle)
