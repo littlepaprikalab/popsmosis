@@ -114,10 +114,12 @@ export default function AboutPage() {
           <p>
             <Wordmark size="sm" /> started with a problem of my own: I wanted to automate making educational song
             videos for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
-            Sprints</a>, my AP and SAT prep site, and a hackathon was a good excuse to build it. Ask for any topic
-            and an AI teacher makes you a droplet, a short lesson with a narrated video and a song, and shares it on
-            the <Link href="/droplets" className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets
-            tab</Link> for anyone to learn from.
+            Sprints</a>, my AP and SAT prep site. Making them was a pain in the tush, with pictures that came out wrong
+            and content that needed checking line by line, and a hackathon was a good excuse to fix that. Ask for any
+            topic and an AI teacher makes you a droplet, a short lesson with a narrated video and a song. It checks
+            every line and every picture first, and shares the droplet on the <Link href="/droplets"
+            className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn
+            from.
           </p>
           <p>If you&rsquo;re curious, here&rsquo;s what else I&rsquo;ve made over the past year and a half.</p>
         </div>
