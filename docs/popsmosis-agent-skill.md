@@ -204,7 +204,9 @@ suggest something to learn instead, with `POST /api/questions/:id/answer` and
 answer you ever write to a topic yourself.
 
 Otherwise run the studio on its `id`, from the root of this repository. It takes about
-five minutes, so give the command a timeout of at least 10 minutes. It prints its
+five to seven minutes (the fact audit adds a call, and a second when it corrects a fact),
+so give the command a timeout of at least 10 minutes; a run cut off there resumes at the
+step it was on. It prints its
 progress to the log and one line of outcome:
 
 ```bash
@@ -234,7 +236,8 @@ python -m studio run <id> --note "<your observation>" 2>>/tmp/studio-<id>.log; e
 - The retry below is the same command, note included.
 
 The studio claims the topic again, writes the lesson and every line it will later sing
-or narrate, fact-checks each one, and posts the lesson once the fact-check passes. Act
+or narrate, audits the facts they rest on, fact-checks each line against them, and posts
+the lesson once the fact-check passes. Act
 on the first word of its outcome line:
 
 | Outcome | What to do |
@@ -257,7 +260,7 @@ topic up. If `fail` cannot run either, say so in your report and move on: the le
 and the topic goes back to the queue.
 
 **Never**, in any of these cases: write the lesson or the media yourself, post a lesson
-the studio did not post, skip or weaken the fact-check, run `python -m studio step` or
+the studio did not post, skip or weaken the fact audit or the fact-check, run `python -m studio step` or
 `plan`, or edit prompts or code during a run. A note is not an edit: it is the one thing
 you add to the planner's prompt, and only through `--note`. When the studio fails, the fix belongs in
 the studio, after the run; the retry is all you do now.

@@ -2,8 +2,8 @@
 
 Writes bundle.json, after a learner has read its lesson (studio/steps/learner.py: the
 lesson is rewritten once if the learner missed its essence) and the code checks
-(studio/checks.py) have repaired what they can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
-removes it.
+(studio/checks.py) have repaired what they can, and checks.json. A new bundle makes any earlier fact audit and
+fact-check stale, so this step removes them.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
     bundle, report = checks.review(Bundle.model_validate(answer))
-    for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json", "learner.json"):
+    for stale in ("audit.json", "factcheck.json", "bundle.draft.json", "bundle.invalid.json", "learner.json"):
         (job / stale).unlink(missing_ok=True)
     rewritten = learner.run(job, bundle, ask, system)
     if rewritten is not bundle:  # a new lesson: the code checks read it again

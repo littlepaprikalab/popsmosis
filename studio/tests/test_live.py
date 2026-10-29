@@ -47,6 +47,34 @@ def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
     assert checks["lyric:v1-3"].verdict == "SUPPORTED"
 
 
+def test_the_audit_corrects_a_fact_saying_every_hand_off_pumps_a_proton():
+    """The fact-check case moved into the planner's own facts, where the fact-check cannot see it: the audit must
+    correct it in its first call, pass the correction in its second, and leave the right facts alone."""
+    from studio.schemas import Bundle
+    from studio.steps import audit
+    from studio.tests.sample import bundle_data
+
+    data = bundle_data()
+    data["facts"] = [{"id": i, "text": text, "source_quote": ""} for i, text in PHOTOSYNTHESIS.items()]
+    data["facts"][1]["text"] = (
+        "Electrons pass from photosystem II through plastoquinone, cytochrome b6f, plastocyanin and photosystem I "
+        "to NADP+ reductase, which makes NADPH, and every electron hand-off along the way pumps a proton into the "
+        "thylakoid lumen.")
+    before = len(brain.calls)
+    report, audited = audit.audit_bundle(Bundle.model_validate(data), "", brain.ask)
+    for fact in report.facts:
+        print(f"{fact.id}: {fact.verdict} ({fact.basis}) {fact.problem}")
+    for correction in report.corrections:
+        print(f"{correction.id} corrected: {correction.after}")
+    for call in brain.calls[before:]:
+        print(f"{call.label}: {call.model} {call.input_tokens} in, {call.output_tokens} out, "
+              f"${call.cost_usd or 0:.4f}, {call.seconds}s")
+
+    assert report.status == "passed" and [c.id for c in report.corrections] == ["f2"]
+    assert "every electron hand-off" not in audited.facts[1].text.lower()
+    assert [f.verdict for f in report.facts if f.id != "f2"] == ["CORRECT", "CORRECT"]
+
+
 def test_the_brain_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
     """One scene of the sample bundle, drawn live by Claude Opus 5.5, as when an admin has Claude draw the art."""
     from studio.steps import art

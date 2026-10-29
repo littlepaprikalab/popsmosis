@@ -20,6 +20,11 @@ shows it as a claim. A motion that fails is left out of the video (no particles 
 lines), never rewritten, and never fails the job; one shown on several lines is checked
 once. Unmarked particles (an analogy's water, a signal) are not sent.
 
+The facts it holds every line to have been audited first (studio/steps/audit.py). A fact the audit
+corrected is sent as corrected, with what it said before (`was`), and the lyrics and narration sentences
+written from it carry `written_from`, so a line that still says what the wrong fact said is caught and
+corrected like any other. Without a corrected fact the call is as it was.
+
 Writes factcheck.json. When the check passes after corrections or dropped tags,
 bundle.json is rewritten with them and the writer's version is kept as bundle.draft.json.
 """
@@ -35,7 +40,7 @@ from pydantic import ValidationError
 
 from studio import brain, checks
 from studio.jobs import read, write
-from studio.schemas import (Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
+from studio.schemas import (AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
 from studio.sentences import replace_sentences, split_sentences
 
@@ -63,7 +68,7 @@ class Line:
 def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckReport:
     bundle = checks.load(job / "bundle.json")
     request = read(job / "request.json", Request)
-    report, checked = check_bundle(bundle, request.study_guide, ask, max_rounds)
+    report, checked = check_bundle(bundle, request.study_guide, ask, max_rounds, was=audit_corrections(job, bundle))
     if report.status == "passed" and checked != bundle:
         draft = job / "bundle.draft.json"
         if not draft.exists():
@@ -77,6 +82,17 @@ def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckRepo
         write(job / "checks.json", problems)
     write(job / "factcheck.json", report)
     return report
+
+
+def audit_corrections(job: Path, bundle: Bundle) -> dict[str, str]:
+    """What each fact the audit corrected said before (studio/steps/audit.py), for the facts that still read as
+    it corrected them."""
+    try:
+        report = read(job / "audit.json", AuditReport)
+    except (OSError, ValueError):
+        return {}
+    now = {fact.id: fact.text for fact in bundle.facts}
+    return {c.id: c.before for c in report.corrections if report.status == "passed" and now.get(c.id) == c.after}
 
 
 def lines_of(bundle: Bundle) -> list[Line]:
@@ -172,15 +188,21 @@ def _dropped(report: FactCheckReport, kind: str) -> list[CheckedLine]:
 
 
 def check_bundle(
-    bundle: Bundle, study_guide: str, ask, max_rounds: int = MAX_ROUNDS
+    bundle: Bundle, study_guide: str, ask, max_rounds: int = MAX_ROUNDS, was: dict[str, str] | None = None
 ) -> tuple[FactCheckReport, Bundle]:
-    """Check, correct and re-check; return the report and the bundle as corrected.
+    """Check, correct and re-check; return the report and the bundle as corrected. was: what each fact the
+    audit corrected said before, by its id.
 
     Verdicts are remembered by (kind, text), so a line is checked again only when
     its text changes, and a chorus line sung three times is checked once.
     """
     facts = {fact.id: fact.text for fact in bundle.facts}
     context = about(bundle)
+    was = {i: before for i, before in (was or {}).items() if i in facts}
+    # The lines written from a corrected fact, by their key: a correction never changes a line's fact_id.
+    written_from = {f"{kind}:{line.id}": line.fact_id for kind, field in (("lyric", bundle.lyrics),
+                                                                          ("narration", bundle.narration))
+                    for line in field if line.fact_id in was}
     verdicts: dict[tuple[str, str], tuple[Check, int]] = {}
     corrections: list[Correction] = []
     reason = ""
@@ -196,7 +218,7 @@ def check_bundle(
         if not pending:
             break
         rounds = round_no
-        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context)
+        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from)
         for line in pending:
             check = checks.get(line.key)
             # A missing verdict, or SUPPORTED without a real source, is asked again next round.
@@ -278,7 +300,8 @@ def check_bundle(
 
 
 def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], study_guide: str, ask,
-                round_no: int, context: dict[str, str] | None = None) -> dict[str, Check]:
+                round_no: int, context: dict[str, str] | None = None, was: dict[str, str] | None = None,
+                written_from: dict[str, str] | None = None) -> dict[str, Check]:
     previous: dict[str, str] = {}
     if round_no > 1:
         # A re-check sends lines without their neighbours, so each brings the one before it.
@@ -286,13 +309,16 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
             same = [line for line in lines if line.kind == kind]
             for before, line in zip(same, same[1:]):
                 previous.setdefault(line.key, before.text)
-    payload: dict = {"facts": [{"id": i, "text": text} for i, text in facts.items()]}
+    was, written_from = was or {}, written_from or {}
+    payload: dict = {"facts": [{"id": i, "text": text, **({"was": was[i]} if i in was else {})}
+                               for i, text in facts.items()]}
     if study_guide:
         payload["study_guide"] = study_guide
     if context and any(line.kind == TAG for line in pending):
         payload["about"] = context  # for the tags only: every other line is judged by the facts alone
     payload["lines"] = [
-        {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {})}
+        {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {}),
+         **({"written_from": written_from[line.key]} if line.key in written_from else {})}
         for line in pending
     ]
     answer = ask("brain", json.dumps(payload, ensure_ascii=False, indent=1), FactCheck, system=PROMPT,
@@ -322,7 +348,12 @@ def cites(source: str, facts: dict[str, str], study_guide: str) -> bool:
     ids = [part.strip() for part in source.split(",")]
     if source and all(i in facts for i in ids):
         return True
-    quote = _squash(source.strip("\"'“”‘’"))
+    return quotes_guide(source, study_guide)
+
+
+def quotes_guide(text: str, study_guide: str) -> bool:
+    """Whether the text is a quote of 3+ words copied from the study guide, its quote marks and spacing aside."""
+    quote = _squash(text.strip().strip("\"'“”‘’"))
     return bool(study_guide) and len(quote.split()) >= 3 and quote in _squash(study_guide)
 
 

@@ -3,7 +3,9 @@ sung in a video until you pass it, and students will study it for exams, so be e
 
 You get JSON with:
 
-- `facts`: the ground truth, each with an id.
+- `facts`: the ground truth, each with an id. An auditor has already judged each fact,
+  and a fact it found wrong comes corrected, with `was`: what it said before. `was` is
+  not ground truth; it is the mistake the auditor corrected.
 - `study_guide`, only when the learner gave one: their course material, also ground truth.
 - `lines`: the lines to check, each with an `id` and its `text`. The id says where a line
   comes from: "lyric:..." is a sung line, "narration:..." a sentence of the voice-over,
@@ -13,7 +15,8 @@ You get JSON with:
   and "motion:..." is what a video shows moving across its diagram, each judged by its
   own rules (Tags and Motions, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
-  the line just before it, for context only.
+  the line just before it, for context only. A line may carry `written_from`: the id of a
+  corrected fact it was written from, before the correction (Corrected facts, below).
 - `about`, only when there are tags: the lesson's `course` and `topic` and the song's
   `song_style`. It is there for the tags alone; it never makes any other line supported.
 
@@ -79,6 +82,15 @@ For example, with the fact "The Treaty of Versailles, signed in 1919, made Germa
 responsibility for the war and pay reparations", the line "Versailles ended the fighting
 in 1919" is UNSUPPORTED: the fact says when the treaty was signed, not when the fighting
 ended. Corrected: "Versailles was signed in 1919".
+
+## Corrected facts
+
+A line written while a fact still said its `was` may repeat its mistake. Judge it, like
+any line, against the facts as they are now: a line that repeats the mistake, or rests on
+it, is UNSUPPORTED, and its `corrected` says what the corrected fact supports. A line that
+already agrees with the corrected fact passes as any other, and so does a line that says
+only what the `was` got right. This holds for every line, marked with `written_from` or
+not: the lesson, the key lines and the motions were written from the facts too.
 
 ## Tags
 

@@ -2,7 +2,7 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from studio.brain import SCHEMA_KEYWORDS, strict_schema
-from studio.schemas import Bundle, FactCheck, tag_of
+from studio.schemas import Bundle, FactAudit, FactCheck, tag_of
 from studio.tests.sample import bundle_data
 
 
@@ -14,7 +14,7 @@ def walk(node):
         yield from walk(node["items"])
 
 
-@pytest.mark.parametrize("model", [Bundle, FactCheck])
+@pytest.mark.parametrize("model", [Bundle, FactAudit, FactCheck])
 def test_schema_uses_only_what_both_providers_accept(model):
     schema = strict_schema(model)
     for node in walk(schema):

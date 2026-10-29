@@ -40,7 +40,7 @@ advice column), whose architecture and look-and-feel come from
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
 web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, sign-in, and the admin pages.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply, DropletLike, DropletComment).
-studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
+studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact audit, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
 ```
 
@@ -103,7 +103,7 @@ See [docs/agent-runbook.md](docs/agent-runbook.md) for the hosted options.
 ### The studio
 
 The studio (Python 3.13) turns a topic into a droplet; so far it writes the bundle,
-fact-checks it and posts the lesson. Its models, and the keys they bill to, are set by
+audits its facts, fact-checks every line against them and posts the lesson. Its models, and the keys they bill to, are set by
 the variables in [Choosing the models](#choosing-the-models): Claude's by default, on
 `POPSMOSIS_ANTHROPIC_API_KEY` ([docs/PLAN.md](docs/PLAN.md), section 4). Each job writes
 into `jobs/<id>/`.
@@ -112,7 +112,7 @@ The teacher runs it on a topic from the queue, by the question's id. That needs
 `POPSMOSIS_API_URL` and `POPSMOSIS_API_KEY` too, and is what the skill file does:
 
 ```bash
-python -m studio run <question-id>       # claim, bundle, fact-check, post; again resumes at the first missing step
+python -m studio run <question-id>       # claim, bundle, fact audit, fact-check, post; again resumes at the first missing step
 python -m studio fail <question-id>      # after a second failure: give the topic up (its videos, once posted)
 python -m studio summary <question-id>   # what its runs did, for the teacher's record
 python -m studio videos <question-id>    # the posted lesson's two videos; --background on a routine
@@ -140,10 +140,10 @@ pipeline without posting anything, start a local job instead:
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
-python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
+python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, fact audit, then fact-check
 python -m studio step factcheck <job-id>                               # re-run one step
 python -m studio make <job-id>                                         # its videos, as `videos` makes them, with no API
-python -m studio show <job-id>                                         # facts, scenes, lyrics, tags, checks, verdicts, runs, calls
+python -m studio show <job-id>                                         # facts, scenes, lyrics, tags, checks, audit, verdicts, runs, calls
 ```
 
 `plan ... --videos` makes the videos too once the fact-check passes, so a test round of a

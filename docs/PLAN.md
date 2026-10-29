@@ -75,7 +75,7 @@ the churn until the video fields land; do it then if at all.
 
 ```
 topic ──► API ──fire──► Claude routine ──► python -m studio run <id>
-                                             │ brain: bundle, fact-check
+                                             │ brain: bundle, fact audit, fact-check
                                              ├──► lesson text posted to the API
                                              │ art + masks    ┐ at the same time
                                              │ audio + timing ┘
@@ -158,10 +158,11 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
 ## 5. The studio pipeline
 
 `python -m studio run <question-id>`. Each step writes into `jobs/<id>/` (git-ignored).
-`run` resumes from the first step whose file is missing (a fact-check counts once it has
-passed) and runs every step after it, so running it again retries a failed step (section
-11). Before each step until the lesson is posted it claims the topic again
-(`POST /api/questions/:id/claim`), which renews the queue's lease. Every run appends to
+`run` resumes from the first step whose file is missing (a fact audit counts once it has
+passed the facts `bundle.json` has, a fact-check once it has passed) and runs every step
+after it, so running it again retries a failed step (section 11). Before each step until
+the lesson is posted it claims the topic again (`POST /api/questions/:id/claim`), which
+renews the queue's lease. Every run appends to
 `runs.jsonl` and prints one line: `DONE`, `FAILED <step>: <reason>` or
 `STOPPED <step>: <reason>` (the topic was deleted, answered, given up or taken: nothing
 to retry). Files are written whole or not at all, only one run of a job goes at a time,
@@ -172,6 +173,7 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | # | Step | Who | Writes |
 |---|---|---|---|
 | 1 | Bundle | Brain, one call | `bundle.json` |
+| | Fact audit | Brain, a fresh context: one call, or two when a fact is corrected | `audit.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Gemini 3.1 Flash Image or Muse Image + helper; or the brain's SVG (`/admin/studio`) | `art/<scene>.png` |
@@ -195,9 +197,10 @@ into `run`, after the post, comes once they are built.
 The planner's Inkmory context is read before step 1, and its record is written after
 step 2 (section 11).
 
-That is two or three brain calls per topic: the bundle, the fact-check, and a re-check of
-any lines the fact-check changed (plus one per scene for the SVG art, with the Claude
-brain). The helper is called per image and per fallback.
+That is three to five brain calls per topic: the bundle, the fact audit (and a second look
+at any fact it corrected), the fact-check, and a re-check of any lines the fact-check
+changed (plus one per scene for the SVG art, with the Claude brain). The helper is called
+per image and per fallback.
 
 ### Step 1: bundle
 
@@ -260,6 +263,39 @@ is 128K), split it into two calls: parts 1–2, then 3–7. Claude's structured 
 with a size limit, and the bundle's schema outgrew it on Oct 28 (with `direction` and
 `tags`): a schema the API refuses for that is asked for in the prompt instead, and the
 answer validated as every answer is (`studio/brain.py`).
+
+### Between steps 1 and 2: the fact audit
+
+The fact-check holds every line to the bundle's `facts`, which the same planner call
+wrote: a wrong fact passes it and spreads to the lesson, the song, the key lines, the
+arrows and the conversions. So the facts are judged first (`studio/steps/audit.py`,
+`studio/prompts/audit.md`), by a separate brain call with a prompt of its own and none of
+the planner's conversation. It sees the course, topic and audience, the facts, and the
+study guide when there is one, and judges each fact on its own: `CORRECT`, `WRONG` with a
+corrected version, or `UNSURE`. With a study guide it judges by the guide first, quoting
+it (code checks the quote is there); where the guide is silent, or there is none, by
+established knowledge for the course at the droplet's level. Each verdict says which
+(`basis`), and `audit.json` says what the facts were judged against.
+
+A fact judged wrong is corrected once, in the first call; a second call judges each
+correction on its own, with any fact the first call skipped. `bundle.json` then has the
+corrected facts (the writer's version stays in `bundle.draft.json`). An `UNSURE` fact is
+kept and recorded. The step fails, and the run retries it, unless every fact ends judged
+`CORRECT` or `UNSURE` as it now reads: a wrong fact with no correction, a correction
+judged wrong again, a fact first judged wrong in the second call (no call is left to
+judge its correction), or a fact with no verdict after both calls.
+
+The fact-check then reads the corrected facts, each with `was` (what it said before), and
+the lyrics and narration written from a corrected fact (their `fact_id`) carry
+`written_from`, so a line that repeats the mistake is caught and corrected in its usual
+rounds. With no fact corrected the fact-check's call is unchanged. An audit call is
+about 1,300 tokens in (its prompt and four facts; a study guide adds its own length) and,
+with thinking, 700 to 3,000 out: about $0.02 to $0.07 on Opus 5.5 at high effort, and the
+second call, on the corrections alone, about half that. Estimated from the prompt's size,
+not yet measured on a paid run.
+
+Regression test: a fact saying "every electron hand-off pumps a proton" must be corrected,
+and the lyric written from it then corrected by the fact-check (`studio/tests/test_audit.py`).
 
 ### Step 2: fact-check
 
@@ -464,9 +500,9 @@ studio/
   api.py           the popsmosis agent endpoints the studio calls
   media.py         the files steps 3-9 pass to each other, and how a media step is built
   inkmory.py       the planner's Inkmory context and record (section 11)
-  prompts/         bundle, fact-check, helper and planner-record prompts
+  prompts/         bundle, fact audit, fact-check, helper and planner-record prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
-  steps/           bundle, factcheck, art, locate, audio, timing, timeline, render, upload
+  steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Bold/SemiBold/ExtraBold)
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/
