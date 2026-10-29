@@ -39,8 +39,9 @@ import sys
 import time
 from collections import Counter
 from pathlib import Path
+from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field
 
 from studio import brain, checks, ledger
 from studio.jobs import read, write
@@ -78,14 +79,9 @@ class Topic(Strict):
 
 class Score(Strict):
     reason: str = Field(description="Two to four sentences quoting the droplet's own words: what earned or lost points")
-    score: int = Field(description="1 to 5, by the rubric's anchors")
-
-    @field_validator("score")
-    @classmethod
-    def _one_to_five(cls, value: int) -> int:
-        if not 1 <= value <= 5:
-            raise ValueError(f"a score is 1 to 5, not {value}")
-        return value
+    # An enum, not a checked int: the schema then holds the answer to 1 to 5. As a plain integer, the first run's
+    # judge scored three of the derivative droplet's criteria 0, and the answer was refused.
+    score: Literal[1, 2, 3, 4, 5] = Field(description="1 to 5, by the rubric's anchors")
 
 
 class Judgement(Strict):
@@ -173,7 +169,12 @@ def judge(job: Path, ask) -> Judgement:
     """The judge reads the droplet as it was written, after the learner test's rewrite, against the rubric."""
     bundle = checks.load(job / "bundle.json")
     request = read(job / "request.json", Request)
-    answer = ask("judge", droplet_text(bundle, request), Judgement, system=RUBRIC, label="judge")
+    try:
+        answer = ask("judge", droplet_text(bundle, request), Judgement, system=RUBRIC, label="judge")
+    except brain.InvalidOutput as e:
+        (job / "judge.invalid.json").write_text(e.raw, encoding="utf-8")  # kept for a look
+        raise
+    (job / "judge.invalid.json").unlink(missing_ok=True)
     judgement = Judgement.model_validate(answer)
     write(job / JUDGE, judgement)
     return judgement

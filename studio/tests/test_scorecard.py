@@ -81,9 +81,12 @@ def test_the_rubric_and_the_judges_schema_name_the_same_seven_criteria():
     for key in scorecard.CRITERIA:
         assert f"## {key}\n" in scorecard.RUBRIC
     assert set(scorecard.CRITERIA) < set(scorecard.Judgement.model_fields)
-    brain.strict_schema(scorecard.Judgement)  # the schema both providers accept
-    with pytest.raises(ValueError):
-        scorecard.Judgement.model_validate(scores(6))
+    schema = brain.strict_schema(scorecard.Judgement)  # the schema both providers accept
+    # The schema itself holds a score to 1 to 5, so a constrained answer cannot score 0.
+    assert schema["properties"]["hook"]["properties"]["score"]["enum"] == [1, 2, 3, 4, 5]
+    for wrong in (0, 6):
+        with pytest.raises(ValueError):
+            scorecard.Judgement.model_validate(scores(wrong))
 
 
 def test_the_judge_is_the_same_claude_model_whatever_the_brain(monkeypatch):
@@ -221,3 +224,15 @@ def test_the_command_names_the_run_for_its_commit_and_resumes_it(tmp_path, monke
     assert cli.main(["scorecard", "run", "--resume", folder.name]) == 0
     assert [c["label"] for c in fake.calls] == ["judge"]
     assert len(json.loads((folder / "scorecard.json").read_text())["topics"]) == 2
+
+
+def test_a_judge_answer_that_does_not_fit_is_kept_for_a_look(tmp_path):
+    made = {}
+
+    def ask_for(job):
+        made[job.name] = FakeAsk(fail="judge")
+        return made[job.name]
+
+    card = scorecard.run([topic("one")], tmp_path, ask_for=ask_for, about=ABOUT)
+    assert card["topics"][0]["failed"]["step"] == "judge" and card["topics"][0]["made"]
+    assert (tmp_path / "one" / "judge.invalid.json").read_text() == "{}"
