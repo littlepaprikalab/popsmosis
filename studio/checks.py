@@ -207,17 +207,18 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
 
 
 def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
-    """The song's style against the bundle prompt's rule: one free-form description, not tags, and the learner's
-    own words as they wrote them when they asked for a style. Recorded, not repaired: the writer may have had to
-    describe an artist they named, or leave out what does not suit a classroom."""
+    """The song's style against the bundle prompt's rule: one free-form description, not tags, that keeps what
+    the learner asked for. Code can count only the tempo of that: the writer builds on the rest in its own words.
+    Recorded, not repaired, as the song's shape is."""
     styles = bundle.music.positive_styles
     problems = []
     if len(styles) > 1:
         problems.append(Problem(line_id="music", rule="song-style", repaired=False,
                                 detail=f"the style is {len(styles)} tags, not one free-form description"))
-    if asked.strip() and fold(asked.strip().rstrip(".")) not in fold(" ".join(styles)):
+    if (found := BPM_TAG.search(asked)) and round(float(found.group(1))) != bundle.music.bpm:
         problems.append(Problem(line_id="music", rule="song-style", repaired=False,
-                                detail=f'the style does not keep the learner\'s words: "{asked.strip()}"'))
+                                detail=f"the song is at {bundle.music.bpm} bpm, not the {found.group(1)} bpm the "
+                                       f"learner asked for"))
     return problems
 
 

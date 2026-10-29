@@ -293,21 +293,31 @@ explanation to the narration, and every word of it is easy to hear.
 ### The music
 
 - `music.positive_styles` is the song's style for a music generator in free-form words, one entry,
-  never a list of tags: the sound described the way a producer would say it, its genre, voices,
-  instruments, mood, mix and tempo in one flowing description ("Bright pop with hip-hop verses;
-  sparkling synths and crisp claps; buoyant 104 bpm beat; clear female vocal, rapped in the
-  verses, rising into a big sing-along chorus").
-  - **When the learner asked for a song style**, use their words exactly as they wrote them. It
-    may come on its own line ("The song style the learner asked for") or anywhere in the topic
-    or request, in their own words ("ATP synthesis. Style: pop-punk", "make the song K-pop").
-    Change them only where you must: add the tempo at the end (", 100 bpm") when they named
-    none, describe the sound of an artist, band or song they named instead of naming it, and
-    leave out what would hide the words or does not belong in a classroom (screamed or growled
-    vocals, explicit lyrics).
+  never a list of tags: the sound described the way a producer would brief it, in one flowing
+  description of a few clauses. A strong one names the genre and how the verses are delivered,
+  the production's texture, the tempo and the feel of the beat, the voice (its timbre, and how
+  it moves from the verses into the chorus), and what leads and what accents: "Bright pop with
+  hip-hop verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat;
+  clear female vocal with a low, dark, raspy edge in rapped verses, rising into a big sing-along
+  chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a warm Rhodes", "a
+  808 that slides", "gang vocals on the hook") make a better song than adjectives ("catchy",
+  "nice", "educational").
+  - **When the learner asked for a song style**, it is your brief. It may come on its own line
+    ("The song style the learner asked for") or anywhere in the topic or request, in their own
+    words ("ATP synthesis. Style: pop-punk", "make the song K-pop"). Keep everything they asked
+    for, the genre, voices, instruments, mood and tempo, and their own vivid words where they
+    work; then build on it as a producer would: turn vague words into sounds, and fill in what
+    they left out in the same spirit and in the mood of the topic. Never trade what they asked
+    for for something else. Describe the sound of an artist, band or song they named instead of
+    naming it, and leave out what would hide the words or does not belong in a classroom
+    (screamed or growled vocals, explicit lyrics).
   - **Otherwise**, the request carries a style from the studio's rotation, so droplets do not
-    all sound alike: use it word for word. With none, describe a vocals-first pop style a
-    teenager plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm.
-    A faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
+    all sound alike. It is a seed, not the answer: keep its genre and roughly its tempo (a few
+    bpm either way to suit the topic's mood), and write your own description from it, choosing
+    the voice, the instruments, the textures and the mood for this topic, so that two droplets
+    from the same seed sound different. With none, describe a vocals-first pop style a teenager
+    plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A faster
+    or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
   - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
     death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities). A
     dance beat under it sounds like a celebration. Write a slow, respectful song instead:

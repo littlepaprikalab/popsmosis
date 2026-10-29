@@ -224,10 +224,11 @@ parts build on the facts it has already written.
    school: pop with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's
    mood setting its tempo, or the learner's own when they ask for one: a question line
    starting `Style:` becomes `song_style` in `request.json`. The style is one free-form
-   description, never a list of tags: the learner's words as they wrote them, or the
-   rotation's word for word. It names the tempo once, "<n> bpm" from 80 to 160; the code
-   checks repair a missing or second one, and record a style split into tags or one that
-   lost the learner's words.
+   description, never a list of tags, written by the planner as a producer's brief: built on
+   the learner's style, keeping all they asked for, or grown from the rotation's style as a
+   seed, so droplets from one seed still differ. It names the tempo once, "<n> bpm" from 80 to
+   160; the code checks repair a missing or second one, and record a style split into tags or
+   one that lost the learner's tempo.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
    and the `fact_id` it teaches or `"filler"`. The song is for memory, not a sung lesson:
    3–5 ideas, rhyming couplets, a story through the steps, a title line that opens the
