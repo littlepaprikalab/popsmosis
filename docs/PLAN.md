@@ -932,7 +932,7 @@ Rules that follow from Inkmory's code:
 | 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; agent credits |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch the default brain to a Muse on `/admin/studio` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them. Particles built early (Oct 28). The contact sheet can be made (`python -m studio.render sheet`); the helper's check on it is not built. Left: the vertical layout, the QA check |
-| 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
+| 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | The script and what to do before recording: `docs/DEMO.md`. What was built during the event, for the judges: README, "Built during the hackathon" |
 
 ### Days 3–7 in parallel
 
@@ -1006,7 +1006,8 @@ To run live (day 8):
   in the lesson voice, one topic each way (section 14).
 
 Then the stretch (day 9): the vertical layout and the QA check. Before launch: the song
-terms (section 10). Day 10: the demo and the submission.
+terms (section 10). Day 10: the demo and the submission (`docs/DEMO.md`); the repository
+must be public by then, as the rules require.
 
 ## 13. Risks and fallbacks
 

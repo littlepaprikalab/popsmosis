@@ -34,6 +34,72 @@ advice column), whose architecture and look-and-feel come from
 [sparks](https://github.com/jclark256/sparks). The API still names a topic request a
 *question*, the lesson its *answer*, and follow-ups *replies*.
 
+## Built during the hackathon
+
+Popsmosis is an entry in the Meta Global AI Developer Hackathon (Indie track), which ran
+from noon ET on Oct 26 to 9:00 PM ET on Nov 4. This repository was created at 1:58 PM ET
+on Oct 26, after the kickoff, so its whole history falls inside the event.
+
+One commit is not new work:
+[`c037cc0`](https://github.com/littlepaprikalab/popsmosis/commit/c037cc0bf15a7acaa55a1038bb0bd3ebb6fae217)
+is a verbatim copy of zoey at its commit `3f81af7`. Every commit after it was written
+during the event, so the difference from it is the hackathon's work:
+[`c037cc0...main`](https://github.com/littlepaprikalab/popsmosis/compare/c037cc0bf15a7acaa55a1038bb0bd3ebb6fae217...main),
+or `git diff --stat c037cc0 main` in a clone.
+
+**From zoey, before the event:**
+
+- Google sign-in, the session cookie, and admins set by `ADMIN_EMAILS`.
+- Agents with hashed API keys, the admin **AGENTS** and **USERS** pages, and the skill
+  file download.
+- The request → answer → follow-up thread (hence the API's *question*, *answer* and
+  *reply*), its queue and claim lease, file attachments, and the trigger that wakes the
+  agent's Claude routine.
+- The Fastify, Next.js and Prisma scaffolding, the test setup, CI and the Render blueprint.
+- The look and feel, which zoey took from sparks.
+
+During the event these were renamed to Popsmosis; zoey's personal access tokens, sign-in
+approval and Zed editor commands were removed; and zoey's `/advice` page became `/learn`,
+which now holds the droplet.
+
+**Built during the event:**
+
+- **The studio** (`studio/`, all of it), which turns a topic into a droplet. A brain
+  (Muse Wonder, Muse Spark or Claude) writes the plan, and a separate call fact-checks
+  every line and tag before anything is posted or sung. Muse Image (or Gemini 3.1 Flash
+  Image, or SVG the brain draws) paints the scenes, a checker has a picture painted again
+  when a part is wrong, and SAM 3.1 finds each structure in them; every picture is tagged
+  AI-generated, and an error the checker still finds is told on screen. ElevenLabs or
+  Lyria sings the song, ElevenLabs reads the narration, and Demucs and the MMS aligner
+  time every sung word. Code builds the timeline and draws every frame: the camera,
+  labels and spotlight, particles marked with what they carry, spaces that fill, parts
+  that turn, stages that fade one into the next, and the karaoke band. It encodes in
+  parallel and uploads. A render whose machine died is recovered, and every model call
+  goes on the droplet's bill of materials.
+- **The droplet on `/learn`:** both video players, and the bill of materials filling in
+  while a droplet is made.
+- **The public Droplets tab** (`/droplets`): watching without an account, search by
+  hashtag, likes and comments.
+- **The Studio page** (`/admin/studio`): which brain, painter and singer make a droplet.
+- **Learner privacy:** public lessons and private learners, deleting an account
+  (`/account`), and the Privacy Policy, Terms of Use and consumer health data policy.
+- **The POPsmosis brand:** the wordmark, the aqua drop icon, and the falling drop on the
+  Droplets tab.
+- **The API and schema behind them:** the droplet's plan, fact-check, videos, tags and
+  bill; likes and comments; video claims and progress; uploads to Supabase; the studio
+  settings. Also the plan (`docs/PLAN.md`), the teacher's skill file and its runbook.
+
+**Used, not built here:** the models and libraries each droplet's bill of materials lists
+(Meta's Muse models, SAM 3.1, Demucs, MMS and PyTorch; Claude; ElevenLabs; Gemini and
+Lyria; skia; ffmpeg), the Inter font, and [Inkmory](https://inkmory.com), the public
+journal the teacher writes to. The videos' style is modelled on the earlier *Fire or
+Don't* videos; none of their code is in this repository, and the renderer here was
+written during the event, starting at `c86bf1f`.
+
+`prisma/migrations/20261026120000_init` is zoey's schema squashed into one migration;
+every migration after it is new. Their folder names only set their order: they are not
+dates, and some fall after the deadline.
+
 ## Layout
 
 ```
@@ -41,7 +107,7 @@ api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_p
 web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, sign-in, and the admin pages.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply, DropletLike, DropletComment).
 studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
-docs/    PLAN.md, the agent skill file, and the runbook for running it.
+docs/    PLAN.md, the agent skill file, the runbook for running it, and the demo video's script.
 ```
 
 ## Stack
