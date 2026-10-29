@@ -365,5 +365,6 @@ def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_i
     timelines = make(job)
     assert timelines["lesson"].notices == {"synthase": [note]}  # the lesson shows the close-up
     assert timelines["song"].notices == {}  # the song never does
+    assert timelines["lesson"].ai_pictures == ["synthase"] and timelines["song"].ai_pictures == []
     os.utime(job / "art" / "synthase.json")  # a new check makes the timelines out of date
     assert not step.is_done(job)

@@ -605,3 +605,20 @@ def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them
     # Every stage of a process with notices keeps the same framing, card or not.
     staged = Renderer(job, flowing([beat]).model_copy(update={"notices": notices, "stages": [["hook", "overview"]]}))
     assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
+
+
+def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
+    beat = flow_beat(0, 4, path=[])
+    plain = Renderer(job, flowing([beat]))
+    tagged = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"]}))
+    carded = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"],
+                                                               "notices": {"overview": ["A note."]}}))
+    view, margin = tagged.view("overview"), tagged.layout.margin
+    spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)  # inside the tag
+
+    def dark(renderer):
+        return max(pixel(renderer.frame(2.0), *spot)) < 120
+
+    assert dark(tagged) and not dark(plain)
+    carded_view = carded.view("overview")
+    assert not max(pixel(carded.frame(2.0), carded_view[0] + margin + 6, spot[1])) < 120  # the card instead

@@ -590,6 +590,12 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
 
 
+def painted(job: Path, bundle: Bundle) -> list[str]:
+    """The scenes whose art is a Muse Image picture of the scene as the bundle has it: the video tags each as
+    AI-generated, whether or not its check found anything wrong, since the check can miss a mistake."""
+    return [scene.id for scene in bundle.scenes if _painted(job, bundle, scene)]
+
+
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
     by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.

@@ -757,7 +757,9 @@ voice are not priced), and SAM found 20 of 20 parts.
   anaphase (the bends, and the fibres on the chromosomes' ends rather than at their
   centromeres). The video shows them on a white card at the right, under "AI-generated
   picture", for as long as the picture is on screen; the picture moves left to make room,
-  and so do the other stages of its process, to keep one framing.
+  and so do the other stages of its process, to keep one framing. Since the check can miss a
+  mistake, as it missed the anaphase count, every other Muse Image picture carries a small
+  "AI-generated picture" tag at its bottom left.
 
 ## Not tested
 

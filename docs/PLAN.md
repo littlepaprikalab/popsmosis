@@ -326,7 +326,9 @@ look. Whatever those notes say of the picture the video uses, after its tries, i
 beside it (`Timeline.notices`): a white card at the right under "AI-generated picture", up
 to three notes, for as long as the picture is on screen. The picture moves left to make
 room, and so do the other stages of its process. The check can miss a mistake (round 16's
-anaphase had twice the chromosomes it should); the card says only what it found.
+anaphase had twice the chromosomes it should); the card says only what it found. So every
+Muse Image picture without a card carries a small "AI-generated picture" tag at its bottom
+left (`Timeline.ai_pictures`), mistakes found or not.
 
 **Stages** are painted as one subject in one framing: each later stage of a process is
 redrawn from the first stage's picture (`/v1/images/edits`, the first stage's picture

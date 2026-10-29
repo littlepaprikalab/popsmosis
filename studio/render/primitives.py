@@ -493,6 +493,20 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
     return top + height
 
 
+def draw_ai_tag(canvas: skia.Canvas, x0: float, bottom: float, font_size: float, alpha: float = 1.0) -> float:
+    """A small dark pill reading "AI-generated picture", its bottom-left corner at (x0, bottom). Returns its top."""
+    if alpha <= 0.01:
+        return bottom
+    f = font("SemiBold", font_size)
+    h = font_size * 1.7
+    w = text_width(f, NOTICE_TITLE) + font_size * 1.6
+    rrect = rounded((x0, bottom - h, x0 + w, bottom), h / 2)
+    canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha * 0.72)))
+    draw_text(canvas, NOTICE_TITLE, x0 + font_size * 0.8, bottom - h / 2 + cap_height(f) / 2, f,
+              with_alpha(0xFFFFFFFF, alpha * 0.92))
+    return bottom - h
+
+
 def draw_caption(canvas: skia.Canvas, text: str, centre_x: float, top: float, font_size: float, alpha: float) -> None:
     if alpha <= 0.01:
         return

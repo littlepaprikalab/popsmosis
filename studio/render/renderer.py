@@ -40,6 +40,7 @@ STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stag
 NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
 NOTICE_MAX = 3  # notes on the card; any more are counted
 NOTICE_FONT = 22
+AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) with no notice card
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
@@ -670,12 +671,16 @@ class Renderer:
         if beat.caption:
             caption_alpha = p.ease((t - plan.caption_in) / CAPTION_FADE_S) * p.ease((plan.caption_out - t) / CAPTION_FADE_S)
         top = layout.margin + (layout.caption_font * 1.75 + 24 if caption_alpha > 0 else 0)
-        bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - layout.margin)
+        notes = self.timeline.notices.get(beat.scene, [])
+        tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
+        bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
+        bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
                            caption_alpha)
-        notes = self.timeline.notices.get(beat.scene, [])
+        if tagged:
+            p.draw_ai_tag(canvas, view[0] + layout.margin, view[3] - layout.margin, AI_TAG_FONT, fade)
         if notes:  # what a check found still wrong in this AI-made picture, disclosed beside it
             p.draw_notice(canvas, view[2], layout.margin + 8, layout.width - layout.margin, notes[:NOTICE_MAX],
                           NOTICE_FONT, fade, more=max(len(notes) - NOTICE_MAX, 0))
