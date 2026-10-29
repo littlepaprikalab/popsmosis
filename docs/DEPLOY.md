@@ -14,6 +14,7 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | Key | Value | Where it comes from |
 |---|---|---|
 | `DATABASE_URL` | `postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres` | Supabase > Project Settings > Database > Connection string > **Session pooler** |
+| `DATABASE_CA_CERT` | the PEM text of Supabase's CA certificate, or the path to it (`/etc/secrets/<name>` as a Render Secret File) | Supabase > Project Settings > Database > SSL Configuration > **Download certificate**. The API checks the database's certificate with it (`api/src/lib/db-tls.ts`), so **set it before deploying**: without it the API cannot connect to Supabase and the new instance's health check fails. See [8](#8-the-database-row-level-security-and-tls) |
 | `DIRECT_URL` | optional: the Session pooler URI, as above (port 5432) | needed only when `DATABASE_URL` is the transaction pooler (port 6543). Migrations hang on that pooler, so they use this URL instead; the running API keeps using `DATABASE_URL`. Leave it empty otherwise |
 | `JWT_SECRET` | generated | Render generates it from the blueprint |
 | `PROXY_SECRET` | generated | Render generates it; the web service copies it |
@@ -296,6 +297,51 @@ the site is public:
    terms of service link `https://<popsmosis-web host>/terms`.
 
 Redeploy `popsmosis-web` after changing `legal.ts`: the pages are built at deploy time.
+
+## 8. The database: row-level security and TLS
+
+Two safeguards around the Supabase Postgres (threat model T14), and what to check in the
+Supabase console for each. Nothing here is visible from the code: check each item.
+
+**Row-level security.** The migration `20261112120000_row_level_security` turns it on for
+every table, with no policy. A role that does not own a table (Supabase's Data API reads as
+`anon` or `authenticated`, with the project's publishable key) then gets no row from it,
+whatever it is granted. The API is unaffected: Prisma connects as `postgres`, the owner of
+every table, and an owner is held to row-level security only where a table forces it, which
+none does. `api/src/rls.integration.test.ts` fails if a table is added without it.
+
+**TLS.** The API checks the database's certificate, chain and host name, with
+`DATABASE_CA_CERT`. `sslmode=no-verify` in `DATABASE_URL` turns the check off (the API warns
+at boot): for a move between providers, never to keep. The build's migrations (`prisma
+migrate deploy`, on `DIRECT_URL` or `DATABASE_URL`) connect through Prisma's own engine,
+which this does not change.
+
+Check in the Supabase console:
+
+1. **Does the Data API expose `public`?** Project Settings > Data API (named API Settings in
+   older dashboards), **Exposed schemas**. Popsmosis never uses the Data API. If `public` is
+   listed, take it off the list or turn the Data API off; row-level security already leaves it
+   no row, and this removes the door.
+2. **Is row-level security on, with no policy?** After deploying, the Table Editor marks every
+   table with RLS enabled, and Authentication > Policies lists no policy for the `public`
+   tables. Advisors > Security Advisor should no longer report "RLS Disabled in Public" for
+   any of them.
+3. **Does `postgres` own every table?** In the SQL editor:
+   `select tablename, tableowner from pg_tables where schemaname = 'public';` Every row should
+   say `postgres` (the `postgres.<ref>` user in `DATABASE_URL` is that role, through the
+   pooler). A table another role owns would now refuse the API. And
+   `select relname from pg_class where relforcerowsecurity and relnamespace = 'public'::regnamespace;`
+   should return nothing.
+4. **The CA certificate.** Project Settings > Database > SSL Configuration: download it and set
+   `DATABASE_CA_CERT` on popsmosis-api before deploying (above). After the deploy,
+   `/api/health` should answer `ok` and the API log should show no certificate error.
+5. **Enforce SSL**, on the same page: on, so the database refuses connections without TLS.
+6. **The keys.** Project Settings > API Keys: popsmosis uses the secret key on the API alone
+   (`SUPABASE_SERVICE_ROLE_KEY`). The publishable (anon) key is in neither the web app nor
+   the runner. If either key was ever shared, rotate it.
+7. **Storage.** Storage > Policies, for `storage.objects`: no policy should let `anon` or
+   `authenticated` insert, update or delete in the `droplets` or `studio` buckets. Uploads go
+   through the signed URLs the API mints with the secret key.
 
 ## How it fits together
 

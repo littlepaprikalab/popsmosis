@@ -38,6 +38,8 @@ services:
         value: "3001"
       - key: DATABASE_URL           # Supabase Session-pooler URI (see docs/DEPLOY.md)
         sync: false
+      - key: DATABASE_CA_CERT       # Supabase's CA (PEM text, or a Secret File's path): the API checks the database's certificate with it; set it before deploying
+        sync: false
       - key: DIRECT_URL             # optional: the Session-pooler URI (port 5432) for migrations; needed only when DATABASE_URL is the transaction pooler (port 6543)
         sync: false
       - key: JWT_SECRET
