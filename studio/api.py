@@ -136,6 +136,7 @@ class Api:
     def set_video(self, answer_id: str, status: str, *, error: str | None = None, attempt: int | None = None,
                   song_video_url: str | None = None, lesson_video_url: str | None = None,
                   song_poster_url: str | None = None, lesson_poster_url: str | None = None,
+                  hook_video_url: str | None = None, hook_poster_url: str | None = None,
                   breakdown: dict | None = None) -> dict:
         """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved.
         With the attempt this run holds, 409 unless it is still the render's current attempt.
@@ -144,7 +145,8 @@ class Api:
         if attempt is not None:
             body["attempt"] = attempt
         for key, value in (("songVideoUrl", song_video_url), ("lessonVideoUrl", lesson_video_url),
-                           ("songPosterUrl", song_poster_url), ("lessonPosterUrl", lesson_poster_url)):
+                           ("songPosterUrl", song_poster_url), ("lessonPosterUrl", lesson_poster_url),
+                           ("hookVideoUrl", hook_video_url), ("hookPosterUrl", hook_poster_url)):
             if value is not None:
                 body[key] = value
         if error is not None:

@@ -124,6 +124,8 @@ model Answer {
   lessonVideoUrl  String?
   songPosterUrl   String? // a still for each video, shown before it plays
   lessonPosterUrl String?
+  hookVideoUrl    String? // the hook cut: the song's pre-chorus and first chorus, upright, to share
+  hookPosterUrl   String?
   videoError      String? // FAILED: why, shown on the droplet
   videoUpdatedAt  DateTime? // the last status change; RENDERING for too long reads as FAILED
   hiddenAt        DateTime? // an admin took it off the public Droplets tab; null: listed once READY

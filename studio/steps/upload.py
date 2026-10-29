@@ -89,6 +89,8 @@ class Uploaded(Progress):
     lesson_video_url: str
     song_poster_url: str | None = None
     lesson_poster_url: str | None = None
+    hook_video_url: str | None = None  # the hook cut's, when it was made
+    hook_poster_url: str | None = None
     missing: list[str] = []  # intermediate files the job did not have, so a re-render may need them made again
 
 
@@ -142,12 +144,14 @@ def _retrying(what: str, call: Callable[[], T]) -> T:
 
 
 def public_files(job: Path) -> list[str]:
-    """The videos, which must both be there, and the posters that are."""
+    """The videos, which must both be there, and the posters that are; the hook cut and its poster when it was made."""
     missing = [media.video_path(v) for v in media.VIDEOS if not (job / media.video_path(v)).is_file()]
     if missing:
         raise media.StepFailed(f"nothing to upload yet: {', '.join(missing)} not rendered")
     posters = [media.poster_path(v) for v in media.VIDEOS if (job / media.poster_path(v)).is_file()]
-    return [media.video_path(v) for v in media.VIDEOS] + posters
+    hook = [path(media.HOOK, media.HOOK_LAYOUT) for path in (media.video_path, media.poster_path)
+            if (job / path(media.HOOK, media.HOOK_LAYOUT)).is_file()]
+    return [media.video_path(v) for v in media.VIDEOS] + posters + hook
 
 
 def private_files(job: Path) -> tuple[list[str], list[str]]:
@@ -216,6 +220,8 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
         **progress.model_dump(),
         song_video_url=url(media.video_path("song")), lesson_video_url=url(media.video_path("lesson")),
         song_poster_url=url(media.poster_path("song")), lesson_poster_url=url(media.poster_path("lesson")),
+        hook_video_url=url(media.video_path(media.HOOK, media.HOOK_LAYOUT)),
+        hook_poster_url=url(media.poster_path(media.HOOK, media.HOOK_LAYOUT)),
         missing=missing,
     )
     breakdown = ledger.try_breakdown(job, "videos", running=("upload", round(time.monotonic() - started, 1)))
@@ -223,6 +229,7 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
         answer, "READY", attempt=attempt,
         song_video_url=uploaded.song_video_url, lesson_video_url=uploaded.lesson_video_url,
         song_poster_url=uploaded.song_poster_url, lesson_poster_url=uploaded.lesson_poster_url,
+        hook_video_url=uploaded.hook_video_url, hook_poster_url=uploaded.hook_poster_url,
         breakdown=breakdown))
     jobs.write(job / UPLOADED, uploaded)  # last: done means READY was sent
 

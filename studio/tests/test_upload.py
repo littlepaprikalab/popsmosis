@@ -364,3 +364,12 @@ def test_a_muse_pictures_check_goes_with_the_rerender_kit_and_a_drawing_misses_n
     (job / media.check_path("overview")).write_text("{}")
     there, missing = upload.private_files(job)
     assert media.check_path("overview") in there and media.check_path("hook") not in missing
+
+
+def test_the_hook_cut_goes_up_with_the_videos_when_it_was_made(job, server):
+    (job / "out" / "hook_v.mp4").write_bytes(b"mp4 hook")
+    (job / "out" / "hook_v.jpg").write_bytes(b"jpg hook")
+    assert {"out/hook_v.mp4", "out/hook_v.jpg"} <= set(upload.public_files(job))
+    upload.run(job, api=api_for(server))
+    ready = server.patches()[-1]
+    assert ready["hookVideoUrl"].endswith("/out/hook_v.mp4") and ready["hookPosterUrl"].endswith("/out/hook_v.jpg")

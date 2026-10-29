@@ -199,6 +199,8 @@ export interface Video {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl?: string | null; // the hook cut: the song's pre-chorus and first chorus, upright, to share
+  hookPosterUrl?: string | null;
   error: string | null;
   updatedAt: string | null;
 }
@@ -337,6 +339,8 @@ export interface DropletVideos {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl?: string | null; // the hook cut: the song's pre-chorus and first chorus, upright, to share
+  hookPosterUrl?: string | null;
 }
 
 /** Each video's hashtags, without the "#", most useful first (api/src/lib/tags.ts). The tab searches by them. */

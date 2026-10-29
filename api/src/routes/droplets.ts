@@ -80,7 +80,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
     const rows = await prisma.$queryRaw<(Parameters<typeof serializeDropletCard>[0] & { liked: boolean })[]>`
       SELECT id, left(content, ${EXCERPT_SOURCE_LENGTH}) AS content, "createdAt",
              jsonb_build_object('course', bundle->'course', 'topic', bundle->'topic') AS bundle,
-             "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl",
+             "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl", "hookVideoUrl", "hookPosterUrl",
              "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked
       FROM answers
       WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${tagged} ${from}
