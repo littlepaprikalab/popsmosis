@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 const card = { background: 'var(--bg-secondary)', border: '1px solid var(--border)' } as const;
+const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 
 interface Shot { src: string; alt: string }
 
@@ -114,10 +115,11 @@ export default function AboutPage() {
           <p>
             <Wordmark size="sm" /> started with a problem of my own: I wanted to automate making educational song
             videos for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
-            Sprints</a>, my AP and SAT prep site. Making them was a pain in the tush, with pictures that came out wrong
-            and content that needed checking line by line, and a hackathon was a good excuse to fix that. Ask for any
-            topic and an AI teacher makes you a droplet, a short lesson with a narrated video and a song. It checks
-            every line and every picture first, and shares the droplet on the <Link href="/droplets"
+            Sprints</a>, my AP and SAT prep site. Making them was a <Marked>pain in the tush</Marked>, with pictures
+            that came out wrong and content that needed checking line by line, and a hackathon was a good excuse to fix
+            that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson with a narrated video
+            and a song. It checks <strong style={{ color: 'var(--text-primary)' }}>every line and every
+            picture</strong> first, and shares the droplet on the <Link href="/droplets"
             className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn
             from.
           </p>
@@ -139,6 +141,37 @@ export default function AboutPage() {
         </div>
       </section>
     </PageContainer>
+  );
+}
+
+/** "droplet" as a pill: the brand aqua, tinted rather than solid, so it sits beside the POPsmosis chip without
+ * copying it, with the drop from the Droplets heading. */
+function DropletPill() {
+  return (
+    <span className="inline-flex items-center gap-[0.3em] whitespace-nowrap align-middle leading-none rounded-full font-bold"
+      style={{
+        fontSize: '0.75rem',
+        padding: '0.3em 0.7em 0.3em 0.55em',
+        color: 'var(--accent-brand)',
+        background: tint('var(--accent-brand)', 14),
+        border: `1px solid ${tint('var(--accent-brand)', 45)}`,
+      }}>
+      <svg aria-hidden="true" viewBox="18 10 28 42" style={{ height: '1em', width: 'auto' }}>
+        <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z" fill="currentColor" />
+      </svg>
+      droplet
+    </span>
+  );
+}
+
+/** A highlighter stroke across the lower half of the words. */
+function Marked({ children }: { children: React.ReactNode }) {
+  return (
+    <mark style={{
+      color: 'var(--text-primary)',
+      background: `linear-gradient(transparent 55%, ${tint('var(--accent-pink)', 50)} 55%)`,
+      padding: '0 0.1em',
+    }}>{children}</mark>
   );
 }
 
