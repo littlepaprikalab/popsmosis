@@ -44,8 +44,9 @@ PROVIDERS = ("claude", "meta")
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;
-    # thinking is billed as output, so max_tokens leaves room for it.
-    "brain": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 64000},
+    # thinking is billed as output, so max_tokens leaves room for it: 128K, the model's most with streaming (every
+    # call streams), since a bundle with its why chain and 16-line verses ran past 64K on Oct 29.
+    "brain": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 128000},
     # Sonnet, not Haiku, since Oct 28: the helper judges each picture's science, and finds the
     # parts SAM missed.
     "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
