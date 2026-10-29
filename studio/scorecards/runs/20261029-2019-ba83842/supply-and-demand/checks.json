@@ -1,0 +1,22 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-9",
+      "rule": "key-line",
+      "detail": "the key line \"Price ↑ → more profit → sellers offer more (law of supply)\" runs 12 words, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "p2-1",
+      "rule": "key-line",
+      "detail": "the key line \"New trend shifts demand right → equilibrium price and quantity rise\" runs 11 words, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-1",
+      "rule": "key-line",
+      "detail": "the key line \"Price ceiling below equilibrium → price can't rise → shortage stays\" runs 11 words, over 10",
+      "repaired": false
+    }
+  ]
+}

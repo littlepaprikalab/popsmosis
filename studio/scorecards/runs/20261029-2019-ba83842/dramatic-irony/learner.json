@@ -1,0 +1,20 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Dramatic irony is when the audience knows something a character doesn't, and in Romeo and Juliet this gap turns a story with a known ending into one full of suspense and dread.",
+      "why": "First, the Prologue tells us up front that the two lovers will die and that their deaths will end the feud. Second, the characters don't know this, so they keep making choices based on what they believe is true, even when it's wrong. Third, we can see where those choices lead, like when Lady Capulet thinks Juliet is crying over Tybalt but we know it's because Romeo was banished. Fourth, the gap between what we know and what they know makes us feel dread. Knowing the ending doesn't spoil it, because we still wonder how and when it will happen. In the tomb, Romeo thinks Juliet is dead because the friar's letter never reached him, but we know she's alive, so we feel the tension the whole time.",
+      "what_if": "If the Prologue stopped working, meaning it didn't tell us the ending, we wouldn't know the lovers will die, so we'd be hoping along with the characters instead of dreading their choices. The lesson says the suspense comes from knowing more than they do, so the audience would be surprised at the end instead. That would be a plain surprise, which the lesson says is not dramatic irony. The lesson doesn't say whether other things in the play could also give us that knowledge, though the tomb scene seems to use what we've been shown about Juliet's potion."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

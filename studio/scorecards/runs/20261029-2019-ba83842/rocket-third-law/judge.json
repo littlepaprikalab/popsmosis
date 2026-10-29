@@ -1,0 +1,36 @@
+{
+  "hook": {
+    "reason": "The title line \"Throw the gas back, take flight\" is concrete, action-based, and close to the core idea in miniature, and it is easy to sing back. But \"take flight\" is slightly vague, and the intro's second line, \"Let a balloon go and watch it zip off in flight\", is a long, awkward line. The lesson opens on the learner's own question, \"If there's no air in space, what is a rocket pushing on?\", and the narration opens on a balloon, which is from the learner's world. The openings are strong.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The skateboarder throwing balls is an apt picture of the whole job (push mass backward, get pushed forward), and it is set up early in verse 1 and in the lesson. But the song's chorus, bridge and outro drop the skateboard and lean on a balloon, so two pictures compete. The skateboard returns only in v2-12, and the bridge has no frame at all. It is a good frame, only partly carried through.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "All five links are taught in order with causes: burn fuel and oxidizer, gas out the nozzle, third-law push, different objects so no cancelling, and pushing on its own exhaust so it works in space. The lesson and narration explain why for each, such as \"so it can burn fuel without air\" and \"They act on different objects\". The song carries the chain's gist. It also adds detours (momentum, the thrust-versus-air-pressure twist, the coasting section) that dilute the chain a little, but no link is missing.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read alone, the lines tell the chain well, mostly as arrows of cause and effect (\"Fuel + oxidizer burn → hot, high-pressure exhaust gas\"; \"Forces act on different objects → they don't cancel\"). Flaws: the first, \"No air in space: what does a rocket push against?\", is a question rather than a step. \"Pushes its own exhaust, not air → works in space\" starts at v2-9, a line about thrust being higher in space, so the start does not match the step. \"Fuel + oxidizer\" starts at v1-9, which names only the tanks. There are also ten lines, including side steps such as momentum and the equal-forces line.",
+    "score": 3
+  },
+  "errors": [
+    "\"Its own oxygen, so there's no air it has to thank\" (v1-10) is a weak, odd phrase, but not wrong; no correction needed.",
+    "\"the thrust's a little higher in space / Than at sea level, where the air pushes back at the engine's base\": the idea is right, but \"a little higher\" is fine and accurate (about 10–15% for typical engines), so it is not an error.",
+    "\"Throw gas out the front, and it pushes you back\" (b-8) is correct; no error.",
+    "\"Same size, opposite way\" is acceptable; no error. The lesson's \"A rocket engine even gives slightly more thrust in space\" is correct for a given engine, so there is no real error."
+  ],
+  "accuracy": {
+    "reason": "The physics is sound: the third law, action-reaction pairs on different objects, thrust, the oxidizer, H₂ + O₂ giving water vapour, higher vacuum thrust because of ambient pressure at the nozzle exit, the first law for coasting, and momentum conservation are all stated correctly. Claims like \"the light gas is flung back fast while the heavy rocket speeds up gradually\" are fair simplifications. One slight imprecision: the song's v2-5/v2-6 \"The rocket's heavy, so it speeds up slow\" skips the point that the forces are equal, and \"balls\" for gas is loose, but nothing a learner would carry away wrong.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "The chorus is a clear chant (\"Throw the gas back, take flight / Push the gas left, the rocket goes right\"), and many lines are natural speech. But verse 1 and verse 2 are long, with lines like \"Same size, opposite way, an action-reaction pair\" and \"Than at sea level, where the air pushes back at the engine's base\", which read like textbook sentences. There are forced rhymes: \"no air it has to thank\", \"the engine's base\", and \"what Newton's third law is about\". The pre-chorus \"Conservation of momentum, that's the next chapter's name\" is a caption, and c3 has a 6-line chorus that is longer than a learner can easily keep. Overall it is mostly singable with clear flaws.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "The lesson opens on the learner's question, builds on the why with the skateboard, and has a Predict question answered right after (\"why does the gas fly off so much faster? Because the gas is light...\"). It names the misconception (\"pushes against the air or the ground. It doesn't\") and ends on a check that needs the core idea (\"what does it push against, and why does that make it move forward?\"). Its weak points are that it carries many new terms (oxidizer, combustion chamber, nozzle, thrust, action-reaction pair, plus momentum and the first and second laws) and extra sections on coasting and momentum that go beyond what is needed. The misconception does not clearly say why it is wrong beyond restating the correct picture.",
+    "score": 4
+  }
+}

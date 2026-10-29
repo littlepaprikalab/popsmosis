@@ -1,0 +1,31 @@
+{
+  "about": {
+    "started": "2026-10-29T20:19:17+0000",
+    "commit": "ba83842a2adf7906f60d271ca448c7b8654c3ae5",
+    "dirty": false,
+    "prompt": "b222b5cac72d",
+    "rubric": "45011f16cc0b",
+    "topics": "b52fd05d1c03",
+    "brain": "Claude Opus 5.5",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "judge": "claude-sonnet-5-5 at high",
+    "name": "20261029-2019-ba83842",
+    "topic_ids": [
+      "sodium-potassium-pump",
+      "light-reactions",
+      "derivative",
+      "french-revolution",
+      "dramatic-irony",
+      "catalyst",
+      "supply-and-demand",
+      "moon-phases",
+      "rocket-third-law",
+      "p-value",
+      "spanish-subjunctive",
+      "classical-conditioning"
+    ]
+  },
+  "topics": [],
+  "summary": {}
+}

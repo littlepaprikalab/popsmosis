@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The French Revolution happened because a nearly bankrupt king had to call the Estates-General to get money, and the overtaxed, angry Third Estate used that chance to take political power.",
+      "why": "First, costly wars, including helping the American Revolution, left the crown so deep in debt that about half its spending went to interest by 1788. Ministers tried to tax the clergy and nobles, who were exempt from most direct taxes, but the nobles said only the Estates-General could approve new taxes, so Louis XVI called it for May 1789. The Third Estate, about 97% of people, paid most of the taxes, was hit by high bread prices after a poor harvest, and had read Enlightenment ideas like Rousseau's that power comes from the people, so it wanted a real say. But voting was by order, one vote per estate, so the clergy and nobles could outvote it two to one even though it had about 600 deputies. When its demand for one vote per deputy was refused, it declared itself the National Assembly on 17 June and swore the Tennis Court Oath. When the king gathered troops near Paris, a crowd stormed the Bastille on 14 July, which showed the king had lost control of Paris.",
+      "what_if": "If the crown had not been nearly bankrupt, the king would not have needed new taxes or had to call the Estates-General, which hadn't met since 1614. Without that meeting, the Third Estate would have had no official place to demand a say, so it might never have gotten its chance in 1789. The anger would still exist, like pressure in the pot, but the lesson doesn't say for sure what would have happened, only that the lid would likely have stayed on longer."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

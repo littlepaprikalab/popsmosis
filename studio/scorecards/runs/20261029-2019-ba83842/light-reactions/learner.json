@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The light reactions use light energy to push electrons from water through a chain of carriers, and that electron flow charges up ATP and NADPH (and releases oxygen) so the Calvin cycle can later use them to build sugar.",
+      "why": "First, light energizes photosystem II, which boosts electrons to a higher energy level. Photosystem II then splits water to replace those electrons, which releases oxygen and protons into the thylakoid space. The energized electrons flow down the electron transport chain toward photosystem I, losing energy as they go, and the cytochrome complex uses that energy to pump protons from the stroma into the thylakoid space. Because protons can't cross the membrane on their own, they pile up into a gradient with about a thousand times more inside than outside. The only way back out is through ATP synthase, and the rushing protons turn it like a mill wheel, so it joins ADP and phosphate into ATP. Meanwhile photosystem I re-energizes the electrons and they get added with a proton to NADP+, making NADPH. So the electron flow is what causes the proton gradient, and the gradient causes ATP to be made.",
+      "what_if": "If photosystem II were blocked so electrons couldn't leave it, like with the weed-killer atrazine, electrons would stop flowing down the chain. Then the cytochrome complex would have no energy to pump protons into the thylakoid space, so the proton gradient wouldn't build up. With no gradient, protons wouldn't rush through ATP synthase, so little or no ATP would be made. The lesson also implies NADPH would drop since the electrons wouldn't reach photosystem I, so the Calvin cycle would have no batteries and the weed would die. The lesson doesn't explain exactly how it kills the plant beyond that, so I'm inferring that part."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}
