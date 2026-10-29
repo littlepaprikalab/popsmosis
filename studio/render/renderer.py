@@ -45,6 +45,7 @@ NOTICE_FONT = 22
 AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) without a notice card
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
+WHOLE_PAD = 1.1  # the whole scene keeps this much around what is drawn: labels sit against the structures
 WHOLE_MAX_ZOOM = 2.0
 CAPTION_FADE_S = 0.3
 # In the song, the next line shows in the band this long before it is sung, unmarked and
@@ -61,6 +62,8 @@ FLOW_IN_S = 0.4
 STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
+TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
+# stay apart instead of smearing into a streak while the lead slows
 STOP_OFFSET = 34.0  # art pixels: the lead particle holds beside a label's dot, not under it
 # A space filling up (Beat.crowds): its dots, at most CROWD_MAX of them, CROWD_SPACING art pixels apart
 # or more, each drifting CROWD_DRIFT pixels about its place; one in CROWD_MARKED written with what it is,
@@ -502,7 +505,7 @@ class Renderer:
         what is drawn rather than the canvas, up to WHOLE_MAX_ZOOM."""
         art = self.scene(scene_id)
         x0, y0, x1, y1 = art.content
-        zoom = min((view[2] - view[0]) / ((x1 - x0) * FIT_PAD), (view[3] - view[1]) / ((y1 - y0) * FIT_PAD))
+        zoom = min((view[2] - view[0]) / ((x1 - x0) * WHOLE_PAD), (view[3] - view[1]) / ((y1 - y0) * WHOLE_PAD))
         zoom = max(1.0, min(zoom / _fit(view, art), WHOLE_MAX_ZOOM))
         return clamp_cam(Cam((x0 + x1) / 2, (y0 + y1) / 2, zoom), view, art)
 
@@ -890,8 +893,12 @@ class Renderer:
                         break
                     trail.append(on_frame(earlier))
                 stream = stream_at(points, elapsed)
+            lead_xy, spaced = on_frame(lead), []
+            for dot in trail:
+                if math.dist(dot, spaced[-1] if spaced else lead_xy) >= TRAIL_GAP:
+                    spaced.append(dot)
             p.draw_particles(canvas, flow.color, [(on_frame(q), fade) for q, fade in stream],
-                             on_frame(lead), trail, alpha, flow.label)
+                             lead_xy, spaced, alpha, flow.label)
             if flow.blocked and elapsed >= trip_s(points):
                 (x0, y0), (x1, y1) = on_frame(points[-2]), on_frame(points[-1])
                 length = math.hypot(x1 - x0, y1 - y0) or 1.0
