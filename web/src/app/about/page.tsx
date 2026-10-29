@@ -117,7 +117,7 @@ export default function AboutPage() {
             <Wordmark size="sm" /> started with a problem of my own: I wanted
             to <Marked color="var(--accent-yellow)">automate</Marked> making educational song videos
             for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
-            Sprints</a>, my AP and SAT prep site. Making them was
+            Sprints</a>, the AP and SAT prep site I built for my kid. Making them was
             a <Marked color="var(--accent-green)">pain in the tush</Marked>, with pictures that came out wrong and
             content that needed checking line by line, and the <Pill color="var(--accent-purple)">#metahackathon</Pill> was
             a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson
