@@ -31,7 +31,9 @@ function safeReturnTo(value: string | null): string | null {
   } catch {
     return null;
   }
-  return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : null;
+  // A path the dot segments folded to "//evil.example" would be read as another host by whatever reads it next.
+  if (url.origin !== window.location.origin || url.pathname.startsWith('//')) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export default function AuthCallbackPage() {

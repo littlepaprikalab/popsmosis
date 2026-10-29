@@ -35,7 +35,7 @@ test.describe('signed out', () => {
     expect(await kept('/droplets/abc?tab=song#comments')).toBe('/droplets/abc?tab=song#comments');
     // A backslash reads as a slash, and tabs and newlines are dropped: each of these resolves off-site.
     for (const offSite of ['/\\evil.example', '//evil.example', '/\t/evil.example', '/\n/evil.example', 'https://evil.example/',
-      '/\\/evil.example/learn']) {
+      '/\\/evil.example/learn', '/.//evil.example', '/x/..//evil.example', '/%2e//evil.example']) {
       expect(await kept(offSite), offSite).toBeNull();
     }
   });
