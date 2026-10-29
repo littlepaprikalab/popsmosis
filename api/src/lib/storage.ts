@@ -238,7 +238,7 @@ export function signUpload(config: StorageConfig, bucket: Bucket, answerId: stri
 // --- The check at boot ------------------------------------------------------------------------------------------------
 
 // R2 answers an S3 error as XML: <Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message>
-async function r2Reason(res: Response): Promise<string> {
+export async function r2Reason(res: Response): Promise<string> {
   const body = await res.text().catch(() => '');
   const code = /<Code>([^<]{1,100})<\/Code>/.exec(body)?.[1];
   const message = /<Message>([^<]{1,300})<\/Message>/.exec(body)?.[1];

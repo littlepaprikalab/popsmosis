@@ -229,6 +229,26 @@ Since a public file never changes once viewers can see it, it is uploaded with
    since the studio uploads straight to it (docs/PLAN.md, section 9). It no longer needs the
    Supabase host.
 
+**Videos made before the move.** Droplets uploaded while storage was Supabase keep
+playing from Supabase until they are moved, and the API moves them on its own: once it
+has started and the R2 check at boot passes, it copies each one's public files (both
+videos and both posters) from their Supabase URLs to the same place in the `droplets`
+bucket, reads each back from `R2_PUBLIC_URL`, and only then switches that droplet's
+URLs (`api/src/lib/storage-move.ts`). The log says `moved N droplet(s)' videos from
+Supabase Storage to R2`, or why one stays on Supabase for now (it keeps playing from
+there, and the next boot tries again). It needs no Supabase key: the files are read
+from their public URLs. Then:
+
+- Check a moved droplet on `/droplets`: its video plays, and its address starts with
+  `https://media.popsmosis.com/`.
+- Leave the Supabase `droplets` bucket for a week or so, then empty and delete it. Until
+  then, switching back is a SQL `replace()` of the two prefixes in the four URL columns of
+  `answers`.
+- The private `studio` bucket's re-render kits are not moved: nothing reads them yet, and
+  they cost nothing to download where they are. Keep them, or delete the bucket.
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are no longer read; remove them from
+  `popsmosis-api` (keep `DATABASE_URL`).
+
 Nothing on `popsmosis-web` changes: the pages read the public URLs from the API, and its
 Content-Security-Policy already allows `https:` media and images. No CORS rule is needed
 either: the uploads come from the studio, not a browser, and a `<video>` plays from
@@ -354,5 +374,6 @@ studio before it has its progress reports refused (404), prints that, and goes o
 | Upload fails with `storage answered 403: SignatureDoesNotMatch` or `InvalidAccessKeyId` | R2 does not take the key: `R2_SECRET_ACCESS_KEY` is not the Secret Access Key of the token whose Access Key ID is in `R2_ACCESS_KEY_ID` (often the token's value pasted instead), or the token was deleted. `AccessDenied`: the token cannot write that bucket; give it Object Read & Write on both. Waiting does not fix these, so the studio does not retry them |
 | Upload fails with `storage answered 404: NoSuchBucket` | the `droplets` or `studio` bucket does not exist in the account `R2_ACCOUNT_ID` names, or is named differently (section 6) |
 | Upload fails with `storage did not answer (<account>.r2.cloudflarestorage.com)` | the routine's network policy does not allow that host (section 6, step 7), or R2 is down. A 429 or 5xx from R2 is retried twice before the step fails |
+| The API log says `a droplet's videos stay on Supabase Storage for now: …` | the move of that droplet's files to R2 stopped, with the reason (section 6, "Videos made before the move"). `answered 404; is https://media.popsmosis.com Active` means the custom domain does not serve the bucket yet; `R2 refused` names R2's reason. Nothing is lost: the droplet plays from Supabase, and the next boot (a redeploy, or the free instance waking) tries again |
 | A video shows on `/learn` but does not play | `media.popsmosis.com` is not **Active** on the `droplets` bucket yet (Settings > Custom Domains), or `R2_PUBLIC_URL` names another domain. Open the video's URL in a browser to see which |
 | Visitors to `/droplets` get `Too many requests` | each visitor may make 60 requests a minute, keyed by the address the edge saw (`CF-Connecting-IP`, `True-Client-IP`, then the first `X-Forwarded-For` entry, believed only on requests that carry the proxy secret), and all of them together 1200 a minute per API instance (`api/src/lib/public-limit.ts`). If every visitor seems to share one limit, the API is seeing none of those headers |

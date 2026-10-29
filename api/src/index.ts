@@ -11,6 +11,7 @@ import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } f
 import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
 import { storageConfig, storageReachable } from './lib/storage.js';
+import { moveSupabaseVideos } from './lib/storage-move.js';
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
 import replyRoutes from './routes/replies.js';
@@ -248,11 +249,19 @@ if (isMain) {
     process.exit(1);
   }
 
-  // Whether R2 takes the key and has both buckets, said once in the log; it never holds the API up.
+  // Whether R2 takes the key and has both buckets, said once in the log; then the videos made before the move to R2
+  // are moved there (lib/storage-move.ts). Neither holds the API up.
   const storage = storageConfig();
   if (storage && !('problem' in storage)) {
-    storageReachable(storage)
-      .then((problem) => (problem ? app.log.error(`File storage: ${problem}`) : app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key')))
-      .catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
+    (async () => {
+      const problem = await storageReachable(storage);
+      if (problem) return app.log.error(`File storage: ${problem}`);
+      app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key');
+      const { moved, failed } = await moveSupabaseVideos(storage, prisma);
+      if (moved.length) app.log.info({ answerIds: moved }, `File storage: moved ${moved.length} droplet(s)' videos from Supabase Storage to R2`);
+      for (const { answerId, reason } of failed) {
+        app.log.error({ answerId }, `File storage: a droplet's videos stay on Supabase Storage for now: ${reason}`);
+      }
+    })().catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
   }
 }
