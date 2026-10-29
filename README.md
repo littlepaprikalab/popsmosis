@@ -476,14 +476,20 @@ without one, rather than shown as the total. The question reads it back as
 
 ```json
 "progress": { "running": [ { "step": "audio", "startedAt": "2026-11-03T12:01:10.000Z" } ],
-              "failed": [], "videos": true, "breakdown": { "steps": [ ... ], ... } }
+              "failed": [], "videos": true, "seconds": 412.3, "breakdown": { "steps": [ ... ], ... } }
 ```
 
-with each running step's start by the API's clock, and the bill in the shape above. The card
-on `/learn` shows it as the bill of materials open, one line per step: done (its time and
-cost), running (a pulsing dot, its time counting up, what it has spent so far), failed and
-waiting for the retry, or still to come. A step still to come that a later one has gone past
-is left out; so is the post, which the lesson's bill never has.
+with each running step's start by the API's clock, and the bill in the shape above. `seconds`
+is how long the droplet has been made so far: the bill's time, and while a step runs, the time
+since the bill came (the API keeps when each bill came; a videos' report without one keeps the
+one before). It is never less than the bill's time, nor than the lesson's time and the longest
+a step running now has run, which stands in when no bill came or the report is older than
+that. The card on `/learn` shows it as the bill of materials
+open, one line per step: done (its time and cost), running (a pulsing dot, its time counting
+up, what it has spent so far), failed and waiting for the retry, or still to come. A step still
+to come that a later one has gone past is left out; so is the post, which the lesson's bill
+never has. The time so far is on the bill's folded line ("Making it · 4 of 10 steps done ·
+6.2 min · $0.53 so far") and its last line, and counts up with a running step.
 
 The lesson text waits for the videos, so a learner meets the droplet through them rather than
 through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill

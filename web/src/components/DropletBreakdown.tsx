@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import type { Breakdown, BreakdownModel, BreakdownStep, Progress, Video } from '@/lib/api';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
@@ -158,8 +158,8 @@ export function progressCount(p: Progress): { done: number; total: number } {
   return { done: rows.filter((r) => r.status === 'done').length, total: rows.length };
 }
 
-/** A running step's time, counting up every second: its earlier tries and this one so far. Only this text
- *  re-renders each second, never the bill around it. */
+/** A running step's time, counting up every second: its earlier tries and this one so far; or the droplet's.
+ *  Only this text re-renders each second, never the bill around it. */
 function Elapsed({ base, since }: { base: number; since: number }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -214,9 +214,9 @@ function StepName({ row, short = false }: { row: Row; short?: boolean }) {
  *
  * With `progress`, the droplet is still being made, and the bill is how far it has got: every
  * step, each done, running (its time counting up), failed or still to come, and what it has cost
- * so far. Open with `defaultOpen`, as it is while the lesson waits for its videos; one that turns
- * true later (the studio has started on a waiting topic) opens it, unless the reader has opened
- * or folded it themselves.
+ * so far, with the time so far counting up too while a step runs. Open with `defaultOpen`, as it
+ * is while the lesson waits for its videos; one that turns true later (the studio has started on a
+ * waiting topic) opens it, unless the reader has opened or folded it themselves.
  */
 export function DropletBreakdown({ breakdown, video, progress, defaultOpen = false }: {
   breakdown: Breakdown | null;
@@ -237,9 +237,13 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
 
   const steps = bill?.steps ?? [];
   const stepSeconds = steps.reduce((sum, s) => sum + (s.seconds ?? 0), 0);
+  // The droplet's time so far: while a step runs, counting up from what the API last said; else the bill's.
+  const totalSince = progress && progress.running.length > 0 ? progress.since : undefined;
+  const totalSeconds = progress?.seconds ?? bill?.seconds ?? null;
+  const totalTime: ReactNode = totalSince !== undefined ? <Elapsed base={0} since={totalSince} /> : duration(totalSeconds);
   const notes = [
     making && rows.some((r) => r.status === 'running')
-      && 'A step running now counts its time up, and shows what it has spent so far.',
+      && 'A step running now counts its time up, the total with it, and shows what it has spent so far.',
     bill && bill.seconds !== null && stepSeconds > bill.seconds + 1
       && 'The times add up to more than the total: the diagrams and the audio are made side by side.',
     steps.some((s) => s.tries > 1) && 'A step tried more than once counts every try, in time and in cost.',
@@ -267,7 +271,13 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
             {rows.some((r) => r.status === 'running') && (
               <span className="inline-block w-1.5 h-1.5 shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
             )}
-            {anyStarted ? `Making it · ${done} of ${rows.length} steps done · ${cost} so far` : `${rows.length} steps to go`}
+            {anyStarted ? (
+              <span>
+                Making it · {done} of {rows.length} steps done
+                {(totalSince !== undefined || totalSeconds !== null) && <> · <span data-testid="breakdown-elapsed" className="tabular-nums">{totalTime}</span></>}
+                {' '}· {cost} so far
+              </span>
+            ) : `${rows.length} steps to go`}
           </span>
         ) : (
           <span data-testid="breakdown-total">{duration(bill?.seconds ?? null)} · {cost}</span>
@@ -276,7 +286,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
         <span className="text-[10px] hidden group-open:inline">hide</span>
       </summary>
       {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <PhoneBill rows={rows} bill={bill} making={making} />
+        <PhoneBill rows={rows} bill={bill} making={making} time={totalTime} />
         <table className="w-full border-collapse hidden sm:table" style={{ color: 'var(--text-secondary)' }}>
           <thead>
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
@@ -323,7 +333,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
           <tfoot>
             <tr className="font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
               <td className={cell} colSpan={making ? 6 : 5}>{making ? 'So far' : 'Total'}</td>
-              <td className={num}>{duration(bill?.seconds ?? null)}</td>
+              <td className={num}>{totalTime}</td>
               <td className={`${num} !pr-0`}>{cost}</td>
             </tr>
           </tfoot>
@@ -339,7 +349,7 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
 }
 
 /** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
-function PhoneBill({ rows, bill, making }: { rows: Row[]; bill: Breakdown | null; making: boolean }) {
+function PhoneBill({ rows, bill, making, time }: { rows: Row[]; bill: Breakdown | null; making: boolean; time: ReactNode }) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
       <ol>
@@ -370,7 +380,7 @@ function PhoneBill({ rows, bill, making }: { rows: Row[]; bill: Breakdown | null
       </ol>
       <div className="flex gap-2 pt-1 font-bold" style={{ borderTop: '1px dashed var(--border)', color: 'var(--text-primary)' }}>
         <span>{making ? 'So far' : 'Total'}</span>
-        <span className="ml-auto text-right tabular-nums">{duration(bill?.seconds ?? null)} · {bill ? totalCost(bill) : '$0'}</span>
+        <span className="ml-auto text-right tabular-nums">{time} · {bill ? totalCost(bill) : '$0'}</span>
       </div>
     </div>
   );

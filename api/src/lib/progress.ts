@@ -5,7 +5,8 @@
  * the steps whose last try failed, and the bill so far (lib/breakdown.ts). While it writes the lesson the report
  * goes on the question (PUT /api/questions/:id/progress), with whether the videos' steps come after; while it
  * makes the videos it goes on the answer (PUT /api/answers/:id/video/progress), and its bill is the videos' bill
- * so far. The page shows it as the bill of materials filling in, one line per step: done, running or waiting.
+ * so far. The page shows it as the bill of materials filling in, one line per step: done, running or waiting, and
+ * its time so far counting up while a step runs.
  *
  * The page holds the lesson text back while the videos are made, so a learner meets the droplet through its
  * videos, not through a text the videos then repeat. Not for ever: the text shows once the videos are READY or
@@ -44,6 +45,9 @@ export interface Progress {
   running: RunningStep[];
   failed: string[]; // steps whose last try failed and that are not running again yet
   videos: boolean; // whether the videos' steps are part of this droplet
+  // How long the droplet has been made so far when the response was made (secondsSoFar), which a browser counts on
+  // from while a step runs; null: not known.
+  seconds: number | null;
   breakdown: Breakdown | null; // the bill so far: the lesson's, then the videos'
 }
 
@@ -76,7 +80,10 @@ export function progressError(value: unknown, part: 'lesson' | 'videos'): string
   return breakdownError(breakdown);
 }
 
-/** A report as it is stored: each running step with when it started, so the page can count on from there. */
+/**
+ * A report as it is stored: each running step with when it started, and when the bill so far came with it, so the
+ * page can count on from there.
+ */
 export function storedProgress(value: Record<string, unknown>, now = new Date()) {
   const running = (value.running as { step: string; seconds: number }[]).map((r) => ({
     step: r.step,
@@ -86,6 +93,7 @@ export function storedProgress(value: Record<string, unknown>, now = new Date())
     running,
     failed: Array.isArray(value.failed) ? (value.failed as string[]) : [],
     ...(typeof value.videos === 'boolean' && { videos: value.videos }),
+    ...(value.breakdown !== undefined && { billAt: now.toISOString() }),
   };
 }
 
@@ -107,8 +115,27 @@ export function readProgress(raw: unknown, now = new Date()) {
     running: readRunning(p.running, now),
     failed: Array.isArray(p.failed) ? p.failed.filter(isStep) : [],
     videos: typeof p.videos === 'boolean' ? p.videos : null, // null: the studio did not say
+    // When the bill so far came; null: the report had none, or was stored before they were timed.
+    billAt: typeof p.billAt === 'string' && !Number.isNaN(Date.parse(p.billAt)) ? new Date(p.billAt).toISOString() : null,
     breakdown: p.breakdown, // the lesson's bill so far, on the question's report
   };
+}
+
+/**
+ * How long the droplet has been made so far, `now`. While nothing runs, the bill's time. While a step runs, the
+ * bill's time and the time since the bill came (`billAt`): the studio sends the bill up to then at the start and
+ * the end of every step, so the two add up to the time so far, the art and the audio side by side as the bill
+ * counts them. Never less than the bill's time, nor than `before` (the lesson's time, while the videos are made)
+ * and the longest a step running now has run, which stands in for the time since when it is not known (a report
+ * with no bill, or stored before bills were timed), and covers the claim a step renews before it is reported.
+ */
+export function secondsSoFar(
+  bill: Breakdown | null, running: RunningStep[], billAt: string | null, before = 0, now = new Date(),
+): number | null {
+  if (running.length === 0) return bill?.seconds ?? null;
+  const longest = Math.max(...running.map((r) => r.seconds));
+  const since = billAt === null ? 0 : Math.max(0, now.getTime() - Date.parse(billAt)) / 1000;
+  return Math.round(Math.max(before + longest, (bill?.seconds ?? 0) + since) * 10) / 10;
 }
 
 /**
@@ -138,11 +165,14 @@ export function awaitingVideos(
 /** The page's view of a topic still being written: its report, if the lease that sent it is still held. */
 export function lessonProgress(raw: unknown, leaseLive: boolean, now = new Date()): Progress {
   const p = readProgress(raw, now);
+  const running = leaseLive ? p.running : []; // a run that let its lease lapse has died: nothing of it is running
+  const breakdown = serializeBreakdown(p.breakdown, undefined);
   return {
-    running: leaseLive ? p.running : [], // a run that let its lease lapse has died: nothing of it is running
+    running,
     failed: p.failed,
     videos: p.videos ?? true, // nothing said yet: the whole droplet, as the studio makes it by default
-    breakdown: serializeBreakdown(p.breakdown, undefined),
+    seconds: secondsSoFar(breakdown, running, p.billAt, 0, now),
+    breakdown,
   };
 }
 
@@ -151,10 +181,15 @@ export function videoProgress(
   raw: unknown, rendering: boolean, lessonBreakdown: unknown, videoBreakdown: unknown, now = new Date(),
 ): Progress {
   const p = readProgress(raw, now);
+  const running = rendering ? p.running : [];
+  // The lesson's whole bill and the videos' so far, which came with the videos' last report that had one.
+  const breakdown = serializeBreakdown(lessonBreakdown, videoBreakdown);
+  const lesson = serializeBreakdown(lessonBreakdown, undefined)?.seconds ?? 0;
   return {
-    running: rendering ? p.running : [],
+    running,
     failed: rendering ? p.failed : [],
     videos: true,
-    breakdown: serializeBreakdown(lessonBreakdown, videoBreakdown),
+    seconds: secondsSoFar(breakdown, running, p.billAt, lesson, now),
+    breakdown,
   };
 }

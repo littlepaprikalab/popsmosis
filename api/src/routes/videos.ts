@@ -152,9 +152,12 @@ export default async function videoRoutes(app: FastifyInstance) {
     if (attempt === 'invalid') return sendError(reply, 'VALIDATION_ERROR', 'attempt must be a positive integer');
     const breakdown = report.breakdown === undefined ? null : JSON.stringify(report.breakdown);
 
+    // A report without a bill keeps the one before and when it came (lib/progress.ts's billAt), which the page
+    // counts the time so far on from. The claim clears the report, so that is never another attempt's.
     const updated = await prisma.$queryRaw<{ id: string }[]>`
       UPDATE answers
-      SET "videoProgress" = ${JSON.stringify(storedProgress(report))}::jsonb,
+      SET "videoProgress" = ${JSON.stringify(storedProgress(report))}::jsonb || CASE WHEN ${breakdown}::jsonb IS NULL
+            THEN jsonb_strip_nulls(jsonb_build_object('billAt', "videoProgress"->'billAt')) ELSE '{}'::jsonb END,
           "videoBreakdown" = COALESCE(${breakdown}::jsonb, "videoBreakdown")
       WHERE id = ${id} AND "agentId" = ${agentId} AND "videoStatus" = 'RENDERING'
         AND (${attempt}::int IS NULL OR "videoAttempts" = ${attempt}::int)

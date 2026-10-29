@@ -79,7 +79,7 @@ d('progress reports', () => {
   it('shows a topic nobody has picked up as the whole droplet still to make', async () => {
     const q = await card();
     expect(q.status).toBe('PENDING');
-    expect(q.progress).toEqual({ running: [], failed: [], videos: true, breakdown: null });
+    expect(q.progress).toEqual({ running: [], failed: [], videos: true, seconds: null, breakdown: null });
   });
 
   it('shows the lesson being written, step by step, with its bill so far', async () => {
@@ -98,6 +98,9 @@ d('progress reports', () => {
     expect(q.progress.videos).toBe(true);
     expect(q.progress.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle']);
     expect(q.progress.breakdown.costUsd).toBe(0.53);
+    // The time so far: the bill's 196.4 seconds, and the time since the report came, which the page counts on from.
+    expect(q.progress.seconds).toBeGreaterThanOrEqual(196.4);
+    expect(q.progress.seconds).toBeLessThan(206.4);
 
     // A step that failed is said so until it runs again; a run whose lease lapsed has nothing running.
     expect((await lessonReport({ running: [], failed: ['factcheck'], breakdown: LESSON_BILL, videos: true })).statusCode).toBe(204);
@@ -183,6 +186,15 @@ d('progress reports', () => {
     expect(q.progress.running.map((r: { step: string }) => r.step)).toEqual(['art', 'audio']);
     expect(q.progress.breakdown.steps.map((s: { step: string }) => s.step)).toEqual(['request', 'bundle', 'art']);
     expect(q.answer.breakdown.steps).toHaveLength(3); // the bill under the lesson fills in as the videos are made
+    // The lesson's 196.4 seconds and the art's 76, and the time since the videos' report.
+    expect(q.progress.seconds).toBeGreaterThanOrEqual(272.4);
+    expect(q.progress.seconds).toBeLessThan(282.4);
+    // A report without a bill keeps the bill before and when it came, so the time so far never drops back.
+    await new Promise((r) => setTimeout(r, 1100));
+    expect((await videoReport(answerId, { attempt: 1, running: [{ step: 'audio', seconds: 6 }] })).statusCode).toBe(204);
+    const kept = (await card()).progress.seconds;
+    expect(kept).toBeGreaterThanOrEqual(q.progress.seconds + 1);
+    expect(kept).toBeLessThan(282.4);
 
     // READY with the last bill: the text shows with the videos, and nothing is in progress any more. (One sent
     // without a bill drops the bill so far, which would read as the total: tested below.)
