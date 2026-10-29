@@ -121,7 +121,7 @@ export default function AboutPage() {
             className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn
             from.
           </p>
-          <p>If you&rsquo;re curious, here&rsquo;s what else I&rsquo;ve made over the past year and a half.</p>
+          <p>Might as well show you what else I&rsquo;ve made over the past year and a half, lol.</p>
         </div>
       </header>
 
