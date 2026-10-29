@@ -119,6 +119,23 @@ def test_a_chorus_the_songwriter_rewrites_is_sung_so_in_every_chorus():
     assert report.corrections[0].ids == ["c1-1", "c2-1", "c3-1"]
 
 
+def test_a_line_sung_in_two_couplets_stays_one_line_in_the_choruss_words():
+    def hook_opens_the_verse(data):  # as the title line opens the intro and every chorus
+        data["lyrics"][0]["text"] = CHORUS
+
+    def rewrites(asked):  # the couplets come back worded differently
+        words = {"v1-1,v1-2": ["Protons come back, ATP is made", SEEDED], "c1-1": ["Protons flow back and ATP grows"]}
+        return [{"id": c["id"], "lines": words[c["id"]]} for c in asked]
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "Protons return and ATP is made") if text == CHORUS
+                       else supported(text), song=rewrites)
+    report, checked = check_bundle(bundle(hook_opens_the_verse), "", fake)
+    assert report.status == "passed"
+    assert [line.text for line in checked.lyrics if line.id in ("v1-1", "c1-1", "c2-1", "c3-1")] == [
+        "Protons flow back and ATP grows"] * 4
+    assert "lyric:v1-1,v1-2" in fake.ids(2)  # the verse couplet, changed by the chorus's words, is checked again
+
+
 def test_a_rewritten_line_must_stay_near_the_length_of_the_one_it_replaces():
     assert songwriter.syllables("Protons flow and ATP grows") == 8  # ATP is said letter by letter
     assert songwriter.syllables("Only b6f pumps a proton through") == 10

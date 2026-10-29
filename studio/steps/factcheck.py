@@ -400,8 +400,15 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     sung = {before: after for (kind, before), after in fixes.items() if kind == LYRIC}
     new = {i: text for unit in couplets(bundle) if unit.text in sung
            for i, text in zip(unit.members, sung[unit.text].split("\n"))}
+    # A line sung in more than one couplet (the title line, in the intro, every chorus and the outro; a chorus the
+    # last one pairs differently) stays one line: its new words wherever it is sung, the chorus's when two
+    # couplets changed it differently. The couplets it changes in are checked again, as any changed line.
+    became: dict[str, str] = {}
+    for line in sorted(bundle.lyrics, key=lambda line: line.section != "chorus"):
+        if new.get(line.id, line.text) != line.text:
+            became.setdefault(line.text, new[line.id])
     for line in data["lyrics"]:
-        line["text"] = new.get(line["id"], line["text"])
+        line["text"] = became.get(line["text"], new.get(line["id"], line["text"]))
     for line in data["narration"]:
         line["text"] = fixes.get(("narration", line["text"]), line["text"])
     for key in data["key_lines"]:
