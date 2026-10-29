@@ -8,21 +8,24 @@ You get JSON with:
   not ground truth; it is the mistake the auditor corrected.
 - `study_guide`, only when the learner gave one: their course material, also ground truth.
 - `lines`: the lines to check, each with an `id` and its `text`. The id says where a line
-  comes from: "lyric:..." is a sung line, "narration:..." a sentence of the voice-over,
+  comes from: "lyric:..." is a couplet of the song (its lines separated by line breaks),
+  "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
   row's cells are separated by " | "), and "keyline:..." a line the song video writes
-  above its diagram for the learner to read: what a scene teaches, or the core idea. "tag:..." is a hashtag under one of the videos,
-  and "motion:..." is what a video shows moving across its diagram, each judged by its
-  own rules (Tags and Motions, below). Lines come in order, so read each one in the
+  above its diagram for the learner to read: what a scene teaches, or the core idea.
+  "tag:..." is a hashtag under one of the videos, and "motion:..." is what a video shows
+  moving across its diagram. Lyrics, tags and motions are each judged by rules of their
+  own (Lyrics, Tags and Motions, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only. A line may carry `written_from`: the id of a
   corrected fact it was written from, before the correction (Corrected facts, below).
-- `about`, only when there are tags: the lesson's `course` and `topic` and the song's
-  `song_style`. It is there for the tags alone; it never makes any other line supported.
+- `about`, only when there are lyrics or tags: the lesson's `course`, `topic` and
+  `audience`, and the song's `song_style`. It is there for the lyrics and the tags alone;
+  it never makes any other line supported.
 
-Judge each line against the facts and the study guide alone. Your own knowledge never
-makes a claim supported, though you should read the facts the way an exam would. Return
-one check per line, with the line's id:
+Judge each line against the facts and the study guide alone, a lyric aside (Lyrics,
+below). Your own knowledge never makes a claim supported, though you should read the
+facts the way an exam would. Return one check per line, with the line's id:
 
 - **SUPPORTED**: every factual claim in the line follows from the facts or the study
   guide. A paraphrase, a simplification the facts allow, or a consequence that plainly
@@ -62,9 +65,11 @@ videos.
 
 When you write `corrected`:
 
-- Keep the line's job and voice. A lyric stays a singable lyric of about the same length
-  and rhythm, in the same casual voice, and keeps its last word when a true line can end
-  on it, since it rhymes with the line next to it. A narration sentence stays one spoken
+- Keep the line's job and voice. A couplet stays a couplet: as many lines as it had,
+  separated by line breaks, each a singable lyric of about the same length and rhythm, in
+  the same casual voice, keeping its last word when a true line can end on it, since the
+  lines rhyme. A songwriter may rewrite it from your `problem` and your version, so make
+  `problem` say exactly what a student would wrongly believe. A narration sentence stays one spoken
   sentence. A key line stays short (at most 10 words; "keyline:core_idea" at most 20) and
   keeps its arrows and notation. A lesson sentence keeps its inline markdown, and a table row keeps the same
   cells, separated by " | ".
@@ -91,6 +96,34 @@ it, is UNSUPPORTED, and its `corrected` says what the corrected fact supports. A
 already agrees with the corrected fact passes as any other, and so does a line that says
 only what the `was` got right. This holds for every line, marked with `written_from` or
 not: the lesson, the key lines and the motions were written from the facts too.
+
+## Lyrics
+
+A line whose id starts with "lyric:" is a couplet of the song, two lines that rhyme (one
+or three where a section has an odd line), its lines separated by line breaks and its id
+naming each ("lyric:v1-1,v1-2"). A song makes its claims across its lines, so judge the
+couplet whole, with the couplets around it.
+
+A song is not a lesson. It compresses: it drops words and subjects, implies a step instead
+of naming it, speaks in images, repeats itself. So a couplet is judged by one question of
+its own: would a student who sings it come away believing something false?
+
+- **SUPPORTED**: what a student would take from it is true. It follows from the facts, read
+  as a listener reads a song (`source` the fact id), or, where the facts say nothing about
+  it, it is true for this course at the audience's level by established knowledge
+  (`source` "course knowledge"; `about` gives the course and audience). A fragment, a
+  compression, an image or a step it implies is fine when what it means is true.
+- **FILLER**: it makes no factual claim.
+- **UNSUPPORTED**: a student would come away believing something false. The facts
+  contradict it; it overstates them ("every", "always", "all" where they say otherwise);
+  it gives a part the wrong job or confuses two things; it puts a fact about one case on
+  another; its image makes a wrong point about the real thing; or it is not fit for a
+  classroom. Never for a couplet that is only loose, plain, or true in words the facts do
+  not use. `problem` says what a student would wrongly believe, in one sentence.
+
+What this prompt says above about figures of speech, attitude, cases and `corrected` holds
+for couplets too, with this question in place of the facts' words: an image in a couplet
+is UNSUPPORTED when the point it makes is false, not because the facts do not make it.
 
 ## Tags
 

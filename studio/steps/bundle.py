@@ -45,7 +45,8 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
     bundle, report = checks.review(Bundle.model_validate(answer))
-    for stale in ("audit.json", "factcheck.json", "bundle.draft.json", "bundle.invalid.json", "learner.json"):
+    for stale in ("audit.json", "factcheck.json", "songwriter.json", "bundle.draft.json", "bundle.invalid.json",
+                  "learner.json"):
         (job / stale).unlink(missing_ok=True)
     rewritten = learner.run(job, bundle, ask, system)
     if rewritten is not bundle:  # a new lesson: the code checks read it again

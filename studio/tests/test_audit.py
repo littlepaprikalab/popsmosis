@@ -5,7 +5,7 @@ import pytest
 from studio import jobs
 from studio import run as operator_run
 from studio.jobs import read, write
-from studio.schemas import AuditReport, Bundle, FactAudit, FactCheck, Request
+from studio.schemas import AuditReport, Bundle, FactAudit, FactCheck, LyricRewrite, Request
 from studio.steps import audit, factcheck
 from studio.steps import bundle as bundle_step
 from studio.steps.factcheck import check_bundle
@@ -18,6 +18,7 @@ WRONG = "Every electron hand-off in the thylakoid membrane pumps a proton into t
 RIGHT = FACTS[1]["text"]  # "Only cytochrome b6f pumps protons into the thylakoid lumen; the other carriers..."
 SEEDED = "Every electron hand-off pumps a proton"  # lyric v1-2, written from f2
 FIXED = "Only b6f pumps a proton through"
+FIRST = "Light lands on the thylakoid"  # lyric v1-1, the line SEEDED is sung in a couplet with
 GUIDE = "In the light reactions, only cytochrome b6f pumps protons into the lumen. ATP synthase makes ATP."
 
 
@@ -53,8 +54,10 @@ def check_by_the_facts(payload):
     checks = []
     for line in payload["lines"]:
         if "every electron hand-off" in line["text"].lower() and not says_every:
+            fixed = "\n".join(FIXED if "every electron hand-off" in part.lower() else part
+                               for part in line["text"].split("\n"))  # a couplet keeps its other line
             checks.append({"id": line["id"], "verdict": "UNSUPPORTED", "source": "",
-                           "problem": "only cytochrome b6f pumps", "corrected": FIXED})
+                           "problem": "only cytochrome b6f pumps", "corrected": fixed})
         else:
             checks.append({"id": line["id"], "verdict": "SUPPORTED", "source": says_every[0] if says_every and
                            "every" in line["text"].lower() else "f1", "problem": "", "corrected": ""})
@@ -78,8 +81,9 @@ class FakeAuditor:
 
 
 class Studio:
-    """brain.ask for a whole run: the seeded bundle, an auditor that knows only cytochrome b6f pumps, and a
-    fact-checker that holds each line to the facts it is sent."""
+    """brain.ask for a whole run: the seeded bundle, an auditor that knows only cytochrome b6f pumps, a
+    fact-checker that holds each line to the facts it is sent, and a songwriter with nothing to offer, so the
+    checker's corrections are used."""
 
     def __init__(self, rule=knows_b6f):
         self.auditor = FakeAuditor(rule)
@@ -91,6 +95,8 @@ class Studio:
             return seeded_data()
         if schema is FactAudit:
             return self.auditor(role, prompt, schema, system=system, label=label)
+        if schema is LyricRewrite:
+            return {"couplets": []}
         assert schema is FactCheck and system == factcheck.PROMPT
         self.checks.append(json.loads(prompt))
         return check_by_the_facts(self.checks[-1])
@@ -142,9 +148,9 @@ def test_the_audit_catches_the_wrong_fact_and_the_fact_check_then_corrects_the_l
     assert sent["facts"][1] == {"id": "f2", "text": RIGHT, "was": WRONG}
     assert "was" not in sent["facts"][0] and "was" not in sent["facts"][2]
     marked = {line["id"]: line.get("written_from") for line in sent["lines"] if "written_from" in line}
-    assert marked == {"lyric:v1-2": "f2", "lyric:v2-1": "f2"}
+    assert marked == {"lyric:v1-1,v1-2": "f2", "lyric:v2-1": "f2"}
     [fix] = checked.corrections
-    assert (fix.ids, fix.before, fix.after) == (["v1-2"], SEEDED, FIXED)
+    assert (fix.ids, fix.before, fix.after) == (["v1-1", "v1-2"], f"{FIRST}\n{SEEDED}", f"{FIRST}\n{FIXED}")
     bundle = Bundle.model_validate_json((job / "bundle.json").read_text())
     assert bundle.lyrics[1].text == FIXED and bundle.facts[1].text == RIGHT
     draft = json.loads((job / "bundle.draft.json").read_text())  # still the writer's, from before the audit
@@ -154,7 +160,8 @@ def test_the_audit_catches_the_wrong_fact_and_the_fact_check_then_corrects_the_l
 def test_a_whole_run_posts_the_corrected_fact_and_the_lines_rechecked_against_it(jobs_root):
     api, ask = FakeApi(), Studio()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.labels == ["bundle", "fact audit", "fact audit again", "factcheck round 1", "factcheck round 2"]
+    assert ask.labels == ["bundle", "fact audit", "fact audit again", "factcheck round 1", "lyric rewrite round 1",
+                          "factcheck round 2"]
     posted = api.posted["bundle"]
     assert posted["facts"][1]["text"] == RIGHT and posted["lyrics"][1]["text"] == FIXED
     assert SEEDED not in json.dumps(posted) and WRONG not in json.dumps(posted)
