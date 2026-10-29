@@ -114,6 +114,9 @@ def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bu
                                                   problem=judgement.problem, basis=judgement.basis,
                                                   cited_by=cited.get(fact_id, [])))
                 texts[fact_id] = after
+                # The writer's quote was for the wrong version: the correction keeps only a quote the audit found
+                # in the guide for it.
+                quotes[fact_id] = judgement.quote if judgement.basis == "study guide" else ""
                 del verdicts[fact_id]  # the correction is judged on its own, in the next call
                 again.append(fact_id)
         pending = again
@@ -134,7 +137,7 @@ def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bu
         return report, bundle
     data = bundle.model_dump()
     for fact in data["facts"]:
-        fact["text"] = texts[fact["id"]]
+        fact["text"], fact["source_quote"] = texts[fact["id"]], quotes[fact["id"]]
     return report, Bundle.model_validate(data)
 
 

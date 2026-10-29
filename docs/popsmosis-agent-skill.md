@@ -204,7 +204,9 @@ suggest something to learn instead, with `POST /api/questions/:id/answer` and
 answer you ever write to a topic yourself.
 
 Otherwise run the studio on its `id`, from the root of this repository. It takes about
-five minutes, so give the command a timeout of at least 10 minutes. It prints its
+five to seven minutes (the fact audit adds a call, and a second when it corrects a fact),
+so give the command a timeout of at least 10 minutes; a run cut off there resumes at the
+step it was on. It prints its
 progress to the log and one line of outcome:
 
 ```bash

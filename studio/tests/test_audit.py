@@ -289,6 +289,32 @@ def test_with_a_study_guide_a_fact_is_judged_by_it_and_its_quote_must_be_in_it(j
     assert audit.describe(report) == "3 fact(s) judged, 1 by the study guide, in 1 call(s)"
 
 
+def test_a_corrected_fact_keeps_only_a_quote_the_audit_found_for_it(job):
+    write(job / "request.json", Request(topic="the light reactions", study_guide=GUIDE))
+    data = seeded_data()
+    data["facts"][1]["source_quote"] = "ATP synthase makes ATP"  # the writer's quote, for the wrong version
+    write(job / "bundle.json", Bundle.model_validate(data))
+
+    def by_the_guide(text):
+        if "Every electron hand-off" in text:
+            return {"verdict": "WRONG", "problem": "only b6f pumps", "corrected": RIGHT, "basis": "study guide",
+                    "quote": "only cytochrome b6f pumps protons into the lumen"}
+        return {"verdict": "CORRECT"}
+
+    auditor = FakeAuditor(by_the_guide)
+    assert audit.run(job, ask=auditor).status == "passed"
+    assert auditor.payloads[1]["facts"] == [{"id": "f2", "text": RIGHT,
+                                             "source_quote": "only cytochrome b6f pumps protons into the lumen"}]
+    fact = Bundle.model_validate_json((job / "bundle.json").read_text()).facts[1]
+    assert (fact.text, fact.source_quote) == (RIGHT, "only cytochrome b6f pumps protons into the lumen")
+
+    write(job / "bundle.json", Bundle.model_validate(data))  # judged by course knowledge: no quote stands
+    auditor = FakeAuditor()
+    audit.run(job, ask=auditor)
+    assert "source_quote" not in auditor.payloads[1]["facts"][0]
+    assert Bundle.model_validate_json((job / "bundle.json").read_text()).facts[1].source_quote == ""
+
+
 def test_without_a_study_guide_every_fact_is_judged_by_course_knowledge_and_the_report_says_so(job):
     auditor = FakeAuditor(lambda text: {"verdict": "CORRECT", "basis": "study guide",
                                         "quote": "only cytochrome b6f pumps protons"})
