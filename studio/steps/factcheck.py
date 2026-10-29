@@ -1,9 +1,17 @@
 """Step 2: the fact-check, the gate before anything is posted or sung.
 
 A fresh brain call sees only the facts (and the study guide, if one was given) and
-the lines: every lyric line, every narration sentence and every sentence of the
+the lines: every couplet of the song, every narration sentence and every sentence of the
 lesson, in one call. Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
+
+The song is checked a couplet at a time (couplets()), since a song makes its claims across its
+lines, and by a question of its own: would a student who sings it come away believing something
+false? A lyric is not held to the facts' words, and may pass on what is true at the audience's
+level where the facts are silent ("course knowledge"); the lesson, the narration and the screen
+are held to the facts alone. A couplet that fails is rewritten by the songwriter
+(studio/steps/songwriter.py), once, so it stays a song; the checker's own correction is used when
+the songwriter has none, or when its rewrite fails too.
 
 The same call checks each video's hashtags, which are public and what the Droplets tab
 is searched by: a tag the checker does not pass is dropped from both videos, never
@@ -43,22 +51,27 @@ from studio.jobs import read, write
 from studio.schemas import (AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
 from studio.sentences import replace_sentences, split_sentences
+from studio.steps import songwriter
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
 KEY = "keyline"  # a key line, or the core idea: written on screen in the song
-KINDS = ("lyric", "narration", "lesson", KEY)  # the lines a correction rewrites
+LYRIC = "lyric"  # a couplet of the song, its lines joined by "\n"
+KINDS = (LYRIC, "narration", "lesson", KEY)  # the lines a correction rewrites
 TAG = "tag"  # a video's hashtag: passed, or dropped
 MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
 KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
 PASSING = ("SUPPORTED", "FILLER")
+COURSE_KNOWLEDGE = "course knowledge"  # a lyric's source when it is true but the facts do not say it
 
 
 @dataclass(frozen=True)
 class Line:
     kind: str  # lyric, narration, lesson or tag
-    id: str  # the bundle's id; for the lesson, the sentence's number; for a tag, its video and place ("song-3")
+    id: str  # the bundle's id; for the lesson, the sentence's number; for a tag, its video and place ("song-3");
+    # for a couplet, its lines' ids ("v1-1,v1-2")
     text: str
+    members: tuple[str, ...] = ()  # a couplet's lyric ids, in order; its text has a line for each
 
     @property
     def key(self) -> str:
@@ -96,10 +109,32 @@ def audit_corrections(job: Path, bundle: Bundle) -> dict[str, str]:
 
 
 def lines_of(bundle: Bundle) -> list[Line]:
-    lines = [Line("lyric", lyric.id, lyric.text) for lyric in bundle.lyrics]
+    lines = couplets(bundle)
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
     return lines + key_lines(bundle) + tag_lines(bundle) + motion_lines(bundle)
+
+
+def couplets(bundle: Bundle) -> list[Line]:
+    """The song as it rhymes: each section's lines two at a time from its start, a section's odd last line
+    joining the pair before it (a chorus of five ends on three), and a section of one line on its own."""
+    units, run = [], []
+    for lyric in bundle.lyrics:
+        if run and lyric.section != run[-1].section:
+            units += _pairs(run)
+            run = []
+        run.append(lyric)
+    units += _pairs(run)
+    return [Line(LYRIC, ",".join(line.id for line in unit), "\n".join(line.text for line in unit),
+                 tuple(line.id for line in unit)) for unit in units]
+
+
+def _pairs(run: list) -> list[list]:
+    pairs = [run[i:i + 2] for i in range(0, len(run), 2)]
+    if len(pairs) > 1 and len(pairs[-1]) == 1:
+        odd = pairs.pop()
+        pairs[-1] += odd
+    return pairs
 
 
 def key_lines(bundle: Bundle) -> list[Line]:
@@ -165,8 +200,10 @@ def tag_lines(bundle: Bundle) -> list[Line]:
 
 
 def about(bundle: Bundle) -> dict[str, str]:
-    """What the checker needs to judge a tag beyond the facts: "#apbio" by the course, "#kpop" by the song."""
-    return {"course": bundle.course, "topic": bundle.topic, "song_style": ", ".join(bundle.music.positive_styles)}
+    """What the checker needs beyond the facts to judge a tag ("#apbio" by the course, "#kpop" by the song) and a
+    lyric (what is true at the audience's level)."""
+    return {"course": bundle.course, "topic": bundle.topic, "audience": bundle.audience,
+            "song_style": ", ".join(bundle.music.positive_styles)}
 
 
 def dropped_tags(report: FactCheckReport) -> list[CheckedLine]:
@@ -194,17 +231,22 @@ def check_bundle(
     audit corrected said before, by its id.
 
     Verdicts are remembered by (kind, text), so a line is checked again only when
-    its text changes, and a chorus line sung three times is checked once.
+    its text changes, and a chorus couplet sung three times is checked once.
     """
     facts = {fact.id: fact.text for fact in bundle.facts}
     context = about(bundle)
     was = {i: before for i, before in (was or {}).items() if i in facts}
     # The lines written from a corrected fact, by their key: a correction never changes a line's fact_id.
-    written_from = {f"{kind}:{line.id}": line.fact_id for kind, field in (("lyric", bundle.lyrics),
-                                                                          ("narration", bundle.narration))
-                    for line in field if line.fact_id in was}
+    fact_of = {line.id: line.fact_id for line in [*bundle.lyrics, *bundle.narration]}
+    written_from = {}
+    for line in lines_of(bundle):
+        if line.kind in (LYRIC, "narration"):
+            cited = sorted({fact_of[i] for i in (line.members or (line.id,))} & set(was))
+            if cited:
+                written_from[line.key] = ", ".join(cited)
     verdicts: dict[tuple[str, str], tuple[Check, int]] = {}
     corrections: list[Correction] = []
+    to_songwriter: set[str] = set()  # the couplets sent to the songwriter: each goes once
     reason = ""
     rounds = 0
     for round_no in range(1, max_rounds + 1):
@@ -221,8 +263,10 @@ def check_bundle(
         checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from)
         for line in pending:
             check = checks.get(line.key)
-            # A missing verdict, or SUPPORTED without a real source, is asked again next round.
-            if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)):
+            # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
+            # on what is true at the audience's level; every other line rests on the facts.
+            if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)
+                          or (line.kind == LYRIC and check.source.strip().lower() == COURSE_KNOWLEDGE)):
                 verdicts[(line.kind, line.text)] = (check, round_no)
         # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
         wrong = [line for line in pending
@@ -230,20 +274,34 @@ def check_bundle(
         if not wrong or round_no == max_rounds:
             continue
 
+        # A narration or lesson line with no correction fails the check: found before a songwriter is paid.
+        for line in wrong:
+            check = verdicts[(line.kind, line.text)][0]
+            if line.kind not in (LYRIC, KEY) and not corrected(line, check):
+                reason = f"{line.kind} {line.id} is unsupported and has no correction: {check.problem}"
+                break
+        if reason:
+            break
+        fresh = [(line, verdicts[(line.kind, line.text)][0]) for line in wrong
+                 if line.kind == LYRIC and line.id not in to_songwriter]
+        written = songwriter.rewrite(bundle, fresh, ask, round_no) if fresh else {}
+        to_songwriter |= {line.id for line, _ in fresh}
+
         fixes: dict[tuple[str, str], str] = {}
         made: list[Correction] = []
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
-            after = " ".join(check.corrected.split())
-            if line.kind == KEY and (not after or after == line.text):
+            after, by = (written[line.id], "songwriter") if line.id in written else (corrected(line, check), "checker")
+            if line.kind == KEY and not after:
                 after = ""  # taken off the screen: a key line is a help, never worth failing the droplet
-            elif not after or after == line.text:
-                reason = f"{line.kind} {line.id} is unsupported and has no correction: {check.problem}"
+            elif not after:
+                reason = f"{line.kind} {_shown(line.id)} is unsupported and has no correction: {check.problem}"
                 break
             fixes[(line.kind, line.text)] = after
-            ids = [other.id for other in lines if (other.kind, other.text) == (line.kind, line.text)]
+            ids = [i for other in lines if (other.kind, other.text) == (line.kind, line.text)
+                   for i in (other.members or (other.id,))]
             made.append(Correction(round=round_no, kind=line.kind, ids=ids, before=line.text,
-                                   after=after, problem=check.problem))
+                                   after=after, problem=check.problem, by=by))
         if reason:
             break
         try:
@@ -314,8 +372,8 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
                                for i, text in facts.items()]}
     if study_guide:
         payload["study_guide"] = study_guide
-    if context and any(line.kind == TAG for line in pending):
-        payload["about"] = context  # for the tags only: every other line is judged by the facts alone
+    if context and any(line.kind in (TAG, LYRIC) for line in pending):
+        payload["about"] = context  # for the tags and the lyrics: every other line is judged by the facts alone
     payload["lines"] = [
         {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {}),
          **({"written_from": written_from[line.key]} if line.key in written_from else {})}
@@ -326,12 +384,26 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
     return {check.id: check for check in FactCheck.model_validate(answer).checks}
 
 
+def corrected(line: Line, check: Check) -> str:
+    """The checker's correction of a line, as it would go in: "" when there is none, it changes nothing, or a
+    couplet's comes back with another number of lines."""
+    if line.kind == LYRIC:
+        after = "\n".join(songwriter.true_version(check, len(line.members)))
+    else:
+        after = " ".join(check.corrected.split())
+    return after if after != line.text else ""
+
+
 def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
-    """Rewrite every line whose (kind, text) has a fix: all repeats of a chorus line alike."""
+    """Rewrite every line whose (kind, text) has a fix: all repeats of a chorus couplet alike."""
     data = bundle.model_dump()
-    for kind, field in (("lyric", "lyrics"), ("narration", "narration")):
-        for line in data[field]:
-            line["text"] = fixes.get((kind, line["text"]), line["text"])
+    sung = {before: after for (kind, before), after in fixes.items() if kind == LYRIC}
+    new = {i: text for unit in couplets(bundle) if unit.text in sung
+           for i, text in zip(unit.members, sung[unit.text].split("\n"))}
+    for line in data["lyrics"]:
+        line["text"] = new.get(line["id"], line["text"])
+    for line in data["narration"]:
+        line["text"] = fixes.get(("narration", line["text"]), line["text"])
     for key in data["key_lines"]:
         key["text"] = fixes.get((KEY, key["text"]), key["text"])
     data["key_lines"] = [key for key in data["key_lines"] if key["text"].strip()]
@@ -366,7 +438,16 @@ def _verdict(verdicts: dict[tuple[str, str], tuple[Check, int]], line: Line) -> 
     return found[0].verdict if found else None
 
 
+def shown(text: str) -> str:
+    """A couplet on one line, for a reason or a printout: "Light lands on the thylakoid / Every hand-off..."."""
+    return text.replace("\n", " / ")
+
+
+def _shown(line_id: str) -> str:
+    return line_id.replace(",", ", ")
+
+
 def _describe(line: CheckedLine, verdicts: dict[tuple[str, str], tuple[Check, int]]) -> str:
     found = verdicts.get((line.kind, line.text))
     why = found[0].problem if found and found[0].problem else "no verdict"
-    return f'{line.kind} {line.id} "{line.text}": {why}'
+    return f'{line.kind} {_shown(line.id)} "{shown(line.text)}": {why}'

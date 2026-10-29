@@ -199,7 +199,8 @@ step 2 (section 11).
 
 That is three to five brain calls per topic: the bundle, the fact audit (and a second look
 at any fact it corrected), the fact-check, and a re-check of any lines the fact-check
-changed (plus one per scene for the SVG art, with the Claude brain). The helper is called
+changed, with a songwriter's rewrite before it when a couplet of the song failed (plus one
+per scene for the SVG art, with the Claude brain). The helper is called
 per image and per fallback.
 
 ### Step 1: bundle
@@ -301,14 +302,32 @@ and the lyric written from it then corrected by the fact-check (`studio/tests/te
 
 A separate brain call that sees only the facts (and the study guide, if one was given)
 and the lines, never the writer's reasoning, persona or memory. The lines are every
-lyric line, every narration sentence, and every sentence of `lesson_markdown` (code
-splits it). For each it
+couplet of the song, every narration sentence, and every sentence of `lesson_markdown`
+(code splits it). For each it
 returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id or study-guide quote, and for
 an unsupported line a corrected one. A corrected lyric stays about the same length and
 keeps the structure's name, so the timing and the direction still fit. Code applies the
 fixes and re-checks only the changed lines, up to 3 rounds; if any line still fails, the
 job fails with the reason shown on the droplet. Nothing is posted or sung that has not
 passed.
+
+The song is checked differently from the lesson, since a song compresses, implies and
+speaks in images, and its claims run across its lines. Its lines go a couplet at a time
+(each section's lines in pairs from its start, an odd last line joining the pair before
+it), and a couplet fails only when a student who sings it would come away believing
+something false, or it is unfit for a classroom: not for being loose, plain or true in
+words the facts do not use. Where the facts say nothing, a couplet may pass on what is true
+for the course at the audience's level (`source` "course knowledge"); the lesson, the
+narration and the key lines are held to the facts alone. A couplet that fails is rewritten
+by the songwriter (`studio/steps/songwriter.py`, `studio/prompts/songwriter.md`), one brain
+call a round for every failing couplet, which hears the whole song, its style and tempo,
+the facts, the checker's problem and the checker's own version, and keeps the couplet's
+shape, rhyme, voice and frame. Code keeps a rewrite only if it has a line for each line,
+each near the length of the line it replaces; the fact-check then judges it like any changed
+line. Each couplet goes to the songwriter once: if its rewrite fails too, or it has none,
+the checker's correction is used, and `factcheck.json` says who wrote each correction
+(`by`). The songwriter costs a call only in a round where a couplet failed: about 2,500
+tokens in and, with thinking, 1,000 to 3,000 out, $0.03 to $0.07 on Opus 5.5 (estimated).
 
 The same call checks each video's hashtags and its marked motions ("H⁺ travels from
 Stroma to Cytochrome b6f to Thylakoid lumen": what a line's particles carry and their

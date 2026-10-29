@@ -425,9 +425,21 @@ class Correction(Strict):
     round: int
     kind: Literal["lyric", "narration", "lesson", "frq", "keyline"]  # "frq": as for CheckedLine
     ids: list[str]
-    before: str
+    before: str  # a couplet's lines joined by "\n"
     after: str
     problem: str
+    by: Literal["checker", "songwriter"] = "checker"  # who wrote `after`; a report from before songwriters: the checker
+
+
+class RewrittenCouplet(Strict):
+    id: str
+    lines: list[str] = Field(description="The couplet rewritten, a line for each line it had, in order")
+
+
+class LyricRewrite(Strict):
+    """What the songwriter writes for the couplets the fact-check failed (studio/steps/songwriter.py)."""
+
+    couplets: list[RewrittenCouplet]
 
 
 class FactCheckReport(Strict):
