@@ -117,14 +117,15 @@ export default function AboutPage() {
             <Wordmark size="sm" /> started with a problem of my own: I wanted
             to <Marked color="var(--accent-yellow)">automate</Marked> making educational song videos
             for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
-            Sprints</a>, my AP and SAT prep site. Making them was a <Marked>pain in the tush</Marked>, with pictures
-            that came out wrong and content that needed checking line by line, and
-            the <Pill color="var(--accent-purple)">#metahackathon</Pill> was a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson with
-            a <Marked color="var(--accent-blue)">narrated video</Marked> and
-            a <Marked color="var(--accent-red)">song</Marked>. It checks <strong style={{ color: 'var(--text-primary)' }}>every line and every
-            picture</strong> first, and shares the droplet on the <Link href="/droplets"
-            className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn
-            from.
+            Sprints</a>, my AP and SAT prep site. Making them was
+            a <Marked color="var(--accent-green)">pain in the tush</Marked>, with pictures that came out wrong and
+            content that needed checking line by line, and the <Pill color="var(--accent-purple)">#metahackathon</Pill> was
+            a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson
+            with a <Marked color="var(--accent-blue)">narrated video</Marked> and
+            a <Marked color="var(--accent-red)">song</Marked>. It
+            checks <strong style={{ color: 'var(--text-primary)' }}>every line and every picture</strong> first, and
+            shares the droplet on the <Link href="/droplets" className="underline"
+            style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from.
           </p>
           <p>Might as well show you what else I&rsquo;ve made over the past year and a half, lol.</p>
         </div>
@@ -176,7 +177,7 @@ function DropletPill() {
 }
 
 /** A highlighter stroke across the lower half of the words. */
-function Marked({ color = 'var(--accent-pink)', children }: { color?: string; children: React.ReactNode }) {
+function Marked({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <mark style={{
       color: 'var(--text-primary)',
