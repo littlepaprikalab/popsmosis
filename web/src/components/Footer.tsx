@@ -17,6 +17,10 @@ export function Footer() {
           DROPLETS
         </Link>
         <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>|</span>
+        <Link href="/about" className="hover-text transition-colors" style={{ color: 'var(--text-muted)' }}>
+          ABOUT
+        </Link>
+        <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>|</span>
         <Link href="/privacy" className="hover-text transition-colors" style={{ color: 'var(--text-muted)' }}>
           PRIVACY
         </Link>

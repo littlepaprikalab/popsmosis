@@ -74,6 +74,7 @@ export function Nav() {
         <div className="hidden lg:flex flex-wrap items-center gap-x-4 gap-y-1 text-sm flex-1">
           <Link href="/learn" className="hover-text transition-colors" style={isActive('/learn') ? activeStyle : idleStyle}>LEARN</Link>
           <Link href="/droplets" className="hover-text transition-colors" style={isActive('/droplets') ? activeStyle : idleStyle}>DROPLETS</Link>
+          <Link href="/about" className="hover-text transition-colors" style={isActive('/about') ? activeStyle : idleStyle}>ABOUT</Link>
           <span style={{ color: 'var(--border)' }}>|</span>
           {authLinks()}
         </div>
@@ -97,6 +98,7 @@ export function Nav() {
           <div className="flex flex-col gap-3" style={{ color: 'var(--text-secondary)' }}>
             <Link href="/learn" className="hover-text transition-colors" onClick={closeMenu}>LEARN</Link>
             <Link href="/droplets" className="hover-text transition-colors" onClick={closeMenu}>DROPLETS</Link>
+            <Link href="/about" className="hover-text transition-colors" onClick={closeMenu}>ABOUT</Link>
           </div>
           <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
           <div className="flex flex-col gap-3">{authLinks(closeMenu)}</div>
