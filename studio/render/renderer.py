@@ -706,13 +706,13 @@ class Renderer:
         taken: clear of the label pills and of each other where there is room."""
         located = self.locations.scene(beat.scene)
         scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
-        alpha = p.ease((t - beat.t0) / LABEL_IN_S)
         font = self.layout.label_font * 1.25
         taken = list(pills)
         for conv in beat.conversions:
             loc = located.get(conv.structure)
             if loc is None:
                 continue
+            alpha = p.ease((t - conv.since) / LABEL_IN_S)
             w, h = p.conversion_size(conv.text, font)
             x = (loc.box.x0 + loc.box.x1) / 2 * scale + dx
             below, above = loc.box.y1 * scale + dy, loc.box.y0 * scale + dy

@@ -637,6 +637,7 @@ class Converting(Strict):
 
     structure: str  # located on the beat's scene
     text: str  # "H₂O → O₂ + H⁺ + e⁻"
+    since: float = 0.0  # when it was first written on this scene: it fades in then, and stays on every later beat
 
 
 class Beat(Strict):

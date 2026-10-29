@@ -26,7 +26,8 @@ No model calls, so it is free to run again:
   empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
   on across scenes, so a close-up of the same space shows it as full as the overview left it.
 - A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
-  that structure is the subject: its spotlight, glow or camera target, or a stop of the particles.
+  that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
+  it stays on every later beat of the scene.
 - The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
   line, so the learner sees where a close-up sits before it is shown.
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
@@ -353,16 +354,22 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
 
 
 def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
-    """The conversions each beat writes: those of the structures on its scene, labelled by now, that the beat is
-    about (spotlight, glow, camera target, or a stop of its particles)."""
+    """The conversions each beat writes. One is written from the first beat on its scene that is about its
+    structure (spotlight, glow, camera target, or a stop of its particles, with the structure labelled by then),
+    and stays on every later beat of that scene, as a label does."""
+    shown: dict[str, dict[str, float]] = {}  # per scene: structure -> when it was first written
     for beat in beats:
+        scene = shown.setdefault(beat["scene"], {})
         subjects = {beat["spotlight"], beat.get("glow"), beat["camera"].target}
         subjects |= {stop for f in beat["particles"] for stop in f.path}
+        for c in bundle.conversions:
+            if (c.structure in subjects and c.structure in beat["labels"] and c.structure not in scene
+                    and c.structure in located.get(beat["scene"], set())):
+                scene[c.structure] = beat["t0"]
         beat["conversions"] = [
-            Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}")
-            for c in bundle.conversions
-            if c.structure in subjects and c.structure in beat["labels"]
-            and c.structure in located.get(beat["scene"], set())]
+            Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
+                       since=scene[c.structure])
+            for c in bundle.conversions if c.structure in scene]
 
 
 def _turn(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:

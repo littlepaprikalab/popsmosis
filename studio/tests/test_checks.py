@@ -295,3 +295,20 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
     assert len({style_for(f"job{i}") for i in range(40)}) > 4
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
+
+
+def test_only_the_verses_are_asked_to_rap_and_the_rest_to_sing():
+    from studio.steps import audio
+
+    data = bundle_data()
+    data["music"]["positive_styles"] = ["pop with clear rapped verses", "100 bpm"]
+    bundle = Bundle.model_validate(data)
+    plan, _ = audio.composition_plan(bundle)
+    by_section = {c["text"].splitlines()[0]: c for c in plan["chunks"]}
+    assert "clear rapped verse" in by_section["[Verse]"]["positive_styles"]
+    assert "rapping" not in by_section["[Verse]"]["negative_styles"]
+    assert "rapping" in by_section["[Chorus]"]["negative_styles"]
+    assert "sung melodic vocal, not rapped" in by_section["[Chorus]"]["positive_styles"]
+    data["music"]["positive_styles"] = ["bright pop", "100 bpm"]  # no rap asked for: nothing added
+    plan, _ = audio.composition_plan(Bundle.model_validate(data))
+    assert all("rapp" not in " ".join(c["positive_styles"] + c["negative_styles"]) for c in plan["chunks"])
