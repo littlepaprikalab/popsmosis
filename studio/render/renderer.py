@@ -62,6 +62,7 @@ FLOW_MIN_LEG_S = 0.8  # a short hop still takes this long, so it reads as a move
 FLOW_IN_S = 0.4
 STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
 ROUTE_BEHIND = 0.7  # how much of a route's arrow fades where it crosses a part it goes through
+BADGE_APART = 70.0  # frame pixels: one marker per spot, where several routes start together
 ROUTE_GAP = 10.0  # frame pixels a route's arrow stops short of where it ends in a space
 ROUTE_EDGE_GAP = 4.0  # and of the edge of a part it reaches
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
@@ -359,6 +360,24 @@ def lead_at(points: list[Point], t: float) -> tuple[Point, int]:
             return (p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)), int(trip)
         t -= leg
     return points[-1], int(trip)
+
+
+def lead_leg(points: list[Point], t: float) -> tuple[Point, int, bool]:
+    """Where the lead particle is t seconds after it set off, the stop it last left (it is between that stop and
+    the next), and whether it has finished its first trip."""
+    if t >= trip_s(points):
+        return points[-1], len(points) - 1, True
+    legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+    t = max(t, 0.0)
+    for i, leg in enumerate(legs):
+        if t < FLOW_PAUSE_S:
+            return points[i], i, False
+        t -= FLOW_PAUSE_S
+        if t < leg:
+            x = p.ease(t / leg)
+            return (p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)), i, False
+        t -= leg
+    return points[-1], len(points) - 1, True
 
 
 def trip_s(points: list[Point]) -> float:
@@ -914,25 +933,37 @@ class Renderer:
         scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        badges: list[Point] = []
         for route in beat.routes:
             points = self._path_points(beat.scene, route.path)
             stops = [loc for name in route.path if (loc := located.get(name)) is not None]
             space = [self._is_space(beat.scene, loc) for loc in stops]
-            alpha = p.ease((t - route.since) / LABEL_IN_S)
+            # The arrow grows behind the lead particle on its first trip, then stays whole.
+            set_off = self.plans[self.beat_index(route.since)].flow_in
+            lead, at, done = lead_leg(points, t - set_off)
+            if t < set_off:
+                continue
+            alpha = 1.0
             legs, i = [], 0
             while i < len(points) - 1:
                 if i + 2 < len(points) and space[i] and not space[i + 1] and space[i + 2]:
-                    legs.append((points[i], points[i + 2], True))  # through a part, space to space: one arrow
+                    legs.append((points[i], points[i + 2], True, i, i + 2))  # through a part, space to space
                     i += 2
                     continue
                 a, b = points[i], points[i + 1]
                 legs.append((a if space[i] else _leave(a, b, stops[i].box),
-                             b if space[i + 1] else _leave(b, a, stops[i + 1].box), space[i + 1]))
+                             b if space[i + 1] else _leave(b, a, stops[i + 1].box), space[i + 1], i, i + 1))
                 i += 1
+            grown = []
+            for start, end, into_space, first, last in legs:
+                if done or at >= last:
+                    grown.append((start, end, into_space))
+                elif at >= first and math.dist(points[first], lead) > math.dist(points[first], start):
+                    grown.append((start, lead, True))  # up to the particle, which covers its head
             through = [loc.name for loc, sp in zip(stops, space) if not sp and loc.name in art.masks]
             if through:  # drawn on a layer, so where it crosses a part it can be faded to pass behind it
                 canvas.saveLayer(None, None)
-            for start, end, into_space in legs:
+            for start, end, into_space in grown:
                 start, end = (start[0] * scale + dx, start[1] * scale + dy), (end[0] * scale + dx, end[1] * scale + dy)
                 gap = ROUTE_GAP if into_space else ROUTE_EDGE_GAP
                 length = math.dist(start, end)
@@ -949,6 +980,14 @@ class Renderer:
                                      skia.Paint(Alphaf=ROUTE_BEHIND, BlendMode=skia.BlendMode.kDstOut))
                 canvas.restore()
                 canvas.restore()
+            if done and route.label and grown:  # what travels this way, at the arrow's tail, once it has passed
+                tail = grown[0][0]
+                at_frame = (tail[0] * scale + dx, tail[1] * scale + dy)
+                if all(math.dist(at_frame, other) > BADGE_APART for other in badges):
+                    badges.append(at_frame)
+                    p.draw_marker(canvas, at_frame, route.color, route.label,
+                                  p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view),
+                                  size=0.7)
         canvas.restore()
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
