@@ -409,13 +409,17 @@ def _route_ink(color: str) -> str:
     return "#{:02X}{:02X}{:02X}".format(*(round(c * 0.92) for c in (r, g, b)))
 
 
-def draw_route_leg(canvas: skia.Canvas, line: list[tuple[float, float]], color: str, alpha: float) -> None:
+def draw_route_leg(canvas: skia.Canvas, line: list[tuple[float, float]], color: str, alpha: float,
+                   head: bool = True) -> None:
     """One leg of a route, as a textbook prints an arrow: a solid line along `line` (two points for a straight
     arrow, more for a curve), and a swept-back head with its tip at the last point, pointing the way the line
     arrives, under a soft shadow."""
     if alpha <= 0.01 or len(line) < 2:
         return
     length = sum(math.dist(a, b) for a, b in zip(line, line[1:]))
+    if not head:  # a piece of a longer arrow, before its last: the line alone
+        _draw_route_line(canvas, line, color, alpha)
+        return
     if length < ROUTE_HEAD * 1.4:
         return
     tip = line[-1]
@@ -462,6 +466,16 @@ def draw_route_leg(canvas: skia.Canvas, line: list[tuple[float, float]], color: 
     canvas.restore()
     canvas.drawPath(path, stroke)
     canvas.drawPath(arrow, fill)
+
+
+def _draw_route_line(canvas: skia.Canvas, line: list[tuple[float, float]], color: str, alpha: float) -> None:
+    path = skia.Path()
+    path.moveTo(*line[0])
+    for point in line[1:]:
+        path.lineTo(*point)
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=argb(_route_ink(color), alpha * ROUTE_ALPHA),
+                                     StrokeWidth=ROUTE_STROKE, Style=skia.Paint.kStroke_Style,
+                                     StrokeCap=skia.Paint.kRound_Cap, StrokeJoin=skia.Paint.kRound_Join))
 
 
 CONVERT_FONT = 30.0
