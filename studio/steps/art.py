@@ -372,8 +372,13 @@ LOOK = ("On a plain, flat dark slate blue background, every part well inside the
         "around each part for its label.")
 # Only in a diagram: in an everyday scene it scattered molecules round round 8's sprinter and through its reservoir.
 MOLECULES = "Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, coils or clusters of atoms."
-NO_TEXT = "No text, labels, letters or numbers anywhere in the picture."
-STYLE = f"{LOOK} {MOLECULES} {NO_TEXT}"  # a diagram's
+NO_TEXT = ("No text, labels, letters, numbers or chemical symbols (no H+, no e-, no ATP) anywhere in the "
+           "picture.")
+# A diagram is the still stage the video acts on: asked for a membrane "during the light reactions", Gemini drew
+# the process itself (lightning bolts, H+ in circles, water molecules, an electron path) on two tries in a row.
+ONLY_PARTS = ("Draw only the parts named above, standing still: no ions, electrons, small molecules, arrows, "
+              "lightning or light rays that are not named.")
+STYLE = f"{LOOK} {MOLECULES} {ONLY_PARTS} {NO_TEXT}"  # a diagram's
 EVERYDAY_STYLE = f"{LOOK} {NO_TEXT}"  # the hook's and the analogy's: everyday things, no molecules
 EVERYDAY = ("hook", "analogy")
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine

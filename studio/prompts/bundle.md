@@ -130,7 +130,8 @@ together they go from what the learner already knows to the parts they are learn
   parallel rays of sunlight reaching it." The illustrator knows what the standard diagrams
   look like, and is best at drawing one it knows.
 - The picture is a still stage, and the video does the acting. Ask for where everything
-  is, never for what it does: nothing pumped, flowing, carried, meeting or turning into
+  is, never for what it does, and never for a moment in a process ("a thylakoid membrane
+  during the light reactions" came back with lightning, ions and symbols drawn in): nothing pumped, flowing, carried, meeting or turning into
   something, no arrows from one part to another, no streams or crowds of ions. The video
   shows each of those as dots moving between the parts (`particles`, under Direction) and
   labels everything. A picture asked to show ions pumped up, crowding a space, flowing
