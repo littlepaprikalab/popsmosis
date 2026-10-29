@@ -1,20 +1,22 @@
 """Muse Image and SAM 3.1 on Meta's Model API: the art when Muse Image paints it, and the masks of any painted art.
 
-    paint(job, label, prompt)                 one picture from Muse Image (POST /v1/images/generations), as PNG bytes
+    paint(job, label, prompt, reference)      one picture from Muse Image (POST /v1/images/generations), as PNG
+                                              bytes; with a reference picture, redrawn from it (/v1/images/edits)
     segment(job, label, art, phrase=...)      SAM 3.1 (POST /v1/responses): every match of a short noun phrase
     segment(job, label, art, box=...)         or the one thing inside a box, each as a full-size mask
 
 Both take MODEL_API_KEY, the Meta key, whatever the brain, and log each call that comes back to the
 job's calls.jsonl (studio/ledger.py) at Meta's price: $0.01 a picture, $2.50 per 1,000
-images segmented. Neither has run against the live API yet; the request and answer
-shapes follow Meta's docs (dev.meta.ai/docs/image-generation, dev.meta.ai/docs/sam).
+images segmented. The request and answer shapes follow Meta's docs
+(dev.meta.ai/docs/image-generation, dev.meta.ai/docs/sam); both first ran live on Oct 28.
 
 SAM answers in a token grammar of its own, one record per match: a box, then a mask
 covering only that box, in an encoding of Meta's. meta-sam-parser, Meta's own parser,
 reads it; segment() puts each mask back on the whole art.
 
-A busy or failing server (429, 502, 503, 504) is asked again three times; 500 is not,
-since Meta says it will not go away on a retry. A picture Muse Image will not make
+A busy or failing server (429, 502, 503, 504), or a connection that drops, is asked again
+three times; 500 is not, since Meta says it will not go away on a retry, nor a timeout,
+since Meta may still be making (and billing) what was asked. A picture Muse Image will not make
 (content policy) raises Declined, which the art step counts as a refused try.
 """
 
@@ -56,6 +58,10 @@ class Declined(MuseError):
     """Muse Image would not make this picture (its content policy)."""
 
 
+class NoAnswer(MuseError):
+    """The request never reached Meta, or the connection dropped: safe to send again."""
+
+
 @dataclass
 class Match:
     """One thing SAM found: where it shows on the art, and how sure SAM is (None when it did not say)."""
@@ -75,7 +81,7 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tu
         # Not retried: Meta may still be making, and billing, what was asked.
         raise MuseError(f"Meta's API took over {TIMEOUT_S}s to answer") from e
     except (urllib.error.URLError, OSError) as e:
-        raise MuseError(f"Meta's API did not answer: {getattr(e, 'reason', e)}") from e
+        raise NoAnswer(f"Meta's API did not answer: {getattr(e, 'reason', e)}") from e
 
 
 send: Send = _urllib_send
@@ -85,8 +91,10 @@ sleep = time.sleep  # tests pass their own
 # --- Muse Image -------------------------------------------------------------------------
 
 
-def paint(job: Path, label: str, prompt: str) -> bytes:
-    """One picture of the prompt at the art's aspect ratio, as PNG bytes (any size: the caller fits it)."""
+def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> bytes:
+    """One picture of the prompt at the art's aspect ratio, as PNG bytes (any size: the caller fits it). With a
+    reference picture it is redrawn from that one, which keeps its framing and look (a process's later stages
+    from its first)."""
     body = {
         "model": IMAGE_MODEL,
         "prompt": prompt,
@@ -97,8 +105,10 @@ def paint(job: Path, label: str, prompt: str) -> bytes:
         # A diagram from its prompt alone: no web search or shell (PLAN section 5, step 3).
         "tool_enablement": {"enable_web_search": False, "enable_shell": False},
     }
+    if reference is not None:
+        body["images"] = [{"image_url": "data:image/png;base64," + base64.standard_b64encode(reference.read_bytes()).decode("ascii")}]
     started = time.monotonic()
-    status, answer = _post("/images/generations", body)
+    status, answer = _post("/images/edits" if reference is not None else "/images/generations", body)
     if status == 400 and _error(answer).get("code") == "content_policy_violation":
         raise Declined(f"Muse Image declined the picture: {_message(answer)}")
     if status != 200:
@@ -202,9 +212,14 @@ def _post(path: str, body: dict) -> tuple[int, bytes]:
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     url = brain.META_BASE_URL + path
     for wait in (*RETRY_WAITS_S, None):
-        status, _, answer = send("POST", url, headers, data)
-        if status not in RETRY_STATUSES or wait is None:
-            return status, answer
+        try:
+            status, _, answer = send("POST", url, headers, data)
+        except NoAnswer:  # a dropped connection (seen live: "Connection reset by peer"), as audio does
+            if wait is None:
+                raise
+        else:
+            if status not in RETRY_STATUSES or wait is None:
+                return status, answer
         sleep(wait)
     raise AssertionError("unreachable")
 

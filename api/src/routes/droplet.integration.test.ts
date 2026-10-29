@@ -16,7 +16,6 @@ const BUNDLE = {
   course: 'AP Biology', topic: 'the light reactions', core_idea: 'Light pumps protons; their flow back makes ATP.',
   facts: [{ id: 'f1', text: 'Only cytochrome b6f pumps protons.', source_quote: '' }],
   misconception: 'Not every carrier pumps protons.',
-  frq: { prompt: 'Explain how ATP is made.', predict_question: 'Which carrier pumps?', model_answer_steps: ['b6f pumps.'], twist: 'A leak?' },
   scenes: [{ id: 'hook', image_prompt: 'A chloroplast.', structures: [] }],
   lyrics: [{ id: 'c1', section: 'chorus', text: 'Protons flow and ATP grows', names: [], fact_id: 'f1' }],
   narration: [], direction: [],

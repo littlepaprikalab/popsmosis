@@ -8,10 +8,9 @@ You get JSON with:
 - `lines`: the lines to check, each with an `id` and its `text`. The id says where a line
   comes from: "lyric:..." is a sung line, "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
-  row's cells are separated by " | "), and "frq:..." a line of the exam question both
-  videos read aloud at the end: its prompt, the predict question, or a step of the model
-  answer. "tag:..." is a hashtag under one of the videos, judged by its own rules (Tags,
-  below). Lines come in order, so read each one in the
+  row's cells are separated by " | "). "tag:..." is a hashtag under one of the videos,
+  and "motion:..." is what a video shows moving across its diagram, each judged by its
+  own rules (Tags and Motions, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only.
 - `about`, only when there are tags: the lesson's `course` and `topic` and the song's
@@ -41,7 +40,16 @@ a story told about a molecule. Judge the point the image makes about the real th
 its literal words. "Protons turn the rotor like water turns a wheel" is SUPPORTED when a
 fact says the flow of protons turns the rotor. An image is UNSUPPORTED when the point it
 makes is wrong or not in the facts, or when it would lead a learner to believe something
-false (calling a part that only lets protons through a "pump").
+false (calling a part that only lets protons through a "pump"). Song lyrics also carry
+attitude that makes no claim ("that's the trick", "you see", "for real"): judge the rest of
+the line, and a line that is only attitude is FILLER.
+
+A fact about one case never supports a line about another. Read each line with the lines
+around it to see which case it is about: when a song's bridge asks "what if the turbine
+jams?", its next lines are about a jammed turbine, and a fact about a different failure
+(a blocked carrier earlier in the chain) supports none of them. Such a line is
+UNSUPPORTED unless a fact describes its own case, and its `corrected` stays with that
+case: say only what the facts support about it, never the other case's outcome.
 
 Whatever its facts, a line that is not fit to play or show in a classroom is UNSUPPORTED:
 crude, sexual or hateful language, cruelty played for laughs, gore for shock, or a name
@@ -51,9 +59,10 @@ videos.
 When you write `corrected`:
 
 - Keep the line's job and voice. A lyric stays a singable lyric of about the same length
-  and rhythm. A narration sentence stays one spoken sentence. An exam-question line
-  stays a question if it was one, and a model-answer step stays one spoken sentence. A lesson sentence keeps its
-  inline markdown, and a table row keeps the same cells, separated by " | ".
+  and rhythm, in the same casual voice, and keeps its last word when a true line can end
+  on it, since it rhymes with the line next to it. A narration sentence stays one spoken
+  sentence. A lesson sentence keeps its inline markdown, and a table row keeps the same
+  cells, separated by " | ".
 - Keep every structure name the line uses: hearing the name is what reveals the structure
   on screen.
 - Fix the claim rather than replacing it with filler, unless the facts support nothing
@@ -89,3 +98,35 @@ judge a tag by one question: would a student searching for it be right to find t
   find this video ("#fyp", "#foryou", "#viral"); or anything not right for a classroom.
   `problem` says why in a few words, and `corrected` is "": a tag that fails is dropped,
   never rewritten.
+
+## Motions
+
+A line whose id starts with "motion:" is what a video shows moving: dots marked with what
+they are, travelling between the parts of its diagram in order ("H⁺ travels from Stroma to
+Cytochrome b6f to Thylakoid lumen"). A student watches the marked dot go, so it is a claim
+about what moves, where from, through what and where to.
+
+- **SUPPORTED**: the facts say this thing moves along this route, in this direction. A
+  route that leaves out a step the facts name between two of its stops is fine (electrons
+  from photosystem II to cytochrome b6f, though they pass through plastoquinone on the
+  way). `source` is the fact id.
+- **UNSUPPORTED**: the wrong thing moving (electrons where the facts move protons), the
+  wrong direction (protons into the stroma where the facts pump them out of it), a stop
+  the facts do not put on its route, or a route the facts never give. `problem` says what
+  is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
+  video, never rewritten.
+
+A motion that says something "builds up" in a space ("H⁺ builds up in Thylakoid lumen")
+is the video filling that space with it as it arrives: SUPPORTED when the facts say it
+piles up or accumulates there, UNSUPPORTED otherwise, judged as above.
+
+A motion that says something "spins" as particles flow ("ATP synthase spins as H⁺ flows
+through it") is the video turning that part while they pass: SUPPORTED when the facts say
+that flow turns it (an analogy's part by what the facts say of the analogy), UNSUPPORTED
+otherwise.
+
+A motion that says a flow "is stopped at" something ("e⁻ flow from Photosystem II is
+stopped at Herbicide") is the video showing the particles pile up there and go no further:
+SUPPORTED when the facts say that thing blocks or stops that flow, UNSUPPORTED otherwise.
+
+A motion is never FILLER.

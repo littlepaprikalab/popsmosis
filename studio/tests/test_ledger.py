@@ -1,6 +1,7 @@
 import json
 import subprocess
 import threading
+import time
 
 import pytest
 
@@ -299,3 +300,31 @@ def test_a_run_killed_between_steps_keeps_the_bill(tmp_path):
     operator_run.record_interrupted(tmp_path)  # appends a try of "videos", which is no step
     report = ledger.breakdown(tmp_path, "videos")
     assert [s["step"] for s in report["steps"]] == ["art"] and report["seconds"] == 76.0
+
+
+def test_work_run_in_parallel_is_billed_to_the_step_that_started_it(tmp_path):
+    seen = []
+
+    def work(item):
+        seen.append((item, ledger.current_step(), threading.get_ident()))
+        ledger.log(tmp_path, [brain.Call(f"call {item}", "brain", "claude-haiku-5-5", 1, 1, 0.0, 0.1, "end_turn")])
+        return item * 2
+
+    with ledger.at_step("art"):
+        assert ledger.parallel(work, [1, 2, 3, 4], workers=4) == [2, 4, 6, 8]  # in the items' order
+    assert {step for _, step, _ in seen} == {"art"} and len({ident for *_, ident in seen}) > 1
+    assert {row["step"] for row in ledger.read(tmp_path)} == {"art"}
+
+
+def test_parallel_work_all_ends_before_the_first_failure_is_raised():
+    ended = []
+
+    def work(item):
+        if item in (2, 3):
+            raise ValueError(f"item {item} broke")
+        time.sleep(0.05)
+        ended.append(item)
+
+    with pytest.raises(ValueError, match="item 2 broke"):  # the first in the items' order
+        ledger.parallel(work, [1, 2, 3, 4], workers=4)
+    assert sorted(ended) == [1, 4]  # the others were not cut short

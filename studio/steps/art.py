@@ -34,22 +34,31 @@ locations.json yet) keeps the scenes it already drew, unless their scene changed
 An answer cut off at the output limit counts as a refused try; any other brain error
 fails the step, and the scenes already drawn are kept for the retry.
 
-The painted art. One picture per scene, from Gemini or Muse Image, from the scene's image_prompt,
-its structures and their colours, and the house style (STYLE). The helper looks at each
-picture for text and for anything missing or wrong; a picture with either is asked for
-again with what was wrong, up to MAX_TRIES pictures in all. A picture with text in it is
-never used (the renderer draws every label); after the last try the scene keeps the
-text-free picture with the fewest problems, and the step fails if there is none.
+The painted art. One picture per scene, from Gemini or Muse Image, the scenes painted at the
+same time, from a short prompt (paint_prompt()): the scene's image_prompt, which asks for it the
+way a teacher asks for a standard textbook diagram, each structure's colour by name, and STYLE.
+Live tests (docs/test-rounds.md) found the plain request right 8 times in 12 where the
+earlier prompt, with hex codes, a list of shapes and one biology style for every subject,
+was right once in 6. The helper looks at each
+picture for text, for a structure missing or out of place, and for anything else wrong,
+told what kind of scene it is (an analogy is meant not to show the topic's own parts). A
+picture with text or a structure missing or out of place is asked for again with what was
+wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not repainted
+(round 8: a second picture painted for those was no better 9 times in 11). A picture with
+text in it is never used (the renderer draws every label); after the last try the scene
+keeps the text-free picture with the fewest structures out of place, then the fewest other
+problems, and the step fails if there is none.
 
-Writes, per scene, art/<scene>.png (fitted to the art's size on white), then
-art/<scene>.json, last: the key (as above), the model, the prompt and the helper's
-check, so the picture counts as done only for this bundle. A refused picture is kept as
-art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
+Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
+art/<scene>.json, last: the key (as above), the model, the prompt, the helper's check of
+the kept picture and what was wrong with each try, so the picture counts as done only for
+this bundle. A refused picture is kept as art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
 pictures. Resuming and redrawing work as for the SVG art.
 """
 
 from __future__ import annotations
 
+import colorsys
 import hashlib
 import json
 import math
@@ -62,12 +71,17 @@ import numpy as np
 
 import skia
 
-from studio import brain, checks, gemini, jobs, media, muse, svg
+from pydantic import Field
+
+from studio import brain, checks, gemini, jobs, ledger, media, muse, svg
 from studio.jobs import read, write
-from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems
+from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems, stage_groups
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
-MAX_TRIES = 3
+MAX_TRIES = 3  # SVG drawings a scene may take
+# Muse Image pictures a scene may take. Two since Oct 28: in round 6 a third picture rarely fixed what
+# the second had not, and every one costs a picture and a check.
+MAX_PAINTS = 2
 
 
 @dataclass(frozen=True)
@@ -77,8 +91,10 @@ class Painter:
     name: str
     title: str
     model: str
-    make: Callable[[Path, str, str], bytes]  # (job, label, prompt) -> the picture's bytes
+    make: Callable[[Path, str, str, Path | None], bytes]  # (job, label, prompt, reference) -> the picture's bytes
     declined: type[Exception]  # a picture it would not make: a refused try
+    failed: type[Exception]  # any picture it did not make
+    redraws: bool  # it can redraw a reference picture (a process's later stages, from its first)
 
 
 def painter(job: Path) -> str:
@@ -90,8 +106,10 @@ def painter(job: Path) -> str:
 def painter_of(job: Path) -> Painter:
     """The painter that paints this job's pictures (not for svg). Looked up at each call, so tests can stand in."""
     if painter(job) == "gemini":
-        return Painter("gemini", gemini.NAME, gemini.MODEL, lambda *a: gemini.paint(*a), gemini.Declined)
-    return Painter("muse", "Muse Image", muse.IMAGE_MODEL, lambda *a: muse.paint(*a), muse.Declined)
+        return Painter("gemini", gemini.NAME, gemini.MODEL, lambda job, label, prompt, reference=None:
+                       gemini.paint(job, label, prompt), gemini.Declined, gemini.GeminiError, redraws=False)
+    return Painter("muse", "Muse Image", muse.IMAGE_MODEL, lambda *a: muse.paint(*a), muse.Declined, muse.MuseError,
+                   redraws=True)
 
 
 def run(job: Path, ask=brain.ask) -> str:
@@ -276,12 +294,39 @@ def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
 
 
 def key(bundle: Bundle, scene: Scene) -> str:
-    """Changes when the topic or the scene does (its prompt, structures, colours).
+    """Changes when the topic or the scene does (its prompt, structures, colours), and for a process's later
+    stage when its first stage does, which it is redrawn from.
 
     Not when the art prompt does: a prompt change should not redraw finished jobs.
     """
-    data = json.dumps([bundle.topic, scene.model_dump()], sort_keys=True)
-    return hashlib.sha256(data.encode("utf-8")).hexdigest()[:16]
+    data = [bundle.topic, _dump(scene)]
+    if (stage := Stage.of(bundle, scene)) and stage.number > 1:
+        data.append(_dump(stage.first))
+    return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()[:16]
+
+
+def _dump(scene: Scene) -> dict:
+    # Without an empty stage_of: a scene that is no stage keeps the key it had before stages existed.
+    return scene.model_dump(exclude=set() if scene.stage_of else {"stage_of"})
+
+
+@dataclass
+class Stage:
+    """Where a scene stands in the process it is a stage of (Scene.stage_of)."""
+
+    process: str
+    number: int  # from 1
+    count: int
+    first: Scene  # the first stage: its picture is what the later ones are redrawn from
+
+    @classmethod
+    def of(cls, bundle: Bundle, scene: Scene) -> Stage | None:
+        if not scene.stage_of:
+            return None
+        group = stage_groups(bundle.scenes).get(scene.stage_of, [])
+        if len(group) < 2:
+            return None
+        return cls(scene.stage_of, [s.id for s in group].index(scene.id) + 1, len(group), group[0])
 
 
 def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -> str:
@@ -310,9 +355,22 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
 
 # --- the painted art: Gemini 3.1 Flash Image or Muse Image -------------------------------------
 
-# The house style (docs/PLAN.md, section 5, step 3), after every scene's prompt.
-STYLE = ("Textbook illustration in the style of OpenStax/Campbell: shaded vector, soft gradients, clean outlines, "
-         "white background, scientifically accurate. Absolutely no text, no labels, no letters, no numbers.")
+# After every scene's prompt. The look is the scene's own (its image_prompt ends with the look its
+# kind of textbook gives it: a modern cell biology illustration, an astronomy schematic), so this
+# says only what every picture needs. A dark slate blue background, as a modern study infographic
+# has: the colours stand out on it, and so do the renderer's white label pills. Code reads the
+# background's colour off each picture's edge (media.paper), so any plain colour works.
+# Where each part sits is the scene's own prompt's to say (studio/prompts/bundle.md): said here, "every part
+# sits inside whatever holds it" wrapped two of round 6's everyday scenes (a dam, a pond) in cell-like bubbles.
+LOOK = ("On a plain, flat dark slate blue background, every part well inside the frame, with clear space "
+        "around each part for its label.")
+# Only in a diagram: in an everyday scene it scattered molecules round round 8's sprinter and through its reservoir.
+MOLECULES = "Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, coils or clusters of atoms."
+NO_TEXT = "No text, labels, letters or numbers anywhere in the picture."
+STYLE = f"{LOOK} {MOLECULES} {NO_TEXT}"  # a diagram's
+EVERYDAY_STYLE = f"{LOOK} {NO_TEXT}"  # the hook's and the analogy's: everyday things, no molecules
+EVERYDAY = ("hook", "analogy")
+WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The video's \
 renderer adds every label and caption itself, so the picture must have none of its own.
@@ -320,17 +378,36 @@ renderer adds every label and caption itself, so the picture must have none of i
 List in `text` every piece of writing you can see in the picture, exactly as written: words, letters, \
 numbers, labels, captions, legends, watermarks, even a single letter. Leave it empty when there is none.
 
-List in `wrong` anything that would mislead a learner, each in a few words: a structure below that is \
-missing or hard to make out, a part in the wrong place or of the wrong shape, or anything scientifically \
-wrong for what the scene should show. Leave it empty when the picture is right. Do not list matters of \
-taste or style."""
+List in `misplaced` each structure below that is missing from the picture, in the wrong place, or facing \
+the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
+wrong side of its membrane), each in a few words. A picture with any of these is painted again.
+
+List in `wrong` anything else that would mislead a learner, each in a few words: a part of the wrong shape \
+or too hard to make out, or anything scientifically wrong for what the scene should show.
+
+Judge both as the kind of scene it is, against what it should show, not the whole topic: what the scene \
+leaves out is not missing. The video animates each flow itself, as dots \
+moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
+wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
+is right. Do not list matters of taste or style.
+
+Then, in `notes`, write for the student watching the video one short, plain sentence for each problem \
+above that would teach them something false about the topic: a part in the wrong place, facing the wrong \
+way, of the wrong shape or in the wrong number. Say what the picture shows and what is true ("The \
+chromosomes' bends point the wrong way: each is pulled toward its pole by its middle, so the bend leads."). \
+Under 25 words each. Leave out writing in the picture and problems of look, size or framing, which \
+mislead no one. Leave it empty when nothing would."""
 
 
 class ArtCheck(Strict):
     """The helper's look at one picture."""
 
     text: list[str]  # every piece of writing seen in it; empty when there is none
-    wrong: list[str]  # what is missing or wrong for the scene, a few words each; empty when it is right
+    misplaced: list[str]  # each structure missing, out of place or facing the wrong way; a repaint
+    wrong: list[str]  # anything else wrong for the scene, a few words each; recorded, not repainted
+    # The problems that would teach something false, as a sentence each for the student: the video shows
+    # those of the picture it uses beside it (notices). [] in a check made before.
+    notes: list[str] = Field(default_factory=list)
 
 
 @dataclass
@@ -343,8 +420,13 @@ class Painting:
     check: ArtCheck
 
     def problems(self) -> list[str]:
+        """What the scene is painted again for: writing in the picture, a structure missing or out of place."""
         text = [f"it has writing in it ({', '.join(repr(t) for t in self.check.text)}); it must have none"]
-        return (text if self.check.text else []) + self.check.wrong
+        return (text if self.check.text else []) + self.check.misplaced
+
+    def score(self) -> tuple[int, int]:
+        """Lower is better, among pictures without writing."""
+        return len(self.check.misplaced), len(self.check.wrong)
 
 
 def run_painted(job: Path, ask) -> str:
@@ -353,63 +435,94 @@ def run_painted(job: Path, ask) -> str:
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
-    painted, kept, tries, left = 0, 0, 0, []
-    for scene in bundle.scenes:
-        if resume and _painted(job, bundle, scene):
-            kept += 1
-            continue
-        best, attempts = paint(job, bundle, scene, ask)
-        painted, tries = painted + 1, tries + attempts
-        left += [f"{scene.id}: {p}" for p in best.check.wrong]
+    stages = {scene.id: stage for scene in bundle.scenes if (stage := Stage.of(bundle, scene))}
+    again = {scene.id for scene in bundle.scenes if not (resume and _painted(job, bundle, scene))}
+    # A later stage is redrawn from its first: painted again whenever that one is.
+    again |= {sid for sid, stage in stages.items() if stage.first.id in again}
+    todo = [scene for scene in bundle.scenes if scene.id in again]
+    kept = len(bundle.scenes) - len(todo)
+    first = [scene for scene in todo if scene.id not in stages or stages[scene.id].number == 1]
+    later = [scene for scene in todo if scene not in first]
+    # The scenes at the same time, then each process's later stages, redrawn from its first stage's picture.
+    # One that fails fails the step once the others are saved.
+    results = ledger.parallel(lambda scene: paint(job, bundle, scene, ask), first, WORKERS)
+    results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
+                               later, WORKERS)
+    todo = first + later
+    painted, tries = len(results), sum(attempts for _, attempts in results)
+    left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results)
+            for p in best.check.misplaced + best.check.wrong]
     return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
             + (f", kept {kept} painted before" if kept else "")
             + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
 
 
-def paint(job: Path, bundle: Bundle, scene: Scene, ask) -> tuple[Painting, int]:
-    """The scene's picture: the best of up to MAX_TRIES from the job's painter, saved as its art. Returns it and
-    how many pictures were asked for."""
+def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None) -> tuple[Painting, int]:
+    """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
+    how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
+    (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
+    not, or the painter cannot, it is painted afresh."""
     by = painter_of(job)
+    if not by.redraws:
+        reference = None
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
         old.unlink()
-    best, problems, n = None, [], 0
-    for n in range(1, MAX_TRIES + 1):
-        prompt = paint_prompt(bundle, scene, problems)
+    best, problems, n, tries = None, [], 0, []
+    for n in range(1, MAX_PAINTS + 1):
+        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
-            picture = by.make(job, label, prompt)
+            picture = by.make(job, label, prompt, reference)
         except by.declined as e:
             problems = [f"{e}; describe the scene plainly, as a textbook diagram"]
+            tries.append({"try": n, "declined": str(e)})
             continue
+        except by.failed as e:
+            if reference is None:
+                raise
+            tries.append({"try": n, "redraw_failed": str(e)})
+            reference = None  # painted afresh from here on
+            prompt = paint_prompt(bundle, scene, problems)
+            try:
+                picture = by.make(job, label, prompt, None)
+            except by.declined as declined:
+                problems = [f"{declined}; describe the scene plainly, as a textbook diagram"]
+                tries.append({"try": n, "declined": str(declined)})
+                continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
         check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
                                label=f"art check {scene.id}" + (f" try {n}" if n > 1 else "")))
         painting = Painting(path, prompt, n, check)
-        if not check.text and (best is None or len(check.wrong) < len(best.check.wrong)):
+        tries.append({"try": n, **check.model_dump()})
+        if not check.text and (best is None or painting.score() < best.score()):
             best = painting
         problems = painting.problems()
         if not problems:
             break
     if best is None:
-        raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_TRIES} tries: {problems[0]}"
+        raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_PAINTS} tries: {problems[0]}"
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
-                                  "try": best.attempt, "check": best.check.model_dump()})
+                                  "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
+                                  and stage.number > 1 else "",
+                                  "try": best.attempt, "check": best.check.model_dump(), "tries": tries})
     _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
 
 
 def fit(picture: bytes) -> np.ndarray:
-    """A painted picture (any size, roughly the art's shape) scaled to fit the art on white, centred: RGB."""
+    """A painted picture (any size, roughly the art's shape) scaled to fit the art, centred, on its own
+    background colour (media.paper): RGB."""
     image = skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy(picture))
     if image is None:
         raise media.StepFailed("the painted picture is not an image skia can read")
+    r, g, b = media.paper(image.toarray(colorType=skia.kRGBA_8888_ColorType))
     surface = skia.Surface(media.ART_WIDTH, media.ART_HEIGHT)
     canvas = surface.getCanvas()
-    canvas.clear(skia.ColorWHITE)
+    canvas.clear(skia.Color(r, g, b))
     scale = min(media.ART_WIDTH / image.width(), media.ART_HEIGHT / image.height())
     w, h = image.width() * scale, image.height() * scale
     canvas.drawImageRect(image, skia.Rect.MakeXYWH((media.ART_WIDTH - w) / 2, (media.ART_HEIGHT - h) / 2, w, h),
@@ -417,28 +530,89 @@ def fit(picture: bytes) -> np.ndarray:
     return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
 
 
-def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = ()) -> str:
-    lines = [f"- {s.name}: {s.sam_phrase}, coloured {s.color_hex}" for s in scene.structures]
-    parts = [f"A diagram for a lesson on {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
-             + f", for {bundle.audience}. {scene.image_prompt}",
-             "Show each of these clearly, in its colour, and keep all of them well inside the frame, "
-             "away from the edges:\n" + "\n".join(lines)]
+def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False) -> str:
+    """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
+    image model reads names), and STYLE (EVERYDAY_STYLE for the hook and the analogy). Short on purpose:
+    every extra line was a chance to miss. A later stage `redrawn` from its first stage's picture says so first."""
+    colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
+    parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
+    if redrawn and (stage := Stage.of(bundle, scene)):
+        parts.insert(0, REDRAW.format(process=stage.process))
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
-    parts.append(STYLE)
-    return "\n\n".join(parts)
+    parts.append(EVERYDAY_STYLE if scene.id in EVERYDAY else STYLE)
+    return " ".join(parts)
+
+
+# Hue bands in degrees, for colour_word.
+HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
+        (290, "purple"), (335, "pink"), (360, "red"))
+
+
+def colour_word(color_hex: str) -> str:
+    """A colour as everyday words, which image and segmentation models know: "#90BE6D" -> "light green"."""
+    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
+    if saturation < 0.15:
+        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
+    name = next(word for limit, word in HUES if hue * 360 < limit)
+    if name in ("orange", "red") and value < 0.55:
+        return "brown"
+    if value < 0.4:
+        return f"dark {name}"
+    if saturation < 0.5 and value > 0.6:
+        return f"light {name}"
+    return name
+
+
+# What each kind of scene is for, by the ids the bundle prompt gives them (studio/prompts/bundle.md), so the
+# helper judges it as what it is. Told only the topic, it refused both round 6 analogies on every try for
+# "a dam, not cellular respiration".
+SCENE_KINDS = {
+    "hook": ("the video's opening: where it can, an everyday sight from the learner's world where the topic "
+             "turns up, rather than a diagram of the topic."),
+    "analogy": ("the lesson's analogy: an everyday object standing in for the real thing, each of its parts "
+                "in the colour of the structure it stands for. It is meant to show that object, not the "
+                "topic's own parts. Judge it as a picture of the object."),
+    "overview": "the overview: the whole system at once, each part in its place.",
+}
+DETAIL = "a close-up of one part of the topic."
+STAGE = ("stage {number} of {count} of {process}: the same subject as its other stages, at the same size and in "
+         "the same place, showing what this stage shows.")
+# Before a later stage's own prompt, when it is redrawn from the first stage's picture (/v1/images/edits).
+REDRAW = ("Redraw this picture as a later stage of {process}: the same subject, at the same size and in the same "
+          "place, in the same colours and style; change only what this stage shows.")
 
 
 def check_prompt(bundle: Bundle, scene: Scene) -> str:
     lines = [f"- {s.name}: {s.sam_phrase}" for s in scene.structures]
+    stage = Stage.of(bundle, scene)
+    kind = (STAGE.format(number=stage.number, count=stage.count, process=stage.process) if stage
+            else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
+            + f"\nThe scene is {kind}"
             + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
+
+
+def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
+    """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
+    by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
+    None for a drawing (the brain's SVG), which is not checked this way."""
+    found = {}
+    for scene in bundle.scenes:
+        if not _painted(job, bundle, scene):
+            continue
+        made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
+        notes = [n.strip() for n in (made.get("check") or {}).get("notes") or [] if n.strip()]
+        if notes:
+            found[scene.id] = notes
+    return found
 
 
 def _painting(job: Path, scene: Scene) -> Path:
     """art/<scene>.json: what the painted picture of the scene was made from."""
-    return job / "art" / f"{media.file_name(scene.id)}.json"
+    return job / media.check_path(scene.id)
 
 
 def _painted(job: Path, bundle: Bundle, scene: Scene) -> bool:

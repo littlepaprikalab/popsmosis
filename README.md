@@ -142,12 +142,18 @@ pipeline without posting anything, start a local job instead:
 python3 -m venv .venv && . .venv/bin/activate && pip install -r studio/requirements.txt
 python -m studio plan --topic "brain structures" --course "AP Psych"   # bundle, then fact-check
 python -m studio step factcheck <job-id>                               # re-run one step
+python -m studio make <job-id>                                         # its videos, as `videos` makes them, with no API
 python -m studio show <job-id>                                         # facts, scenes, lyrics, tags, checks, verdicts, runs, calls
 ```
 
+`plan ... --videos` makes the videos too once the fact-check passes, so a test round of a
+topic is one command ([docs/test-rounds.md](docs/test-rounds.md)). `make` runs the media steps
+in `videos`' order (art and locate alongside audio and timing, then the timeline and render)
+but claims nothing and uploads nothing; run again, it resumes at the first step not done.
+
 Each droplet is written for one audience: high school, unless the learner's request says
 who it is for ("I'm in 5th grade", "for my college course"). The audience sets the level
-of the lesson, the song, the narration and the exam question, never the rules: every
+of the lesson, the song and the narration, never the rules: every
 droplet is fact-checked the same way and stays fit for a classroom. The song's style is
 one the audience listens to (for high school: pop with rapped verses, K-pop,
 R&B, dance-pop, pop-punk), at a tempo that fits the topic's mood, unless the learner
@@ -171,7 +177,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 
 | Variable | Value | Needed for |
 |---|---|---|
-| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Haiku 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
+| `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Sonnet 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
 | `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | a Muse brain and its picture checks (Muse Spark 1.3), Muse Image, and SAM 3.1 with any painter but the SVG |
 | `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
 
@@ -197,8 +203,8 @@ What runs, by the brain's provider:
 | Job | Claude's brain | Muse's brain |
 |---|---|---|
 | Brain: writes and fact-checks the lesson | Claude Opus 5.5 | Muse Wonder 1.0 or Muse Spark 1.3 |
-| Art: paints each scene, up to three tries | the painter set for Claude topics | the painter set for Muse topics |
-| Helper: checks each picture, boxes a structure SAM missed | Claude Haiku 5.5 | Muse Spark 1.3 |
+| Art: paints each scene, up to two tries | the painter set for Claude topics | the painter set for Muse topics |
+| Helper: checks each picture, boxes a structure SAM missed | Claude Sonnet 5.5, effort low | Muse Spark 1.3 |
 | Finding each structure in the art | SAM 3.1, $2.50 per 1,000 images (none for the SVG, which says where each one is) | SAM 3.1 |
 
 Gemini's picture is 1K at 16:9 (1376 x 768), fitted to the art (`studio/gemini.py`).
@@ -212,9 +218,11 @@ topic is failed or given up over a setting. For a local job, `python -m studio p
 --brain muse-spark --effort medium` (the default: Claude Opus 5.5 at high); Muse Spark vets
 a prompt change for about a quarter of Muse Wonder's price.
 
-The Meta calls follow Meta's docs but have not run against the live API yet: check them
-first with `STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s`
-(one scene, a few cents). Gemini's has: `STUDIO_LIVE=1 GEMINI_API_KEY=... python -m pytest
+The Meta calls first ran live on Oct 28, on two topics end to end (Muse Spark 1.3 as the
+brain, Muse Image and SAM 3.1 for the art, Lyria for the song): what worked and what did not
+is in [docs/test-rounds.md](docs/test-rounds.md). Check them again after a change with
+`STUDIO_LIVE=1 MODEL_API_KEY=... python -m pytest studio/tests/test_live_meta.py -s` (one
+scene, a few cents). Gemini's too: `STUDIO_LIVE=1 GEMINI_API_KEY=... python -m pytest
 studio/tests/test_live_gemini.py -s` paints one scene, about 7 cents.
 
 #### One topic on another brain

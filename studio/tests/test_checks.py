@@ -96,6 +96,67 @@ def test_particles_stay_on_the_scene():
     assert found == [("v1-1", "particles", True)]
 
 
+def test_a_structure_named_on_an_earlier_scene_can_be_spotlit_on_a_later_one():
+    # "Light lands on the thylakoid" is sung over the hook; the overview, next, draws it labelled.
+    bundle, found, _ = review(lambda d: direction(d, "v1-2").update(spotlight="Thylakoid"))
+    assert found == [] and next(d.spotlight for d in bundle.direction if d.line_id == "v1-2") == "Thylakoid"
+    _, found, report = review(lambda d: direction(d, "v1-2").update(spotlight="Cytochrome b6f"))  # not named yet
+    assert found == [("v1-2", "spotlight", True)] and "has not been named yet" in report.problems[0].detail
+
+
+def test_what_particles_carry_needs_particles_and_fits_on_the_dot():
+    def carrying(particles, carries):
+        def change(data):
+            direction(data, "v1-1").update(particles=particles, carries=carries)
+        bundle, found, _ = review(change)
+        return next(d.carries for d in bundle.direction if d.line_id == "v1-1"), found
+
+    assert carrying(["Thylakoid", "Cytochrome b6f"], "H⁺") == ("H⁺", [])
+    assert carrying([], "H⁺") == ("", [("v1-1", "carries", True)])
+    assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True)])
+
+
+def test_what_builds_up_is_where_marked_particles_start_or_end():
+    def building(*builds):
+        def change(data):
+            direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+            data["builds_up"] = [{"carries": c, "region": r} for c, r in builds]
+        bundle, found, _ = review(change)
+        return [(b.carries, b.region) for b in bundle.builds_up], found
+
+    assert building(("H+", "cytochrome B6F")) == ([("H+", "Cytochrome b6f")], [])  # its name, from any spelling
+    assert building(("H⁺", "Thylakoid")) == ([("H⁺", "Thylakoid")], [])  # where they start counts too
+    left_out = [("builds_up", "builds_up", True)]
+    assert building(("H⁺", "ATP synthase")) == ([], left_out)  # no particles carrying H⁺ start or end there
+    assert building(("e⁻", "Thylakoid")) == ([], left_out)  # none carry electrons
+    assert building(("H⁺", "the lumen")) == ([], left_out)  # no such structure
+
+
+def test_what_turns_is_where_particles_flow_in_or_through():
+    def turning(*spins):
+        def change(data):
+            direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+            data["spins"] = [{"structure": s} for s in spins]
+        bundle, found, _ = review(change)
+        return [s.structure for s in bundle.spins], found
+
+    assert turning("cytochrome B6F") == (["Cytochrome b6f"], [])  # particles flow into it
+    assert turning("Thylakoid") == ([], [("spins", "spins", True)])  # they only leave it
+    assert turning("the rotor") == ([], [("spins", "spins", True)])  # no such structure
+
+
+def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
+    def change(data):
+        direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
+        direction(data, "c1-1").update(glow="Cytochrome b6f")  # not named yet on the overview
+        data["blocks"] = [{"structure": "cytochrome B6F"}, {"structure": "Thylakoid"}]
+    bundle, found, _ = review(change)
+    assert [b.structure for b in bundle.blocks] == ["Cytochrome b6f"]  # particles end there; none end at the other
+    glows = {d.line_id: d.glow for d in bundle.direction if d.line_id in ("v1-2", "c1-1")}
+    assert glows == {"v1-2": "Thylakoid", "c1-1": ""}
+    assert sorted(found) == [("blocks", "blocks", True), ("c1-1", "glow", True)]
+
+
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
     data = bundle_data()
     for item in [*data["lyrics"], *data["narration"]]:
@@ -165,6 +226,7 @@ def test_checking_a_checked_bundle_changes_nothing():
             d["spotlight"] = rng.choice(targets)
             d["camera"] = {"target": rng.choice(targets), "zoom": rng.choice([1.0, 2.0])}
             d["particles"] = rng.sample(targets, rng.randint(0, 3))
+            d["carries"] = rng.choice(["", "H⁺", "plastoquinone"])
         if rng.random() < 0.2:
             data["scenes"][0]["structures"] = []
         once, first = checks.review(Bundle.model_validate(data))
@@ -184,3 +246,15 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
     assert styles(["bright pop"]) == (["bright pop", "112 bpm"], repaired)  # none named: what songs used to be
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+
+
+def test_a_process_needs_two_stages_or_more():
+    def staging(*stages):
+        def change(data):
+            for scene in data["scenes"]:
+                scene["stage_of"] = "photosynthesis" if scene["id"] in stages else ""
+        bundle, found, _ = review(change)
+        return [s.stage_of for s in bundle.scenes], found
+
+    assert staging("overview", "synthase") == (["", "photosynthesis", "photosynthesis"], [])
+    assert staging("synthase") == (["", "", ""], [("scene:synthase", "stages", True)])  # an ordinary scene

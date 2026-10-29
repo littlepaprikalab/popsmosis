@@ -1,5 +1,5 @@
 """The renderer's drawing pieces (docs/PLAN.md, section 7): easing, colours, text,
-labels and their placement, the lyric band, the caption pill and the exam question's card.
+labels and their placement, the lyric band and the caption pill.
 
 Everything here draws onto a skia canvas in frame pixels and keeps no state between
 frames, so a frame depends only on its time.
@@ -267,10 +267,16 @@ STREAM_R = 5.5  # the dots streaming along the path
 HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any colour
 
 
+MARKER_R = 22.0  # a marked lead particle: room for "H⁺" inside it, in frame pixels
+MARKER_FONT = 24.0
+MARKER_PAD = 8.0  # a longer marker ("glucose") is a pill this far wider than its word, each side
+
+
 def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[float, float], float]],
-                   lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float) -> None:
+                   lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float, label: str = "") -> None:
     """What travels between structures: dots streaming along the path (each with its own fade,
-    0-1), and the lead particle with its trail, the newest position first."""
+    0-1), and the lead particle with its trail, the newest position first; marked with what it
+    is when there is a label."""
     halo, fill = skia.Paint(AntiAlias=True), skia.Paint(AntiAlias=True)
     for (x, y), fade in stream:
         if alpha * fade <= 0.01:
@@ -283,12 +289,98 @@ def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[flo
     fill.setColor(argb(color, alpha))
     for k, (x, y) in reversed(list(enumerate(trail, 1))):
         canvas.drawCircle(x, y, 0.8 * PARTICLE_R * (1 - k / (len(trail) + 1)), fill)
+    if label:
+        draw_marker(canvas, lead, color, label, alpha)
+        return
     halo.setColor(with_alpha(0xFFFFFFFF, alpha))
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R + HALO, halo)
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R, fill)
     ring = skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2.5,
                       Color=argb(darken(color, 3.0), alpha))
     canvas.drawCircle(lead[0], lead[1], PARTICLE_R - 1.25, ring)
+
+
+def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,
+                size: float = 1.0) -> None:
+    """A particle marked with what it is: a disc for "H⁺", a pill for "glucose", in its colour
+    with a white halo, the word in dark or white ink, whichever reads on it. `size` scales it (a crowd's
+    marked dots are smaller than the lead particle)."""
+    x, y = at
+    r, pad = MARKER_R * size, MARKER_PAD * size
+    f = font("ExtraBold", MARKER_FONT * size)
+    width = text_width(f, label)
+    half = max(r, width / 2 + pad)
+    body = rounded((x - half, y - r, x + half, y + r), r)
+    shadow(canvas, body, alpha)
+    canvas.drawRRect(rounded((x - half - HALO, y - r - HALO, x + half + HALO, y + r + HALO),
+                             r + HALO), skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
+    ink = "#1A1A1A" if _luminance(*rgb(color)) > 0.3 else "#FFFFFF"
+    draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
+
+
+ARROW_SWEEP = 280.0  # degrees of the ellipse a turning arrow covers
+ARROW_STROKE = 6.0  # frame pixels, inside a dark edge ARROW_EDGE wider
+ARROW_EDGE = 4.0
+ARROW_HEAD = 15.0
+ARROW_BEHIND = 0.35  # how strong the arrow is where it passes behind the part
+
+
+def draw_turning_arrow(canvas: skia.Canvas, centre: tuple[float, float], rx: float, ry: float, turns: float,
+                       alpha: float) -> None:
+    """A curved arrow round an ellipse, the way a textbook shows a rotor turning about an axis in the page:
+    its far half (the top) faint, as if behind the part; it goes round as the part turns."""
+    cx, cy = centre
+    start = 360.0 * turns
+    steps = 48
+    points = [(cx + rx * math.cos(math.radians(start + ARROW_SWEEP * k / steps)),
+               cy + ry * math.sin(math.radians(start + ARROW_SWEEP * k / steps))) for k in range(steps + 1)]
+    for width, color in ((ARROW_STROKE + ARROW_EDGE, 0xFF1A1A1A), (ARROW_STROKE, 0xFFFFFFFF)):
+        paint = skia.Paint(AntiAlias=True, StrokeWidth=width, Style=skia.Paint.kStroke_Style,
+                           StrokeCap=skia.Paint.kRound_Cap)
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            behind = (y0 + y1) / 2 < cy
+            paint.setColor(with_alpha(color, alpha * (ARROW_BEHIND if behind else 1.0) * (0.6 if color == 0xFF1A1A1A else 1)))
+            canvas.drawLine(x0, y0, x1, y1, paint)
+    (x0, y0), (x1, y1) = points[-2], points[-1]
+    length = math.hypot(x1 - x0, y1 - y0) or 1.0
+    ux, uy = (x1 - x0) / length, (y1 - y0) / length
+    head = skia.Path()
+    head.moveTo(x1 + ux * ARROW_HEAD, y1 + uy * ARROW_HEAD)
+    head.lineTo(x1 - uy * ARROW_HEAD * 0.7, y1 + ux * ARROW_HEAD * 0.7)
+    head.lineTo(x1 + uy * ARROW_HEAD * 0.7, y1 - ux * ARROW_HEAD * 0.7)
+    head.close()
+    behind = y1 < cy
+    shade = ARROW_BEHIND if behind else 1.0
+    canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFF1A1A1A, 0.6 * alpha * shade),
+                                     Style=skia.Paint.kStrokeAndFill_Style, StrokeWidth=ARROW_EDGE))
+    canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * shade)))
+
+
+BLOCK_R = 17.0  # the cross on a blocker, in frame pixels
+
+
+def draw_block(canvas: skia.Canvas, at: tuple[float, float], alpha: float) -> None:
+    """A red disc with a white cross, where blocked particles stop."""
+    if alpha <= 0.01:
+        return
+    x, y = at
+    canvas.drawCircle(x, y, BLOCK_R + HALO, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawCircle(x, y, BLOCK_R, skia.Paint(AntiAlias=True, Color=argb("#E5484D", alpha)))
+    arm = BLOCK_R * 0.5
+    cross = skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha), StrokeWidth=4.5,
+                       Style=skia.Paint.kStroke_Style, StrokeCap=skia.Paint.kRound_Cap)
+    canvas.drawLine(x - arm, y - arm, x + arm, y + arm, cross)
+    canvas.drawLine(x - arm, y + arm, x + arm, y - arm, cross)
+
+
+CROWD_R = 8.5  # a crowd's unmarked dots, in frame pixels: bigger than the stream's, smaller than the lead's
+
+
+def draw_crowd_dot(canvas: skia.Canvas, at: tuple[float, float], color: str, alpha: float) -> None:
+    """One of a crowd's dots: its colour in a white ring, as the particles have."""
+    canvas.drawCircle(at[0], at[1], CROWD_R + HALO, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.85 * alpha)))
+    canvas.drawCircle(at[0], at[1], CROWD_R, skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
 
 
 # --- the lyric band ------------------------------------------------------------------------
@@ -345,6 +437,81 @@ def draw_band(canvas: skia.Canvas, rect: Rect, words: list[BandWord], t: float, 
 # --- the caption pill ----------------------------------------------------------------------
 
 
+NOTICE_ACCENT = 0xFFF59E0B  # amber: the side of a notice card, and its warning sign
+NOTICE_SUBTLE = 0xFF475569  # slate-600
+NOTICE_TITLE = "AI-generated picture"
+NOTICE_LEAD = "A check found these mistakes:"
+NOTICE_LINES = 6  # lines a note may take on the card
+
+
+def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: list[str], font_size: float,
+                alpha: float = 1.0, more: int = 0) -> float:
+    """A white card telling the viewer the picture beside it is AI-made and what a check found wrong in it, a
+    bullet per note (and how many more were left out). Returns the card's bottom."""
+    if alpha <= 0.01:
+        return top
+    pad, bar = 22.0, 7.0
+    title, body = font("ExtraBold", font_size * 1.15), font("SemiBold", font_size)
+    line_h = font_size * 1.32
+    inner = x1 - x0 - 2 * pad - bar
+    bullet = text_width(body, "•  ")
+    rows: list[tuple[str, float, skia.Font, int]] = []  # text, indent, font, colour
+    for note in notes:
+        lines = wrap(note, body, inner - bullet)
+        if len(lines) > NOTICE_LINES:  # a long note is cut, so the card stays above the lyric band
+            lines = lines[:NOTICE_LINES]
+            lines[-1] = lines[-1].rstrip(" .,;:") + "…"
+        for k, line in enumerate(lines):
+            rows.append((("•  " if k == 0 else "") + line, 0.0 if k == 0 else bullet, body, INK))
+    if more:
+        rows.append((f"and {more} more", 0.0, body, NOTICE_SUBTLE))
+    lead = wrap(NOTICE_LEAD, body, inner)
+    sign = font_size * 1.15
+    height = pad + sign + 12 + len(lead) * line_h + 8 + len(rows) * line_h + pad - 6
+    rect = (x0, top, x1, top + height)
+    rrect = rounded(rect, 16)
+    shadow(canvas, rrect, alpha, blur=12, dy=4)
+    canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * 0.97)))
+    canvas.save()
+    canvas.clipRRect(rrect, doAntiAlias=True)
+    canvas.drawRect(skia.Rect.MakeLTRB(x0, top, x0 + bar, top + height), skia.Paint(Color=with_alpha(NOTICE_ACCENT, alpha)))
+    canvas.restore()
+    x, y = x0 + bar + pad, top + pad
+    # The warning sign: an amber triangle with a dark "!".
+    path = skia.Path()
+    path.moveTo(x + sign / 2, y)
+    path.lineTo(x + sign, y + sign * 0.9)
+    path.lineTo(x, y + sign * 0.9)
+    path.close()
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
+    bang = font("ExtraBold", sign * 0.62)
+    draw_text(canvas, "!", x + sign / 2 - text_width(bang, "!") / 2, y + sign * 0.78, bang, with_alpha(INK, alpha))
+    draw_text(canvas, NOTICE_TITLE, x + sign + 12, y + sign * 0.5 + cap_height(title) / 2, title, with_alpha(INK, alpha))
+    y += sign + 12
+    for line in lead:
+        y += line_h
+        draw_text(canvas, line, x, y - line_h * 0.3, body, with_alpha(NOTICE_SUBTLE, alpha))
+    y += 8
+    for text, indent, f, color in rows:
+        y += line_h
+        draw_text(canvas, text, x + indent, y - line_h * 0.3, f, with_alpha(color, alpha))
+    return top + height
+
+
+def draw_ai_tag(canvas: skia.Canvas, x0: float, bottom: float, font_size: float, alpha: float = 1.0) -> float:
+    """A small dark pill reading "AI-generated picture", its bottom-left corner at (x0, bottom). Returns its top."""
+    if alpha <= 0.01:
+        return bottom
+    f = font("SemiBold", font_size)
+    h = font_size * 1.7
+    w = text_width(f, NOTICE_TITLE) + font_size * 1.6
+    rrect = rounded((x0, bottom - h, x0 + w, bottom), h / 2)
+    canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha * 0.72)))
+    draw_text(canvas, NOTICE_TITLE, x0 + font_size * 0.8, bottom - h / 2 + cap_height(f) / 2, f,
+              with_alpha(0xFFFFFFFF, alpha * 0.92))
+    return bottom - h
+
+
 def draw_caption(canvas: skia.Canvas, text: str, centre_x: float, top: float, font_size: float, alpha: float) -> None:
     if alpha <= 0.01:
         return
@@ -357,127 +524,3 @@ def draw_caption(canvas: skia.Canvas, text: str, centre_x: float, top: float, fo
     shadow(canvas, rrect, alpha, blur=12, dy=4)
     canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha * 0.94)))
     draw_text(canvas, text, centre_x - tw / 2, y + h / 2 + cap_height(f) / 2, f, with_alpha(0xFFFFFFFF, alpha))
-
-
-# --- the exam question ---------------------------------------------------------------------
-
-
-@dataclass
-class CardStep:
-    number: int
-    text: str
-    color: str | None  # its spotlight's colour
-    alpha: float  # 0 before it is read
-    current: bool
-
-
-def draw_frq_card(canvas: skia.Canvas, rect: Rect, slide: float, prompt: str, predict: str,
-                  countdown: float | None, pause_s: float, steps: list[CardStep]) -> None:
-    """The question card: the prompt, the predict question, then the countdown or the steps.
-
-    `slide` (0-1) brings the card in from the left; `countdown` is the seconds left in
-    the predict pause, None outside it.
-    """
-    if slide <= 0.01:
-        return
-    x0, y0, x1, y1 = rect
-    pad = 48
-    inner = (x1 - x0) - 2 * pad
-    # Size the card for its fullest moment (the countdown, or every step), so it does not
-    # grow as the steps come in; shrink the text if even that does not fit.
-    scale = 1.0
-    while True:
-        tallest = max(_card_layout(prompt, predict, steps, inner, scale, counting)[-1] for counting in (True, False))
-        if tallest <= (y1 - y0) - 2 * pad or scale < 0.55:
-            break
-        scale *= 0.92
-    middle = (y0 + y1) / 2
-    y0, y1 = middle - tallest / 2 - pad, middle + tallest / 2 + pad
-    rect = (x0, y0, x1, y1)
-    layout = _card_layout(prompt, predict, steps, inner, scale, countdown is not None)
-    dx = -(x1 + 40) * (1 - ease(slide))
-    canvas.save()
-    canvas.translate(dx, 0)
-    alpha = clamp01(slide * 1.5)
-    card = rounded(rect, 28)
-    shadow(canvas, card, alpha, blur=30, dy=8)
-    canvas.drawRRect(card, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
-    canvas.drawRRect(card, skia.Paint(AntiAlias=True, Color=with_alpha(HAIRLINE, alpha), StrokeWidth=2,
-                                      Style=skia.Paint.kStroke_Style))
-    chip_f, prompt_f, prompt_lines, predict_f, predict_lines, step_f, step_lines, _ = layout
-    y = y0 + pad
-    chip = "EXAM QUESTION"
-    cw = text_width(chip_f, chip) + 36
-    canvas.drawRRect(rounded((x0 + pad, y, x0 + pad + cw, y + chip_f.getSize() * 1.9), chip_f.getSize()),
-                     skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha)))
-    draw_text(canvas, chip, x0 + pad + 18, y + chip_f.getSize() * 0.95 + cap_height(chip_f) / 2, chip_f,
-              with_alpha(0xFFFFFFFF, alpha))
-    y += chip_f.getSize() * 1.9 + 28 * scale
-    for line in prompt_lines:
-        y += prompt_f.getSize() * 1.22
-        draw_text(canvas, line, x0 + pad, y, prompt_f, with_alpha(INK, alpha))
-    y += 26 * scale
-    canvas.drawRect(skia.Rect.MakeLTRB(x0 + pad, y, x0 + pad + 6, y + len(predict_lines) * predict_f.getSize() * 1.25
-                                       + 8), skia.Paint(Color=with_alpha(0xFFF59E0B, alpha)))
-    for line in predict_lines:
-        y += predict_f.getSize() * 1.25
-        draw_text(canvas, line, x0 + pad + 24, y, predict_f, with_alpha(0xFF92400E, alpha))
-    y += 40 * scale
-    if countdown is not None:
-        _draw_countdown(canvas, (x0 + x1) / 2, y + 120 * scale, 96 * scale, countdown, pause_s, alpha)
-    for step, lines in zip(steps, step_lines):
-        if step.alpha <= 0.01:
-            continue
-        a = alpha * step.alpha * (1.0 if step.current else 0.72)
-        color = argb(step.color, a) if step.color else with_alpha(INK, a)
-        r = step_f.getSize() * 0.78
-        cy = y + r + 4
-        canvas.drawCircle(x0 + pad + r, cy, r, skia.Paint(AntiAlias=True, Color=color))
-        nf = font("ExtraBold", step_f.getSize() * 0.9)
-        num = str(step.number)
-        draw_text(canvas, num, x0 + pad + r - text_width(nf, num) / 2, cy + cap_height(nf) / 2, nf,
-                  with_alpha(0xFFFFFFFF, a))
-        ty = y
-        for line in lines:
-            ty += step_f.getSize() * 1.25
-            draw_text(canvas, line, x0 + pad + 2 * r + 20, ty, step_f, with_alpha(INK, a))
-        y = max(ty, cy + r) + 22 * scale
-    canvas.restore()
-
-
-def _card_layout(prompt: str, predict: str, steps: list[CardStep], inner: float, scale: float, counting: bool):
-    chip_f = font("ExtraBold", 22 * scale)
-    prompt_f = font("SemiBold", 40 * scale)
-    predict_f = font("Bold", 34 * scale)
-    step_f = font("SemiBold", 31 * scale)
-    prompt_lines = wrap(prompt, prompt_f, inner)
-    predict_lines = wrap(predict, predict_f, inner - 24)
-    r = step_f.getSize() * 0.78
-    step_lines = [wrap(s.text, step_f, inner - 2 * r - 20) for s in steps]
-    height = (chip_f.getSize() * 1.9 + 28 * scale + len(prompt_lines) * prompt_f.getSize() * 1.22 + 26 * scale
-              + len(predict_lines) * predict_f.getSize() * 1.25 + 40 * scale)
-    if counting:
-        height += 240 * scale
-    else:
-        for lines in step_lines:
-            height += max(len(lines) * step_f.getSize() * 1.25, 2 * r + 4) + 22 * scale
-    return chip_f, prompt_f, prompt_lines, predict_f, predict_lines, step_f, step_lines, height
-
-
-def _draw_countdown(canvas: skia.Canvas, cx: float, cy: float, r: float, left: float, total: float,
-                    alpha: float) -> None:
-    """A ring that empties over the pause, the seconds left inside it, and a prompt to predict."""
-    track = skia.Paint(AntiAlias=True, Color=with_alpha(HAIRLINE, alpha), StrokeWidth=14,
-                       Style=skia.Paint.kStroke_Style)
-    canvas.drawCircle(cx, cy, r, track)
-    arc = skia.Paint(AntiAlias=True, Color=with_alpha(0xFFF59E0B, alpha), StrokeWidth=14,
-                     Style=skia.Paint.kStroke_Style, StrokeCap=skia.Paint.kRound_Cap)
-    sweep = 360 * clamp01(left / total) if total else 0
-    if sweep > 0.5:
-        canvas.drawArc(skia.Rect.MakeLTRB(cx - r, cy - r, cx + r, cy + r), -90, sweep, False, arc)
-    f = font("ExtraBold", r * 0.95)
-    num = str(max(1, math.ceil(left - 1e-6)))
-    draw_text(canvas, num, cx - text_width(f, num) / 2, cy + cap_height(f) / 2, f, with_alpha(INK, alpha))
-    g = font("Bold", r * 0.3)
-    hint = "Pause and predict"
-    draw_text(canvas, hint, cx - text_width(g, hint) / 2, cy + r + g.getSize() * 1.6, g, with_alpha(0xFF475569, alpha))

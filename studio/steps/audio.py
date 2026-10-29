@@ -1,24 +1,26 @@
-"""Step 5: audio. The song, then the narration and the exam question read aloud.
+"""Step 5: audio. The song, then the narration read aloud.
 
     audio/song.mp3                the song: Eleven Music, one composition-plan chunk per
                                   section, or Lyria on the Gemini API, from one prompt
     audio/song.plan.json          what was asked for, which lines each section sings, who made it
     audio/narration.mp3           text-to-speech, the narration sentences in order
     audio/narration.chars.json    what was read, where each line sits in it, and the
-    audio/frq.mp3                 character timings the TTS returned (step 6 turns them
-    audio/frq.chars.json          into words without an aligner)
+                                  character timings the TTS returned (step 6 turns them
+                                  into words without an aligner)
 
 Who makes the song is an admin's setting on /admin/studio, as the claim said (the job's
 settings.json, song_provider()): elevenlabs (the default) or gemini. Eleven Music
 makes each section a chunk of the length asked for, so step 6 looks for each section's
 lines where it was planned. Lyria takes the whole song as one prompt and keeps to the
 planned times only roughly, so its plan says the sections are not pinned and step 6 looks
-for its lines across the whole song. The narration and the exam question are always
-ElevenLabs text-to-speech, whose character timings step 6 turns into words.
+for its lines across the whole song. The narration is always ElevenLabs text-to-speech,
+whose character timings step 6 turns into words.
 
-Every call costs credits, so a file that is already there is never asked for again,
-unless the bundle's lines have changed since it was made, or for the song, who sings it
-(its .json says what it was made from and by whom). To redo one by hand, delete its
+The two are asked for at the same time (the song takes longest), after the keys and the
+speech's length are checked. One that fails fails the step once the others are saved, so
+a retry asks only for what is missing. Every call costs credits, so a file that is already
+there is never asked for again, unless the bundle's lines have changed since it was made,
+or for the song, who sings it (its .json says what it was made from and by whom). To redo one by hand, delete its
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
 the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
 Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model.
@@ -57,10 +59,11 @@ SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this 
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "XrExE9yKIg1WjnnlVkGX"  # Matilda: a clear, steady American educator
-BEATS_PER_LINE = 8  # one sung line is two bars of 4/4 (PLAN section 5, step 5): 4.3 s at 112 bpm
+BEATS_PER_BAR = 4
+TWO_BAR_BPM = 130  # from this tempo a line is two bars, since one would be under 1.9 s (PLAN section 5, step 5)
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
 TIMEOUT_S = 600  # a song takes a minute or two to come back
-SPEECH = ("narration", "frq")
+SPEECH = ("narration",)
 # USD per song, by Lyria model (Gemini API pricing). A model not here is logged with no price.
 GEMINI_SONG_PRICES = {"lyria-3.5": 0.08, "lyria-3-clip-preview": 0.04}
 ELEVENLABS_PRICE_VAR = "ELEVENLABS_USD_PER_1K_CREDITS"
@@ -107,15 +110,22 @@ def run(job: Path, ask=brain.ask) -> str:
         raise media.StepFailed(f"the song's provider {provider!r} is not one this studio has "
                                f"({', '.join(SONG_PROVIDERS)}): update the studio")
     _check_keys(todo, provider)  # before anything is spent: the song is paid for even if the narration then fails
-    made = []
-    for kind in todo:
-        (job / "audio").mkdir(exist_ok=True)
+    for kind in todo:  # likewise what a voice call would refuse, since the song is asked for at the same time
+        if kind != "song" and len(join_lines(speech_lines(bundle, kind))[0]) > TTS_MAX_CHARS:
+            raise media.StepFailed(f"the {kind} is {len(join_lines(speech_lines(bundle, kind))[0])} characters; "
+                                   f"one text-to-speech call takes {TTS_MAX_CHARS}")
+    (job / "audio").mkdir(exist_ok=True)
+
+    def make(kind: str) -> str:
         if kind == "song":
             _make_song(job, bundle, provider)
-            made.append(f"song ({provider})")
-        else:
-            _make_speech(job, kind, speech_lines(bundle, kind))
-            made.append(kind)
+            return f"song ({provider})"
+        _make_speech(job, kind, speech_lines(bundle, kind))
+        return kind
+
+    # Both at once: the song takes longest, and the voice is made while it is. One that
+    # fails fails the step after the others are saved, so a retry makes only what is missing.
+    made = ledger.parallel(make, todo, len(todo))
     lengths = ", ".join(f"{kind} {duration(job / media.audio_path(kind)):.1f}s" for kind in media.TIMED)
     return f"made {', '.join(made) or 'nothing (all cached)'}; {lengths}"
 
@@ -178,12 +188,15 @@ def sections(bundle: Bundle) -> list[dict]:
 
 
 def line_ms(bundle: Bundle) -> float:
-    """How long one line takes to sing at the tempo the song's styles name."""
-    return BEATS_PER_LINE * 60_000 / bundle.music.bpm
+    """How long one line takes to sing at the tempo the song's styles name: one bar, short
+    and punchy (2.4 s at 100 bpm), or two bars from TWO_BAR_BPM (3.2 s at 150)."""
+    bpm = bundle.music.bpm
+    bars = 2 if bpm >= TWO_BAR_BPM else 1
+    return bars * BEATS_PER_BAR * 60_000 / bpm
 
 
 def planned_sections(bundle: Bundle) -> list[dict]:
-    """Each section in sung order with its lines, and where it is planned to fall: two bars a
+    """Each section in sung order with its lines, and where it is planned to fall: line_ms a
     line at the tempo the styles name."""
     out, at = [], 0
     for part in sections(bundle):
@@ -352,13 +365,14 @@ def as_mp3(audio: bytes, mime_type: str) -> bytes:
     raise media.StepFailed(f"cannot keep Gemini's song ({mime_type or 'no type given'}) as an MP3: {detail}")
 
 
-# --- narration and the exam question ------------------------------------------------------
+# --- the narration -------------------------------------------------------------------------
 
 
 def speech_lines(bundle: Bundle, kind: str) -> list[tuple[str, str]]:
-    if kind == "narration":
-        return [(n.id, n.text) for n in bundle.narration]
-    return media.frq_lines(bundle)
+    """What a speech file reads aloud: (line id, text), in order. The narration is the only one."""
+    if kind != "narration":
+        raise ValueError(f"no speech called {kind!r}")
+    return [(n.id, n.text) for n in bundle.narration]
 
 
 def voice_id() -> str:

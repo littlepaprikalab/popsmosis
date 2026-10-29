@@ -98,26 +98,41 @@ def test_the_song_is_one_chunk_per_section_timed_by_its_lines(job, monkeypatch):
     assert [c["text"].split("\n")[0] for c in chunks] == ["[Verse]", "[Chorus]", "[Verse]", "[Chorus]", "[Bridge]",
                                                          "[Chorus]"]
     assert chunks[0]["text"] == "[Verse]\nLight lands on the thylakoid\nEvery electron hand-off pumps a proton"
-    assert [c["duration_ms"] for c in chunks] == [8571, 4286, 4286, 4286, 4286, 4286]  # two bars a line at 112 bpm
+    # one bar a line at 112 bpm (2143 ms); a one-line section is held to the 3 s a chunk must last
+    assert [c["duration_ms"] for c in chunks] == [4286, 3000, 3000, 3000, 3000, 3000]
     assert all(c["positive_styles"] == ["upbeat pop", "112 bpm"] and c["negative_styles"] == ["mumbled vocals"]
                for c in chunks)
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["song_id"] == "song123"
-    assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 8571)]
+    assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 4286)]
     assert (job / "audio/song.mp3").read_bytes() == b"ID3 song"
 
 
-@pytest.mark.parametrize("tags, chorus_ms, chorus_at", [
-    (["pop-punk anthem at 150 bpm"], 3200, 6400),
-    (["K-pop", "98 bpm"], 4898, 9796),
-    (["upbeat pop"], 4286, 8571),  # a bundle from before the styles chose a tempo: 112 bpm
+@pytest.mark.parametrize("tags, verse_ms", [
+    (["pop-punk anthem at 150 bpm"], 6400),  # from 130 bpm a line is two bars: 3.2 s
+    (["dance-pop", "129 bpm"], 3721),  # below it, one bar: 1.86 s
+    (["K-pop", "98 bpm"], 4898),
+    (["upbeat pop"], 4286),  # a bundle from before the styles chose a tempo: 112 bpm
 ])
-def test_each_section_is_timed_by_the_tempo_the_styles_name(tags, chorus_ms, chorus_at):
+def test_each_section_is_timed_by_the_tempo_the_styles_name(tags, verse_ms):
     data = sample_media.bundle().model_dump()
     data["music"]["positive_styles"] = tags
     plan, placed = audio.composition_plan(sample_media.bundle().model_validate(data))
-    assert plan["chunks"][1]["duration_ms"] == chorus_ms  # the first chorus: one line
-    assert placed[1]["start_ms"] == chorus_at  # after a two-line verse
+    assert plan["chunks"][0]["duration_ms"] == verse_ms  # the first verse: two lines
+    assert placed[1]["start_ms"] == verse_ms
+
+
+def test_the_song_can_have_an_intro_pre_choruses_and_an_outro():
+    data = sample_media.bundle().model_dump()
+    first = data["lyrics"][0]
+    data["lyrics"] = [{**first, "id": "i-1", "section": "intro"}, *data["lyrics"],
+                      {**first, "id": "pc-1", "section": "pre-chorus"}, {**first, "id": "o-1", "section": "outro"}]
+    data["music"]["sections"] = ["intro", *data["music"]["sections"], "pre-chorus", "outro"]
+    data["direction"].append({**data["direction"][0], "line_id": "i-1"})
+    data["direction"] += [{**data["direction"][0], "line_id": i} for i in ("pc-1", "o-1")]
+    plan, _ = audio.composition_plan(sample_media.bundle().model_validate(data))
+    heads = [c["text"].split("\n")[0] for c in plan["chunks"]]
+    assert heads[0] == "[Intro]" and heads[-2:] == ["[Pre-Chorus]", "[Outro]"]
 
 
 def test_a_chunk_is_never_shorter_than_the_api_allows():
@@ -133,14 +148,14 @@ def test_speech_keeps_its_character_timings_and_where_each_line_is(job, monkeypa
     monkeypatch.setattr(audio, "send", fake)
     audio.run(job)
     tts = [r for r in fake.requests if "text-to-speech" in r[0]]
-    assert [url.split("?")[0].rsplit("/", 2)[-2] for url, _, _ in tts] == [audio.DEFAULT_VOICE] * 2
-    frq = json.loads((job / audio.plan_path("frq")).read_text())
-    bundle = sample_media.bundle()
-    assert frq["text"] == " ".join(text for _, text in media.frq_lines(bundle))
-    for span, (line_id, text) in zip(frq["lines"], media.frq_lines(bundle)):
-        assert span["id"] == line_id and frq["text"][span["start"]:span["end"]] == text
-    assert len(frq["alignment"]["characters"]) == len(frq["text"])
-    assert (job / "audio/frq.mp3").read_bytes() == b"ID3 speech"
+    assert [url.split("?")[0].rsplit("/", 2)[-2] for url, _, _ in tts] == [audio.DEFAULT_VOICE]
+    narration = json.loads((job / audio.plan_path("narration")).read_text())
+    lines = [(n.id, n.text) for n in sample_media.bundle().narration]
+    assert narration["text"] == " ".join(text for _, text in lines)
+    for span, (line_id, text) in zip(narration["lines"], lines):
+        assert span["id"] == line_id and narration["text"][span["start"]:span["end"]] == text
+    assert len(narration["alignment"]["characters"]) == len(narration["text"])
+    assert (job / "audio/narration.mp3").read_bytes() == b"ID3 speech"
     assert audio.is_done(job)
 
 
@@ -149,23 +164,23 @@ def test_the_voice_can_be_changed(job, monkeypatch):
     monkeypatch.setattr(audio, "send", fake)
     monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice42")
     audio.run(job)
-    assert sum("/text-to-speech/voice42/with-timestamps" in url for url in fake.urls()) == 2
+    assert sum("/text-to-speech/voice42/with-timestamps" in url for url in fake.urls()) == 1
 
 
 def test_made_files_are_never_asked_for_again_until_their_lines_change(job, monkeypatch):
     fake = FakeEleven()
     monkeypatch.setattr(audio, "send", fake)
     audio.run(job)
-    assert len(fake.requests) == 3
-    assert "nothing" in audio.run(job) and len(fake.requests) == 3
+    assert len(fake.requests) == 2
+    assert "nothing" in audio.run(job) and len(fake.requests) == 2
 
     bundle = sample_media.bundle()
     data = bundle.model_dump()
-    data["frq"]["model_answer_steps"][0] = "Cytochrome b6f pumps protons into the lumen."
+    data["narration"][0]["text"] = "The light reactions happen on the thylakoid membrane."
     jobs.write(job / "bundle.json", bundle.model_validate(data))
     assert not audio.is_done(job)
     audio.run(job)
-    assert len(fake.requests) == 4 and "text-to-speech" in fake.requests[-1][0]
+    assert len(fake.requests) == 3 and "text-to-speech" in fake.requests[-1][0]
 
 
 def test_a_refusal_or_a_missing_key_fails_the_step(job, monkeypatch):
@@ -192,7 +207,7 @@ def test_a_busy_server_or_a_dropped_connection_is_tried_again(job, monkeypatch):
 
     monkeypatch.setattr(audio, "send", flaky)
     audio.run(job)
-    assert waits == [30.0, 20] and len(fake.requests) == 3 and audio.is_done(job)
+    assert waits == [30.0, 20] and len(fake.requests) == 2 and audio.is_done(job)
 
 
 def test_a_timeout_or_a_server_that_stays_busy_fails_without_more_calls(job, monkeypatch):
@@ -205,12 +220,13 @@ def test_a_timeout_or_a_server_that_stays_busy_fails_without_more_calls(job, mon
     monkeypatch.setattr(audio, "send", times_out)
     with pytest.raises(media.StepFailed, match="600s"):
         audio.run(job)
-    assert len(calls) == 1  # the song may still be being made, and billed
+    # Each file asked for once, never again: it may still be being made, and billed.
+    assert len(calls) == 2 and sum("/v1/music" in url for url in calls) == 1
 
     monkeypatch.setattr(audio, "send", FakeEleven(status=503))
     with pytest.raises(media.StepFailed, match="503"):
         audio.run(job)
-    assert len(audio.send.requests) == 1 + len(audio.RETRY_WAITS_S)
+    assert len(audio.send.requests) == 2 * (1 + len(audio.RETRY_WAITS_S))
 
 
 def test_a_song_cut_off_before_its_audio_is_written_is_made_again(job, monkeypatch):
@@ -248,14 +264,14 @@ def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, m
     assert headers["x-goog-api-key"] == "gemini-key" and "xi-api-key" not in headers
     assert body["generationConfig"] == {"responseModalities": ["AUDIO", "TEXT"]}
     prompt = body["contents"][0]["parts"][0]["text"]
-    assert prompt.startswith("Style: upbeat pop, 112 bpm.\nAvoid: mumbled vocals.\nLength: about 0:30.")
-    assert "[0:00 - 0:09] Verse\n[0:09 - 0:13] Chorus\n" in prompt
+    assert prompt.startswith("Style: upbeat pop, 112 bpm.\nAvoid: mumbled vocals.\nLength: about 0:19.")
+    assert "[0:00 - 0:04] Verse\n[0:04 - 0:07] Chorus\n" in prompt
     assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEvery electron hand-off pumps a proton"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Verse]\nOnly b6f pumps them in"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Bridge]\nFeel the gradient build"
                            "\n\n[Chorus]\nProtons flow and ATP grows")
     assert not any("/v1/music" in u for u in fake.urls())
-    assert sum("text-to-speech" in u for u in fake.urls()) == 2  # the narration and the exam question
+    assert sum("text-to-speech" in u for u in fake.urls()) == 1  # the narration
 
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["provider"] == "gemini" and plan["model_id"] == "lyria-3.5" and plan["sections_pinned"] is False
@@ -270,17 +286,17 @@ def test_switching_the_provider_makes_only_the_song_again(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
     audio.run(job)
-    assert len(fake.requests) == 3 and json.loads((job / audio.plan_path("song")).read_text())["provider"] == "elevenlabs"
+    assert len(fake.requests) == 2 and json.loads((job / audio.plan_path("song")).read_text())["provider"] == "elevenlabs"
 
     sing(job, "gemini")
     assert not audio.is_done(job)
     audio.run(job)
-    assert len(fake.requests) == 4 and len(fake.gemini()) == 1  # the speech was kept
-    assert "nothing" in audio.run(job) and len(fake.requests) == 4
+    assert len(fake.requests) == 3 and len(fake.gemini()) == 1  # the speech was kept
+    assert "nothing" in audio.run(job) and len(fake.requests) == 3
 
     sing(job, "elevenlabs")
     audio.run(job)
-    assert len(fake.requests) == 5 and "/v1/music" in fake.requests[-1][0]
+    assert len(fake.requests) == 4 and "/v1/music" in fake.requests[-1][0]
 
 
 def test_a_song_made_before_there_was_a_choice_counts_as_elevenlabs(job, monkeypatch):
@@ -318,7 +334,8 @@ def test_a_gemini_refusal_or_block_fails_the_step_and_keeps_nothing(job, monkeyp
     with pytest.raises(media.StepFailed, match=reason):
         audio.run(job)
     assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
-    assert len(fake.requests) == 1  # nothing else was asked for once the song failed
+    # The voice was made at the same time and is kept, so a retry asks for the song alone.
+    assert len(fake.gemini()) == 1 and (job / "audio/narration.mp3").exists()
 
 
 def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monkeypatch):
@@ -429,21 +446,20 @@ def _logged(job):
 def test_each_elevenlabs_call_is_logged_in_the_credits_it_cost(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeEleven())
     audio.run(job)
-    rows = _logged(job)
-    assert [(r["label"], r["role"], r["model"]) for r in rows] == [
-        ("song", "audio", "music_v2_5"), ("narration", "audio", "eleven_multilingual_v2"),
-        ("frq", "audio", "eleven_multilingual_v2")]
+    rows = {r["label"]: r for r in _logged(job)}  # made at the same time, so logged in any order
+    assert {label: (r["role"], r["model"]) for label, r in rows.items()} == {
+        "song": ("audio", "music_v2_5"), "narration": ("audio", "eleven_multilingual_v2")}
     # The fake's music answer names no cost; its speech costs a credit a character. No plan price: no dollars.
-    assert rows[0]["credits"] is None and rows[0]["cost_usd"] is None
+    assert rows["song"]["credits"] is None and rows["song"]["cost_usd"] is None
     narration = json.loads((job / audio.plan_path("narration")).read_text())["text"]
-    assert rows[1]["credits"] == len(narration) and rows[1]["cost_usd"] is None
+    assert rows["narration"]["credits"] == len(narration) and rows["narration"]["cost_usd"] is None
 
 
 def test_the_plans_price_of_credits_turns_them_into_dollars(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, "0.30")
     audio.run(job)
-    narration = _logged(job)[1]
+    narration = next(r for r in _logged(job) if r["label"] == "narration")
     assert narration["cost_usd"] == pytest.approx(narration["credits"] * 0.30 / 1000)
 
 
@@ -452,14 +468,15 @@ def test_a_price_that_is_not_one_leaves_the_credits_alone(job, monkeypatch, valu
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, value)
     audio.run(job)
-    assert _logged(job)[1]["cost_usd"] is None and _logged(job)[1]["credits"]
+    narration = next(r for r in _logged(job) if r["label"] == "narration")
+    assert narration["cost_usd"] is None and narration["credits"]
 
 
 def test_a_lyria_song_is_logged_at_its_models_price(job, monkeypatch):
     monkeypatch.setattr(audio, "send", FakeGemini())
     sing(job, "gemini")
     audio.run(job)
-    song = _logged(job)[0]
+    song = next(r for r in _logged(job) if r["label"] == "song")
     assert (song["label"], song["model"], song["cost_usd"]) == ("song", "lyria-3.5", 0.08)
 
 
@@ -482,4 +499,4 @@ def test_a_lyria_answer_with_no_song_is_not_logged_as_one(job, monkeypatch):
     sing(job, "gemini")
     with pytest.raises(media.StepFailed, match="blocked"):
         audio.run(job)
-    assert not (job / "calls.jsonl").exists()
+    assert "song" not in [r["label"] for r in _logged(job)]  # only the voice, made at the same time

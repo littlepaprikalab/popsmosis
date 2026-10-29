@@ -41,9 +41,9 @@ def test_the_brain_is_opus_at_high_effort_with_the_refusal_fallback(tmp_path):
     assert content["content"][0]["source"]["media_type"] == "image/png"
 
 
-def test_the_helper_is_haiku_at_low_effort_without_a_fallback():
+def test_the_helper_is_sonnet_at_low_effort_without_a_fallback():
     request = brain.claude_request("helper", "Any text in this image?", None, [], None)
-    assert request["model"] == "claude-haiku-5-5"
+    assert request["model"] == "claude-sonnet-5-5"
     assert request["output_config"] == {"effort": "low"}
     assert "fallbacks" not in request and "betas" not in request and "system" not in request
 
@@ -54,7 +54,7 @@ def test_the_brains_effort_is_the_one_set_on_the_studio_page(monkeypatch):
         assert request["model"] == "claude-opus-5-5" and request["output_config"] == {"effort": "medium"}
         assert request["fallbacks"] == "default"
         helper = brain.claude_request("helper", "Look.", None, [], None)
-        assert helper["model"] == "claude-haiku-5-5" and helper["output_config"] == {"effort": "low"}
+        assert helper["model"] == "claude-sonnet-5-5" and helper["output_config"] == {"effort": "low"}
     assert brain.claude_request("brain", "Write.", None, [], None)["output_config"] == {"effort": "high"}
 
 
@@ -162,6 +162,34 @@ def test_ask_streams_records_the_call_and_validates(monkeypatch):
     assert sent[0]["system"] == "You check." and sent[0]["model"] == "claude-opus-5-5"
     [call] = brain.calls
     assert call.label == "factcheck round 1" and call.stop_reason == "end_turn"
+
+
+class TooLargeWhenStrict(FakeStream):
+    """Refuses any request whose schema is in output_config, as the API does a schema too large to compile."""
+
+    def __enter__(self):
+        if "format" in self.sent[-1]["output_config"]:
+            import anthropic
+
+            response = NS(status_code=400, headers={}, request=None)
+            raise anthropic.BadRequestError("Error code: 400 - The compiled grammar is too large, which would "
+                                            "cause performance issues.", response=response, body=None)
+        return self
+
+
+def test_a_schema_too_large_for_claudes_grammar_is_asked_for_in_the_prompt(monkeypatch):
+    sent = []
+    fenced = "Here it is.\n```json\n" + ANSWER + "\n```"
+    client = NS(beta=NS(messages=NS(stream=TooLargeWhenStrict(message([text(fenced)]), sent))))
+    monkeypatch.setitem(brain._clients, "claude", client)
+    monkeypatch.setattr(brain, "calls", [])
+    monkeypatch.setattr(brain, "_too_large", set())
+    assert brain.ask("brain", "Check.", FactCheck) == FactCheck.model_validate_json(ANSWER).model_dump()
+    assert "format" in sent[0]["output_config"] and "format" not in sent[1]["output_config"]
+    assert '"properties"' in sent[1]["messages"][0]["content"][-1]["text"]  # the schema, in the prompt
+    brain.ask("brain", "Again.", FactCheck)
+    assert len(sent) == 3 and "format" not in sent[2]["output_config"]  # not tried strictly again this run
+    assert len(brain.calls) == 2  # the refused request generated nothing, so it is not a call
 
 
 def test_a_refused_call_is_still_recorded(monkeypatch):
@@ -351,7 +379,7 @@ def test_the_helper_is_the_brains_whoever_paints(monkeypatch):
     monkeypatch.setitem(brain._clients, "claude", NS(beta=NS(messages=NS(stream=FakeStream(
         message([text('{"seen": true}')], model="claude-haiku-5-5"), sent)))))
     brain.ask("helper", "Any text in it?")
-    assert sent[-1]["model"] == "claude-haiku-5-5"
+    assert sent[-1]["model"] == "claude-sonnet-5-5"
     answer = NS(model="muse-spark-1.3", usage=NS(prompt_tokens=10, completion_tokens=5),
                 choices=[NS(finish_reason="stop", message=NS(content="seen", refusal=None))])
     seen = []

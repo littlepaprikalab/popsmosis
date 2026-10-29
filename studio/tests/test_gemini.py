@@ -131,7 +131,7 @@ def test_on_claudes_brain_gemini_paints_by_default_and_sam_finds_the_structures(
     helper = FakeHelper()
     assert art.painter(job) == "gemini"
     assert art.run(job, helper) == "painted 3 scenes with Gemini 3.1 Flash Image in 3 tries"
-    assert [label for label, _ in painter.painted] == ["art hook", "art overview", "art synthase"]
+    assert sorted(label for label, _ in painter.painted) == ["art hook", "art overview", "art synthase"]  # at once
     assert sam.painted == []  # Muse Image was not asked
     assert art.STYLE in dict(painter.painted)["art overview"]
     for scene in sample_media.bundle().scenes:

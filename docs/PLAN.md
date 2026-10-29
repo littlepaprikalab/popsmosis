@@ -16,10 +16,12 @@ endpoints as built.
    trigger, so a run starts within seconds.
 4. The routine runs the **studio**, a Python pipeline in this repo, on the topic. The
    studio writes the lesson, fact-checks every line, then makes two videos from the same
-   plan and the same diagrams. Only the audio differs:
-   - **Lesson video**: narrated, ending with a worked exam question (FRQ).
-   - **Song video**: the same content sung, the diagram labels synced to the vocals, the
-     same FRQ at the end.
+   plan and the same diagrams. They do different jobs:
+   - **Lesson video**: explains. The narration walks through every step and every part,
+     ending on the core idea.
+   - **Song video**: makes it stick. A song the learner replays, carrying the 3–5 things
+     to remember in rhyme and a chant-like chorus, the diagram labels synced to the
+     vocals.
 5. The page shows the droplet: both videos when they finish rendering, with the lesson
    text under them, updating in place without a reload. Until then the card shows the
    droplet's bill of materials filling in, step by step, as its progress; the text waits
@@ -105,7 +107,7 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
 | Role | Claude (default for now) | Muse |
 |---|---|---|
 | **Brain**: the bundle, the fact-check | Claude Opus 5.5 (`claude-opus-5-5`), effort `high` (set on `/admin/studio`) | Muse Wonder (`muse-wonder-1.0`) or Muse Spark (`muse-spark-1.3`, $1.25 / $4.25 per million tokens, to vet a change) |
-| **Helper**: image checks, SAM boxes, QA stills | Claude Haiku 5.5 (`claude-haiku-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
+| **Helper**: image checks, SAM boxes, QA stills | Claude Sonnet 5.5 (`claude-sonnet-5-5`), effort `low` | Muse Spark (`muse-spark-1.3`) |
 
 The helper's models are set in `studio/brain.py`. An admin can also send one topic to its own
 brain on `/learn` (Claude, Muse Wonder or Muse Spark), which wins over the default for that
@@ -124,7 +126,7 @@ The other jobs:
 | Video | Code: skia-python draws, ffmpeg encodes |
 
 Prices per million tokens (input / output): Opus 5.5 $4 / $20, the same as Muse Wonder;
-Haiku 5.5 $0.10 / $0.50. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
+Sonnet 5.5, the helper, $2 / $10. Muse Image is $0.01 per image, SAM 3.1 $2.50 per 1,000 images.
 
 ## 4. The brain interface
 
@@ -174,8 +176,8 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Gemini 3.1 Flash Image or Muse Image + helper; or the brain's SVG (`/admin/studio`) | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper on painted art; nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
-| 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3`, `audio/frq.mp3` |
-| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json`, `timing/frq_words.json` |
+| 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3` |
+| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
 | 9 | Upload | API + Supabase | Videos (public), intermediates (private) |
@@ -205,29 +207,41 @@ parts build on the facts it has already written.
 
 1. `course`, `topic`, `audience` ("high school" unless the learner's request names
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
-   (`id`, `text`, `source_quote` when a study guide was given), `misconception`, `frq`
-   (`prompt`, `predict_question`, `model_answer_steps[]`, `twist`).
+   (`id`, `text`, `source_quote` when a study guide was given), `misconception`.
 2. `scenes[3-6]`: the hook (where it can, the topic in the learner's world), overview,
    one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
-   `image_prompt`, and `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`).
-   One fixed colour per structure for the whole job.
+   `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`) and
+   `stage_of`. One fixed colour per structure for the whole job. A process whose parts move
+   or change shape from stage to stage (mitosis, the phases of the Moon) takes a scene per
+   stage, 2 to 5 of them, each with `stage_of` naming the process, all opening with the same
+   framing sentence; then up to 8 scenes in all.
 3. `lesson_markdown`: the text droplet. The skill file's "How to teach" rules now live in
    this prompt.
-4. `music`: `positive_styles`, `negative_styles`, and the section order (verse, chorus,
-   verse, chorus, bridge, chorus). The style is one the audience listens to (for high
+4. `music`: `positive_styles`, `negative_styles`, and the section order (intro, verse,
+   pre-chorus, chorus, verse, pre-chorus, bridge, chorus, outro). The style is one the audience listens to (for high
    school: pop with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's
    mood setting its tempo, or the learner's own when they ask for one: a question line
    starting `Style:` becomes `song_style` in `request.json`. One tag names the tempo,
    "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
-   and the `fact_id` it teaches or `"filler"`. The chorus states `core_idea`. A line that names a structure uses its `name` or one of its
-   `aliases`, because hearing that word is what reveals the structure on screen.
-6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics.
+   and the `fact_id` it teaches or `"filler"`. The song is for memory, not a sung lesson:
+   3–5 ideas, rhyming couplets, a story through the steps, a title line that opens the
+   song and comes back in the chorus, and a chorus that chants `core_idea`; the bridge
+   sings what happens when a part fails. A line need not name a structure; one that does
+   uses its `name` or one of its `aliases`, because hearing that word is what reveals the
+   structure on screen.
+6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
+   what the song only names: every fact, step by step, and every structure drawn.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
-   (`target`, `zoom`), `spotlight`, `particles`, `caption`. No times: code adds those
-   from the alignment.
+   (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
+   "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
+   from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
+   (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties,
+   `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
+   `blocks`: what stops the particles reaching it (`[{"structure": "Herbicide"}]`). Each
+   direction line may also name a `glow`: a part an outside cause switches on.
 8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
    then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
@@ -242,7 +256,10 @@ repair what code safely can (no spotlight, the whole scene) and report the rest
 in `checks.json`.
 
 The bundle is roughly 6–10k tokens. If it ever outgrows a model's output limit (Claude's
-is 128K), split it into two calls: parts 1–2, then 3–7.
+is 128K), split it into two calls: parts 1–2, then 3–7. Claude's structured outputs compile the schema into a grammar
+with a size limit, and the bundle's schema outgrew it on Oct 28 (with `direction` and
+`tags`): a schema the API refuses for that is asked for in the prompt instead, and the
+answer validated as every answer is (`studio/brain.py`).
 
 ### Step 2: fact-check
 
@@ -256,6 +273,12 @@ keeps the structure's name, so the timing and the direction still fit. Code appl
 fixes and re-checks only the changed lines, up to 3 rounds; if any line still fails, the
 job fails with the reason shown on the droplet. Nothing is posted or sung that has not
 passed.
+
+The same call checks each video's hashtags and its marked motions ("H⁺ travels from
+Stroma to Cytochrome b6f to Thylakoid lumen": what a line's particles carry and their
+route), each once however many lines show it. Neither is ever rewritten or fails the job:
+a tag that fails is dropped, and a motion that fails is left out of the video. Motions
+add about $0.02 a lesson.
 
 There is no teacher approval step: the fact-check is the gate.
 
@@ -272,16 +295,60 @@ cytochrome b6f pumps).
 
 ### Step 3: art
 
-**Painted, by Gemini 3.1 Flash Image or Muse Image** (`/admin/studio`; Gemini by default with `claude`, Muse Image with `meta`). Gemini: `generateContent` at 16:9, 1K (1376 x 768), about $0.07 a picture, run live. Muse Image (`/v1/images/generations`), size `1792x1024`
-(an aspect ratio: the picture is fitted to the art on white). The prompt suffix is always:
-"textbook illustration in the style of OpenStax/Campbell, shaded vector, soft gradients,
-clean outlines, white background, scientifically accurate, absolutely no text, no labels,
-no letters, no numbers." Disable web search and shell (`tool_enablement`). Keep
+**Painted, by Gemini 3.1 Flash Image or Muse Image** (`/admin/studio`; Gemini by default with `claude`, Muse Image with `meta`), every scene at the same time. Gemini: `generateContent` at 16:9, 1K (1376 x 768), about $0.07 a picture, run live. Muse Image (`/v1/images/generations`), size `1792x1024`
+(an aspect ratio). Either picture is fitted to the art on its own background colour.
+The prompt is short: the scene's `image_prompt`, which asks for it
+the way a teacher asks for a standard textbook diagram of its subject ("Educational
+diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
+Earth has seasons..."), each structure's colour by name, and the style line (`art.STYLE`: a
+plain dark slate blue background, room for labels, smooth rounded proteins, no text; the
+hook and the analogy leave the proteins out). The picture is a still stage: the request
+says where everything is and which way it faces, never what it does, and the video draws
+every flow as moving dots (round 8: the same layouts without their actions came back
+clean, [test-rounds.md](test-rounds.md)). The kind of diagram is the scene's: a cell biology figure in the Campbell/OpenStax manner, an
+astronomy schematic as its textbooks draw one. (One OpenStax/Campbell style for every
+subject, hex colours and a list of shapes were right once in 6 on the seasons scenes; the
+plain request 8 in 12: [test-rounds.md](test-rounds.md).) Disable Muse Image's web search and shell
+(`tool_enablement`); turning them on made no difference. Keep
 structures away from the edges so vertical crops work later. The helper looks at each
-image; if any text is visible or the anatomy is wrong, regenerate (max 3) with what was
-wrong. A picture with text is never used; after the third, the scene keeps the text-free
-picture with the fewest problems. Built (`studio/steps/art.py`, `studio/muse.py`), not
-yet run against the live API.
+image, told what kind of scene it is (hook, overview, analogy or close-up) and that the
+video animates the flows; if any text is visible or a structure is missing, out of place or
+facing the wrong way, regenerate (max 2, since Oct 28) with what was wrong. Anything else
+wrong is recorded, not repainted: a second picture for those was no better 9 times in 11. A
+picture with text is never used; after the second, the scene keeps the text-free picture
+with the fewest structures out of place. Built (`studio/steps/art.py`, `studio/muse.py`); first
+run live on Oct 28 ([test-rounds.md](test-rounds.md)).
+
+**Saying what is left wrong.** The check also writes, for each problem that would teach the
+student something false, a sentence for them ("The chromosomes' bends point the wrong way:
+each is pulled toward its pole by its middle, so the bend leads."), leaving out matters of
+look. Whatever those notes say of the picture the video uses, after its tries, is shown
+beside it (`Timeline.notices`): a white card at the right under "AI-generated picture", up
+to three notes, for as long as the picture is on screen. The picture moves left to make
+room, and so do the other stages of its process. The check can miss a mistake (round 16's
+anaphase had twice the chromosomes it should); the card says only what it found. So every
+other picture carries a small "AI-generated picture" tag at its bottom left
+(`Timeline.ai_pictures`), mistakes found or not, and whatever made it: Muse Image's pictures
+and the brain's SVG drawings alike.
+
+**Stages** are painted as one subject in one framing: each later stage of a process is
+redrawn from the first stage's picture (`/v1/images/edits`, the first stage's picture
+with the stage's own prompt after "Redraw this picture as a later stage of mitosis: the
+same subject, at the same size and in the same place..."), and the helper is told which
+stage of how many it checks. A later stage is painted again whenever its first stage is;
+if Muse Image will not redraw a picture, the stage is painted afresh. Gemini 3.1 Flash
+Image is not given the first stage's picture yet (`gemini.paint` takes a prompt only), so
+with Gemini painting each stage is painted afresh, from its own prompt.
+
+**Repair before repainting** (`studio/repair.py`, run by the locate step once the
+structures are found): code fixes what it can for at most a helper look or two, where a
+repaint costs a picture, its check and locating it again, and is a gamble. A space the
+bundle fills (`builds_up`) is cleared of small specks painted wholly inside it, for free;
+a structure the art check found out of place, which the helper then names as upside down,
+is turned over about the middle of its narrow stretch (a stalk in its membrane), its old
+place filled from beside it; the art check looks again, and the flip is kept only if
+fewer structures are out of place. Code cannot redraw a part drawn wrong (a protein with
+two heads): those wait for a repaint, or are reported.
 
 **Drawn by Claude's brain as SVG** (`/admin/studio`), the brain draws each scene as SVG, with every structure
 as its own named group. Rasterising the SVG gives the art, and rasterising one group at a
@@ -292,13 +359,17 @@ it unchanged. Switching the painter makes a job's art again on its next run.
 ### Step 4: locate
 
 SAM 3.1 via `/v1/responses`, one noun phrase per request (the structure's `sam_phrase`:
-its colour and shape in a few words). Every match at least 0.5 sure makes up its mask. If
-SAM finds nothing that sure for a structure, the helper proposes a box and SAM is called
-again with that box. A structure neither finds is left out, like one the SVG art leaves
-out (no spotlight, no camera move), and a scene with fewer than half its structures found
-fails the step. `locations.json` holds `box`, `centroid` and `label_anchor` per
-structure, all in art pixel coordinates. Built (`studio/steps/locate.py`), not yet run
-against the live API.
+its colour and an everyday noun, "yellow flashlight"). Every match at least 0.5 sure makes
+up its mask. If SAM finds nothing that sure for a structure, it is asked again in plainer
+words (its colour and the phrase's last noun, then its colour and "region"), and only then
+does the helper propose a box for SAM to look in. Every match is held to the structure's
+colour: one mostly in another structure's colour is dropped. A structure none of these finds
+is left out, like one the SVG art leaves out (no spotlight, no camera move), and a scene
+with fewer than half its structures found fails the step. `locations.json` holds `box`,
+`centroid` and `label_anchor` per structure, all in art pixel coordinates. Built
+(`studio/steps/locate.py`); first run live on Oct 28, when SAM missed most long phrases and a
+helper box around two Earths labelled one's northern half "Southern Hemisphere", so the
+plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
 
 ### Step 5: audio
 
@@ -306,8 +377,9 @@ against the live API.
   `composition_plan` of one chunk per section: `text` ("[Section]\nlines"),
   `duration_ms`, `positive_styles`, `negative_styles`, `context_adherence` "high". The
   studio's code makes this call, only after the fact-check passes. Section durations come
-  from the line count and the styles' "<n> bpm" tag (two bars per line: 4.8 s at 100
-  bpm, 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
+  from the line count and the styles' "<n> bpm" tag (one bar per line below 130 bpm, 2.4 s
+  at 100 bpm, so the lines come short and punchy; two bars from 130 bpm, where one would be
+  under 1.9 s: 3.2 s at 150; 112 bpm for a song whose styles name none), not from the model.
 - **Or the song from Lyria** (picked on `/admin/studio`): `POST
   https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent` with
   one text prompt: the style tags (the same tempo tag), the length, the planned structure
@@ -320,9 +392,9 @@ against the live API.
   as a whole. Switching the provider makes a job's song again, not its speech.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
-- **The exam question:** the same voice reads `media.frq_lines()` (the prompt, the predict
-  question, the model answer steps) into `audio/frq.mp3`. Both videos end on it. The
-  fact-check covers these lines (kind `frq`) and writes its fixes back into `bundle.frq`.
+- **No exam question:** both videos ended on a read-aloud exam question (`audio/frq.mp3`)
+  until Oct 28, when it left them (the song's bridge still poses one, sung). A bundle
+  written before still loads, its `frq` dropped.
 
 ### Step 6: timing
 
@@ -347,7 +419,9 @@ Output is a `Timing` per audio file: each line by id, with its start, end and
 
 Code merges `bundle.direction`, the word timings and `locations.json` into the timeline
 (section 6). Reveals are mechanical: a structure reveals when its name or an alias is
-sung, and the labels shown are everything revealed so far. A direction that names a
+first sung, and the labels shown are everything revealed so far. Once named, a structure
+stays labelled: a later scene that draws it shows its label from that scene's first line,
+so a learner never loses the name of a part they have already heard. A direction that names a
 structure not in its scene, or one SAM could not find, falls back to no spotlight and
 the camera on the whole scene, rather than another model call.
 
@@ -410,9 +484,7 @@ come from step 6.
 {
   "video": "song", "duration": 212.5, "fps": 30,
   "audio": [                               // mixed into one track
-    {"path": "audio/song.mp3", "at": 0},
-    {"path": "audio/frq.mp3", "at": 195.5, "start": 0, "end": 9.2},   // the question
-    {"path": "audio/frq.mp3", "at": 209.7, "start": 9.2}               // the answer, after the pause
+    {"path": "audio/song.mp3", "at": 0}
   ],
   "palette": {"Broca's area": "#E07A2F", ...},
   "beats": [
@@ -422,26 +494,21 @@ come from step 6.
       "camera": {"target": "Broca's area", "zoom": 1.6, "ease": "inOut"},   // target null: the whole scene
       "reveal": [{"name": "Broca's area", "t": 12.6}],   // fades from ghost to full when the word is sung
       "spotlight": "Broca's area",         // others washed pale; null = none
-      "labels": ["Broca's area", "Wernicke's area"],  // everything revealed on this scene so far
-      "particles": [{"path": ["Wernicke's area", "Broca's area"], "color": "#F2C230", "trail": true}],
+      "labels": ["Broca's area", "Wernicke's area"],  // everything named so far that this scene draws
+      "particles": [{"path": ["Wernicke's area", "Broca's area"], "color": "#F2C230", "trail": true, "label": ""}],
       "caption": null,                     // at most ~1 per section, held >= 4 s
       "line_id": "v1-2",                   // null in an instrumental gap
       "line": "Broca builds the words you say",
       "words": [{"word": "Broca", "start": 12.6, "end": 13.0}, ...]
     }
-  ],
-  "frq": {"t0": 195.5, "t1": 212.5, "scene": "overview", "labels": ["Broca's area", ...],
-          "prompt": "...", "predict_question": "...",
-          "predict_t": 204.7, "predict_pause_s": 5,
-          "steps": [{"t": 209.7, "text": "...", "spotlight": "Broca's area"}]}
+  ]
 }
 ```
 
-Validation (pydantic): `t0 < t1`; the beats run from 0 to `frq.t0`, each starting
+Validation (pydantic): `t0 < t1`; the beats run from 0 to `duration`, each starting
 exactly where the last ended, so every frame (`n / fps`, `beat_at(t)`) has one; a
 reveal is labelled, and a spotlight or camera target waits for its reveal; a label once
-shown stays on that scene; zoom is at least 1; every name has a colour; the steps follow
-the predict pause, each spotlighting a structure the card labels. Paths are ones the
+shown stays on that scene; zoom is at least 1; every name has a colour. Paths are ones the
 API's upload takes, built by `studio/media.py`, which turns model-written scene ids and
 structure names into safe, distinct file names.
 `timeline_problems()` adds that every name is located on its scene's art. Both videos
@@ -458,10 +525,14 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
 - **Primitives** (`studio/render/primitives.py`):
   - **Camera:** the world is art pixel coordinates; per beat, ease zoom and pan toward
     the target structure's centroid; clamp to the art's bounds.
-  - **Ghost:** unrevealed structures drawn pale through their mask (white wash at ~85%
-    alpha, blurred edge); fade to full over 0.4 s when revealed.
-  - **Spotlight:** wash all other structures pale. Never add a glow on top (it tints the
-    colours).
+  - **Ghost:** unrevealed structures faded into the art's background through their mask (a
+    wash in the background's colour, read off the art's edge, at ~85% alpha, blurred edge:
+    pale on the SVG art's white, dark on Muse Image's slate); fade to full over 0.4 s when
+    revealed. A structure the video
+    never names on a scene is drawn as it is, unlabelled: as a ghost it washed its part of
+    the picture out for as long as the scene was on screen.
+  - **Spotlight:** wash all other structures toward the background. Never add a glow on top
+    (it tints the colours).
   - **Label:** white rounded pill, 3.5 px outline in the structure's colour, text in a
     darkened version of that colour, Inter Bold, a leader line and a 6 px dot at the
     mask's `label_anchor`. Pills stay inside the frame and avoid each other (a simple
@@ -472,15 +543,43 @@ Generalised from the Fire or Don't renderer (hard-coded per song) into one that 
     dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
     have, keeps them readable on any colour. Lines in a row with the same path are one
     run, so the motion carries on across them, and it waits for its stops to be revealed.
+    When the line's direction says what the particles carry, the lead particle is a badge
+    with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
+    kind has its own colour in every lesson (protons gold, electrons cyan), so a proton
+    reads apart from an electron and from anything painted in the picture.
+  - **Spaces filling up:** for what the bundle's `builds_up` says piles up where ("H⁺" in
+    the thylakoid lumen), the space fills with that kind's dots while marked particles end
+    there and empties while they start from it, tinted its colour as it fills; one dot in
+    three is marked. How full it is runs on across scenes. The dots sit inside the space's
+    mask, drift a few pixels in place, and stay bright while particles fill or empty the
+    space, whatever the spotlight. The pictures paint no loose ions, so nothing painted
+    looks like them.
+  - **Parts that turn:** for what the bundle's `spins` names (a rotor, a turbine, a water
+    wheel), the part eases up to turning while particles flow into or through it and eases
+    to a stop when they stop, so the flow is seen to drive it. How it turns is read off the
+    picture: one that looks the same turned a quarter and a half turn (a wheel seen
+    face-on) turns in place, the disc of the picture around it; any other (a rotor seen
+    edge-on, a mushroom-shaped ATP synthase, which turned in place would stand on its head)
+    gets a white curved arrow going round it, its far half faint, as textbooks draw one.
+  - **Blocked flows:** particles whose last stop is a blocker (the bundle's `blocks`: a
+    poison, a drug, a herbicide) go once and hold there; the stream queues up behind them,
+    and a red cross shows at the blocker once the first arrives. The fact-check reads such
+    a motion as "e⁻ flow from Photosystem II is stopped at Herbicide".
+  - **Glow:** a line's `glow` lights its part with a warm light past its edge, pulsing,
+    for the line: light exciting photosystem II, a neuron firing. Rare, and like the
+    spotlight, never on a part not yet named.
+  - **Stages:** where the video goes from one stage of a process to the next
+    (`Timeline.stages`), the next stage's picture fades in over the last for 0.8 s with
+    the camera going on from where it was, in place of a cut; what was shown on the stage
+    before is on in full from the next stage's first frame. Since every stage is painted
+    in the same framing, what changes between them is what the viewer sees move.
   - **Lyric band:** a white band at the bottom (110 px tall in 16:9), the current line
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
     spotlight still move when it is sung).
   - **Caption pill:** optional, top area, held at least 4 s.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
-  - **FRQ segment:** a question card over the diagram, a visible countdown during the
-    predict pause, then numbered model-answer steps appearing in sync with the
-    narration, spotlighting the structure each step names.
+  - **Ending:** the last picture stays on screen 1.5 s after the voice ends.
 - **Encoding:** pipe raw BGRA frames to ffmpeg (H.264 + AAC, 30 fps, 1920x1080). Render
   frame ranges in parallel processes, each encoding video only; join them with
   `-c copy`, then add the audio once (audio added per chunk clicks at the joins). Encode
@@ -500,7 +599,8 @@ video in under 5 minutes per layout.
 
 ## 8. Quality rules (also the QA checklist)
 
-- One style: textbook shaded vector on white. Never anime, personified characters,
+- One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
+  coding) on a plain dark slate blue background; the SVG art's on white. Never anime, personified characters,
   clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
 - No text baked into the art; the renderer draws all text.
 - A fixed colour per structure across all scenes and both videos.
@@ -560,7 +660,7 @@ The `jobs/<id>/` folder disappears with the routine's machine. These copies outl
 | Art, masks, `locations.json`, audio, timings, timelines | Supabase Storage, private bucket `studio/<answerId>/` | Re-render after a renderer fix without paying again for the song and the art |
 
 **Follow-ups read the droplet from the database.** The reply queue includes a compact
-context taken from the bundle: `core_idea`, the facts, the misconception, the FRQ and the
+context taken from the bundle: `core_idea`, the facts, the misconception and the
 lyrics. It leaves out the scenes and the camera directions, so a thread stays a couple of
 thousand tokens. Whichever model answers reads the same context, so moving follow-ups from
 Claude to Muse Wonder later is a model change, not a data change.

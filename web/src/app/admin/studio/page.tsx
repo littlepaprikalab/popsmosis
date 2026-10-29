@@ -22,7 +22,7 @@ const painterOf = (painter: string) => PAINTERS[painter as Painter] ?? { label: 
 const brainOf = (brain: string) => ({ label: BRAIN_MODELS[brain as Brain] ?? brain, note: BRAIN_NOTES[brain as Brain] ?? '' });
 
 const BRAINS: { provider: keyof ArtSettings; title: string; who: string }[] = [
-  { provider: 'claude', title: 'Pictures for Claude topics', who: 'Sent to Claude on the LEARN page, or on Default while the default brain is Claude. Claude Haiku 5.5 checks each picture.' },
+  { provider: 'claude', title: 'Pictures for Claude topics', who: 'Sent to Claude on the LEARN page, or on Default while the default brain is Claude. Claude Sonnet 5.5 checks each picture.' },
   { provider: 'meta', title: 'Pictures for Muse topics', who: 'Sent to Muse Wonder or Muse Spark, or on Default while the default brain is a Muse. Muse Spark 1.3 checks each picture.' },
 ];
 

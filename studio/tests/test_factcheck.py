@@ -5,7 +5,7 @@ import pytest
 from studio.jobs import read, write
 from studio.schemas import Bundle, FactCheck, FactCheckReport, Request
 from studio.steps import factcheck
-from studio.steps.factcheck import check_bundle, cites, dropped_tags, lines_of
+from studio.steps.factcheck import check_bundle, cites, dropped_motions, dropped_tags, lines_of
 from studio.tests.sample import CHORUS, bundle_data
 
 SEEDED = "Every electron hand-off pumps a proton"
@@ -103,32 +103,14 @@ def test_a_lesson_fix_is_written_back_into_the_markdown():
     assert fake.ids(2) == ["lesson:3"]
 
 
-def test_the_exam_question_is_checked_and_its_fixes_go_back_into_the_frq():
-    wrong_step = "Cytochrome b6f pumps protons."
-    fixed_step = "Cytochrome b6f pumps protons into the lumen."
-
-    def step_is_wrong(text):
-        if text == wrong_step:
-            return "UNSUPPORTED", "", fixed_step
-        if text.endswith("?"):
-            return "FILLER", "", ""
-        return supported(text)
-
-    fake = FakeChecker(step_is_wrong)
-    report, checked = check_bundle(bundle(), "", fake)
-    assert [k for k in fake.ids(1) if k.startswith("frq:")] == [
-        "frq:frq-prompt", "frq:frq-predict", "frq:frq-step-1", "frq:frq-step-2"]
-    assert fake.ids(2) == ["frq:frq-step-1"]
-    assert report.status == "passed"
-    assert checked.frq.model_answer_steps == [fixed_step, "ATP synthase uses the flow."]
-    assert checked.frq.prompt == bundle().frq.prompt
-    [correction] = report.corrections
-    assert (correction.kind, correction.ids, correction.after) == ("frq", ["frq-step-1"], fixed_step)
-    frq = [line for line in report.lines if line.kind == "frq"]
-    assert [(line.id, line.verdict) for line in frq] == [
-        ("frq-prompt", "SUPPORTED"), ("frq-predict", "FILLER"), ("frq-step-1", "SUPPORTED"), ("frq-step-2", "SUPPORTED")]
-    # The report still reads back, as the API stores it.
-    assert FactCheckReport.model_validate_json(report.model_dump_json()) == report
+def test_a_bundle_written_with_an_exam_question_is_checked_without_it():
+    # The exam question left the videos on Oct 28; a bundle written before still carries one.
+    data = bundle().model_dump()
+    data["frq"] = {"prompt": "Explain it.", "predict_question": "Which?", "model_answer_steps": ["One."], "twist": "And?"}
+    fake = FakeChecker(supported)
+    report, checked = check_bundle(Bundle.model_validate(data), "", fake)
+    assert report.status == "passed" and not any(k.startswith("frq:") for k in fake.ids(1))
+    assert "frq" not in checked.model_dump()
 
 
 def test_it_fails_after_three_rounds_when_fixes_keep_failing():
@@ -277,6 +259,106 @@ def test_a_tag_that_fails_leaves_both_videos_and_never_fails_the_check():
     assert [(t.text, t.verdict, t.problem) for t in dropped_tags(report)] == [
         ("#lightreactions", "UNSUPPORTED", "wrong"), ("#apbio", None, "")]
     assert FactCheckReport.model_validate_json(report.model_dump_json()) == report
+
+
+ELECTRONS = "e⁻ travels from Thylakoid to Cytochrome b6f"
+PROTONS = "H⁺ travels from Cytochrome b6f to Thylakoid"
+
+
+def moving(data):
+    """Electrons on a verse line and on every chorus line, protons on another, and an unmarked flow."""
+    for d in data["direction"]:
+        if d["line_id"] in ("v1-2", "c1-1", "c2-1", "c3-1"):
+            d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+        elif d["line_id"] == "v2-1":
+            d.update(particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")
+        elif d["line_id"] == "b-1":
+            d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="")
+
+
+def test_each_marked_motion_is_checked_once_and_unmarked_ones_are_not_sent():
+    fake = FakeChecker(supported)
+    report, checked = check_bundle(bundle(moving), "", fake)
+    motions = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")]
+    assert motions == [("motion:v1-2", ELECTRONS), ("motion:v2-1", PROTONS)]  # after the tags, the chorus once
+    assert report.status == "passed" and checked == bundle(moving) and dropped_motions(report) == []
+
+
+def test_a_motion_that_fails_is_left_out_of_the_video_and_never_fails_the_check():
+    def rule(text):
+        if text == PROTONS:
+            return "UNSUPPORTED", "", ""  # left out: a motion is never rewritten
+        return supported(text)
+
+    report, checked = check_bundle(bundle(moving), "", FakeChecker(rule))
+    assert report.status == "passed" and report.corrections == []
+    shown = {d.line_id: (d.particles, d.carries) for d in checked.direction if d.particles}
+    assert shown == {line: (["Thylakoid", "Cytochrome b6f"], "e⁻") for line in ("v1-2", "c1-1", "c2-1", "c3-1")} | {
+        "b-1": (["Thylakoid", "Cytochrome b6f"], "")}  # an unmarked flow is not the check's
+    assert [(m.text, m.verdict) for m in dropped_motions(report)] == [(PROTONS, "UNSUPPORTED")]
+
+
+def test_a_motion_with_no_verdict_is_asked_again_then_left_out():
+    fake = FakeChecker(lambda text: None if text == ELECTRONS else supported(text))
+    report, checked = check_bundle(bundle(moving), "", fake)
+    assert fake.ids(2) == ["motion:v1-2"] and fake.ids(3) == ["motion:v1-2"]
+    assert report.status == "passed"
+    assert {d.line_id for d in checked.direction if d.particles} == {"v2-1", "b-1"}
+
+
+def test_what_builds_up_is_checked_too_and_left_out_when_it_fails():
+    def building(data):
+        moving(data)
+        data["builds_up"] = [{"carries": "H⁺", "region": "Thylakoid"}, {"carries": "e⁻", "region": "Cytochrome b6f"}]
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == "e⁻ builds up in Cytochrome b6f"
+                       else supported(text))
+    report, checked = check_bundle(bundle(building), "", fake)
+    sent = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:builds")]
+    assert sent == [("motion:builds-1", "H⁺ builds up in Thylakoid"), ("motion:builds-2", "e⁻ builds up in Cytochrome b6f")]
+    assert report.status == "passed" and [(b.carries, b.region) for b in checked.builds_up] == [("H⁺", "Thylakoid")]
+    assert [m.text for m in dropped_motions(report)] == ["e⁻ builds up in Cytochrome b6f"]
+
+
+def test_what_turns_is_checked_with_what_drives_it():
+    def spinning(data):
+        moving(data)
+        data["spins"] = [{"structure": "Cytochrome b6f"}, {"structure": "Thylakoid"}]
+        for d in data["direction"]:
+            if d["line_id"] == "b-1":  # unmarked: an analogy's water, say
+                d.update(particles=["Cytochrome b6f", "Thylakoid"])
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text.startswith("Thylakoid spins") else supported(text))
+    report, checked = check_bundle(bundle(spinning), "", fake)
+    sent = [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:spins")]
+    assert sent == ["Cytochrome b6f spins as e⁻ flows through it",
+                    "Thylakoid spins as H⁺ flows through it"]
+    assert [s.structure for s in checked.spins] == ["Cytochrome b6f"]
+
+
+def test_what_turns_an_unmarked_part_is_the_stop_just_before_it():
+    def dam(data):
+        for d in data["direction"]:
+            if d["line_id"] == "v1-2":  # pump -> reservoir -> turbine, as an analogy's water runs
+                d.update(particles=["Thylakoid", "Cytochrome b6f", "Thylakoid"], carries="")
+        data["spins"] = [{"structure": "Thylakoid"}]
+
+    fake = FakeChecker(supported)
+    check_bundle(bundle(dam), "", fake)
+    assert [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:spins")] == [
+        "Thylakoid spins as particles flow into it from Cytochrome b6f"]
+
+
+def test_a_blocked_flow_is_checked_as_stopped_there():
+    def stopping(data):
+        moving(data)
+        data["blocks"] = [{"structure": "Cytochrome b6f"}]
+
+    fake = FakeChecker(supported)
+    check_bundle(bundle(stopping), "", fake)
+    motions = [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")]
+    assert "e⁻ flow from Thylakoid is stopped at Cytochrome b6f" in motions
+    assert "H⁺ travels from Cytochrome b6f to Thylakoid" in motions  # not blocked: it ends elsewhere
 
 
 def test_a_tag_never_rides_along_with_a_corrected_line():

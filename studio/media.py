@@ -2,16 +2,14 @@
 
 Every path is relative to the job folder, jobs/<id>/. The models are in studio/schemas.py.
 
-    art/<scene>.png                     3     RGB, ART_WIDTH x ART_HEIGHT, white background, no text in it
+    art/<scene>.png                     3     RGB, ART_WIDTH x ART_HEIGHT, a plain background, no text in it
     masks/<scene>/<structure>.png       3/4   8-bit greyscale, the art's size: 255 where the structure is
                                               visible in the art (what covers it is left out), 0 elsewhere
     locations.json                      3/4   Locations: each structure's mask, box, centroid, label anchor
     audio/song.mp3                      5     the song
     audio/narration.mp3                 5     the lesson video's voice-over
-    audio/frq.mp3                       5     the exam question read aloud, the lines of frq_lines() in order
     timing/song_words.json              6     a Timing for each audio file
     timing/narration_words.json         6
-    timing/frq_words.json               6
     timeline_song.json                  7     a Timeline for each video
     timeline_lesson.json                7
     out/song_h.mp4, out/lesson_h.mp4    8     1920x1080, 30 fps, H.264 + AAC, -movflags +faststart
@@ -51,15 +49,16 @@ import re
 from pathlib import Path
 from types import ModuleType
 
-from studio.schemas import SAFE_PATH, Bundle  # every path built here passes SAFE_PATH
+import numpy as np
+
+from studio.schemas import SAFE_PATH  # every path built here passes SAFE_PATH
 
 MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
 VIDEOS = ("song", "lesson")
-TIMED = ("song", "narration", "frq")  # the audio files, each with its Timing
+TIMED = ("song", "narration")  # the audio files, each with its Timing
 
 ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
-PREDICT_PAUSE_S = 5.0
 
 LOCATIONS = "locations.json"
 
@@ -84,8 +83,27 @@ def file_name(name: str) -> str:
     return f"{plain}-{digest}" if plain else digest
 
 
+PAPER_EDGE = 6  # pixels: the ring around a picture whose colour is its background
+
+
+def paper(pixels: np.ndarray) -> tuple[int, int, int]:
+    """A picture's background colour: the median of a thin ring around its edge, its channels in the
+    picture's own order (H x W x 3 or more). White for the SVG art; for Muse Image's, whatever it painted
+    behind the diagram (dark slate blue, as art.STYLE asks)."""
+    rgb = pixels[..., :3]
+    e = PAPER_EDGE
+    ring = np.concatenate([rgb[:e].reshape(-1, 3), rgb[-e:].reshape(-1, 3),
+                           rgb[:, :e].reshape(-1, 3), rgb[:, -e:].reshape(-1, 3)])
+    return tuple(int(v) for v in np.median(ring, axis=0))
+
+
 def art_path(scene: str) -> str:
     return f"art/{file_name(scene)}.png"
+
+
+def check_path(scene: str) -> str:
+    """What a Muse Image picture of the scene was made from and what its check found (studio/steps/art.py)."""
+    return f"art/{file_name(scene)}.json"
 
 
 def mask_path(scene: str, structure: str) -> str:
@@ -116,13 +134,6 @@ def restart(job: Path, *index_files: str) -> None:
     """Remove a step's index files before it writes anything, so it is not done until it finishes."""
     for name in index_files:
         (job / name).unlink(missing_ok=True)
-
-
-def frq_lines(bundle: Bundle) -> list[tuple[str, str]]:
-    """The exam question as the videos read it aloud and show it: (line id, text), in order."""
-    frq = bundle.frq
-    lines = [("frq-prompt", frq.prompt), ("frq-predict", frq.predict_question)]
-    return lines + [(f"frq-step-{i}", step) for i, step in enumerate(frq.model_answer_steps, 1)]
 
 
 def step_module(name: str) -> ModuleType:

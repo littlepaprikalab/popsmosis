@@ -48,7 +48,7 @@ def test_speech_timings_survive_characters_the_tts_dropped_or_changed():
     text = "Use 2 steps."
     heard = "Use two steps."  # a normalised reading, one character longer
     alignment = _alignment(heard)
-    timed = timing_from_chars("frq", text, [{"id": "x", "start": 0, "end": len(text)}], alignment, 5.0)
+    timed = timing_from_chars("narration", text, [{"id": "x", "start": 0, "end": len(text)}], alignment, 5.0)
     words = timed.lines[0].words
     assert [w.word for w in words] == ["Use", "2", "steps"]
     assert all(a.end <= b.start for a, b in zip(words, words[1:]))
@@ -63,6 +63,7 @@ def made(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
+    monkeypatch.setattr(audio, "TWO_BAR_BPM", 0)  # two bars a line, room for the fake singer's steady words
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
@@ -199,7 +200,7 @@ def test_a_line_with_no_room_between_its_neighbours_stays_as_it_was(made):
     assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
 
 
-def test_the_step_writes_all_three_timings_and_reports_drift(made, monkeypatch):
+def test_the_step_writes_both_timings_and_reports_drift(made, monkeypatch):
     monkeypatch.setattr(timing, "separate_vocals", lambda job: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
     monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([]))
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
@@ -207,14 +208,13 @@ def test_the_step_writes_all_three_timings_and_reports_drift(made, monkeypatch):
     assert summary.startswith("song 7 lines in 30.1s, chorus drift at most")
     assert timing.is_done(made)
     bundle = sample_media.bundle()
-    expected = {"song": [line.id for line in bundle.lyrics], "narration": [n.id for n in bundle.narration],
-                "frq": [i for i, _ in media.frq_lines(bundle)]}
+    expected = {"song": [line.id for line in bundle.lyrics], "narration": [n.id for n in bundle.narration]}
     for kind, ids in expected.items():
         assert timing_problems(jobs.read(made / media.timing_path(kind), Timing), ids) == []
     report = json.loads((made / timing.REPORT).read_text())
     assert {d["line_id"] for d in report["drift"]} == {"c1-1", "c2-1", "c3-1"}
     # Demucs and MMS ran here: logged with their time and no bill, after the audio step's paid calls.
-    local = [json.loads(row) for row in (made / "calls.jsonl").read_text().splitlines()][3:]
+    local = [json.loads(row) for row in (made / "calls.jsonl").read_text().splitlines()][2:]
     assert [(r["label"], r["role"], r["model"], r["cost_usd"]) for r in local] == [
         ("song vocals", "local", "htdemucs", 0.0), ("song alignment", "local", "mms-fa", 0.0)]
 
@@ -244,7 +244,9 @@ def test_timings_are_not_done_once_the_audio_or_the_lines_change(made, monkeypat
     assert timing.is_done(made)
 
     data = sample_media.bundle().model_dump()
-    data["frq"]["model_answer_steps"].append("The flow drives the synthase.")
+    data["narration"].append({"id": "n3", "text": "The flow drives the synthase.", "names": [], "fact_id": "f3"})
+    data["direction"].append({"line_id": "n3", "scene": "synthase", "camera": {"target": "", "zoom": 1.0},
+                              "spotlight": "", "particles": [], "carries": "", "glow": "", "caption": ""})
     jobs.write(made / "bundle.json", sample_media.bundle().model_validate(data))
     assert not timing.is_done(made)  # a line to time that has no timing yet
 
@@ -339,3 +341,25 @@ def test_a_front_end_normalised_across_the_window_is_heard_in_one_pass(monkeypat
     window = torch.randn(1, 3 * timing.SAMPLE_RATE) * 0.1
     with torch.inference_mode():
         assert torch.equal(timing._emission(model, window), model(window)[0])
+
+
+def test_jobs_on_one_machine_time_their_songs_in_turn(tmp_path):
+    import threading
+    import time as clock
+
+    inside, most = [], []
+
+    def time_a_song(name):
+        (tmp_path / name).mkdir()
+        with timing.cpu_turn(tmp_path / name):
+            inside.append(name)
+            most.append(len(inside))
+            clock.sleep(0.05)
+            inside.remove(name)
+
+    threads = [threading.Thread(target=time_a_song, args=(f"job{i}",)) for i in range(3)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert max(most) == 1

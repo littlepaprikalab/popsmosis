@@ -5,7 +5,6 @@
                                   section at a time (across the whole song at once when
                                   its sections are not pinned: a Gemini song)
     timing/narration_words.json   from the character timings the TTS returned (step 5)
-    timing/frq_words.json
     timing/song_report.json       how sure the aligner was of each line, the lines it was unsure
                                   of that it heard again alone between their neighbours, and
                                   chorus drift
@@ -24,6 +23,8 @@ calls.jsonl logs them with their time and no cost (studio/ledger.py).
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import re
 import statistics
@@ -52,6 +53,23 @@ MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
+TURN = ".timing.lock"  # beside the jobs: the jobs on one machine time their songs in turn
+
+
+@contextlib.contextmanager
+def cpu_turn(job: Path):
+    """Wait for this machine's other jobs to finish timing a song. Demucs and the aligner each use
+    every core; two at once (a test round's topics side by side) took 8 times as long each, their
+    threads fighting for the cores, where taking turns costs only the wait. A routine runs on a
+    machine of its own, so it never waits."""
+    with open(job.parent / TURN, "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
 # align(vocals at 16 kHz, a list of normalised words) -> per word (start s, end s, score),
 # in the window's own time. Tests pass their own.
 Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
@@ -60,11 +78,11 @@ Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
 def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     if not audio_step.is_done(job):
-        raise media.StepFailed("the audio step has not made all three audio files from this bundle yet")
-    # Not done until all three are written again; the cached vocals are kept.
+        raise media.StepFailed("the audio step has not made both audio files from this bundle yet")
+    # Not done until both are written again; the cached vocals are kept.
     media.restart(job, *(media.timing_path(kind) for kind in media.TIMED), REPORT)
     parts = []
-    for kind in ("narration", "frq"):
+    for kind in audio_step.SPEECH:
         try:
             timing = speech_timing(job, kind)
         except (ValueError, KeyError, IndexError) as e:
@@ -74,7 +92,8 @@ def run(job: Path, ask=brain.ask) -> str:
         jobs.write(job / media.timing_path(kind), timing)
         parts.append(f"{kind} {len(timing.lines)} lines")
     try:
-        timing, report = song_timing(job, bundle)
+        with cpu_turn(job):
+            timing, report = song_timing(job, bundle)
     except (ValueError, RuntimeError) as e:  # a timing out of order, or an aligner that could not fit the words
         raise media.StepFailed(f"the song could not be aligned: {e}") from e
     _check(timing, [line.id for line in bundle.lyrics], "song")
@@ -88,8 +107,7 @@ def is_done(job: Path) -> bool:
     try:
         bundle = jobs.read(job / "bundle.json", Bundle)
         expected = {"song": [line.id for line in bundle.lyrics],
-                    "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")],
-                    "frq": [i for i, _ in audio_step.speech_lines(bundle, "frq")]}
+                    "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")]}
         for kind, ids in expected.items():
             path = job / media.timing_path(kind)
             if timing_problems(jobs.read(path, Timing), ids):
@@ -164,7 +182,7 @@ def spoken(word: str) -> str:
     return re.sub(r"[^a-z']", "", plain)
 
 
-# --- narration and the exam question: the TTS character timings ---------------------------
+# --- the narration: the TTS character timings ---------------------------------------------
 
 
 def speech_timing(job: Path, kind: str) -> Timing:

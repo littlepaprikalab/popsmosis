@@ -77,6 +77,38 @@ def current_step() -> str | None:
     return getattr(_local, "step", None)
 
 
+def parallel(fn, items, workers: int = 4) -> list:
+    """fn(item) for each item, up to `workers` at a time, the results in the items' order.
+
+    For a step's work that waits on an API (a picture per scene, a song and a voice): each
+    runs as part of the calling thread's step, since at_step is per thread and a plain
+    thread would log its calls with no step, leaving them off the bill. Every item runs to
+    its end, so what the others made is kept; then the first exception, in the items'
+    order, is raised.
+    """
+    items = list(items)
+    step = current_step()
+
+    def run(item):
+        with at_step(step):
+            try:
+                return True, fn(item)
+            except Exception as e:  # raised below, once every item has ended
+                return False, e
+
+    if workers <= 1 or len(items) <= 1:
+        outcomes = [run(item) for item in items]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(min(workers, len(items))) as pool:
+            outcomes = list(pool.map(run, items))
+    for ok, value in outcomes:
+        if not ok:
+            raise value
+    return [value for _, value in outcomes]
+
+
 def log(job: Path, calls: list[brain.Call]) -> None:
     """Append the calls to the job's calls.jsonl, tagged with this thread's step, and print each one.
 

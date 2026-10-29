@@ -378,8 +378,9 @@ def make_factcheck(job: Path, api: Api, question: dict, ask) -> str:
     if report.status == "failed":
         raise StepFailed(report.reason)
     dropped = len(factcheck_step.dropped_tags(report))
+    still = len(factcheck_step.dropped_motions(report))
     return f"passed in {report.rounds} round(s), {len(report.corrections)} correction(s)" + (
-        f", {dropped} tag(s) dropped" if dropped else "")
+        f", {dropped} tag(s) dropped" if dropped else "") + (f", {still} motion(s) left out" if still else "")
 
 
 def post_lesson(job: Path, api: Api, question: dict | None, ask) -> str:

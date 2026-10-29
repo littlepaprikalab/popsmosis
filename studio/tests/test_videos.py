@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -480,7 +481,8 @@ def test_a_topic_sent_to_claude_is_painted_by_gemini_and_sam_finds_its_structure
     painter = FakeGemini().install(monkeypatch)
     operator_run.keep_brain(meta_job.job, "claude")
     assert videos.videos("q1", api=VideoApi()) == ("DONE", "upload", "upload made")
-    assert len(painter.painted) == 3 and meta_job.muse.painted == [] and len(meta_job.muse.segmented) == 4
+    asked = {re.sub(r" try \d+$", "", label) for label, _, _ in meta_job.muse.segmented}  # in plainer words too
+    assert len(painter.painted) == 3 and meta_job.muse.painted == [] and len(asked) == 4
     assert meta_job.artist.labels() == []  # not the SVG artist either
     assert brain.chosen_name() is None
 
@@ -620,3 +622,33 @@ def test_a_song_lyria_sings_needs_the_gemini_key_before_anything_is_claimed(setu
     assert claims(api) == [] and setup.ran == []
     monkeypatch.setenv("GEMINI_API_KEY", "k")
     assert videos.videos("q1", api=api)[0] == "DONE"
+
+
+# --- `python -m studio make`: a local job's videos, with no API --------------------------------------
+
+
+def test_make_runs_a_local_jobs_videos_in_videos_order_with_no_api_and_no_upload(setup):
+    job = jobs.ROOT / "local-job"
+    job.mkdir()  # from `plan`: no posted lesson, no claim
+    assert videos.local(job) == (videos.DONE, "render", "render made")
+    assert sorted(setup.ran[:2]) == ["art", "audio"]  # side by side (the stand-ins wait for each other)
+    assert setup.ran[2:] == ["locate", "timing", "timeline", "render"] or \
+        setup.ran[2:] == ["timing", "locate", "timeline", "render"]
+    assert "upload" not in setup.ran
+    run = operator_run.read_jsonl(job / "runs.jsonl")[-1]  # kept, so `show` has each step's time
+    assert run["result"] == videos.DONE and {s["step"] for s in run["steps"]} == {
+        "art", "locate", "audio", "timing", "timeline", "render"}
+
+    setup.ran.clear()
+    assert videos.local(job) == (videos.DONE, "render", "the videos were already made")
+    assert setup.ran == []
+
+
+def test_make_resumes_at_the_step_that_failed(setup):
+    job = jobs.ROOT / "local-job"
+    job.mkdir()
+    setup.fail["locate"] = 1
+    assert videos.local(job) == (videos.FAILED, "locate", "locate broke")
+    setup.ran.clear()
+    assert videos.local(job)[0] == videos.DONE
+    assert setup.ran == ["locate", "timeline", "render"]

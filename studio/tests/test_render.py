@@ -9,25 +9,26 @@ import sys
 import time
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 skia = pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
 
 from studio import jobs, media
 from studio.render import primitives as p
-from studio.render.encode import EncodeError, encode, poster_time, ranges, write_poster
+from studio.render.encode import EncodeError, audio_filter, encode, poster_time, ranges, write_poster
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
     Beat,
-    FrqSegment,
-    FrqStep,
+    Crowd,
     Locations,
     Particles,
     Reveal,
     Timeline,
     TimelineCamera,
     Timing,
+    Turning,
     Word,
 )
 from studio.render import renderer as renderer_module
@@ -78,6 +79,13 @@ def test_a_structure_is_a_pale_ghost_until_its_name_is_sung(job, song):
     assert after == pytest.approx(green, abs=3)
 
 
+def test_a_structure_never_named_on_its_scene_is_drawn_as_it_is_not_as_a_ghost(job, song):
+    # Only what the video names on a scene builds up from a ghost; the rest is drawn plainly, unlabelled.
+    reveals = {"Thylakoid": 5.0}  # as if the video never named Cytochrome b6f on the overview
+    assert song._ghosts("overview", reveals, 4.0) == {"Thylakoid": 1.0, "Cytochrome b6f": 0.0}
+    assert song._ghosts("overview", reveals, 6.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
+
+
 def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
     _, plain = art.compose({}, {})
@@ -88,6 +96,26 @@ def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     assert (lit_px[int(b6f.y), int(b6f.x)] == plain_px[int(b6f.y), int(b6f.x)]).all()
     assert lit_px[int(thylakoid.y), int(thylakoid.x)][:3].min() > plain_px[int(thylakoid.y), int(thylakoid.x)][:3].min() + 80
     assert art.compose({}, {"Cytochrome b6f": 1.0})[1] is lit  # composed once, then reused
+
+
+def test_on_dark_art_the_ghost_and_the_spotlight_fade_toward_its_background(tmp_path):
+    from studio import svg
+
+    dark = sample_media.write_job(tmp_path / "dark", art=True)
+    path = dark / media.art_path("overview")
+    rgb = skia.Image.open(str(path)).toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3].copy()
+    rgb[(rgb > 250).all(axis=2)] = (40, 55, 75)  # the white behind the diagram, now dark slate
+    path.write_bytes(svg.png(rgb))
+    art = SceneArt(dark, jobs.read(dark / media.LOCATIONS, Locations).scene("overview"))
+    _, plain = art.compose({}, {})
+    _, ghosted = art.compose({"Cytochrome b6f": 1.0}, {})
+    _, lit = art.compose({}, {"Cytochrome b6f": 1.0})
+    b6f = located(dark, "overview", "Cytochrome b6f").centroid
+    thylakoid = located(dark, "overview", "Thylakoid").label_anchor
+    assert ghosted.toarray()[int(b6f.y), int(b6f.x)][:3].max() < 110  # dark, not a white blob
+    before = plain.toarray()[int(thylakoid.y), int(thylakoid.x)][:3]
+    after = lit.toarray()[int(thylakoid.y), int(thylakoid.x)][:3]
+    assert after.max() < before.max() - 40  # the others dimmed into the background, not washed white
 
 
 def test_the_lyric_band_is_white_and_marks_the_word_being_sung(song):
@@ -124,7 +152,8 @@ def band_of(frame):
     return frame[media.VIDEO_HEIGHT - 100:, :, :3].copy()  # the frame is a view the next one draws over
 
 
-def test_late_in_a_gap_the_song_shows_its_next_line_dimmed_and_unmarked(job):
+def test_late_in_a_gap_the_song_shows_its_next_line_dimmed_and_unmarked(job, monkeypatch):
+    monkeypatch.setattr(timeline_step, "INTRO_MAX_S", 99.0)  # keep the 3 s intro: it is the long gap here
     song = Renderer(job, gapped(job, "song"))
     beats = song.timeline.beats
     gaps = [i for i, b in enumerate(beats) if b.line_id is None]
@@ -186,10 +215,7 @@ def test_a_label_is_drawn_only_while_its_dot_is_on_screen(job, monkeypatch, dot_
     beat = Beat(t0=0, t1=5.0, scene="overview", camera=TimelineCamera(target="Cytochrome b6f", zoom=3.0),
                 reveal=[], spotlight=None, labels=["Thylakoid", "Cytochrome b6f"], particles=[], caption=None,
                 line_id="v1-1", line="b6f pumps", words=[Word(word="b6f", start=0.2, end=0.6)])
-    frq = FrqSegment(t0=5.0, t1=6.0, scene="overview", labels=["Thylakoid"], prompt="Explain it.",
-                     predict_question="Which pumps?", predict_t=5.1, predict_pause_s=0.4,
-                     steps=[FrqStep(t=5.5, text="b6f pumps.", spotlight=None)])
-    timeline = Timeline(video="song", duration=6.0, fps=30, audio=[], beats=[beat], frq=frq,
+    timeline = Timeline(video="song", duration=5.0, fps=30, audio=[], beats=[beat],
                         palette={"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"})
     settled = 4.0  # the camera has finished its move onto b6f
     camera = Renderer(job, timeline)
@@ -215,16 +241,12 @@ FLOW = ["Thylakoid", "Cytochrome b6f"]
 
 
 def flowing(beats: list[Beat]) -> Timeline:
-    """A song of these beats on the overview, then a short exam question."""
-    end = beats[-1].t1
-    frq = FrqSegment(t0=end, t1=end + 1, scene="overview", labels=["Thylakoid"], prompt="Explain it.",
-                     predict_question="Which pumps?", predict_t=end + 0.1, predict_pause_s=0.4,
-                     steps=[FrqStep(t=end + 0.5, text="b6f pumps.", spotlight=None)])
-    return Timeline(video="song", duration=end + 1, fps=30, audio=[], beats=beats, frq=frq, palette=PALETTE)
+    """A song of these beats on the overview."""
+    return Timeline(video="song", duration=beats[-1].t1, fps=30, audio=[], beats=beats, palette=PALETTE)
 
 
-def flow_beat(t0, t1, path=FLOW, labels=(), reveal=()):
-    particles = [Particles(path=list(path), color="#F2C230", trail=True)] if path else []
+def flow_beat(t0, t1, path=FLOW, labels=(), reveal=(), label="", color="#F2C230"):
+    particles = [Particles(path=list(path), color=color, trail=True, label=label)] if path else []
     return Beat(t0=t0, t1=t1, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=list(reveal),
                 spotlight=None, labels=list(labels), particles=particles, caption=None, line_id=f"v{t0}",
                 line="protons flow", words=[Word(word="protons", start=t0 + 0.1, end=t0 + 0.5)])
@@ -283,22 +305,112 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
 
 
+def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
+    cyan = "#4CC9F0"
+    marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
+    plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
+    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
+    x, y = marked.art_to_frame(held, *stops[0])
+    badge, dot = marked.frame(held).copy(), plain.frame(held).copy()
+
+    def cyan_across(frame):  # how wide the cyan runs across the particle, above its word
+        row = frame[round(y) - 14, round(x) - 60:round(x) + 60, 2::-1]  # BGRA to RGB
+        return int((np.abs(row.astype(int) - p.rgb(cyan)).max(1) < 12).sum())
+
+    assert cyan_across(dot) == 0 and cyan_across(badge) > 15  # bigger than the plain dot
+    ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
+    assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
+
+    pill = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)])).frame(held)
+    assert cyan_across(pill.copy()) > cyan_across(badge) + 25  # a longer word gets a pill
+
+
+def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
+    gold = "#F2C230"
+
+    def crowded(level):
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"crowds": [
+            Crowd(region="Thylakoid", label="H⁺", color=gold, start=level, end=level)]})
+        return Renderer(job, flowing([beat]))
+
+    mask = skia.Image.open(str(job / located(job, "overview", "Thylakoid").mask)).toarray(
+        colorType=skia.kGray_8_ColorType) > 127
+    full = crowded(1.0)
+    scale, x0, y0 = renderer_module.to_frame(full.plans[0].cam(4.0, full.layout.view, full.scene("overview")),
+                                             full.layout.view, full.scene("overview"))
+
+    def gold_inside(renderer):  # gold pixels on the frame, and how many of them fall on the thylakoid
+        frame = renderer.frame(4.0)
+        rgb = frame[..., 2::-1].astype(int)
+        ys, xs = np.nonzero(np.abs(rgb - p.rgb(gold)).max(-1) < 20)
+        ax, ay = ((xs - x0) / scale).astype(int), ((ys - y0) / scale).astype(int)
+        ok = (ax >= 0) & (ax < mask.shape[1]) & (ay >= 0) & (ay < mask.shape[0])
+        return len(xs), int(mask[ay[ok], ax[ok]].sum())
+
+    empty, low, lots = gold_inside(crowded(0.0)), gold_inside(crowded(0.2)), gold_inside(full)
+    assert empty == (0, 0) and 0 < low[0] < lots[0]
+    assert lots[1] > 0.9 * lots[0]  # the dots sit on the space
+    assert (full.frame(4.0) == full.frame(4.0)).all()
+
+
+def test_a_round_part_seen_face_on_turns_in_place_and_nothing_outside_it_moves(job):
+    def turned(turns):
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"turning": [
+            Turning(structure="Cytochrome b6f", turns=turns, from_speed=0.0, speed=0.0)]})
+        return Renderer(job, flowing([beat]))
+
+    still, quarter = turned(0.0), turned(0.25)
+    a, b = still.frame(4.0).copy(), quarter.frame(4.0).copy()
+    cx, cy, r = quarter.scene("overview").spin_disc("Cytochrome b6f")
+    scale, dx, dy = renderer_module.to_frame(quarter.plans[0].cam(4.0, quarter.layout.view, quarter.scene("overview")),
+                                             quarter.layout.view, quarter.scene("overview"))
+    ys, xs = np.nonzero((a != b).any(-1))
+    assert len(xs) > 500  # it turned
+    assert (np.hypot(xs - (cx * scale + dx), ys - (cy * scale + dy)) <= r * scale + 2).all()  # inside its disc only
+
+
+def test_a_part_that_is_not_round_gets_an_arrow_round_it_while_it_turns(job):
+    def turning(speed):  # the overview's thylakoid is a long band: no disc to turn in place
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"turning": [
+            Turning(structure="Thylakoid", turns=0.1, from_speed=speed, speed=speed)]})
+        return Renderer(job, flowing([beat])).frame(4.0).copy()
+
+    plain = Renderer(job, flowing([flow_beat(0, 8, path=[])])).frame(4.0).copy()
+    drawn = lambda frame: int((frame != plain).any(-1).sum())  # the sample art is on white: count what changed
+    assert drawn(turning(0.45)) > 1500  # the arrow
+    assert drawn(turning(0.0)) == 0  # stopped: no arrow
+
+
+def test_blocked_particles_pile_up_at_their_last_stop_under_a_cross(job):
+    blocked = flowing([flow_beat(0, 20, label="e⁻", color="#4CC9F0").model_copy(update={"particles": [
+        Particles(path=FLOW, color="#4CC9F0", trail=True, label="e⁻", blocked=True)]})])
+    free = Renderer(job, flowing([flow_beat(0, 20, label="e⁻", color="#4CC9F0")]))
+    stuck = Renderer(job, blocked)
+    red = lambda frame: int((np.abs(frame[..., 2::-1].astype(int) - p.rgb("#E5484D")).max(-1) < 25).sum())
+    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    arrived = renderer_module.trip_s(stops)
+    assert red(stuck.frame(arrived - 0.2).copy()) < 30  # no cross before the first one gets there
+    assert red(stuck.frame(arrived + 6).copy()) > 400 and red(free.frame(arrived + 6).copy()) < 30
+    # The dots queue up behind the last stop, and stay: the queue is the same a little later.
+    late = renderer_module.pile_at(stops, 60.0)
+    assert len(late) == renderer_module.PILE_MAX or len(late) > 3
+    assert renderer_module.pile_at(stops, 60.0) == renderer_module.pile_at(stops, 61.0)
+    end = stops[-1]
+    assert all(math.dist(q, end) <= renderer_module.PILE_SPACING * (j + 1) + 1 for j, (q, _) in enumerate(late))
+
+
+def test_a_glowing_part_is_lit_and_pulses(job):
+    lit = Renderer(job, flowing([flow_beat(0, 8, path=[]).model_copy(update={"glow": "Cytochrome b6f"})]))
+    plain = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
+    changed = [int((lit.frame(t).copy() != plain.frame(t)).any(-1).sum()) for t in (1.0, 1.4, 1.8)]
+    assert all(c > 500 for c in changed) and len(set(changed)) > 1  # lit throughout, and pulsing
+
+
 def test_label_text_is_dark_enough_to_read_on_white():
     for color in ("#F2C230", "#2E8B57", "#E07A2F", "#3366CC", "#FFFFFF"):
         r, g, b = p.rgb(p.darken(color))
         assert 1.05 / (p._luminance(r, g, b) + 0.05) >= 4.5
-
-
-def test_the_exam_question_counts_down_then_shows_its_steps(song):
-    frq = song.timeline.frq
-    countdown = song.frame(frq.predict_t + 0.5).copy()
-    ring = p.rgb("#F59E0B")
-    amber = ((countdown[..., 2] == ring[0]) & (countdown[..., 1] == ring[1]) & (countdown[..., 0] == ring[2])).sum()
-    assert amber > 2000
-    after = song.frame(frq.steps[0].t + 1.0)
-    orange = p.rgb("#E07A2F")  # step 1's number circle, in its spotlight's colour
-    near = (abs(after[..., 2].astype(int) - orange[0]) < 4) & (abs(after[..., 1].astype(int) - orange[1]) < 4)
-    assert near[:, :800].sum() > 500
 
 
 def test_a_missing_mask_is_a_render_error(job, tmp_path):
@@ -317,7 +429,7 @@ def test_frames_split_into_ranges_with_none_missed():
 
 
 def short_timeline(job, video: str) -> Timeline:
-    """Two seconds: a line on the hook, then the exam question with a short pause."""
+    """Two seconds: a line on the hook, then an instrumental gap on the overview."""
     tone = job / "audio" / "tone.mp3"
     if not tone.exists():
         tone.parent.mkdir(exist_ok=True)
@@ -328,13 +440,22 @@ def short_timeline(job, video: str) -> Timeline:
     beat = Beat(t0=0, t1=1.0, scene="hook", camera=TimelineCamera(target=None, zoom=1.0),
                 reveal=[Reveal(name="Thylakoid", t=0.8)], spotlight=None, labels=["Thylakoid"], particles=[],
                 caption=None, line_id="v1-1", line="Light lands on the thylakoid", words=words)
-    frq = FrqSegment(t0=1.0, t1=2.0, scene="overview", labels=["Thylakoid"], prompt="Explain it.", predict_question="Which pumps?",
-                     predict_t=1.1, predict_pause_s=0.4, steps=[FrqStep(t=1.5, text="b6f pumps.", spotlight=None)])
+    gap = Beat(t0=1.0, t1=2.0, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
+               spotlight=None, labels=[], particles=[], caption=None, line_id=None, line="", words=[])
     return Timeline(video=video, duration=2.0, fps=30,
                     audio=[AudioClip(path="audio/tone.mp3", at=0, end=1.0),
                            AudioClip(path="audio/tone.mp3", at=1.5, start=1.0)],
                     palette={"Thylakoid": "#2E8B57", "Cytochrome b6f": "#E07A2F", "ATP synthase": "#3366CC"},
-                    beats=[beat], frq=frq)
+                    beats=[beat, gap])
+
+
+def test_a_clip_that_starts_partway_into_music_fades_in(job):
+    timeline = short_timeline(job, "song")
+    timeline.audio[0] = AudioClip(path="audio/tone.mp3", at=0, start=0.5, fade_in=0.5)
+    _, mix = audio_filter(job, timeline)
+    first, second = mix.split(";")[:2]
+    assert "atrim=start=0.500" in first and "afade=t=in:st=0:d=0.500" in first
+    assert "afade" not in second  # a clip that starts partway on purpose is not faded
 
 
 def probe(path):
@@ -436,3 +557,94 @@ def test_a_render_that_hangs_is_stopped_at_its_time_limit(job, tmp_path, monkeyp
         encode(job, short_timeline(job, "song"), tmp_path / "out.mp4", parts=2)
     assert time.monotonic() - started < 10
     assert not (tmp_path / "out.mp4").exists()
+
+
+def test_one_stage_of_a_process_fades_into_the_next_framed_alike(job):
+    def beat(t0, t1, scene, reveal):
+        return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0),
+                    reveal=[Reveal(name="Thylakoid", t=reveal)], spotlight=None, labels=["Thylakoid"], particles=[],
+                    caption=None, line_id=f"v{t0}", line="the stages", words=[])
+
+    def video(stages):
+        return Renderer(job, Timeline(video="song", duration=8, fps=30, audio=[], palette=PALETTE, stages=stages,
+                                      beats=[beat(0, 4, "hook", 1.0), beat(4, 8, "overview", 4.0)]))
+
+    staged, cut = video([["hook", "overview"]]), video([])
+    fade = renderer_module.STAGE_FADE_S
+    # The camera goes on from where it was, rather than cutting in and settling.
+    assert staged.plans[1].start == renderer_module.clamp_cam(
+        staged.plans[0].cam(4.0, staged.layout.view, staged.scene("hook")), staged.layout.view, staged.scene("overview"))
+    assert cut.plans[1].start.zoom > cut.plans[1].target.zoom  # a cut settles in
+    # A spot that is the hook's thylakoid and the overview's white background: green, then fading to white.
+    def at(renderer, t):
+        return pixel(renderer.frame(t), *renderer.art_to_frame(t, 896, 300))
+
+    green, halfway, white = at(staged, 3.9), at(staged, 4 + fade / 2), at(staged, 4 + fade + 0.1)
+    assert green[1] > green[0] + 40 and min(white) > 245
+    assert all(g + 25 < h < w - 25 for g, h, w in zip(green, halfway, white) if w - g > 100)
+    assert min(at(cut, 4 + fade / 2)) > 245  # without stages, a cut
+    # The thylakoid, shown on the stage before, is on in full from the next stage's first frame.
+    assert staged.revealed["overview"]["Thylakoid"] < 4.0 - renderer_module.REVEAL_S + 1e-9
+    assert cut.revealed["overview"]["Thylakoid"] == 4.0
+    backwards = video([["overview", "hook"]])  # back to the earlier stage: a cut
+    assert backwards.plans[1].fade_from is None and min(at(backwards, 4 + fade / 2)) > 245
+
+
+def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them(job):
+    beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
+    plain = Renderer(job, flowing([beat]))
+    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+    noted = Renderer(job, flowing([beat]).model_copy(update={"notices": notices}))
+    width = noted.layout.width
+    edge = width - renderer_module.NOTICE_W
+    assert plain.view("overview")[2] == width and noted.view("overview")[2] == edge
+    assert noted.art_to_frame(2.0, 896, 560)[0] < plain.art_to_frame(2.0, 896, 560)[0]  # the picture moved left
+    amber = p.rgb("#F59E0B")
+    assert np.allclose(pixel(noted.frame(2.0), edge + 3, 120), amber, atol=12)  # the card's side
+    assert not np.allclose(pixel(plain.frame(2.0), edge + 3, 120), amber, atol=12)
+    # Every stage of a process with notices keeps the same framing, card or not.
+    staged = Renderer(job, flowing([beat]).model_copy(update={"notices": notices, "stages": [["hook", "overview"]]}))
+    assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
+
+
+def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
+    beat = flow_beat(0, 4, path=[])
+    plain = Renderer(job, flowing([beat]))
+    tagged = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"]}))
+    carded = Renderer(job, flowing([beat]).model_copy(update={"ai_pictures": ["overview"],
+                                                               "notices": {"overview": ["A note."]}}))
+    view, margin = tagged.view("overview"), tagged.layout.margin
+    spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)  # inside the tag
+
+    def dark(renderer):
+        return max(pixel(renderer.frame(2.0), *spot)) < 120
+
+    assert dark(tagged) and not dark(plain)
+    carded_view = carded.view("overview")
+    assert not max(pixel(carded.frame(2.0), carded_view[0] + margin + 6, spot[1])) < 120  # the card instead
+
+
+def test_a_stage_fading_into_the_next_keeps_its_tag_and_card_on(job):
+    def beat(t0, t1, scene):
+        return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
+                    spotlight=None, labels=[], particles=[], caption=None, line_id=f"v{t0}", line="x", words=[])
+
+    def video(**extra):
+        return Renderer(job, Timeline(video="song", duration=8, fps=30, audio=[], palette=PALETTE,
+                                      stages=[["hook", "overview"]], beats=[beat(0, 4, "hook"), beat(4, 8, "overview")],
+                                      ai_pictures=["hook", "overview"], **extra))
+
+    tagged = video()
+    view, margin = tagged.view("overview"), tagged.layout.margin
+    spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)
+    assert max(pixel(tagged.frame(4.05), *spot)) < 120  # the tag, not fading in again
+    carded = video(notices={"hook": ["A note."], "overview": ["Another note."]})
+    edge = carded.view("overview")[2]
+    assert np.allclose(pixel(carded.frame(4.05), edge + 3, 120), p.rgb("#F59E0B"), atol=12)  # the card's side
+
+
+def test_a_long_note_is_cut_so_the_card_stays_above_the_lyric_band():
+    surface = skia.Surface(1920, 1080)
+    long = " ".join(["word"] * 400)
+    bottom = p.draw_notice(surface.getCanvas(), 1480, 28, 1900, [long] * 3, 22)
+    assert bottom < 1080 - 110

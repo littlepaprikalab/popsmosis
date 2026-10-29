@@ -4,7 +4,7 @@ import pytest
 
 from studio import jobs, media
 from studio.media import StepFailed
-from studio.schemas import Bundle, Locations, Timeline, Timing, timeline_problems
+from studio.schemas import AudioClip, Bundle, Locations, Timeline, Timing, timeline_problems
 from studio.steps import timeline as step
 from studio.tests import sample_media
 from studio.tests.sample import bundle_data
@@ -56,8 +56,9 @@ def test_the_sample_job_gives_two_valid_timelines_that_open_on_the_hook(job):
     word = next(w for w in song["v1-1"].words if w.word == "thylakoid")
     assert [(r.name, r.t) for r in song["v1-1"].reveal] == [("Thylakoid", word.start)]
     assert song["v1-1"].labels == ["Thylakoid"]
-    # The overview has not heard "thylakoid" yet, so nothing is revealed or labelled there.
-    assert song["v1-2"].scene == "overview" and song["v1-2"].labels == []
+    # The overview draws the thylakoid, named on the hook: its label stays on, from the overview's first line.
+    assert song["v1-2"].scene == "overview" and song["v1-2"].labels == ["Thylakoid"]
+    assert [(r.name, r.t) for r in song["v1-2"].reveal] == [("Thylakoid", song["v1-2"].t0)]
 
 
 def test_names_match_whatever_the_case_punctuation_or_alias_and_longer_names_win(job):
@@ -65,6 +66,8 @@ def test_names_match_whatever_the_case_punctuation_or_alias_and_longer_names_win
     data["scenes"][1]["structures"][1]["aliases"] = ["b6f"]
     data["scenes"][2]["structures"][0]["aliases"] = ["synthase"]
     for lyric in data["lyrics"]:
+        if lyric["id"] == "v1-1":
+            lyric.update(text="Light lands on the leaf", names=[])  # so the overview first hears the thylakoid
         if lyric["id"] == "v2-1":
             lyric["text"] = "Only B6F, the pump, pushes thylakoids full"  # an alias in capitals; a plural
         if lyric["id"] == "b-1":
@@ -122,8 +125,7 @@ def test_a_structure_the_art_could_not_locate_is_never_revealed_or_spotlit(job):
     timelines = make(job)
     song = lines(timelines["song"])
     assert song["v2-1"].reveal == [] and song["v2-1"].spotlight is None and song["v2-1"].camera.target is None
-    assert all(s.spotlight != "Cytochrome b6f" for s in timelines["song"].frq.steps)
-    assert "Cytochrome b6f" not in timelines["song"].frq.labels
+    assert all("Cytochrome b6f" not in b.labels for b in timelines["song"].beats)
 
 
 def test_both_videos_open_on_the_hook_even_when_the_direction_does_not(job):
@@ -170,12 +172,90 @@ def test_particles_come_from_the_direction(job):
     assert song["c1-1"].particles == []
 
 
+def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="e-")
+    direct(data, "v2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    direct(data, "b-1", particles=["Thylakoid", "Cytochrome b6f"], carries="")
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1")}
+    assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)]}
+
+
+def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H+")  # into the space
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # out of it
+    direct(data, "b-1", particles=["Thylakoid", "Cytochrome b6f"], carries="e-")  # something else
+    data["builds_up"] = [{"carries": "H+", "region": "Cytochrome b6f"}]
+    write_bundle(job, data)
+    song = make(job)["song"]
+    level = step.CROWD_START
+    for beat in song.beats:
+        crowds = beat.crowds
+        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
+            assert crowds == []
+            continue
+        [crowd] = crowds
+        assert (crowd.region, crowd.label, crowd.color) == ("Cytochrome b6f", "H⁺", "#F2C230")
+        assert crowd.start == pytest.approx(level, abs=1e-3)  # it runs on from where it was
+        rise = (crowd.end - crowd.start) / (beat.t1 - beat.t0)
+        if beat.line_id == "v1-2":
+            assert rise == pytest.approx(1 / step.FILL_S, rel=0.01)
+        elif beat.line_id == "v2-1":
+            assert rise < 0 and crowd.end >= step.CROWD_MIN
+        else:
+            assert rise == 0
+        level = crowd.end
+
+
+def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    data["spins"] = [{"structure": "Cytochrome b6f"}]
+    write_bundle(job, data)
+    song = make(job)["song"]
+    before = None
+    for beat in song.beats:
+        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
+            assert beat.turning == []
+            continue
+        [turn] = beat.turning
+        assert turn.speed == (step.SPIN_SPEED if beat.line_id == "v1-2" else 0.0)
+        if before is not None:  # it runs on from where the beat before left it, never jumping
+            turns, speed = before[0].at(before[1])
+            assert turn.from_speed == pytest.approx(speed) and turn.turns == pytest.approx(turns % 1, abs=1e-5)
+        before = (turn, beat.t1 - beat.t0)
+    assert any(b.turning and b.turning[0].turns > 0 for b in song.beats)
+
+
+def test_particles_that_end_at_a_blocker_are_blocked_and_a_glow_shows_once_named(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺", glow="ATP synthase")  # not drawn here
+    data["blocks"] = [{"structure": "Cytochrome b6f"}]
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    assert [(f.path, f.blocked) for f in song["v1-2"].particles] == [(["Thylakoid", "Cytochrome b6f"], True)]
+    assert [f.blocked for f in song["v2-1"].particles] == [False]  # it ends at the thylakoid, which blocks nothing
+    assert (song["v1-2"].glow, song["v2-1"].glow) == ("Thylakoid", None)
+
+
+def test_what_particles_carry_is_written_as_a_textbook_prints_it():
+    printed = {"H+": "H⁺", "e-": "e⁻", "O2": "O₂", "H2O": "H₂O", "CO2": "CO₂", "Ca2+": "Ca²⁺", "Cl-": "Cl⁻",
+               "NAD+": "NAD⁺", "2H+": "2H⁺", "H +": "H⁺", "H⁺": "H⁺", "HCO₃⁻": "HCO₃⁻", "glucose": "glucose", "": ""}
+    assert {text: step.notation(text) for text in printed} == printed
+    # Another kind keeps one colour of its own, whatever the lesson.
+    assert step.marker_colour("pyruvate") == step.marker_colour("pyruvate") in step.OTHER_MARKERS
+
+
 def test_instrumental_gaps_get_beats_of_their_own(job):
     bundle = sample_media.bundle()
     timed = sample_media.timings(bundle)
     song = timed["song"].model_dump()
-    for i, line in enumerate(song["lines"]):  # a 3 s intro, and 2 s more before each chorus
-        shift = 3.0 + 2.0 * sum(1 for earlier in song["lines"][1:i + 1] if earlier["line_id"].startswith("c"))
+    for i, line in enumerate(song["lines"]):  # a 1.8 s intro (kept: under INTRO_MAX_S), 2 s more before each chorus
+        shift = 1.8 + 2.0 * sum(1 for earlier in song["lines"][1:i + 1] if earlier["line_id"].startswith("c"))
         line["start"] += shift
         line["end"] += shift
         for w in line["words"]:
@@ -190,35 +270,44 @@ def test_instrumental_gaps_get_beats_of_their_own(job):
     assert gaps[0].t0 == 0 and gaps[0].scene == "hook" and gaps[0].line == "" and gaps[0].words == []
     after = timeline.beats.index(gaps[1]) - 1
     assert gaps[1].scene == timeline.beats[after].scene and gaps[1].camera == timeline.beats[after].camera
-    assert timeline.frq.t0 == pytest.approx(timed["song"].duration)
-    # Beats meet exactly, from 0 to the exam question, so every frame has one.
+    assert timeline.duration == pytest.approx(timed["song"].duration + step.TAIL_S)
+    # Beats meet exactly, from 0 to the end, so every frame has one.
     ends = [0.0] + [b.t1 for b in timeline.beats]
-    assert [b.t0 for b in timeline.beats] == ends[:-1] and ends[-1] == timeline.frq.t0
+    assert [b.t0 for b in timeline.beats] == ends[:-1] and ends[-1] == timeline.duration
 
 
-def test_the_exam_question_pauses_to_predict_then_spotlights_each_step(job):
-    timelines = make(job)
+def test_a_long_intro_is_cut_so_the_hook_is_sung_within_two_seconds(job):
     bundle = sample_media.bundle()
-    frq_timing = sample_media.timings(bundle)["frq"]
-    asked = frq_timing.line("frq-predict").end
+    timed = sample_media.timings(bundle)
+    song = timed["song"].model_dump()
+    for line in song["lines"]:  # Lyria's 10 s intro
+        line["start"] += 10.0
+        line["end"] += 10.0
+        for w in line["words"]:
+            w["start"] += 10.0
+            w["end"] += 10.0
+    song["duration"] += 10.0
+    timed["song"] = Timing.model_validate(song)
+    write_bundle(job, bundle.model_dump(), timed)
+    timelines = make(job)
+    timeline, first = timelines["song"], timed["song"].lines[0]
+    skip = round(first.start - step.INTRO_KEEP_S, 3)
+    assert timeline.audio[0] == AudioClip(path="audio/song.mp3", at=0, start=skip, fade_in=step.INTRO_FADE_S)
+    assert timeline.beats[0].line_id == first.line_id  # no intro beat: the hook is sung at once
+    assert timeline.beats[0].words[0].start == pytest.approx(step.INTRO_KEEP_S)
+    assert timeline.duration == pytest.approx(timed["song"].duration - skip + step.TAIL_S)
+    assert timelines["lesson"].audio[0] == AudioClip(path="audio/narration.mp3", at=0)  # the narration is not cut
+    assert timeline_problems(timeline, jobs.read(job / media.LOCATIONS, Locations)) == []
+
+
+def test_each_video_ends_a_moment_after_its_voice_on_its_last_picture(job):
+    timelines = make(job)
+    timed = sample_media.timings(sample_media.bundle())
     for video, timeline in timelines.items():
-        frq = timeline.frq
-        assert frq.t0 == timeline.beats[-1].t1
-        assert frq.predict_t == pytest.approx(frq.t0 + asked)
-        assert frq.predict_pause_s == media.PREDICT_PAUSE_S
-        answer_at = frq.predict_t + media.PREDICT_PAUSE_S
-        assert [(c.path, c.at, c.start, c.end) for c in timeline.audio[1:]] == [
-            ("audio/frq.mp3", frq.t0, 0, asked), ("audio/frq.mp3", pytest.approx(answer_at), asked, None)]
-        first_step = frq_timing.line("frq-step-1").start
-        assert frq.steps[0].t == pytest.approx(answer_at + first_step - asked)
-        # Behind the card: the scene shown in this video that can spotlight the most steps.
-        # The song shows the overview ("Cytochrome b6f pumps protons."); the lesson never does.
-        expected = {"song": ("overview", ["Cytochrome b6f", None]), "lesson": ("synthase", [None, "ATP synthase"])}
-        assert (frq.scene, [s.spotlight for s in frq.steps]) == expected[video]
-        # The card reviews the whole diagram: what the video revealed there first, then the rest.
-        card = {"song": ["Thylakoid", "Cytochrome b6f"], "lesson": ["ATP synthase"]}
-        assert frq.labels == card[video]
-        assert timeline.duration == pytest.approx(frq.t1)
+        voice = timed["song" if video == "song" else "narration"]
+        assert timeline.duration == pytest.approx(voice.duration + step.TAIL_S)
+        assert timeline.beats[-1].t1 == timeline.duration  # the last beat holds its picture to the end
+        assert timeline.audio == [AudioClip(path=voice.audio, at=0)]
 
 
 def test_timings_that_do_not_match_the_bundle_fail_the_step(job):
@@ -249,3 +338,34 @@ def test_lines_the_aligner_put_at_one_instant_still_make_a_timeline(job):
     beats = lines(timeline)
     assert [beats[i].t0 for i in ("v1-2", "c1-1", "v2-1")] == sorted({beats[i].t0 for i in ("v1-2", "c1-1", "v2-1")})
     assert all(b.t0 <= w.start <= w.end <= b.t1 for b in timeline.beats for w in b.words)
+
+
+def test_a_processs_stages_are_listed_for_the_renderer_to_fade_between(job):
+    data = bundle_data()
+    for scene in data["scenes"][1:]:
+        scene["stage_of"] = "photosynthesis"
+    write_bundle(job, data)
+    timelines = make(job)
+    assert [t.stages for t in timelines.values()] == [[["overview", "synthase"]]] * 2
+
+
+def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_it_is_shown(job):
+    import json
+
+    from studio.steps import art
+
+    bundle = jobs.read(job / "bundle.json", Bundle)
+    synthase = next(s for s in bundle.scenes if s.id == "synthase")
+    note = "The head of ATP synthase should face the stroma."
+    (job / "art").mkdir(exist_ok=True)
+    (job / media.art_path("synthase")).touch()  # Muse Image's picture, as far as the timeline step looks
+    (job / "art" / "synthase.json").write_text(json.dumps(
+        {"key": art.key(bundle, synthase), "model": art.painter_of(job).model, "check": {"notes": [note]}}))
+    timelines = make(job)
+    assert timelines["lesson"].notices == {"synthase": [note]}  # the lesson shows the close-up
+    assert timelines["song"].notices == {}  # the song never does
+    # Every picture is tagged AI-made, painted by Muse Image (the close-up) or not (the sample's others).
+    assert timelines["lesson"].ai_pictures == ["hook", "synthase"]
+    assert timelines["song"].ai_pictures == ["hook", "overview"]
+    os.utime(job / "art" / "synthase.json")  # a new check makes the timelines out of date
+    assert not step.is_done(job)

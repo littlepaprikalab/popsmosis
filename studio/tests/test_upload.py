@@ -103,14 +103,14 @@ def test_uploads_the_videos_public_and_the_rest_private_then_marks_them_ready(jo
     public = {p for p in server.stored if p.startswith("droplets/")}
     assert public == {f"droplets/ans1/out/{v}_h.{ext}" for v in media.VIDEOS for ext in ("mp4", "jpg")}
     private = {p.removeprefix("studio/ans1/") for p in server.stored if p.startswith("studio/")}
-    assert {"locations.json", "audio/song.mp3", "audio/narration.mp3", "audio/frq.mp3", "timing/song_words.json",
-            "timing/narration_words.json", "timing/frq_words.json", "timeline_song.json", "timeline_lesson.json",
+    assert {"locations.json", "audio/song.mp3", "audio/narration.mp3", "timing/song_words.json",
+            "timing/narration_words.json", "timeline_song.json", "timeline_lesson.json",
             "art/hook.png", "art/overview.png", "art/synthase.png",
             media.mask_path("overview", "Cytochrome b6f")} <= private
     assert not any(p.startswith(("out/", "posted", "bundle", "request", "upload")) for p in private)
     assert server.stored["droplets/ans1/out/song_h.mp4"] == (b"mp4 song", "video/mp4")
     assert server.stored["droplets/ans1/out/lesson_h.jpg"][1] == "image/jpeg"
-    assert server.stored["studio/ans1/audio/frq.mp3"][1] == "audio/mpeg"
+    assert server.stored["studio/ans1/audio/narration.mp3"][1] == "audio/mpeg"
 
     # The bytes go to Supabase on the signed URL alone: never the agent key.
     for _, url, headers, _ in server.puts():
@@ -194,11 +194,11 @@ def test_storage_not_set_up_on_the_api_says_so(job, server):
 def test_posters_are_optional_and_missing_intermediates_are_recorded(job, server):
     for video in media.VIDEOS:
         (job / media.poster_path(video)).unlink()
-    (job / media.audio_path("frq")).unlink()
+    (job / media.audio_path("narration")).unlink()
     line = upload.run(job, api=api_for(server))
     assert "songPosterUrl" not in server.patches()[0]
-    assert jobs.read(job / upload.UPLOADED, upload.Uploaded).missing == ["audio/frq.mp3"]
-    assert line.endswith("not in the job: audio/frq.mp3")
+    assert jobs.read(job / upload.UPLOADED, upload.Uploaded).missing == ["audio/narration.mp3"]
+    assert line.endswith("not in the job: audio/narration.mp3")
 
 
 def test_a_progress_file_for_another_answer_is_not_trusted(job, server):
@@ -353,3 +353,11 @@ def test_a_run_that_was_taken_over_fails_without_marking_ready_or_retrying(job, 
     with pytest.raises(media.StepFailed, match="taken over"):
         upload.run(job, api=api_for(server))
     assert len(server.patches()) == 1 and not upload.is_done(job)
+
+
+def test_a_muse_pictures_check_goes_with_the_rerender_kit_and_a_drawing_misses_none(job):
+    there, missing = upload.private_files(job)
+    assert not any(p.endswith(".json") and p.startswith("art/") for p in there + missing)  # drawn: none
+    (job / media.check_path("overview")).write_text("{}")
+    there, missing = upload.private_files(job)
+    assert media.check_path("overview") in there and media.check_path("hook") not in missing

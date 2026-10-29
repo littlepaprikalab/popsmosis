@@ -18,11 +18,11 @@ from typing import Annotated, Literal
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 FILLER = "filler"
-Section = Literal["verse", "chorus", "bridge"]
-SECTION_ORDER = ["verse", "chorus", "verse", "chorus", "bridge", "chorus"]
+Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
+SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "bridge", "chorus", "outro"]
 Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
-BPM_RANGE = (80, 160)  # the tempos the song may take; a line is two bars, so 6.0 s down to 3.0 s
+BPM_RANGE = (80, 160)  # the tempos the song may take; a sung line lasts 1.9 s to 3.7 s (audio.line_ms)
 DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
 BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
@@ -48,13 +48,6 @@ class Fact(Strict):
     source_quote: str = Field(description='Verbatim from the study guide; "" when there is none')
 
 
-class Frq(Strict):
-    prompt: str
-    predict_question: str
-    model_answer_steps: list[str]
-    twist: str
-
-
 class Structure(Strict):
     name: str
     aliases: list[str]
@@ -71,6 +64,19 @@ class Scene(Strict):
     id: str
     image_prompt: str
     structures: list[Structure]
+    # Scenes that are stages of one process, in scene order: painted as one subject in one framing (each
+    # later stage redrawn from the first), and the video cross-fades between them. "" in a bundle before.
+    stage_of: str = Field(default_factory=str, description='The process this scene is one stage of ("mitosis"), its stages '
+                                                            'in scene order; "" for any other scene')
+
+
+def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
+    """Each process's stage scenes, in scene order."""
+    groups: dict[str, list[Scene]] = {}
+    for scene in scenes:
+        if scene.stage_of:
+            groups.setdefault(scene.stage_of, []).append(scene)
+    return groups
 
 
 class Music(Strict):
@@ -113,7 +119,25 @@ class Direction(Strict):
     camera: Camera
     spotlight: str = Field(description='A structure name, or "" for none')
     particles: list[str] = Field(description="Structure names the particles travel between, in order; [] for none")
+    carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
+                                     '"" for none')
+    glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
+
+
+class BuildUp(Strict):
+    carries: str = Field(description='What piles up, as `carries` writes it ("H⁺")')
+    region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
+
+
+class Block(Strict):
+    structure: str = Field(description="The structure that stops the particles reaching it (a poison, a drug), by its name")
+
+
+class Spin(Strict):
+    # How it turns on screen is read off its shape in the picture (renderer: SceneArt.spin_disc), which the
+    # writer never sees: Claude called a turbine painted face-on "side".
+    structure: str = Field(description="The structure that turns while particles flow into or through it, by its name")
 
 
 def tag_of(value: str) -> str:
@@ -159,13 +183,19 @@ class Bundle(Strict):
     core_idea: str
     facts: list[Fact]
     misconception: str
-    frq: Frq
     scenes: list[Scene]
     lesson_markdown: str
     music: Music
     lyrics: list[Lyric]
     narration: list[Narration]
     direction: list[Direction]
+    # What piles up where as the lesson goes (a gradient), filled and emptied by the marked particles.
+    # A bundle written before Oct 28 has none.
+    builds_up: list[BuildUp] = Field(default_factory=list, description="What piles up in which space; [] for none")
+    # What turns while particles drive it. A bundle written before Oct 28 has none.
+    spins: list[Spin] = Field(default_factory=list, description="What turns while particles flow through it; [] for none")
+    # What stops the particles that reach it. A bundle written before Oct 28 has none.
+    blocks: list[Block] = Field(default_factory=list, description="What stops the particles reaching it; [] for none")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -173,17 +203,34 @@ class Bundle(Strict):
     @model_validator(mode="before")
     @classmethod
     def _older_bundles(cls, data):
+        if not isinstance(data, dict):
+            return data
         # A bundle written before `audience` existed was pitched to high school.
-        if isinstance(data, dict) and "audience" not in data:
-            return {**data, "audience": "high school"}
+        if "audience" not in data:
+            data = {**data, "audience": "high school"}
+        # The exam question (`frq`) left both videos on Oct 28; a bundle written before still has one.
+        data = {k: v for k, v in data.items() if k != "frq"}
+        # What the particles carry, and what lights up, were added on Oct 28: before, nothing did.
+        if isinstance(data.get("direction"), list):
+            data["direction"] = [{"carries": "", "glow": "", **d} if isinstance(d, dict) else d
+                                 for d in data["direction"]]
         return data
 
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:
+        # The song is timed and sung from the lyrics' own sections (studio/steps/audio.py); music.sections
+        # only names them, so it follows the lyrics. A writer may sing the chorus once more than the
+        # prompt's order has it, as songs do: on Oct 28 Claude wrote one, and the whole bundle was refused.
+        self.music.sections = sung_sections(self.lyrics)
         problems = bundle_problems(self)
         if problems:
             raise ValueError("; ".join(problems))
         return self
+
+
+def sung_sections(lyrics: list[Lyric]) -> list[str]:
+    """The sections as the lyrics run: a section each time the next line's differs."""
+    return [line.section for i, line in enumerate(lyrics) if i == 0 or line.section != lyrics[i - 1].section]
 
 
 def bundle_problems(bundle: Bundle) -> list[str]:
@@ -191,8 +238,9 @@ def bundle_problems(bundle: Bundle) -> list[str]:
     problems = []
     if not 3 <= len(bundle.facts) <= 4:
         problems.append(f"{len(bundle.facts)} facts, not 3-4")
-    if not 3 <= len(bundle.scenes) <= 6:
-        problems.append(f"{len(bundle.scenes)} scenes, not 3-6")
+    most = 8 if any(s.stage_of for s in bundle.scenes) else 6  # a process's stages take a scene each
+    if not 3 <= len(bundle.scenes) <= most:
+        problems.append(f"{len(bundle.scenes)} scenes, not 3-{most}")
     for kind, ids in (
         ("fact", [f.id for f in bundle.facts]),
         ("scene", [s.id for s in bundle.scenes]),
@@ -216,10 +264,6 @@ def bundle_problems(bundle: Bundle) -> list[str]:
             if colors.setdefault(structure.name, structure.color_hex) != structure.color_hex:
                 problems.append(f"{structure.name} has two colours")
 
-    sung = [line.section for i, line in enumerate(bundle.lyrics) if i == 0 or line.section != bundle.lyrics[i - 1].section]
-    if sung != bundle.music.sections:
-        problems.append(f"lyrics run {'/'.join(sung)} but music.sections is {'/'.join(bundle.music.sections)}")
-
     line_ids = [line.id for line in bundle.lyrics] + [n.id for n in bundle.narration]
     directed = [d.line_id for d in bundle.direction]
     missing = [i for i in line_ids if i not in directed]
@@ -235,8 +279,6 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 
     if not bundle.lyrics or not bundle.narration:
         problems.append("lyrics and narration must not be empty")
-    if not bundle.frq.model_answer_steps:
-        problems.append("the FRQ has no model answer steps")
     if not bundle.lesson_markdown.strip():
         problems.append("lesson_markdown is empty")
     elif len(bundle.lesson_markdown) > LESSON_MAX_CHARS:
@@ -247,7 +289,8 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "tempo"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "glow", "stages",
+                  "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -274,7 +317,9 @@ class FactCheck(Strict):
 
 
 class CheckedLine(Strict):
-    kind: Literal["lyric", "narration", "lesson", "frq", "tag"]  # a tag is dropped when it fails, never corrected
+    # A tag or a motion (what a line's particles show moving) is dropped when it fails, never corrected.
+    # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
+    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -285,7 +330,7 @@ class CheckedLine(Strict):
 
 class Correction(Strict):
     round: int
-    kind: Literal["lyric", "narration", "lesson", "frq"]
+    kind: Literal["lyric", "narration", "lesson", "frq"]  # "frq": as for CheckedLine
     ids: list[str]
     before: str
     after: str
@@ -439,7 +484,7 @@ class Word(Strict):
 
 
 class TimedLine(Strict):
-    line_id: str  # a lyric id, a narration id, or an exam-question line (media.frq_lines)
+    line_id: str  # a lyric id or a narration id
     start: float
     end: float
     words: list[Word]  # every word of the line, in order
@@ -448,7 +493,7 @@ class TimedLine(Strict):
 class Timing(Strict):
     """timing/<kind>_words.json: when each line, and each word in it, is heard in one audio file (step 6)."""
 
-    audio: JobPath  # the file it times: audio/song.mp3, audio/narration.mp3 or audio/frq.mp3
+    audio: JobPath  # the file it times: audio/song.mp3 or audio/narration.mp3
     duration: float  # that file's length
     lines: list[TimedLine]  # in the order they are heard
 
@@ -498,6 +543,7 @@ class AudioClip(Strict):
     at: float
     start: float = 0.0  # where in the file to start
     end: float | None = None  # where in the file to stop; None: its end
+    fade_in: float = 0.0  # seconds it fades in over, for a clip that starts partway into music
 
 
 class TimelineCamera(Strict):
@@ -515,11 +561,49 @@ class Particles(Strict):
     path: list[str]  # the structures they travel between, in order
     color: str
     trail: bool
+    label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
+    blocked: bool = False  # the last stop stops them (Bundle.blocks): they pile up there, not go round again
 
     @field_validator("color")
     @classmethod
     def _color(cls, value: str) -> str:
         return _hex_color(value)
+
+
+class Crowd(Strict):
+    """A space filling up with what the particles carry (Bundle.builds_up), as one beat shows it."""
+
+    region: str  # the space, a structure located on the beat's scene
+    label: str  # what fills it ("H⁺"), written on some of its dots
+    color: str
+    start: float  # how full it is when the beat starts, 0-1
+    end: float  # and when it ends; it changes evenly in between
+
+    @field_validator("color")
+    @classmethod
+    def _color(cls, value: str) -> str:
+        return _hex_color(value)
+
+
+SPIN_EASE_S = 0.8  # a part speeds up to its turning speed, or slows to a stop, over this long
+
+
+class Turning(Strict):
+    """A part that turns (Bundle.spins), as one beat shows it: how far round it is, and how fast it goes."""
+
+    structure: str  # located on the beat's scene
+    turns: float  # how far round it has turned when the beat starts, in turns
+    from_speed: float  # turns a second when the beat starts
+    speed: float  # turns a second it eases to over SPIN_EASE_S, and keeps
+
+    def at(self, dt: float) -> tuple[float, float]:
+        """How far round it is and how fast it turns, dt seconds into the beat."""
+        dt = max(dt, 0.0)
+        ease = min(dt, SPIN_EASE_S)
+        # The speed changes evenly over the ease, then holds: turns are its integral.
+        turned = self.from_speed * ease + (self.speed - self.from_speed) * ease * ease / (2 * SPIN_EASE_S)
+        turned += self.speed * (dt - ease)
+        return self.turns + turned, self.from_speed + (self.speed - self.from_speed) * ease / SPIN_EASE_S
 
 
 class Beat(Strict):
@@ -533,38 +617,21 @@ class Beat(Strict):
     # label shows from its reveal's t and stays on every later beat of the scene.
     labels: list[str]
     particles: list[Particles]
+    crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
+    turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
+    glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
     words: list[Word]  # its words, in video time
 
 
-class FrqStep(Strict):
-    t: float  # when the step appears, as its narration starts
-    text: str
-    spotlight: str | None
-
-
-class FrqSegment(Strict):
-    """The exam question at the end of both videos: a card over the diagram, a predict pause, the steps."""
-
-    t0: float  # the card appears; the beats end here
-    t1: float  # the video ends
-    scene: str  # the diagram behind the card
-    labels: list[str]  # the structures shown revealed and labelled on it; each step's spotlight is one
-    prompt: str
-    predict_question: str
-    predict_t: float  # the countdown starts
-    predict_pause_s: float
-    steps: list[FrqStep]
-
-
 class Timeline(Strict):
     """timeline_song.json, timeline_lesson.json: everything the renderer draws, and when (step 7).
 
     Every frame depends only on its time. Frame n is at n / fps, for n below
-    frame_count; beat_at(t) is the beat that holds it (t0 <= t < t1), or None from
-    frq.t0 on, where the exam question is drawn.
+    frame_count; beat_at(t) is the beat that holds it (t0 <= t < t1). The beats run
+    from 0 to the end of the video.
     """
 
     video: Literal["song", "lesson"]
@@ -573,7 +640,13 @@ class Timeline(Strict):
     audio: list[AudioClip]  # mixed into one track
     palette: dict[str, str]  # structure name -> #RRGGBB, the same in both videos
     beats: list[Beat]
-    frq: FrqSegment
+    stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
+    # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
+    # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.
+    notices: dict[str, list[str]] = {}
+    # The scenes whose picture a model made, each tagged as AI-generated: every scene, as the studio makes its
+    # art (Muse Image paints it, or the brain draws it as SVG); a picture from anywhere else would be left out.
+    ai_pictures: list[str] = []
 
     @field_validator("palette")
     @classmethod
@@ -595,10 +668,8 @@ class Timeline(Strict):
     def _starts(self) -> list[float]:
         return [beat.t0 for beat in self.beats]
 
-    def beat_at(self, t: float) -> Beat | None:
-        """The beat on screen at t; None from the exam question on."""
-        if t >= self.frq.t0:
-            return None
+    def beat_at(self, t: float) -> Beat:
+        """The beat on screen at t."""
         return self.beats[max(0, bisect.bisect_right(self._starts, t) - 1)]
 
 
@@ -607,8 +678,7 @@ def _same(a: float, b: float) -> bool:
 
 
 def _times(timeline: Timeline) -> list[float]:
-    frq = timeline.frq
-    times = [timeline.duration, frq.t0, frq.t1, frq.predict_t, frq.predict_pause_s] + [s.t for s in frq.steps]
+    times = [timeline.duration]
     for beat in timeline.beats:
         times += [beat.t0, beat.t1, beat.camera.zoom] + [r.t for r in beat.reveal]
         times += [t for w in beat.words for t in (w.start, w.end)]
@@ -618,7 +688,7 @@ def _times(timeline: Timeline) -> list[float]:
 
 
 def timeline_shape_problems(timeline: Timeline) -> list[str]:
-    """What a timeline must hold on its own: beats that cover the video up to the exam question, in order."""
+    """What a timeline must hold on its own: beats that cover the whole video, in order."""
     problems = []
     if not all(math.isfinite(t) for t in _times(timeline)):
         return ["a time is not a finite number"]
@@ -644,7 +714,11 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
         for word in beat.words:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
-        named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path]
+        named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path] + [
+            c.region for c in beat.crowds] + [s.structure for s in beat.turning] + [beat.glow]
+        for crowd in beat.crowds:
+            if not (0 <= crowd.start <= 1 and 0 <= crowd.end <= 1):
+                problems.append(f"{where} fills {crowd.region} to {crowd.start}-{crowd.end}, outside 0-1")
         for name in [n for n in named if n] + beat.labels:
             if name not in timeline.palette:
                 problems.append(f"{where} names {name}, which has no colour in the palette")
@@ -659,24 +733,8 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
             if name and name not in beat.labels:
                 problems.append(f"beat {i} spotlights or aims at {name} before it is revealed on {beat.scene}")
 
-    frq = timeline.frq
-    for name in frq.labels:
-        if name not in timeline.palette:
-            problems.append(f"the exam question names {name}, which has no colour in the palette")
-    for step in frq.steps:
-        if step.spotlight and step.spotlight not in frq.labels:
-            problems.append(f"the exam question spotlights {step.spotlight}, which it does not label")
-    if not _same(timeline.beats[-1].t1, frq.t0):
-        problems.append(f"the beats end at {timeline.beats[-1].t1}, not where the exam question starts ({frq.t0})")
-    if not _same(frq.t1, timeline.duration):
-        problems.append(f"the exam question ends at {frq.t1}, not at the end of the video ({timeline.duration})")
-    if not frq.t0 <= frq.predict_t:
-        problems.append("the predict pause starts before the exam question")
-    if not frq.steps:
-        problems.append("the exam question has no steps")
-    times = [frq.predict_t + frq.predict_pause_s - TOLERANCE_S] + [step.t for step in frq.steps] + [frq.t1]
-    if any(a > b for a, b in zip(times, times[1:])):
-        problems.append("the exam question's steps must follow the predict pause, in order, before the end")
+    if not _same(timeline.beats[-1].t1, timeline.duration):
+        problems.append(f"the beats end at {timeline.beats[-1].t1}, not at the end of the video ({timeline.duration})")
     for clip in timeline.audio:
         if clip.at < 0 or clip.start < 0 or (clip.end is not None and clip.end <= clip.start):
             problems.append(f"audio clip {clip.path} at {clip.at} plays {clip.start}-{clip.end}")
@@ -692,7 +750,6 @@ def timeline_problems(timeline: Timeline, locations: Locations) -> list[str]:
               [r.name for r in beat.reveal] + beat.labels + [beat.spotlight, beat.camera.target]
               + [n for p in beat.particles for n in p.path])
              for i, beat in enumerate(timeline.beats)]
-    shown.append(("the exam question", timeline.frq.scene, timeline.frq.labels))
     for where, scene_id, names in shown:
         scene = locations.scene(scene_id)
         if scene is None:

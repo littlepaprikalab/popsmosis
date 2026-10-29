@@ -56,12 +56,6 @@ def bundle_data() -> dict:
         "core_idea": "Light energy pumps protons, and their flow back makes ATP.",
         "facts": FACTS,
         "misconception": "Not every carrier pumps protons; only cytochrome b6f does.",
-        "frq": {
-            "prompt": "Explain how the light reactions make ATP.",
-            "predict_question": "Which carrier pumps protons?",
-            "model_answer_steps": ["Cytochrome b6f pumps protons.", "ATP synthase uses the flow."],
-            "twist": "What if the membrane leaked protons?",
-        },
         "scenes": [
             {"id": "hook", "image_prompt": "A chloroplast.", "structures": [_structure("Thylakoid", "#2e8b57")]},
             {
@@ -81,7 +75,7 @@ def bundle_data() -> dict:
         "narration": [{"id": i, "text": t, "names": n, "fact_id": f} for i, t, n, f in NARRATION],
         "direction": [
             {"line_id": i, "scene": scenes.get(i, "overview"), "camera": {"target": "", "zoom": 1.0},
-             "spotlight": "", "particles": [], "caption": ""}
+             "spotlight": "", "particles": [], "carries": "", "glow": "", "caption": ""}
             for i in line_ids
         ],
         "tags": {

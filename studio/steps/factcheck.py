@@ -1,14 +1,20 @@
 """Step 2: the fact-check, the gate before anything is posted or sung.
 
 A fresh brain call sees only the facts (and the study guide, if one was given) and
-the lines: every lyric line, every narration sentence, every sentence of the
-lesson and every line of the exam question the videos read aloud (media.frq_lines). Code applies the checker's corrections and re-checks only the lines that
+the lines: every lyric line, every narration sentence and every sentence of the
+lesson, in one call. Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
 The same call checks each video's hashtags, which are public and what the Droplets tab
 is searched by: a tag the checker does not pass is dropped from both videos, never
 rewritten, and never fails the job. A tag that gets no verdict in three rounds is dropped
 too, so only checked tags are posted.
+
+It checks the marked motions the same way: what a line's particles carry and the route
+they take ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"), since the video
+shows it as a claim. A motion that fails is left out of the video (no particles on its
+lines), never rewritten, and never fails the job; one shown on several lines is checked
+once. Unmarked particles (an analogy's water, a signal) are not sent.
 
 Writes factcheck.json. When the check passes after corrections or dropped tags,
 bundle.json is rewritten with them and the writer's version is kept as bundle.draft.json.
@@ -23,7 +29,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, checks, media
+from studio import brain, checks
 from studio.jobs import read, write
 from studio.schemas import (Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
@@ -31,16 +37,17 @@ from studio.sentences import replace_sentences, split_sentences
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KINDS = ("lyric", "narration", "lesson", "frq")  # the lines a correction rewrites
+KINDS = ("lyric", "narration", "lesson")  # the lines a correction rewrites
 TAG = "tag"  # a video's hashtag: passed, or dropped
+MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
+KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
 PASSING = ("SUPPORTED", "FILLER")
 
 
 @dataclass(frozen=True)
 class Line:
-    kind: str  # lyric, narration, lesson, frq or tag
-    id: str  # the bundle's id; for the lesson, the sentence's number; for the exam question, media.frq_lines';
-    # for a tag, its video and place ("song-3")
+    kind: str  # lyric, narration, lesson or tag
+    id: str  # the bundle's id; for the lesson, the sentence's number; for a tag, its video and place ("song-3")
     text: str
 
     @property
@@ -71,8 +78,47 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines = [Line("lyric", lyric.id, lyric.text) for lyric in bundle.lyrics]
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
-    lines += [Line("frq", line_id, text) for line_id, text in media.frq_lines(bundle)]
-    return lines + tag_lines(bundle)
+    return lines + tag_lines(bundle) + motion_lines(bundle)
+
+
+def motion_text(carries: str, particles: list[str], blocked: bool = False) -> str:
+    """A marked motion as the checker reads it: "H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen", or,
+    when its last stop blocks it, "e⁻ flow from Photosystem II is stopped at Herbicide"."""
+    if blocked:
+        through = f" through {' and '.join(particles[1:-1])}" if len(particles) > 2 else ""
+        return f"{carries} flow from {particles[0]}{through} is stopped at {particles[-1]}"
+    return f"{carries} travels from " + " to ".join(particles)
+
+
+def _motion(bundle: Bundle, d) -> str:
+    blockers = {b.structure for b in bundle.blocks}
+    return motion_text(d.carries, d.particles, d.particles[-1] in blockers)
+
+
+def build_up_text(carries: str, region: str) -> str:
+    return f"{carries} builds up in {region}"
+
+
+def spin_text(bundle: Bundle, structure: str) -> str:
+    """What the video shows turning, and what drives it: "ATP synthase spins as H⁺ flows through it", or for
+    unmarked particles (an analogy's water) "Water wheel spins as particles flow into it from Reservoir"."""
+    flows = [d for d in bundle.direction if structure in d.particles[1:]]
+    marked = sorted({d.carries for d in flows if d.carries})
+    if marked:
+        return f"{structure} spins as {' and '.join(marked)} flows through it"
+    # What flows into it comes from the stop just before it, not where its path began ("water pump -> reservoir
+    # -> turbine": the reservoir's water turns the turbine; naming the pump was refused as wrong).
+    sources = sorted({d.particles[d.particles.index(structure, 1) - 1] for d in flows})
+    return f"{structure} spins as particles flow into it from {' and '.join(sources)}"
+
+
+def motion_lines(bundle: Bundle) -> list[Line]:
+    """What each line's particles show moving, when they are marked with what they carry, and what the
+    video shows piling up and turning."""
+    return [Line(MOTION, d.line_id, _motion(bundle, d))
+            for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
+        Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
+        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -89,9 +135,18 @@ def about(bundle: Bundle) -> dict[str, str]:
 
 def dropped_tags(report: FactCheckReport) -> list[CheckedLine]:
     """The tags the check did not pass, each once, as the report has them."""
+    return _dropped(report, TAG)
+
+
+def dropped_motions(report: FactCheckReport) -> list[CheckedLine]:
+    """The marked motions the check did not pass, each once: they are left out of the video."""
+    return _dropped(report, MOTION)
+
+
+def _dropped(report: FactCheckReport, kind: str) -> list[CheckedLine]:
     seen: dict[str, CheckedLine] = {}
     for line in report.lines:
-        if line.kind == TAG and line.verdict not in PASSING:
+        if line.kind == kind and line.verdict not in PASSING:
             seen.setdefault(line.text, line)
     return list(seen.values())
 
@@ -127,8 +182,9 @@ def check_bundle(
             # A missing verdict, or SUPPORTED without a real source, is asked again next round.
             if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)):
                 verdicts[(line.kind, line.text)] = (check, round_no)
-        # A tag that fails is dropped below, never corrected: only the other lines get fixes.
-        wrong = [line for line in pending if line.kind != TAG and _verdict(verdicts, line) == "UNSUPPORTED"]
+        # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
+        wrong = [line for line in pending
+                 if line.kind not in KEPT_OR_DROPPED and _verdict(verdicts, line) == "UNSUPPORTED"]
         if not wrong or round_no == max_rounds:
             continue
 
@@ -167,7 +223,20 @@ def check_bundle(
         bundle = bundle.model_copy(update={"tags": tags.model_copy(update={
             "song": [t for t in tags.song if t in passed_tags],
             "lesson": [t for t in tags.lesson if t in passed_tags]})})
-    failing = [c for c in checked if c.kind != TAG and c.verdict not in PASSING]
+    # Only checked motions are shown: one that failed, or never got a verdict, has its particles taken out.
+    passed_motions = {c.text for c in checked if c.kind == MOTION and c.verdict in PASSING}
+    if any(line.text not in passed_motions for line in motion_lines(bundle)):
+        data = bundle.model_dump()
+        for d in data["direction"]:
+            blocked = bool(d["particles"]) and d["particles"][-1] in {b["structure"] for b in data["blocks"]}
+            if (d["carries"] and len(d["particles"]) >= 2
+                    and motion_text(d["carries"], d["particles"], blocked) not in passed_motions):
+                d["particles"], d["carries"] = [], ""
+        data["builds_up"] = [b for b in data["builds_up"]
+                             if build_up_text(b["carries"], b["region"]) in passed_motions]
+        data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
+        bundle = Bundle.model_validate(data)
+    failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED and c.verdict not in PASSING]
     if failing and not reason:
         reason = f"after {rounds} round(s), {len(failing)} line(s) still fail: " + "; ".join(
             _describe(c, verdicts) for c in failing[:3]
@@ -209,10 +278,6 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     lesson = {before: after for (kind, before), after in fixes.items() if kind == "lesson"}
     if lesson:
         data["lesson_markdown"] = replace_sentences(data["lesson_markdown"], lesson)
-    frq = data["frq"]
-    for field in ("prompt", "predict_question"):
-        frq[field] = fixes.get(("frq", frq[field]), frq[field])
-    frq["model_answer_steps"] = [fixes.get(("frq", step), step) for step in frq["model_answer_steps"]]
     return Bundle.model_validate(data)
 
 
