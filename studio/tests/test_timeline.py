@@ -385,3 +385,23 @@ def test_a_path_stays_drawn_on_its_scene_from_when_its_particles_set_off_and_a_b
     _route(beats)
     assert [[(r.path, r.since) for r in b["routes"]] for b in beats] == [
         [], [(["PSII", "b6f"], 2.0)], [(["PSII", "b6f"], 2.0)], [], [(["PSII", "b6f"], 2.0)]]
+
+
+def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(job):
+    from studio import checks
+
+    step.run(job)
+    bundle = checks.load(job / "bundle.json")
+    song = jobs.read(job / media.timeline_path("song"), Timeline)
+    hook = step.hook_cut(bundle, song)
+    if "chorus" not in [line.section for line in bundle.lyrics]:
+        assert hook is None
+        return
+    assert hook.video == "hook" and hook.title == bundle.topic
+    assert hook.beats[0].t0 == 0 and hook.beats[-1].t1 == hook.duration
+    sung = [b.line_id for b in hook.beats if b.line_id]
+    chorus = [line.id for line in bundle.lyrics if line.section == "chorus"]
+    assert chorus[0] in sung  # the first chorus is in it...
+    assert all(w.start >= 0 for b in hook.beats for w in b.words)  # ...moved to start at 0
+    clip = hook.audio[0]
+    assert clip.end - clip.start == pytest.approx(hook.duration, abs=0.01) and clip.fade_out > 0

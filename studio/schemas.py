@@ -576,6 +576,7 @@ class AudioClip(Strict):
     start: float = 0.0  # where in the file to start
     end: float | None = None  # where in the file to stop; None: its end
     fade_in: float = 0.0  # seconds it fades in over, for a clip that starts partway into music
+    fade_out: float = 0.0  # seconds it fades out over at its end, for a clip cut out of a song (the hook cut)
 
 
 class TimelineCamera(Strict):
@@ -690,12 +691,13 @@ class Timeline(Strict):
     from 0 to the end of the video.
     """
 
-    video: Literal["song", "lesson"]
+    video: Literal["song", "lesson", "hook"]
     duration: float
     fps: int
     audio: list[AudioClip]  # mixed into one track
     palette: dict[str, str]  # structure name -> #RRGGBB, the same in both videos
     beats: list[Beat]
+    title: str = ""  # written across the top by a layout with a title band (the hook cut's): the topic
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.

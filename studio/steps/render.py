@@ -2,6 +2,7 @@
 
     out/song_h.mp4, out/lesson_h.mp4    1920x1080, 30 fps, H.264 + AAC, -movflags +faststart
     out/song_h.jpg, out/lesson_h.jpg    a poster frame for each
+    out/hook_v.mp4, out/hook_v.jpg      the hook cut, 1080x1920, when the song has one (timeline_hook.json)
 
 The drawing is in studio/render/: renderer.py draws a frame at a time, encode.py
 splits the frames across processes and adds the audio. No model calls.
@@ -16,27 +17,35 @@ from studio.jobs import read
 from studio.media import StepFailed
 from studio.schemas import Locations, Timeline, timeline_problems
 
-LAYOUT = "h"  # the vertical "v" layout is a stretch goal
+LAYOUT = "h"  # the song and lesson videos; the hook cut is upright (media.HOOK_LAYOUT)
+
+
+def videos(job: Path) -> list[tuple[str, str]]:
+    """What this job renders, each video with its layout: the song and the lesson, and the hook cut when there is one."""
+    made = [(video, LAYOUT) for video in media.VIDEOS]
+    if (job / media.timeline_path(media.HOOK)).exists():
+        made.append((media.HOOK, media.HOOK_LAYOUT))
+    return made
 
 
 def run(job: Path, ask=None) -> str:
-    """Render both videos; `ask` is unused (no model calls)."""
+    """Render the videos; `ask` is unused (no model calls)."""
     from studio.render.encode import EncodeError, encode, write_poster
     from studio.render.renderer import RenderError
 
     # A re-render cut off halfway must not leave last time's videos looking done.
-    media.restart(job, *(path(video, LAYOUT) for video in media.VIDEOS
+    media.restart(job, *(path(video, layout) for video, layout in videos(job)
                          for path in (media.video_path, media.poster_path)))
     locations = read(job / media.LOCATIONS, Locations)
     done = []
-    for video in media.VIDEOS:
+    for video, layout in videos(job):
         timeline = read(job / media.timeline_path(video), Timeline)
         problems = timeline_problems(timeline, locations)
         if problems:
             raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
         try:
-            write_poster(job, timeline, job / media.poster_path(video, LAYOUT), LAYOUT)
-            rendered = encode(job, timeline, job / media.video_path(video, LAYOUT), LAYOUT)
+            write_poster(job, timeline, job / media.poster_path(video, layout), layout)
+            rendered = encode(job, timeline, job / media.video_path(video, layout), layout)
         except (RenderError, EncodeError) as e:
             raise StepFailed(f"{video}: {e}") from e
         done.append(f"{video} {timeline.duration:.0f} s in {rendered.seconds:.0f} s")
@@ -44,10 +53,10 @@ def run(job: Path, ask=None) -> str:
 
 
 def is_done(job: Path) -> bool:
-    """Both videos and posters are there, and newer than the timelines they were made from."""
-    for video in media.VIDEOS:
+    """Every video and poster is there, and newer than the timeline it was made from."""
+    for video, layout in videos(job):
         timeline = job / media.timeline_path(video)
-        outputs = [job / media.video_path(video, LAYOUT), job / media.poster_path(video, LAYOUT)]
+        outputs = [job / media.video_path(video, layout), job / media.poster_path(video, layout)]
         if not timeline.exists() or not all(o.exists() and o.stat().st_size for o in outputs):
             return False
         if any(o.stat().st_mtime < timeline.stat().st_mtime for o in outputs):

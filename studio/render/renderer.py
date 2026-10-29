@@ -48,6 +48,8 @@ HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the f
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_PAD = 1.1  # the whole scene keeps this much around what is drawn: labels sit against the structures
 WHOLE_MAX_ZOOM = 2.0
+PORTRAIT_MAX_ZOOM = 2.6  # about two complexes of a membrane across an upright frame
+PORTRAIT_PAD = 1.25  # an upright frame's whole scene leaves this much room above and below what is drawn
 CAPTION_FADE_S = 0.3
 # In the song, the next line shows in the band this long before it is sung, unmarked and
 # dimmed, as karaoke does: the eye gets to its first word as the voice does, and a singer
@@ -504,6 +506,7 @@ class Renderer:
         self.job = job
         self.timeline = timeline
         self.layout = LAYOUTS[layout] if isinstance(layout, str) else layout
+        self.portrait = self.layout.height > self.layout.width
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
         scene_ids = {b.scene for b in timeline.beats}
@@ -558,15 +561,22 @@ class Renderer:
             self._scenes[scene_id] = SceneArt(self.job, self.locations.scene(scene_id))
         return self._scenes[scene_id]
 
-    def _aim(self, scene_id: str, target: str | None, zoom: float) -> Cam:
+    def _aim(self, scene_id: str, target: str | None, zoom: float, focus: Point | None = None) -> Cam:
+        """The camera for a beat: on its target, or on the whole scene. An upright frame cannot hold a wide picture
+        whole, so there "the whole scene" fills the frame's height and looks at `focus`, where the beat's flow is."""
         art = self.scene(scene_id)
         loc = self.locations.scene(scene_id).get(target) if target else None
-        if loc is None:
-            return self._whole(scene_id, self.view(scene_id))
         view = self.view(scene_id)
+        if loc is None:
+            whole = self._whole(scene_id, view)
+            if self.portrait and focus is not None:
+                return clamp_cam(Cam(focus[0], whole.cy, whole.zoom), view, art)
+            return whole
         box_w, box_h = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         fits = min((view[2] - view[0]) / (box_w * FIT_PAD), (view[3] - view[1]) / (box_h * FIT_PAD)) / _fit(view, art)
         zoom = max(1.0, min(zoom, fits))
+        if self.portrait:  # a close-up is never wider than the upright frame's whole scene
+            zoom = max(zoom, self._whole(scene_id, view).zoom)
         return clamp_cam(Cam(loc.centroid.x, loc.centroid.y, zoom), view, art)
 
     def _whole(self, scene_id: str, view: Rect) -> Cam:
@@ -577,7 +587,9 @@ class Renderer:
         art = self.scene(scene_id)
         x0, y0, x1, y1 = art.content
         zoom = min((view[2] - view[0]) / ((x1 - x0) * WHOLE_PAD), (view[3] - view[1]) / ((y1 - y0) * WHOLE_PAD))
-        zoom = max(1.0, min(zoom / _fit(view, art), WHOLE_MAX_ZOOM))
+        if self.portrait:  # what is drawn fills the frame's height; its sides run off, and the camera follows the flow
+            zoom = (view[3] - view[1]) / ((y1 - y0) * PORTRAIT_PAD)
+        zoom = max(1.0, min(zoom / _fit(view, art), PORTRAIT_MAX_ZOOM if self.portrait else WHOLE_MAX_ZOOM))
         return clamp_cam(Cam((x0 + x1) / 2, (y0 + y1) / 2, zoom), view, art)
 
     def _plan(self) -> list[BeatPlan]:
@@ -585,7 +597,11 @@ class Renderer:
         beats = self.timeline.beats
         for i, beat in enumerate(beats):
             reveals = {r.name: r.t for r in beat.reveal}
-            target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom)
+            focus = None
+            if self.portrait and beat.particles:  # where the beat's flow is: the middle of its stops
+                stops = self._path_points(beat.scene, beat.particles[0].path)
+                focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
+            target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus)
             same = i > 0 and beats[i - 1].scene == beat.scene
             staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
             if same:
@@ -784,7 +800,9 @@ class Renderer:
             alpha = 1.0 if plan.fade_from in self.timeline.notices else fade
             canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
-                    self._band_words(self._band_beat(i, t)), t, layout.band_font)
+                    self._band_words(self._band_beat(i, t)), t, layout.band_font, lines=layout.band_lines)
+        if layout.title_h:
+            p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font)
 
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                      arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:

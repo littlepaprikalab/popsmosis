@@ -21,7 +21,8 @@ from studio.schemas import Timeline
 
 
 def stills(job: Path, video: str, times: list[float], out: Path) -> list[Path]:
-    renderer = Renderer(job, jobs.read(job / media.timeline_path(video), Timeline))
+    renderer = Renderer(job, jobs.read(job / media.timeline_path(video), Timeline),
+                        media.HOOK_LAYOUT if video == media.HOOK else "h")
     out.mkdir(parents=True, exist_ok=True)
     paths = []
     for t in times:
@@ -59,7 +60,7 @@ def main() -> None:
     for name in ("still", "sheet"):
         command = commands.add_parser(name)
         command.add_argument("job", type=Path)
-        command.add_argument("video", choices=media.VIDEOS)
+        command.add_argument("video", choices=[*media.VIDEOS, media.HOOK])
         command.add_argument("--out", type=Path)
         if name == "still":
             command.add_argument("times", type=float, nargs="+")

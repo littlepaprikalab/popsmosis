@@ -541,43 +541,81 @@ class BandWord:
 
 
 def draw_band(canvas: skia.Canvas, rect: Rect, words: list[BandWord], t: float, font_size: float,
-              alpha: float = 1.0) -> None:
-    """The white band at the bottom with the line centred and the word being sung marked."""
+              alpha: float = 1.0, lines: int = 1) -> None:
+    """The white band at the bottom with the line centred and the word being sung marked: on one row, or, when it
+    is too wide and the band allows `lines` rows, wrapped onto rows of about the same width; only a line still too
+    wide shrinks."""
     x0, y0, x1, y1 = rect
     canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=0xFFFFFFFF))
     canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y0 + 2), skia.Paint(Color=HAIRLINE))
     if not words or alpha <= 0.01:
         return
+    room = (x1 - x0) - 160
     size = font_size
     f = font("Bold", size)
     space = text_width(f, " ")
-    total = sum(text_width(f, w.text) for w in words) + space * (len(words) - 1)
-    room = (x1 - x0) - 160
-    if total > room:
-        size = max(font_size * room / total, 24)
+    widths = [text_width(f, w.text) for w in words]
+    total = sum(widths) + space * (len(words) - 1)
+    rows = [list(range(len(words)))]
+    if total > room and lines > 1:
+        # Break where the rows come out closest to equal: the fewest rows that fit, up to `lines`.
+        n = min(lines, max(2, math.ceil(total / room)))
+        rows, row, run = [], [], 0.0
+        for i, width in enumerate(widths):
+            if row and run + space + width > total / n + width / 2 and len(rows) < n - 1:
+                rows.append(row)
+                row, run = [], 0.0
+            run += (space if row else 0) + width
+            row.append(i)
+        rows.append(row)
+    widest = max(sum(widths[i] for i in row) + space * (len(row) - 1) for row in rows)
+    if widest > room:
+        size = max(font_size * room / widest, 24)
         f = font("Bold", size)
         space = text_width(f, " ")
-        total = sum(text_width(f, w.text) for w in words) + space * (len(words) - 1)
-    baseline = (y0 + y1) / 2 + cap_height(f) / 2 + 1
+        widths = [text_width(f, w.text) for w in words]
+    step = size * 1.35
+    first = (y0 + y1) / 2 - step * (len(rows) - 1) / 2 + cap_height(f) / 2 + 1
     # The word being sung is the last one started; it stays marked until the next starts.
     current = max((i for i, w in enumerate(words) if w.start <= t), default=None)
     if current is not None and t > words[current].end + 0.6:
         current = None  # a held breath after the last word
-    x = (x0 + x1) / 2 - total / 2
-    for i, w in enumerate(words):
-        tw = text_width(f, w.text)
-        sung = w.start <= t
-        if i == current:
-            grow = ease_out((t - w.start) / 0.12)
-            pad = size * 0.22
-            box = (x - pad, baseline - cap_height(f) - pad * 1.1, x + tw + pad, baseline + pad * 0.9)
-            canvas.drawRRect(rounded(box, pad * 1.2), skia.Paint(AntiAlias=True, Color=with_alpha(MARKER, alpha * grow)))
-        if w.color and sung:
-            color = argb(darken(w.color), alpha)
-        else:
-            color = with_alpha(INK if sung else MUTED, alpha)
-        draw_text(canvas, w.text, x, baseline, f, color)
-        x += tw + space
+    for r, row in enumerate(rows):
+        baseline = first + r * step
+        x = (x0 + x1) / 2 - (sum(widths[i] for i in row) + space * (len(row) - 1)) / 2
+        for i in row:
+            w, tw = words[i], widths[i]
+            sung = w.start <= t
+            if i == current:
+                grow = ease_out((t - w.start) / 0.12)
+                pad = size * 0.22
+                box = (x - pad, baseline - cap_height(f) - pad * 1.1, x + tw + pad, baseline + pad * 0.9)
+                canvas.drawRRect(rounded(box, pad * 1.2),
+                                 skia.Paint(AntiAlias=True, Color=with_alpha(MARKER, alpha * grow)))
+            if w.color and sung:
+                color = argb(darken(w.color), alpha)
+            else:
+                color = with_alpha(INK if sung else MUTED, alpha)
+            draw_text(canvas, w.text, x, baseline, f, color)
+            x += tw + space
+
+
+def draw_title(canvas: skia.Canvas, rect: Rect, text: str, font_size: float) -> None:
+    """The title band along the top of an upright frame: the topic, white on the art's dark slate, centred, on up
+    to two lines."""
+    x0, y0, x1, y1 = rect
+    canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
+    if not text:
+        return
+    f = font("ExtraBold", font_size)
+    rows = wrap(text, f, (x1 - x0) - 120)[:2]
+    step = font_size * 1.2
+    first = (y0 + y1) / 2 - step * (len(rows) - 1) / 2 + cap_height(f) / 2
+    for r, row in enumerate(rows):
+        draw_text(canvas, row, (x0 + x1) / 2 - text_width(f, row) / 2, first + r * step, f, 0xFFFFFFFF)
+
+
+TITLE_BG = "#34435E"  # a shade under the art's dark slate blue, so the title sits on it as a band
 
 
 # --- the caption pill ----------------------------------------------------------------------

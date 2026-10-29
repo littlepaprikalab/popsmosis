@@ -133,9 +133,75 @@ def run(job: Path, ask=None) -> str:
         timelines[video] = timeline
     for video, timeline in timelines.items():
         write(job / media.timeline_path(video), timeline)
+    hook = hook_cut(bundle, timelines["song"])
+    if hook is not None:
+        write(job / media.timeline_path(media.HOOK), hook)
+    else:
+        (job / media.timeline_path(media.HOOK)).unlink(missing_ok=True)
     return "; ".join(
         f"{video} {t.duration:.1f} s, {len(t.beats)} beats, {sum(len(b.reveal) for b in t.beats)} reveals"
-        for video, t in timelines.items())
+        for video, t in timelines.items()) + (f"; hook cut {hook.duration:.1f} s" if hook else "")
+
+
+HOOK_LEAD_S = 0.3  # the hook cut starts this long before its first sung word
+HOOK_TAIL_S = 0.8  # and runs this long past its last
+HOOK_FADE_IN_S, HOOK_FADE_OUT_S = 0.25, 0.6
+HOOK_MIN_S = 25.0  # shorter than this, the cut takes in the end of the verse before it...
+HOOK_VERSE_LINES_MAX = 4  # ...up to this many of its lines
+
+
+def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
+    """The hook cut: the song's first chorus and the pre-chorus right before it, the part that sings the core idea
+    with the line that sets it up (and, when that is shorter than HOOK_MIN_S, the end of the verse before it), as its own timeline for the upright video. Its beats are the song's, moved to
+    start at 0, so it shows what the song shows then; its audio is that stretch of the song, faded in and out.
+    None when the song has no chorus, or its lines were not timed."""
+    sections = [line.section for line in bundle.lyrics]
+    if "chorus" not in sections:
+        return None
+    first = sections.index("chorus")
+    last = first
+    while last + 1 < len(sections) and sections[last + 1] == "chorus":
+        last += 1
+    start = first
+    while start > 0 and sections[start - 1] == "pre-chorus":
+        start -= 1
+    by_line = {beat.line_id: beat for beat in song.beats if beat.line_id}
+    # A short cut starts a few lines earlier, at the end of the verse that builds into the pre-chorus.
+    for _ in range(HOOK_VERSE_LINES_MAX):
+        head, tail = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
+        if (start == 0 or sections[start - 1] != "verse" or head is None or tail is None
+                or tail.t1 - head.t0 >= HOOK_MIN_S):
+            break
+        start -= 1
+    opening, closing = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
+    if opening is None or closing is None or not song.audio:
+        return None
+    t0 = max((opening.words[0].start if opening.words else opening.t0) - HOOK_LEAD_S, 0.0)
+    t1 = min((closing.words[-1].end if closing.words else closing.t1) + HOOK_TAIL_S, song.duration)
+    beats = []
+    for beat in song.beats:
+        if beat.t1 <= t0 or beat.t0 >= t1:
+            continue
+        b0, b1 = max(beat.t0, t0) - t0, min(beat.t1, t1) - t0
+
+        def moved(t: float) -> float:
+            return round(min(max(t - t0, b0), b1), 3)
+
+        beats.append(beat.model_copy(update={
+            "t0": round(b0, 3), "t1": round(b1, 3),
+            "reveal": [r.model_copy(update={"t": moved(r.t)}) for r in beat.reveal],
+            "words": [w.model_copy(update={"start": moved(w.start), "end": moved(w.end)}) for w in beat.words
+                      if t0 <= w.start < t1],
+            "conversions": [c.model_copy(update={"since": max(c.since - t0, 0.0)}) for c in beat.conversions],
+            "routes": [r.model_copy(update={"since": max(r.since - t0, 0.0)}) for r in beat.routes],
+        }))
+    duration = round(t1 - t0, 3)
+    beats[-1] = beats[-1].model_copy(update={"t1": duration})
+    voice = song.audio[0]
+    audio = [AudioClip(path=voice.path, at=0, start=round(voice.start + t0, 3), end=round(voice.start + t1, 3),
+                       fade_in=HOOK_FADE_IN_S, fade_out=HOOK_FADE_OUT_S)]
+    return song.model_copy(update={"video": media.HOOK, "duration": duration, "audio": audio, "beats": beats,
+                                   "title": bundle.topic})
 
 
 def is_done(job: Path) -> bool:
