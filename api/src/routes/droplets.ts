@@ -71,6 +71,8 @@ export default async function dropletRoutes(app: FastifyInstance) {
     const tagged = searched
       ? Prisma.sql`AND ("songTags" @> ARRAY[${searched}]::text[] OR "lessonTags" @> ARRAY[${searched}]::text[])`
       : Prisma.empty;
+    // With the READY and not-hidden terms above, this matches answers_clips_idx's predicate, so Postgres walks
+    // that partial index (only droplets with a clip) instead of every finished droplet.
     const clipped = clips === '1' ? Prisma.sql`AND "hookVideoUrl" IS NOT NULL` : Prisma.empty;
     // The viewer's own thumbs-up, one primary-key probe per card, in the same statement.
     const liked = viewer
