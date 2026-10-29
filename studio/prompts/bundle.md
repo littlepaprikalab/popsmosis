@@ -151,7 +151,9 @@ together they go from what the learner already knows to the parts they are learn
   - A cell or molecular process (membranes, organelles, proteins, molecules): "a clean,
     modern biology textbook illustration: semi-realistic organelles, each protein complex a
     smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the
-    membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere."
+    membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere." Leave
+    the last clause out when no structure of the scene is a small molecule or carrier: it
+    made the illustrator scatter unnamed spheres through scenes that named none.
     This is the figure students know from a modern textbook or study guide, not a
     detailed molecular rendering: "semi-realistic proteins" came back as ribbon models.
   - Anatomy (the brain, organs, body systems): "a softly shaded medical textbook

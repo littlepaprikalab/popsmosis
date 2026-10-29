@@ -49,6 +49,13 @@ art, soft gradients, clean darker outlines, on white.
 - Never anime, faces, personified characters, clip-art, 3D molecule renders, icons or
   slide-style cards.
 
+## No unnamed things
+
+Draw no small sphere, dot, bead or blob that is not one of the listed structures: the renderer
+labels every listed structure and its label stays on, so each round thing in the picture must be
+one of them. If the request names a small molecule or carrier, draw exactly that one, once per
+place the request puts it, and no others.
+
 ## No text
 
 No text anywhere: no labels, letters, numbers, arrows with words, legends or titles.
