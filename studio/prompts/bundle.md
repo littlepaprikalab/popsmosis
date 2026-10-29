@@ -44,7 +44,8 @@ the whole droplet. So:
 - Put what makes the topic come alive into the facts too, since a line can only use what
   a fact supports: a concrete example or case, where it shows up in everyday life, a
   surprising true detail for the song, what it leads to next in the course (the next step
-  or topic in the unit), and the stakes when it goes wrong: a way it can fail, with what
+  or topic in the unit), what it resembles that the learner may already know (the same
+  trick in another topic of the course), and the stakes when it goes wrong: a way it can fail, with what
   follows from it step by step, for the song's bridge ("cyanide blocks the chain's last
   carrier, so the cell stops making most of its ATP"). Facts that hold only definitions make dry lines.
 - When an analogy makes the idea concrete, put it in the fact it explains, saying what it
@@ -62,9 +63,23 @@ the whole droplet. So:
 Then:
 
 - `course`: the course named in the request, or the one this topic is usually taught in.
-- `core_idea`: the one sentence the learner should remember: how the thing works or why
-  it happens, the cause and its effect, not only a name or a definition. The chorus
-  sings it.
+- `core_idea`: the essence, the one sentence the learner should still be able to say a week
+  later: how the thing works or why it happens, the cause and its effect, not a name or a
+  definition. At most 20 words, in plain words, with at most two terms from `key_terms`.
+  Write it first and build everything else on it: the chorus sings it, the narration ends
+  on it, the lesson opens toward it and its check tests it. Not "Sodium channels open, the
+  membrane depolarizes, potassium channels open and it repolarizes": that is the steps. "A
+  nerve signal is a chain reaction: sodium rushing in at one spot opens the gates just
+  ahead."
+- `why_chain`: 3 to 5 links that explain the core idea, each one short sentence that says
+  what happens and why ("The next gates open because the sodium rushing in changes the
+  charge beside them"). In order, each following from the one before. The lesson and
+  the narration are built on these links rather than on a list of parts: a learner who
+  knows why each step happens can work the steps out again. Every link is in the facts.
+- `key_terms`: the terms the learner must come away knowing, at most 8, the ones the
+  course or exam uses ("photosystem II", "ATP synthase", "proton gradient"). Every other
+  technical name (a carrier, an intermediate) is said at most once, in passing, or left
+  out: a learner can hold a handful of new names, and each extra one pushes out the idea.
 - `misconception`: the most common misunderstanding of the topic at this level and its
   correction, in one or two sentences. The facts must state the correction, because the
   lesson, the song and the narration each correct it once.
@@ -210,10 +225,20 @@ together they go from what the learner already knows to the parts they are learn
 passes the fact-check, while the videos are still being made. A droplet is one short
 lesson that leaves the learner understanding the topic, not just knowing a fact about it.
 
-- **Big picture first.** Open with one or two sentences that say what the thing is and
-  why it matters. Then the parts, in the order they happen or build on each other:
-  numbered steps for a process, a small table to compare or sort, an analogy where it
-  makes an abstract idea concrete. Use markdown (GitHub-flavored, so tables work too).
+- **Open with a question, then the big picture.** First a short question the learner
+  can't answer yet but wants to ("Where does the oxygen you breathe come from?"), then one
+  or two sentences that say what the thing is, why it matters, and the core idea in plain
+  words.
+- **Teach the why, not the parts list.** Build the body on `why_chain`: each step says
+  what happens and why it has to, so the steps follow from each other instead of being
+  memorized. Numbered steps for a process, a small table to compare or sort, an analogy
+  where it makes an abstract idea concrete. Use markdown (GitHub-flavored, so tables work
+  too). Keep to `key_terms`; any other name at most once.
+- **Make the learner think once in the middle.** One "predict" question before the answer
+  is given ("What do you think happens to the protons piling up in the lumen?"), answered
+  in the next sentence.
+- **Link to what they know.** Where the facts give it, one sentence on what this resembles
+  that they have met before.
 - **Pitch it to the audience.** Write for a learner at that level meeting the topic for
   the first time, unless the request says they know more.
 - **Make it vivid.** Explain with the droplet's analogy, a concrete example and why it
@@ -223,8 +248,10 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   say why it is wrong.
 - **Be right.** Say when something is simplified. Never invent figures, dates or quotes;
   leave out what you are unsure of rather than guess.
-- **End with a check.** Close with one short question the learner can answer to test
-  themselves, and an invitation to ask a follow-up.
+- **End with a check on the essence.** Close with one short question that a learner can
+  only answer if they understood the core idea, not one they can answer by recalling a
+  name: a "why" or a "what happens if" ("Why does ATP synthase stop when a herbicide stops
+  electrons leaving photosystem II?"). Then an invitation to ask a follow-up.
 - **Length:** most lessons fit in 250-600 words. Stay inside 5000 characters.
 - **Never include personal data** (email addresses, phone numbers, the learner's name).
 
@@ -413,8 +440,11 @@ only names: it teaches every fact, step by step, in the order the scenes show th
 says why each step happens. Name every structure the scenes draw, by its `name` or an
 alias. Write at the audience's level, in plain spoken language: short sentences, no
 markdown, no lists, nothing in parentheses. Use the droplet's analogy, and correct the
-misconception once, as the song does. Open on the hook, and end on the core idea: what
-goes in, what comes out, and why it matters.
+misconception once, as the song does. Build it on `why_chain`: every step says why it
+happens. Keep to `key_terms`, never more than one new name in a sentence. Ask the listener
+one question mid-way and answer it in the next sentence. Open on the hook, and end on the
+core idea, in the same words as `core_idea`, then what goes in, what comes out, and why it
+matters.
 
 ## Direction
 

@@ -129,6 +129,31 @@ def song_length_problems(bundle: Bundle) -> list[Problem]:
                            f"{seconds:.0f} s, outside {SONG_MIN_S} to {SONG_MAX_S}")]
 
 
+ESSENCE_WORDS_MAX = 20
+WHY_LINKS = (3, 5)
+KEY_TERMS_MAX = 8
+
+
+def essence_problems(bundle: Bundle) -> list[Problem]:
+    """The essence fields against their limits: a core idea short enough to remember, a why chain of 3 to 5 links,
+    at most KEY_TERMS_MAX key terms. Recorded, not repaired; the bundle step adds them. A bundle written before
+    the why chain existed has none of these."""
+    if not bundle.why_chain:
+        return []
+    problems = []
+    words = len(bundle.core_idea.split())
+    if words > ESSENCE_WORDS_MAX:
+        problems.append(Problem(line_id="core_idea", rule="essence", repaired=False,
+                                detail=f"the core idea runs {words} words, over {ESSENCE_WORDS_MAX}"))
+    if not WHY_LINKS[0] <= len(bundle.why_chain) <= WHY_LINKS[1]:
+        problems.append(Problem(line_id="why_chain", rule="essence", repaired=False,
+                                detail=f"the why chain has {len(bundle.why_chain)} links, not {WHY_LINKS[0]} to {WHY_LINKS[1]}"))
+    if len(bundle.key_terms) > KEY_TERMS_MAX:
+        problems.append(Problem(line_id="key_terms", rule="essence", repaired=False,
+                                detail=f"{len(bundle.key_terms)} key terms, over {KEY_TERMS_MAX}"))
+    return problems
+
+
 STILL_LINES_MAX = 2  # lines in a row on a diagram scene with nothing moving
 STILL_SCENES = ("hook", "analogy")  # scenes where nothing needs to move
 

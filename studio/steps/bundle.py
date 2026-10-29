@@ -1,7 +1,8 @@
 """Step 1: the bundle. One brain call writes everything the topic alone can give.
 
-Writes bundle.json, after the code checks (studio/checks.py) have repaired what they
-can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
+Writes bundle.json, after a learner has read its lesson (studio/steps/learner.py: the
+lesson is rewritten once if the learner missed its essence) and the code checks
+(studio/checks.py) have repaired what they can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
 removes it.
 """
 
@@ -10,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from studio import brain, checks
+from studio.steps import learner
 from studio.jobs import read, write
 from studio.schemas import Bundle, Request
 from studio.styles import style_for
@@ -43,9 +45,13 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
     bundle, report = checks.review(Bundle.model_validate(answer))
-    report.problems += checks.song_length_problems(bundle) + checks.motion_problems(bundle)
-    for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json"):
+    for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json", "learner.json"):
         (job / stale).unlink(missing_ok=True)
+    rewritten = learner.run(job, bundle, ask, system)
+    if rewritten is not bundle:  # a new lesson: the code checks read it again
+        bundle, report = checks.review(rewritten)
+    report.problems += (checks.song_length_problems(bundle) + checks.motion_problems(bundle)
+                        + checks.essence_problems(bundle))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
     return bundle

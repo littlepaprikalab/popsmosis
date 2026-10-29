@@ -19,7 +19,7 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
 
     bundle = bundle_step.run(tmp_path, ask=fake_ask)
     assert seen["role"] == "brain" and seen["schema"] is Bundle and seen["label"] == "bundle"
-    assert seen["system"] == bundle_step.PROMPT and "Big picture first" in seen["system"]
+    assert seen["system"] == bundle_step.PROMPT and "Teach the why, not the parts list" in seen["system"]
     assert seen["prompt"].startswith("Topic: the light reactions\n\nCourse: AP Bio\n\nThe song style for this droplet, "
                                      "from the studio's rotation: ")
     assert style_for(tmp_path.name) in seen["prompt"]

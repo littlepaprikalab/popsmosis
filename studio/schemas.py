@@ -187,6 +187,12 @@ class Bundle(Strict):
     topic: str
     audience: str = Field(description='Who the droplet is written for: "high school" unless the request names someone else')
     core_idea: str
+    # Why the core idea holds, a link a line, and the only terms the learner must come away with. A bundle written
+    # before Oct 29 has neither.
+    why_chain: list[str] = Field(default_factory=list,
+                                 description="3 to 5 cause-and-effect links that explain the core idea, in order")
+    key_terms: list[str] = Field(default_factory=list,
+                                 description="The terms the learner must know, at most 8; every other name is optional")
     facts: list[Fact]
     misconception: str
     scenes: list[Scene]
@@ -299,7 +305,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "glow", "stages",
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "glow", "stages",
                   "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
