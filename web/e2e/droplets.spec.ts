@@ -248,7 +248,7 @@ test.describe('videos on /learn', () => {
   });
 
   test('a lesson shows while its videos render, then the players appear above it without a reload; an admin approves it, and can hide it from the tab', async ({ page, context, request }) => {
-    // Review is on, the default: each droplet waits for an admin before it lists.
+    // Review on (it is off by default): each droplet waits for an admin before it lists.
     await request.put(apiUrl('/api/studio/settings'), {
       headers: { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' },
       data: { review: { required: true } },
@@ -302,6 +302,10 @@ test.describe('videos on /learn', () => {
     await card.getByTestId('toggle-hidden').click();
     await expect(card.getByRole('link', { name: 'On the public Droplets tab' })).toBeVisible();
     expect(await onTab()).toBe(true);
+    await request.put(apiUrl('/api/studio/settings'), { // back to the default
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' },
+      data: { review: { required: false } },
+    });
   });
 
   test("a finished lesson shows both videos' tags under them, each a search of the tab", async ({ page, context }) => {

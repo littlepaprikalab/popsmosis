@@ -64,12 +64,12 @@ d('studio settings', () => {
       song: { provider: 'elevenlabs' },
       art: { claude: 'gemini', meta: 'muse' },
       knobs: expect.any(Object),
-      spend: { topicUsd: 5 },
-      review: { required: true },
+      spend: { topicUsd: 20 },
+      review: { required: false },
       updatedAt: null,
       defaults: {
         brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
-        spend: { topicUsd: 5 }, review: { required: true },
+        spend: { topicUsd: 20 }, review: { required: false },
       },
       choices: {
         brain: { default: ['claude', 'muse-wonder', 'muse-spark'], effort: ['low', 'medium', 'high', 'xhigh', 'max'] },
@@ -86,7 +86,7 @@ d('studio settings', () => {
     expect(asTeacher.json()).toEqual({
       brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
       knobs: {},
-      spend: { topicUsd: 5 },
+      spend: { topicUsd: 20 },
     });
     expect((await app.inject({ method: 'PUT', url: '/api/studio/settings', headers: asAgent, payload: { art: { claude: 'muse' } } })).statusCode).toBe(401);
     expect((await get(learnerCookie)).statusCode).toBe(403);
@@ -170,7 +170,7 @@ d('studio settings', () => {
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
     const brain = { default: 'claude', effort: 'high' };
     const song = { provider: 'elevenlabs' };
-    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {}, spend: { topicUsd: 5 } });
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {}, spend: { topicUsd: 20 } });
     await put(adminCookie, { art: { claude: 'svg' }, knobs: { ELEVENLABS_VOICE_ID: 'Voice42' }, spend: { topicUsd: 3 } });
     const knobs = { ELEVENLABS_VOICE_ID: 'Voice42' };
     const spend = { topicUsd: 3 };

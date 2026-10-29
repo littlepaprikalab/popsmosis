@@ -172,7 +172,7 @@ test.describe('signed in', () => {
     const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
     expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);
     expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`, lessonVideoUrl: `${BASE}/samples/lesson.mp4` })).status()).toBe(200);
-    // Approved by an admin, as review asks, so it is on the public tab.
+    // Approved by an admin, which review would ask for if it were on, so it is on the public tab either way.
     const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
     expect((await request.patch(apiUrl(`/api/answers/${answerId}`), { headers: asAda, data: { approved: true } })).status()).toBe(200);
 
@@ -464,7 +464,7 @@ test.describe('studio settings', () => {
       headers: asAda(),
       data: {
         brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
-        spend: { topicUsd: 5 },
+        spend: { topicUsd: 20 },
       },
     });
     await signIn(context, S.users.ada);
@@ -487,7 +487,7 @@ test.describe('studio settings', () => {
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
     expect((await claimed.json()).studio).toEqual({
       brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
-      spend: { topicUsd: 5 },
+      spend: { topicUsd: 20 },
     });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
@@ -568,11 +568,11 @@ test.describe('studio settings', () => {
   });
 
   test('an admin sets the per-topic spend ceiling, and the teacher reads it with its key', async ({ page, context, request }) => {
-    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 5 } } });
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 20 } } });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
     const spend = page.getByTestId('spend');
-    await expect(spend.getByTestId('spend-now')).toContainText('Now: $5.00.');
+    await expect(spend.getByTestId('spend-now')).toContainText('Now: $20.00.');
     await spend.getByLabel('Dollars a topic:').fill('2.5');
     await spend.getByRole('button', { name: 'Save' }).click();
     await expect(spend.getByTestId('spend-now')).toContainText('Now: $2.50.');
@@ -584,7 +584,7 @@ test.describe('studio settings', () => {
     await expect(page.getByText(/from 0 \(no ceiling\) to 100/)).toBeVisible();
     await page.reload();
     await expect(page.getByTestId('spend').getByTestId('spend-now')).toContainText('Now: $2.50.');
-    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 5 } } });
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 20 } } });
   });
 
   test('an admin turns review before the Droplets tab off and on, and the learner is told it waits', async ({ page, context, request }) => {
@@ -617,6 +617,7 @@ test.describe('studio settings', () => {
     await expect(card.getByTestId('awaiting-review')).toHaveText('It goes on the public Droplets tab once a person has looked at it.');
     await expect(card.getByTestId('approve-droplet')).toHaveCount(0);
     expect((await request.delete(apiUrl(`/api/questions/${questionId}`), { headers: benHeaders })).status()).toBe(204);
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { review: { required: false } } }); // the default
   });
 
   test('is for admins only', async ({ page, context }) => {

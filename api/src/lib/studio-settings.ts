@@ -25,9 +25,10 @@
  * paid call and fails the step once the topic has reached it, so a retry costs nothing and the topic is given up.
  * Calls with no known price (ElevenLabs without ELEVENLABS_USD_PER_1K_CREDITS) count as nothing.
  *
- * `review`: whether a person looks at each droplet before it lists on the public Droplets tab (`required`, on by
- * default: the audience is 13 and up). With it on, a droplet whose videos become READY waits off the tab until an admin
- * approves it on /learn; the learner sees their own droplet either way. The API reads it; the studio never does.
+ * `review`: whether a person looks at each droplet before it lists on the public Droplets tab (`required`, off by
+ * default: a droplet lists once its videos are READY, after the studio's fact-check). With it on, a droplet whose
+ * videos become READY waits off the tab until an admin approves it on /learn; the learner sees their own droplet either
+ * way. The API reads it; the studio never does.
  */
 import prisma from './prisma.js';
 import { BRAINS, type Brain } from './brains.js';
@@ -60,9 +61,10 @@ export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
 export const DEFAULT_ART: ArtSettings = { claude: 'gemini', meta: 'muse' };
 export const DEFAULT_BRAIN: BrainSettings = { default: 'claude', effort: 'high' };
 export const DEFAULT_SONG: SongSettings = { provider: 'elevenlabs' };
-// About two and a half times the dearest topic so far, retries included.
-export const DEFAULT_SPEND: SpendSettings = { topicUsd: 5 };
-export const DEFAULT_REVIEW: ReviewSettings = { required: true };
+// Generous for the hackathon: about ten times the dearest topic so far, retries included. Lower it afterwards
+// ($5 is about two and a half times), here and in studio/ledger.py.
+export const DEFAULT_SPEND: SpendSettings = { topicUsd: 20 };
+export const DEFAULT_REVIEW: ReviewSettings = { required: false };
 
 const ART_KEY = 'art';
 const BRAIN_KEY = 'brain';

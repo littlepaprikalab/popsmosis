@@ -68,8 +68,8 @@ LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
 
 # A claimed topic's ceiling when its claim came from an API older than the setting
-# (api/src/lib/studio-settings.ts, DEFAULT_SPEND): about two and a half times the dearest topic so far.
-DEFAULT_TOPIC_USD = 5.0
+# (api/src/lib/studio-settings.ts, DEFAULT_SPEND): generous for the hackathon, about ten times the dearest topic so far.
+DEFAULT_TOPIC_USD = 20.0
 
 _local = threading.local()
 _lock = threading.Lock()

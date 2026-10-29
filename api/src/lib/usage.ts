@@ -44,9 +44,10 @@ export function usageLimits(env: NodeJS.ProcessEnv = process.env) {
     // Site-wide, everyone's topics together: the ceiling on a day's model spend. 0: no ceiling.
     topicsPerDay: intEnv(knob('TOPICS_PER_DAY', env), 100),
     repliesPerUserPerHour: intEnv(knob('REPLIES_PER_USER_PER_HOUR', env), 30),
-    // Files, in MB. 0: no limit. A phone's photo of notes is 2 to 4 MB.
-    attachmentMbPerUserPerDay: intEnv(knob('ATTACHMENT_MB_PER_USER_PER_DAY', env), 20),
-    attachmentMbHeldPerUser: intEnv(knob('ATTACHMENT_MB_HELD_PER_USER', env), 60),
+    // Files, in MB. 0: no limit. A phone's photo of notes is 2 to 4 MB. Generous for the hackathon; lower them
+    // afterwards (20 a day and 60 held), here and in lib/knobs.ts, since the files live in the database.
+    attachmentMbPerUserPerDay: intEnv(knob('ATTACHMENT_MB_PER_USER_PER_DAY', env), 100),
+    attachmentMbHeldPerUser: intEnv(knob('ATTACHMENT_MB_HELD_PER_USER', env), 300),
   };
 }
 

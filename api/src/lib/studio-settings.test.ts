@@ -81,8 +81,8 @@ describe('songFrom and parseSongSettings', () => {
 });
 
 describe('spendFrom and parseSpendSettings', () => {
-  it('is $5 a topic with nothing stored, takes a stored ceiling, and 0 for none', () => {
-    expect(DEFAULT_SPEND).toEqual({ topicUsd: 5 });
+  it('is $20 a topic with nothing stored, takes a stored ceiling, and 0 for none', () => {
+    expect(DEFAULT_SPEND).toEqual({ topicUsd: 20 });
     for (const stored of [undefined, null, 5, { topicUsd: '5' }, { topicUsd: -1 }, { topicUsd: 1e9 }, { topicUsd: NaN }]) {
       expect(spendFrom(stored)).toEqual(DEFAULT_SPEND);
     }

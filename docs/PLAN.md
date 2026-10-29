@@ -359,9 +359,9 @@ dropped.
 The song is held to its lyrics after it is sung: when the aligner cannot hear more than
 half of its lines (step 6), the timing fails and the song is made again on the retry.
 
-There is no teacher approval step: the fact-check is the gate. A person still looks at
-each droplet before it lists on the public Droplets tab while review is on
-(`/admin/studio`, on by default).
+There is no teacher approval step: the fact-check is the gate. An admin can turn on
+review (`/admin/studio`, off by default), and then a person looks at each droplet before
+it lists on the public Droplets tab.
 
 The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):
 SUPPORTED when a tag names something the facts cover, FILLER when it names only the topic,

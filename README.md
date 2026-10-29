@@ -202,8 +202,8 @@ page and remove it, so nothing changes without anyone seeing why.
 | Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
-| Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $5 |
-| Review before the Droplets tab: an admin approves each droplet on `/learn` before it lists (the API reads it; the studio never does) | on, off | on |
+| Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $20 (generous for the hackathon; $5 is about two and a half times the dearest topic so far) |
+| Review before the Droplets tab: an admin approves each droplet on `/learn` before it lists (the API reads it; the studio never does) | on, off | off: a droplet lists once its videos are done, after the fact-check |
 
 The ceiling is checked before every paid call, against the job's `calls.jsonl`
 (`studio/ledger.py`, `check_ceiling`). Once a topic has cost it, the step fails with `the
@@ -367,7 +367,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 20 MB a day or 60 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
 | DELETE | `/api/replies/:id` | own reply |
@@ -570,10 +570,11 @@ is decided from its bytes, not from what was sent: PNG, JPEG, GIF and WebP as th
 text as `text/plain`, anything else as a download, all in a sandbox. Past
 `ATTACHMENT_RETENTION_DAYS` (default 30, 0 keeps them) the bytes are let go and the row stays,
 `expired: true`, its `url` answering 410: the API sweeps them every hour, and lets one go on
-the spot when it is read past its time. Each learner may send 20 MB of files a day
-(`ATTACHMENT_MB_PER_USER_PER_DAY`; deleting a request gives none back) and have 60 MB held at
+the spot when it is read past its time. Each learner may send 100 MB of files a day
+(`ATTACHMENT_MB_PER_USER_PER_DAY`; deleting a request gives none back) and have 300 MB held at
 a time (`ATTACHMENT_MB_HELD_PER_USER`; deleting a request frees its files), so one account
-cannot fill the database. Agents cannot send files.
+cannot fill the database. Those defaults are generous for the hackathon; 20 and 60 suit a
+small database better. Agents cannot send files.
 
 **Admins** (session cookie, `ADMIN` role)
 
