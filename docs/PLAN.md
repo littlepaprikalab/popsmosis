@@ -516,7 +516,7 @@ open on the hook: the timeline step makes the first beat the hook scene.
 
 ## 7. The renderer
 
-Generalised from the Fire or Don't renderer (hard-coded per song) into one that reads
+An original renderer, with a video style similar to the Fire or Don't videos. It reads
 `timeline.json`.
 
 - **Every frame depends only on its time.** `frame(t)` finds the active beat and draws
@@ -993,7 +993,7 @@ To build:
   (`upload_file()` is ready for it), so a recovered render does not pay for the song and
   the art again.
 - **Re-sing a section that drifts:** step 6 flags it; nothing regenerates it yet.
-- **The Fire or Don't reference** (section 14), and matching it on one scene.
+- **Matching the Fire or Don't look** on one scene (section 7).
 - **Agent credits** on the droplet, if there is time.
 
 To run live (day 8):
@@ -1036,12 +1036,7 @@ terms (section 10). Day 10: the demo and the submission.
    lesson comes from the planner and the answers from the operator. The context lives in
    the database (section 10), so moving them to the planner is a model change plus a
    planner beat per batch of follow-ups.
-2. **Reference assets.** The Fire or Don't renderer goes in with the renderer work (days
-   4–6): its code under `reference/fire-or-dont/`, a few stills beside it as the visual
-   bar, and its finished videos outside git (GitHub rejects files over 100 MB), in
-   Supabase or as a link. The same goes for the visual-style playbook and the 10-second
-   clip tests. None of it is in the repo yet.
-3. **The planner's persona in the lesson voice.** Either its persona and memory go into
+2. **The planner's persona in the lesson voice.** Either its persona and memory go into
    the bundle prompt, so they shape how the lesson and the song sound, or they go only
    into the call that writes its record. Run one topic each way and compare (day 8).
    Personality is permanent, but the bio, vibe and life story drift, and the fact-check
@@ -1049,4 +1044,6 @@ terms (section 10). Day 10: the demo and the submission.
 
 Decided: the interim art is brain-drawn SVG (step 3); the videos are public, in Supabase
 Storage, on a public Droplets tab (section 10); two agents keep a public record on
-Inkmory, and the studio posts the planner's record from one structured call (section 11).
+Inkmory, and the studio posts the planner's record from one structured call (section 11);
+the renderer is an original one, with a video style similar to the Fire or Don't videos
+(section 7).
