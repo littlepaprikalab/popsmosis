@@ -162,12 +162,22 @@ const EXCERPT_LENGTH = 200;
 // How much of the lesson the list reads to make an excerpt; markdown only shrinks it.
 export const EXCERPT_SOURCE_LENGTH = EXCERPT_LENGTH * 8;
 
-/** The lesson's first lines as plain text, for a card on the list. */
+// A line of a table's rule or a horizontal rule is these characters alone. One class under one quantifier, tested a
+// line at a time: linear. (The single regex this replaces, with three quantifiers that could each take a dash, took 3 s
+// on one 1,600-dash line ending in a letter, and the list makes up to 24 excerpts a page.)
+const RULE_LINE = /^[ \t|:\r-]*$/;
+// Links and images, their text and target each bounded, so a run of brackets with no end costs at most a few hundred
+// steps from each, never the whole rest of the text.
+const LINK = /!?\[([^\]]{0,300})\]\([^)]{0,500}\)/g;
+
+/** The lesson's first lines as plain text, for a card on the list. Linear in the length it reads. */
 export function excerptOf(markdown: string, max = EXCERPT_LENGTH): string {
   const text = markdown
     .slice(0, max * 8) // EXCERPT_SOURCE_LENGTH for the default max
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1') // links and images
-    .replace(/^[ \t|:-]*-{3,}[ \t|:-]*$/gm, ' ') // table and horizontal rules
+    .replace(LINK, '$1') // links and images
+    .split('\n')
+    .map((line) => (line.includes('---') && RULE_LINE.test(line) ? ' ' : line)) // table and horizontal rules
+    .join('\n')
     .replace(/[#>*_`|]+/g, ' ') // headings, quotes, emphasis, code, table pipes
     .replace(/\s+/g, ' ')
     .trim();

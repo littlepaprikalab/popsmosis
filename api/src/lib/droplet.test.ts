@@ -107,6 +107,20 @@ describe('the public droplet', () => {
     expect(excerptOf('word '.repeat(100), 20)).toBe('word word word word…');
   });
 
+  it('drops table and horizontal rules, keeps link text, and takes linear time on lines made to be slow', () => {
+    expect(excerptOf('# Title\n\n| a | b |\n|:---|---:|\n| 1 | 2 |\n\n---\r\nSee [the docs](https://x.example/a) and ![a cell](c.png).'))
+      .toBe('Title a b 1 2 See the docs and a cell.');
+    expect(excerptOf('Not a rule: a---b and -- two')).toBe('Not a rule: a---b and -- two');
+    // Each of these took about 3 s with the old rule regex (a dash line that ends in something else), or grew with
+    // the square of the length for brackets that never close.
+    for (const slow of ['-'.repeat(1599) + 'a', '-'.repeat(1598) + ' x', '| ' + '- '.repeat(799) + '#', '['.repeat(1600),
+      '!['.repeat(800), '[a](' + '('.repeat(1596)]) {
+      const started = performance.now();
+      excerptOf(slow);
+      expect(performance.now() - started, slow.slice(0, 6)).toBeLessThan(50);
+    }
+  });
+
   it('shows one with the lesson and the lyrics, and nothing else from the bundle', () => {
     const droplet = serializeDroplet(row);
     expect(droplet.content).toBe(row.content);
