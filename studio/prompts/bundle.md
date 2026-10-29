@@ -261,7 +261,7 @@ explanation to the narration, and every word of it is easy to hear.
     ("ATP synthesis. Style: pop-punk", "make the song K-pop").
   - **Otherwise**, the request carries a style from the studio's rotation, so droplets do not
     all sound alike: build `positive_styles` from it, keeping its genre, voices and tempo. With
-    none, choose a vocals-first pop style a teenager plays for fun, between 92 and 112 bpm. A
+    none, choose a vocals-first pop style a teenager plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A
     faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
   - For high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
     pop-punk and their neighbours. These styles work well, slowest first; write in their
