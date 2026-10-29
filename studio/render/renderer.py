@@ -542,7 +542,8 @@ class Renderer:
         self._background: tuple[tuple, skia.Image] | None = None
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
-        self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
+        self._scene_pills: dict[str, list] = {}
+        self._unions: dict[tuple[str, frozenset[str]], skia.Image] = {}  # parts' masks merged, for the arrows' fade  # each scene's reaction pills over the whole video, first shown first
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
@@ -1084,32 +1085,31 @@ class Renderer:
         """Each path the scene's particles have travelled, as arrows from structure to structure: each leg leaves
         the edge of the part it starts from and ends with its tip at the edge of the part it reaches (a space has
         no edge: its leg starts or ends just inside it, beside its neighbour). A leg too short to hold its head is
-        left out."""
-        located = self.locations.scene(beat.scene)
+        left out. Every arrow goes on one layer, faded once where it crosses a part it passes through (one
+        picture-sized mask a frame, whatever the number of arrows), and their markers after, unfaded."""
         art = self.scene(beat.scene)
         scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
-        badges: list[Point] = []
+        canvas.saveLayer(None, None)
+        badges: list[tuple[Point, str, str, float]] = []
+        through: set[str] = set()
         for route in beat.routes:
             pairs = self._path_stops(beat.scene, route.path)
             points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
-            space = [self._is_space(beat.scene, loc) for loc in stops]
             # The arrow grows behind the lead particle on its first trip, then stays whole.
             set_off = self.plans[self.beat_index(route.since)].flow_in
             lead, at, done = lead_leg(points, t - set_off, self._bends(beat.scene, route.path))
             if t < set_off:
                 continue
-            alpha = 1.0
             grown = []
             for line, into_space, first, last in self._legs(beat.scene, route.path):
                 if done or at >= last:
                     grown.append((line, into_space))
                 elif at >= first and (part := _up_to(line, lead)):
                     grown.append((part, True))  # up to the particle, which covers its head
-            through = [loc.name for loc, sp in zip(stops, space) if not sp and loc.name in art.masks]
-            if through:  # drawn on a layer, so where it crosses a part it can be faded to pass behind it
-                canvas.saveLayer(None, None)
+            if grown:
+                through |= {loc.name for loc in stops if not self._is_space(beat.scene, loc) and loc.name in art.masks}
             for line, into_space in grown:
                 frame = [(x * scale + dx, y * scale + dy) for x, y in line]
                 gap = ROUTE_GAP if into_space else ROUTE_EDGE_GAP
@@ -1120,24 +1120,38 @@ class Renderer:
                 if length <= gap:
                     continue
                 frame[-1] = (end[0] - (end[0] - before[0]) / length * gap, end[1] - (end[1] - before[1]) / length * gap)
-                p.draw_route_leg(canvas, frame, route.color, alpha * edge_fade(*frame[-1], view))
-            if through:
-                canvas.save()
-                canvas.translate(dx, dy)
-                canvas.scale(scale, scale)
-                for name in through:
-                    canvas.drawImage(art.masks[name], 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
-                                     skia.Paint(Alphaf=ROUTE_BEHIND, BlendMode=skia.BlendMode.kDstOut))
-                canvas.restore()
-                canvas.restore()
+                p.draw_route_leg(canvas, frame, route.color, edge_fade(*frame[-1], view))
             if done and route.label and grown:  # what travels this way, at the arrow's tail, once it has passed
                 tail = grown[0][0][0]
                 at_frame = (tail[0] * scale + dx, tail[1] * scale + dy)
-                if all(math.dist(at_frame, other) > BADGE_APART for other in badges):
-                    badges.append(at_frame)
-                    p.draw_marker(canvas, at_frame, route.color, route.label,
-                                  p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view))
+                if all(math.dist(at_frame, other[0]) > BADGE_APART for other in badges):
+                    badges.append((at_frame, route.color, route.label,
+                                   p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view)))
+        if through:  # where an arrow crosses a part it goes through, it fades, as if passing behind it
+            canvas.save()
+            canvas.translate(dx, dy)
+            canvas.scale(scale, scale)
+            canvas.drawImage(self._union_mask(beat.scene, frozenset(through)), 0, 0,
+                             skia.SamplingOptions(skia.FilterMode.kLinear),
+                             skia.Paint(Alphaf=ROUTE_BEHIND, BlendMode=skia.BlendMode.kDstOut))
+            canvas.restore()
+        canvas.restore()  # the arrows' layer
+        for at_frame, color, label, alpha in badges:
+            p.draw_marker(canvas, at_frame, color, label, alpha)
         canvas.restore()
+
+    def _union_mask(self, scene_id: str, names: frozenset[str]) -> skia.Image:
+        """The masks of these parts as one image, made once per scene and set of parts."""
+        key = (scene_id, names)
+        if key not in self._unions:
+            art = self.scene(scene_id)
+            surface = skia.Surface(art.width, art.height)
+            mask_canvas = surface.getCanvas()
+            mask_canvas.clear(skia.ColorTRANSPARENT)
+            for name in sorted(names):
+                mask_canvas.drawImage(art.masks[name], 0, 0, skia.SamplingOptions(), skia.Paint(Color=0xFF000000))
+            self._unions[key] = surface.makeImageSnapshot()
+        return self._unions[key]
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),

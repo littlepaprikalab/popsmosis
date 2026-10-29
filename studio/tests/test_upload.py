@@ -373,3 +373,9 @@ def test_the_hook_cut_goes_up_with_the_videos_when_it_was_made(job, server):
     upload.run(job, api=api_for(server))
     ready = server.patches()[-1]
     assert ready["hookVideoUrl"].endswith("/out/hook_v.mp4") and ready["hookPosterUrl"].endswith("/out/hook_v.jpg")
+
+
+def test_a_render_picked_up_elsewhere_gets_the_hook_cuts_timeline_too(job):
+    assert "timeline_hook.json" not in upload.private_files(job)[0]
+    (job / "timeline_hook.json").write_text("{}")
+    assert "timeline_hook.json" in upload.private_files(job)[0]

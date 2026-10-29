@@ -355,20 +355,45 @@ def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[flo
 def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,
                 size: float = 1.0) -> None:
     """A particle marked with what it is: a disc for "H⁺", a pill for "glucose", in its colour
-    with a white halo, the word in dark or white ink, whichever reads on it. `size` scales it (a crowd's
-    marked dots are smaller than the lead particle)."""
-    x, y = at
+    with a white halo, the word in dark or white ink, whichever reads on it. `size` scales it. Drawn once into an
+    image for each colour, word and size, then stamped: a filling space shows a couple of dozen at a time, and
+    drawing each one's shadow, halo and word afresh on every frame cost about 40 ms a frame."""
+    if alpha <= 0.01:
+        return
+    sprite = _marker_sprite(color, label, size)
+    margin = MARKER_MARGIN
+    canvas.drawImage(sprite, at[0] - sprite.width() / 2, at[1] - (sprite.height() - 2 * margin) / 2 - margin,
+                     skia.SamplingOptions(skia.FilterMode.kLinear), skia.Paint(Alphaf=alpha))
+
+
+MARKER_MARGIN = 12  # pixels round a marker's sprite for its shadow, which falls a little below it
+_SPRITES: dict[tuple[str, str, float], skia.Image] = {}
+
+
+def _marker_sprite(color: str, label: str, size: float) -> skia.Image:
+    """The marker drawn on its own, centred, at full strength: what draw_marker stamps."""
+    key = (color, label, size)
+    if key in _SPRITES:
+        return _SPRITES[key]
     r, pad = MARKER_R * size, MARKER_PAD * size
     f = font("ExtraBold", MARKER_FONT * size)
     width = text_width(f, label)
     half = max(r, width / 2 + pad)
+    margin = MARKER_MARGIN
+    w, h = math.ceil(2 * (half + HALO + margin)), math.ceil(2 * (r + HALO + margin))
+    surface = skia.Surface(w, h)
+    canvas = surface.getCanvas()
+    canvas.clear(skia.ColorTRANSPARENT)
+    x, y = w / 2, h / 2
     body = rounded((x - half, y - r, x + half, y + r), r)
-    shadow(canvas, body, alpha)
+    shadow(canvas, body, 1.0)
     canvas.drawRRect(rounded((x - half - HALO, y - r - HALO, x + half + HALO, y + r + HALO),
-                             r + HALO), skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
-    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
+                             r + HALO), skia.Paint(AntiAlias=True, Color=0xFFFFFFFF))
+    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=argb(color)))
     ink = "#1A1A1A" if _luminance(*rgb(color)) > 0.3 else "#FFFFFF"
-    draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
+    draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink))
+    _SPRITES[key] = surface.makeImageSnapshot()
+    return _SPRITES[key]
 
 
 ROUTE_STROKE = 6.0  # a route's arrows, in frame pixels

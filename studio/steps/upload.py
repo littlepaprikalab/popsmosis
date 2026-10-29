@@ -169,7 +169,9 @@ def private_files(job: Path) -> tuple[list[str], list[str]]:
         pass  # locations.json itself is reported missing
     named += ([media.audio_path(k) for k in media.TIMED]
               + [media.timing_path(k) for k in media.TIMED]
-              + [media.timeline_path(v) for v in media.VIDEOS])
+              + [media.timeline_path(v) for v in media.VIDEOS]
+              # The hook cut's, when the song has one, so a render picked up on another machine makes it too.
+              + ([media.timeline_path(media.HOOK)] if (job / media.timeline_path(media.HOOK)).is_file() else []))
     named = list(dict.fromkeys(named))  # the art is named by both
     there = [p for p in named if (job / p).is_file()]
     # What each Muse Image picture's check found, which the timeline discloses beside it: a timeline made
