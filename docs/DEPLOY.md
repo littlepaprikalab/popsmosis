@@ -333,8 +333,14 @@ Check in the Supabase console:
    `select relname from pg_class where relforcerowsecurity and relnamespace = 'public'::regnamespace;`
    should return nothing.
 4. **The CA certificate.** Project Settings > Database > SSL Configuration: download it and set
-   `DATABASE_CA_CERT` on popsmosis-api before deploying (above). After the deploy,
-   `/api/health` should answer `ok` and the API log should show no certificate error.
+   `DATABASE_CA_CERT` on popsmosis-api before deploying (above). The API checks the Session
+   pooler's certificate as Supabase's own guide connects to it, with `sslmode=verify-full`
+   ([Connecting with PSQL](https://supabase.com/docs/guides/database/psql)), so try that first
+   from your machine with the file you downloaded:
+   `psql "sslmode=verify-full sslrootcert=<the .crt> host=aws-0-<region>.pooler.supabase.com port=5432 dbname=postgres user=postgres.<ref>"`.
+   If it connects, the API will. After the deploy, `/api/health` should answer `ok` and the
+   API log should show no certificate error. Should it fail anyway, adding `?sslmode=no-verify`
+   to `DATABASE_URL` puts the old behaviour back while you look.
 5. **Enforce SSL**, on the same page: on, so the database refuses connections without TLS.
 6. **The keys.** Project Settings > API Keys: popsmosis uses the secret key on the API alone
    (`SUPABASE_SERVICE_ROLE_KEY`). The publishable (anon) key is in neither the web app nor
