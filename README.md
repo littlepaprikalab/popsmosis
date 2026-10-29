@@ -38,7 +38,7 @@ advice column), whose architecture and look-and-feel come from
 
 ```
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
-web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, sign-in, and the admin pages.
+web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, /about, sign-in, and the admin pages.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply, DropletLike, DropletComment).
 studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
