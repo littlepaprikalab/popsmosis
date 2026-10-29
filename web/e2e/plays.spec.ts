@@ -25,7 +25,7 @@ function watchCounts(page: Page) {
     if (r.method() !== 'POST' || !/^\/api\/droplets\/[^/]+\/plays$/.test(new URL(r.url()).pathname)) return;
     const { video, event } = r.postDataJSON();
     sent.push(`${video} ${event}`);
-    headers.push(r.allHeaders());
+    headers.push(r.allHeaders().catch(() => ({}))); // a request never answered has none by the end of its test
   });
   return { sent, withCookie: async () => (await Promise.all(headers)).filter((h) => 'cookie' in h).length };
 }
@@ -137,6 +137,41 @@ test.describe('play counts', () => {
     await expect.poll(() => counts.sent.slice(2)).toEqual(['hook started', 'hook reached25']);
     await expect.poll(async () => added(await countsOf(request, 'hook'), before))
       .toEqual({ started: 1, reached25: 1, reached50: 0, reached75: 0, finished: 0, shared: 1, downloaded: 1 });
+  });
+
+  test('counting never holds a video up: with the API not answering, it plays to the end', async ({ page }) => {
+    const counts = watchCounts(page);
+    await page.route('**/api/droplets/*/plays', () => undefined); // never answered
+    await page.goto(`/droplets/${S.droplet}`);
+    await playThrough(page.getByLabel('song video'));
+    // Its steps wait on the start, which never came back: nothing more went.
+    await settle(page);
+    expect(counts.sent).toEqual(['song started']);
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  });
+
+  test('a start over a limit stops that play there; an API that has no counts hears from a page load once', async ({ page }) => {
+    const counts = watchCounts(page);
+    let status = 429;
+    await page.route('**/api/droplets/*/plays', (route) => route.fulfill({ status, contentType: 'application/json', body: '{"error":{"code":"x","message":"x"}}' }));
+    await page.goto(`/droplets/${S.droplet}`);
+    await playThrough(page.getByLabel('song video'));
+    await settle(page);
+    expect(counts.sent).toEqual(['song started']);
+
+    // Another play is its own: its start goes. An API older than the counts answers it 404...
+    status = 404;
+    await playTo(page.getByLabel('lesson video'), 1);
+    await expect.poll(() => counts.sent).toEqual(['song started', 'lesson started']);
+    // ...and after that this page load sends none, on this page or the next.
+    await playTo(page.getByLabel('hook clip'), 1);
+    await page.getByRole('link', { name: '← All droplets' }).click();
+    await expect(page).toHaveURL(/\/droplets$/);
+    const card = page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' }).first();
+    await card.getByTestId('card-play').click();
+    await expect.poll(() => card.getByLabel('ATP synthesis: song video').evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(0.5);
+    await settle(page);
+    expect(counts.sent).toEqual(['song started', 'lesson started']);
   });
 
   test('the Clips feed counts the clip that plays, and with reduced motion only once it is pressed', async ({ page }) => {

@@ -98,7 +98,8 @@ export class KeyedWindowCounter {
       this.counts = new Map();
       this.secret = randomBytes(32);
     }
-    const key = createHmac('sha256', this.secret).update(parts.join('\n')).digest('base64url');
+    // 128 bits of the hash are plenty to tell keys apart, at half the memory of all 256.
+    const key = createHmac('sha256', this.secret).update(parts.join('\n')).digest().subarray(0, 16).toString('base64url');
     const n = this.counts.get(key) ?? 0;
     if (n >= this.max || (n === 0 && this.counts.size >= this.maxKeys)) return false;
     this.counts.set(key, n + 1);

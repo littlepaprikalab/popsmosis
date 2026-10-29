@@ -201,42 +201,96 @@ d('play counts', () => {
       expect((await send(id, { video: 'song', event: 'started' }, '2001:db8:1:3::1')).statusCode).toBe(204);
     });
 
-    it('lets one address send at most 120 a minute, across droplets, without touching its reads', async () => {
-      const { PLAYS_PER_ADDRESS_PER_MINUTE: max } = await import('./plays.js');
+    it('lets one address start at most 120 a minute, across droplets, without touching its reads', async () => {
+      const { STARTS_PER_ADDRESS_PER_MINUTE: max } = await import('./plays.js');
       const ids = await Promise.all(Array.from({ length: 4 }, (_, i) => droplet(`Topic ${i}`)));
       const from = fresh();
+      // A play counted before the address ran out of starts.
+      await play(ids[0], 'song', 1, from);
       const codes: number[] = [];
-      for (let i = 0; i <= max; i++) {
+      for (let i = 1; i <= max; i++) {
         codes.push((await send(ids[i % ids.length], { video: (['song', 'lesson', 'hook'] as const)[i % 3], event: 'started' }, from)).statusCode);
       }
-      expect(codes.slice(0, max).every((c) => c === 204)).toBe(true);
-      expect(codes[max]).toBe(429);
-      // The site still answers that address: counting spends a budget of its own, not the API's limit for it.
+      expect(codes.slice(0, max - 1).every((c) => c === 204)).toBe(true);
+      expect(codes[max - 1]).toBe(429);
+      // That play goes on being counted: its steps have a budget of their own.
+      expect((await send(ids[0], { video: 'song', event: 'reached50' }, from)).statusCode).toBe(204);
+      expect(await counts(ids[0], 'SONG')).toMatchObject({ reached50: 1 });
+      // And the site still answers that address: counting spends budgets of its own, not the API's limit for it.
       const headers = { 'x-proxy-token': SECRET, 'x-popsmosis-client-ip': from };
       expect((await app.inject({ method: 'GET', url: '/api/droplets', headers })).statusCode).toBe(200);
       expect((await app.inject({ method: 'GET', url: '/api/auth/me', headers })).statusCode).toBe(401);
     });
 
-    it('takes at most 1500 a minute from every address together, per instance', async () => {
-      const { PLAYS_PER_INSTANCE_PER_MINUTE: max, PLAYS_PER_ADDRESS_PER_MINUTE: perAddress } = await import('./plays.js');
+    it('lets one address send at most 480 later steps a minute', async () => {
+      const { STEPS_PER_ADDRESS_PER_MINUTE: max } = await import('./plays.js');
+      const ids = await Promise.all(Array.from({ length: 4 }, (_, i) => droplet(`Topic ${i}`)));
+      const from = fresh();
+      const keys = ids.flatMap((id) => ['song', 'lesson', 'hook'].flatMap((video) => STEPS.slice(1).map((event) => ({ id, video, event }))));
+      const codes: number[] = [];
+      for (let i = 0; i <= max; i++) {
+        const { id, video, event } = keys[i % keys.length]; // 48 counts, 10 each: under their hourly 40
+        codes.push((await send(id, { video, event }, from)).statusCode);
+      }
+      expect(codes.slice(0, max).every((c) => c === 204)).toBe(true);
+      expect(codes[max]).toBe(429);
+    });
+
+    it('holds a request that is no count to the starts\' budget', async () => {
+      const { STARTS_PER_ADDRESS_PER_MINUTE: max } = await import('./plays.js');
+      const id = await droplet();
+      const from = fresh();
+      const codes: number[] = [];
+      for (let i = 0; i <= max; i++) codes.push((await send(id, { video: 'song', event: 'nonsense' }, from)).statusCode);
+      expect(codes.slice(0, max).every((c) => c === 400)).toBe(true);
+      expect(codes[max]).toBe(429);
+      expect((await send(id, { video: 'song', event: 'started' }, from)).statusCode).toBe(429);
+    });
+
+    it('takes at most 1500 starts a minute from every address together, per instance, and the steps of counted plays still', async () => {
+      const { STARTS_PER_INSTANCE_PER_MINUTE: max, STARTS_PER_ADDRESS_PER_MINUTE: perAddress } = await import('./plays.js');
       // An app of its own, so the ceiling the other tests spent is not this one's.
       const own = await (await import('../index.js')).buildApp();
       await own.ready();
+      const post = (id: string, event: string, from: string) => own.inject({
+        method: 'POST', url: `/api/droplets/${id}/plays`, payload: { video: 'song', event },
+        headers: { 'x-proxy-token': SECRET, 'x-popsmosis-client-ip': from },
+      });
       try {
+        const id = await droplet();
+        expect((await post(id, 'started', '192.0.2.1')).statusCode).toBe(204);
         const at = (i: number) => `203.0.${Math.floor(i / perAddress)}.1`;
         const codes: number[] = [];
-        for (let i = 0; i <= max; i++) {
-          // A droplet id of its own each time: no count's hourly limit is reached first.
-          const res = await own.inject({
-            method: 'POST', url: `/api/droplets/d${i}/plays`, payload: { video: 'song', event: 'started' },
-            headers: { 'x-proxy-token': SECRET, 'x-popsmosis-client-ip': at(i) },
-          });
-          codes.push(res.statusCode);
-        }
-        expect(codes.slice(0, max).every((c) => c === 204)).toBe(true);
-        expect(codes[max]).toBe(429);
+        // A droplet id of its own each time: no count's hourly limit is reached first.
+        for (let i = 1; i <= max; i++) codes.push((await post(`d${i}`, 'started', at(i))).statusCode);
+        expect(codes.slice(0, max - 1).every((c) => c === 204)).toBe(true);
+        expect(codes[max - 1]).toBe(429);
+        // The play counted before the surge still counts its steps.
+        expect((await post(id, 'reached25', '192.0.2.1')).statusCode).toBe(204);
+        expect(await counts(id, 'SONG')).toMatchObject({ started: 1, reached25: 1 });
       } finally {
         await own.close();
+      }
+    });
+  });
+
+  describe('across the seams', () => {
+    it('answers 204, not a 500, when the droplet is deleted while its count is made', async () => {
+      const id = await droplet();
+      const { Client } = await import('pg');
+      const other = new Client({ connectionString: process.env.DATABASE_URL });
+      await other.connect();
+      try {
+        // Deleted in a transaction not yet committed: the count's insert sees the droplet, then waits on its row.
+        await other.query('BEGIN');
+        await other.query('DELETE FROM answers WHERE id = $1', [id]);
+        const counting = send(id, { video: 'song', event: 'started' }, fresh());
+        await new Promise((r) => setTimeout(r, 300));
+        await other.query('COMMIT');
+        expect((await counting).statusCode).toBe(204);
+        expect(await prisma.dropletPlays.count()).toBe(0);
+      } finally {
+        await other.end();
       }
     });
   });

@@ -27,6 +27,11 @@ const VIDEO = {
   hook: { value: 'HOOK', url: 'hookVideoUrl' },
 } as const;
 
+/** 25%, 50%, 75% or finished: a step that only follows a start. */
+export function isLaterStep(event: PlayEvent): boolean {
+  return (PLAY_STEPS as readonly string[]).indexOf(event) > 0;
+}
+
 /** The event in a request body, or why it is not one. */
 export function playEventOf(body: unknown): { video: PlayVideo; event: PlayEvent } | string {
   const { video, event } = (typeof body === 'object' && body !== null ? body : {}) as Record<string, unknown>;

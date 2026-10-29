@@ -570,22 +570,32 @@ feed and the hook tile's Share and Download:
   and a count that fails is dropped.
 - **Hard to inflate.** In the table each step stays at or below the one before it, so a step
   sent without its play moves nothing. One address (an IPv6 /64 counts as one) adds at most 40
-  an hour to any one count of a droplet video, about a class sharing a school's address, and
-  sends at most 120 a minute; all addresses together, 1,500 a minute per API instance, apart
-  from the tab's own reads. A play whose start goes over a limit is not counted at all (the web
-  app sends nothing more of it), so a crowd bigger than that is counted short, never skewed.
-  The limits hold the address only as a keyed hash under a secret drawn afresh each window,
-  and only in memory. One address can still add 40 plays an hour to one video: rank on
-  droplets with enough plays (`?min=`, the page's "At least").
+  an hour to any one count of a droplet video, about a class sharing a school's address.
+- **Limited without skewing.** The limits gate starts first: one address starts at most 120
+  plays a minute, and all addresses together 1,500 a minute per API instance. A play whose
+  start is refused is not counted at all (the web app sends nothing more of it), so a crowd
+  past a limit is counted short, not skewed. The steps after a counted start have budgets of
+  their own, four times the starts' (480 a minute per address, 6,000 per instance), so a burst
+  of new starts never cuts off a counted play halfway. A request that is no count is held to
+  the starts' budget, and none of this touches the address's limit for the rest of the API. The
+  limits hold the address only as a keyed hash under a secret drawn afresh each window, and
+  only in memory. One address can still add 40 plays an hour to one video: rank on droplets
+  with enough plays (`?min=`, the page's "At least").
+- **Across a deploy.** A web app that meets an API with no counts (a 404) stops sending them
+  until the page is loaded again; a 429 or a failure stops only that play.
 
-The ranking `/admin/plays` shows, as SQL (here for the song; `'LESSON'` or `'HOOK'` for the others):
+The ranking `/admin/plays` shows, as SQL (here for the song; `'LESSON'` or `'HOOK'` for the others).
+The page is picked from the counts alone and the droplets joined after, so only the bundles
+shown are read (27 ms for 30,000 droplets, where joining first took 280 ms):
 
 ```sql
 SELECT a.id, a.bundle->>'course' AS course, a.bundle->>'topic' AS topic, a."hiddenAt" IS NOT NULL AS hidden,
        p.started, p."reached25", p."reached50", p."reached75", p.finished, p.shared, p.downloaded,
        round(p.finished::numeric / p.started, 3) AS finish_rate
-FROM droplet_plays p JOIN answers a ON a.id = p."answerId"
-WHERE p.video = 'SONG' AND p.started >= 10
+FROM (
+  SELECT * FROM droplet_plays WHERE video = 'SONG' AND started >= 10
+  ORDER BY finished::float8 / started DESC, started DESC, "answerId" LIMIT 200
+) p JOIN answers a ON a.id = p."answerId"
 ORDER BY p.finished::float8 / p.started DESC, p.started DESC, a.id;
 ```
 
