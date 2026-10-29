@@ -62,6 +62,7 @@ FLOW_MIN_LEG_S = 0.8  # a short hop still takes this long, so it reads as a move
 FLOW_IN_S = 0.4
 STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
 ROUTE_BEHIND = 0.7  # how much of a route's arrow fades where it crosses a part it goes through
+ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
 BADGE_APART = 70.0  # frame pixels: one marker per spot, where several routes start together
 ROUTE_GAP = 10.0  # frame pixels a route's arrow stops short of where it ends in a space
 ROUTE_EDGE_GAP = 4.0  # and of the edge of a part it reaches
@@ -504,6 +505,7 @@ class Renderer:
         self.surface = skia.Surface(self.pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         self._background: tuple[tuple, skia.Image] | None = None
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
+        self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
@@ -653,7 +655,8 @@ class Renderer:
             self._background = (key, self.surface.makeImageSnapshot())
 
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
-                spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float) -> list[Rect]:
+                spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float,
+                avoid: list[Point] = ()) -> list[Rect]:
         """Draws the labels; returns where each pill landed, for what is drawn after them to keep clear."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
@@ -671,7 +674,7 @@ class Renderer:
                 labels.append(p.Label(name=name, color=self.timeline.palette[name], anchor=(ax, ay), box=box, alpha=alpha,
                                       big=big, emphasis=spots.get(name, 0.0)))
         centre = (art.centre[0] * scale + dx, art.centre[1] * scale + dy)
-        p.place_labels(labels, bounds, centre, self.layout.label_font)
+        p.place_labels(labels, bounds, centre, self.layout.label_font, avoid)
         for lb in sorted(labels, key=lambda lb: lb.emphasis):  # the spotlit one on top
             p.draw_label(canvas, lb, self.layout.label_font)
         rects = []
@@ -725,9 +728,10 @@ class Renderer:
         tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
         bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
-        pills = self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
+        arrows = self._arrow_points(beat.scene, cam, view)
+        pills = self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows)
         if beat.conversions:
-            self._conversions(canvas, beat, cam, view, bounds, t, pills)
+            self._conversions(canvas, beat, cam, view, bounds, t, pills, arrows)
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
                            caption_alpha)
@@ -744,7 +748,7 @@ class Renderer:
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
 
     def _conversions(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, bounds: Rect, t: float,
-                     pills: list[Rect]) -> None:
+                     pills: list[Rect], arrows: list[Point] = ()) -> None:
         """What each structure the beat is about turns into what, written under it, or over it when that is
         taken: clear of the label pills and of each other where there is room."""
         located = self.locations.scene(beat.scene)
@@ -762,16 +766,18 @@ class Renderer:
             gap = self.layout.label_font * 0.6
             options = [below + gap + h / 2, above - gap - h / 2, below + gap + 1.5 * h + 8, above - gap - 1.5 * h - 8]
             best = None
-            for y in options:
-                cx = min(max(x, bounds[0] + w / 2), bounds[2] - w / 2)
+            # Under or over the structure first, then the same rows shifted to either side.
+            for x_try, y in [(xo, yo) for xo in (x, x - 0.6 * w, x + 0.6 * w) for yo in options]:
+                cx = min(max(x_try, bounds[0] + w / 2), bounds[2] - w / 2)
                 cy = min(max(y, bounds[1] + h / 2), bounds[3] - h / 2)
                 rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-                hit = sum(1 for r in taken if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
-                          and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
-                if best is None or hit < best[0]:
-                    best = (hit, cx, cy, rect)
-                if not hit:
-                    break
+                # Covering a label or another pill hides words, so it weighs far more than crossing an arrow.
+                hit = 50 * sum(1 for r in taken if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
+                               and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
+                hit += sum(1 for ax, ay in arrows if rect[0] - 8 < ax < rect[2] + 8 and rect[1] - 8 < ay < rect[3] + 8)
+                score = hit + 0.01 * math.dist((cx, cy), (x, below))  # nearest of the equally clear spots
+                if best is None or score < best[0]:
+                    best = (score, cx, cy, rect)
             _, cx, cy, rect = best
             taken.append(rect)
             p.draw_conversion(canvas, (cx, cy), conv.text, self.timeline.palette[conv.structure],
@@ -888,7 +894,7 @@ class Renderer:
                 at = ((px + CROWD_DRIFT * math.sin(speed * t + phase)) * scale + dx,
                       (py + CROWD_DRIFT * math.cos(0.8 * speed * t + 2 * phase)) * scale + dy)
                 if k % CROWD_MARKED == 0 and crowd.label:
-                    p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade, size=0.62)
+                    p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade)
                 else:
                     p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
 
@@ -923,6 +929,45 @@ class Renderer:
         # has no dot, and moving it would pull it back toward the edge it was put past.
         return [a if space else q for a, q, space in zip(anchors, stop_points(anchors), spaces)]
 
+    def _legs(self, scene_id: str, path: list[str]) -> list[tuple[Point, Point, bool, int, int]]:
+        """A route's arrows, in art pixels: (start, end, ends in a space, its first stop, its last stop). A leg leaves
+        the edge of the part it starts from and ends at the edge of the part it reaches; a flow through a part from
+        one space to the other is one leg."""
+        located = self.locations.scene(scene_id)
+        points = self._path_points(scene_id, path)
+        stops = [loc for name in path if (loc := located.get(name)) is not None]
+        space = [self._is_space(scene_id, loc) for loc in stops]
+        legs, i = [], 0
+        while i < len(points) - 1:
+            if i + 2 < len(points) and space[i] and not space[i + 1] and space[i + 2]:
+                legs.append((points[i], points[i + 2], True, i, i + 2))
+                i += 2
+                continue
+            a, b = points[i], points[i + 1]
+            legs.append((a if space[i] else _leave(a, b, stops[i].box),
+                         b if space[i + 1] else _leave(b, a, stops[i + 1].box), space[i + 1], i, i + 1))
+            i += 1
+        return legs
+
+    def _arrow_points(self, scene_id: str, cam: Cam, view: Rect) -> list[Point]:
+        """Points along every arrow the scene draws at any time in the video, in frame pixels: what labels and
+        reaction pills keep clear of. Every arrow, not only those on screen, so a label is placed once for the
+        scene and does not jump as each arrow appears."""
+        if scene_id not in self._scene_routes:
+            paths = []
+            for beat in self.timeline.beats:
+                for route in beat.routes if beat.scene == scene_id else []:
+                    if route.path not in paths:
+                        paths.append(route.path)
+            samples = []
+            for path in paths:
+                for start, end, *_ in self._legs(scene_id, path):
+                    n = max(int(math.dist(start, end) / ARROW_SAMPLE), 1)
+                    samples += [(p.lerp(start[0], end[0], k / n), p.lerp(start[1], end[1], k / n)) for k in range(n + 1)]
+            self._scene_routes[scene_id] = samples
+        scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
+        return [(x * scale + dx, y * scale + dy) for x, y in self._scene_routes[scene_id]]
+
     def _routes(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float) -> None:
         """Each path the scene's particles have travelled, as arrows from structure to structure: each leg leaves
         the edge of the part it starts from and ends with its tip at the edge of the part it reaches (a space has
@@ -944,16 +989,7 @@ class Renderer:
             if t < set_off:
                 continue
             alpha = 1.0
-            legs, i = [], 0
-            while i < len(points) - 1:
-                if i + 2 < len(points) and space[i] and not space[i + 1] and space[i + 2]:
-                    legs.append((points[i], points[i + 2], True, i, i + 2))  # through a part, space to space
-                    i += 2
-                    continue
-                a, b = points[i], points[i + 1]
-                legs.append((a if space[i] else _leave(a, b, stops[i].box),
-                             b if space[i + 1] else _leave(b, a, stops[i + 1].box), space[i + 1], i, i + 1))
-                i += 1
+            legs = self._legs(beat.scene, route.path)
             grown = []
             for start, end, into_space, first, last in legs:
                 if done or at >= last:
@@ -986,8 +1022,7 @@ class Renderer:
                 if all(math.dist(at_frame, other) > BADGE_APART for other in badges):
                     badges.append(at_frame)
                     p.draw_marker(canvas, at_frame, route.color, route.label,
-                                  p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view),
-                                  size=0.7)
+                                  p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view))
         canvas.restore()
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:

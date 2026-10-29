@@ -161,6 +161,46 @@ class Label:
         return text_width(f, self.name) + 2 * LABEL_PAD_X * scale, LABEL_H * scale
 
 
+AVOID_MARGIN = 10.0  # frame pixels a pill keeps from the points it avoids (along an arrow)
+
+
+def _clear_home(lb: Label, size: tuple[float, float], home: tuple[float, float], avoid,
+                bounds: Rect, others: list[Rect] = ()) -> tuple[float, float]:
+    """Where a pill starts, clear of what it avoids: its usual place when that is clear, else the nearest of the
+    spots hugging its structure (above, below, each side and each corner; a space's around its label point)
+    that crosses the fewest points to avoid and stays on the frame."""
+    w, h = size
+    bx0, by0, bx1, by1 = lb.box
+    cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+    if lb.big:
+        ax, ay = lb.anchor
+        spots = [(ax + kx * w, ay + ky * h * 1.5) for kx in (0, -1, 1) for ky in (0, -1, 1)]
+    else:
+        up, down = by0 - TOUCH - h / 2, by1 + TOUCH + h / 2
+        left, right = bx0 - TOUCH - w / 2, bx1 + TOUCH + w / 2
+        # The corners put the pill wholly to one side of the structure's middle, clear of a flow straight through it.
+        west, east = cx - w / 2 - 2 * TOUCH, cx + w / 2 + 2 * TOUCH
+        spots = [(cx, up), (cx, down), (left, cy), (right, cy), (west, up), (east, up), (west, down), (east, down)]
+
+    def crossed(spot) -> int:
+        x, y = spot
+        return sum(1 for px, py in avoid if abs(px - x) < w / 2 + AVOID_MARGIN and abs(py - y) < h / 2 + AVOID_MARGIN)
+
+    def off_frame(spot) -> bool:
+        x, y = spot
+        return x - w / 2 < bounds[0] or x + w / 2 > bounds[2] or y - h / 2 < bounds[1] or y + h / 2 > bounds[3]
+
+    def on_another(spot) -> int:  # sitting on another structure would read as its label
+        x, y = spot
+        return sum(1 for ox0, oy0, ox1, oy1 in others
+                   if x - w / 2 < ox1 and ox0 < x + w / 2 and y - h / 2 < oy1 and oy0 < y + h / 2)
+
+    if not crossed(home):
+        return home
+    return min([home] + spots, key=lambda spot: (crossed(spot) + 3 * on_another(spot), off_frame(spot),
+                                                  math.dist(spot, home)))
+
+
 def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float], font_size: float,
                  avoid: list[tuple[float, float]] = ()) -> None:
     """Put each pill near its dot, away from the diagram's centre, inside `bounds` and off the others.
@@ -188,8 +228,11 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
             continue
         reach = out + TOUCH + min(abs(w / 2 / dx) if abs(dx) > 1e-6 else 1e9, abs(h / 2 / dy) if abs(dy) > 1e-6 else 1e9)
         homes.append((lb.anchor[0] + dx * reach, lb.anchor[1] + dy * reach))
-    pos = [list(h) for h in homes]
     x0, y0, x1, y1 = bounds
+    if avoid:
+        homes = [_clear_home(lb, size, home, avoid, bounds, [o.box for o in labels if o is not lb and not o.big])
+                 for lb, size, home in zip(labels, sizes, homes)]
+    pos = [list(h) for h in homes]
 
     def clamp(i: int) -> None:
         w, h = sizes[i]
@@ -276,8 +319,8 @@ STREAM_R = 5.5  # the dots streaming along the path
 HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any colour
 
 
-MARKER_R = 22.0  # a marked lead particle: room for "H⁺" inside it, in frame pixels
-MARKER_FONT = 24.0
+MARKER_R = 18.0  # a marked particle: room for "H⁺" inside it, in frame pixels; one size wherever it is drawn
+MARKER_FONT = 20.0
 MARKER_PAD = 8.0  # a longer marker ("glucose") is a pill this far wider than its word, each side
 
 
