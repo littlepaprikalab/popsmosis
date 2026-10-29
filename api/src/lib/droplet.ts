@@ -166,9 +166,9 @@ export const EXCERPT_SOURCE_LENGTH = EXCERPT_LENGTH * 8;
 // line at a time: linear. (The single regex this replaces, with three quantifiers that could each take a dash, took 3 s
 // on one 1,600-dash line ending in a letter, and the list makes up to 24 excerpts a page.)
 const RULE_LINE = /^[ \t|:\r-]*$/;
-// Links and images, their text and target each bounded, so a run of brackets with no end costs at most a few hundred
-// steps from each, never the whole rest of the text.
-const LINK = /!?\[([^\]]{0,300})\]\([^)]{0,500}\)/g;
+// Links and images. Their text is bounded, so a run of brackets with no end costs at most a few hundred steps from each;
+// the target runs to its ")" however long, scanned once from each "](" in the 1,600 characters read.
+const LINK = /!?\[([^\]]{0,300})\]\([^)]*\)/g;
 
 /** The lesson's first lines as plain text, for a card on the list. Linear in the length it reads. */
 export function excerptOf(markdown: string, max = EXCERPT_LENGTH): string {

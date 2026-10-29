@@ -111,10 +111,11 @@ describe('the public droplet', () => {
     expect(excerptOf('# Title\n\n| a | b |\n|:---|---:|\n| 1 | 2 |\n\n---\r\nSee [the docs](https://x.example/a) and ![a cell](c.png).'))
       .toBe('Title a b 1 2 See the docs and a cell.');
     expect(excerptOf('Not a rule: a---b and -- two')).toBe('Not a rule: a---b and -- two');
+    expect(excerptOf(`Read [the guide](https://example.org/${'a'.repeat(520)}) first.`)).toBe('Read the guide first.');
     // Each of these took about 3 s with the old rule regex (a dash line that ends in something else), or grew with
     // the square of the length for brackets that never close.
     for (const slow of ['-'.repeat(1599) + 'a', '-'.repeat(1598) + ' x', '| ' + '- '.repeat(799) + '#', '['.repeat(1600),
-      '!['.repeat(800), '[a](' + '('.repeat(1596)]) {
+      '!['.repeat(800), '[a](' + '('.repeat(1596), '[a]('.repeat(400)]) {
       const started = performance.now();
       excerptOf(slow);
       expect(performance.now() - started, slow.slice(0, 6)).toBeLessThan(50);
