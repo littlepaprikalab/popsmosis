@@ -1,5 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { awaitingVideos, lessonHoldMinutes, lessonProgress, progressError, readProgress, storedProgress, videoProgress } from './progress.js';
+import {
+  awaitingVideos, lessonHoldMinutes, lessonProgress, progressError, readProgress, secondsSoFar, storedProgress, videoProgress,
+} from './progress.js';
 
 const NOW = new Date('2026-11-03T12:00:00Z');
 const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000);
@@ -28,12 +30,13 @@ describe('progressError', () => {
 });
 
 describe('storedProgress and readProgress', () => {
-  it('keeps when each running step started, by this clock, and reads back only what it knows', () => {
+  it('keeps when each running step started and when the report came, by this clock, and reads back only what it knows', () => {
     const stored = storedProgress({ running: [{ step: 'art', seconds: 90 }, { step: 'audio', seconds: 0 }], failed: ['locate'], videos: true }, NOW);
     expect(stored).toEqual({
       running: [{ step: 'art', startedAt: '2026-11-03T11:58:30.000Z' }, { step: 'audio', startedAt: NOW.toISOString() }],
       failed: ['locate'],
       videos: true,
+      reportedAt: NOW.toISOString(),
     });
     // Read back with how long each has run by the same clock, which a browser counts on from.
     expect(readProgress({ ...stored, breakdown: BILL, extra: 1 }, NOW)).toEqual({
@@ -41,10 +44,29 @@ describe('storedProgress and readProgress', () => {
       running: [{ step: 'art', startedAt: '2026-11-03T11:58:30.000Z', seconds: 90 }, { step: 'audio', startedAt: NOW.toISOString(), seconds: 0 }],
       breakdown: BILL,
     });
-    expect(readProgress(null)).toEqual({ running: [], failed: [], videos: null, breakdown: undefined });
+    expect(readProgress(null)).toEqual({ running: [], failed: [], videos: null, reportedAt: null, breakdown: undefined });
     expect(readProgress({ running: [{ step: 'art', startedAt: 'never' }, 'x'], failed: [1, 'art'] }).running).toEqual([]);
+    expect(readProgress({ running: [], reportedAt: 'never' }).reportedAt).toBeNull();
     // A start a little ahead of this clock (another API instance) never counts below zero.
     expect(readProgress({ running: [{ step: 'art', startedAt: '2026-11-03T12:00:02.000Z' }] }, NOW).running[0].seconds).toBe(0);
+  });
+});
+
+describe('secondsSoFar', () => {
+  const bill = { seconds: 196 } as Parameters<typeof secondsSoFar>[0];
+  const reported = minutesAgo(0.5).toISOString();
+
+  it('counts the time since the last report on top of the bill while a step runs', () => {
+    expect(secondsSoFar(bill, true, reported, NOW)).toBe(226);
+    expect(secondsSoFar(null, true, reported, NOW)).toBe(30); // the first step, before any bill
+    // A report a little ahead of this clock (another API instance) never takes the bill's time down.
+    expect(secondsSoFar(bill, true, minutesAgo(-0.1).toISOString(), NOW)).toBe(196);
+  });
+
+  it('is the bill\'s time while nothing runs, and not known on a report stored before reports were timed', () => {
+    expect(secondsSoFar(bill, false, reported, NOW)).toBe(196);
+    expect(secondsSoFar(null, false, reported, NOW)).toBeNull();
+    expect(secondsSoFar(bill, true, null, NOW)).toBeNull();
   });
 });
 
@@ -96,15 +118,18 @@ describe('awaitingVideos', () => {
 });
 
 describe('the page\'s view', () => {
-  const report = { running: [{ step: 'bundle', startedAt: NOW.toISOString() }], failed: [], videos: false, breakdown: BILL };
+  const report = { running: [{ step: 'bundle', startedAt: NOW.toISOString() }], failed: [], videos: false, reportedAt: NOW.toISOString(), breakdown: BILL };
 
-  it('shows a lesson being written with its bill, and nothing running once its lease has lapsed', () => {
+  it('shows a lesson being written with its bill and its time so far, and nothing running once its lease has lapsed', () => {
     const live = lessonProgress(report, true, minutesAgo(-0.5));
     expect(live.running).toEqual([{ ...report.running[0], seconds: 30 }]);
     expect(live.videos).toBe(false);
+    expect(live.seconds).toBe(226); // the bill's 196 seconds, and the 30 since the report
     expect(live.breakdown?.steps.map((s) => [s.step, s.part])).toEqual([['bundle', 'lesson']]);
-    expect(lessonProgress(report, false).running).toEqual([]);
-    expect(lessonProgress(null, true)).toEqual({ running: [], failed: [], videos: true, breakdown: null });
+    const lapsed = lessonProgress(report, false, minutesAgo(-0.5));
+    expect(lapsed.running).toEqual([]);
+    expect(lapsed.seconds).toBe(196); // nothing runs: the time stops at the bill's
+    expect(lessonProgress(null, true)).toEqual({ running: [], failed: [], videos: true, seconds: null, breakdown: null });
   });
 
   it('shows the videos being made with the whole bill so far, and nothing running once they stop rendering', () => {
@@ -114,6 +139,12 @@ describe('the page\'s view', () => {
     expect(p.failed).toEqual(['audio']);
     expect(p.breakdown?.steps.map((s) => s.step)).toEqual(['bundle', 'audio']);
     expect(videoProgress({ running: [{ step: 'art', startedAt: NOW.toISOString() }], failed: ['audio'] }, false, BILL, null))
-      .toMatchObject({ running: [], failed: [], videos: true });
+      .toMatchObject({ running: [], failed: [], videos: true, seconds: 196 });
+  });
+
+  it('counts the videos\' time so far on from their last report, on top of the lesson\'s whole bill', () => {
+    const videos = { steps: [{ step: 'art', seconds: 76, tries: 1, models: [] }], seconds: 76 };
+    const raw = { running: [{ step: 'audio', startedAt: minutesAgo(1).toISOString() }], failed: [], reportedAt: minutesAgo(0.25).toISOString() };
+    expect(videoProgress(raw, true, BILL, videos, NOW).seconds).toBe(287); // 196 + 76 + 15
   });
 });

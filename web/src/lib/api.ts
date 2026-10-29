@@ -252,20 +252,29 @@ export interface Progress {
   running: RunningStep[];
   failed: string[]; // steps whose last try failed and that are not running again yet
   videos: boolean; // whether the videos' steps are part of this droplet
+  // How long the droplet has been made so far when the API answered, counting on while a step runs; null: not
+  // known. Absent from an API older than this page.
+  seconds?: number | null;
+  since?: number; // while a step runs: where that time counts on from, by this browser's clock, worked out from `seconds`
   breakdown: Breakdown | null; // the bill so far: the lesson's steps, then the videos'
 }
 
 /**
- * Each running step's start by this browser's clock, from how long the API says it has run: a computer whose clock
- * is minutes off the API's would otherwise show every running step minutes off too.
+ * Each running step's start by this browser's clock, from how long the API says it has run, and the same for the
+ * droplet's time so far: a computer whose clock is minutes off the API's would otherwise show them minutes off too.
  */
 function localClock(q: Question): Question {
-  const running = q.progress?.running;
-  if (!q.progress || !running?.length) return q;
+  const p = q.progress;
+  const running = p?.running;
+  if (!p || !running?.length) return q;
   const now = Date.now();
   return {
     ...q,
-    progress: { ...q.progress, running: running.map((r) => ({ ...r, since: now - (r.seconds ?? Math.max(0, (now - Date.parse(r.startedAt)) / 1000)) * 1000 })) },
+    progress: {
+      ...p,
+      running: running.map((r) => ({ ...r, since: now - (r.seconds ?? Math.max(0, (now - Date.parse(r.startedAt)) / 1000)) * 1000 })),
+      ...(typeof p.seconds === 'number' && { since: now - p.seconds * 1000 }),
+    },
   };
 }
 

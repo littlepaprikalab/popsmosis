@@ -182,12 +182,18 @@ test.describe('videos on /learn', () => {
     expect((await bot.claim(questionId)).status()).toBe(200);
     const lessonBill = studioBill([['request', 0.4, 0], ['bundle', 196, 0.53]]);
     expect((await bot.progress(questionId, { running: [{ step: 'factcheck', seconds: 20 }], breakdown: lessonBill, videos: true })).status()).toBe(204);
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 2 of 10 steps done · $0.53 so far', { timeout: 25_000 });
+    // With the time so far: the bill's 196.4 seconds, and the time since the report.
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText(/^Making it · 2 of 10 steps done · [34]\.\d min · \$0\.53 so far$/, { timeout: 25_000 });
     await expect(step('Read the request')).toHaveAttribute('data-status', 'done');
     await expect(step('Write the lesson')).toHaveAttribute('data-status', 'done');
     await expect(step('Write the lesson')).toContainText('$0.53');
     await expect(step('Fact-check')).toHaveAttribute('data-status', 'running');
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'waiting');
+    // The time so far counts up while the fact-check runs, and the bill's last line has it too.
+    const elapsed = bill.getByTestId('breakdown-elapsed');
+    const before = (await elapsed.textContent())!;
+    await expect(elapsed).not.toHaveText(before, { timeout: 10_000 }); // a tenth of a minute is 6 seconds
+    await expect(bill.locator('tfoot')).toContainText(/So far\s*[34]\.\d min/);
 
     // The lesson is posted and the videos started: the card still shows the bill, never the text, and is not READY.
     const lesson = 'The light reactions **pump protons** across the thylakoid membrane.';
@@ -206,7 +212,8 @@ test.describe('videos on /learn', () => {
     await expect(step('Fact-check')).toHaveAttribute('data-status', 'done');
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'running');
     await expect(step('Song and voice')).toHaveAttribute('data-status', 'running');
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 3 of 10 steps done · $0.71 so far');
+    // The lesson's whole 276.4 seconds, and the time since the videos' report.
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText(/^Making it · 3 of 10 steps done · [45]\.\d min · \$0\.71 so far$/);
     await expect(card.locator('.md', { hasText: 'pump protons' })).toHaveCount(0);
     await expect(card.getByText('BREWING', { exact: true })).toBeVisible();
     await expect(card.getByPlaceholder(/Ask a follow-up/)).toHaveCount(0);
