@@ -72,12 +72,11 @@ TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before
 # stay apart instead of smearing into a streak while the lead slows
 STOP_OFFSET = 34.0  # art pixels: the lead particle holds beside a label's dot, not under it
 # A space filling up (Beat.crowds): its dots, at most CROWD_MAX of them, CROWD_SPACING art pixels apart
-# or more, each drifting CROWD_DRIFT pixels about its place; one in CROWD_MARKED written with what it is,
-# and the space tinted their colour, CROWD_TINT strong when it is full.
-CROWD_MAX = 36
-CROWD_SPACING = 46.0
+# or more, each drifting CROWD_DRIFT pixels about its place, each written with what it is (an unmarked dot
+# left the learner asking what it was), and the space tinted their colour, CROWD_TINT strong when it is full.
+CROWD_MAX = 24
+CROWD_SPACING = 60.0
 CROWD_DRIFT = 5.0
-CROWD_MARKED = 3
 CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 # A part that turns (Beat.turning). One that looks the same turned a quarter and a half turn (its outline
 # overlaps itself so turned by SPIN_SAME or more, and its box is at most SPIN_ROUND times wider than tall, or
@@ -893,7 +892,7 @@ class Renderer:
                 speed = 0.5 + 0.08 * (k % 5)
                 at = ((px + CROWD_DRIFT * math.sin(speed * t + phase)) * scale + dx,
                       (py + CROWD_DRIFT * math.cos(0.8 * speed * t + 2 * phase)) * scale + dy)
-                if k % CROWD_MARKED == 0 and crowd.label:
+                if crowd.label:
                     p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade)
                 else:
                     p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
