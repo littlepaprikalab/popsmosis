@@ -3,8 +3,9 @@ text lesson and two videos made from the same plan, a narrated lesson video that
 explains and a song video that makes it stick. You write the whole plan in one answer, as JSON that fits the schema. Code turns it into diagrams, audio and video, and
 nobody edits it by hand, so every field has to be ready to use as written.
 
-Write the fields in the schema's order. Each part builds on the parts before it: the
-facts come first because everything after them must be true to them.
+Write the fields in the schema's order. Each part builds on the parts before it: the essence
+first (`core_idea`, `why_chain`, `key_terms`), then the facts, which must state everything
+the essence says, then everything else, which must be true to the facts.
 
 ## The audience
 
@@ -48,10 +49,11 @@ the whole droplet. So:
   trick in another topic of the course), and the stakes when it goes wrong: a way it can fail, with what
   follows from it step by step, for the song's bridge ("cyanide blocks the chain's last
   carrier, so the cell stops making most of its ATP"). Facts that hold only definitions make dry lines.
-- When an analogy makes the idea concrete, put it in the fact it explains, saying what it
-  matches ("ATP synthase works like a water wheel: protons flowing through it turn its
-  rotor"). Choose one main analogy for the droplet, so the lesson, the song and the
-  narration build the same picture.
+- Choose one everyday picture for the droplet, and put it in the fact it explains, saying
+  what it matches. Choose it by what the process is *for*: find the everyday thing that does
+  the same job (a trade, a delivery, a relay, a recipe, a filter, a game's points), not one
+  that only looks like its parts, and never a stock one that fits any topic. The lesson, the
+  song, the narration and an analogy scene all use this one picture.
 - Be precise, in the words the audience's course or exam uses (for a young audience,
   plain words that are still exact). State quantities, exceptions and limits exactly
   ("only cytochrome b6f pumps protons", not "the chain pumps protons").
@@ -75,7 +77,8 @@ Then:
   what happens and why ("The next gates open because the sodium rushing in changes the
   charge beside them"). In order, each following from the one before. The lesson and
   the narration are built on these links rather than on a list of parts: a learner who
-  knows why each step happens can work the steps out again. Every link is in the facts.
+  knows why each step happens can work the steps out again. The facts you write next
+  state every link.
 - `key_terms`: the terms the learner must come away knowing, at most 8, the ones the
   course or exam uses ("photosystem II", "ATP synthase", "proton gradient"). Every other
   technical name (a carrier, an intermediate) is said at most once, in passing, or left
@@ -273,7 +276,7 @@ explanation to the narration, and every word of it is easy to hear.
 - Pick the 3 to 5 things the learner most needs to remember: the order of the steps,
   what goes in and what comes out, the one cause behind it all, the misconception's
   correction. Every line serves one of them; everything else is the lesson's job.
-- Sing only the terms the learner must know. Sing a run of small parts as one plain thing
+- Sing only `key_terms`, the terms the learner must know. Sing a run of small parts as one plain thing
   ("three tiny bones pass the sound along") rather than naming each. A term is easiest to catch
   in the middle of a line, with plain words around it.
 
@@ -291,7 +294,7 @@ explanation to the narration, and every word of it is easy to hear.
     all sound alike: build `positive_styles` from it, keeping its genre, voices and tempo. With
     none, choose a vocals-first pop style a teenager plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A
     faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
-  - For high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
+  - Only when there is neither, for high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
     pop-punk and their neighbours. These styles work well, slowest first; write in their
     spirit rather than copying one:
     - laid-back R&B with smooth rapped verses, warm electric piano, deep round bass,
@@ -357,14 +360,9 @@ explanation to the narration, and every word of it is easy to hear.
 - **Lines that are sung, never directions.** Every line is something a singer says to the listener. Never
   narrate the picture or the camera ("zoom inside to the chloroplast", "now look at the membrane"), never
   announce a section ("here comes the bridge"). A line is at most 12 words.
-- **One metaphor, all the way through.** Carry the droplet's analogy from the intro to
-  the outro, so every section adds to the same picture (a relay race, a factory line, a
-  city's mail). Take the picture from this topic's own point, not from a stock one: ask what the process is
-  *for* and what comes out of it, and find the everyday thing that does the same job (a trade, a
-  delivery, a relay, a recipe, a bank, a game's points). The examples below are for other topics;
-  never reuse one for a topic it does not fit, and never default to money or a dam. Light reactions
-  as an exchange that turns sunlight into something the cell can spend; the nephron as a coffee
-  filter that keeps the grounds; a vaccine as a "wanted" poster for the immune system's guards.
+- **One metaphor, all the way through.** Carry the droplet's one everyday picture (chosen in
+  the facts) from the intro to the outro, so every section adds to it: the nephron as a coffee
+  filter that keeps the grounds, a vaccine as a "wanted" poster for the immune system's guards.
   Every image points at the idea, and what it says about the real thing is in the facts.
 - **One surprise, required.** Give the song one surprising true detail from the facts that sticks,
   sung as its own line or couplet in a verse, or as the pre-chorus's hook ("photosystem two goes
@@ -457,7 +455,8 @@ order, keyed by `line_id`:
   it names, usually the overview. Stay on a scene for several lines and cut when the
   content moves on. Both videos open on the hook.
 - `camera`: `target` is the structure to frame ("" for the whole scene); `zoom` is 1.0
-  for the whole scene, up to about 2.5 for a close-up. Move slowly and hold each station.
+  for the whole scene and about 1.6 to 2.0 for a close-up (how to move it: "Plan the motion
+  like an animator", below).
 - `spotlight`: the structure the line is about, which stays bright while the others fade
   back, or "".
 - A `spotlight` or camera `target` is a structure the line names, or one already named

@@ -4,7 +4,7 @@ scientifically accurate.
 
 The video is built on your drawing: the renderer reveals each structure when it is first
 named, washes the others pale to spotlight one, zooms the camera onto it, and draws a
-label with a leader line that ends inside it. Code finds every structure through the
+label beside it. Code finds every structure through the
 group you put it in, so the grouping matters as much as the picture.
 
 ## What you get

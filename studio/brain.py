@@ -456,7 +456,10 @@ def claude_request(
         "output_config": output_config,
     }
     if system:
-        request["system"] = system
+        # The instructions are the same on every call of a kind (every fact-check round, every picture check), and
+        # come first, so they are cached: a call within the cache's few minutes reads them at a tenth of the price.
+        # One shorter than the model's least cacheable prefix is simply not cached.
+        request["system"] = [{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}]
     if role == "brain" and not model.startswith("claude-haiku"):
         request["fallbacks"] = "default"
         request["betas"] = [FALLBACK_BETA]
@@ -521,8 +524,7 @@ def claude_call(message, asked_model: str, role: str, label: str, seconds: float
             total = None
             continue
         price_in, price_out = PRICES[model]
-        # Cache writes bill at 1.25x input and reads at about 0.1x; the studio sets
-        # no cache breakpoints, so both are normally zero.
+        # Cache writes bill at 1.25x input and reads at about 0.1x (claude_request caches the instructions).
         billed_in = hop.input_tokens + 1.25 * cache_write + 0.1 * cache_read
         total += (billed_in * price_in + hop.output_tokens * price_out) / 1_000_000
     fell_back = any(getattr(hop, "type", None) == "fallback_message" for hop in usage.iterations or [])
