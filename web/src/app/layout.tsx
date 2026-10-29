@@ -6,6 +6,7 @@ import { Footer } from '@/components/Footer';
 import { TermsGate } from '@/components/TermsGate';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
+import { PlayCountScope } from '@/components/PlayCountScope';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </main>
             <Footer />
             <TermsGate />
+            <PlayCountScope />
           </ToastProvider>
         </AuthProvider>
       </body>

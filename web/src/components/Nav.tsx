@@ -47,6 +47,7 @@ export function Nav() {
             <Link href="/admin/agents" className="hover-text transition-colors" style={isActive('/admin/agents') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>AGENTS</Link>
             <Link href="/admin/users" className="hover-text transition-colors" style={isActive('/admin/users') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>USERS</Link>
             <Link href="/admin/studio" className="hover-text transition-colors" style={isActive('/admin/studio') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>STUDIO</Link>
+            <Link href="/admin/plays" className="hover-text transition-colors" style={isActive('/admin/plays') ? activeStyle : { color: 'var(--accent-purple)' }} onClick={onClick}>PLAYS</Link>
           </>
         )}
         <Link href="/account" className="hover-text transition-colors" title="Your account"

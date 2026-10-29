@@ -4,17 +4,19 @@ import type { DropletTags, DropletVideos, Video } from '@/lib/api';
 import { useState } from 'react';
 
 import { TagList } from '@/components/TagList';
+import { countClip, countPlays } from '@/lib/plays';
 
 /**
  * A droplet's two videos: the karaoke song and the narrated lesson, each with its
  * hashtags under it. H.264 with +faststart, so a plain <video> starts playing before
  * the file has downloaded; preload="none" keeps a page of them from fetching anything
- * until one is played.
+ * until one is played. How far each play gets is counted, with nothing about who
+ * watched (lib/plays.ts).
  */
-export function DropletPlayers({ video, tags, title }: { video: DropletVideos; tags?: DropletTags; title?: string }) {
+export function DropletPlayers({ dropletId, video, tags, title }: { dropletId: string; video: DropletVideos; tags?: DropletTags; title?: string }) {
   const players = [
-    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)', tags: tags?.song ?? [], tagsLabel: 'Song tags' },
-    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)', tags: tags?.lesson ?? [], tagsLabel: 'Lesson tags' },
+    { label: 'SONG', kind: 'song' as const, src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)', tags: tags?.song ?? [], tagsLabel: 'Song tags' },
+    { label: 'LESSON', kind: 'lesson' as const, src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)', tags: tags?.lesson ?? [], tagsLabel: 'Lesson tags' },
   ].filter((p): p is typeof p & { src: string } => !!p.src);
   if (players.length === 0) return null;
   return (
@@ -29,6 +31,7 @@ export function DropletPlayers({ video, tags, title }: { video: DropletVideos; t
             preload="none"
             poster={p.poster ?? undefined}
             src={p.src}
+            {...countPlays(dropletId, p.kind)}
             aria-label={`${p.label.toLowerCase()} video`}
             className="w-full rounded-md aspect-video"
             style={{ background: '#000', border: '1px solid var(--border)' }}
@@ -37,7 +40,7 @@ export function DropletPlayers({ video, tags, title }: { video: DropletVideos; t
         </figure>
       ))}
     </div>
-    {video.hookVideoUrl && <HookClip src={video.hookVideoUrl} poster={video.hookPosterUrl ?? null} title={title} />}
+    {video.hookVideoUrl && <HookClip dropletId={dropletId} src={video.hookVideoUrl} poster={video.hookPosterUrl ?? null} title={title} />}
     </>
   );
 }
@@ -45,15 +48,17 @@ export function DropletPlayers({ video, tags, title }: { video: DropletVideos; t
 /**
  * The hook cut: the song's pre-chorus and first chorus as a short upright clip, the part students post. A small
  * tile beside its two buttons, so it never competes with the full videos: Share hands the clip's link to the
- * phone's share sheet (or copies it where there is none), Download saves the file.
+ * phone's share sheet (or copies it where there is none), Download saves the file. A share is counted once it went
+ * through (a share sheet closed without sharing is not), a download when it is pressed.
  */
-export function HookClip({ src, poster, title }: { src: string; poster: string | null; title?: string }) {
+export function HookClip({ dropletId, src, poster, title }: { dropletId: string; src: string; poster: string | null; title?: string }) {
   const [copied, setCopied] = useState(false);
   async function share() {
     const data = { title: title ? `${title}: the hook` : 'The hook', url: src };
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share(data);
+        countClip(dropletId, 'shared');
       } catch {
         // the learner closed the share sheet
       }
@@ -61,6 +66,7 @@ export function HookClip({ src, poster, title }: { src: string; poster: string |
     }
     try {
       await navigator.clipboard.writeText(src);
+      countClip(dropletId, 'shared');
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -76,6 +82,7 @@ export function HookClip({ src, poster, title }: { src: string; poster: string |
         preload="none"
         poster={poster ?? undefined}
         src={src}
+        {...countPlays(dropletId, 'hook')}
         aria-label="hook clip"
         className="w-32 rounded-md"
         style={{ aspectRatio: '9 / 16', background: '#000', border: '1px solid var(--border)' }}
@@ -88,7 +95,7 @@ export function HookClip({ src, poster, title }: { src: string; poster: string |
             style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }} data-testid="hook-share">
             {copied ? 'Link copied' : 'Share clip'}
           </button>
-          <a href={src} download className="text-xs font-bold px-3 py-1.5 rounded-md"
+          <a href={src} download onClick={() => countClip(dropletId, 'downloaded')} className="text-xs font-bold px-3 py-1.5 rounded-md"
             style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }} data-testid="hook-download">
             Download
           </a>
@@ -99,10 +106,10 @@ export function HookClip({ src, poster, title }: { src: string; poster: string |
 }
 
 /** Under a lesson on /learn: the players once READY, else where the render stands. */
-export function LessonVideos({ video, tags }: { video: Video | null; tags?: DropletTags }) {
+export function LessonVideos({ answerId, video, tags }: { answerId: string; video: Video | null; tags?: DropletTags }) {
   if (!video) return null;
   if (video.status === 'READY') {
-    return <div className="mt-3"><DropletPlayers video={video} tags={tags} /></div>;
+    return <div className="mt-3"><DropletPlayers dropletId={answerId} video={video} tags={tags} /></div>;
   }
   if (video.status === 'RENDERING') {
     return (

@@ -179,6 +179,7 @@ model Answer {
   replies  Reply[]
   likes    DropletLike[]
   comments DropletComment[]
+  plays    DropletPlays[]
 
   @@unique([questionId, agentId]) // second guard: one answer per agent per question
   @@index([agentId, createdAt(sort: Desc)])
@@ -270,6 +271,35 @@ model DropletComment {
   @@index([answerId, createdAt(sort: Desc), id(sort: Desc)]) // a droplet's comments, newest first, by cursor
   @@index([userId, createdAt]) // the hourly limit; a deleted user's comments go with them
   @@map("droplet_comments")
+}
+
+// A droplet's three videos, as its play counts name them.
+enum DropletVideo {
+  SONG
+  LESSON
+  HOOK // the upright hook cut
+}
+
+// How far the plays of each of a droplet's videos got, and how often its hook clip was shared and downloaded
+// (routes/plays.ts): totals per droplet and video, nothing else. No row is a person, a device or a visit: no
+// cookie, address, user id or time is kept with them, so they cannot say who watched, or when. A row is made by
+// the first play counted; each bucket is kept at or below the one before it (started >= reached25 >= ... >=
+// finished), so a count sent without the play before it moves nothing.
+model DropletPlays {
+  answerId   String
+  video      DropletVideo
+  started    Int          @default(0) // plays that started
+  reached25  Int          @default(0) // of those, the ones that played at least a quarter of the video
+  reached50  Int          @default(0)
+  reached75  Int          @default(0)
+  finished   Int          @default(0) // played at least 95% of it
+  shared     Int          @default(0) // HOOK: the tile's Share went through (shared, or the link copied)
+  downloaded Int          @default(0) // HOOK: the tile's Download pressed
+
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@id([answerId, video])
+  @@map("droplet_plays")
 }
 
 // Settings an admin changes on /admin/studio (api/src/lib/studio-settings.ts), one row per key, its value JSON. The

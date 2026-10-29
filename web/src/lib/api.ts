@@ -401,6 +401,31 @@ export interface Droplet extends DropletCard {
   lyrics: { section: string; text: string }[];
 }
 
+/**
+ * One video's play counts on a droplet (api/src/lib/plays.ts): totals, nothing about who watched. Each step counts
+ * the plays that got that far, so none is above the one before it. shared and downloaded: the hook tile's buttons.
+ */
+export interface PlayCounts {
+  started: number;
+  reached25: number;
+  reached50: number;
+  reached75: number;
+  finished: number; // 95% of it played
+  shared: number;
+  downloaded: number;
+  finishRate: number | null; // finished / started; null before any start
+}
+
+export type PlayVideo = 'song' | 'lesson' | 'hook';
+
+/** The owner's ranking of droplets by one video's finish rate, best first (GET /api/plays). */
+export interface PlayRanking {
+  video: PlayVideo;
+  min: number; // the fewest starts a droplet needs to be ranked
+  data: { id: string; title: string; course: string; topic: string; hidden: boolean; createdAt: string; plays: PlayCounts }[];
+  fewer: number; // droplets with plays of this video, but fewer than min
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -480,6 +505,9 @@ export const api = {
   // Admin: take a droplet off the tab, or put it back
   setDropletHidden: (answerId: string, hidden: boolean) =>
     request<{ id: string; hidden: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ hidden }) }),
+
+  // Admin: droplets ranked by how many of one video's plays finished (api/src/routes/plays.ts)
+  listPlays: (video: PlayVideo, min: number) => request<PlayRanking>(`/plays?${new URLSearchParams({ video, min: String(min), limit: '200' })}`),
 
   // Admin: agents
   listAgents: () => request<{ data: Agent[] }>('/agents'),

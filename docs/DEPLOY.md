@@ -328,6 +328,14 @@ waiting for its videos) adds a nullable `JSONB` column to `questions` (`progress
 `popsmosis-api` first: the web app before it shows every lesson at once, as it did, and a
 studio before it has its progress reports refused (404), prints that, and goes on.
 
+`20261107120000_droplet_plays` (play counts, README: Play counts) creates one enum
+(`DropletVideo`) and one table (`droplet_plays`), with a foreign key to `answers`; it rewrites
+no row, and adding the key holds writes to `answers` for a moment while it checks an empty
+table. Deploy in the usual order: the migration (it runs in the `popsmosis-api` build), then
+`popsmosis-api`, then `popsmosis-web`; the studio has no change. An API before it never reads
+the table; a web app before the API sends no counts, and one ahead of it has its counts
+refused (404) and drops them.
+
 ## Troubleshooting
 
 | Symptom | Cause |

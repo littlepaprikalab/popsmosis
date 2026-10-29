@@ -87,8 +87,8 @@ its next request, without a new sign-in.
 To fill the page with sample data (two users, one agent, a topic with its lesson, its videos,
 a follow-up thread and a like and a comment on the Droplets tab, one topic still waiting, and
 older lessons whose videos are rendering or failed), run `npm --workspace api run seed:dev`. It prints the agent's key. The seeded
-videos are two short clips in `web/public/samples/`, so `/droplets` and the players on
-`/learn` work locally with no Supabase.
+videos are short clips in `web/public/samples/` (a song, a lesson and an upright hook clip), so
+`/droplets`, its Clips feed and the players on `/learn` work locally with no Supabase.
 
 Run a heartbeat against the local API with Claude Code CLI, from this checkout (the skill
 file runs the studio, below, from here):
@@ -310,6 +310,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 | GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
+| POST | `/api/droplets/:id/plays` | count one step of a play: `{ video: song\|lesson\|hook, event: started\|reached25\|reached50\|reached75\|finished\|shared\|downloaded }` (`shared` and `downloaded` the hook's only); 204 whether or not a count moved. No cookie needed or read. Limits of its own, apart from the 60 a minute: [Play counts](#play-counts) |
 
 Only the title (the bundle's `course` and `topic`), the lesson text, the videos with
 their posters and hashtags, the lyrics, the counts and the comments are public. The learner's name and
@@ -546,6 +547,47 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
+| GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. The PLAYS page, `/admin/plays` |
+
+### Play counts
+
+To learn which droplets work for students, the API counts how far the plays of each droplet
+video get and how often a hook clip is shared or downloaded: totals per droplet and video in
+`droplet_plays`, and nothing else. The web app (`web/src/lib/plays.ts`) sends each step as it
+happens, from the players on a droplet's page and on `/learn`, the cards on the tab, the Clips
+feed and the hook tile's Share and Download:
+
+- **Nothing about who watched.** A count goes without the session cookie, so a signed-in
+  person's is counted with no account, and with no id of the browser, device or visit. The
+  table holds no address, user id or time. An admin's browser sends none, so the owner's own
+  checking never reads as a student watching.
+- **Once a page view.** Each step of each video counts once however often it is replayed or
+  rewound: `started` when it starts playing, then `reached25`, `reached50`, `reached75` and
+  `finished` (95%) of it **played**, so a skip to the end counts as nothing played. A clip in
+  the feed counts once it really plays; with reduced motion, nothing plays, or counts, until it
+  is pressed. A share counts once it went through (a share sheet closed without sharing does
+  not), a download when it is pressed. Counting never holds playback up: nothing waits for it,
+  and a count that fails is dropped.
+- **Hard to inflate.** In the table each step stays at or below the one before it, so a step
+  sent without its play moves nothing. One address (an IPv6 /64 counts as one) adds at most 40
+  an hour to any one count of a droplet video, about a class sharing a school's address, and
+  sends at most 120 a minute; all addresses together, 1,500 a minute per API instance, apart
+  from the tab's own reads. A play whose start goes over a limit is not counted at all (the web
+  app sends nothing more of it), so a crowd bigger than that is counted short, never skewed.
+  The limits hold the address only as a keyed hash under a secret drawn afresh each window,
+  and only in memory. One address can still add 40 plays an hour to one video: rank on
+  droplets with enough plays (`?min=`, the page's "At least").
+
+The ranking `/admin/plays` shows, as SQL (here for the song; `'LESSON'` or `'HOOK'` for the others):
+
+```sql
+SELECT a.id, a.bundle->>'course' AS course, a.bundle->>'topic' AS topic, a."hiddenAt" IS NOT NULL AS hidden,
+       p.started, p."reached25", p."reached50", p."reached75", p.finished, p.shared, p.downloaded,
+       round(p.finished::numeric / p.started, 3) AS finish_rate
+FROM droplet_plays p JOIN answers a ON a.id = p."answerId"
+WHERE p.video = 'SONG' AND p.started >= 10
+ORDER BY p.finished::float8 / p.started DESC, p.started DESC, a.id;
+```
 
 ## Privacy and the legal pages
 
@@ -557,6 +599,9 @@ Two sides, kept apart in the API (`api/src/lib/privacy.ts`):
   files and the follow-up thread. A learner sees only their own topics on `/learn`, and only
   they post follow-ups in their thread. Admins see everyone's (to moderate and fix things)
   and the teacher reads what it answers.
+
+Beside both, the [play counts](#play-counts) are about no one: totals of how far each video's
+plays got and how often a hook clip was shared or downloaded, seen only by admins.
 
 A learner can **take back** a request from its card: with no lesson yet it is deleted; with
 one, their words, files and thread are deleted and `questions.userId` is set to null, so

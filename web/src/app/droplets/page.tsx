@@ -16,6 +16,7 @@ import { ClipFeed } from '@/components/ClipFeed';
 import { DropletComments } from '@/components/DropletComments';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { PlayIcon } from '@heroicons/react/24/solid';
+import { countPlays } from '@/lib/plays';
 
 // How many of a droplet's hashtags its card shows; its page shows them all, under each video.
 const CARD_TAGS = 4;
@@ -268,7 +269,7 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
       className="flex flex-col rounded-lg overflow-hidden animate-fade-in"
       style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', animationDelay: `${Math.min(index, 12) * 60}ms` }}>
       {src ? (
-        <CardVideo src={src} poster={poster} kind={song ? 'song' : 'lesson'} heading={heading} />
+        <CardVideo dropletId={d.id} src={src} poster={poster} kind={song ? 'song' : 'lesson'} heading={heading} />
       ) : (
         <Link href={href} className="aspect-video flex items-center justify-center" style={{ background: 'var(--bg-tertiary)' }}>
           <span className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>▶ Watch</span>
@@ -314,8 +315,11 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
  * loaded yet does nothing in Chrome, and its own play button is small, so the still
  * is the button. Until then the still is a lazy <img>: a <video>'s poster loads at once,
  * for every card on the page, and preload="none" keeps the video itself from loading.
+ * How far it plays is counted as on the droplet's page (lib/plays.ts).
  */
-function CardVideo({ src, poster, kind, heading }: { src: string; poster: string | null; kind: 'song' | 'lesson'; heading: string }) {
+function CardVideo({ dropletId, src, poster, kind, heading }: {
+  dropletId: string; src: string; poster: string | null; kind: 'song' | 'lesson'; heading: string;
+}) {
   const video = useRef<HTMLVideoElement>(null);
   const [started, setStarted] = useState(false);
   const pressed = useRef(false);
@@ -331,6 +335,7 @@ function CardVideo({ src, poster, kind, heading }: { src: string; poster: string
         poster={started ? poster ?? undefined : undefined}
         src={src}
         onPlay={() => setStarted(true)}
+        {...countPlays(dropletId, kind)}
         aria-label={`${heading}: ${kind} video`}
         className="block w-full h-full"
       />

@@ -21,6 +21,7 @@ import answerRoutes from './routes/answers.js';
 import dropletRoutes from './routes/droplets.js';
 import videoRoutes from './routes/videos.js';
 import studioRoutes from './routes/studio.js';
+import playRoutes, { PLAY_COUNT_URL } from './routes/plays.js';
 
 export async function buildApp() {
   const app = Fastify({
@@ -183,9 +184,12 @@ export async function buildApp() {
     const path = request.url.split('?')[0];
     const ms = Math.round(reply.elapsedTime);
     const status = reply.statusCode;
+    // Every play sends a few counts (routes/plays.ts): only a failure or a slow one is worth a line, and a refusal is
+    // a limit doing its job, which a line each would only make cheaper to flood the logs with.
+    const playCount = request.method === 'POST' && request.routeOptions.url === PLAY_COUNT_URL;
     if (status >= 500 || ms > 1000) {
       request.log.warn({ method: request.method, path, status, ms }, 'slow or failed request');
-    } else if (status >= 400 || !QUIET_PATHS.has(path)) {
+    } else if (!playCount && (status >= 400 || !QUIET_PATHS.has(path))) {
       request.log.info({ method: request.method, path, status, ms }, 'request');
     }
   });
@@ -205,6 +209,7 @@ export async function buildApp() {
   await app.register(dropletRoutes);
   await app.register(videoRoutes);
   await app.register(studioRoutes);
+  await app.register(playRoutes);
 
   // A storage setting that cannot upload is said once at boot, where whoever set it looks;
   // the rest of the API works without storage, so it still starts. So is a key on borrowed time.
