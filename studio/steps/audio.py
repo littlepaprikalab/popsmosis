@@ -219,27 +219,10 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> None:
         _make_eleven_song(job, bundle)
 
 
-# Eleven Music: one chunk per section, each exactly as long as asked.
-
-# Told one style for every section, the song rapped all the way through: a style that says "rapped verses"
-# is read for the chorus too. So only the verses are asked to rap, and the other sections to sing.
-SUNG_SECTIONS = {"intro", "pre-chorus", "chorus", "bridge", "outro"}
-
-
-def raps(bundle: Bundle) -> bool:
-    return any("rap" in style.lower() or "hip-hop" in style.lower() for style in bundle.music.positive_styles)
-
-
-def section_styles(bundle: Bundle, section: str) -> tuple[list[str], list[str]]:
-    """The styles to ask one section for, and what to avoid in it."""
-    positive, negative = list(bundle.music.positive_styles), list(bundle.music.negative_styles)
-    if raps(bundle):
-        if section in SUNG_SECTIONS:
-            positive.append("sung melodic vocal, not rapped")
-            negative += ["rapping", "rapped vocals", "spoken word"]
-        else:
-            positive.append("clear rapped verse")
-    return positive, negative
+# Eleven Music: one chunk per section, each exactly as long as asked, and each asked for the song's own style and
+# avoid list as the bundle writes them, nothing added: how the verses and the chorus are sung is the style's to say
+# ("rapped verses, rising into a big sing-along chorus"). Until Oct 29 code added "clear rapped verse" to the verses
+# and "sung melodic vocal, not rapped" to the rest, after a song told one style for every section rapped throughout.
 
 
 def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
@@ -248,8 +231,8 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     chunks = [{
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
-        "positive_styles": section_styles(bundle, part["section"])[0],
-        "negative_styles": section_styles(bundle, part["section"])[1],
+        "positive_styles": list(bundle.music.positive_styles),
+        "negative_styles": list(bundle.music.negative_styles),
         "context_adherence": "high",
     } for part in planned]
     return {"chunks": chunks}, _placed(planned)
@@ -287,13 +270,10 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     end_ms = planned[-1]["start_ms"] + planned[-1]["duration_ms"] if planned else 0
     music = bundle.music
     head = []
-    if music.positive_styles:
-        head.append(f"Style: {', '.join(music.positive_styles)}.")
+    if music.positive_styles:  # a free-form style may end on its own full stop
+        head.append(f"Style: {', '.join(style.rstrip(' .') for style in music.positive_styles)}.")
     if music.negative_styles:
-        head.append(f"Avoid: {', '.join(music.negative_styles)}.")
-    if raps(bundle):
-        head.append("The verses are rapped, clearly; the intro, pre-chorus, chorus, bridge and outro are sung "
-                    "melodically, never rapped.")
+        head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
     head += [
         f"Length: about {_clock(end_ms)}. The singing starts within the first two seconds, with no long "
         "intro, and the song ends soon after the last line.",

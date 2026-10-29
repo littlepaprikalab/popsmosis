@@ -52,7 +52,7 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
         bundle, report = checks.review(rewritten)
     report.problems += (checks.song_length_problems(bundle) + checks.motion_problems(bundle)
                         + checks.essence_problems(bundle) + checks.key_line_problems(bundle)
-                        + checks.song_shape_problems(bundle))
+                        + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
     return bundle
@@ -67,10 +67,10 @@ def user_prompt(request: Request, rotation: str = "") -> str:
     if request.song_style:
         parts.append(f"The song style the learner asked for: {request.song_style}")
     elif rotation:
-        parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. Use it for a high "
-                     "school or older audience, as the starting point for `positive_styles` (its tempo is the "
-                     "tempo); a younger audience gets the younger style below, and a grave topic (a genocide, "
-                     "slavery) the grave topic's own slow style.")
+        parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. For a high school "
+                     "or older audience, it is the seed of the song's style: keep its genre and roughly its tempo, "
+                     "and write your own description from it. A younger audience gets the younger style below, and "
+                     "a grave topic (a genocide, slavery) the grave topic's own slow style.")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")
     if request.study_guide:

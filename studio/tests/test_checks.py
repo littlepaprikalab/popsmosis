@@ -281,9 +281,23 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
 
     assert styles(["K-pop", "98 BPM"]) == (["K-pop", "98 BPM"], [])
     repaired = [("music", "tempo", True)]
-    assert styles(["bright pop"]) == (["bright pop", "112 bpm"], repaired)  # none named: what songs used to be
+    assert styles(["bright pop."]) == (["bright pop, 112 bpm"], repaired)  # none named: what songs used to be, said
+    # at the end of the description
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+
+
+def test_the_song_style_is_one_description_that_keeps_the_learners_tempo():
+    def found(styles, asked=""):
+        data = bundle_data()
+        data["music"]["positive_styles"] = styles
+        return [p.detail for p in checks.style_problems(Bundle.model_validate(data), asked)]
+
+    asked = "Bright pop with hip-hop verses; buoyant 104 bpm beat"
+    # Built on in the writer's own words, as long as the learner's tempo stays.
+    assert found(["Bright pop with sharp hip-hop verses; glassy synths over a buoyant 104 bpm beat"], asked) == []
+    assert found(["Bright pop; 98 bpm"], asked) == ["the song is at 98 bpm, not the 104 bpm the learner asked for"]
+    assert found(["bright pop", "hip-hop verses", "104 bpm"]) == ["the style is 3 tags, not one free-form description"]
 
 
 def test_a_process_needs_two_stages_or_more():
@@ -306,21 +320,18 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
 
 
-def test_only_the_verses_are_asked_to_rap_and_the_rest_to_sing():
+def test_every_section_is_asked_for_the_songs_own_style_with_nothing_added():
     from studio.steps import audio
 
     data = bundle_data()
-    data["music"]["positive_styles"] = ["pop with clear rapped verses", "100 bpm"]
+    data["music"]["positive_styles"] = ["Pop with clear rapped verses, rising into a sung chorus; 100 bpm."]
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
-    by_section = {c["text"].splitlines()[0]: c for c in plan["chunks"]}
-    assert "clear rapped verse" in by_section["[Verse]"]["positive_styles"]
-    assert "rapping" not in by_section["[Verse]"]["negative_styles"]
-    assert "rapping" in by_section["[Chorus]"]["negative_styles"]
-    assert "sung melodic vocal, not rapped" in by_section["[Chorus]"]["positive_styles"]
-    data["music"]["positive_styles"] = ["bright pop", "100 bpm"]  # no rap asked for: nothing added
-    plan, _ = audio.composition_plan(Bundle.model_validate(data))
-    assert all("rapp" not in " ".join(c["positive_styles"] + c["negative_styles"]) for c in plan["chunks"])
+    assert all(c["positive_styles"] == bundle.music.positive_styles for c in plan["chunks"])
+    assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
+    prompt, _ = audio.song_prompt(bundle)
+    assert "never rapped" not in prompt and prompt.startswith(f"Style: {bundle.music.positive_styles[0]}\n")
+    assert ".." not in prompt  # the description's own full stop is the sentence's
 
 
 def test_a_scene_where_things_travel_and_the_song_stands_still_is_recorded():

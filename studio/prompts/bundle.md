@@ -292,18 +292,32 @@ explanation to the narration, and every word of it is easy to hear.
 
 ### The music
 
-- `music.positive_styles` are short style tags for a music generator, one idea each:
-  genre, mood, tempo, instruments, voices and mix ("K-pop", "hip-hop verses", "male
-  group vocals", "punchy synth bass", "98 bpm").
-  - **When the learner asked for a song style**, it is your source of inspiration. Keep
-    what they asked for (the genre, the voices, the instruments, the tempo) and fill in
-    what they left out in the same spirit. It may come on its own line ("The song style
-    the learner asked for") or anywhere in the topic or request, in their own words
-    ("ATP synthesis. Style: pop-punk", "make the song K-pop").
+- `music.positive_styles` is the song's style for a music generator in free-form words, one entry,
+  never a list of tags: the sound described the way a producer would brief it, in one flowing
+  description of a few clauses. A strong one names the genre and how the verses are delivered,
+  the production's texture, the tempo and the feel of the beat, the voice (its timbre, and how
+  it moves from the verses into the chorus), and what leads and what accents: "Bright pop with
+  hip-hop verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat;
+  clear female vocal with a low, dark, raspy edge in rapped verses, rising into a big sing-along
+  chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a warm Rhodes", "a
+  808 that slides", "gang vocals on the hook") make a better song than adjectives ("catchy",
+  "nice", "educational").
+  - **When the learner asked for a song style**, it is your brief. It may come on its own line
+    ("The song style the learner asked for") or anywhere in the topic or request, in their own
+    words ("ATP synthesis. Style: pop-punk", "make the song K-pop"). Keep everything they asked
+    for, the genre, voices, instruments, mood and tempo, and their own vivid words where they
+    work; then build on it as a producer would: turn vague words into sounds, and fill in what
+    they left out in the same spirit and in the mood of the topic. Never trade what they asked
+    for for something else. Describe the sound of an artist, band or song they named instead of
+    naming it, and leave out what would hide the words or does not belong in a classroom
+    (screamed or growled vocals, explicit lyrics).
   - **Otherwise**, the request carries a style from the studio's rotation, so droplets do not
-    all sound alike: build `positive_styles` from it, keeping its genre, voices and tempo. With
-    none, choose a vocals-first pop style a teenager plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A
-    faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
+    all sound alike. It is a seed, not the answer: keep its genre and roughly its tempo (a few
+    bpm either way to suit the topic's mood), and write your own description from it, choosing
+    the voice, the instruments, the textures and the mood for this topic, so that two droplets
+    from the same seed sound different. With none, describe a vocals-first pop style a teenager
+    plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A faster
+    or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
   - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
     death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities). A
     dance beat under it sounds like a celebration. Write a slow, respectful song instead:
@@ -319,45 +333,32 @@ explanation to the narration, and every word of it is easy to hear.
     map make tokens of the dead. Goods, ships and money may move; the camera and the
     spotlight show where people were taken. The rest of history keeps the rotation: a
     revolution's causes or a war's alliances are not grave in this sense.
-  - Only when there is neither, for high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
-    pop-punk and their neighbours. These styles work well, slowest first; write in their
-    spirit rather than copying one:
-    - laid-back R&B with smooth rapped verses, warm electric piano, deep round bass,
-      soft finger snaps, smooth sung chorus with stacked harmonies, clear female vocal,
-      85 bpm, clear diction
-    - upbeat pop with hip-hop verses, clear rapped verses, catchy sung chorus, female
-      vocals, moderate tempo 96 bpm, bright synths, punchy drums, educational, clear
-      diction
-    - K-pop with hip-hop verses, vocals start immediately, no instrumental intro, vocals
-      upfront in the mix, male group vocals, sharp clear rapped verses, big catchy sung
-      chorus, moderate tempo 98 bpm, punchy synth bass, crisp claps, bright synth stabs,
-      educational, clear diction
-    - upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female
-      vocal, warm synths, finger snaps, 100 bpm, clear diction
-    - bright pop with hip-hop verses, rapped verses, big sing-along chorus, clear female
-      vocal, shimmering synths, claps, 104 bpm, clear diction
-    - dance-pop with a four-on-the-floor beat, energetic male vocal, euphoric sing-along
-      chorus, bright plucked synths, handclaps, pulsing bass, 124 bpm, clear diction
-    - (only when the learner asks) pop-punk anthem at 150 bpm with a driving straight-ahead pulse, energetic male lead
-      vocal and gang vocals on the chorus, bright radio-ready master, driving electric
-      guitars and punchy live drums, clear diction
-  - For a younger audience: bright, playful pop with a big sing-along chorus, a clear
-    lead vocal, sung verses or light, unhurried rap, and a tempo they can sing along to.
-    Dense, fast rap is hard for young listeners to follow.
-  - Whatever the style, include these: clear diction, vocals upfront in the mix, vocals
-    start immediately with no instrumental intro (the hook is sung in the first two
-    seconds), and a big catchy sung chorus.
-  - Name the tempo in exactly one tag, "<n> bpm", from 80 to 160: the learner's tempo
-    when they gave one, otherwise the one that fits the style and the topic's mood. Code
-    times every section of the song from this tag.
-  - Never name an artist, band or song in a tag; the music generator refuses them. When
-    the learner names one, describe its sound instead.
-- `music.negative_styles` keep the words clear and the song right for a classroom: for
-  example "mumbled vocals", "long instrumental intro", "vocals buried in the mix",
-  "explicit lyrics", and anything the learner said they did not want. When the
-  learner's style asks for something that would hide the words or does not belong in a
-  classroom (screamed or growled vocals, explicit lyrics), keep the rest of their style
-  and leave that part out.
+  - Only when there is neither, for high school and older: pop with rapped hip-hop verses,
+    K-pop, R&B, dance-pop, pop-punk and their neighbours. These work well, slowest first;
+    write in their spirit rather than copying one:
+    - Laid-back R&B with smooth rapped verses; warm electric piano, deep round bass and soft
+      finger snaps; a smooth sung chorus with stacked harmonies; clear female vocal; 85 bpm
+    - Upbeat pop with clear rapped verses and a catchy sung chorus; female vocals over bright
+      synths and punchy drums; 96 bpm
+    - K-pop with sharp, clear rapped verses from male group vocals, rising into a big catchy
+      sung chorus; punchy synth bass, crisp claps and bright synth stabs; 98 bpm
+    - Bright pop with hip-hop verses and a big sing-along chorus; clear female vocal;
+      shimmering synths lead, claps accent the beat; 104 bpm
+    - Dance-pop on a four-on-the-floor beat; energetic male vocal into a euphoric sing-along
+      chorus; bright plucked synths, handclaps and a pulsing bass; 124 bpm
+    - (only when the learner asks) A pop-punk anthem with a driving straight-ahead pulse;
+      energetic male lead and gang vocals on the chorus; driving electric guitars, punchy live
+      drums and a bright radio-ready master; 150 bpm
+  - For a younger audience: bright, playful pop with a big sing-along chorus, a clear lead
+    vocal, sung verses or light, unhurried rap, and a tempo they can sing along to. Dense,
+    fast rap is hard for young listeners to follow.
+  - Name the tempo once, as "<n> bpm", from 80 to 160: the learner's tempo when they gave
+    one, otherwise the one that fits the style and the topic's mood. Code times every
+    section of the song from it.
+  - Never name an artist, band or song; the music generator refuses them.
+- `music.negative_styles` are short things to avoid, a list, that keep the words clear and the
+  song right for a classroom: always "mumbled vocals", "long instrumental intro", "vocals
+  buried in the mix" and "explicit lyrics", and anything the learner said they did not want.
 - `music.sections` is exactly intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus,
   bridge, chorus, outro (The parts, below).
 - `lyrics` is every line as sung, in order, section by section, so the chorus appears

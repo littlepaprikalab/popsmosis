@@ -41,17 +41,18 @@ Live tests (docs/test-rounds.md) found the plain request right 8 times in 12 whe
 earlier prompt, with hex codes, a list of shapes and one biology style for every subject,
 was right once in 6. The helper looks at each
 picture for text, for a structure missing or out of place, and for anything else wrong,
-told what kind of scene it is (an analogy is meant not to show the topic's own parts). A
-picture with text or a structure missing or out of place is asked for again with what was
-wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not repainted
-(round 8: a second picture painted for those was no better 9 times in 11). A picture with
-text in it is never used (the renderer draws every label); after the last try the scene
-keeps the text-free picture with the fewest structures out of place, then the fewest other
-problems, and the step fails if there is none.
+told what kind of scene it is (an analogy is meant not to show the topic's own parts). The
+renderer draws every label, so text in a picture is painted out by code where the helper boxes
+it (unwrite(), studio/repair.py), and the picture is checked again. A picture with text still in
+it or a structure missing or out of place is asked for again with what was wrong, up to
+MAX_PAINTS pictures in all; anything else wrong is recorded, not repainted (round 8: a second
+picture painted for those was no better 9 times in 11). After the last try the scene keeps the
+text-free picture with the fewest structures out of place, then the fewest other problems; when
+text is left in every one, the one with the fewest out of place and the least text.
 
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
 art/<scene>.json, last: the key (as above), the model, the prompt, the helper's check of
-the kept picture and what was wrong with each try, so the picture counts as done only for
+the kept picture and what was wrong with each try (and the text painted out of it), so the picture counts as done only for
 this bundle. A refused picture is kept as art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
 pictures. Resuming and redrawing work as for the SVG art.
 """
@@ -73,7 +74,7 @@ import skia
 
 from pydantic import Field
 
-from studio import brain, checks, gemini, jobs, ledger, media, muse, svg
+from studio import brain, checks, gemini, jobs, ledger, media, muse, repair, svg
 from studio.jobs import read, write
 from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems, stage_groups
 
@@ -540,18 +541,23 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                 continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
+        named = f"{scene.id}" + (f" try {n}" if n > 1 else "")
         check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
-                               label=f"art check {scene.id}" + (f" try {n}" if n > 1 else "")))
+                               label=f"art check {named}"))
+        check, painted_out = unwrite(job, bundle, scene, ask, path, check, named) if check.text else (check, [])
         painting = Painting(path, prompt, n, check)
         painted.append(painting)
-        tries.append({"try": n, **check.model_dump()})
+        tries.append({"try": n, **check.model_dump(), **({"painted_out": painted_out} if painted_out else {})})
         if not check.text and (best is None or painting.score() < best.score()):
             best = painting
         problems = painting.problems()
         if not problems:
             break
     if best is None and painted:
-        best, n = _without_writing(job, bundle, scene, ask, by, painted, tries, n)
+        # Writing still in every picture: the one with the fewest structures out of place, then the least writing.
+        # A picture with a little writing in it is worth more than no droplet; the video labels it anyway.
+        best = min(painted, key=lambda pt: (len(pt.check.misplaced) + len(pt.check.unnamed), len(pt.check.text),
+                                            len(pt.check.wrong)))
     if best is None:
         raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_PAINTS} tries: {problems[0]}"
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
@@ -565,37 +571,30 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     return best, n
 
 
-# Every try came back with writing in it: the painter is asked once to take the writing out of the least-bad one.
-CLEAN_PROMPT = ("Remove every word, letter, number and chemical symbol from this picture, and paint over where "
-                "they were with what surrounds them. Change nothing else: keep every part, its shape, colour and "
-                "place, and the background, exactly as they are.")
-# What the video says beside a picture that still has writing in it (Timeline.notices), rather than fail the droplet.
-WRITING_NOTE = "This AI-made picture has some writing in it; go by the labels the video adds."
+UNWRITE_ROUNDS = 2  # a picture's writing painted out at most this many times, each a helper's look for it and a check
 
 
-def _without_writing(job: Path, bundle: Bundle, scene: Scene, ask, by: Painter, painted: list[Painting],
-                     tries: list[dict], n: int) -> tuple[Painting, int]:
-    """The scene's picture when every try had writing in it: the least-bad try, edited to take the writing out,
-    or, when the edit fails or leaves writing, that try as it is, with a note for the video. Never None: a
-    picture with writing in it is worth more than no droplet."""
-    least = min(painted, key=lambda pt: (len(pt.check.misplaced) + len(pt.check.unnamed), len(pt.check.text),
-                                         len(pt.check.wrong)))
-    n += 1
-    path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
-    try:
-        picture = by.make(job, f"art {scene.id} clean", CLEAN_PROMPT, least.path)
-        path.write_bytes(svg.png(fit(picture)))
+def unwrite(job: Path, bundle: Bundle, scene: Scene, ask, path: Path, check: ArtCheck,
+            named: str) -> tuple[ArtCheck, list[str]]:
+    """The writing the check found in the picture at `path`, painted out in place (repair.unwrite) where the
+    helper boxes it, and the picture checked again; again while writing is still found, up to UNWRITE_ROUNDS.
+    Returns the last check and the writing painted out. Code paints over only the letters, where the painter
+    asked to take them out (Oct 29) left half of them and moved a part."""
+    pixels, painted_out = repair.read_rgb(path), []
+    for k in range(1, UNWRITE_ROUNDS + 1):
+        if not check.text:
+            break
+        again = f" round {k}" if k > 1 else ""
+        found = repair.Writing(**ask("helper", "A check saw this writing: " + "; ".join(repr(t) for t in check.text),
+                                     repair.Writing, [path], system=repair.WRITING_PROMPT,
+                                     label=f"art writing {named}{again}"))
+        if not repair.unwrite(pixels, found.writing):
+            break
+        path.write_bytes(svg.png(pixels))
+        painted_out += [w.text for w in found.writing]
         check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
-                               label=f"art check {scene.id} clean"))
-        tries.append({"try": n, "cleaned": least.attempt, **check.model_dump()})
-        cleaned = Painting(path, CLEAN_PROMPT, n, check)
-        # Kept when the writing is gone and nothing new went wrong.
-        if not check.text and cleaned.score() <= least.score():
-            return cleaned, n
-    except (by.declined, by.failed) as e:
-        tries.append({"try": n, "cleaned": least.attempt, "clean_failed": str(e)})
-    least.check.notes = [*least.check.notes, WRITING_NOTE]
-    return least, n
+                               label=f"art check {named} unwritten{again}"))
+    return check, painted_out
 
 
 def fit(picture: bytes) -> np.ndarray:
