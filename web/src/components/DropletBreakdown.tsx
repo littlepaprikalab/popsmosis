@@ -263,9 +263,16 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
 
   return (
     <details className="mt-3 text-[11px] group" data-testid="breakdown" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
-      <summary className="cursor-pointer select-none flex items-center gap-2 flex-wrap" style={{ color: 'var(--text-muted)' }}
-        onClick={() => setTouched(true)}>
-        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--accent-yellow)' }}>Bill of materials</span>
+      {/* The flex line drops the browser's own triangle, so the chevron and the underlined show/hide say it opens. */}
+      <summary className="group/summary cursor-pointer select-none flex items-center gap-2 flex-wrap list-none [&::-webkit-details-marker]:hidden"
+        style={{ color: 'var(--text-muted)' }} onClick={() => setTouched(true)}>
+        <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--accent-yellow)' }}>
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" aria-hidden="true"
+            className="shrink-0 -rotate-90 group-open:rotate-0 transition-transform duration-200">
+            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Bill of materials
+        </span>
         {making ? (
           <span data-testid="breakdown-progress" className="flex items-center gap-1.5">
             {rows.some((r) => r.status === 'running') && (
@@ -282,8 +289,8 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
         ) : (
           <span data-testid="breakdown-total">{duration(bill?.seconds ?? null)} · {cost}</span>
         )}
-        <span className="text-[10px] group-open:hidden">show</span>
-        <span className="text-[10px] hidden group-open:inline">hide</span>
+        <span className="text-[10px] underline underline-offset-2 group-hover/summary:text-[var(--text-hover)] group-open:hidden">show</span>
+        <span className="text-[10px] underline underline-offset-2 group-hover/summary:text-[var(--text-hover)] hidden group-open:inline">hide</span>
       </summary>
       {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
         <PhoneBill rows={rows} bill={bill} making={making} time={totalTime} />
