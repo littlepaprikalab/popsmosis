@@ -275,15 +275,17 @@ def print_job(job: Path, brief: bool = False) -> None:
             print(f"  {'line':<15} {'verdict':<11} {'source':<9} {'rnd':<3} text")
             for line in report.lines:
                 key = f"{line.kind}:{line.id}"
-                text = textwrap.shorten(line.text, 80, placeholder="...")
+                text = textwrap.shorten(factcheck_step.shown(line.text), 80, placeholder="...")
                 print(f"  {key:<15} {line.verdict or '-':<11} {textwrap.shorten(line.source, 9, placeholder='~'):<9} "
                       f"{line.round:<3} {text}")
         if report.corrections:
             print("\n## Corrections\n")
+            sung = factcheck_step.songwriter_wrote(job)
             for c in report.corrections:
-                print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}: {c.problem}", indent=2))
-                print(_wrap(f"- {c.before}", indent=4, first=4))
-                print(_wrap(f"+ {c.after}", indent=4, first=4) + "\n")
+                by = " (the songwriter's)" if (c.round, c.before) in sung else ""
+                print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}{by}: {c.problem}", indent=2))
+                print(_wrap(f"- {factcheck_step.shown(c.before)}", indent=4, first=4))
+                print(_wrap(f"+ {factcheck_step.shown(c.after)}", indent=4, first=4) + "\n")
     timed = [kind for kind in media.TIMED if (job / media.timing_path(kind)).exists()]
     if timed:
         print("\n## Timing\n")

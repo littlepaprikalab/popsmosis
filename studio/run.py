@@ -432,7 +432,9 @@ def make_factcheck(job: Path, api: Api, question: dict, ask) -> str:
         raise StepFailed(report.reason)
     dropped = len(factcheck_step.dropped_tags(report))
     still = len(factcheck_step.dropped_motions(report))
+    sung = sum(c.by == "songwriter" for c in report.corrections)
     return f"passed in {report.rounds} round(s), {len(report.corrections)} correction(s)" + (
+        f", {sung} by the songwriter" if sung else "") + (
         f", {dropped} tag(s) dropped" if dropped else "") + (f", {still} motion(s) left out" if still else "")
 
 
