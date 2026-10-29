@@ -189,7 +189,7 @@ def repair(job: Path, bundle: Bundle, scene: Scene, located: dict[str, tuple[np.
     import json
 
     path = job / media.art_path(scene.id)
-    made_path = job / "art" / f"{media.file_name(scene.id)}.json"
+    made_path = job / media.check_path(scene.id)
     made = json.loads(made_path.read_text(encoding="utf-8")) if made_path.exists() else {}
     pixels = read_rgb(path)
     done: list[str] = []

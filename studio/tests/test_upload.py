@@ -353,3 +353,11 @@ def test_a_run_that_was_taken_over_fails_without_marking_ready_or_retrying(job, 
     with pytest.raises(media.StepFailed, match="taken over"):
         upload.run(job, api=api_for(server))
     assert len(server.patches()) == 1 and not upload.is_done(job)
+
+
+def test_a_muse_pictures_check_goes_with_the_rerender_kit_and_a_drawing_misses_none(job):
+    there, missing = upload.private_files(job)
+    assert not any(p.endswith(".json") and p.startswith("art/") for p in there + missing)  # drawn: none
+    (job / media.check_path("overview")).write_text("{}")
+    there, missing = upload.private_files(job)
+    assert media.check_path("overview") in there and media.check_path("hook") not in missing

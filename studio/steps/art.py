@@ -484,7 +484,12 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
             tries.append({"try": n, "redraw_failed": str(e)})
             reference = None  # painted afresh from here on
             prompt = paint_prompt(bundle, scene, problems)
-            picture = by.make(job, label, prompt, None)
+            try:
+                picture = by.make(job, label, prompt, None)
+            except by.declined as declined:
+                problems = [f"{declined}; describe the scene plainly, as a textbook diagram"]
+                tries.append({"try": n, "declined": str(declined)})
+                continue
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
         check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
@@ -590,12 +595,6 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
 
 
-def painted(job: Path, bundle: Bundle) -> list[str]:
-    """The scenes whose art is a Muse Image picture of the scene as the bundle has it: the video tags each as
-    AI-generated, whether or not its check found anything wrong, since the check can miss a mistake."""
-    return [scene.id for scene in bundle.scenes if _painted(job, bundle, scene)]
-
-
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
     by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
@@ -613,7 +612,7 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
 
 def _painting(job: Path, scene: Scene) -> Path:
     """art/<scene>.json: what the painted picture of the scene was made from."""
-    return job / "art" / f"{media.file_name(scene.id)}.json"
+    return job / media.check_path(scene.id)
 
 
 def _painted(job: Path, bundle: Bundle, scene: Scene) -> bool:

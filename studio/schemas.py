@@ -644,7 +644,9 @@ class Timeline(Strict):
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.
     notices: dict[str, list[str]] = {}
-    ai_pictures: list[str] = []  # the scenes whose picture an image model made: each is tagged as AI-generated
+    # The scenes whose picture a model made, each tagged as AI-generated: every scene, as the studio makes its
+    # art (Muse Image paints it, or the brain draws it as SVG); a picture from anywhere else would be left out.
+    ai_pictures: list[str] = []
 
     @field_validator("palette")
     @classmethod

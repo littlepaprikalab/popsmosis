@@ -441,6 +441,7 @@ NOTICE_ACCENT = 0xFFF59E0B  # amber: the side of a notice card, and its warning 
 NOTICE_SUBTLE = 0xFF475569  # slate-600
 NOTICE_TITLE = "AI-generated picture"
 NOTICE_LEAD = "A check found these mistakes:"
+NOTICE_LINES = 6  # lines a note may take on the card
 
 
 def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: list[str], font_size: float,
@@ -456,7 +457,11 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
     bullet = text_width(body, "•  ")
     rows: list[tuple[str, float, skia.Font, int]] = []  # text, indent, font, colour
     for note in notes:
-        for k, line in enumerate(wrap(note, body, inner - bullet)):
+        lines = wrap(note, body, inner - bullet)
+        if len(lines) > NOTICE_LINES:  # a long note is cut, so the card stays above the lyric band
+            lines = lines[:NOTICE_LINES]
+            lines[-1] = lines[-1].rstrip(" .,;:") + "…"
+        for k, line in enumerate(lines):
             rows.append((("•  " if k == 0 else "") + line, 0.0 if k == 0 else bullet, body, INK))
     if more:
         rows.append((f"and {more} more", 0.0, body, NOTICE_SUBTLE))

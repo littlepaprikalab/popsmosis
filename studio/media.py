@@ -101,6 +101,11 @@ def art_path(scene: str) -> str:
     return f"art/{file_name(scene)}.png"
 
 
+def check_path(scene: str) -> str:
+    """What a Muse Image picture of the scene was made from and what its check found (studio/steps/art.py)."""
+    return f"art/{file_name(scene)}.json"
+
+
 def mask_path(scene: str, structure: str) -> str:
     return f"masks/{file_name(scene)}/{file_name(structure)}.png"
 

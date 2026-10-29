@@ -239,6 +239,17 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     assert art.notices(job, checks.load(job / "bundle.json")) == {}
 
 
+def test_a_stage_painted_afresh_and_declined_is_a_declined_try_not_a_failed_step(job, monkeypatch):
+    staged(job)
+    declined = muse.Declined("Muse Image declined the picture: blocked")
+    fake = FakeMuse(pictures={"synthase": [declined, painting("synthase")]},
+                    redraw_error=muse.MuseError("Muse Image refused the picture: 400 no images")).install(monkeypatch)
+    assert art.run(job, FakeHelper()) == "painted 3 scenes with Muse Image in 4 tries"
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert [sorted(t) for t in made["tries"][:2]] == [["redraw_failed", "try"], ["declined", "try"]]
+    assert made["try"] == 2 and fake.references[-1] == ("art synthase try 2", None)
+
+
 def sample_media_image(path):
     import skia
 

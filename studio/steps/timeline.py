@@ -107,13 +107,14 @@ def run(job: Path, ask=None) -> str:
         raise StepFailed("the timings do not match the bundle: " + "; ".join(problems))
 
     timelines = {}
-    notices, ai_pictures = art.notices(job, bundle), art.painted(job, bundle)
+    notices = art.notices(job, bundle)
     for video in media.VIDEOS:
         try:
             timeline = build(video, bundle, timed, locations)
             shown = {beat.scene for beat in timeline.beats}
             timeline.notices = {scene: notes for scene, notes in notices.items() if scene in shown}
-            timeline.ai_pictures = [scene for scene in ai_pictures if scene in shown]
+            # Every picture here is AI-made, painted or drawn: each is tagged so, mistakes found or not.
+            timeline.ai_pictures = [scene.id for scene in bundle.scenes if scene.id in shown]
         except ValidationError as e:
             raise StepFailed(f"the {video} timeline does not validate: {e}") from e
         problems = timeline_problems(timeline, locations)

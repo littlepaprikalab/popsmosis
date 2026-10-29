@@ -40,7 +40,7 @@ STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stag
 NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
 NOTICE_MAX = 3  # notes on the card; any more are counted
 NOTICE_FONT = 22
-AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) with no notice card
+AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) without a notice card
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_MAX_ZOOM = 2.0
@@ -463,6 +463,7 @@ class Renderer:
         self.pixels = np.zeros((height, width, 4), np.uint8)
         self.surface = skia.Surface(self.pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         self._background: tuple[tuple, skia.Image] | None = None
+        self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
@@ -679,13 +680,34 @@ class Renderer:
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
                            caption_alpha)
+        # Fading in with a stage only where the stage before had none: the same card or tag stays put.
         if tagged:
-            p.draw_ai_tag(canvas, view[0] + layout.margin, view[3] - layout.margin, AI_TAG_FONT, fade)
+            before = plan.fade_from in self.timeline.ai_pictures and plan.fade_from not in self.timeline.notices
+            p.draw_ai_tag(canvas, view[0] + layout.margin, view[3] - layout.margin, AI_TAG_FONT,
+                          1.0 if before else fade)
         if notes:  # what a check found still wrong in this AI-made picture, disclosed beside it
-            p.draw_notice(canvas, view[2], layout.margin + 8, layout.width - layout.margin, notes[:NOTICE_MAX],
-                          NOTICE_FONT, fade, more=max(len(notes) - NOTICE_MAX, 0))
+            card, x, y = self._card(beat.scene, view)
+            alpha = 1.0 if plan.fade_from in self.timeline.notices else fade
+            canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _card(self, scene_id: str, view: Rect) -> tuple[skia.Image, float, float]:
+        """The scene's notice card as an image and where it goes: drawn once, as wrapping its notes and blurring
+        its shadow every frame cost an eighth of the frame."""
+        if scene_id not in self._cards:
+            layout, notes = self.layout, self.timeline.notices[scene_id]
+            surface = skia.Surface(layout.width, layout.height)
+            canvas = surface.getCanvas()
+            canvas.clear(skia.ColorTRANSPARENT)
+            top = layout.margin + 8
+            bottom = p.draw_notice(canvas, view[2], top, layout.width - layout.margin, notes[:NOTICE_MAX],
+                                   NOTICE_FONT, more=max(len(notes) - NOTICE_MAX, 0))
+            x0, y0 = max(int(view[2]) - 24, 0), max(int(top) - 24, 0)
+            x1, y1 = layout.width, min(int(bottom) + 32, layout.height)
+            card = surface.makeImageSnapshot(skia.IRect.MakeLTRB(x0, y0, x1, y1))
+            self._cards[scene_id] = (card, float(x0), float(y0))
+        return self._cards[scene_id]
 
     def _turning(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
                  ghosts: dict[str, float], spots: dict[str, float], face: bool) -> None:

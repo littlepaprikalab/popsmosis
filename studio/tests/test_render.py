@@ -622,3 +622,29 @@ def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
     assert dark(tagged) and not dark(plain)
     carded_view = carded.view("overview")
     assert not max(pixel(carded.frame(2.0), carded_view[0] + margin + 6, spot[1])) < 120  # the card instead
+
+
+def test_a_stage_fading_into_the_next_keeps_its_tag_and_card_on(job):
+    def beat(t0, t1, scene):
+        return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
+                    spotlight=None, labels=[], particles=[], caption=None, line_id=f"v{t0}", line="x", words=[])
+
+    def video(**extra):
+        return Renderer(job, Timeline(video="song", duration=8, fps=30, audio=[], palette=PALETTE,
+                                      stages=[["hook", "overview"]], beats=[beat(0, 4, "hook"), beat(4, 8, "overview")],
+                                      ai_pictures=["hook", "overview"], **extra))
+
+    tagged = video()
+    view, margin = tagged.view("overview"), tagged.layout.margin
+    spot = (view[0] + margin + 6, view[3] - margin - renderer_module.AI_TAG_FONT * 0.85)
+    assert max(pixel(tagged.frame(4.05), *spot)) < 120  # the tag, not fading in again
+    carded = video(notices={"hook": ["A note."], "overview": ["Another note."]})
+    edge = carded.view("overview")[2]
+    assert np.allclose(pixel(carded.frame(4.05), edge + 3, 120), p.rgb("#F59E0B"), atol=12)  # the card's side
+
+
+def test_a_long_note_is_cut_so_the_card_stays_above_the_lyric_band():
+    surface = skia.Surface(1920, 1080)
+    long = " ".join(["word"] * 400)
+    bottom = p.draw_notice(surface.getCanvas(), 1480, 28, 1900, [long] * 3, 22)
+    assert bottom < 1080 - 110
