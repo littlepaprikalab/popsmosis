@@ -129,4 +129,9 @@ A motion that says a flow "is stopped at" something ("e⁻ flow from Photosystem
 stopped at Herbicide") is the video showing the particles pile up there and go no further:
 SUPPORTED when the facts say that thing blocks or stops that flow, UNSUPPORTED otherwise.
 
+A motion that says something "is turned into" something ("At Photosystem II, H₂O is turned into O₂, H⁺
+and e⁻") is the video writing that conversion beside the structure: SUPPORTED when the facts say that
+structure makes those outputs from those inputs (every one of them, and nothing the facts do not say),
+UNSUPPORTED otherwise.
+
 A motion is never FILLER.

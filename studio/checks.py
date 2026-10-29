@@ -61,6 +61,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_stages(data, problems)
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
+    _check_conversions(data, canon, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
@@ -92,6 +93,29 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
             continue
         kept.append({"structure": name})
     data["blocks"] = kept
+
+
+CONVERT_MAX = 4  # species on one side of a conversion
+
+
+def _check_conversions(data: dict, canon: dict[str, str], problems: list) -> None:
+    """Each conversion names a structure, as its name, with something going in and something coming out, each as a
+    textbook prints it. One structure shows one conversion; any other is left out."""
+    kept, seen = [], set()
+    for conv in data["conversions"]:
+        name = canon.get(fold(conv["structure"]))
+        sides = [[notation(x) for x in conv[side] if notation(x)] for side in ("inputs", "outputs")]
+        why = ("names no structure" if not name else "repeats a structure's conversion" if name in seen else
+               "has nothing going in or coming out" if not all(sides) else
+               f"has more than {CONVERT_MAX} on one side" if any(len(side) > CONVERT_MAX for side in sides) else
+               "has a name too long to print" if any(len(x) > MARKER_MAX for side in sides for x in side) else "")
+        if why:
+            problems.append(Problem(line_id="conversions", rule="conversions", repaired=True,
+                                    detail=f"{conv['structure']} converting {why}; left out"))
+            continue
+        seen.add(name)
+        kept.append({"structure": name, "inputs": sides[0], "outputs": sides[1]})
+    data["conversions"] = kept
 
 
 def _check_spins(data: dict, canon: dict[str, str], problems: list) -> None:

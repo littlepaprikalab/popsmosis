@@ -677,6 +677,8 @@ class Renderer:
         bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t)
+        if beat.conversions:
+            self._conversions(canvas, beat, cam, view, bounds, t)
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, layout.margin + 8, layout.caption_font,
                            caption_alpha)
@@ -691,6 +693,20 @@ class Renderer:
             canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font)
+
+    def _conversions(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, bounds: Rect, t: float) -> None:
+        """What each structure the beat is about turns into what, written just under it (over the label above)."""
+        located = self.locations.scene(beat.scene)
+        scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
+        alpha = p.ease((t - beat.t0) / LABEL_IN_S)
+        for conv in beat.conversions:
+            loc = located.get(conv.structure)
+            if loc is None:
+                continue
+            x = (loc.box.x0 + loc.box.x1) / 2 * scale + dx
+            y = loc.box.y1 * scale + dy + self.layout.label_font * 1.2
+            p.draw_conversion(canvas, (x, y), conv.text, self.timeline.palette[conv.structure],
+                              alpha * edge_fade(x, y, view), bounds, self.layout.label_font * 1.25)
 
     def _card(self, scene_id: str, view: Rect) -> tuple[skia.Image, float, float]:
         """The scene's notice card as an image and where it goes: drawn once, as wrapping its notes and blurring

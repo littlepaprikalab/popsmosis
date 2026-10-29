@@ -319,6 +319,28 @@ def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label:
     draw_text(canvas, label, x - width / 2, y + cap_height(f) / 2, f, argb(ink, alpha))
 
 
+CONVERT_FONT = 30.0
+CONVERT_PAD = 16.0
+
+
+def draw_conversion(canvas: skia.Canvas, centre: tuple[float, float], text: str, color: str, alpha: float,
+                    bounds: Rect, font_size: float = CONVERT_FONT) -> None:
+    """What a structure turns into what, "H₂O → O₂ + H⁺ + e⁻", on a white pill edged in its colour, centred on
+    `centre` and kept inside `bounds`."""
+    if alpha <= 0.01:
+        return
+    f = font("Bold", font_size)
+    width, height = text_width(f, text) + 2 * CONVERT_PAD, font_size * 1.7
+    x = min(max(centre[0], bounds[0] + width / 2), bounds[2] - width / 2)
+    y = min(max(centre[1], bounds[1] + height / 2), bounds[3] - height / 2)
+    body = rounded((x - width / 2, y - height / 2, x + width / 2, y + height / 2), height / 2)
+    shadow(canvas, body, alpha)
+    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.96 * alpha)))
+    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=3.5,
+                                      Color=argb(color, alpha)))
+    draw_text(canvas, text, x - width / 2 + CONVERT_PAD, y + cap_height(f) / 2, f, argb("#1A1A1A", alpha))
+
+
 ARROW_SWEEP = 280.0  # degrees of the ellipse a turning arrow covers
 ARROW_STROKE = 6.0  # frame pixels, inside a dark edge ARROW_EDGE wider
 ARROW_EDGE = 4.0

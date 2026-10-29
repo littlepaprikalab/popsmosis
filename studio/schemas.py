@@ -140,6 +140,12 @@ class Spin(Strict):
     structure: str = Field(description="The structure that turns while particles flow into or through it, by its name")
 
 
+class Conversion(Strict):
+    structure: str = Field(description="The structure where it happens (a complex, an enzyme, a stage), by its name")
+    inputs: list[str] = Field(description='What goes in, as a textbook prints it: ["H₂O"], ["NADP⁺", "H⁺", "e⁻"]')
+    outputs: list[str] = Field(description='What comes out, as a textbook prints it: ["O₂", "H⁺", "e⁻"]')
+
+
 def tag_of(value: str) -> str:
     """A hashtag as it is stored and searched: "#AP Bio" -> "apbio".
 
@@ -196,6 +202,10 @@ class Bundle(Strict):
     spins: list[Spin] = Field(default_factory=list, description="What turns while particles flow through it; [] for none")
     # What stops the particles that reach it. A bundle written before Oct 28 has none.
     blocks: list[Block] = Field(default_factory=list, description="What stops the particles reaching it; [] for none")
+    # What each structure turns into what, drawn beside it as "H₂O → O₂ + H⁺ + e⁻" while it is the subject of a line.
+    # A bundle written before Oct 29 has none.
+    conversions: list[Conversion] = Field(default_factory=list,
+                                          description="What turns into what, and where; [] for none")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -289,7 +299,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "glow", "stages",
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "glow", "stages",
                   "tempo"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
@@ -622,6 +632,13 @@ class Turning(Strict):
         return self.turns + turned, self.from_speed + (self.speed - self.from_speed) * ease / SPIN_EASE_S
 
 
+class Converting(Strict):
+    """A conversion (Bundle.conversions) as one beat shows it: written beside the structure where it happens."""
+
+    structure: str  # located on the beat's scene
+    text: str  # "H₂O → O₂ + H⁺ + e⁻"
+
+
 class Beat(Strict):
     t0: float
     t1: float
@@ -635,6 +652,7 @@ class Beat(Strict):
     particles: list[Particles]
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
+    conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     caption: str | None
     line_id: str | None  # None: an instrumental gap

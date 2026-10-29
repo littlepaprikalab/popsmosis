@@ -145,6 +145,22 @@ def test_what_turns_is_where_particles_flow_in_or_through():
     assert turning("the rotor") == ([], [("spins", "spins", True)])  # no such structure
 
 
+def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
+    def converting(*convs):
+        def change(data):
+            data["conversions"] = [{"structure": s, "inputs": i, "outputs": o} for s, i, o in convs]
+        bundle, found, _ = review(change)
+        return [(c.structure, c.inputs, c.outputs) for c in bundle.conversions], found
+
+    assert converting(("cytochrome B6F", ["h2o"], ["O2", "H+"])) == (
+        [("Cytochrome b6f", ["h₂o"], ["O₂", "H⁺"])], [])  # its name, and as a textbook prints them
+    left_out = [("conversions", "conversions", True)]
+    assert converting(("the rotor", ["H₂O"], ["O₂"])) == ([], left_out)  # no such structure
+    assert converting(("Thylakoid", [], ["O₂"])) == ([], left_out)  # nothing goes in
+    assert converting(("Thylakoid", ["glucose6phosphate"], ["O₂"])) == ([], left_out)  # too long to print
+    assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
+
+
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     def change(data):
         direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")

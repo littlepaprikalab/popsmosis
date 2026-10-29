@@ -475,6 +475,19 @@ drug, a herbicide (`[{"structure": "Herbicide"}]`). Particles whose last stop is
 pile up there in the video, under a cross, instead of going on. List only what the facts
 say blocks that flow; the fact-check holds each to them. [] when nothing does.
 
+## What turns into what
+
+`conversions` lists what each structure turns into what, when the lesson says so: the reactions a
+textbook writes beside a diagram (`[{"structure": "Photosystem II", "inputs": ["H₂O"], "outputs":
+["O₂", "H⁺", "e⁻"]}, {"structure": "NADP⁺ reductase", "inputs": ["NADP⁺", "H⁺", "e⁻"], "outputs":
+["NADPH"]}, {"structure": "ATP synthase", "inputs": ["ADP", "Pᵢ"], "outputs": ["ATP"]}]`). The structure is
+where it happens, named as in `structures`; each species is written as a textbook prints it (at most 4 a
+side, 8 characters each), and one structure gets one. The video writes it beside the structure, as
+"H₂O → O₂ + H⁺ + e⁻", while a line is about it (its spotlight, glow or camera target, or a stop of its
+particles), so the learner sees every input and output on the diagram, not only hears them. A lesson that
+says "X is made into Y" at a part of the diagram has one for it. List only what the facts say; the
+fact-check holds each to them. [] when none.
+
 ## Tags
 
 `tags` are hashtags for each video, the way a creator tags a TikTok, so that someone

@@ -25,6 +25,10 @@ No model calls, so it is free to run again:
   end there and empties while they start from it: FILL_S seconds of them fill it from
   empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
   on across scenes, so a close-up of the same space shows it as full as the overview left it.
+- A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
+  that structure is the subject: its spotlight, glow or camera target, or a stop of the particles.
+- The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
+  line, so the learner sees where a close-up sits before it is shown.
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
   through it, and eases to a stop when they stop; how far round it is runs on from beat
   to beat, so it never jumps.
@@ -54,6 +58,7 @@ from studio.schemas import (
     AudioClip,
     Beat,
     Bundle,
+    Converting,
     Crowd,
     Locations,
     Particles,
@@ -239,6 +244,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     revealed: dict[str, list[str]] = {}  # per scene, in order
     heard: list[str] = []  # every structure named in this video so far, in order
     captions: list[str | None] = []
+    opened: set[str] = set()  # scenes whose first line has played
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
         scene = after["scene"] if after else hook
@@ -294,6 +300,9 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         particles = [Particles(path=stops, color=marker_colour(label), trail=True, label=label,
                                blocked=stops[-1] in blockers)] if len(stops) >= 2 else []
         glow = _shown(direction.glow, scene_names, labels) if direction else None
+        if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
+            target, zoom = None, 1.0
+        opened.add(scene)
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
                       "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels), "particles": particles,
@@ -314,6 +323,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     beats[-1]["t1"] = duration
     _fill_crowds(beats, bundle, located)
     _turn(beats, bundle, located)
+    _convert(beats, bundle, located)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
@@ -340,6 +350,19 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label),
                                     start=round(start, 4), end=round(end, 4)))
         beat["crowds"] = crowds
+
+
+def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
+    """The conversions each beat writes: those of the structures on its scene, labelled by now, that the beat is
+    about (spotlight, glow, camera target, or a stop of its particles)."""
+    for beat in beats:
+        subjects = {beat["spotlight"], beat.get("glow"), beat["camera"].target}
+        subjects |= {stop for f in beat["particles"] for stop in f.path}
+        beat["conversions"] = [
+            Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}")
+            for c in bundle.conversions
+            if c.structure in subjects and c.structure in beat["labels"]
+            and c.structure in located.get(beat["scene"], set())]
 
 
 def _turn(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:

@@ -112,13 +112,20 @@ def spin_text(bundle: Bundle, structure: str) -> str:
     return f"{structure} spins as particles flow into it from {' and '.join(sources)}"
 
 
+def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> str:
+    """What the video writes beside a structure: "At Photosystem II, H₂O is turned into O₂, H⁺ and e⁻"."""
+    return f"At {structure}, {' and '.join(inputs)} is turned into {' and '.join(outputs)}"
+
+
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving, when they are marked with what they carry, and what the
     video shows piling up and turning."""
     return [Line(MOTION, d.line_id, _motion(bundle, d))
             for d in bundle.direction if d.carries and len(d.particles) >= 2] + [
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
-        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)]
+        Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
+        Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
+        for i, c in enumerate(bundle.conversions, 1)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -235,6 +242,8 @@ def check_bundle(
         data["builds_up"] = [b for b in data["builds_up"]
                              if build_up_text(b["carries"], b["region"]) in passed_motions]
         data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
+        data["conversions"] = [c for c in data["conversions"]
+                               if conversion_text(c["structure"], c["inputs"], c["outputs"]) in passed_motions]
         bundle = Bundle.model_validate(data)
     failing = [c for c in checked if c.kind not in KEPT_OR_DROPPED and c.verdict not in PASSING]
     if failing and not reason:
