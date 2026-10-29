@@ -563,10 +563,11 @@ fact-check holds each to them. [] when none.
 
 ## On screen
 
-The lyrics fly past faster than a learner can take them in, so the song video writes the step being
-sung above the diagram and holds it there while the lines go by. `key_lines` are those steps, 3 to 10
+The lyrics fly past faster than a learner can take them in, so both videos write the step being
+taught above the diagram and hold it there while the lines go by. `key_lines` are those steps, 3 to 10
 of them in song order: the `why_chain` walked through the song, every link on at least one, each
-written where the song starts singing it.
+written where the song starts singing it. The lesson video shows the same lines, so the learner reads
+the same words in both.
 
 - `from_line` is the id of the lyric line it appears on. It stays until the next key line appears,
   across scene changes, so put one where the song moves on to a new step, not on every line.
@@ -577,8 +578,11 @@ written where the song starts singing it.
 - The first can sit on the first sung line and ask the question the song answers ("How does a leaf
   turn light into fuel?"). The analogy's can say what stands for what ("Turnstile = ATP synthase").
   The bridge's says what fails and why.
-- None on the last chorus: the video shows `core_idea` there by itself, so the chain ends on the
-  whole idea. Each is fact-checked like a sentence of the lesson.
+- `from_narration` is the id of the narration sentence where the lesson video shows it: the sentence
+  where the narrator starts on that step. In the narration's order, never two on one sentence. "" for a
+  line the narration has no place for (the analogy's, when the narration tells it another way).
+- None on the last chorus or the narration's last sentence: the videos show `core_idea` there by
+  themselves, so the chain ends on the whole idea. Each is fact-checked like a sentence of the lesson.
 
 ## Tags
 

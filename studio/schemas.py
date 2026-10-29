@@ -143,6 +143,9 @@ class Spin(Strict):
 class KeyLine(Strict):
     from_line: str = Field(description="The id of the lyric line it appears on; it stays until the next key line's")
     text: str = Field(description='The step being sung, in at most 10 words: "Light splits water → O₂ + H⁺ + e⁻"')
+    # Where the lesson video writes the same line. "" in a bundle written before the lesson video showed them.
+    from_narration: str = Field(default_factory=str, description="The id of the narration sentence it appears on in the "
+                                                                 'lesson video; "" for none')
 
 
 class Conversion(Strict):
@@ -217,10 +220,10 @@ class Bundle(Strict):
     # A bundle written before Oct 29 has none.
     conversions: list[Conversion] = Field(default_factory=list,
                                           description="What turns into what, and where; [] for none")
-    # What the song writes above its diagram, held while the lyrics go by, so a learner who cannot keep up with
-    # them reads the step being sung. A bundle written before Oct 29 has none.
+    # What both videos write above their diagram, held while the lines go by, so a learner who cannot keep up
+    # with them reads the step being taught. A bundle written before Oct 29 has none.
     key_lines: list[KeyLine] = Field(default_factory=list,
-                                     description="The why chain written on screen in the song, in song order")
+                                     description="The why chain written on screen in both videos, in song order")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)

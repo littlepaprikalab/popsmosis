@@ -396,31 +396,47 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _turn(beats, bundle, located)
     _convert(beats, bundle, located)
     _route(beats)
-    if video == "song":
-        _key_lines(beats, bundle)
+    _key_lines(beats, bundle, video)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
-                    key_terms=bundle.key_terms if video == "song" else [])
+                    key_terms=bundle.key_terms)
 
 
-def _key_lines(beats: list[dict], bundle: Bundle) -> None:
-    """Each song beat's key line: the last one to start on or before its lyric, held through the gaps after it.
-    From the last chorus to the end, the core idea, the whole why chain in one line, unless a key line starts
-    after the chorus begins."""
-    order = {line.id: i for i, line in enumerate(bundle.lyrics)}
-    starts = sorted((order[k.from_line], " ".join(k.text.split())) for k in bundle.key_lines
-                    if k.from_line in order and k.text.strip())
+CORE_SAID = 0.6  # the share of the core idea's words a narration sentence says to be the one that says it
+
+
+def _says_core_idea(bundle: Bundle) -> int:
+    """The narration sentence that says the core idea, as the prompt has it, in its own words (the last that says
+    most of them); the last sentence when none does."""
+    idea = set(tokens(bundle.core_idea))
+    said = [i for i, n in enumerate(bundle.narration) if idea and len(idea & set(tokens(n.text))) >= CORE_SAID * len(idea)]
+    return said[-1] if said else len(bundle.narration) - 1
+
+
+def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
+    """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
+    sentence in the lesson), held through the gaps after it. From the last chorus, or the narration's last
+    sentence that says it, to the end, the core idea, the whole why chain in one line, unless a key line starts
+    later."""
+    lines = bundle.lyrics if video == "song" else bundle.narration
+    order = {line.id: i for i, line in enumerate(lines)}
+    starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
+                    if (at := k.from_line if video == "song" else k.from_narration) in order and k.text.strip())
     if not starts:
         return  # a bundle written before key lines: no band, the picture as it was
-    choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
-    finale = choruses[-1] if choruses and bundle.core_idea.strip() else len(bundle.lyrics)
-    while finale > 0 and finale - 1 in choruses:
-        finale -= 1  # where the last chorus starts
-    starts.append((finale, " ".join(bundle.core_idea.split())))
-    starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the chorus's first line, and wins
+    if video == "song":
+        choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
+        finale = choruses[-1] if choruses else len(lines)
+        while finale > 0 and finale - 1 in choruses:
+            finale -= 1  # where the last chorus starts
+    else:
+        finale = _says_core_idea(bundle)
+    if bundle.core_idea.strip():
+        starts.append((finale, " ".join(bundle.core_idea.split())))
+    starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
     for i, beat in enumerate(beats):
         if beat["line_id"] in order:
             at = order[beat["line_id"]]

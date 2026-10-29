@@ -169,6 +169,9 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
     if not KEY_LINES[0] <= len(bundle.key_lines) <= KEY_LINES[1]:
         problems.append(Problem(line_id="key_lines", rule="key-line", repaired=False,
                                 detail=f"{len(bundle.key_lines)} key lines, not {KEY_LINES[0]} to {KEY_LINES[1]}"))
+    if bundle.key_lines and not any(k.from_narration for k in bundle.key_lines):
+        problems.append(Problem(line_id="key_lines", rule="key-line", repaired=False,
+                                detail="no key line is placed in the narration, so the lesson video shows none"))
     for key in bundle.key_lines:
         words = len(key.text.split())
         if words > KEY_LINE_WORDS_MAX:
@@ -190,6 +193,17 @@ def _check_key_lines(data: dict, problems: list) -> None:
             continue
         seen.add(key["from_line"])
         kept.append(key)
+    # In the lesson video, one on a sentence the narration does not have, or a second on the same sentence, is
+    # left out of that video only.
+    spoken, taken = {n["id"] for n in data["narration"]}, set()
+    for key in kept:
+        at = key.get("from_narration", "")
+        if at and (at not in spoken or at in taken):
+            problems.append(Problem(line_id=at, rule="key-line", repaired=True,
+                                    detail=f'left the key line "{key["text"]}" out of the lesson video: its narration '
+                                           f"sentence is unknown or taken"))
+            key["from_narration"] = ""
+        taken.add(key["from_narration"])
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_line"]])
 
 

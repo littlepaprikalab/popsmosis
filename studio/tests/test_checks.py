@@ -328,11 +328,14 @@ def test_a_song_that_stands_still_or_directs_its_choruses_differently_is_recorde
 
 def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
     data = bundle_data()
-    data["key_lines"] = [{"from_line": "v2-1", "text": "Light pumps H⁺"}, {"from_line": "v1-1", "text": "How?"},
-                         {"from_line": "nope", "text": "Lost"}, {"from_line": "v2-1", "text": "Twice"}]
+    data["key_lines"] = [{"from_line": "v2-1", "text": "Light pumps H⁺", "from_narration": "n2"},
+                         {"from_line": "v1-1", "text": "How?", "from_narration": "n2"},
+                         {"from_line": "nope", "text": "Lost"}, {"from_line": "v2-1", "text": "Twice"},
+                         {"from_line": "c1-1", "text": "Unspoken", "from_narration": "zz"}]
     bundle, report = checks.review(Bundle.model_validate(data))
-    assert [(k.from_line, k.text) for k in bundle.key_lines] == [("v1-1", "How?"), ("v2-1", "Light pumps H⁺")]
-    assert [p.rule for p in report.problems if p.rule == "key-line"] == ["key-line", "key-line"]
+    assert [(k.from_line, k.text, k.from_narration) for k in bundle.key_lines] == [
+        ("v1-1", "How?", ""), ("c1-1", "Unspoken", ""), ("v2-1", "Light pumps H⁺", "n2")]  # n2 went to the first
+    assert len([p for p in report.problems if p.rule == "key-line"]) == 4
 
 
 def test_key_lines_are_recorded_when_too_few_or_too_long():
@@ -340,5 +343,6 @@ def test_key_lines_are_recorded_when_too_few_or_too_long():
     data["why_chain"] = ["a", "b", "c"]
     data["key_lines"] = [{"from_line": "v1-1", "text": " ".join(["word"] * 11)}]
     found = [p.detail for p in checks.key_line_problems(Bundle.model_validate(data))]
-    assert found == ["1 key lines, not 3 to 10", f'the key line "{" ".join(["word"] * 11)}" runs 11 words, over 10']
+    assert found == ["1 key lines, not 3 to 10", "no key line is placed in the narration, so the lesson video shows none",
+                     f'the key line "{" ".join(["word"] * 11)}" runs 11 words, over 10']
     assert checks.key_line_problems(Bundle.model_validate(bundle_data())) == []  # before the why chain

@@ -409,8 +409,8 @@ def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(
 
 
 def keyed(data):
-    data["key_lines"] = [{"from_line": "v1-1", "text": "How does a leaf make fuel from light?"},
-                         {"from_line": "v2-1", "text": "Light pumps H⁺ into the lumen"}]
+    data["key_lines"] = [{"from_line": "v1-1", "text": "How does a leaf make fuel from light?", "from_narration": "n1"},
+                         {"from_line": "v2-1", "text": "Light pumps H⁺ into the lumen", "from_narration": "n2"}]
     data["key_terms"] = ["ATP synthase", "lumen"]
 
 
@@ -429,11 +429,23 @@ def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_the_
         if not beat.line_id and i:
             assert beat.key_line == song.beats[i - 1].key_line
     assert song.key_terms == ["ATP synthase", "lumen"]
-    assert all(b.key_line == "" for b in timelines["lesson"].beats) and timelines["lesson"].key_terms == []
+    lesson = {b.line_id: b.key_line for b in timelines["lesson"].beats if b.line_id}
+    narration = [n.id for n in bundle.narration]
+    assert lesson[narration[0]] == "How does a leaf make fuel from light?"
+    assert lesson[narration[-1]] == bundle.core_idea  # the narration ends on the core idea
+    assert all(lesson[n] == "Light pumps H⁺ into the lumen" for n in narration[1:-1])
+    assert timelines["lesson"].key_terms == ["ATP synthase", "lumen"]
     hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
     assert any(b.key_line for b in hook.beats) and hook.key_terms == song.key_terms
 
 
 def test_a_song_from_a_bundle_without_key_lines_has_none(job):
-    song = make(job)["song"]
-    assert all(b.key_line == "" for b in song.beats)  # not even the core idea: no band at all
+    for timeline in make(job).values():
+        assert all(b.key_line == "" for b in timeline.beats)  # not even the core idea: no band at all
+
+
+def test_the_lesson_shows_the_core_idea_from_the_sentence_that_says_it():
+    data = bundle_data()
+    assert step._says_core_idea(Bundle.model_validate(data)) == len(data["narration"]) - 1  # none says it: the last
+    data["narration"][0]["text"] = "So remember: " + data["core_idea"]
+    assert step._says_core_idea(Bundle.model_validate(data)) == 0
