@@ -1109,14 +1109,19 @@ class Renderer:
         reaction pills keep clear of. Every arrow, not only those on screen, so a label is placed once for the
         scene and does not jump as each arrow appears."""
         if scene_id not in self._scene_routes:
-            paths = []
+            routes = []
             for beat in self.timeline.beats:
                 for route in beat.routes if beat.scene == scene_id else []:
-                    if route.path not in paths:
-                        paths.append(route.path)
-            samples = []
-            for path in paths:
-                for line, *_ in self._legs(scene_id, path):
+                    if (route.path, route.label, route.color) not in routes:
+                        routes.append((route.path, route.label, route.color))
+            samples, drawn = [], set()
+            for path, label, color in routes:
+                pairs = self._path_stops(scene_id, path)
+                for line, _, first, last, _ in self._legs(scene_id, path):
+                    hop = (pairs[first][1].name, pairs[last][1].name, label, color)
+                    if hop in drawn:
+                        continue  # drawn once, by the route that first has it (_routes)
+                    drawn.add(hop)
                     for start, end in zip(line, line[1:]):
                         n = max(int(math.dist(start, end) / ARROW_SAMPLE), 1)
                         samples += [(p.lerp(start[0], end[0], k / n), p.lerp(start[1], end[1], k / n))
@@ -1136,6 +1141,7 @@ class Renderer:
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         badges: list[tuple[Point, str, str, float]] = []
+        drawn: set[tuple] = set()  # the hops drawn so far, so a later route never draws one again beside it
         for route in beat.routes:
             pairs = self._path_stops(beat.scene, route.path)
             points = [pt for pt, _ in pairs]
@@ -1146,10 +1152,16 @@ class Renderer:
                 continue
             grown = []
             for line, into_space, first, last, crossed in self._legs(beat.scene, route.path):
+                hop = (pairs[first][1].name, pairs[last][1].name, route.label, route.color)
+                if hop in drawn:
+                    continue  # an earlier route on the scene draws it, from when its own particles passed
                 if done or at >= last:
                     grown.append((line, into_space, crossed))
                 elif at >= first and (part := _up_to(line, lead)):
                     grown.append((part, True, crossed))  # up to the particle, which covers its head
+                else:
+                    continue
+                drawn.add(hop)
             for line, into_space, crossed in grown:
                 frame = [(x * scale + dx, y * scale + dy) for x, y in line]
                 gap = ROUTE_GAP if into_space else ROUTE_EDGE_GAP

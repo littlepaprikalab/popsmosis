@@ -25,6 +25,7 @@ from studio.schemas import (
     Locations,
     Particles,
     Reveal,
+    Route,
     Timeline,
     TimelineCamera,
     Timing,
@@ -671,3 +672,19 @@ def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
     assert upright.view("overview")[1] == upright.layout.title_h  # in the title band, which keeps its height
     top = upright.frame(14.0)[:upright.layout.title_h, :, :3]
     assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50
+
+
+def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    first = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    since = timeline.beats[first].t0
+    one = Route(path=["Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
+    both = Route(path=["Cytochrome b6f", "Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
+    other = Route(path=["Thylakoid", "Cytochrome b6f"], color="#F2C230", label="H⁺", since=since)  # another carrier
+    beats = [b.model_copy(update={"routes": [one, both, other]}) if b.scene == "overview" else b for b in timeline.beats]
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    legs = []
+    monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append(color))
+    last = max(i for i, b in enumerate(beats) if b.scene == "overview")
+    renderer.frame(beats[last].t1 - 0.01)
+    assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
