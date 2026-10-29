@@ -81,7 +81,7 @@ topic ──► API ──fire──► Claude routine ──► python -m studi
                                              │ audio + timing ┘
                                              │ timeline (code) ──► render (code)
                                              ▼
-                                          Supabase Storage ──► both videos on the droplet
+                                          Cloudflare R2 ──► both videos on the droplet
 ```
 
 - **The Claude routine is the entry point and the operator.** It wakes on the API
@@ -180,7 +180,7 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
-| 9 | Upload | API + Supabase | Videos (public), intermediates (private) |
+| 9 | Upload | API + Cloudflare R2 | Videos (public), intermediates (private) |
 
 Steps 3–4 (art) and 5–6 (audio) do not depend on each other: run them at the same time.
 
@@ -431,8 +431,8 @@ Section 7.
 
 ### Step 9: upload
 
-The API mints a signed upload URL per file and the studio uploads straight to Supabase
-Storage, so the Supabase key stays on the API: the videos to the public bucket, the
+The API signs an upload URL per file and the studio uploads straight to Cloudflare R2,
+so the R2 key stays on the API: the videos to the public bucket, the
 intermediate files to the private one (section 10). Then the studio marks the videos
 ready.
 
@@ -627,7 +627,7 @@ takes some setup in the routine's environment:
   starts. The container is cached after the hook, so a cold environment pays about two
   minutes once and a warm run seconds.
 - **Network policy:** allow the popsmosis API host, `api.anthropic.com`,
-  `api.elevenlabs.io`, `generativelanguage.googleapis.com` (a Lyria song), `api.meta.ai`, the Supabase host, the Inkmory API host, PyPI,
+  `api.elevenlabs.io`, `generativelanguage.googleapis.com` (a Lyria song), `api.meta.ai`, R2's upload host (`<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`), the Inkmory API host, PyPI,
   `download.pytorch.org` (CPU PyTorch), `huggingface.co` (the Demucs weights, 81 MB) and
   `dl.fbaipublicfiles.com` (the MMS aligner weights, 1.2 GB).
 - **Queue settings:** the lesson text is posted right after the fact-check, a few minutes
@@ -656,8 +656,8 @@ The `jobs/<id>/` folder disappears with the routine's machine. These copies outl
 | What | Where | Why |
 |---|---|---|
 | `bundle.json`, `factcheck.json` | Postgres, JSON columns on the `Answer` | Small (tens of KB). Follow-ups and the page need them, and they are saved in the same request as the lesson |
-| The song and lesson videos, a poster frame for each | Supabase Storage, public bucket `droplets/<answerId>/` | Anyone can watch them on the Droplets tab |
-| Art, masks, `locations.json`, audio, timings, timelines | Supabase Storage, private bucket `studio/<answerId>/` | Re-render after a renderer fix without paying again for the song and the art |
+| The song and lesson videos, a poster frame for each | Cloudflare R2, public bucket `droplets/<answerId>/`, read at its custom domain (`R2_PUBLIC_URL`) | Anyone can watch them on the Droplets tab; R2 charges nothing for downloads |
+| Art, masks, `locations.json`, audio, timings, timelines | Cloudflare R2, private bucket `studio/<answerId>/` | Re-render after a renderer fix without paying again for the song and the art |
 
 **Follow-ups read the droplet from the database.** The reply queue includes a compact
 context taken from the bundle: `core_idea`, the facts, the misconception and the
@@ -714,7 +714,7 @@ the videos' (`videoStatus`).
 | Agent | PUT | `/api/questions/:id/progress` | Where the studio is while it writes the lesson: the steps running, the bill so far, whether videos follow |
 | Agent | PUT | `/api/answers/:id/video/progress` | Where the render is: the media steps running and the videos' bill so far; the current attempt only |
 | Agent | PATCH | `/api/answers/:id/video` | `{ status, songVideoUrl?, lessonVideoUrl?, error? }`; the agent's own answers only |
-| Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed Supabase upload URL (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` on the API) |
+| Agent | POST | `/api/answers/:id/upload-url` | `{ bucket, file }`; returns a signed R2 upload URL and the headers to send with it (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_PUBLIC_URL` on the API) |
 | Anyone | GET | `/api/droplets` | READY and not hidden, newest first, `?cursor=`; `?tag=` those tagged with it |
 | Anyone | GET | `/api/droplets/:id` | One droplet |
 | Admin | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the tab, or put it back |
@@ -769,8 +769,9 @@ account.
   instead of making another.
 - **Before launch:** check that the ElevenLabs plan allows publishing its generated songs
   publicly, and Google's terms for Lyria's when Lyria sings (they carry a
-  SynthID watermark). Keep the bitrate modest (flat diagrams compress well) to hold down
-  Supabase egress. Done: the videos are encoded with `-movflags +faststart`, so one starts
+  SynthID watermark). Keep the bitrate modest (flat diagrams compress well) so a video
+  starts quickly on a phone; R2 charges nothing for downloads, so serving them does not
+  grow with views. Done: the videos are encoded with `-movflags +faststart`, so one starts
   playing before it has downloaded.
 
 ## 11. The two agents and their record on Inkmory
@@ -969,7 +970,7 @@ Rules that follow from Inkmory's code:
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days. The planner's beat was built on Oct 28 (`studio/inkmory.py`) and run against a local Inkmory |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
-| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: Supabase is not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Left: the Supabase buckets, then `run` and `videos` end to end; agent credits |
+| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: storage was not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Oct 29: storage moved from Supabase to Cloudflare R2, whose downloads are free; its buckets, `media.popsmosis.com` and the API's settings are set up. Left: the routine's network policy, then `run` and `videos` end to end; agent credits |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch the default brain to a Muse on `/admin/studio` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them. Particles built early (Oct 28). The contact sheet can be made (`python -m studio.render sheet`); the helper's check on it is not built. Left: the vertical layout, the QA check |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |
@@ -1020,8 +1021,10 @@ Setup by hand. Until it is done, no droplet runs live from topic to videos:
 - **The ElevenLabs key.** `ELEVENLABS_API_KEY` must hold the key itself, not its ID
   (day 3).
 - **The routine:** its environment and the API trigger (the runbook, Option A).
-- **Supabase Storage:** the `droplets` and `studio` buckets, and `SUPABASE_URL` and
-  `SUPABASE_SERVICE_ROLE_KEY` on the API (DEPLOY.md, section 6).
+- **Cloudflare R2:** the `droplets` and `studio` buckets, `media.popsmosis.com` and the
+  four `R2_` settings on the API are set up (Oct 29). Left: allow
+  `<R2_ACCOUNT_ID>.r2.cloudflarestorage.com` in the routine's network policy (DEPLOY.md,
+  section 6).
 - **The operator on Inkmory:** adopt it, then run its first beat within 3 days.
 - **The planner on Inkmory:** Boojum is adopted. Set its `llmModel` to
   `muse-wonder-1.0` on the sponsor dashboard, put its key in the routine's environment
@@ -1085,8 +1088,8 @@ terms (section 10). Day 10: the demo and the submission.
    facts, not tone. Only `lesson` closes the loop of section 11: the corrections in the
    planner's journal reach its next bundle only through the bundle prompt.
 
-Decided: the interim art is brain-drawn SVG (step 3); the videos are public, in Supabase
-Storage, on a public Droplets tab (section 10); two agents keep a public record on
+Decided: the interim art is brain-drawn SVG (step 3); the videos are public, in Cloudflare
+R2, on a public Droplets tab (section 10); two agents keep a public record on
 Inkmory, and the studio posts the planner's record from one structured call (section 11);
 the renderer is an original one, with a video style similar to the Fire or Don't videos
 (section 7).

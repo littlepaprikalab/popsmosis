@@ -1,6 +1,6 @@
 """Step 9: upload (docs/PLAN.md, sections 5 and 10).
 
-Copies what outlives the job folder to Supabase Storage, then marks the videos READY:
+Copies what outlives the job folder to Cloudflare R2, then marks the videos READY:
 
     droplets/<answerId>/a<n>/out/song_h.mp4 ...   public: the two videos and their posters, for anyone to watch
     studio/<answerId>/a<n>/art/hook.png ...       private: art, masks, locations.json, audio, timings and
@@ -15,8 +15,9 @@ takes it only from the attempt that holds the render. A job with no videos.json 
 step run by hand) uploads without the a<n> folder.
 
 For each file the API mints a signed upload URL (POST /api/answers/:id/upload-url) and
-the bytes go straight to Supabase, so the Supabase key stays on the API and the agent
-key is never sent to Supabase. The answer is the one in posted.json.
+the bytes go straight to R2 with the headers the API signed into it (the file's type, and
+for a public file how long it may be cached), so the R2 key stays on the API and the
+agent key is never sent to R2. The answer is the one in posted.json.
 
 The files are an explicit list built from studio/media.py, the bundle's scenes (art)
 and locations.json (masks), never a glob of the folder: the job also holds lock and log
@@ -61,11 +62,6 @@ RETRY_DELAYS_S = (2.0, 6.0)  # waits before the second and third try of a transi
 T = TypeVar("T")
 PUBLIC, PRIVATE = "droplets", "studio"
 Bucket = Literal["droplets", "studio"]
-
-CONTENT_TYPES = {".mp4": "video/mp4", ".jpg": "image/jpeg", ".png": "image/png", ".mp3": "audio/mpeg", ".json": "application/json"}
-# A re-render overwrites the public files in place; a short cache lets viewers see the new one soon.
-PUBLIC_CACHE_S = 300
-PRIVATE_CACHE_S = 3600
 
 
 class UploadedFile(BaseModel):
@@ -241,14 +237,15 @@ def upload_file(api: Api, job: Path, answer_id: str, bucket: Bucket, path: str) 
     done = progress.files.get(path)
     if done and done.bucket == bucket and done.remote == remote and done.sha256 == digest:
         return done, 0
-    content_type = CONTENT_TYPES.get(Path(path).suffix.lower(), "application/octet-stream")
-    cache_s = PUBLIC_CACHE_S if bucket == PUBLIC else PRIVATE_CACHE_S
 
     def send() -> dict:
         signed = api.upload_url(answer_id, bucket, remote)  # signed per try: a URL is good for two hours
         if not isinstance(signed, dict) or not isinstance(signed.get("uploadUrl"), str):
             raise media.StepFailed(f"{bucket}/{remote}: the API sent no upload URL")
-        api.put_file(signed["uploadUrl"], data, content_type, cache_s)
+        headers = signed.get("headers")
+        if not isinstance(headers, dict) or not all(isinstance(v, str) for v in headers.values()):
+            raise media.StepFailed(f"{bucket}/{remote}: the API sent no upload headers (is it older than the move to R2?)")
+        api.put_file(signed["uploadUrl"], data, headers)
         return signed
 
     signed = _retrying(f"{bucket}/{remote}", send)

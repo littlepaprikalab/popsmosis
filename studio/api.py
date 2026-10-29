@@ -5,8 +5,8 @@ shell commands read. Only the agent endpoints the studio needs are here
 (README, "API"); errors come back as ApiError with the API's own code and message.
 
 The one request that does not go to the API is put_file: the bytes of a video or an
-intermediate file go straight to Supabase Storage, on a signed URL the API minted
-(upload_url), so neither the Supabase key nor the agent key is ever sent there.
+intermediate file go straight to Cloudflare R2, on a signed URL the API minted
+(upload_url), so neither the R2 key nor the agent key is ever sent there.
 """
 
 from __future__ import annotations
@@ -14,7 +14,9 @@ from __future__ import annotations
 import io
 import json
 import os
+import re
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from typing import Callable
@@ -57,6 +59,22 @@ def _urllib_send(method: str, url: str, headers: dict, body: bytes | None, timeo
         return e.code, e.read()
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise ApiError(0, "UNREACHABLE", f"the API did not answer: {getattr(e, 'reason', e)}") from e
+
+
+# What R2 says when it refuses a PUT, and what to check: <Error><Code>…</Code><Message>…</Message></Error>.
+_KEY_CODES = {"SignatureDoesNotMatch", "InvalidAccessKeyId", "AccessDenied", "Unauthorized", "ExpiredToken"}
+
+
+def _storage_reason(raw: bytes) -> str:
+    text = raw.decode("utf-8", "replace") if raw else ""
+    code = re.search(r"<Code>([^<]{1,100})</Code>", text)
+    message = re.search(r"<Message>([^<]{1,300})</Message>", text)
+    said = ": " + ": ".join(m.group(1) for m in (code, message) if m) if code or message else ""
+    if code and code.group(1) in _KEY_CODES:
+        said += "; check R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY on the API, and that its R2 token may write this bucket"
+    elif code and code.group(1) == "NoSuchBucket":
+        said += "; check that the bucket exists in the account R2_ACCOUNT_ID names on the API"
+    return said
 
 
 @dataclass
@@ -129,8 +147,10 @@ class Api:
     # --- the videos (docs/PLAN.md, section 10) ----------------------------------
 
     def upload_url(self, answer_id: str, bucket: str, file: str) -> dict:
-        """A signed URL to PUT one file to, at <bucket>/<answer_id>/<file>: { uploadUrl, path, publicUrl }.
-        publicUrl is set for the public "droplets" bucket only. 503 until the API has SUPABASE_URL."""
+        """A signed URL to PUT one file to, at <bucket>/<answer_id>/<file>: { uploadUrl, headers, path, publicUrl }.
+        The PUT carries exactly `headers` (the file's Content-Type, and Cache-Control in the public bucket), which
+        are signed into the URL. publicUrl is set for the public "droplets" bucket only. 503 until the API has its
+        R2 settings."""
         return self.request("POST", f"/api/answers/{answer_id}/upload-url", {"bucket": bucket, "file": file})
 
     def set_video(self, answer_id: str, status: str, *, error: str | None = None, attempt: int | None = None,
@@ -153,17 +173,21 @@ class Api:
             body["breakdown"] = breakdown
         return self.request("PATCH", f"/api/answers/{answer_id}/video", body)
 
-    def put_file(self, upload_url: str, data: bytes, content_type: str, cache_seconds: int = 3600) -> None:
-        """PUT one file's bytes to a signed Supabase Storage URL, as supabase-js's uploadToSignedUrl
-        does: the raw bytes, their Content-Type, and the token in the URL as the only credential."""
-        headers = {"Content-Type": content_type, "Cache-Control": f"max-age={cache_seconds}", "x-upsert": "true"}
-        status, raw = self.send("PUT", upload_url, headers, data)
+    def put_file(self, upload_url: str, data: bytes, headers: dict[str, str]) -> None:
+        """PUT one file's bytes to a signed R2 URL, with the headers the API signed into it (upload_url).
+        The signature in the URL is the only credential."""
+        try:
+            status, raw = self.send("PUT", upload_url, dict(headers), data)
+        except ApiError as e:
+            if e.status:
+                raise
+            # The routine's network policy has to allow the R2 host, unlike every other request here.
+            host = urllib.parse.urlsplit(upload_url).hostname
+            reason = e.message.removeprefix("the API did not answer: ")
+            raise ApiError(0, "UNREACHABLE", f"storage did not answer ({host}): {reason}") from e
         if not 200 <= status < 300:
-            try:
-                message = json.loads(raw).get("message") or json.loads(raw).get("error") or ""
-            except (ValueError, AttributeError):
-                message = ""
-            raise ApiError(status, "UPLOAD_FAILED", f"storage answered {status}" + (f": {message}" if message else ""))
+            raise ApiError(status, "UPLOAD_FAILED", f"storage answered {status}{_storage_reason(raw)}")
+
     # --- the videos (docs/PLAN.md, section 12) ---------------------------------
 
     def claim_videos(self, answer_id: str, attempt: int | None = None) -> dict:

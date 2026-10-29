@@ -21,8 +21,8 @@ const BUNDLE = {
 const FACTCHECK = { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] };
 const READY = {
   videoStatus: 'READY' as const,
-  songVideoUrl: 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song.mp4',
-  lessonVideoUrl: 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/lesson.mp4',
+  songVideoUrl: 'https://media.popsmosis.com/a/out/song.mp4',
+  lessonVideoUrl: 'https://media.popsmosis.com/a/out/lesson.mp4',
 };
 const WORDS = 'ATP synthase, for my AP Bio exam on Friday at Lincoln High';
 const LESSON = 'Protons flowing back through **ATP synthase** spin its rotor.';

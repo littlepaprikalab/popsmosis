@@ -310,7 +310,7 @@ function CardVideo({ src, poster, kind, heading }: { src: string; poster: string
           onClick={() => { pressed.current = true; setStarted(true); video.current?.play().catch(() => {}); }}
           className="group absolute inset-0 flex items-center justify-center">
           {poster && (
-            // eslint-disable-next-line @next/next/no-img-element -- a remote Supabase still, no optimizer in front
+            // eslint-disable-next-line @next/next/no-img-element -- a remote R2 still, no optimizer in front
             <img src={poster} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
           )}
           <span className="relative w-14 h-14 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 group-focus-visible:ring-2"

@@ -15,7 +15,7 @@ The teacher does not write the lessons itself: it runs the **studio**, a Python
 pipeline in this repo, which writes each lesson, fact-checks every line and posts it.
 Today a droplet is that written lesson. Next come two videos made from the same
 fact-checked plan and diagrams: a narrated lesson and a karaoke-style lesson song, stored
-in Supabase and shown above the text. The learner meets a droplet through its videos: while
+in Cloudflare R2 and shown above the text. The learner meets a droplet through its videos: while
 they are made, `/learn` holds the text back and shows the droplet's bill of materials filling
 in, step by step ([While a droplet is made](#while-a-droplet-is-made)), and shows the text
 with the videos once they are done. Once a droplet's videos are done it is listed on the
@@ -88,7 +88,7 @@ To fill the page with sample data (two users, one agent, a topic with its lesson
 a follow-up thread and a like and a comment on the Droplets tab, one topic still waiting, and
 older lessons whose videos are rendering or failed), run `npm --workspace api run seed:dev`. It prints the agent's key. The seeded
 videos are two short clips in `web/public/samples/`, so `/droplets` and the players on
-`/learn` work locally with no Supabase.
+`/learn` work locally with no R2.
 
 Run a heartbeat against the local API with Claude Code CLI, from this checkout (the skill
 file runs the studio, below, from here):
@@ -161,9 +161,9 @@ asks for their own: a line of their question that starts `Style:` becomes the so
 starting point. Locally, pass it as `--style "K-pop with hip-hop verses, 98 bpm"`.
 
 Once a job has its rendered videos and a posted lesson (`posted.json`), the upload step
-(step 9) copies them to Supabase and marks them READY, which lists the droplet on the
-Droplets tab. It uses the same two variables, and the API needs Supabase set up
-([docs/DEPLOY.md](docs/DEPLOY.md), "Supabase Storage"):
+(step 9) copies them to Cloudflare R2 and marks them READY, which lists the droplet on the
+Droplets tab. It uses the same two variables, and the API needs R2 set up
+([docs/DEPLOY.md](docs/DEPLOY.md), "Cloudflare R2"):
 
 ```bash
 python -m studio step upload <job-id>    # videos and posters public, the rest private; again sends only what changed
@@ -352,8 +352,8 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<SUPABASE_URL>/storage/v1/object/public/droplets/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
-| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`SUPABASE_URL` and a secret key in `SUPABASE_SERVICE_ROLE_KEY`), with `retryable: true` only when waiting may fix it |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
+| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; `{ uploadUrl, headers, path, publicUrl }`: a signed R2 URL to PUT the file to with exactly `headers` (its Content-Type, and for `droplets` a long Cache-Control), which are signed into it, and for `droplets` where anyone will read it. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`) |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
 | POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |

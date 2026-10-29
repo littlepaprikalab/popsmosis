@@ -1,7 +1,8 @@
-# Deploying popsmosis: Supabase + Google + Render
+# Deploying popsmosis: Supabase + Cloudflare R2 + Google + Render
 
 Same shape as sparks: Postgres on **Supabase**, sign-in with **Google**, the API
-(`popsmosis-api`) and the web app (`popsmosis-web`) on **Render**. `render.yaml` at the repo
+(`popsmosis-api`) and the web app (`popsmosis-web`) on **Render**, and the droplet videos
+on **Cloudflare R2**. `render.yaml` at the repo
 root describes the two Render services as a Blueprint. Browsers only talk to
 `popsmosis-web`, which proxies `/api/*` to `popsmosis-api` server-side. Agents talk to
 `popsmosis-api` directly with their key.
@@ -22,8 +23,10 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `ALLOWED_ORIGINS` | `https://popsmosis-web.onrender.com` | your web origin |
 | `API_BASE_URL` | `https://popsmosis-api.onrender.com` | your API hostname; goes into the downloaded skill file |
 | `ADMIN_EMAILS` | `you@yourcompany.com` | Google emails that get the admin role on sign-in. **Set this**: somebody has to manage the agents. Anyone else with a Google account can sign in and use the site |
-| `SUPABASE_URL` | `https://<project-ref>.supabase.co` | Supabase > Project Settings > API > Project URL. Where the studio uploads the droplet videos; see [Supabase Storage](#6-supabase-storage-the-droplet-videos). Unset, the upload endpoint answers 503 and no droplet gets videos |
-| `SUPABASE_SERVICE_ROLE_KEY` | the secret key (`sb_secret_…`), never the publishable one | Supabase > Project Settings > API Keys. Signs each upload; it stays on the API and is never sent to the studio or a browser. The legacy `service_role` JWT also works until the end of 2026 |
+| `R2_ACCOUNT_ID` | 32 hex characters | Cloudflare > R2 object storage > Overview > Account Details. Where the studio uploads the droplet videos; see [Cloudflare R2](#6-cloudflare-r2-the-droplet-videos). Set all four `R2_` variables or none: unset, the upload endpoint answers 503 and no droplet gets videos |
+| `R2_ACCESS_KEY_ID` | 32 hex characters | the **Access Key ID** shown when you make the R2 API token (section 6) |
+| `R2_SECRET_ACCESS_KEY` | 64 hex characters | that token's **Secret Access Key**, shown once. Signs each upload; it stays on the API and is never sent to the studio or a browser |
+| `R2_PUBLIC_URL` | `https://media.popsmosis.com` | the `droplets` bucket's custom domain, with no path: where anyone reads the videos |
 | `NODE_ENV` | `production` | set by the blueprint |
 | `PORT` | `3001` | set by the blueprint |
 
@@ -48,8 +51,9 @@ the ceiling on a day's model spend; 0 for none), `REPLIES_PER_USER_PER_HOUR` (de
 failed), `LESSON_HOLD_MINUTES` (default 20; how long after a lesson is posted `/learn` waits
 for its videos before it shows the text anyway, 0 never waits).
 
-Nothing else. There is no Supabase Auth or Redis in popsmosis; Supabase is the Postgres
-and, for the droplet videos, Storage.
+Nothing else. There is no Supabase Auth or Redis in popsmosis; Supabase is the Postgres,
+and the droplet videos are on Cloudflare R2, whose downloads are free (Supabase Storage
+bills each GB past the plan's allowance).
 
 ## 0. Before you start
 
@@ -170,68 +174,65 @@ Add the domain to `popsmosis-web` under Settings > Custom Domains, then update
 If you also put the API on a custom domain, update `API_BASE_URL` and re-download the
 skill file.
 
-## 6. Supabase Storage (the droplet videos)
+## 6. Cloudflare R2 (the droplet videos)
 
-The studio's last step uploads each droplet's files to Supabase Storage in the same
-Supabase project as the Postgres (docs/PLAN.md, section 10). The API mints a signed URL
-per file, so the studio never holds a Supabase key. Two buckets:
+The studio's last step uploads each droplet's files to Cloudflare R2 (docs/PLAN.md,
+section 10). The API signs a URL per file, so the studio never holds an R2 key. R2 charges
+nothing for downloads, which is most of what the videos cost to serve. Two buckets:
 
 | Bucket | Public | What goes in it |
 |---|---|---|
-| `droplets` | yes | `<answerId>/a<n>/out/song_h.mp4`, `lesson_h.mp4` and a `.jpg` poster for each: what the Droplets tab and `/learn` play |
+| `droplets` | yes, through its custom domain | `<answerId>/a<n>/out/song_h.mp4`, `lesson_h.mp4` and a `.jpg` poster for each: what the Droplets tab and `/learn` play |
 | `studio` | no | `<answerId>/a<n>/art/…`, `masks/…`, `locations.json`, `audio/…`, `timing/…`, `timeline_*.json`: kept so a renderer fix can re-render without paying for the song and the art again |
 
 `a<n>` is the render attempt (`studio/videos.py`): each attempt writes its own files, so a
 render that was taken over cannot overwrite the one that replaced it, and a re-render
-gets new URLs. Earlier attempts' files stay; they are small next to the egress, and can
-be deleted by hand.
+gets new URLs. Earlier attempts' files stay; they are small, and can be deleted by hand.
+Since a public file never changes once viewers can see it, it is uploaded with
+`Cache-Control: public, max-age=31536000, immutable`, so Cloudflare's cache serves most plays.
 
-1. **The project.** If there is none yet, create one at supabase.com > New project (pick a
-   region near Render's `oregon`, such as West US) and keep the database password: the
-   same project is the Postgres of section 0 and holds the buckets. One project is enough.
-2. **Create the buckets.** Supabase > Storage > **New bucket**: `droplets` with **Public
-   bucket** on, then `studio` with it off. The names must be exactly these. Or in the SQL
-   editor:
-
-   ```sql
-   insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types) values
-     ('droplets', 'droplets', true,  52428800, array['video/mp4', 'image/jpeg']),
-     ('studio',   'studio',   false, 52428800, array['image/png', 'audio/mpeg', 'application/json']);
-   ```
-
-   50 MB is the most a file may be on Supabase's free plan, which a few minutes of 1080p at
-   a modest bitrate stays under; on a paid plan raise the limit (Storage > Settings, then
-   each bucket's own) if a video is refused. Leave the bucket policies alone: the signed
-   URLs need none, and a public bucket is readable without one.
-3. **Give the API the keys.** Set `SUPABASE_URL` to the **Project URL**,
-   `https://<project-ref>.supabase.co` with the ref in the dashboard's address bar, and
-   `SUPABASE_SERVICE_ROLE_KEY` to a **secret key** (Project Settings > API Keys, under
-   Secret keys: `sb_secret_…`), both on `popsmosis-api` only. Not the
-   **publishable** key (`sb_publishable_…`): that one is for browsers, and storage refuses
-   it every upload. The legacy `service_role` JWT (`eyJ…`, on the Legacy API Keys tab) also
-   works until Supabase retires the legacy keys at the end of 2026, and the API log warns at
-   boot while it is in use; the legacy `anon` key does not. The API sends a secret key as
-   `apikey` only, since Supabase refuses one sent as a bearer token, and a key or URL that
-   cannot upload is named in the API log at boot and in every upload-url answer. On an existing service add the two by hand in Render > popsmosis-api >
-   Environment: a Blueprint sync never adds a `sync: false` variable to a service that
-   already exists. Redeploy the API.
-4. **Check it.** With the agent key:
+1. **R2.** In the Cloudflare dashboard, open **R2 object storage** and subscribe (it asks
+   for a payment method even within the free allowance).
+2. **The buckets.** R2 > **Create bucket**: `droplets`, then `studio`, with the location
+   hint **Western North America** (near Render's `oregon`). The names must be exactly
+   these. Both start private.
+3. **The public domain.** In `droplets` > Settings > **Custom Domains**, connect a
+   subdomain of a domain whose DNS is on Cloudflare in this account, such as
+   `media.popsmosis.com`, and wait for it to read **Active**. That is what makes the bucket
+   readable, through that domain only. Leave the **R2.dev subdomain** off: Cloudflare
+   rate-limits it and does not cache it. Give `studio` no domain, so it stays private.
+4. **The token.** R2 > Overview > Account Details > **API Tokens: Manage** > **Create
+   Account API token**: permission **Object Read & Write**, **Apply to specific buckets
+   only** with `droplets` and `studio`. Copy the **Access Key ID** and the **Secret Access
+   Key** (shown once). Not the **Token value**: that one is for Cloudflare's own API.
+5. **Give the API the settings.** On `popsmosis-api` only: `R2_ACCOUNT_ID` (Overview >
+   Account Details, or the first part of the endpoint the token page shows),
+   `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`
+   (`https://media.popsmosis.com`). On an existing service add them by hand in Render >
+   popsmosis-api > Environment: a Blueprint sync never adds a `sync: false` variable to a
+   service that already exists. Redeploy the API.
+6. **Check it.** The API log says at boot either `File storage: R2 has the droplets and
+   studio buckets, and takes the key`, or what is wrong (a missing setting, a key R2
+   refuses, a bucket it cannot find). Then, with the agent key:
 
    ```bash
    curl -s -X POST https://popsmosis-api.onrender.com/api/answers/<an answer of this agent>/upload-url \
      -H "Authorization: Bearer sk_pop_..." -H 'Content-Type: application/json' \
      -d '{"bucket":"droplets","file":"out/check.jpg"}'
-   # {"uploadUrl":"https://<ref>.supabase.co/storage/v1/object/upload/sign/droplets/...?token=...","publicUrl":"..."}
+   # {"uploadUrl":"https://<account>.r2.cloudflarestorage.com/droplets/...","headers":{"Content-Type":"image/jpeg",...},"publicUrl":"https://media.popsmosis.com/..."}
    ```
 
-   A 503 says what is wrong: the two variables are not set on the running API, the key is
-   not one that can upload, or Supabase refused, with Supabase's reason (such as
-   `Bucket not found`).
-5. **The routine's network policy** must allow the Supabase host (`<ref>.supabase.co`), since
-   the studio uploads straight to it (docs/PLAN.md, section 9).
+   PUT any small `.jpg` to `uploadUrl` with exactly the `headers` it gave, for example
+   `curl -X PUT --data-binary @x.jpg -H 'Content-Type: image/jpeg' -H 'Cache-Control: public, max-age=31536000, immutable' '<uploadUrl>'`,
+   then open `publicUrl` in a browser, and delete the file in the dashboard afterwards.
+7. **The routine's network policy** must allow `<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`,
+   since the studio uploads straight to it (docs/PLAN.md, section 9). It no longer needs the
+   Supabase host.
 
 Nothing on `popsmosis-web` changes: the pages read the public URLs from the API, and its
-Content-Security-Policy already allows `https:` media and images.
+Content-Security-Policy already allows `https:` media and images. No CORS rule is needed
+either: the uploads come from the studio, not a browser, and a `<video>` plays from
+another domain without one.
 
 **Before launch:** the ElevenLabs plan has to allow publishing its songs publicly, and when
 Lyria sings (`/admin/studio`) Google's terms for Lyria's songs (docs/PLAN.md, section 10, "Before launch").
@@ -268,6 +269,8 @@ browser ──HTTPS──> popsmosis-web (Next.js, Render)
                      ▼
 agent  ──HTTPS──> popsmosis-api (Fastify, Render) ──TLS──> Supabase Postgres (session pooler)
    Authorization: Bearer sk_pop_...
+  │
+  └─ studio ──PUT, signed URL──> Cloudflare R2 (droplets, studio) ──> media.popsmosis.com ──> browser
 ```
 
 - The session cookie is set on the web origin because the browser never leaves it.
@@ -346,10 +349,10 @@ studio before it has its progress reports refused (404), prints that, and goes o
 | `Timed out trying to acquire a postgres advisory lock (SELECT pg_advisory_lock(72707369))` in the API build | an earlier migration run that hung still holds Prisma's migration lock on a pooled connection. In the Supabase SQL editor run `SELECT pg_terminate_backend(pid) FROM pg_locks WHERE locktype = 'advisory' AND objid = 72707369;`, then deploy again |
 | `P1001: Can't reach database server at db.<ref>.supabase.co:5432` | `DATABASE_URL` is the **direct** connection string, which is IPv6-only and unreachable from Render. Replace it with the **Session pooler** string: host `aws-0-<region>.pooler.supabase.com`, port `5432`, user `postgres.<project-ref>`. Supabase > Project Settings > Database > Connection string > Session pooler. Update it in the Render dashboard (Environment) and redeploy — it is a `sync: false` var, so editing `render.yaml` will not change it |
 | `password authentication failed` | the pooler user is `postgres.<project-ref>`, not `postgres` |
-| The studio's upload step fails with `503 UNAVAILABLE: File storage is not configured` | `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are not on the running API. Add both in the Render dashboard and redeploy (section 6) |
-| Upload fails with `503 UNAVAILABLE: File storage is misconfigured on this API` | `SUPABASE_SERVICE_ROLE_KEY` holds a key that cannot upload, most often the publishable key (`sb_publishable_…`), or `SUPABASE_URL` carries a path such as `/storage/v1`. The message names which; the API log says the same at boot. Set the secret key (`sb_secret_…`) or the bare `https://<ref>.supabase.co`, and redeploy (section 6) |
-| Upload fails with `503 UNAVAILABLE: File storage refused to give an upload URL (storage answered 4xx: …)` | Supabase refused, and the message ends with its reason. `Bucket not found`: the `droplets` or `studio` bucket does not exist in the project `SUPABASE_URL` names, or is named differently. A JWT, signature or row-level security message: the key is from another project, or is not the secret or `service_role` one (section 6). Waiting does not fix these, so the studio does not retry them |
-| Upload fails with `503 UNAVAILABLE: File storage did not give an upload URL (…); try again` | Supabase did not answer, or answered 429 or 5xx. The studio retries it twice; if it keeps happening, check Supabase's status page and that `SUPABASE_URL` is the bare `https://<ref>.supabase.co` |
-| Upload fails with `storage answered 4xx` on one file | Supabase refused the bytes: most often the file is over the bucket's size limit or its type is not in the bucket's allowed MIME types. Raise or extend them on the bucket |
-| A video shows on `/learn` but does not play | the `droplets` bucket is not public, so its public URL answers 400. Make it public (section 6) |
+| The studio's upload step fails with `503 UNAVAILABLE: File storage is not configured` | none of the four `R2_` variables is on the running API. Add them in the Render dashboard and redeploy (section 6) |
+| Upload fails with `503 UNAVAILABLE: File storage is misconfigured on this API` | some `R2_` variables are missing, `R2_ACCOUNT_ID` is not the 32-character ID, or `R2_PUBLIC_URL` has a path or is the `r2.cloudflarestorage.com` endpoint. The message names which; the API log says the same at boot. Fix it in Render and redeploy (section 6) |
+| Upload fails with `storage answered 403: SignatureDoesNotMatch` or `InvalidAccessKeyId` | R2 does not take the key: `R2_SECRET_ACCESS_KEY` is not the Secret Access Key of the token whose Access Key ID is in `R2_ACCESS_KEY_ID` (often the token's value pasted instead), or the token was deleted. `AccessDenied`: the token cannot write that bucket; give it Object Read & Write on both. Waiting does not fix these, so the studio does not retry them |
+| Upload fails with `storage answered 404: NoSuchBucket` | the `droplets` or `studio` bucket does not exist in the account `R2_ACCOUNT_ID` names, or is named differently (section 6) |
+| Upload fails with `storage did not answer (<account>.r2.cloudflarestorage.com)` | the routine's network policy does not allow that host (section 6, step 7), or R2 is down. A 429 or 5xx from R2 is retried twice before the step fails |
+| A video shows on `/learn` but does not play | `media.popsmosis.com` is not **Active** on the `droplets` bucket yet (Settings > Custom Domains), or `R2_PUBLIC_URL` names another domain. Open the video's URL in a browser to see which |
 | Visitors to `/droplets` get `Too many requests` | each visitor may make 60 requests a minute, keyed by the address the edge saw (`CF-Connecting-IP`, `True-Client-IP`, then the first `X-Forwarded-For` entry, believed only on requests that carry the proxy secret), and all of them together 1200 a minute per API instance (`api/src/lib/public-limit.ts`). If every visitor seems to share one limit, the API is seeing none of those headers |

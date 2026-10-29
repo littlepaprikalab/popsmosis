@@ -23,9 +23,9 @@ const BUNDLE = {
 const FACTCHECK = { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] };
 // Everything that is the learner's own. None of it may appear in a public response.
 const PRIVATE = ['Grace Hopper', 'grace@example.com', 'https://avatars.example/grace.png', 'my AP Bio exam on Friday', 'class-notes.txt', 'a follow-up only Grace should see'];
-const SONG = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.mp4';
-const LESSON = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/lesson_h.mp4';
-const POSTER = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.jpg';
+const SONG = 'https://media.popsmosis.com/a/out/song_h.mp4';
+const LESSON = 'https://media.popsmosis.com/a/out/lesson_h.mp4';
+const POSTER = 'https://media.popsmosis.com/a/out/song_h.jpg';
 
 d('the Droplets tab', () => {
   let app: FastifyInstance;

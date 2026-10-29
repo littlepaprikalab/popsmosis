@@ -10,7 +10,7 @@ import { hashApiKey, isAgentToken, isWellFormedAgentToken, bearerToken } from '.
 import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } from './lib/session.js';
 import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
-import { storageConfig } from './lib/storage.js';
+import { storageConfig, storageReachable } from './lib/storage.js';
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
 import replyRoutes from './routes/replies.js';
@@ -207,11 +207,11 @@ export async function buildApp() {
   await app.register(studioRoutes);
 
   // A storage setting that cannot upload is said once at boot, where whoever set it looks;
-  // the rest of the API works without storage, so it still starts. So is a key on borrowed time.
+  // the rest of the API works without storage, so it still starts.
   const storage = storageConfig();
   if (storage && 'problem' in storage) app.log.error(`File storage is misconfigured: ${storage.problem}`);
-  else if (storage?.legacy) {
-    app.log.warn('File storage uses the legacy service_role key, which Supabase retires at the end of 2026; set SUPABASE_SERVICE_ROLE_KEY to the secret key (sb_secret_…)');
+  else if (storage && new URL(storage.publicUrl).hostname.endsWith('.r2.dev')) {
+    app.log.warn('R2_PUBLIC_URL is an r2.dev address, which Cloudflare rate-limits and does not cache; set it to the droplets bucket\'s custom domain');
   }
 
   app.get('/api/health', async (_request, reply) => {
@@ -246,5 +246,13 @@ if (isMain) {
   } catch (err) {
     app.log.error(err);
     process.exit(1);
+  }
+
+  // Whether R2 takes the key and has both buckets, said once in the log; it never holds the API up.
+  const storage = storageConfig();
+  if (storage && !('problem' in storage)) {
+    storageReachable(storage)
+      .then((problem) => (problem ? app.log.error(`File storage: ${problem}`) : app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key')))
+      .catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
   }
 }
