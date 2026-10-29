@@ -17,9 +17,15 @@
  *   gemini   Gemini 3.1 Flash Image, on GEMINI_API_KEY
  *   muse     Muse Image, on MODEL_API_KEY
  *   svg      the brain draws it; Claude's only
+ *
+ * `knobs`: the environment variables an admin may set here instead, by name (lib/knobs.ts). The studio is sent its
+ * own (where: 'studio'); the API's own are kept in force by each instance.
  */
 import prisma from './prisma.js';
 import { BRAINS, type Brain } from './brains.js';
+import {
+  KNOBS, knobsFrom, knobsStale, putKnobs, reloadKnobsWith, type KnobName, type KnobValue, type Knobs,
+} from './knobs.js';
 
 export const PROVIDERS = ['claude', 'meta'] as const;
 export type Provider = (typeof PROVIDERS)[number];
@@ -45,6 +51,7 @@ export const DEFAULT_SONG: SongSettings = { provider: 'elevenlabs' };
 const ART_KEY = 'art';
 const BRAIN_KEY = 'brain';
 const SONG_KEY = 'song';
+const KNOBS_KEY = 'knobs';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
@@ -120,40 +127,66 @@ export function parseBrainSettings(value: unknown): { brain?: Partial<BrainSetti
 }
 
 export async function readStudioSettings(db: Pick<typeof prisma, 'setting'> = prisma) {
-  const rows = await db.setting.findMany({ where: { key: { in: [ART_KEY, BRAIN_KEY, SONG_KEY] } } });
+  const rows = await db.setting.findMany({ where: { key: { in: [ART_KEY, BRAIN_KEY, SONG_KEY, KNOBS_KEY] } } });
   const row = (key: string) => rows.find((r) => r.key === key);
   const times = rows.map((r) => r.updatedAt.getTime());
   return {
     brain: brainFrom(row(BRAIN_KEY)?.value),
     song: songFrom(row(SONG_KEY)?.value),
     art: artFrom(row(ART_KEY)?.value),
+    knobs: knobsFrom(row(KNOBS_KEY)?.value),
     updatedAt: times.length ? new Date(Math.max(...times)).toISOString() : null,
   };
 }
 
+/** The knobs set here that the studio reads (studio/knobs.py), over its own environment. */
+function studioKnobs(knobs: Knobs): Knobs {
+  return Object.fromEntries(Object.entries(knobs).filter(([name]) => KNOBS[name as KnobName].where === 'studio'));
+}
+
 /** What the studio reads: the settings in force, nothing about when they changed. */
 export async function studioForAgent() {
-  const { brain, song, art } = await readStudioSettings();
-  return { brain, song, art };
+  const { brain, song, art, knobs } = await readStudioSettings();
+  return { brain, song, art, knobs: studioKnobs(knobs) };
+}
+
+const loadKnobs = async () => (await prisma.setting.findUnique({ where: { key: KNOBS_KEY } }))?.value;
+
+/** Read the stored knobs again and put them in force on this instance (lib/knobs.ts). */
+export function reloadKnobs(): Promise<void> {
+  return reloadKnobsWith(loadKnobs);
+}
+
+/** Once this instance's knobs are REFRESH_MS old, read them again in the background: never what a request waits on. */
+export function refreshKnobs(log: { warn(obj: object, msg: string): void }): void {
+  if (knobsStale()) reloadKnobs().catch((err) => log.warn({ err }, 'could not read the knobs; keeping those in force'));
 }
 
 /**
  * Apply an admin's change: only the fields it names, merged into what is stored by Postgres itself (jsonb ||), so
  * two admins saving different fields at once both keep their change. Every key in one transaction, so a change to
- * the brain, the song and the art lands whole or not at all.
+ * the brain, the song, the art and the knobs lands whole or not at all. A knob set to null is taken out
+ * (jsonb_strip_nulls), so the environment's value is read again. The knobs are put in force here at once.
  */
 export async function writeStudioSettings(change: {
   brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>;
+  knobs?: Partial<Record<KnobName, KnobValue | null>>;
 }) {
   const writes = [
     ...(change.brain ? [[BRAIN_KEY, change.brain] as const] : []),
     ...(change.song ? [[SONG_KEY, change.song] as const] : []),
     ...(change.art ? [[ART_KEY, change.art] as const] : []),
-  ].map(([key, value]) => prisma.$executeRaw`
-    INSERT INTO settings (key, value, "updatedAt") VALUES (${key}, ${JSON.stringify(value)}::jsonb, now())
-    ON CONFLICT (key) DO UPDATE SET "updatedAt" = now(),
-      value = CASE WHEN jsonb_typeof(settings.value) = 'object' THEN settings.value || EXCLUDED.value ELSE EXCLUDED.value END
-  `);
+    ...(change.knobs ? [[KNOBS_KEY, change.knobs] as const] : []),
+  ].map(([key, value]) => {
+    const json = JSON.stringify(value);
+    return prisma.$executeRaw`
+      INSERT INTO settings (key, value, "updatedAt") VALUES (${key}, jsonb_strip_nulls(${json}::jsonb), now())
+      ON CONFLICT (key) DO UPDATE SET "updatedAt" = now(), value = jsonb_strip_nulls(
+        CASE WHEN jsonb_typeof(settings.value) = 'object' THEN settings.value || ${json}::jsonb ELSE ${json}::jsonb END)
+    `;
+  });
   await prisma.$transaction(writes);
-  return readStudioSettings();
+  const saved = await readStudioSettings();
+  if (change.knobs) putKnobs(saved.knobs);
+  return saved;
 }

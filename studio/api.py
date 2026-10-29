@@ -101,8 +101,9 @@ class Api:
     # --- the endpoints --------------------------------------------------------
 
     def studio_settings(self) -> dict:
-        """The settings an admin sets on /admin/studio: {brain: {default, effort}, art: {claude, meta}}. {} from an
-        API too old to have them, and the studio's own defaults apply."""
+        """The settings an admin sets on /admin/studio: {brain: {default, effort}, song: {provider}, art: {claude,
+        meta}, knobs: {NAME: value}} (the knobs: studio/knobs.py). {} from an API too old to have them, and the
+        studio's own defaults apply."""
         try:
             return self.request("GET", "/api/studio/settings")
         except ApiError as e:

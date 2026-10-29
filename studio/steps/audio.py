@@ -23,7 +23,8 @@ there is never asked for again, unless the bundle's lines have changed since it 
 or for the song, who sings it (its .json says what it was made from and by whom). To redo one by hand, delete its
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
 the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
-Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model.
+Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model, on
+/admin/studio or in the environment (studio/knobs.py).
 
 What it spent. Each call that comes back made is logged to calls.jsonl (studio/ledger.py),
 with its model, its time and its price: a Lyria song at its model's price per song; an
@@ -46,7 +47,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from studio import brain, jobs, ledger, media
+from studio import brain, jobs, knobs, ledger, media
 from studio.api import USER_AGENT
 from studio.schemas import Bundle
 
@@ -275,7 +276,7 @@ def _make_eleven_song(job: Path, bundle: Bundle) -> None:
 # Lyria on the Gemini API: the whole song from one prompt, which it follows only roughly.
 
 def gemini_song_model() -> str:
-    return os.environ.get("GEMINI_SONG_MODEL", "").strip() or GEMINI_SONG_MODEL
+    return knobs.env("GEMINI_SONG_MODEL").strip() or GEMINI_SONG_MODEL
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
@@ -400,7 +401,7 @@ def speech_lines(bundle: Bundle, kind: str) -> list[tuple[str, str]]:
 
 
 def voice_id() -> str:
-    return os.environ.get("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
+    return knobs.env("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
 
 
 def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
@@ -471,7 +472,7 @@ def eleven_credits(headers: dict) -> float | None:
 
 def eleven_usd_per_1k_credits() -> float | None:
     """What 1,000 ElevenLabs credits cost on this account's plan (ELEVENLABS_USD_PER_1K_CREDITS), or None."""
-    raw = os.environ.get(ELEVENLABS_PRICE_VAR, "").strip()
+    raw = knobs.env(ELEVENLABS_PRICE_VAR).strip()
     if not raw:
         return None
     try:

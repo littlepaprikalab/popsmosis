@@ -12,10 +12,12 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from studio import knobs
+
 M = TypeVar("M", bound=BaseModel)
 ROOT = Path(os.environ.get("STUDIO_JOBS_DIR") or Path(__file__).resolve().parent.parent / "jobs")
-# The studio's settings as the API's claim said ({"art": {"claude": ..., "meta": ...}}; api/src/lib/studio-settings.ts):
-# who paints the art, as an admin set it on /admin/studio.
+# The studio's settings as the API's claim said ({"brain": ..., "song": ..., "art": ..., "knobs": ...};
+# api/src/lib/studio-settings.ts): who paints the art and who sings, and the knobs, as an admin set them on /admin/studio.
 SETTINGS = "settings.json"
 
 
@@ -52,7 +54,8 @@ def studio_settings(job: Path) -> dict:
 
 
 def keep_studio_settings(job: Path, studio) -> None:
-    """Save the settings a claim carried, for the steps after it. A claim without them (an older API) keeps what
-    is there."""
+    """Save the settings a claim carried, for the steps after it, and put their knobs in force (studio/knobs.py).
+    A claim without them (an older API) keeps what is there."""
+    knobs.use(studio)
     if isinstance(studio, dict) and studio != studio_settings(job):
         write(job / SETTINGS, studio)

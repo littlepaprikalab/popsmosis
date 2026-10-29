@@ -13,12 +13,14 @@
  * queue on its own, by flipping status, so the happy path never needs to clear
  * a claim.
  */
+import { knob } from './knobs.js';
+
 // The studio writes and fact-checks a lesson in about 5 minutes and renews the claim
 // before each step (POST /api/questions/:id/claim), so 20 outlasts a slow step.
 const DEFAULT_CLAIM_MINUTES = 20;
 
 export function claimMinutes(): number {
-  const n = parseInt(process.env.QUESTION_CLAIM_MINUTES ?? '', 10);
+  const n = parseInt(knob('QUESTION_CLAIM_MINUTES') ?? '', 10);
   // Long enough to outlast a run writing its batch; a bad value must not mean
   // "no lease at all", so anything unparseable falls back rather than to zero.
   if (Number.isNaN(n) || n <= 0) return DEFAULT_CLAIM_MINUTES;

@@ -43,7 +43,7 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, files, jobs, ledger, media, post
+from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
@@ -201,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
         job = jobs.ROOT / args.job
         if not job.is_dir():
             parser.error(f"no job folder {job}")
+        knobs.use(jobs.studio_settings(job))  # the knobs its last claim carried, if it had one
         with operator_run.job_chosen(job):  # the brain the job was made on
             ok = run_steps(job, [args.name]) if args.command == "step" else True
     print_job(job, brief=args.brief)

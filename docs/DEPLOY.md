@@ -46,7 +46,9 @@ the ceiling on a day's model spend; 0 for none), `REPLIES_PER_USER_PER_HOUR` (de
 30; how long the files sent with messages keep their bytes in Postgres, 0 for good),
 `VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
 failed), `LESSON_HOLD_MINUTES` (default 20; how long after a lesson is posted `/learn` waits
-for its videos before it shows the text anyway, 0 never waits).
+for its videos before it shows the text anyway, 0 never waits). All of these but
+`DATABASE_POOL_SIZE` and `ATTACHMENT_RETENTION_DAYS` are knobs: an admin can set them on
+`/admin/studio` instead, with no redeploy, and a value set there wins (README, "Knobs").
 
 Nothing else. There is no Supabase Auth or Redis in popsmosis; Supabase is the Postgres
 and, for the droplet videos, Storage.

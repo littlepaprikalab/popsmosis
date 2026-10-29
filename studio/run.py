@@ -61,7 +61,7 @@ import time
 import traceback
 from pathlib import Path
 
-from studio import brain, checks, inkmory, jobs, ledger
+from studio import brain, checks, inkmory, jobs, knobs, ledger
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -167,6 +167,7 @@ def run(question_id: str, api: Api | None = None, ask=None, note: str = "") -> t
             result, reason = api_outcome(e)
             # Down or failing, the API is no reason to fail this topic: nothing about it was tried.
             return STOPPED, "run", reason if result == STOPPED else f"the studio's settings could not be read: {reason}"
+        knobs.use(studio)
         with brain.chosen(*default_brain(studio)):
             problem = brain.settings_problem()
         if problem:

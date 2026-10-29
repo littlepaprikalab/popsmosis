@@ -53,7 +53,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain, jobs, ledger, media
+from studio import brain, jobs, knobs, ledger, media
 from studio.api import Api, ApiError
 from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, job_chosen, job_dir,
                         keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
@@ -74,8 +74,8 @@ def unavailable(job: Path | None = None, studio: dict | None = None) -> str | No
     """Why the videos cannot be made here, or None. Checks the step modules exist without importing them, and the
     keys the brain in force and the art's painter need: the job's painter, or without a job, the one the studio
     settings name (the defaults without them)."""
-    if os.environ.get("STUDIO_VIDEOS", "").strip().lower() in ("off", "0", "false", "no"):
-        return "the videos are turned off here (STUDIO_VIDEOS)"
+    if knobs.env("STUDIO_VIDEOS").strip().lower() in ("off", "0", "false", "no"):
+        return f"the videos are turned off here ({knobs.named('STUDIO_VIDEOS')})"
     missing = [n for n in media.MEDIA_STEPS if importlib.util.find_spec(f"studio.steps.{n}") is None]
     if missing:
         return f"the media steps are not all built yet ({', '.join(missing)})"
@@ -275,6 +275,7 @@ def local(job: Path, ask=None) -> tuple[str, str, str]:
             return STOPPED, "videos", "a run of this job is still going"
         record_interrupted(job)
         record = Record(job)
+        knobs.use(jobs.studio_settings(job))  # as its last claim said, if it had one
         why = unavailable(job)
         if why:
             return record.finish(STOPPED, "videos", why)
@@ -429,6 +430,7 @@ def recover(api: Api | None = None) -> tuple[str, str, str]:
         studio = api.studio_settings()
     except ApiError as e:
         return _outcome(e, "recover")
+    knobs.use(studio)
     with brain.chosen(*default_brain(studio)):
         why = unavailable(studio=studio)
     if why:  # taking one would spend an attempt this machine cannot use
