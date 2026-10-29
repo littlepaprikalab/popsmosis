@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
 import { Wordmark } from '@/components/Wordmark';
+import { HeartIcon } from '@heroicons/react/24/solid';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -112,17 +113,23 @@ export default function AboutPage() {
         </h1>
         <div className="flex flex-col gap-3 text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
           <p>I love vibe coding and bringing the things I care about to life.</p>
-          {/* The narrated video and the song are marked in their players' colours (components/DropletPlayers.tsx) */}
           <p>
             <Wordmark size="sm" /> started with a problem of my own: I wanted
             to <Marked color="var(--accent-yellow)">automate</Marked> making educational song videos
             for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
-            Sprints</a>, the AP and SAT prep site I built for my kid. Making them was
-            a <Marked color="var(--accent-green)">pain in the tush</Marked>, with pictures that came out wrong and
+            Sprints</a>, the AP and SAT prep site I built for{' '}
+            {/* One piece, so the heart never wraps away from "my kid" */}
+            <span className="whitespace-nowrap">
+              <strong style={{ color: 'var(--text-primary)' }}>my kid</strong>{' '}
+              <HeartIcon aria-hidden="true" className="inline-block"
+                style={{ width: '1em', height: '1em', verticalAlign: '-0.15em', color: 'var(--accent-red)' }} />.
+            </span>{' '}
+            Making them was
+            a <Marked color="var(--accent-pink)">pain in the tush</Marked>, with pictures that came out wrong and
             content that needed checking line by line, and the <Pill color="var(--accent-purple)">#metahackathon</Pill> was
             a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson
-            with a <Marked color="var(--accent-blue)">narrated video</Marked> and
-            a <Marked color="var(--accent-red)">song</Marked>. It
+            with a <Marked color="var(--accent-green)">narrated video</Marked> and
+            a <SongChip />. It
             checks <strong style={{ color: 'var(--text-primary)' }}>every line and every picture</strong> first, and
             shares the droplet on the <Link href="/droplets" className="underline"
             style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from.
@@ -173,6 +180,16 @@ function DropletPill() {
       </svg>
       droplet
     </Pill>
+  );
+}
+
+/** "song" on the wordmark's chip, white on the same aqua as POP: the POP in POPsmosis is the song. */
+function SongChip() {
+  return (
+    <span className="inline-block whitespace-nowrap align-middle leading-none"
+      style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.3em 0.55em', borderRadius: '0.3em', background: 'var(--brand-chip)', color: '#ffffff' }}>
+      song
+    </span>
   );
 }
 
