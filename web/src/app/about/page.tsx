@@ -110,17 +110,16 @@ export default function AboutPage() {
           Hi, I&rsquo;m Samantha
         </h1>
         <div className="flex flex-col gap-3 text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+          <p>I love vibe coding and bringing the things I care about to life.</p>
           <p>
-            I love vibe coding and bringing the things I care about to life. For the past year and a half I&rsquo;ve
-            been tinkering with AI agents, short lessons and learning by listening, each in a separate project.
+            <Wordmark size="sm" /> started with a problem of my own: I wanted to automate making educational song
+            videos for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
+            Sprints</a>, my AP and SAT prep site, and a hackathon was a good excuse to build it. Ask for any topic
+            and an AI teacher makes you a droplet, a short lesson with a narrated video and a song, and shares it on
+            the <Link href="/droplets" className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets
+            tab</Link> for anyone to learn from.
           </p>
-          <p>
-            A hackathon felt like a good excuse to try putting them together, and <Wordmark size="sm" /> is what
-            came out. Ask for any topic and an AI teacher makes you a droplet, a short lesson with a narrated video and a
-            song, and shares it on the <Link href="/droplets" className="underline"
-            style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from.
-          </p>
-          <p>If you&rsquo;re curious, here are the other things I&rsquo;ve made.</p>
+          <p>If you&rsquo;re curious, here&rsquo;s what else I&rsquo;ve made over the past year and a half.</p>
         </div>
       </header>
 
@@ -151,12 +150,13 @@ function SectionTitle({ id, children }: { id: string; children: React.ReactNode 
 
 function AppCard({ app }: { app: App }) {
   return (
-    <article className="rounded-lg p-4 sm:p-5 lg:flex lg:gap-6 lg:items-start" style={card} aria-labelledby={slug(app.name)}>
+    <article id={slug(app.name)} className="rounded-lg p-4 sm:p-5 lg:flex lg:gap-6 lg:items-start scroll-mt-18" style={card}
+      aria-labelledby={`${slug(app.name)}-title`}>
       <div className="lg:flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-3">
           <img src={app.icon} alt="" width={48} height={48} className="rounded-xl shrink-0" />
           <div className="min-w-0">
-            <h3 id={slug(app.name)} className="font-bold" style={{ color: 'var(--text-primary)' }}>{app.name}</h3>
+            <h3 id={`${slug(app.name)}-title`} className="font-bold" style={{ color: 'var(--text-primary)' }}>{app.name}</h3>
             <p className="text-xs" style={{ color: 'var(--accent-purple)' }}>{app.tagline}</p>
           </div>
         </div>
@@ -182,11 +182,12 @@ function AppCard({ app }: { app: App }) {
 function SiteCard({ site }: { site: Site }) {
   const host = new URL(site.url).hostname.replace(/^www\./, '');
   return (
-    <article className="rounded-lg overflow-hidden flex flex-col" style={card} aria-labelledby={slug(site.name)}>
+    <article id={slug(site.name)} className="rounded-lg overflow-hidden flex flex-col scroll-mt-18" style={card}
+      aria-labelledby={`${slug(site.name)}-title`}>
       <img src={site.shot.src} alt={site.shot.alt} width={960} height={600} loading="lazy"
         className="block w-full h-auto" style={{ borderBottom: '1px solid var(--border)' }} />
       <div className="p-4 sm:p-5 flex flex-col flex-1">
-        <h3 id={slug(site.name)} className="font-bold" style={{ color: 'var(--text-primary)' }}>{site.name}</h3>
+        <h3 id={`${slug(site.name)}-title`} className="font-bold" style={{ color: 'var(--text-primary)' }}>{site.name}</h3>
         <p className="text-xs mb-3" style={{ color: 'var(--accent-purple)' }}>{site.tagline}</p>
         <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: 'var(--text-secondary)' }}>{site.about}</p>
         <div>
