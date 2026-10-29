@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The sodium-potassium pump uses ATP to push sodium out and potassium in, storing energy as concentration gradients so nerve cells can fire signals instantly when sodium channels open.",
+      "why": "Ions constantly leak down their gradients: sodium leaks in and potassium leaks out through channels, with no energy needed. That would erase the gradients, so the pump spends ATP to push them back uphill (active transport). Step by step: the pump, open to the inside, binds 3 sodium and splits ATP; the phosphate attaches and flips the pump open to the outside; it releases the sodium; it binds 2 potassium, drops the phosphate, flips back, and releases the potassium inside. Because 3 positive charges leave and only 2 come in, and potassium leaks out through its channels, the inside becomes negative (about -70 mV, the resting membrane potential). Then when a neuron is stimulated, sodium channels open and sodium rushes in downhill with no ATP, which starts the action potential. So the pump builds the gradients ahead of time and the channels spend that stored energy.",
+      "what_if": "If the pump stopped, like when ouabain blocks it, sodium would keep leaking in and potassium would keep leaking out, so both gradients would run down. The resting membrane potential would shrink toward zero, so the cell would no longer have the stored energy and the electrical setup needed for sodium to rush in. Nerve and muscle cells could not fire action potentials normally. The lesson also says water follows sodium in, so the cell swells and can burst. This also answers the check question: firing itself costs no ATP, but it depends on gradients that only the pump can keep restoring, so they eventually run out."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Supply meets demand, the price sits tight\" names the topic in abstract terms and could open any economics song. \"Sits tight\" is also misleading, since the core idea is that price moves. The lesson opens well on a question (\"Why do limited sneakers resell for more than the store price, while strawberries get cheaper...\"), and the narration opens on a sneaker drop from the learner's world.",
+    "score": 3
+  },
+  "frame": {
+    "reason": "The two-way auction (\"bidders stand for demand, items for sale for supply, and the auctioneer's call for the price\") is an apt picture of the whole mechanism: hands raised against items, price climbing or dropping. It is set up early in the lesson, narration (n5-n6) and song verse 1. It is then dropped. The chorus, bridge and outro do not use it, and the later sections run on shortage and surplus language alone.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link with its cause: \"because the good costs more compared with other things\", \"because selling becomes more profitable\", \"buyers compete for the scarce goods, so sellers can raise the price\", \"unsold goods pile up, so sellers cut the price\", and \"no shortage pushes it up and no surplus pushes it down\". They also say how each move closes the gap. The order is clear and the song carries the gist. The narration adds a tangent (the price ceiling) after the chain is done, but this does not break it.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Most lines are real steps with arrows: \"Price too low → shortage → price rises\", \"Price ↑ → more profit → sellers offer more\". But the first, \"How do buyers and sellers set a price?\", is a question and not a step. \"Auction: bidders = demand...\" is a label. The \"Price too high → surplus\" line starts at v2-7, the harvest line, not at the surplus step. The shift and price ceiling lines add material outside the chain, and the core idea itself is never stated as a final line.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Song c1-1, i-1, o-3: \"Supply meets demand, the price sits tight\"",
+      "problem": "\"Sits tight\" suggests the price stays fixed, which hides that price moves until it reaches equilibrium. It is a rhyme-driven phrase.",
+      "correction": "Say something like \"Supply meets demand, the price finds its place\", so the line reflects the price settling."
+    },
+    {
+      "claim": "Song v2-6: \"And sellers bring more, so the shortage gets compressed\"",
+      "problem": "This is imprecise. It reads as if the shortage compresses because sellers offer more, and \"compressed\" is vague. The shortage closes because buyers want less and sellers offer more as the price rises.",
+      "correction": "\"As the price climbs, buyers want less and sellers bring more, so the shortage closes.\""
+    }
+  ],
+  "accuracy": {
+    "reason": "The economics is sound: laws of demand and supply, shortage and surplus dynamics, equilibrium, and the price ceiling. Two song lines mislead slightly. \"The price sits tight\" suggests a fixed price, and \"the shortage gets compressed\" is vague. A teacher would tighten these, but a learner would not come away with a wrong model.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are whole, speakable phrases (\"Think of the market as an auction room\"), and the chorus is a chantable, repeating hook. But there are textbook lines (\"Law of supply: a higher price, the profit's bigger\"), and several overrun the bar, such as \"Equilibrium's found by buyers' and sellers' hands\". Some rhymes bend meaning, such as \"Sellers offer less till the surplus is no more\". The long 12-line verses and 8-line bridge are dense, and \"profit's bigger / climbs higher\" is awkward.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the rule, builds the mechanism through the auction, has a Predict question answered right after, names the misconception and why it is wrong, and ends on a good check (\"A store prices a new game console below its equilibrium price...\"). However, it carries many terms (law of demand, law of supply, equilibrium, shortage, surplus, price ceiling), and it adds side topics on wages, shifts and price ceilings that crowd the core idea.",
+    "score": 4
+  }
+}

@@ -43,7 +43,7 @@ from studio import brain, media
 
 CALLS = "calls.jsonl"
 MAX_BYTES = 16 * 1024  # what the API takes (api/src/lib/breakdown.ts); a bigger one is left out, never refused
-LESSON_STEPS = ("request", "bundle", "factcheck", "post")  # studio/run.py's STEPS
+LESSON_STEPS = ("request", "bundle", "audit", "factcheck", "post")  # studio/run.py's STEPS
 PARTS = {"lesson": LESSON_STEPS, "videos": media.MEDIA_STEPS}
 # The software each media step runs on this machine besides its models, by the name it is
 # installed under. The bill lists each with the version installed here (version()); the API

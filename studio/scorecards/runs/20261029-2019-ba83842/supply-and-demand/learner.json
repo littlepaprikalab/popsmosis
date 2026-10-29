@@ -1,0 +1,24 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "In a competitive market, the price keeps moving until the amount buyers want equals the amount sellers offer, with shortages pushing it up and surpluses pushing it down, and it settles at the equilibrium price.",
+      "why": "Buyers want less when the price goes up and sellers offer more when it goes up (the laws of demand and supply). If the price is too low, buyers want more than sellers offer, so there is a shortage, buyers compete, and sellers can raise the price. If the price is too high, sellers offer more than buyers want, so unsold goods pile up and sellers cut the price. Each price move shrinks the gap, because a higher price lowers demand and raises supply, while a lower price does the opposite. Eventually the price reaches equilibrium, where quantity demanded equals quantity supplied. At that point there is no shortage or surplus to push it anywhere else, so it stops moving. Nobody has to announce the price, since buyers and sellers reacting to shortages and surpluses get it there by themselves.",
+      "what_if": "The lesson says a price ceiling stops the price from rising. If the price could not move up when there is a shortage, like a rent cap below the market rent, the gap would never close. Buyers would still want more than sellers offer, and sellers would offer less than they would at equilibrium. The shortage would stay, and buyers would end up in lines or on waiting lists. The lesson does not say what else might happen beyond that, so I can't guess."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ],
+      "missing": [
+        "Why buyers want less when price rises: the good costs more relative to other things they could buy (substitution), not just 'law of demand'.",
+        "Why sellers offer more when price rises: selling more becomes more profitable."
+      ]
+    },
+    "passed": true
+  }
+}

@@ -5,7 +5,7 @@ import pytest
 from studio import brain, jobs
 from studio import run as operator_run
 from studio.api import PROGRESS_TIMEOUT_S, Api, ApiError
-from studio.schemas import Bundle, FactCheck, Request
+from studio.schemas import Bundle, FactAudit, FactCheck, Request
 from studio.tests.sample import bundle_data
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
@@ -67,11 +67,13 @@ class FakeApi:
 
 
 class FakeBrain:
-    """Stands in for brain.ask: a sample bundle, and a fact-check that supports every line (or none)."""
+    """Stands in for brain.ask: a sample bundle, a fact audit that judges every fact as `fact` says, and a
+    fact-check that supports every line (or none)."""
 
-    def __init__(self, bundle_error=None, verdict="SUPPORTED"):
+    def __init__(self, bundle_error=None, verdict="SUPPORTED", fact="CORRECT"):
         self.bundle_error = bundle_error
         self.verdict = verdict
+        self.fact = fact
         self.labels = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -80,6 +82,11 @@ class FakeBrain:
             if self.bundle_error:
                 raise self.bundle_error
             return bundle_data()
+        if schema is FactAudit:
+            return FactAudit.model_validate({"facts": [
+                {"id": fact["id"], "basis": "course knowledge", "quote": "", "verdict": self.fact,
+                 "problem": "" if self.fact == "CORRECT" else "wrong", "corrected": ""}
+                for fact in json.loads(prompt)["facts"]]}).model_dump()
         lines = json.loads(prompt)["lines"]
         bad = self.verdict == "UNSUPPORTED"
         return FactCheck.model_validate({"checks": [
@@ -103,8 +110,8 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     # Claimed again before every step but the post, so the lease outlasts a slow step; and each of those steps
     # tells the page it is running.
     assert api.names() == ["claim", "report_progress", "download", "download", "claim", "report_progress",
-                           "claim", "report_progress", "post_answer"]
-    assert ask.labels == ["bundle", "factcheck round 1"]
+                           "claim", "report_progress", "claim", "report_progress", "post_answer"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
 
     job = jobs_root / "q1"
     request = jobs.read(job / "request.json", Request)
@@ -118,13 +125,13 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     assert api.posted == {"content": bundle["lesson_markdown"], "bundle": bundle,
                           "factcheck": json.loads((job / "factcheck.json").read_text()), "model": "claude-opus-5-5"}
     # The steps before the post, each timed; the call logged before this run is the bundle's.
-    assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "factcheck"]
+    assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "audit", "factcheck"]
     assert breakdown["steps"][1]["models"] == [{"model": "claude-opus-5-5", "calls": 1, "costUsd": None, "credits": None}]
     assert all(s["tries"] == 1 and s["seconds"] is not None for s in breakdown["steps"])
     assert json.loads((job / "posted.json").read_text())["id"] == "ans1"
     [record] = operator_run.read_jsonl(job / "runs.jsonl")
     assert (record["result"], record["step"]) == ("DONE", "post")
-    assert [s["step"] for s in record["steps"]] == ["request", "bundle", "factcheck", "post"]
+    assert [s["step"] for s in record["steps"]] == ["request", "bundle", "audit", "factcheck", "post"]
 
 
 def test_a_photo_too_big_for_the_brain_is_left_out_rather_than_failing_every_try(jobs_root, monkeypatch):
@@ -158,7 +165,8 @@ def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether
     monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: None)
     api = FakeApi()
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
-    assert [[r["step"] for r in report["running"]] for report in api.reports] == [["request"], ["bundle"], ["factcheck"]]
+    assert [[r["step"] for r in report["running"]] for report in api.reports] == [
+        ["request"], ["bundle"], ["audit"], ["factcheck"]]
     assert all(r["running"][0]["seconds"] < 5 and r["failed"] == [] and r["videos"] is True for r in api.reports)
     # The bill so far is the steps already done, never the one just starting.
     assert "breakdown" not in api.reports[0] or api.reports[0]["breakdown"]["steps"] == []
@@ -210,7 +218,7 @@ def test_running_again_resumes_at_the_step_that_failed(jobs_root):
     ask = FakeBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
     assert "download" not in api.names()  # request.json was already written
-    assert ask.labels == ["bundle", "factcheck round 1"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
     runs = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert [(r["result"], r["step"]) for r in runs] == [("FAILED", "bundle"), ("DONE", "post")]
 
@@ -230,15 +238,15 @@ def test_a_failed_fact_check_is_retried_on_the_same_bundle_and_nothing_is_posted
 
     ask = FakeBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.labels == ["factcheck round 1"]  # the bundle was kept
+    assert ask.labels == ["factcheck round 1"]  # the bundle and its audit were kept
 
 
 def test_a_new_bundle_runs_every_step_after_it(jobs_root):
     operator_run.run("q1", api=FakeApi(), ask=FakeBrain(verdict="UNSUPPORTED"))
-    (jobs_root / "q1" / "bundle.json").unlink()  # by hand: the factcheck.json beside it is now stale
+    (jobs_root / "q1" / "bundle.json").unlink()  # by hand: the audit.json and factcheck.json beside it are now stale
     ask = FakeBrain()
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
-    assert ask.labels == ["bundle", "factcheck round 1"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
 
 
 @pytest.mark.parametrize("error, reason", [
@@ -534,7 +542,7 @@ def test_a_topic_sent_to_its_own_brain_is_made_on_it_and_its_job_keeps_it(jobs_r
     api = FakeApi({**QUESTION, "brain": "muse-spark"}, studio={"brain": {"default": "claude", "effort": "high"}})
     ask = SpyBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("meta", "muse-spark-1.3")] * 2  # the bundle and the fact-check
+    assert ask.brains == [("meta", "muse-spark-1.3")] * 3  # the bundle, the fact audit and the fact-check
     assert operator_run.job_brain(jobs_root / "q1") == "muse-spark"
     assert brain.chosen_name() is None  # nothing in force once the run ends
 
@@ -552,14 +560,14 @@ def test_a_topic_without_a_brain_of_its_own_is_made_on_the_default_at_its_effort
     api = FakeApi({**QUESTION, "brain": None}, studio={"brain": {"default": "muse-wonder", "effort": "medium"}})
     ask = SpyBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("meta", "muse-wonder-1.0")] * 2
+    assert ask.brains == [("meta", "muse-wonder-1.0")] * 3
     assert (operator_run.job_brain(jobs_root / "q1"), operator_run.job_effort(jobs_root / "q1")) == ("muse-wonder", "medium")
 
 
 def test_with_no_settings_from_the_api_the_brain_is_claude_opus(jobs_root):
     api, ask = FakeApi(), SpyBrain()  # an API too old to send them
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("claude", "claude-opus-5-5")] * 2
+    assert ask.brains == [("claude", "claude-opus-5-5")] * 3
 
 
 def test_a_topics_brain_the_studio_cannot_run_fails_the_topic_rather_than_holding_up_the_queue(jobs_root, monkeypatch):
@@ -694,6 +702,7 @@ def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_r
     [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert [(s["step"], s.get("detail")) for s in record["steps"]] == [
         ("request", "1 image(s), 1 text file(s)"), ("bundle", "AP Biology / the light reactions"),
+        ("audit", "3 fact(s) judged by course knowledge, in 1 call(s)"),
         ("factcheck", "passed in 1 round(s), 0 correction(s)"), ("post", None)]
     assert record["reason"] == "503 UNAVAILABLE: down"
     # No media step has run, so the summary is the one paragraph for the cycle log.

@@ -1,0 +1,23 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A derivative is the rate something changes at one single instant, found by shrinking the interval between two points on a graph until the average rate of change (secant slope) closes in on one number, the slope of the tangent line.",
+      "why": "First, an average rate of change is the slope of a secant line through two points, [f(a+h) − f(a)] / h. Second, a curve keeps changing steepness, so one average over a long interval can't describe a single point. Third, if I slide the second point closer to the first (make h smaller), the secant line swings toward the tangent line and its slopes close in on one number. In the t² example, the averages 3, 2.1, 2.01 closed in on 2. Fourth, I can't just plug in h = 0 because that gives 0/0, so the derivative is defined as a limit as h goes to 0. That limit is the tangent slope and the instantaneous rate of change. Doing this at every x gives a new function f′(x), like 2x for x².",
+      "what_if": "Suppose the left and right secant slopes stopped closing in on the same number, like at the corner of y = |x|. The left slopes are all −1 and the right slopes are all +1, so the limit wouldn't exist and there would be no derivative at that point, because there's no single tangent slope to settle on. The lesson also says jumps and vertical tangent lines cause the same problem, but it doesn't explain those in detail."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": [
+        "The student did not mention the power rule as a shortcut for computing the derivative function; they only gave 2x for x² as an example."
+      ]
+    },
+    "passed": true
+  }
+}

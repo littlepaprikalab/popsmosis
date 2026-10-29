@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-7",
+      "rule": "key-line",
+      "detail": "the key line \"Characters act on wrong beliefs → audience sees where it leads\" runs 11 words, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "lyrics",
+      "rule": "lyric-style",
+      "detail": "3 lines end on a claim-free tag, over 2: \"But you know she's only sleeping, she'll be waking soon\"; \"They marry in secret, and you know where it's going\"; \"You know her secret husband's banished, that's her heartbreak\"",
+      "repaired": false
+    }
+  ]
+}

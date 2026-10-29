@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A rocket moves in space by pushing its own exhaust gas backward, and by Newton's third law the gas pushes the rocket forward with an equal and opposite force, so it doesn't need air or ground to push on.",
+      "why": "First, the rocket carries fuel and an oxidizer, so it can burn without air. Second, the fuel and oxidizer burn in the combustion chamber and make hot, high-pressure exhaust gas. Third, the gas goes out the back through the bell-shaped nozzle, which speeds it up. Fourth, the engine pushes the gas backward, and the gas pushes the rocket forward with an equal force. That forward push is thrust. The two forces act on different objects (the gas and the rocket), so they don't cancel. The gas is light, so it accelerates a lot, while the rocket is heavy, so it speeds up more slowly. As fuel burns the rocket gets lighter, so the same thrust accelerates it more.",
+      "what_if": "If the combustion chamber stopped working, say the fuel or oxidizer wasn't burning, there would be no hot high-pressure gas to push out the nozzle. With no gas being thrown backward, there would be no reaction force and no thrust. The rocket wouldn't stop, though, because the lesson says Newton's first law means it would keep coasting at the same speed in a straight line unless something like gravity acted on it. It just couldn't speed up or change speed using its engine."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

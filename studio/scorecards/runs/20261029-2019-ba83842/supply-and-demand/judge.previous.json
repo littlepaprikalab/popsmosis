@@ -1,0 +1,35 @@
+{
+  "hook": {
+    "reason": "The title line \"Supply meets demand, the price sits tight\" names the topic with abstract nouns, not concrete actions on real things, and \"sits tight\" is vague and not quite the core idea. The lesson opens well on a real question (\"Why do limited sneakers resell for more than the store price, while strawberries get cheaper...\"), and the narration opens on a sneaker drop with a long line of shoppers, which is from the learner's world. The title line is the weak point, so the hook falls short of a 5.",
+    "score": 3
+  },
+  "frame": {
+    "reason": "The auction that runs both ways is an apt picture of the whole market (\"bidders stand for demand, items for sale for supply, and the auctioneer's call for the price\"), and it fits how price finds its level. It is set up early in the verse and the lesson and narration use it. But the song drops it after v1-4; the chorus, bridge and outro do not carry it, and later verses go to curves and sneakers.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order with causes: buyers want less \"because the good costs more compared with other things\", sellers offer more \"because selling becomes more profitable\", shortage leads sellers to raise the price, surplus leads them to cut it, and at equilibrium \"no shortage pushes it up and no surplus pushes it down\". The song carries the gist (v2-1 to v2-12, chorus). Extras like shifts and the price ceiling add length but do not break the chain.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Most lines are steps with arrows and tell the chain well: \"Price too low → shortage → price rises\", \"No shortage, no surplus → price stops at equilibrium\". But the first, \"How do buyers and sellers set a price?\", is a question, not a step; \"Auction: bidders = demand, items for sale = supply\" is a label; and the last two (shifts, ceiling) go beyond the core chain. The \"price too high\" line starts at v2-7 \"Big summer harvest\", which is not the surplus step itself, and \"Price too low\" and \"Price too high\" are not tied to the closing links. The set does not end on the core idea.",
+    "score": 3
+  },
+  "errors": [
+    "\"Price too high → surplus → price falls\" is shown from lyric v2-7 and narration n16, but v2-7 sings a harvest example, not the 'price too high' step. This is a timing mismatch, not a factual error.",
+    "v2-6 \"And sellers bring more, so the shortage gets compressed\" and v2-9/v2-10 are roughly right, but v2-8 \"A surplus, so the stores cut the price, so more will buy\" skips the sellers-offer-less response; minor, not wrong.",
+    "p1-1 \"charge too high and it sits\" is fine, but i-2 \"Buyers and sellers set it side by side\" is fine too; no factual error found."
+  ],
+  "accuracy": {
+    "reason": "The economics is correct throughout: laws of demand and supply with the right reasons, shortage and surplus dynamics, equilibrium, the price ceiling effect, and the demand shift raising both price and quantity. The song holds up, e.g. \"Sellers offer less till the surplus is no more\". The only slips are loose phrasing, such as \"the price sits tight\" for a price that settles, and the framing of a rising price making buyers \"want\" less (quantity demanded). A teacher would barely tighten anything.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "Most verse lines are whole rapped phrases that fit the bar, like \"Think of the market as an auction room / More bidders than items, and the price will zoom\". The chorus is chantable and repeats well: \"Got a shortage? Then the price takes flight\". But some lines read like textbook sentences or are forced to rhyme: \"Equilibrium's found by buyers' and sellers' hands\", \"So the shortage stays, the gap won't shrink\" (does not rhyme cleanly with \"bring\"), \"Climb the demand curve and the buyers want less / Other things look cheaper, so they spend on the rest\" (weak), and p2-2 \"Now the price and the amount both climb to a new height\" overruns. The bridge is long and prosaic.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture, builds on why, has a **Predict:** answered right after (\"once the price reaches equilibrium, what will push it anywhere else?\"), names the misconception and why it is wrong, and ends on a check only an understanding learner can answer (\"A store prices a new game console below its equilibrium price...\"). But the table plus ceiling and shifts sections and the wages aside add new terms (price ceiling, shifts) beyond the core idea, so it carries more than needed, and the lesson ends with the check after \"Next in the unit\" digression.",
+    "score": 4
+  }
+}

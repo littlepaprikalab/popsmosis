@@ -1,0 +1,34 @@
+{
+  "hook": {
+    "reason": "The title line \"Pump sodium out, pull potassium in\" is concrete, singable after one hearing, and names the pump's main move. It leaves out the payoff (the signal), though i-2 \"Charge up the brain before the signals begin\" adds it. The lesson opens on a real question, \"How can a nerve cell fire a signal the instant it's stimulated?\", and the narration opens in the learner's world: \"Right now, signals are racing through your brain and down your spinal cord.\" It is strong but names one part, not the whole idea.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The water tower fits the whole job: pumps spend energy to store potential that is released the moment a faucet opens. It is set up in v1-1, returns in c1-3 \"stack the tower higher\" and b-4 \"the tower runs out\", and the lesson and narration both use it. It is not carried through the whole song, though, because the pre-choruses and verse 2 drop it. The picture also does not map the 3-for-2 swap or the negative charge, but nothing in it misleads.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order with causes: leaks, so uphill needs ATP, so the shape change gives 3 out and 2 in, so a negative inside, so channels open and an action potential starts. Link 4 is made more accurate by naming the potassium leak as the main cause. The song carries the gist, though the potassium leak appears only in v2-4. Link 5 is clear, and the sodium-channel link is well explained.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Read alone, the eight lines mostly tell the chain: \"Na⁺ leaks in, K⁺ leaks out → gradients run down\", \"Pushing ions uphill needs ATP → active transport\", \"1 ATP → 3 Na⁺ out, 2 K⁺ in\", \"K⁺ leak + 3-for-2 swap → negative resting membrane potential\". The first, \"How does a cell store energy for nerve signals?\", is a question, not a step. The second, \"Electric pump = sodium-potassium pump; tank = sodium outside\", is a label. The last, about ouabain, is a side topic and does not return to the core idea. The line \"Pushing ions uphill…\" starts at v1-4, which says only that the pump sends sodium away.",
+    "score": 3
+  },
+  "errors": [
+    "\"Na⁺ leaks in, K⁺ leaks out\" (key line, narration n10): the narration says sodium leaks in through \"a sodium channel\". Resting leak channels differ from the voltage-gated sodium channels that open during a signal, which could blur the two. Say \"leak channels\".",
+    "\"Three out, two in, then go again\" / \"Burn one ATP to stack the tower higher\": the tower stores sodium outside, but the pump also stores potassium inside, so the picture covers only half the work. It is a fair simplification."
+  ],
+  "accuracy": {
+    "reason": "The facts, the 3:2 stoichiometry, the cycle, the −70 mV resting potential, ouabain and digoxin are all correct and match the study guide. The one imprecision is the narration's \"some sodium leaks in through a sodium channel\" (n10), which does not distinguish leak channels from the voltage-gated sodium channels that open during a signal. The misconception is handled correctly, and the lesson flags the simplification about other ions.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Most lines are whole phrases with clean rhymes, such as \"The pump is not the signal, the signal runs downhill / Sodium floods through open channels, no ATP bill\", and the chorus is a chant that is easy to sing back. Several lines run long for the bar, such as v2-5 \"Now the inside rests near minus seventy millivolts\", v2-6, v2-8 and b-8, and the bridge reads like a textbook caption list. Some rhymes bend the grammar or add filler: v2-1/v2-2 rhyme \"outside\" with \"inside\", and v2-4 \"through a channel of its own\" is padded. The \"millivolts / jolt\" rhyme is a near-rhyme.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, uses the water-tower picture, and builds on why in numbered causal steps. It has a predict question (\"if three positive charges leave for every two that come in…\") answered right after, a comparison table, a named misconception, and a final check: \"An action potential spends no ATP, so why does a cell with a blocked pump eventually stop firing them?\" That check needs the core idea. The lesson carries many new terms for high school (eight or more), and the intestine and digoxin asides add load, so it could be tighter.",
+    "score": 4
+  }
+}

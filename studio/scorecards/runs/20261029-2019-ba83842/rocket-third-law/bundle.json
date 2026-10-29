@@ -1,0 +1,2356 @@
+{
+  "course": "Physics",
+  "topic": "How a rocket moves in space: Newton's third law",
+  "audience": "high school",
+  "core_idea": "A rocket pushes its exhaust backward, so the exhaust pushes the rocket forward; it needs no air.",
+  "why_chain": [
+    "Burning fuel with the oxidizer the rocket carries makes hot, high-pressure exhaust gas in the combustion chamber.",
+    "The engine pushes that gas backward out of the nozzle at high speed.",
+    "By Newton's third law, the gas pushes the rocket forward with an equal and opposite force, called thrust.",
+    "The two forces act on different objects, so they don't cancel, and the rocket speeds up.",
+    "Because the rocket pushes on its own exhaust, not on air, it moves in empty space."
+  ],
+  "key_terms": [
+    "Newton's third law",
+    "action-reaction pair",
+    "thrust",
+    "exhaust gas",
+    "combustion chamber",
+    "nozzle",
+    "oxidizer",
+    "conservation of momentum"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Newton's third law says that when one object pushes or pulls on a second object, the second object pushes or pulls back on the first with a force equal in size and opposite in direction. The two forces are called an action-reaction pair. They always act on different objects, so they never cancel each other out. Everyday examples: when you walk, your foot pushes the ground backward and the ground pushes you forward; a blown-up balloon that is let go zips away across the room in flight, because its stretched rubber squeezes air backward out of its neck and that air pushes the balloon forward. A person standing on a skateboard who throws a heavy ball backward rolls forward: the person pushes the ball backward and the ball pushes the person forward with an equal force. A rocket works like that skateboarder throwing balls backward nonstop, except that what it throws is tiny bits of its own exhaust gas.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "A rocket carries its own fuel in a fuel tank and its own oxidizer, a supply of oxygen, in an oxidizer tank, so it does not need air to burn its fuel. The fuel and oxidizer flow into the combustion chamber, where they burn and make hot, high-pressure exhaust gas; a hydrogen engine, for example, burns hydrogen (H₂) with oxygen (O₂), and its exhaust is hot water vapour (H₂O). The exhaust gas leaves through the nozzle, a bell-shaped opening at the back of the engine that speeds the gas up as it leaves. So the engine pushes the exhaust gas backward out of the nozzle at high speed, and by Newton's third law the exhaust gas pushes the rocket forward with an equal and opposite force: if the gas is pushed to the left, the rocket is pushed to the right. This forward push on the rocket is called thrust.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "Many people think a rocket moves by pushing against the air or the ground. It does not: it pushes against its own exhaust gas, which it carries with it, so it works in empty space where there is no air. A rocket engine even gives slightly more thrust in the vacuum of space than in air at sea level, because at sea level the surrounding air pressure pushes back at the nozzle's opening, the base of the engine, and reduces the thrust. The two forces of the pair are equal, but their effects are not: by Newton's second law (acceleration = force ÷ mass), the light exhaust gas is flung backward very fast while the heavy rocket speeds up more gradually. As the fuel burns, the rocket gets lighter, so the same thrust gives it a bigger acceleration. Newton's third law leads to the next topic in the unit, conservation of momentum: the forward momentum the rocket gains equals the backward momentum given to its exhaust, so the total momentum of the rocket and its exhaust stays the same when no outside force acts.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "When a rocket's engine shuts down, for example because its fuel runs out, no more exhaust gas is pushed out of the nozzle, so there is no reaction force and no thrust. In space there is no air to slow the rocket, so nothing changes its motion: by Newton's first law it keeps coasting in a straight line at the same speed, unless another force such as gravity acts on it. It does not stop when the engine stops. To slow down, a spacecraft has to fire an engine again, throwing exhaust gas out in the direction it is moving, so the exhaust pushes it backward.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "Many people think a rocket moves by pushing against the air or the ground. It actually pushes against its own exhaust gas, which pushes back, so it works in empty space, with even slightly more thrust than at sea level.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a physics textbook draws it, of a blown-up balloon with its neck untied, floating in a room: a red balloon in the centre of the picture, its round body on the right and its open neck on its left side, a plain wall behind it. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Balloon",
+          "aliases": [
+            "balloon"
+          ],
+          "sam_phrase": "red balloon",
+          "color_hex": "#FF5252"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a physics textbook draws it, of a skateboarder on a smooth flat floor: a skateboarder in a light blue outfit standing on a skateboard in the centre of the picture, facing right, and a heavy orange ball held in the skateboarder's hands behind them on the left. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Skateboarder",
+          "aliases": [
+            "skateboarder",
+            "skateboard"
+          ],
+          "sam_phrase": "light blue person",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Heavy ball",
+          "aliases": [
+            "heavy ball"
+          ],
+          "sam_phrase": "orange ball",
+          "color_hex": "#FFA726"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a rocket in empty space: a light blue rocket lying across the centre of the picture, its pointed nose on the right and its engine nozzle at its left end, an orange exhaust flame extending to the left from the nozzle, a few tiny stars far in the distance. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Rocket",
+          "aliases": [
+            "rocket",
+            "Rocket"
+          ],
+          "sam_phrase": "light blue rocket",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Exhaust gas",
+          "aliases": [
+            "exhaust gas",
+            "exhaust"
+          ],
+          "sam_phrase": "orange flame",
+          "color_hex": "#FFA726"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "engine-detail",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a rocket cut open lengthwise to show its engine, lying across the picture with its nose on the right: inside a plain white hull, a pink fuel tank near the nose, a cyan oxidizer tank to its left, a purple combustion chamber to the left of the tanks, a green bell-shaped nozzle opening to the left from the combustion chamber, and an orange exhaust flame extending to the left from the nozzle. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Fuel tank",
+          "aliases": [
+            "fuel tank"
+          ],
+          "sam_phrase": "pink tank",
+          "color_hex": "#FF6FB5"
+        },
+        {
+          "name": "Oxidizer tank",
+          "aliases": [
+            "oxidizer tank"
+          ],
+          "sam_phrase": "cyan tank",
+          "color_hex": "#26C6DA"
+        },
+        {
+          "name": "Combustion chamber",
+          "aliases": [
+            "combustion chamber"
+          ],
+          "sam_phrase": "purple chamber",
+          "color_hex": "#B388FF"
+        },
+        {
+          "name": "Nozzle",
+          "aliases": [
+            "nozzle"
+          ],
+          "sam_phrase": "green bell",
+          "color_hex": "#66DD66"
+        },
+        {
+          "name": "Exhaust gas",
+          "aliases": [
+            "exhaust gas",
+            "exhaust"
+          ],
+          "sam_phrase": "orange flame",
+          "color_hex": "#FFA726"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "coasting",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a rocket in empty space with its engine switched off: a light blue rocket lying across the centre of the picture, its pointed nose on the right and its engine nozzle at its left end, the nozzle dark and empty, a few tiny stars far in the distance. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Rocket",
+          "aliases": [
+            "rocket",
+            "Rocket"
+          ],
+          "sam_phrase": "light blue rocket",
+          "color_hex": "#4FC3F7"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "## What does a rocket push against?\n\nIf there's no air in space, what is a rocket pushing on?\n\nA rocket moves by throwing its own gas out the back. **A rocket pushes its exhaust backward, so the exhaust pushes the rocket forward; it needs no air.** That's Newton's third law at work.\n\n## Newton's third law\n\nWhen one object pushes on a second object, the second object pushes back with a force equal in size and opposite in direction. These two forces are an **action-reaction pair**. They act on different objects, so they never cancel each other out.\n\nYou already use this: when you walk, your foot pushes the ground backward and the ground pushes you forward.\n\n## The skateboard picture\n\nStand on a skateboard and throw a heavy ball backward. You push the ball backward, the ball pushes you forward with an equal force, and you roll forward. A rocket is that skateboarder throwing balls backward nonstop, except that it throws tiny bits of its own **exhaust gas**.\n\n## How the engine throws its gas\n\n1. **It brings its own oxygen.** A rocket carries fuel and an **oxidizer**, a supply of oxygen, so it can burn fuel without air.\n2. **Burning makes hot gas.** In the **combustion chamber**, fuel and oxidizer burn into hot, high-pressure exhaust gas. A hydrogen engine burns H₂ with O₂, and its exhaust is hot water vapour, H₂O.\n3. **The gas shoots out the back.** It leaves through the **nozzle**, a bell-shaped opening that speeds the gas up.\n4. **The gas pushes back.** The engine pushes the exhaust gas backward, so the gas pushes the rocket forward with an equal and opposite force. That forward push is **thrust**.\n\n**Predict:** the forces on the gas and on the rocket are equal, so why does the gas fly off so much faster? Because the gas is light and the rocket is heavy: by Newton's second law (acceleration = force ÷ mass), the same force flings the gas backward fast and speeds the rocket up gradually. As fuel burns, the rocket gets lighter, so the same thrust gives it a bigger acceleration.\n\n## The common mistake\n\nMany people think a rocket pushes against the air or the ground. It doesn't: it pushes against its own exhaust gas, which it carries with it, so it works in empty space. A rocket engine even gives slightly more thrust in space than at sea level, where air pressure pushes back at the nozzle's opening.\n\n## When the engine stops\n\nWhen the fuel runs out, no gas is pushed out, so there is no thrust. The rocket doesn't stop: with no air to slow it, Newton's first law says it keeps coasting in a straight line at the same speed, unless a force such as gravity acts on it. To slow down, it must fire an engine again, throwing exhaust in the direction it is moving.\n\n## Where this leads\n\nNext comes **conservation of momentum**: the forward momentum the rocket gains equals the backward momentum given to its exhaust, so the total stays the same when no outside force acts.\n\n*This lesson is simplified: it focuses on the engine's push and leaves out the other forces on a real rocket.*\n\n**Check:** A rocket floats at rest in empty space, with nothing around it. When it fires its engine, what does it push against, and why does that make it move forward?\n\nGot a follow-up question? Ask away!",
+  "music": {
+    "positive_styles": [
+      "dance-pop",
+      "four-on-the-floor beat",
+      "short rapped verses",
+      "energetic female vocal",
+      "big sing-along chorus",
+      "bright plucked synths",
+      "handclaps",
+      "pulsing bass",
+      "112 bpm",
+      "vocals start immediately, no instrumental intro",
+      "vocals upfront in the mix",
+      "clear diction",
+      "educational"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "screamed vocals",
+      "heavy distortion",
+      "slow tempo"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Let a balloon go and watch it zip off in flight",
+      "names": [
+        "balloon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Stand on a skateboard and throw a heavy ball away",
+      "names": [
+        "skateboard",
+        "heavy ball"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "You push it back, the ball pushes you the other way",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Same size, opposite way, an action-reaction pair",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "One force on you, and one on the ball in the air",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "They act on different things, so they don't cancel out",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "You roll ahead, that's what Newton's third law is about",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Now a rocket does that, and it keeps on throwing",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Its balls are tiny bits of gas, and that's how it's going",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-9",
+      "section": "verse",
+      "text": "It hauls a fuel tank and an oxidizer tank",
+      "names": [
+        "fuel tank",
+        "oxidizer tank"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-10",
+      "section": "verse",
+      "text": "Its own oxygen, so there's no air it has to thank",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-11",
+      "section": "verse",
+      "text": "In the combustion chamber, fuel and oxygen burn",
+      "names": [
+        "combustion chamber"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-12",
+      "section": "verse",
+      "text": "Making hot, high-pressure gas, and now it's the nozzle's turn",
+      "names": [
+        "nozzle"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "It's not the air or the ground that it's pushing on",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "It pushes its own exhaust, so it works when the air is gone",
+      "names": [
+        "exhaust"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Push the gas left, the rocket goes right",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Equal push back, with no air in sight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "The nozzle's a bell that speeds the gas on its way",
+      "names": [
+        "nozzle"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "The engine shoves it backward, out the back it sprays",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Then the gas shoves back on the rocket, just as strong",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "That forward push is thrust that carries the rocket along",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "The rocket's heavy, so it speeds up slow",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "The gas is light, it gets flung back fast, and out it goes",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Burn more fuel and the rocket gets light",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Same thrust on less mass, so it speeds up more in flight",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-9",
+      "section": "verse",
+      "text": "Here's the twist: the thrust's a little higher in space",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-10",
+      "section": "verse",
+      "text": "Than at sea level, where the air pushes back at the engine's base",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-11",
+      "section": "verse",
+      "text": "Gas thrown backward, the rocket shoved ahead",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-12",
+      "section": "verse",
+      "text": "That's thrust, the skater's trick, with gas balls instead",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Rocket forward, gas back, the total momentum's the same",
+      "names": [
+        "Rocket"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Conservation of momentum, that's the next chapter's name",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Push the gas left, the rocket goes right",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Equal push back, with no air in sight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "The fuel runs out, the engine stops",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "No gas is thrown back, so the thrust just drops",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "No push from the gas, no reaction force",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "And no air out there to slow it on its course",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Nothing changes its motion, that's the first law's call",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "It coasts straight on at the same speed, it doesn't stop at all",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Want to slow down? Then fire an engine once more",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "Throw gas out the front, and it pushes you back, like before",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Fuel and oxygen burn, and the gas gets fired out",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "The gas pushes the rocket, that's what thrust's about",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Push the gas left, the rocket goes right",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Equal push back, with no air in sight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Let a balloon go and watch it zip off in flight",
+      "names": [
+        "balloon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "A rocket does the same, with no air in sight",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Throw the gas back, take flight",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Let go of a blown-up balloon, and it zips away across the room.",
+      "names": [
+        "balloon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n2",
+      "text": "The stretched rubber squeezes air backward out of its neck, and that air pushes the balloon forward.",
+      "names": [
+        "balloon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "That same trick answers a big question: with no air in space, what does a spacecraft push against?",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n4",
+      "text": "The answer starts with Newton's third law.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "When one object pushes on another, the second pushes back with a force equal in size and opposite in direction.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "Those two forces are called an action-reaction pair.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "Picture a skateboarder holding a heavy ball.",
+      "names": [
+        "skateboarder",
+        "heavy ball"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "When the skateboarder throws the ball backward, the ball pushes the skateboarder forward, and the skateboarder rolls.",
+      "names": [
+        "skateboarder"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "These forces act on different objects, one on the ball and one on the skateboarder, so they never cancel.",
+      "names": [
+        "skateboarder"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "A rocket does the same, nonstop, but what it throws is tiny bits of its own exhaust gas.",
+      "names": [
+        "rocket",
+        "exhaust gas"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "That gas starts in the fuel tank, which holds the fuel.",
+      "names": [
+        "fuel tank"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "The oxidizer tank holds a supply of oxygen, so the fuel can burn without air.",
+      "names": [
+        "oxidizer tank"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "Fuel and oxidizer flow into the combustion chamber, where they burn and make hot, high-pressure exhaust gas.",
+      "names": [
+        "combustion chamber",
+        "exhaust gas"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "A hydrogen engine, for example, burns hydrogen with oxygen and makes hot water vapour.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "The nozzle, a bell-shaped opening at the back, speeds the gas up as it leaves.",
+      "names": [
+        "nozzle"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "So if the engine pushes the gas backward, what pushes the rocket forward?",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "The gas does: by Newton's third law, it pushes the rocket with an equal and opposite force.",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "That forward push on the rocket is called thrust.",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "The forces are equal, but by Newton's second law the light gas is flung back fast while the heavy rocket speeds up gradually.",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "As fuel burns, the rocket gets lighter, so the same thrust speeds it up faster.",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "Many people think a rocket pushes against the air, but it pushes against its own exhaust gas.",
+      "names": [
+        "rocket",
+        "exhaust gas"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "So it works in empty space, and its thrust is even slightly higher there than at sea level, where air pressure pushes back.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "That leads to conservation of momentum: the forward momentum the rocket gains equals the backward momentum of its exhaust.",
+      "names": [
+        "rocket",
+        "exhaust"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "Now imagine the fuel runs out and the engine shuts down.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "No gas is pushed out, so there is no reaction force and no thrust.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "With no air to slow it, Newton's first law says the rocket keeps coasting in a straight line at the same speed, unless gravity or another force acts.",
+      "names": [
+        "rocket"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "To slow down, it must fire an engine again, throwing gas out the way it is moving.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "So remember: a rocket pushes its exhaust backward, so the exhaust pushes the rocket forward; it needs no air.",
+      "names": [
+        "rocket",
+        "exhaust"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n29",
+      "text": "Fuel and oxidizer go in, hot exhaust gas comes out the back, and that push is how a rocket travels through empty space.",
+      "names": [
+        "exhaust gas",
+        "rocket"
+      ],
+      "fact_id": "f3"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Balloon",
+        "zoom": 1.6
+      },
+      "spotlight": "Balloon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Heavy ball",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Skateboarder",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "Action-reaction pair",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Heavy ball",
+        "zoom": 1.6
+      },
+      "spotlight": "Heavy ball",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Skateboarder",
+        "zoom": 1.6
+      },
+      "spotlight": "Skateboarder",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-9",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Fuel tank",
+        "Combustion chamber"
+      ],
+      "carries": "H₂",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Oxidizer tank",
+            "Combustion chamber"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "v1-10",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Oxidizer tank",
+        "zoom": 1.6
+      },
+      "spotlight": "Oxidizer tank",
+      "particles": [
+        "Oxidizer tank",
+        "Combustion chamber"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-11",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Combustion chamber",
+        "zoom": 1.6
+      },
+      "spotlight": "Combustion chamber",
+      "particles": [
+        "Fuel tank",
+        "Combustion chamber"
+      ],
+      "carries": "H₂",
+      "glow": "Combustion chamber",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Oxidizer tank",
+            "Combustion chamber"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "v1-12",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Nozzle",
+        "zoom": 1.6
+      },
+      "spotlight": "Nozzle",
+      "particles": [
+        "Combustion chamber",
+        "Nozzle"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Exhaust gas",
+        "zoom": 1.6
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Nozzle",
+        "zoom": 1.8
+      },
+      "spotlight": "Nozzle",
+      "particles": [
+        "Combustion chamber",
+        "Nozzle",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Exhaust gas",
+        "zoom": 1.6
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Combustion chamber",
+        "Nozzle",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "Thrust",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Exhaust gas",
+        "zoom": 1.6
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-10",
+      "scene": "overview",
+      "camera": {
+        "target": "Exhaust gas",
+        "zoom": 1.6
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "Conservation of momentum",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "coasting",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "coasting",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "coasting",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "coasting",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "coasting",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "Newton's first law",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "coasting",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.8
+      },
+      "spotlight": "Rocket",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "coasting",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "coasting",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "Balloon",
+        "zoom": 1.6
+      },
+      "spotlight": "Balloon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Balloon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Balloon",
+        "zoom": 1.6
+      },
+      "spotlight": "Balloon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "analogy",
+      "camera": {
+        "target": "Skateboarder",
+        "zoom": 1.6
+      },
+      "spotlight": "Skateboarder",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Heavy ball",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Skateboarder",
+        "Heavy ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Fuel tank",
+        "zoom": 1.6
+      },
+      "spotlight": "Fuel tank",
+      "particles": [
+        "Fuel tank",
+        "Combustion chamber"
+      ],
+      "carries": "H₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Oxidizer tank",
+        "zoom": 1.6
+      },
+      "spotlight": "Oxidizer tank",
+      "particles": [
+        "Oxidizer tank",
+        "Combustion chamber"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Combustion chamber",
+        "zoom": 1.6
+      },
+      "spotlight": "Combustion chamber",
+      "particles": [
+        "Fuel tank",
+        "Combustion chamber"
+      ],
+      "carries": "H₂",
+      "glow": "Combustion chamber",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Oxidizer tank",
+            "Combustion chamber"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "n14",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Combustion chamber",
+      "particles": [
+        "Combustion chamber",
+        "Nozzle"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "engine-detail",
+      "camera": {
+        "target": "Nozzle",
+        "zoom": 1.8
+      },
+      "spotlight": "Nozzle",
+      "particles": [
+        "Combustion chamber",
+        "Nozzle",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "overview",
+      "camera": {
+        "target": "Exhaust gas",
+        "zoom": 1.6
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "coasting",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "coasting",
+      "camera": {
+        "target": "Rocket",
+        "zoom": 1.6
+      },
+      "spotlight": "Rocket",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "coasting",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "coasting",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Rocket",
+        "Exhaust gas"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [
+    {
+      "structure": "Combustion chamber",
+      "inputs": [
+        "H₂",
+        "O₂"
+      ],
+      "outputs": [
+        "H₂O"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "No air in space: what does a rocket push against?",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Push on an object → it pushes back, equal and opposite",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Forces act on different objects → they don't cancel",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "v1-9",
+      "text": "Fuel + oxidizer burn → hot, high-pressure exhaust gas",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Nozzle shoots exhaust gas backward at high speed",
+      "from_narration": "n15"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "Exhaust gas pushes rocket forward → thrust",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Equal forces: light gas flung fast, heavy rocket speeds slowly",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "v2-9",
+      "text": "Pushes its own exhaust, not air → works in space",
+      "from_narration": "n21"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "Rocket's forward momentum = exhaust's backward momentum",
+      "from_narration": "n23"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Fuel runs out → no thrust → rocket coasts, same speed",
+      "from_narration": "n24"
+    }
+  ],
+  "tags": {
+    "song": [
+      "newtonsthirdlaw",
+      "rockets",
+      "thrust",
+      "physics",
+      "actionreaction",
+      "dancepop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "newtonsthirdlaw",
+      "rockets",
+      "thrust",
+      "physics",
+      "actionreaction",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

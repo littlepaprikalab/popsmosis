@@ -174,18 +174,19 @@ test.describe('videos on /learn', () => {
 
     // Nobody has picked it up: the whole droplet to make, folded to one line.
     await expect(card.getByTestId('waiting')).toBeVisible();
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText('10 steps to go');
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('11 steps to go');
     await expect(bill.locator('table')).toBeHidden();
 
     // The studio claims it and starts the lesson: the bill opens by itself and fills in on the card's poll.
     const bot = agent(request, S.POPSMOSIS_API_KEY);
     expect((await bot.claim(questionId)).status()).toBe(200);
-    const lessonBill = studioBill([['request', 0.4, 0], ['bundle', 196, 0.53]]);
+    const lessonBill = studioBill([['request', 0.4, 0], ['bundle', 196, 0.53], ['audit', 40, 0.06]]);
     expect((await bot.progress(questionId, { running: [{ step: 'factcheck', seconds: 20 }], breakdown: lessonBill, videos: true })).status()).toBe(204);
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 2 of 10 steps done · $0.53 so far', { timeout: 25_000 });
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 3 of 11 steps done · $0.59 so far', { timeout: 25_000 });
     await expect(step('Read the request')).toHaveAttribute('data-status', 'done');
     await expect(step('Write the lesson')).toHaveAttribute('data-status', 'done');
     await expect(step('Write the lesson')).toContainText('$0.53');
+    await expect(step('Audit the facts')).toHaveAttribute('data-status', 'done');
     await expect(step('Fact-check')).toHaveAttribute('data-status', 'running');
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'waiting');
 
@@ -195,7 +196,7 @@ test.describe('videos on /learn', () => {
     const posted = await bot.answer(questionId, lesson, {
       bundle: { course: 'AP Biology', topic: 'the light reactions' },
       factcheck: { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] },
-      breakdown: studioBill([['request', 0.4, 0], ['bundle', 196, 0.53], ['factcheck', 80, 0.18]]),
+      breakdown: studioBill([['request', 0.4, 0], ['bundle', 196, 0.53], ['audit', 40, 0.06], ['factcheck', 80, 0.18]]),
     });
     expect(posted.status()).toBe(201);
     const answerId = (await posted.json()).id;
@@ -208,7 +209,7 @@ test.describe('videos on /learn', () => {
     await expect(card.getByTestId('awaiting-videos')).toHaveCount(0);
     await expect(card.getByText('READY', { exact: true })).toBeVisible();
     await expect(card.getByPlaceholder(/Ask a follow-up/)).toBeVisible();
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 3 of 10 steps done · $0.71 so far');
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('Making it · 4 of 11 steps done · $0.77 so far');
     await bill.locator('summary').click();
     await expect(step('Fact-check')).toHaveAttribute('data-status', 'done');
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'running');

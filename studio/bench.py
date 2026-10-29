@@ -39,7 +39,7 @@ from studio import brain, checks, jobs, media, muse, svg
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.render import bench as render_bench
-from studio.schemas import Bundle, FactCheck
+from studio.schemas import Bundle, FactAudit, FactCheck
 from studio.steps import art, audio, timing
 from studio.tests.test_run import FakeApi
 
@@ -48,6 +48,7 @@ from studio.tests.test_run import FakeApi
 # SAM call each structure, the scenes at once). The rest are estimates from docs/test-rounds.md.
 WAITS = {
     "bundle": 522.0,
+    "audit": 40.0,  # the fact audit, one call (estimate)
     "factcheck": 84.0,
     "paint": 45.0,  # one Muse Image picture (estimate)
     "art check": 12.0,  # the helper's look at it (estimate)
@@ -109,8 +110,8 @@ def bench_bundle() -> Bundle:
 
 
 class Brain:
-    """Stands in for brain.ask: the bench bundle, a fact-check that supports every line, and the helper's look at
-    a picture that finds nothing wrong."""
+    """Stands in for brain.ask: the bench bundle, a fact audit that finds every fact correct, a fact-check that
+    supports every line, and the helper's look at a picture that finds nothing wrong."""
 
     def __init__(self, scale: float):
         self.scale = scale
@@ -119,6 +120,10 @@ class Brain:
         if schema is Bundle:
             wait("bundle", self.scale)
             return bench_bundle().model_dump(mode="json")
+        if schema is FactAudit:
+            wait("audit", self.scale)
+            return {"facts": [{"id": fact["id"], "basis": "course knowledge", "quote": "", "verdict": "CORRECT",
+                               "problem": "", "corrected": ""} for fact in json.loads(prompt)["facts"]]}
         if schema is FactCheck:
             wait("factcheck", self.scale)
             return {"checks": [{"id": line["id"], "verdict": "SUPPORTED", "source": "f1", "problem": "",
