@@ -280,8 +280,9 @@ def print_job(job: Path, brief: bool = False) -> None:
                       f"{line.round:<3} {text}")
         if report.corrections:
             print("\n## Corrections\n")
+            sung = factcheck_step.songwriter_wrote(job)
             for c in report.corrections:
-                by = " (the songwriter's)" if c.by == "songwriter" else ""
+                by = " (the songwriter's)" if (c.round, c.before) in sung else ""
                 print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}{by}: {c.problem}", indent=2))
                 print(_wrap(f"- {factcheck_step.shown(c.before)}", indent=4, first=4))
                 print(_wrap(f"+ {factcheck_step.shown(c.after)}", indent=4, first=4) + "\n")

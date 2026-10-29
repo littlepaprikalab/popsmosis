@@ -323,10 +323,14 @@ by the songwriter (`studio/steps/songwriter.py`, `studio/prompts/songwriter.md`)
 call a round for every failing couplet, which hears the whole song, its style and tempo,
 the facts, the checker's problem and the checker's own version, and keeps the couplet's
 shape, rhyme, voice and frame. Code keeps a rewrite only if it has a line for each line,
-each near the length of the line it replaces; the fact-check then judges it like any changed
-line. Each couplet goes to the songwriter once: if its rewrite fails too, or it has none,
-the checker's correction is used, and `factcheck.json` says who wrote each correction
-(`by`). The songwriter costs a call only in a round where a couplet failed: about 2,500
+each near the length of the line it replaces and still saying every structure the line
+named (what reveals it on screen); the fact-check then judges it like any changed line.
+Each couplet goes to the songwriter once: if its rewrite fails too, or it has none, the
+checker's correction is used, and the checker's correction from before the rewrite when the
+checker has none for the rewrite. A line sung in two couplets (the title line in the intro,
+the choruses and the outro) keeps one wording wherever it is sung, the chorus's. The
+songwriter's corrections are listed in `songwriter.json`, beside `factcheck.json`, which
+stays in the shape a studio from before the songwriter reads. The songwriter costs a call only in a round where a couplet failed: about 2,500
 tokens in and, with thinking, 1,000 to 3,000 out, $0.03 to $0.07 on Opus 5.5 (estimated).
 
 The same call checks each video's hashtags and its marked motions ("H⁺ travels from

@@ -428,7 +428,9 @@ class Correction(Strict):
     before: str  # a couplet's lines joined by "\n"
     after: str
     problem: str
-    by: Literal["checker", "songwriter"] = "checker"  # who wrote `after`; a report from before songwriters: the checker
+    # Who wrote `after`. Kept out of factcheck.json, which a studio from before the songwriter must still read (its
+    # models refuse a field they do not know): songwriter.json beside it lists the songwriter's.
+    by: Literal["checker", "songwriter"] = Field(default="checker", exclude=True)
 
 
 class RewrittenCouplet(Strict):

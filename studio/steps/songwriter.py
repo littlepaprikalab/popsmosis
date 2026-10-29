@@ -10,8 +10,9 @@ frame.
 The fact-check then judges the rewrite like any changed line. Each couplet goes to the songwriter once: if its
 rewrite fails too, the checker's correction of it is used, as before there was a songwriter. A rewrite is kept
 only where code can stand behind its shape (the same number of lines, none empty, none far longer or shorter
-than the line it replaces, at most 12 words a line unless the line it replaces had more); elsewhere, and when
-the call itself fails, the checker's version is used. The songwriter never fails the droplet on its own.
+than the line it replaces, at most 12 words a line unless the line it replaces had more) and its names (every
+structure a line said, which is what reveals it on screen); elsewhere, and when the call itself fails, the
+checker's version is used, and when that fails again, the checker's correction from before the rewrite.
 
 Its call is the fact-check step's, on its bill, labelled "lyric rewrite round <n>".
 """
@@ -25,7 +26,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from studio import brain
+from studio import brain, checks
 from studio.schemas import Bundle, Check, LyricRewrite
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "songwriter.md").read_text(encoding="utf-8")
@@ -54,10 +55,11 @@ def rewrite(bundle: Bundle, failing: list[tuple], ask, round_no: int) -> dict[st
     except (brain.BrainError, ValidationError) as e:  # the checker's versions stand in
         print(f"factcheck: the songwriter's call failed, so the checker's corrections are used: {e}", file=sys.stderr)
         return {}
+    canon = checks.canonical_names([scene.model_dump() for scene in bundle.scenes])
     kept = {}
     for couplet, _ in failing:
         lines = [" ".join(line.split()) for line in written.get(couplet.id, [])]
-        if fits(couplet.text.split("\n"), lines) and "\n".join(lines) != couplet.text:
+        if fits(couplet.text.split("\n"), lines, canon) and "\n".join(lines) != couplet.text:
             kept[couplet.id] = "\n".join(lines)
     return kept
 
@@ -71,12 +73,15 @@ def true_version(check: Check, lines: int) -> list[str]:
     return []
 
 
-def fits(before: list[str], after: list[str]) -> bool:
+def fits(before: list[str], after: list[str], canon: dict[str, str] | None = None) -> bool:
     """Whether a rewrite keeps the couplet's shape: a line for each line, each near the length of the one it
-    replaces, so it is sung in the same bar."""
+    replaces, so it is sung in the same bar, and, with the bundle's names (checks.canonical_names), still saying
+    every structure the line said, by its name or an alias."""
     if len(after) != len(before) or not all(after):
         return False
     for old, new in zip(before, after):
+        if canon and not set(checks.said(old, canon)) <= set(checks.said(new, canon)):
+            return False
         if len(new.split()) > max(WORDS_MAX, len(old.split())):
             return False
         if abs(syllables(new) - syllables(old)) > max(SYLLABLES_OFF, round(0.3 * syllables(old))):

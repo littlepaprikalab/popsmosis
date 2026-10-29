@@ -1,7 +1,10 @@
+import json
 from types import SimpleNamespace
 
 from studio import brain
-from studio.steps import songwriter
+from studio.jobs import write
+from studio.schemas import Request
+from studio.steps import factcheck, songwriter
 from studio.steps.factcheck import check_bundle, couplets
 from studio.tests.sample import CHORUS
 from studio.tests.test_factcheck import FIRST, FIXED, SEEDED, FakeChecker, bundle, seeded_is_wrong, supported
@@ -134,6 +137,58 @@ def test_a_line_sung_in_two_couplets_stays_one_line_in_the_choruss_words():
     assert [line.text for line in checked.lyrics if line.id in ("v1-1", "c1-1", "c2-1", "c3-1")] == [
         "Protons flow back and ATP grows"] * 4
     assert "lyric:v1-1,v1-2" in fake.ids(2)  # the verse couplet, changed by the chorus's words, is checked again
+
+
+def test_a_rewrite_that_fails_with_no_usable_fix_falls_back_to_the_checkers_first_correction():
+    def rule(text):
+        if text == SUNG:
+            return "UNSUPPORTED", "", ""  # and no correction of the songwriter's line
+        return seeded_is_wrong(text)
+
+    report, checked = check_bundle(bundle(), "", FakeChecker(rule, song=sings))
+    # Without the songwriter this bundle passes on the checker's correction; with it, it must pass too.
+    assert report.status == "passed" and [line.text for line in checked.lyrics[:2]] == [FIRST, FIXED]
+    assert [c.by for c in report.corrections] == ["songwriter", "checker"]
+
+
+def test_factcheck_json_stays_readable_by_a_studio_from_before_the_songwriter(tmp_path):
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    write(tmp_path / "bundle.json", bundle())
+    report = factcheck.run(tmp_path, ask=FakeChecker(seeded_is_wrong, song=sings))
+    assert report.status == "passed" and report.corrections[0].by == "songwriter"
+    saved = json.loads((tmp_path / "factcheck.json").read_text())
+    assert "by" not in saved["corrections"][0]  # an older studio's models refuse a field they do not know
+    assert factcheck.songwriter_wrote(tmp_path) == {(1, f"{FIRST}\n{SEEDED}")}
+    # A fact-check with nothing from the songwriter leaves no songwriter.json behind.
+    write(tmp_path / "bundle.json", bundle())
+    factcheck.run(tmp_path, ask=FakeChecker(seeded_is_wrong))
+    assert not (tmp_path / factcheck.SONGWRITER).exists() and factcheck.songwriter_wrote(tmp_path) == set()
+
+
+def test_a_lyric_with_a_line_break_in_it_is_still_one_line_of_its_couplet():
+    def broken(data):
+        data["lyrics"][1]["text"] = "Every electron hand-off\npumps a proton"
+
+    unit = couplets(bundle(broken))[0]
+    assert unit.members == ("v1-1", "v1-2") and unit.text == f"{FIRST}\n{SEEDED}"
+    report, checked = check_bundle(bundle(broken), "", FakeChecker(seeded_is_wrong, song=sings))
+    assert report.status == "passed" and checked.lyrics[1].text == SUNG
+
+
+def test_a_rewrite_that_drops_a_structure_the_line_named_is_left_for_the_checkers():
+    def thylakoid_lost(asked):  # FIRST names the thylakoid, which reveals it on screen
+        return [{"id": "v1-1,v1-2", "lines": ["Light lands on the membrane", SUNG]}]
+
+    report, checked = check_bundle(bundle(), "", FakeChecker(seeded_is_wrong, song=thylakoid_lost))
+    assert report.status == "passed" and [line.text for line in checked.lyrics[:2]] == [FIRST, FIXED]
+    assert songwriter.fits([FIRST], ["Light falls on the Thylakoid"], {"thylakoid": "Thylakoid"})  # any case
+
+
+def test_a_lyric_may_name_course_knowledge_in_its_own_words():
+    fake = FakeChecker(lambda text: ("SUPPORTED", "Course knowledge (AP Biology)", "") if text == FIRST
+                       else supported(text))
+    report, _ = check_bundle(bundle(), "", fake)
+    assert report.status == "passed" and len(fake.payloads) == 1
 
 
 def test_a_rewritten_line_must_stay_near_the_length_of_the_one_it_replaces():

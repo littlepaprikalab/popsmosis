@@ -33,8 +33,9 @@ corrected is sent as corrected, with what it said before (`was`), and the lyrics
 written from it carry `written_from`, so a line that still says what the wrong fact said is caught and
 corrected like any other. Without a corrected fact the call is as it was.
 
-Writes factcheck.json. When the check passes after corrections or dropped tags,
-bundle.json is rewritten with them and the writer's version is kept as bundle.draft.json.
+Writes factcheck.json, and songwriter.json when the songwriter wrote a correction. When the check
+passes after corrections or dropped tags, bundle.json is rewritten with them and the writer's
+version is kept as bundle.draft.json.
 """
 
 from __future__ import annotations
@@ -63,6 +64,7 @@ MOTION = "motion"  # what a line's particles show moving: passed, or left out of
 KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
 PASSING = ("SUPPORTED", "FILLER")
 COURSE_KNOWLEDGE = "course knowledge"  # a lyric's source when it is true but the facts do not say it
+SONGWRITER = "songwriter.json"  # the corrections the songwriter wrote (write_songwriter())
 
 
 @dataclass(frozen=True)
@@ -93,8 +95,28 @@ def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckRepo
             problems = checks.merge(read(job / "checks.json", CheckReport), problems)
         write(job / "bundle.json", checked)
         write(job / "checks.json", problems)
+    write_songwriter(job, report)
     write(job / "factcheck.json", report)
     return report
+
+
+def write_songwriter(job: Path, report: FactCheckReport) -> None:
+    """songwriter.json: the corrections the songwriter wrote, which factcheck.json leaves unmarked (Correction.by);
+    none, and the file goes."""
+    sung = [c.model_dump(exclude={"kind", "by"}) for c in report.corrections if c.by == "songwriter"]
+    if sung:
+        write(job / SONGWRITER, {"corrections": sung})
+    else:
+        (job / SONGWRITER).unlink(missing_ok=True)
+
+
+def songwriter_wrote(job: Path) -> set[tuple[int, str]]:
+    """The (round, before) of each correction the songwriter wrote, from songwriter.json; none when it has none."""
+    try:
+        data = json.loads((job / SONGWRITER).read_text(encoding="utf-8"))
+        return {(c["round"], c["before"]) for c in data["corrections"]}
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
 
 
 def audit_corrections(job: Path, bundle: Bundle) -> dict[str, str]:
@@ -125,7 +147,8 @@ def couplets(bundle: Bundle) -> list[Line]:
             run = []
         run.append(lyric)
     units += _pairs(run)
-    return [Line(LYRIC, ",".join(line.id for line in unit), "\n".join(line.text for line in unit),
+    # A line's own text on one line, so a couplet has a line for each of its ids, whatever a lyric holds.
+    return [Line(LYRIC, ",".join(line.id for line in unit), "\n".join(" ".join(line.text.split()) for line in unit),
                  tuple(line.id for line in unit)) for unit in units]
 
 
@@ -246,7 +269,9 @@ def check_bundle(
                 written_from[line.key] = ", ".join(cited)
     verdicts: dict[tuple[str, str], tuple[Check, int]] = {}
     corrections: list[Correction] = []
-    to_songwriter: set[str] = set()  # the couplets sent to the songwriter: each goes once
+    # The couplets sent to the songwriter (each goes once), with the checker's correction of each as it was then:
+    # what stands in when the songwriter's rewrite fails and the checker has no usable correction of that.
+    to_songwriter: dict[str, str] = {}
     reason = ""
     rounds = 0
     for round_no in range(1, max_rounds + 1):
@@ -266,7 +291,7 @@ def check_bundle(
             # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
             # on what is true at the audience's level; every other line rests on the facts.
             if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)
-                          or (line.kind == LYRIC and check.source.strip().lower() == COURSE_KNOWLEDGE)):
+                          or (line.kind == LYRIC and COURSE_KNOWLEDGE in check.source.lower())):
                 verdicts[(line.kind, line.text)] = (check, round_no)
         # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
         wrong = [line for line in pending
@@ -285,13 +310,15 @@ def check_bundle(
         fresh = [(line, verdicts[(line.kind, line.text)][0]) for line in wrong
                  if line.kind == LYRIC and line.id not in to_songwriter]
         written = songwriter.rewrite(bundle, fresh, ask, round_no) if fresh else {}
-        to_songwriter |= {line.id for line, _ in fresh}
+        to_songwriter |= {line.id: corrected(line, check) for line, check in fresh}
 
         fixes: dict[tuple[str, str], str] = {}
         made: list[Correction] = []
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
             after, by = (written[line.id], "songwriter") if line.id in written else (corrected(line, check), "checker")
+            if not after and line.kind == LYRIC and to_songwriter.get(line.id, line.text) != line.text:
+                after = to_songwriter[line.id]  # the songwriter's rewrite failed with no fix: the checker's first
             if line.kind == KEY and not after:
                 after = ""  # taken off the screen: a key line is a help, never worth failing the droplet
             elif not after:
