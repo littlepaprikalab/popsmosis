@@ -51,11 +51,12 @@ export default async function dropletRoutes(app: FastifyInstance) {
   };
 
   // GET /api/droplets — READY and not hidden, newest first; ?cursor=, ?limit= (default 12, max 24);
-  // ?tag= only those whose song or lesson video carries that hashtag ("#APBio" and "apbio" alike).
+  // ?tag= only those whose song or lesson video carries that hashtag ("#APBio" and "apbio" alike);
+  // ?clips=1 only those with a hook cut, for the tab's Clips feed.
   // Each card brings its newest comments (COMMENTS_ON_CARD), so the list shows them in one request.
   app.get('/api/droplets', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
-    const { limit, cursor } = request.query as Record<string, string | undefined>;
+    const { limit, cursor, clips } = request.query as Record<string, string | undefined>;
     const { tag } = request.query as Record<string, unknown>; // a string, or a list when named twice
     const take = parseLimit(limit, 12, 24);
     const after = decodeCursor(cursor ?? '');
@@ -70,6 +71,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
     const tagged = searched
       ? Prisma.sql`AND ("songTags" @> ARRAY[${searched}]::text[] OR "lessonTags" @> ARRAY[${searched}]::text[])`
       : Prisma.empty;
+    const clipped = clips === '1' ? Prisma.sql`AND "hookVideoUrl" IS NOT NULL` : Prisma.empty;
     // The viewer's own thumbs-up, one primary-key probe per card, in the same statement.
     const liked = viewer
       ? Prisma.sql`EXISTS (SELECT 1 FROM droplet_likes l WHERE l."answerId" = answers.id AND l."userId" = ${viewer})`
@@ -83,7 +85,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
              "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl", "hookVideoUrl", "hookPosterUrl",
              "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked
       FROM answers
-      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${tagged} ${from}
+      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${tagged} ${clipped} ${from}
       ORDER BY "createdAt" DESC, id DESC
       LIMIT ${take}
     `;
@@ -164,7 +166,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
   app.get('/api/droplets/:id/comments', { config, preHandler: [shared] }, async (request, reply) => {
     const viewer = viewerOf(request, reply);
     const { id } = request.params as { id: string };
-    const { limit, cursor } = request.query as Record<string, string | undefined>;
+    const { limit, cursor, clips } = request.query as Record<string, string | undefined>;
     const droplet = await prisma.answer.findFirst({ where: { id, ...publicDropletWhere }, select: { commentCount: true } });
     if (!droplet) return sendError(reply, 'NOT_FOUND', 'Droplet not found');
     const page = await commentsPage(id, viewer, parseLimit(limit, COMMENTS_PAGE_SIZE, COMMENTS_PAGE_MAX), cursor);

@@ -446,9 +446,10 @@ export const api = {
 
   // The public Droplets tab: no sign-in needed
   // With a tag, only the droplets whose song or lesson video carries it.
-  listDroplets: (cursor?: string | null, tag?: string | null) => {
+  listDroplets: (cursor?: string | null, tag?: string | null, clips = false) => {
     const query = new URLSearchParams();
     if (tag) query.set('tag', tag);
+    if (clips) query.set('clips', '1');
     if (cursor) query.set('cursor', cursor);
     const qs = query.toString();
     return request<{ data: DropletCard[]; nextCursor: string | null }>(`/droplets${qs ? `?${qs}` : ''}`);

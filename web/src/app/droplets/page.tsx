@@ -12,6 +12,7 @@ import { timeAgo } from '@/lib/time';
 import { allTags, tagHref, tagOf } from '@/lib/tags';
 import { LikeButton, formatCount } from '@/components/LikeButton';
 import { TagList } from '@/components/TagList';
+import { ClipFeed } from '@/components/ClipFeed';
 import { DropletComments } from '@/components/DropletComments';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { PlayIcon } from '@heroicons/react/24/solid';
@@ -41,7 +42,11 @@ export default function DropletsPage() {
 function Droplets() {
   const { showToast } = useToast();
   const router = useRouter();
-  const tag = tagOf(useSearchParams().get('tag') ?? '') || null;
+  const params = useSearchParams();
+  const tag = tagOf(params.get('tag') ?? '') || null;
+  // ?view=clips: the hook cuts, one upright clip at a time (ClipFeed); else the grid of cards.
+  const clips = params.get('view') === 'clips';
+  const shown = `${clips ? 'clips' : 'grid'}|${tag ?? ''}`;
   const [query, setQuery] = useState(tag ? `#${tag}` : '');
   const [droplets, setDroplets] = useState<DropletCard[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -51,20 +56,20 @@ function Droplets() {
   // The first page of this search did not load: never leave another search's cards under its name.
   const [failed, setFailed] = useState(false);
   // The search the list now shows: a page that comes back after the search changed is dropped.
-  const current = useRef(tag);
+  const current = useRef(shown);
 
   const load = useCallback(async () => {
-    current.current = tag;
+    current.current = shown;
     setLoading(true);
     try {
-      const res = await api.listDroplets(null, tag);
-      if (current.current !== tag) return;
+      const res = await api.listDroplets(null, tag, clips);
+      if (current.current !== shown) return;
       setDroplets(res.data);
       setCursor(res.nextCursor);
       setUnreachable(false);
       setFailed(false);
     } catch (err) {
-      if (current.current !== tag) return;
+      if (current.current !== shown) return;
       setDroplets([]);
       setCursor(null);
       if (isUnreachable(err)) setUnreachable(true);
@@ -73,9 +78,9 @@ function Droplets() {
         showToast(err instanceof Error ? err.message : 'Failed to load droplets', 'error');
       }
     } finally {
-      if (current.current === tag) setLoading(false);
+      if (current.current === shown) setLoading(false);
     }
-  }, [showToast, tag]);
+  }, [showToast, tag, clips, shown]);
 
   useEffect(() => { load(); }, [load]);
   // A tag clicked on a card changes the search without a new page: show it in the box too.
@@ -95,8 +100,8 @@ function Droplets() {
     if (!cursor || loadingMore) return;
     setLoadingMore(true);
     try {
-      const res = await api.listDroplets(cursor, tag);
-      if (current.current !== tag) return;
+      const res = await api.listDroplets(cursor, tag, clips);
+      if (current.current !== shown) return;
       setDroplets((prev) => [...prev, ...res.data.filter((d) => !prev.some((p) => p.id === d.id))]);
       setCursor(res.nextCursor);
     } catch (err) {
@@ -110,6 +115,15 @@ function Droplets() {
     e.preventDefault();
     const wanted = tagOf(query);
     router.push(wanted ? tagHref(wanted) : '/droplets');
+  };
+
+  // Grid or Clips, keeping the tag searched.
+  const viewHref = (view: 'grid' | 'clips') => {
+    const q = new URLSearchParams();
+    if (tag) q.set('tag', tag);
+    if (view === 'clips') q.set('view', 'clips');
+    const qs = q.toString();
+    return `/droplets${qs ? `?${qs}` : ''}`;
   };
 
   if (unreachable) return <ServerUnavailable onRetry={load} />;
@@ -139,6 +153,19 @@ function Droplets() {
         </button>
       </form>
 
+      <nav aria-label="Show droplets as" className="mb-4 inline-flex rounded-md overflow-hidden text-xs font-bold uppercase tracking-wider"
+        style={{ border: '1px solid var(--border)' }} data-testid="droplets-view">
+        {(['grid', 'clips'] as const).map((view) => {
+          const on = (view === 'clips') === clips;
+          return (
+            <Link key={view} href={viewHref(view)} aria-current={on ? 'page' : undefined} className="px-3 py-1.5"
+              style={on ? { background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' } : { color: 'var(--text-secondary)' }}>
+              {view === 'grid' ? 'Grid' : 'Clips'}
+            </Link>
+          );
+        })}
+      </nav>
+
       {tag && (
         <p className="mb-4 text-sm flex flex-wrap items-baseline gap-x-3" data-testid="tag-search">
           <span style={{ color: 'var(--text-secondary)' }}>
@@ -159,20 +186,23 @@ function Droplets() {
         <div className="text-center py-20" style={{ color: 'var(--text-muted)' }}>
           {tag ? (
             <>
-              <p>No droplets are tagged #{tag} yet.</p>
+              <p>{clips ? `No droplets tagged #${tag} have a clip yet.` : `No droplets are tagged #${tag} yet.`}</p>
               <p className="text-xs mt-2">
                 Try another tag, or <Link href="/learn" className="underline hover-text">ask for this topic</Link> to make one.
               </p>
             </>
           ) : (
             <>
-              <p>No droplets yet.</p>
+              <p>{clips ? 'No clips yet.' : 'No droplets yet.'}</p>
               <p className="text-xs mt-2">
-                A droplet lands here once its videos are done. <Link href="/learn" className="underline hover-text">Ask for a topic</Link> to make one.
+                {clips ? 'New droplets come with a short clip of their song.' : 'A droplet lands here once its videos are done.'}{' '}
+                <Link href="/learn" className="underline hover-text">Ask for a topic</Link> to make one.
               </p>
             </>
           )}
         </div>
+      ) : clips ? (
+        <ClipFeed droplets={droplets} onEnd={loadMore} />
       ) : (
         // Each card is as tall as it is: one opening its comments grows alone, and its row does not stretch the rest.
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 items-start">
@@ -180,7 +210,7 @@ function Droplets() {
         </div>
       )}
 
-      {cursor && !loading && (
+      {cursor && !loading && !clips && (
         <div className="text-center mt-6">
           <button onClick={loadMore} disabled={loadingMore}
             className="px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors"
