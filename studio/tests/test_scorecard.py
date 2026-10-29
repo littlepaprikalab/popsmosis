@@ -236,3 +236,35 @@ def test_a_judge_answer_that_does_not_fit_is_kept_for_a_look(tmp_path):
     card = scorecard.run([topic("one")], tmp_path, ask_for=ask_for, about=ABOUT)
     assert card["topics"][0]["failed"]["step"] == "judge" and card["topics"][0]["made"]
     assert (tmp_path / "one" / "judge.invalid.json").read_text() == "{}"
+
+
+def test_the_judges_errors_come_with_their_corrections(tmp_path):
+    error = {"claim": 'lyric c1-4 "ATP and NADPH from the synthase"', "problem": "ATP synthase makes only ATP.",
+             "correction": "NADPH is made at photosystem I's end of the chain."}
+    ask_for, _ = asks(judge={**scores(4), "errors": [error]})
+    card = scorecard.run([topic("one")], tmp_path, ask_for=ask_for, about=ABOUT)
+    assert card["topics"][0]["errors"] == [error] and card["summary"]["errors"] == 1
+    assert ("- Error: lyric c1-4 \"ATP and NADPH from the synthase\": ATP synthase makes only ATP. Correction: NADPH"
+            in (tmp_path / "scorecard.md").read_text())
+    assert "Never a claim that is fine" in json.dumps(brain.strict_schema(scorecard.Judgement))
+
+
+def test_a_changed_rubric_judges_a_run_again_only_when_asked(tmp_path, monkeypatch):
+    monkeypatch.setattr(scorecard, "RUNS", tmp_path)
+    monkeypatch.setenv(brain.CLAUDE_KEY_VARS[0], "a fake key")
+    fake = FakeAsk(judge=scores(3))
+    monkeypatch.setattr(brain, "ask", fake)
+    assert cli.main(["scorecard", "run", "--topics", "derivative,p-value"]) == 0
+    [folder] = tmp_path.iterdir()
+    monkeypatch.setattr(scorecard, "RUBRIC", scorecard.RUBRIC + "\nA rule more.")
+    assert cli.main(["scorecard", "run", "--resume", folder.name]) == 2  # the rubric changed
+    assert cli.main(["scorecard", "run", "--rejudge"]) == 2  # which run?
+    fake.calls.clear()
+    fake.judge = scores(5)
+    assert cli.main(["scorecard", "run", "--resume", folder.name, "--rejudge"]) == 0
+    assert [c["label"] for c in fake.calls] == ["judge", "judge"]  # the bundles are kept
+    card = json.loads((folder / "scorecard.json").read_text())
+    assert card["about"]["rubric"] == scorecard.digest(scorecard.RUBRIC) and card["about"]["rejudged"]["commit"]
+    assert [r["rubric"]["hook"]["score"] for r in card["topics"]] == [5, 5]
+    assert json.loads((folder / "derivative" / "judge.previous.json").read_text())["hook"]["score"] == 3
+    assert "judged again on" in (folder / "scorecard.md").read_text()

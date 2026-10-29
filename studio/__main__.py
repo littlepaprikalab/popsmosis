@@ -106,6 +106,8 @@ def main(argv: list[str] | None = None) -> int:
     card_run = card_actions.add_parser("run", help="make and score each topic's bundle (paid calls; no art or audio)")
     card_run.add_argument("--topics", default="", help="topic ids, comma-separated (default: all of them)")
     card_run.add_argument("--resume", help="a run that stopped: make and score only what it is missing")
+    card_run.add_argument("--rejudge", action="store_true",
+                          help="with --resume: judge every droplet again, by the rubric and judge as they are now")
     card_run.add_argument("--workers", type=int, default=scorecard.WORKERS, help="topics at a time")
     card_run.add_argument("--budget", type=float, default=scorecard.BUDGET_USD,
                           help="dollars; no topic starts once the run has spent this")

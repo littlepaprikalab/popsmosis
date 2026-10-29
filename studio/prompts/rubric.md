@@ -80,9 +80,10 @@ standard as the lesson. When a study guide is given, a claim that contradicts it
 - 2: Several real errors.
 - 1: The core idea or a link of the why chain is wrong.
 
-Before you score accuracy, list in `errors` every claim that is wrong or misleading: quote it, say what
-is wrong, and give the correction, one entry a claim. Leave out matters of style and anything that is
-only simplified fairly for the level. An empty list is a real answer when there is nothing wrong.
+Before you score accuracy, list in `errors` each claim you would correct, one entry a claim: quote it,
+say what is wrong, and give the correction. List only claims that are wrong or would mislead a learner:
+never a claim to say it is fine, and never a matter of style or a simplification fair for the level. An
+empty list is a real answer when there is nothing to correct.
 
 ## singability
 

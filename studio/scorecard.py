@@ -14,6 +14,7 @@ scored three ways:
     python -m studio scorecard run                              # every topic, WORKERS at a time
     python -m studio scorecard run --topics derivative,p-value  # a few, to try a change cheaply
     python -m studio scorecard run --resume <run>               # finish a run that stopped, on its own topics
+    python -m studio scorecard run --resume <run> --rejudge     # judge its droplets again, by the rubric as it is
     python -m studio scorecard compare <run> <run>              # two runs side by side
 
 A run is saved in studio/scorecards/runs/<run>/, named for when it started and the commit it ran on:
@@ -84,6 +85,14 @@ class Score(Strict):
     score: Literal[1, 2, 3, 4, 5] = Field(description="1 to 5, by the rubric's anchors")
 
 
+class Error(Strict):
+    # In parts, with a correction: as one line each, the first run's judge listed claims it then called fine.
+    claim: str = Field(description="The words to correct, quoted, and where they are (lyric c1-2, narration n4, "
+                                   "the lesson)")
+    problem: str = Field(description="What is wrong or misleading, in one sentence")
+    correction: str = Field(description="What it should say")
+
+
 class Judgement(Strict):
     """judge.json: the rubric's scores for one droplet, each with its reason."""
 
@@ -91,8 +100,7 @@ class Judgement(Strict):
     frame: Score
     why_chain: Score
     key_lines: Score
-    errors: list[str] = Field(description="Every wrong or misleading claim: quoted, what is wrong, the correction; "
-                                          "[] for none")
+    errors: list[Error] = Field(description="Each claim to correct; [] when there is none. Never a claim that is fine")
     accuracy: Score
     singability: Score
     lesson_clarity: Score
@@ -138,8 +146,8 @@ def run(topics: list[Topic], folder: Path, ask_for=None, about: dict | None = No
 
     ledger.parallel(one, topics, workers=workers)
     rows = [topic_row(topic, folder / topic.id) for topic in topics]
-    card = {"about": {**about, "finished": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-                      "minutes": round((time.monotonic() - started) / 60, 1)},
+    card = {"about": {**about, "finished": time.strftime("%Y-%m-%dT%H:%M:%S%z"),  # minutes: every go at it, summed
+                      "minutes": round((about.get("minutes") or 0) + (time.monotonic() - started) / 60, 1)},
             "topics": rows, "summary": summarize(rows)}
     write(card_path, card)
     (folder / "scorecard.md").write_text(markdown(card), encoding="utf-8")
@@ -284,7 +292,7 @@ def topic_row(topic: Topic, job: Path) -> dict:
     if (job / JUDGE).exists():
         judgement = read(job / JUDGE, Judgement)
         row["rubric"] = {key: getattr(judgement, key).model_dump() for key in CRITERIA}
-        row["errors"] = judgement.errors
+        row["errors"] = [error.model_dump() for error in judgement.errors]
     calls = ledger.read(job)
     row["cost"] = {step: round(sum(r.get("cost_usd") or 0 for r in calls if ledger.step_of(r) == step), 4)
                    for step in ("bundle", "judge")}
@@ -354,6 +362,7 @@ def markdown(card: dict) -> str:
     cost = s["cost"]["bundle"] + s["cost"]["judge"]
     out = [f"# Scorecard {card['about'].get('name', '')}".rstrip(), "",
            f"Commit `{about['commit'][:7]}`" + (" with uncommitted changes (prompt.diff)" if about["dirty"] else "")
+           + (f"; judged again on `{about['rejudged']['commit'][:7]}`" if about.get("rejudged") else "")
            + f"; brain {about['brain']} ({about['model']}" + (f" at {about['effort']}" if about["effort"] else "")
            + f"); judge {about['judge']}; bundle prompt `{about['prompt']}`, rubric `{about['rubric']}`, topics "
            f"`{about['topics']}`. {s['topics']} topics, ${cost:.2f}" + ("+" if s["cost"]["unpriced"] else "")
@@ -419,7 +428,7 @@ def topic_section(r: dict) -> list[str]:
     if r["rubric"]:
         for key, name in CRITERIA.items():
             out.append(f"- **{name} {r['rubric'][key]['score']}.** {r['rubric'][key]['reason']}")
-        out += [f"- Error: {e}" for e in r["errors"]]
+        out += [f"- Error: {e['claim']}: {e['problem']} Correction: {e['correction']}" for e in r["errors"]]
     if r["checks"] and r["checks"]["problems"]:
         out.append("- Checks left for the prompt:")
         out += [f"  - {p}" for p in r["checks"]["problems"]]
@@ -509,6 +518,9 @@ def main(args) -> int:
     if args.resume and args.topics:
         print("scorecard: a resumed run keeps the topics it started with", file=sys.stderr)
         return 2
+    if args.rejudge and not args.resume:
+        print("scorecard: --rejudge judges a run again: name it with --resume", file=sys.stderr)
+        return 2
     if args.topics:
         wanted = [t.strip() for t in args.topics.split(",") if t.strip()]
         unknown = sorted(set(wanted) - {t.id for t in topics})
@@ -526,13 +538,21 @@ def main(args) -> int:
             folder = _run_folder(args.resume)
             about = json.loads((folder / "scorecard.json").read_text(encoding="utf-8"))["about"]
             now = provenance()
-            keys = ("prompt", "rubric", "topics", "brain", "model", "effort", "judge")
+            keys = ("prompt", "topics", "brain", "model", "effort") + (() if args.rejudge else ("rubric", "judge"))
             changed = [key for key in keys if about[key] != now[key]]
             if changed:
                 print(f"scorecard: {', '.join(changed)} changed since {args.resume} started; start a new run",
                       file=sys.stderr)
                 return 2
             topics = [t for t in topics if t.id in about["topic_ids"]]
+            if args.rejudge:  # every droplet judged again, by the rubric and judge in force now
+                for t in topics:
+                    if (folder / t.id / JUDGE).exists():
+                        (folder / t.id / JUDGE).replace(folder / t.id / "judge.previous.json")
+                about.update(rubric=now["rubric"], judge=now["judge"],
+                             rejudged={"commit": now["commit"], "dirty": now["dirty"], "at": now["started"]})
+                card = json.loads((folder / "scorecard.json").read_text(encoding="utf-8"))
+                write(folder / "scorecard.json", {**card, "about": about})
         else:
             about = provenance()
             about.update(name=run_name(about), topic_ids=[t.id for t in topics])
