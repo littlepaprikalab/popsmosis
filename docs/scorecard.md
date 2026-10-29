@@ -44,7 +44,7 @@ python -m studio scorecard compare <earlier-run> <new-run>        # two runs sid
 - `--brain muse-spark` (or `muse-wonder`) and `--effort` run it on another brain.
 - `--resume <run>` finishes a run that stopped (a container restart), redoing only what is missing.
 - `--resume <run> --rejudge` judges a run's droplets again after the rubric changes, keeping its
-  bundles (about $0.40).
+  bundles (about $0.40). It never makes a bundle, so a topic whose bundle failed stays failed.
 
 **Commit the run folder.** A cloud container does not keep files, and the next comparison needs
 the run.

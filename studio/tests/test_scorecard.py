@@ -268,3 +268,62 @@ def test_a_changed_rubric_judges_a_run_again_only_when_asked(tmp_path, monkeypat
     assert [r["rubric"]["hook"]["score"] for r in card["topics"]] == [5, 5]
     assert json.loads((folder / "derivative" / "judge.previous.json").read_text())["hook"]["score"] == 3
     assert "judged again on" in (folder / "scorecard.md").read_text()
+
+
+def test_a_rejudge_makes_no_bundle_and_records_each_go(tmp_path, monkeypatch):
+    monkeypatch.setattr(scorecard, "RUNS", tmp_path)
+    monkeypatch.setenv(brain.CLAUDE_KEY_VARS[0], "a fake key")
+    fake = FakeAsk(fail="bundle")
+    monkeypatch.setattr(brain, "ask", fake)
+    assert cli.main(["scorecard", "run", "--topics", "derivative,p-value"]) == 1  # both bundles fail
+    [folder] = tmp_path.iterdir()
+    (folder / "p-value" / "failed.json").unlink()
+    fake.fail, fake.calls = None, []
+    assert cli.main(["scorecard", "run", "--resume", folder.name, "--rejudge"]) == 1
+    assert fake.calls == []  # a re-judge spends cents: it never makes the bundles that failed
+    card = json.loads((folder / "scorecard.json").read_text())
+    assert [r["failed"]["step"] for r in card["topics"]] == ["bundle", "bundle"]
+    assert len(card["about"]["resumed"]) == 1 and card["about"]["rejudged"] == card["about"]["resumed"][0]
+    assert cli.main(["scorecard", "run", "--resume", folder.name]) == 0  # a plain resume makes them
+    assert len(json.loads((folder / "scorecard.json").read_text())["about"]["resumed"]) == 2
+    assert "resumed on" in (folder / "scorecard.md").read_text()
+
+
+def test_a_bundle_made_again_is_judged_again(tmp_path):
+    ask_for, _ = asks(judge=scores(2))
+    scorecard.run([topic("one")], tmp_path, ask_for=ask_for, about=ABOUT)
+    (tmp_path / "one" / "bundle.json").unlink()
+    ask_for, made = asks(judge=scores(5))
+    card = scorecard.run([topic("one")], tmp_path, ask_for=ask_for, about=ABOUT)
+    assert made["one"].calls[-1]["label"] == "judge" and card["topics"][0]["rubric"]["hook"]["score"] == 5
+
+
+def test_two_runs_never_share_a_folder(tmp_path, monkeypatch):
+    monkeypatch.setattr(scorecard, "RUNS", tmp_path)
+    monkeypatch.setenv(brain.CLAUDE_KEY_VARS[0], "a fake key")
+    monkeypatch.setattr(brain, "ask", FakeAsk())
+    monkeypatch.setattr(scorecard, "run_name", lambda about: "same-minute")
+    assert cli.main(["scorecard", "run", "--topics", "derivative"]) == 0
+    assert cli.main(["scorecard", "run", "--topics", "p-value"]) == 2
+    assert json.loads((tmp_path / "same-minute" / "scorecard.json").read_text())["about"]["topic_ids"] == ["derivative"]
+
+
+def test_an_older_judgement_or_bundle_is_a_failed_step_not_a_lost_scorecard(tmp_path):
+    ask_for, _ = asks()
+    scorecard.run([topic("one"), topic("two")], tmp_path, ask_for=ask_for, about=ABOUT)
+    old = json.loads((tmp_path / "one" / "judge.json").read_text())
+    (tmp_path / "one" / "judge.json").write_text(json.dumps({**old, "errors": ["an error as one line"]}))
+    (tmp_path / "two" / "bundle.json").write_text('{"topic": "cut short"')
+    card = scorecard.run([topic("one"), topic("two")], tmp_path, ask_for=asks()[0], about=ABOUT)
+    one, two = card["topics"]
+    assert "--rejudge" in one["failed"]["error"] and not one["rubric"]
+    assert two["failed"]["step"] == "bundle" and not two["made"]
+    assert (tmp_path / "scorecard.md").exists()
+
+
+def test_compare_or_resume_of_a_run_not_there_says_so(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(scorecard, "RUNS", tmp_path)
+    monkeypatch.setenv(brain.CLAUDE_KEY_VARS[0], "a fake key")
+    assert cli.main(["scorecard", "compare", "nope-a", "nope-b"]) == 2
+    assert cli.main(["scorecard", "run", "--resume", "nope"]) == 2
+    assert "no run nope" in capsys.readouterr().err

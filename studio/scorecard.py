@@ -114,12 +114,13 @@ def load_topics(path: Path = TOPICS) -> list[Topic]:
 
 
 def run(topics: list[Topic], folder: Path, ask_for=None, about: dict | None = None, workers: int = WORKERS,
-        budget: float = BUDGET_USD) -> dict:
+        budget: float = BUDGET_USD, judge_only: bool = False) -> dict:
     """Make and score each topic's droplet in folder/<topic id>/, then write scorecard.json and scorecard.md.
 
     A topic whose files are there already is not made again: a run that stopped resumes where it left off.
     ask_for(job) is the ask for a topic's calls (default: brain.ask, logged to its calls.jsonl); about is the
-    run's provenance (default: provenance()). Returns the scorecard."""
+    run's provenance (default: provenance()). judge_only (a re-judge) makes no bundle, even for a topic whose
+    bundle failed. Returns the scorecard."""
     if ask_for is None:
         from studio.run import logged_ask
         ask_for = logged_ask
@@ -141,7 +142,7 @@ def run(topics: list[Topic], folder: Path, ask_for=None, about: dict | None = No
             print(f"{topic.id}: skipped, the run has spent its ${budget:.2f}", file=sys.stderr)
             return
         print(f"{topic.id}: running", file=sys.stderr)
-        make(topic, job, ask_for(job))
+        make(topic, job, ask_for(job), judge_only)
         print(f"{topic.id}: " + ("failed" if (job / FAILED).exists() else "done"), file=sys.stderr)
 
     ledger.parallel(one, topics, workers=workers)
@@ -154,15 +155,19 @@ def run(topics: list[Topic], folder: Path, ask_for=None, about: dict | None = No
     return card
 
 
-def make(topic: Topic, job: Path, ask) -> None:
+def make(topic: Topic, job: Path, ask, judge_only: bool = False) -> None:
     """The topic's bundle (with its learner test and checks), then the judge's scores: whichever is missing.
     A step that fails is recorded in failed.json and the topic goes no further; the run goes on."""
     job.mkdir(parents=True, exist_ok=True)
+    if judge_only and not (job / "bundle.json").exists():
+        return  # a re-judge spends cents and makes nothing: a topic whose bundle failed stays failed
     (job / FAILED).unlink(missing_ok=True)
     if not (job / "request.json").exists():
         write(job / "request.json", topic.as_request())
     try:
         if not (job / "bundle.json").exists():
+            for stale in (JUDGE, "judge.invalid.json"):  # a new bundle is judged afresh, never by an older one's scores
+                (job / stale).unlink(missing_ok=True)
             with ledger.at_step("bundle"):
                 bundle_step.run(job, ask=ask)
         if not (job / JUDGE).exists():
@@ -277,22 +282,33 @@ def topic_row(topic: Topic, job: Path) -> dict:
         row["failed"] = json.loads((job / FAILED).read_text(encoding="utf-8"))
     elif not row["made"]:
         row["failed"] = {"step": "bundle", "error": "not run: the run spent its budget first"}
-    if row["made"]:
-        bundle = checks.load(job / "bundle.json")
+    try:
+        bundle = checks.load(job / "bundle.json") if row["made"] else None
+    except ValueError as e:  # written by an older studio: the run's other topics are still scored
+        row.update(made=False, failed={"step": "bundle", "error": f"bundle.json does not read: {e}"})
+        bundle = None
+    if bundle is not None:
         choruses = [line for line in bundle.lyrics if line.section == "chorus"]
         row.update(audience=bundle.audience, core_idea=bundle.core_idea, why_chain=bundle.why_chain,
                    title_line=(choruses or bundle.lyrics)[0].text, bpm=bundle.music.bpm)
-        if (job / "checks.json").exists():
-            problems = read(job / "checks.json", CheckReport).problems
+        try:
+            problems = read(job / "checks.json", CheckReport).problems if (job / "checks.json").exists() else None
+        except ValueError:  # a rule an older studio had: the checks go unscored, the rest of the row stands
+            problems = None
+        if problems is not None:
             left = [p for p in problems if not p.repaired]
             row["checks"] = {"left": len(left), "repaired": len(problems) - len(left),
                              "by_rule": dict(Counter(p.rule for p in left)),
                              "problems": [f"{p.line_id} {p.rule}: {p.detail}" for p in left]}
         row["learner"] = learner_result(job, len(bundle.why_chain))
     if (job / JUDGE).exists():
-        judgement = read(job / JUDGE, Judgement)
-        row["rubric"] = {key: getattr(judgement, key).model_dump() for key in CRITERIA}
-        row["errors"] = [error.model_dump() for error in judgement.errors]
+        try:
+            judgement = read(job / JUDGE, Judgement)
+        except ValueError:  # an older judgement's shape: --rejudge gives it this one's
+            row["failed"] = {"step": "judge", "error": "judge.json is in an older shape: judge it again (--rejudge)"}
+        else:
+            row["rubric"] = {key: getattr(judgement, key).model_dump() for key in CRITERIA}
+            row["errors"] = [error.model_dump() for error in judgement.errors]
     calls = ledger.read(job)
     row["cost"] = {step: round(sum(r.get("cost_usd") or 0 for r in calls if ledger.step_of(r) == step), 4)
                    for step in ("bundle", "judge")}
@@ -362,6 +378,8 @@ def markdown(card: dict) -> str:
     cost = s["cost"]["bundle"] + s["cost"]["judge"]
     out = [f"# Scorecard {card['about'].get('name', '')}".rstrip(), "",
            f"Commit `{about['commit'][:7]}`" + (" with uncommitted changes (prompt.diff)" if about["dirty"] else "")
+           + "".join(f"; resumed on `{c}`" for c in dict.fromkeys(  # the re-judge, a resume too, is said below
+               r["commit"][:7] for r in about.get("resumed", []) if not r.get("rejudge")))
            + (f"; judged again on `{about['rejudged']['commit'][:7]}`" if about.get("rejudged") else "")
            + f"; brain {about['brain']} ({about['model']}" + (f" at {about['effort']}" if about["effort"] else "")
            + f"); judge {about['judge']}; bundle prompt `{about['prompt']}`, rubric `{about['rubric']}`, topics "
@@ -508,6 +526,10 @@ def _pair(a: str, b: str) -> str:
 def main(args) -> int:
     """python -m studio scorecard run|compare (studio/__main__.py)."""
     if args.action == "compare":
+        missing = [name for name in args.runs if not (_run_folder(name) / "scorecard.json").exists()]
+        if missing:
+            print(f"scorecard: no run {', '.join(missing)} in {RUNS}", file=sys.stderr)
+            return 2
         cards = [json.loads((_run_folder(name) / "scorecard.json").read_text(encoding="utf-8")) for name in args.runs]
         text = compare(*cards)
         print(text)
@@ -536,6 +558,9 @@ def main(args) -> int:
             return 2
         if args.resume:
             folder = _run_folder(args.resume)
+            if not (folder / "scorecard.json").exists():
+                print(f"scorecard: no run {args.resume} in {RUNS}", file=sys.stderr)
+                return 2
             about = json.loads((folder / "scorecard.json").read_text(encoding="utf-8"))["about"]
             now = provenance()
             keys = ("prompt", "topics", "brain", "model", "effort") + (() if args.rejudge else ("rubric", "judge"))
@@ -545,20 +570,27 @@ def main(args) -> int:
                       file=sys.stderr)
                 return 2
             topics = [t for t in topics if t.id in about["topic_ids"]]
+            # Each go at the run on record: a bundle made after a restart was made on the commit checked out then.
+            went = {"commit": now["commit"], "dirty": now["dirty"], "at": now["started"]}
+            went.update({"rejudge": True} if args.rejudge else {})
+            about["resumed"] = [*about.get("resumed", []), went]
             if args.rejudge:  # every droplet judged again, by the rubric and judge in force now
                 for t in topics:
                     if (folder / t.id / JUDGE).exists():
                         (folder / t.id / JUDGE).replace(folder / t.id / "judge.previous.json")
-                about.update(rubric=now["rubric"], judge=now["judge"],
-                             rejudged={"commit": now["commit"], "dirty": now["dirty"], "at": now["started"]})
-                card = json.loads((folder / "scorecard.json").read_text(encoding="utf-8"))
-                write(folder / "scorecard.json", {**card, "about": about})
+                about.update(rubric=now["rubric"], judge=now["judge"], rejudged=went)
+            card = json.loads((folder / "scorecard.json").read_text(encoding="utf-8"))
+            write(folder / "scorecard.json", {**card, "about": about})
         else:
             about = provenance()
             about.update(name=run_name(about), topic_ids=[t.id for t in topics])
             folder = RUNS / about["name"]
+            if folder.exists():  # another run started this minute on this commit: never two in one folder
+                print(f"scorecard: {folder} is another run's; start this one in a minute, or --resume that one",
+                      file=sys.stderr)
+                return 2
         print(f"scorecard {folder.name}: {len(topics)} topic(s), up to ${args.budget:.2f}", file=sys.stderr)
-        card = run(topics, folder, about=about, workers=args.workers, budget=args.budget)
+        card = run(topics, folder, about=about, workers=args.workers, budget=args.budget, judge_only=args.rejudge)
     print(f"{folder / 'scorecard.md'}\n")
     print(markdown(card))
     return 0 if not card["summary"]["failed"] else 1

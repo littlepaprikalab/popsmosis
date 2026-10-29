@@ -30,8 +30,22 @@
     "rejudged": {
       "commit": "f9d42f36b33c91e89dc0153cdee4748e099f2054",
       "dirty": false,
-      "at": "2026-10-29T21:11:15+0000"
-    }
+      "at": "2026-10-29T21:11:15+0000",
+      "rejudge": true
+    },
+    "resumed": [
+      {
+        "commit": "bfbe093d43cbea8e2b75678b632f809f9f555a2f",
+        "dirty": false,
+        "at": "2026-10-29T20:36:35+0000"
+      },
+      {
+        "commit": "f9d42f36b33c91e89dc0153cdee4748e099f2054",
+        "dirty": false,
+        "at": "2026-10-29T21:11:15+0000",
+        "rejudge": true
+      }
+    ]
   },
   "topics": [
     {

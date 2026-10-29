@@ -1,6 +1,6 @@
 # Scorecard 20261029-2019-ba83842
 
-Commit `ba83842`; judged again on `f9d42f3`; brain Claude Opus 5.5 (claude-opus-5-5 at high); judge claude-sonnet-5-5 at high; bundle prompt `b222b5cac72d`, rubric `714bdf3624bd`, topics `b52fd05d1c03`. 12 topics, $19.82, 35.4 min.
+Commit `ba83842`; resumed on `bfbe093`; judged again on `f9d42f3`; brain Claude Opus 5.5 (claude-opus-5-5 at high); judge claude-sonnet-5-5 at high; bundle prompt `b222b5cac72d`, rubric `714bdf3624bd`, topics `b52fd05d1c03`. 12 topics, $19.82, 35.4 min.
 
 ## Summary
 
