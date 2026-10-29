@@ -131,6 +131,64 @@ def song_length_problems(bundle: Bundle) -> list[Problem]:
                            f"{seconds:.0f} s, outside {SONG_MIN_S} to {SONG_MAX_S}")]
 
 
+CHORUSES = 3  # the chorus comes back after each pre-chorus and once more at the end
+ATTITUDE_MAX = 2  # claim-free tags in the whole song ("for real", "no doubt"); more are rhymes filled with nothing
+ATTITUDE = re.compile(r"\b(?:for real|no doubt|it'?s true|you see|you know|believe (?:it|me)|no lie|that'?s the trick"
+                      r"|that'?s the rule|that'?s a fact|word up|check it)\b", re.I)
+PRONOUNS = {"it", "its", "them", "they", "their", "this", "that", "these", "those", "he", "she", "him", "her"}
+PLAIN = PRONOUNS | {"the", "a", "an", "and", "or", "but", "so", "then", "now", "in", "on", "out", "up", "down", "to",
+                    "of", "for", "from", "with", "into", "is", "are", "was", "be", "we", "you", "your", "our", "all",
+                    "go", "goes", "get", "got", "make", "makes", "just", "like", "what", "when", "how", "let", "lets"}
+
+
+def _stems(text: str) -> set[str]:
+    """The content words of a text, cut to their first five letters so "pumps" meets "pumping"."""
+    return {w[:5] for w in re.findall(r"[a-z0-9]+", fold(text).replace("'", "")) if w not in PLAIN and len(w) > 2}
+
+
+def song_shape_problems(bundle: Bundle) -> list[Problem]:
+    """The song against the rules a check can count, for any subject: the chorus three times; a title line that
+    names real things from the droplet's own idea, not pronouns; a chorus that says the idea; verses no longer
+    than the tempo asks for; few claim-free tags. Recorded, not repaired; the bundle step adds them. A bundle
+    written before the why chain existed has nothing to hold the hook to."""
+    if not bundle.why_chain:
+        return []
+    problems: list[Problem] = []
+    runs: list[tuple[str, list]] = []
+    for line in bundle.lyrics:
+        if runs and runs[-1][0] == line.section:
+            runs[-1][1].append(line)
+        else:
+            runs.append((line.section, [line]))
+    choruses = [lines for section, lines in runs if section == "chorus"]
+    if len(choruses) < CHORUSES:
+        problems.append(Problem(line_id="music", rule="lyric-style", repaired=False,
+                                detail=f"the chorus is sung {len(choruses)} times, not {CHORUSES}"))
+    idea = _stems(" ".join([bundle.core_idea, *bundle.why_chain, *bundle.key_terms]))
+    if choruses:
+        title = choruses[0][0]
+        words = re.findall(r"[a-z']+", fold(title.text))
+        if sum(w in PRONOUNS for w in words) >= 2 or not _stems(title.text) & idea:
+            problems.append(Problem(line_id=title.id, rule="lyric-style", repaired=False,
+                                    detail=f'the title line "{title.text}" names nothing from the core idea, why '
+                                           f"chain or key terms, or leans on pronouns"))
+        named = _stems(" ".join(line.text for line in choruses[0])) & _stems(bundle.core_idea)
+        if len(named) < 2:
+            problems.append(Problem(line_id=choruses[0][0].id, rule="lyric-style", repaired=False,
+                                    detail="the chorus says too little of the core idea: at most one of its words"))
+    most = 8 if bundle.music.bpm < 100 or bundle.music.bpm >= 130 else 12
+    for section, lines in runs:
+        if section == "verse" and len(lines) > most:
+            problems.append(Problem(line_id=lines[0].id, rule="lyric-style", repaired=False,
+                                    detail=f"a verse of {len(lines)} lines, over {most} at {bundle.music.bpm} bpm"))
+    tagged = sorted({line.text for line in bundle.lyrics if ATTITUDE.search(line.text)})
+    if len(tagged) > ATTITUDE_MAX:
+        problems.append(Problem(line_id="lyrics", rule="lyric-style", repaired=False,
+                                detail=f"{len(tagged)} lines end on a claim-free tag, over {ATTITUDE_MAX}: "
+                                       + "; ".join(f'"{t}"' for t in tagged)))
+    return problems
+
+
 ESSENCE_WORDS_MAX = 20
 WHY_LINKS = (3, 5)
 KEY_TERMS_MAX = 8

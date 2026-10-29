@@ -51,7 +51,8 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
     if rewritten is not bundle:  # a new lesson: the code checks read it again
         bundle, report = checks.review(rewritten)
     report.problems += (checks.song_length_problems(bundle) + checks.motion_problems(bundle)
-                        + checks.essence_problems(bundle) + checks.key_line_problems(bundle))
+                        + checks.essence_problems(bundle) + checks.key_line_problems(bundle)
+                        + checks.song_shape_problems(bundle))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
     return bundle

@@ -49,11 +49,16 @@ the whole droplet. So:
   trick in another topic of the course), and the stakes when it goes wrong: a way it can fail, with what
   follows from it step by step, for the song's bridge ("cyanide blocks the chain's last
   carrier, so the cell stops making most of its ATP"). Facts that hold only definitions make dry lines.
-- Choose one everyday picture for the droplet, and put it in the fact it explains, saying
-  what it matches. Choose it by what the process is *for*: find the everyday thing that does
-  the same job (a trade, a delivery, a relay, a recipe, a filter, a game's points), not one
-  that only looks like its parts, and never a stock one that fits any topic. The lesson, the
-  song, the narration and an analogy scene all use this one picture.
+- Choose one everyday picture for the droplet, the frame for the whole idea, and put it in
+  the fact it explains, saying what it matches. Choose it by what the whole thing is *for*:
+  find the everyday thing that does the same job (a trade, a delivery, a relay, a recipe, a
+  filter, a game's points), not one that only looks like a part, and never a stock one that
+  fits any topic. "You can't spend sunshine, so the leaf trades it for cash" frames the
+  light reactions; "a turnstile" only explains ATP synthase. It works for any subject: a
+  derivative as a car's speedometer, a revolution as a pressure cooker, a sonnet's turn as
+  a plot twist. The lesson, the song, the narration and an analogy scene all use it. When
+  one part also needs a picture of its own (a turnstile for ATP synthase), it may have one,
+  in a fact too, as long as it fits inside the frame rather than replacing it.
 - Be precise, in the words the audience's course or exam uses (for a young audience,
   plain words that are still exact). State quantities, exceptions and limits exactly
   ("only cytochrome b6f pumps protons", not "the chain pumps protons").
@@ -333,14 +338,15 @@ explanation to the narration, and every word of it is easy to hear.
   learner's style asks for something that would hide the words or does not belong in a
   classroom (screamed or growled vocals, explicit lyrics), keep the rest of their style
   and leave that part out.
-- `music.sections` is exactly intro, verse, pre-chorus, chorus, verse, pre-chorus, bridge,
-  chorus, outro (The parts, below).
+- `music.sections` is exactly intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus,
+  bridge, chorus, outro (The parts, below).
 - `lyrics` is every line as sung, in order, section by section, so the chorus appears
   three times. Below 130 bpm each line is one bar, short and punchy: about 2.4 seconds at
   100 bpm. From 130 bpm it is two bars: about 3.2 seconds at 150. Either way a sung line
   is roughly 6 to 10 syllables; a rapped line can carry a few more, up to about 14. The
-  song runs 2 to 2½ minutes, so below 130 bpm, where lines are shorter, each verse has 16
-  lines instead of 8, so the song comes to about 2 minutes 15 seconds.
+  song runs 2 to 2½ minutes: each verse has 8 lines below 100 bpm, 12 from 100 to 129 bpm,
+  and 8 from 130 bpm, where each line is two bars. Fill the length with the chorus coming
+  back, not with longer verses.
 
 ### How it sounds
 
@@ -360,16 +366,22 @@ explanation to the narration, and every word of it is easy to hear.
 - **Lines that are sung, never directions.** Every line is something a singer says to the listener. Never
   narrate the picture or the camera ("zoom inside to the chloroplast", "now look at the membrane"), never
   announce a section ("here comes the bridge"). A line is at most 12 words.
-- **One metaphor, all the way through.** Carry the droplet's one everyday picture (chosen in
-  the facts) from the intro to the outro, so every section adds to it: the nephron as a coffee
-  filter that keeps the grounds, a vaccine as a "wanted" poster for the immune system's guards.
-  Every image points at the idea, and what it says about the real thing is in the facts.
+- **One frame, all the way through.** Carry the droplet's frame (the everyday picture of the
+  whole idea, chosen in the facts) from the intro to the outro, so every section adds to it:
+  set it up in the first lines of verse 1 ("You can't spend sunshine, that's the catch / So the
+  thylakoid trades it"), and let the chorus, the bridge and the outro come back to it. The
+  nephron as a coffee filter that keeps the grounds, a vaccine as a "wanted" poster for the
+  immune system's guards. A picture for one part (a turnstile) can have a couplet in a verse;
+  it never stands in for the frame. Every image points at the idea, and what it says about the
+  real thing is in the facts.
 - **One surprise, required.** Give the song one surprising true detail from the facts that sticks,
   sung as its own line or couplet in a verse, or as the pre-chorus's hook ("photosystem two goes
   first, even though it's number two"; one cell's DNA, unwound, would stretch about two metres).
   Choose it from the facts before writing, and make it a line a listener repeats to a friend.
 - **Attitude.** A short tag that makes no claim ("that's the trick", "you see", "for real")
-  can finish a line or land a rhyme, a few times in the song, never in place of the idea.
+  can finish a line, at most twice in the whole song. Never use one to reach a rhyme: a
+  line that ends "it's true", "no doubt" or "for real" because nothing else rhymed is a line
+  with half its job missing. Find a rhyme that carries the idea instead.
 - **Repetition.** What is repeated is what sticks: the title line, the chorus, and a key
   idea said again in new words.
 - Where it fits, tie the idea to the listener's own world (the burn in their legs after
@@ -385,23 +397,28 @@ explanation to the narration, and every word of it is easy to hear.
 In this order, each section a run of lines with its own `section` value:
 
 - **Intro**, 2 lines: the whole idea in a catchy phrase, sung from the first second. Its
-  first line is the title line: 3 to 7 words that name the big move ("Open the gates, let
-  sodium in"). It is the hook, the song's name, and a line of the chorus.
-- **Verse**, 8 lines (16 below 130 bpm): the first half of the story, in order, one step a
-  line or a couplet.
+  first line is the title line: 3 to 7 words that name the big move with concrete actions on
+  real things ("Open the gates, let sodium in", "Split the water, catch the light"), never
+  pronouns standing in for them ("Pump them in, they spin it out" names nothing). It is the
+  hook, the song's name, and a line of the chorus.
+- **Verse**, 8 or 12 lines (by tempo, above): the frame first, then the first half of the
+  story, in order, one step a line or a couplet, with the surprise in it.
 - **Pre-chorus**, 2 lines: bust the misconception. Sing the right idea, and the mistake
   only as what it is not; the chorus that follows lands the right idea. Say it with a fact, not a
   filler ("that isn't true"): "the oxygen you breathe came from water, not CO2".
 - **Chorus**, 4 or 5 lines: `core_idea` as a chant. Sum up the whole pathway or idea, the
   steps in order where the topic is a process, each line built like the one before so the
   rhythm repeats ("Open the gates, let sodium in / Flip the charge and the spike
-  begins"). It opens and ends on the title line. It is word for word the same each time;
+  begins"), and name what goes in and what comes out, every main product ("ATP and NADPH,
+  that's the deal"), or for an idea that is not a process, its cause and its result. It
+  opens and ends on the title line. It is word for word the same each time;
   give each repeat its own ids. A learner should be able to sing it back after hearing it
   twice.
-- **Verse**, 8 lines (16 below 130 bpm): the second half of the story, ending with what it
-  makes and where that goes next.
+- **Verse**, 8 or 12 lines: the second half of the story, ending with what it makes and
+  where that goes next.
 - **Pre-chorus**, 2 lines: link it to what comes next in the course (the next step or
   topic in the unit), as the facts give it.
+- **Chorus**, word for word again.
 - **Bridge**, 8 lines: a sung exam question. Name one thing that breaks the system (a drug,
   a toxin, a mutation, a missing part), then walk its effects in cause-and-effect order to
   the final outcome, one link a line ("no myelin, so the signal crawls"). Pick a break

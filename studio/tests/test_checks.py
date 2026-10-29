@@ -361,3 +361,44 @@ def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_ke
     _, found, _ = review(lambda d: direction(d, "v1-1").update(also=[{"particles": ["Thylakoid", "ATP synthase"],
                                                                        "carries": "O₂"}]))
     assert found == [("v1-1", "particles", True)]  # ATP synthase is not on the hook: fewer than two stops
+
+
+def shaped(chorus, core_idea, extra=(), bpm_tag="112 bpm"):
+    data = bundle_data()
+    data["core_idea"] = core_idea
+    data["why_chain"] = ["a", "b", "c"]
+    data["music"]["positive_styles"] = ["upbeat pop", bpm_tag]
+    for line in data["lyrics"]:
+        if line["section"] == "chorus":
+            line["text"] = chorus
+    for line_id, text in extra:
+        next(line for line in data["lyrics"] if line["id"] == line_id)["text"] = text
+    return [p.detail for p in checks.song_shape_problems(Bundle.model_validate(data))]
+
+
+def test_a_hook_that_names_the_idea_passes_and_one_made_of_pronouns_is_recorded():
+    idea = "Light splits water, and the protons it pumps make ATP."
+    assert shaped("Split the water, catch the light", idea) == []
+    found = shaped("Pump them in, they spin it out", idea)
+    assert any("leans on pronouns" in f for f in found) and any("too little of the core idea" in f for f in found)
+
+
+def test_the_song_shape_check_holds_any_subject_to_its_own_idea():
+    # History: the hook is held to the droplet's own core idea, not to any science words.
+    assert shaped("Bread too dear, the people rise against the king",
+                  "Debt and hunger turned the French people against the king.") == []
+    assert shaped("Feel it rise, let it go",
+                  "Debt and hunger turned the French people against the king.") != []
+
+
+def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded():
+    data = bundle_data()
+    data["why_chain"] = ["a", "b", "c"]
+    data["lyrics"] = [line for line in data["lyrics"] if line["id"] != "c2-1"]
+    data["direction"] = [d for d in data["direction"] if d["line_id"] != "c2-1"]
+    found = [p.detail for p in checks.song_shape_problems(Bundle.model_validate(data))]
+    assert "the chorus is sung 2 times, not 3" in found
+    tags = shaped("Split the water, catch the light", "Light splits water.",
+                  [("v1-1", "Light lands on the thylakoid, for real"), ("v1-2", "Protons pile up, no doubt"),
+                   ("v2-1", "Only b6f pumps them in, it's true")])
+    assert any("3 lines end on a claim-free tag" in f for f in tags)

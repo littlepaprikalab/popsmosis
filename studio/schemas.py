@@ -19,7 +19,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validat
 
 FILLER = "filler"
 Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
-SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "bridge", "chorus", "outro"]
+SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "chorus", "bridge", "chorus", "outro"]
 Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
 BPM_RANGE = (80, 160)  # the tempos the song may take; a sung line lasts 1.9 s to 3.7 s (audio.line_ms)
