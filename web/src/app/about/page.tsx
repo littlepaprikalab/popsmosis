@@ -112,13 +112,16 @@ export default function AboutPage() {
         </h1>
         <div className="flex flex-col gap-3 text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
           <p>I love vibe coding and bringing the things I care about to life.</p>
+          {/* The narrated video and the song are marked in their players' colours (components/DropletPlayers.tsx) */}
           <p>
-            <Wordmark size="sm" /> started with a problem of my own: I wanted to automate making educational song
-            videos for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
+            <Wordmark size="sm" /> started with a problem of my own: I wanted
+            to <Marked color="var(--accent-yellow)">automate</Marked> making educational song videos
+            for <a href="#sat-sprints" className="underline" style={{ color: 'var(--accent-blue)' }}>SAT
             Sprints</a>, my AP and SAT prep site. Making them was a <Marked>pain in the tush</Marked>, with pictures
-            that came out wrong and content that needed checking line by line, and a hackathon was a good excuse to fix
-            that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson with a narrated video
-            and a song. It checks <strong style={{ color: 'var(--text-primary)' }}>every line and every
+            that came out wrong and content that needed checking line by line, and
+            the <Pill color="var(--accent-purple)">#metahackathon</Pill> was a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson with
+            a <Marked color="var(--accent-blue)">narrated video</Marked> and
+            a <Marked color="var(--accent-red)">song</Marked>. It checks <strong style={{ color: 'var(--text-primary)' }}>every line and every
             picture</strong> first, and shares the droplet on the <Link href="/droplets"
             className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn
             from.
@@ -144,32 +147,40 @@ export default function AboutPage() {
   );
 }
 
-/** "droplet" as a pill: the brand aqua, tinted rather than solid, so it sits beside the POPsmosis chip without
- * copying it, with the drop from the Droplets heading. */
-function DropletPill() {
+/** A word as a pill: tinted rather than solid, so it sits beside the POPsmosis chip without copying it. */
+function Pill({ color, children }: { color: string; children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-[0.3em] whitespace-nowrap align-middle leading-none rounded-full font-bold"
       style={{
         fontSize: '0.75rem',
-        padding: '0.3em 0.7em 0.3em 0.55em',
-        color: 'var(--accent-brand)',
-        background: tint('var(--accent-brand)', 14),
-        border: `1px solid ${tint('var(--accent-brand)', 45)}`,
+        padding: '0.3em 0.7em',
+        color,
+        background: tint(color, 14),
+        border: `1px solid ${tint(color, 45)}`,
       }}>
-      <svg aria-hidden="true" viewBox="18 10 28 42" style={{ height: '1em', width: 'auto' }}>
-        <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z" fill="currentColor" />
-      </svg>
-      droplet
+      {children}
     </span>
   );
 }
 
+/** "droplet" as a pill in the brand aqua, with the drop from the Droplets heading. */
+function DropletPill() {
+  return (
+    <Pill color="var(--accent-brand)">
+      <svg aria-hidden="true" viewBox="18 10 28 42" style={{ height: '1em', width: 'auto', marginLeft: '-0.15em' }}>
+        <path d="M32 12.5C32 12.5 20.3 28 20.3 38a11.7 11.7 0 0 0 23.4 0C43.7 28 32 12.5 32 12.5Z" fill="currentColor" />
+      </svg>
+      droplet
+    </Pill>
+  );
+}
+
 /** A highlighter stroke across the lower half of the words. */
-function Marked({ children }: { children: React.ReactNode }) {
+function Marked({ color = 'var(--accent-pink)', children }: { color?: string; children: React.ReactNode }) {
   return (
     <mark style={{
       color: 'var(--text-primary)',
-      background: `linear-gradient(transparent 55%, ${tint('var(--accent-pink)', 50)} 55%)`,
+      background: `linear-gradient(transparent 55%, ${tint(color, 50)} 55%)`,
       padding: '0 0.1em',
     }}>{children}</mark>
   );
