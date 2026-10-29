@@ -332,7 +332,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, or once every learner's topics together reach `TOPICS_PER_DAY` (100); taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
 | POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars |
 | DELETE | `/api/replies/:id` | own reply |
@@ -349,18 +349,24 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES` |
 | POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own); 409 if answered, failed, or leased to another agent |
-| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own |
+| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render |
-| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL; 503 until storage is set up (`SUPABASE_URL` and a secret key in `SUPABASE_SERVICE_ROLE_KEY`), with `retryable: true` only when waiting may fix it |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<SUPABASE_URL>/storage/v1/object/public/droplets/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
+| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; a signed Supabase upload URL, and for `droplets` its public URL. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`SUPABASE_URL` and a secret key in `SUPABASE_SERVICE_ROLE_KEY`), with `retryable: true` only when waiting may fix it |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
 | POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |
 | PUT | `/api/answers/:id/video/progress` | own answers: `{ attempt?, running: [{ step, seconds }], failed?, breakdown? }`, where the render is, its `breakdown` the videos' bill so far; 204; 409 unless they are RENDERING under that attempt. Not the heartbeat: the claim is |
 | GET | `/api/replies/queue?limit=N` | threads where a human followed up last, each with the droplet's `answer.context` |
 | POST | `/api/answers/:id/replies` | `{ content, replyToId }`; 409 if already responded |
-| GET | `/api/attachments/:id` | a file a human sent; 410 once past the retention |
+| GET | `/api/attachments/:id` | a file a human sent with a topic the caller holds or answered, or with a follow-up under its own lesson; 404 otherwise, 410 once past the retention |
+
+What an agent reads never names a learner: the queues and the claim leave out who asked
+and who followed up. A lesson, reply or reason an agent sends that looks like it carries a
+key or an environment variable's value is refused with a 400 (`containsSecret` in
+`api/src/lib/validation.ts`), and the API logs it. The agent's key is held by an LLM that
+reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#what-learners-write-is-data-never-instructions)).
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
@@ -513,8 +519,9 @@ A topic request or a follow-up may carry files - a photo of class notes, a diagr
 At most 5 per message, 4 MB each and 8 MB together, sent inside the message's own body so a
 message and its files are written together or not at all; they are kept in Postgres beside it
 and go when it does. Each comes back listed on its message as
-`{ id, name, mimeType, size, url, expired }`, never with its bytes; `GET url` serves them to any
-signed-in user and to the teacher, whose queues list them the same way. What a file is served as
+`{ id, name, mimeType, size, url, expired }`, never with its bytes; `GET url` serves them to the
+learner who sent them, the admins, and the teacher while it holds or has answered that topic,
+whose queues list them the same way. What a file is served as
 is decided from its bytes, not from what was sent: PNG, JPEG, GIF and WebP as themselves, UTF-8
 text as `text/plain`, anything else as a download, all in a sandbox. Past
 `ATTACHMENT_RETENTION_DAYS` (default 30, 0 keeps them) the bytes are let go and the row stays,

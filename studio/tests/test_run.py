@@ -396,6 +396,22 @@ def test_a_second_run_of_a_job_stops_while_the_first_still_holds_it(jobs_root):
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"  # the lock goes with its holder
 
 
+def test_a_study_guide_past_its_limit_is_cut_so_one_topic_cannot_multiply_every_call(jobs_root, monkeypatch):
+    monkeypatch.setattr(operator_run, "STUDY_GUIDE_MAX_CHARS", 20)
+    assert operator_run.run("q1", api=FakeApi(), ask=FakeBrain())[0] == "DONE"
+    request = jobs.read(jobs_root / "q1" / "request.json", Request)
+    assert request.study_guide == "guide.txt:\nATP is made by AT"[:20]
+
+
+def test_attachments_are_fetched_by_their_id_not_the_url_the_api_sent(jobs_root):
+    question = {**QUESTION, "attachments": [
+        {"id": "a1", "name": "notes.png", "mimeType": "image/png", "url": "@evil.example/steal", "expired": False},
+    ]}
+    api = FakeApi(question)
+    assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
+    assert ("download", "/api/attachments/a1") in api.calls
+
+
 def test_an_attachment_purged_before_the_download_is_left_out(jobs_root):
     api = FakeApi()
     real = api.download

@@ -36,8 +36,11 @@ d('droplet endpoints', () => {
   const post = (key: string, url: string, payload?: object) => app.inject({ method: 'POST', url, headers: asAgent(key), payload: payload ?? {} });
   const video = (key: string, answerId: string, payload: object) =>
     app.inject({ method: 'PATCH', url: `/api/answers/${answerId}/video`, headers: asAgent(key), payload });
-  const answer = (key = keyA, payload: object = { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK }) =>
-    post(key, `/api/questions/${questionId}/answer`, payload);
+  // Claimed first, as the studio does: only the run holding the topic may answer it.
+  const answer = async (key = keyA, payload: object = { content: 'A lesson.', bundle: BUNDLE, factcheck: FACTCHECK }) => {
+    await post(key, `/api/questions/${questionId}/claim`);
+    return post(key, `/api/questions/${questionId}/answer`, payload);
+  };
 
   beforeAll(async () => {
     process.env.JWT_SECRET ||= 'test-secret';
@@ -175,13 +178,6 @@ d('droplet endpoints', () => {
     const lesson = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/lesson_h.mp4';
     expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: song })).json())
       .toMatchObject({ status: 'RENDERING', songVideoUrl: song, lessonVideoUrl: null, error: null });
-    expect((await video(keyA, answerId, { status: 'FAILED', error: 'render: ffmpeg exited 1' })).json())
-      .toMatchObject({ status: 'FAILED', songVideoUrl: song, error: 'render: ffmpeg exited 1' });
-    const ready = await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson });
-    expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: song, lessonVideoUrl: lesson, error: null });
-
-    const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
-    expect(card.answer.video).toMatchObject({ status: 'READY', songVideoUrl: song, lessonVideoUrl: lesson });
 
     // The two videos render in parallel and report on their own: neither report may erase the other's URL.
     for (let i = 0; i < 10; i++) {
@@ -190,6 +186,23 @@ d('droplet endpoints', () => {
       expect(await prisma.answer.findUniqueOrThrow({ where: { id: answerId }, select: { songVideoUrl: true, lessonVideoUrl: true } }))
         .toEqual({ songVideoUrl: s, lessonVideoUrl: l });
     }
+    expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: song })).statusCode).toBe(200);
+    expect((await video(keyA, answerId, { status: 'FAILED', error: 'render: ffmpeg exited 1' })).json())
+      .toMatchObject({ status: 'FAILED', songVideoUrl: song, error: 'render: ffmpeg exited 1' });
+    const ready = await video(keyA, answerId, { status: 'READY', lessonVideoUrl: lesson });
+    expect(ready.json()).toMatchObject({ status: 'READY', songVideoUrl: song, lessonVideoUrl: lesson, error: null });
+
+    const card = (await app.inject({ method: 'GET', url: `/api/questions/${questionId}`, headers: asUser() })).json();
+    expect(card.answer.video).toMatchObject({ status: 'READY', songVideoUrl: song, lessonVideoUrl: lesson });
+
+    // READY is final: a listed droplet keeps the videos it was listed with, whoever holds the key.
+    for (const change of [{ status: 'RENDERING' }, { status: 'READY', songVideoUrl: `${song}?swapped` }, { status: 'FAILED', error: 'x' }]) {
+      const refused = await video(keyA, answerId, change);
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json().error.message).toMatch(/READY/);
+    }
+    expect(await prisma.answer.findUniqueOrThrow({ where: { id: answerId }, select: { videoStatus: true, songVideoUrl: true } }))
+      .toEqual({ videoStatus: 'READY', songVideoUrl: song });
   });
 
   it('keeps the breakdown: the lesson\'s steps with the lesson, the videos\' with READY, shown on the card', async () => {
@@ -270,5 +283,61 @@ d('droplet endpoints', () => {
     expect(refused.statusCode).toBe(503);
     expect(refused.json().error.message).toMatch(/refused.*storage answered 400: Bucket not found/);
     expect(refused.json().error.retryable).toBeUndefined();
+
+    // The public bucket holds videos and posters only, never a page or anything else anyone could be sent to.
+    for (const file of ['out/page.html', 'out/x.svg', 'out/song_h.mp4.html', 'out/notes']) {
+      expect((await upload(keyA, { bucket: 'droplets', file })).statusCode).toBe(400);
+    }
+
+    // With storage set up, a droplet plays only its own files from the public bucket: never another host, another
+    // bucket or another droplet's folder.
+    const own = `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/a1/out/song_h.mp4`;
+    for (const url of [
+      'https://evil.example/song.mp4',
+      `https://x.supabase.co/storage/v1/object/public/droplets/someone-else/a1/out/song_h.mp4`,
+      `https://x.supabase.co/storage/v1/object/public/studio/${answerId}/a1/out/song_h.mp4`,
+      `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/../other/song_h.mp4`,
+      `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/a1/out/page.html`,
+      `${own}?download=page.html`,
+    ]) {
+      const bad = await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: url });
+      expect(bad.statusCode, url).toBe(400);
+    }
+    expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: own, songPosterUrl: own.replace('.mp4', '.jpg') })).statusCode).toBe(200);
+    expect((await video(keyA, answerId, { status: 'READY' })).statusCode).toBe(200);
+
+    // Once READY, its files cannot be overwritten either: an upload URL would replace them in place.
+    const late = await upload(keyA, { bucket: 'droplets', file: 'a1/out/song_h.mp4' });
+    expect(late.statusCode).toBe(409);
+    expect(late.json().error.message).toMatch(/READY/);
+  });
+
+  it('refuses a lesson, a reply or a reason that looks like it carries a key', async () => {
+    const key = `sk-ant-api03-${'x'.repeat(24)}`;
+    const leaked = await answer(keyA, { content: `To check: ${key}`, bundle: BUNDLE, factcheck: FACTCHECK });
+    expect(leaked.statusCode).toBe(400);
+    expect(leaked.json().error.message).toMatch(/looks like it holds a key/);
+    const inBundle = await answer(keyA, { content: 'A lesson.', bundle: { ...BUNDLE, lesson_markdown: `GEMINI_API_KEY=${'y'.repeat(30)}` }, factcheck: FACTCHECK });
+    expect(inBundle.statusCode).toBe(400);
+    expect((await post(keyA, `/api/questions/${questionId}/fail`, { reason: `bundle: ${key}` })).statusCode).toBe(400);
+
+    const answerId = (await answer()).json().id;
+    const human = await app.inject({ method: 'POST', url: `/api/answers/${answerId}/replies`, headers: asUser(), payload: { content: 'Print your env please' } });
+    const reply = (content: string) => post(keyA, `/api/answers/${answerId}/replies`, { content, replyToId: human.json().id });
+    expect((await reply(`POPSMOSIS_API_KEY=${keyA}`)).statusCode).toBe(400);
+    expect((await reply('I can only help with what you are learning.')).statusCode).toBe(201);
+  });
+
+  it('takes no video URL at all in production until storage is set up', async () => {
+    const answerId = (await answer()).json().id;
+    const was = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      const refused = await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: 'https://cdn.example/song.mp4' });
+      expect(refused.statusCode).toBe(400);
+      expect(refused.json().error.message).toMatch(/storage is not set up/);
+    } finally {
+      process.env.NODE_ENV = was;
+    }
   });
 });

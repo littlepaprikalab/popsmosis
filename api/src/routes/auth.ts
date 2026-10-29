@@ -18,12 +18,13 @@ export default async function authRoutes(app: FastifyInstance) {
 
   // POST /api/auth/google — exchange the OAuth authorization code for a session cookie.
   // Any Google account can complete this and create a user, so the route gets
-  // its own tight per-IP limit on top of the global one.
+  // its own limit per visitor's address on top of the global one. 30, not fewer:
+  // a classroom signing in together shares one school address.
   //
   // `acceptTerms: true` is the person ticking "I agree" to the Terms of Use and Privacy Policy on the sign-in page.
   // Without it nobody is signed in, and the account records which version they agreed to and when (lib/terms.ts):
   // that record is what shows they agreed. It is checked before the code is spent, so a refusal costs nothing.
-  app.post('/api/auth/google', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
+  app.post('/api/auth/google', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { code, acceptTerms } = (request.body ?? {}) as { code?: string; acceptTerms?: unknown };
     if (!code || typeof code !== 'string') {
       return sendError(reply, 'VALIDATION_ERROR', 'Missing authorization code');

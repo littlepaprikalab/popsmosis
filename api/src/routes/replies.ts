@@ -1,15 +1,15 @@
-import { FastifyInstance } from 'fastify';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import prisma, { runTransaction } from '../lib/prisma.js';
 import { sendError, AppError, isAppError, isUniqueViolation } from '../lib/errors.js';
 import { requireUser, requireAgent, requireUserOrAgent, accountGone } from '../middleware/auth.js';
-import { validateString, containsPersonalInfo, parseLimit } from '../lib/validation.js';
-import { replyInclude, serializeReply, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
+import { validateString, containsPersonalInfo, parseLimit, secretError } from '../lib/validation.js';
+import { replyInclude, serializeReply, serializeReplyForAgent, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
 import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { followUpContext } from '../lib/droplet.js';
+import { takeReply, giveBack, replyAllowed } from '../lib/usage.js';
 
 export const REPLY_MAX_LENGTH = 2000;
-const REPLIES_PER_USER_PER_HOUR = parseInt(process.env.REPLIES_PER_USER_PER_HOUR || '30', 10);
 
 export default async function replyRoutes(app: FastifyInstance) {
   // GET /api/replies/queue — agent: threads under this agent's answers whose
@@ -43,7 +43,8 @@ export default async function replyRoutes(app: FastifyInstance) {
     const answers = await prisma.answer.findMany({
       where: { id: { in: answerIds } },
       omit: { factcheck: true }, // only the bundle feeds the follow-up context
-      include: { ...answerInclude, question: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, attachments: attachmentsInclude } } },
+      // Never who asked: the teacher is given what it needs to teach (lib/serialize.ts, serializeReplyForAgent).
+      include: { ...answerInclude, question: { include: { attachments: attachmentsInclude } } },
     });
     const byId = new Map(answers.map((a) => [a.id, a]));
 
@@ -56,7 +57,7 @@ export default async function replyRoutes(app: FastifyInstance) {
         return {
           question: {
             id: a.question.id, content: a.question.content,
-            attachments: a.question.attachments.map(serializeAttachment), createdAt: a.question.createdAt.toISOString(), user: a.question.user,
+            attachments: a.question.attachments.map(serializeAttachment), createdAt: a.question.createdAt.toISOString(),
           },
           answer: {
             id: serialized.id, content: serialized.content, createdAt: serialized.createdAt,
@@ -64,9 +65,9 @@ export default async function replyRoutes(app: FastifyInstance) {
             // lesson posted without a bundle.
             context: followUpContext(a.bundle),
           },
-          thread: a.replies.map((r) => serializeReply(r)),
+          thread: a.replies.map(serializeReplyForAgent),
           // The reply the agent must respond to: the newest human reply.
-          replyTo: last && !last.agentId ? serializeReply(last) : null,
+          replyTo: last && !last.agentId ? serializeReplyForAgent(last) : null,
         };
       })
       .filter((t) => t.replyTo !== null);
@@ -78,7 +79,13 @@ export default async function replyRoutes(app: FastifyInstance) {
   // POST /api/answers/:id/replies — human (the learner who asked for the lesson) or agent (author of the answer). The
   // thread is the learner's own (lib/privacy.ts). A human's may carry `attachments` (lib/attachments.ts) - checked for
   // before the body is read, since that makes it large.
-  app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
+  // A learner already at the hour's limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
+  const replyOpen = async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.viewer) return; // an agent, or requireUserOrAgent replied
+    const refusal = await replyAllowed(request.viewer.id);
+    if (refusal) return sendError(reply, refusal.code, refusal.message, refusal.extra);
+  };
+  app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent, replyOpen], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
     const { id: answerId } = request.params as { id: string };
     const { content, replyToId, attachments: rawAttachments } = (request.body ?? {}) as {
       content?: unknown; replyToId?: unknown; attachments?: unknown;
@@ -105,6 +112,12 @@ export default async function replyRoutes(app: FastifyInstance) {
       if (rawAttachments !== undefined && rawAttachments !== null) {
         return sendError(reply, 'VALIDATION_ERROR', 'attachments are for human replies only');
       }
+      // The thread is where a learner who talked the teacher into pasting a key would read it.
+      const leak = secretError('content', text);
+      if (leak) {
+        request.log.warn({ agentId: request.agent.id, answerId }, 'agent text refused: it looks like a secret');
+        return sendError(reply, 'VALIDATION_ERROR', leak);
+      }
       try {
         const created = await runTransaction(async (tx) => {
           const target = await tx.reply.findUnique({ where: { id: replyToId }, select: { id: true, answerId: true, userId: true } });
@@ -118,7 +131,7 @@ export default async function replyRoutes(app: FastifyInstance) {
           return row;
         });
         reply.status(201);
-        return serializeReply(created);
+        return serializeReplyForAgent(created);
       } catch (err) {
         if (isUniqueViolation(err)) return sendError(reply, 'CONFLICT', 'You have already replied to that message');
         if (isAppError(err)) return sendError(reply, err.code, err.message);
@@ -136,10 +149,15 @@ export default async function replyRoutes(app: FastifyInstance) {
     if (containsPersonalInfo(text)) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a reply');
     }
-    const since = new Date(Date.now() - 60 * 60 * 1000);
-    const recent = await prisma.reply.count({ where: { userId, createdAt: { gte: since } } });
-    if (recent >= REPLIES_PER_USER_PER_HOUR) {
-      return sendError(reply, 'RATE_LIMITED', `Max ${REPLIES_PER_USER_PER_HOUR} replies per hour`, { retryable: false });
+    // The learner's hour (lib/usage.ts), taken before the follow-up is written and kept after: one deleted later does
+    // not hand its place back. Its own short transaction, so the files' write below holds no lock or pooled connection.
+    let usageId: string;
+    try {
+      usageId = await takeReply(userId);
+    } catch (err) {
+      if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
+      if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
+      throw err;
     }
     let created;
     try {
@@ -148,6 +166,7 @@ export default async function replyRoutes(app: FastifyInstance) {
         include: replyInclude,
       });
     } catch (err) {
+      await giveBack(usageId).catch(() => {}); // never written, so it used nothing
       if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
       throw err;
     }

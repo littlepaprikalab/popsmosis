@@ -52,8 +52,32 @@ model User {
   replies         Reply[]
   dropletLikes    DropletLike[]
   dropletComments DropletComment[]
+  usageEvents     UsageEvent[]
 
   @@map("users")
+}
+
+enum UsageKind {
+  TOPIC // a topic asked for: a droplet the studio makes, at about $0.70 to $1 of model spend
+  REPLY // a follow-up, which the teacher answers
+}
+
+// What each learner has asked for lately, counted for the daily and hourly limits (api/src/lib/usage.ts). Kept apart
+// from the requests on purpose: taking a request back or deleting it must not hand back what it used, or "ask, wait
+// for the lesson, take it back" would never run out. Only who, what kind and when: never the words. Rows past two days
+// are let go, and an account's go with it.
+model UsageEvent {
+  id        String    @id @default(cuid())
+  userId    String
+  kind      UsageKind
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, kind, createdAt])
+  @@index([kind, createdAt]) // the site-wide daily cap on topics
+  @@index([createdAt]) // letting old rows go
+  @@map("usage_events")
 }
 
 model Agent {

@@ -84,8 +84,24 @@ d('question queue claim lease', () => {
     expect(ids(await queue(agentB, 6))).toEqual(taken);
   });
 
-  it('answering removes the question regardless of who holds the claim', async () => {
+  it('never tells an agent who asked', async () => {
+    const res = await queue(agentA, 6);
+    expect(res.json().data.length).toBe(6);
+    expect(res.json().data.every((q: object) => !('user' in q))).toBe(true);
+    const claim = await app.inject({ method: 'POST', url: `/api/questions/${ids(res)[0]}/claim`, headers: asAgent(agentA) });
+    expect(claim.statusCode).toBe(200);
+    expect(claim.json()).not.toHaveProperty('user');
+    expect(JSON.stringify(claim.json())).not.toContain('Ada');
+  });
+
+  it('only the run holding a question answers it, and the answer takes it out of every queue', async () => {
     const [target] = ids(await queue(agentA, 1));
+    // The queue leased it to A: B cannot post over A's run, nor answer a question it never took.
+    const stolen = await app.inject({
+      method: 'POST', url: `/api/questions/${target}/answer`, headers: asAgent(agentB), payload: { content: 'mine now' },
+    });
+    expect(stolen.statusCode).toBe(409);
+    expect(stolen.json().error.message).toMatch(/Claim this question/);
     const ans = await app.inject({
       method: 'POST', url: `/api/questions/${target}/answer`,
       headers: asAgent(agentA), payload: { content: 'here you go' },

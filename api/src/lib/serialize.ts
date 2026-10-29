@@ -189,6 +189,22 @@ export function serializeQuestion(q: QuestionRow, viewerId?: string, now = new D
   };
 }
 
+/**
+ * A follow-up as the teacher reads it: never who wrote it. The agent's key is held by an LLM that reads
+ * learner-written text, so it is given what it needs to teach and nothing that names a learner (lib/privacy.ts).
+ */
+export function serializeReplyForAgent(r: ReplyRow) {
+  const { user: _user, canDelete: _canDelete, ...rest } = serializeReply(r);
+  return rest;
+}
+
+/** A question as the teacher reads it (the queues, the claim): the request and its files, never who asked. */
+export function serializeQuestionForAgent(q: QuestionRow, now = new Date()) {
+  const { user: _user, isOwner: _isOwner, canDelete: _canDelete, answer, ...rest } = serializeQuestion(q, undefined, now);
+  const replies = q.answers[0]?.replies.map(serializeReplyForAgent) ?? [];
+  return { ...rest, answer: answer && { ...answer, replies } };
+}
+
 export type SerializedQuestion = ReturnType<typeof serializeQuestion>;
 export type SerializedAnswer = ReturnType<typeof serializeAnswer>;
 export type SerializedReply = ReturnType<typeof serializeReply>;

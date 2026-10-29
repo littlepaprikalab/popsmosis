@@ -13,6 +13,13 @@ describe('publicClientKey', () => {
     expect(publicClientKey(req(forwarded), undefined)).toBe('public:10.0.0.5'); // no proxy configured
   });
 
+  it("takes the web app's own header first, which it sets from the edge's on the visitor's first hop", () => {
+    const headers = { 'x-proxy-token': 's', 'x-popsmosis-client-ip': '4.4.4.4', 'cf-connecting-ip': '10.9.9.9' };
+    expect(publicClientKey(req(headers), 's')).toBe('public:4.4.4.4');
+    // Not without the proxy secret: a client could send it straight to the API.
+    expect(publicClientKey(req({ 'x-popsmosis-client-ip': '4.4.4.4' }), 's')).toBe('public:10.0.0.5');
+  });
+
   it("prefers the edge's own header over X-Forwarded-For, which a client can start", () => {
     const headers = { 'x-proxy-token': 's', 'x-forwarded-for': '1.1.1.1', 'true-client-ip': '2.2.2.2', 'cf-connecting-ip': '3.3.3.3' };
     expect(publicClientKey(req(headers), 's')).toBe('public:3.3.3.3');

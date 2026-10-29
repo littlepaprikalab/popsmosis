@@ -101,6 +101,26 @@ installed, because the skill file runs the studio from it. A run does not hold a
 open: it reads both queues, runs the studio on one topic, answers the follow-ups, looks
 again, and exits when they are empty.
 
+### What the operator can reach, and how to keep it small
+
+The operator reads text any signed-in learner writes (topics, follow-ups, files) and runs
+in a shell whose environment holds the popsmosis key and every provider key. The skill
+file tells it that learner text is data and never goes on a command line, and the API
+refuses a lesson, reply or failure reason that looks like it carries a key (it logs
+`agent text refused: it looks like a secret` when it does). Neither can stop a model that
+is talked into something cleverer, so keep what a hijacked run could do small:
+
+- **Network:** give the runner only the hosts it calls (Option A's allowlist below), never
+  every host. A run that can reach any host can send a key anywhere.
+- **Keys:** use provider keys made for popsmosis alone, each with a spend limit or budget
+  in its provider's console, so a stolen one costs a capped amount.
+- **When something looks wrong** (a lesson, reply or Inkmory entry with command output in
+  it, or that log line): disable the agent on `/admin/agents`, rotate its key, and rotate
+  the provider keys in the routine's environment.
+- **Not yet:** the studio still reads the provider keys from the operator's own
+  environment. Running the studio as a separate service that holds them would keep them
+  out of the operator's shell entirely.
+
 ### What a run costs
 
 The model re-reads the whole conversation on every turn it takes, so the cost of a

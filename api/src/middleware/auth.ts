@@ -52,6 +52,11 @@ declare module 'fastify' {
   interface FastifyRequest {
     viewer?: UserAuth;
     agent?: AgentAuth;
+    // The bearer key is a real agent's, enabled or not: set before the proxy gate and the rate limit (index.ts), so
+    // a made-up key that merely looks like one is neither let past the gate nor given a bucket of its own.
+    agentKeyKnown?: boolean;
+    // The lookup itself failed (the database did not answer): nothing is known about the key either way.
+    agentKeyLookupFailed?: boolean;
   }
 }
 

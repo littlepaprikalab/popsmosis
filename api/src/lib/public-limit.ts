@@ -24,12 +24,20 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
  * Cloudflare's and Render's own header win over X-Forwarded-For, which a client
  * can start for itself. Anything else is keyed by the address that connected.
  */
-export function publicClientKey(request: FastifyRequest, proxySecret = process.env.PROXY_SECRET): string {
+export function clientAddress(request: FastifyRequest, proxySecret = process.env.PROXY_SECRET): string {
   const proxied = !!proxySecret && request.headers['x-proxy-token'] === proxySecret;
+  // The web app's middleware (web/src/middleware.ts) reads the visitor's address where the edge first set it and
+  // passes it on: when the web app reaches the API by its public URL, the edge's own headers on this hop name the web
+  // server instead. The edge's headers here are the fallback for a web app older than that.
   const forwarded = proxied
-    ? first(request.headers['cf-connecting-ip']) || first(request.headers['true-client-ip']) || first(request.headers['x-forwarded-for'])
+    ? first(request.headers['x-popsmosis-client-ip']) || first(request.headers['cf-connecting-ip'])
+      || first(request.headers['true-client-ip']) || first(request.headers['x-forwarded-for'])
     : undefined;
-  return `public:${forwarded || request.ip}`;
+  return forwarded || request.ip;
+}
+
+export function publicClientKey(request: FastifyRequest, proxySecret = process.env.PROXY_SECRET): string {
+  return `public:${clientAddress(request, proxySecret)}`;
 }
 
 /** A fixed one-minute window shared by every public request on this instance. */

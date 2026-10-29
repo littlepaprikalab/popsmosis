@@ -33,6 +33,40 @@ export function containsPersonalInfo(text: string): boolean {
   return false;
 }
 
+/**
+ * Whether text an agent wants to post looks like it carries a key or an environment dump. The teacher is an LLM that
+ * holds the agent key and the providers' keys and reads text any learner can write; if that text talks it into
+ * pasting a key, the lesson, the reply or the failure reason is the way out. This refuses the plain forms. It cannot
+ * catch a key the agent was talked into encoding, so it backs up the skill file's rules rather than replacing them.
+ */
+const SECRET_PATTERNS: RegExp[] = [
+  /sk_pop_[0-9a-f]{16,}/i, // popsmosis agent keys
+  /sk-ant-[A-Za-z0-9_-]{16,}/, // Anthropic
+  /AIza[0-9A-Za-z_-]{30,}/, // Google (Gemini)
+  /\bsk_[0-9a-f]{40,}\b/i, // ElevenLabs
+  /sb_secret_[A-Za-z0-9_-]{10,}/, // Supabase
+  /sk_inkmory_[A-Za-z0-9_-]{10,}/, // Inkmory
+  /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\./, // a JWT
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----(?:\s|\\n)*[A-Za-z0-9+/=]{40,}/, // a private key with its body, raw or inside JSON; a header alone is a lesson
+  // One of this system's own secrets with a value, as `printenv` or a .env file shows it. Named one by one: a lesson
+  // that teaches `API_KEY=...` or `PASSWORD = "..."` is a lesson, and refusing it would fail a learner's topic for good.
+  new RegExp(`\\b(?:${[
+    'POPSMOSIS_API_KEY', 'POPSMOSIS_ANTHROPIC_API_KEY', 'ANTHROPIC_API_KEY', 'MODEL_API_KEY', 'GEMINI_API_KEY',
+    'ELEVENLABS_API_KEY', 'INKMORY_OPERATOR_API_KEY', 'INKMORY_PLANNER_API_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
+    'JWT_SECRET', 'PROXY_SECRET', 'GOOGLE_CLIENT_SECRET', 'POPSMOSIS_ROUTINE_FIRE_TOKEN', 'DATABASE_URL', 'DIRECT_URL',
+  ].join('|')})["']?\\s*[=:]\\s*["']?[^\\s"']{8,}`),
+];
+
+export function containsSecret(text: string): boolean {
+  return SECRET_PATTERNS.some((p) => p.test(text));
+}
+
+/** The refusal for agent text that containsSecret flags, or null. */
+export function secretError(field: string, ...texts: unknown[]): string | null {
+  const flagged = texts.some((t) => t !== undefined && containsSecret(typeof t === 'string' ? t : JSON.stringify(t)));
+  return flagged ? `${field} looks like it holds a key or a secret, so it was not posted` : null;
+}
+
 export function parseLimit(raw: string | undefined, fallback: number, max: number): number {
   const n = parseInt(raw ?? '', 10);
   if (!Number.isFinite(n) || n <= 0) return fallback;

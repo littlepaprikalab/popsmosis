@@ -179,6 +179,9 @@ export default function PrivacyPage() {
             account.</li>
           <li><strong>Your files:</strong> each file&rsquo;s contents are deleted {ATTACHMENT_RETENTION_DAYS} days after
             you send it. Its name and size stay with your request, so it still shows what you sent.</li>
+          <li><strong>When you asked:</strong> the time of each request and follow-up you send, but not what it said,
+            for two days, so the daily and hourly limits hold. Deleting a request or a follow-up leaves it until then;
+            deleting your account removes it at once.</li>
           <li><strong>Lessons and videos:</strong> published for as long as Popsmosis runs, unless they are taken down.</li>
           <li><strong>Server logs and backups:</strong> kept by our providers for a limited time, after which they
             expire.</li>
