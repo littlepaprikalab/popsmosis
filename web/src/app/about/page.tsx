@@ -11,6 +11,9 @@ export const metadata: Metadata = {
 
 const card = { background: 'var(--bg-secondary)', border: '1px solid var(--border)' } as const;
 const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
+// An accent for small text: blended toward the text colour, so it darkens in the light theme and lightens in the dark
+// one, enough to read at 4.5:1 in both (yellow needs the most).
+const ink = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, var(--text-primary))`;
 
 interface Shot { src: string; alt: string }
 
@@ -176,7 +179,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
       style={{
         fontSize: '0.75rem',
         padding: '0.3em 0.7em',
-        color,
+        color: ink(color, 85),
         background: tint(color, 14),
         border: `1px solid ${tint(color, 45)}`,
       }}>
@@ -220,7 +223,7 @@ function Marked({ color, children }: { color: string; children: React.ReactNode 
 
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <h2 id={id} className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--accent-yellow)' }}>
+    <h2 id={id} className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: ink('var(--accent-yellow)', 55) }}>
       {children}
     </h2>
   );
@@ -235,7 +238,7 @@ function AppCard({ app }: { app: App }) {
           <img src={app.icon} alt="" width={48} height={48} className="rounded-xl shrink-0" />
           <div className="min-w-0">
             <h3 id={`${slug(app.name)}-title`} className="font-bold" style={{ color: 'var(--text-primary)' }}>{app.name}</h3>
-            <p className="text-xs" style={{ color: 'var(--accent-purple)' }}>{app.tagline}</p>
+            <p className="text-xs" style={{ color: ink('var(--accent-purple)', 85) }}>{app.tagline}</p>
           </div>
         </div>
         <p className="text-sm leading-relaxed mb-4" style={{ color: 'var(--text-secondary)' }}>{app.about}</p>
@@ -266,7 +269,7 @@ function SiteCard({ site }: { site: Site }) {
         className="block w-full h-auto" style={{ borderBottom: '1px solid var(--border)' }} />
       <div className="p-4 sm:p-5 flex flex-col flex-1">
         <h3 id={`${slug(site.name)}-title`} className="font-bold" style={{ color: 'var(--text-primary)' }}>{site.name}</h3>
-        <p className="text-xs mb-3" style={{ color: 'var(--accent-purple)' }}>{site.tagline}</p>
+        <p className="text-xs mb-3" style={{ color: ink('var(--accent-purple)', 85) }}>{site.tagline}</p>
         <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: 'var(--text-secondary)' }}>{site.about}</p>
         <div>
           <OutLink href={site.url} label={`Visit ${site.name} at ${host}`}>{host}</OutLink>
