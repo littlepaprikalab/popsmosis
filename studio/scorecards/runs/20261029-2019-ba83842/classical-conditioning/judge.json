@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Play a sound, then serve the meal\" is concrete, singable after one hearing, and names the big move (pair a signal before food). It is a little generic about the outcome, since it leaves out that the sound alone starts working. The lesson opens on a real question, \"Why does the lunch bell make you hungry?\", and the narration opens in the learner's world with \"When the lunch bell rings, you might feel hungry before you see any food.\" Strong, close to an example.",
+    "score": 5
+  },
+  "frame": {
+    "reason": "The forecast frame (\"Dark clouds roll in and you know the rain is near\", \"The forecast's just on mute\") is apt for a signal that predicts an event. It appears in the lesson, narration (n3) and song, and is carried to the bridge, chorus c3-1 and outro \"that sound became a forecast of a meal\". It is set up in v1 rather than the intro and drops out of the second verse and chorus, and it is somewhat common as a picture. Extinction as \"on mute\" fits inside it well.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration go reflex, then neutral tone, then pairing with timing and Rescorla's prediction, then the tone alone triggering, then extinction and spontaneous recovery, and they give causes (\"because it triggers a response without any learning\", \"suppresses the association rather than erasing it\"). The link \"it becomes a reliable signal because it predicts food\" is carried by Rescorla and the chorus, \"'Cause the dog learned the tone means food is due\". Some added material (Garcia, discrimination, operant contrast) dilutes the chain, and the step from pairing to the tone's power is a bit declarative in places, but there are no missing links.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines read as a sequence from reflex to extinction and recovery, and most are steps (\"Conditioned stimulus alone → conditioned response\"). The first is a question that sets up the idea, not a step. The acquisition line starts on c1-1, \"Play a sound, then serve the meal\", which is the repeated title line and not where acquisition is sung (v2-1), and it comes before the conditioned-stimulus line that v2-5 introduces. The \"After rest\" line starts at b-5, though the suppressed/erased point is sung in b-7. Some lines carry terms such as \"unconditioned\" that are needed here. The chain from the first link to the core idea is mostly complete, though it omits the \"tone becomes a reliable signal\" link as a separate line.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson and narration n19, song v2-7/v2-8: Little Albert's fear \"spread to other furry objects\" presented as straightforward, 'People learn this way too' (n19)",
+      "problem": "Nothing is factually wrong here, but the claim is presented without noting that Albert's study is ethically controversial; this is a matter of style, not an error.",
+      "correction": "No correction needed."
+    }
+  ],
+  "accuracy": {
+    "reason": "Facts match the study guide: the half-second timing, Rescorla, Garcia, the UR/CR same-behavior point, and spontaneous recovery as \"usually weaker\". The song says Albert \"heard a loud noise with a white rat in view\", which is fine, and \"unconditioned response, it's hard-wired\" is a fair simplification. The error list contains no real error. One tightening: v2-2 \"Half a second early works best, so it's a prediction\" is fine too. A small item: \"Extinction only buried it\" matches the guide's suppression language. Nothing a learner would carry away wrong.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "The chorus is a clear chant (\"Play a sound, then serve the meal / Again and again, till the link gets real\") and the rhymes are mostly clean. Many verse lines read like textbook captions and run long, e.g. v1-6 \"And the drool's the unconditioned response, it's hard-wired\" and v2-3 \"Not just how often they're paired, it's how reliable the sign\", which is also grammatically bent for the rhyme. The pre-chorus p2-2 \"Operant ties reinforcement or punishment to how you act\" is a textbook sentence. Term-heavy lines sit close to the 14-syllable rap ceiling. A few rhymes are stretched (\"a lesson of its own\"). Chorus c3 runs long.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question and the big picture, has a Predict prompt answered straight away (\"It salivates anyway\"), names the misconception and why it is wrong, and ends on a good check: \"Why would a tone that plays *after* the food work poorly as a conditioned stimulus?\". The final check requires the prediction idea, which fits the core. The weaknesses are that it carries many new terms (US, UR, NS, CS, CR, extinction, spontaneous recovery, generalization, discrimination), uses a table list for four processes, and adds Little Albert, Garcia and operant material that drift from the core idea.",
+    "score": 3
+  }
+}

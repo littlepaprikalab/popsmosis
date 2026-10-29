@@ -4,7 +4,7 @@
     "commit": "ba83842a2adf7906f60d271ca448c7b8654c3ae5",
     "dirty": false,
     "prompt": "b222b5cac72d",
-    "rubric": "45011f16cc0b",
+    "rubric": "714bdf3624bd",
     "topics": "b52fd05d1c03",
     "brain": "Claude Opus 5.5",
     "model": "claude-opus-5-5",
@@ -24,8 +24,1143 @@
       "p-value",
       "spanish-subjunctive",
       "classical-conditioning"
-    ]
+    ],
+    "finished": "2026-10-29T21:12:22+0000",
+    "minutes": 35.4,
+    "rejudged": {
+      "commit": "f9d42f36b33c91e89dc0153cdee4748e099f2054",
+      "dirty": false,
+      "at": "2026-10-29T21:11:15+0000"
+    }
   },
-  "topics": [],
-  "summary": {}
+  "topics": [
+    {
+      "id": "sodium-potassium-pump",
+      "subject": "biology",
+      "level": "high school",
+      "topic": "the sodium-potassium pump",
+      "course": "Anatomy and Physiology",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 0,
+        "repaired": 0,
+        "by_rule": {},
+        "problems": []
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Pump sodium out, pull potassium in\" is concrete, singable, and opens and closes the chorus, but it names only the pump's action, not the big move of stored energy for nerve signals; i-2 \"Charge up the brain before the signals begin\" adds that. The lesson opens on a real question (\"How can a nerve cell fire a signal the instant it's stimulated?\") and the narration opens on the learner's world (\"signals are racing through your brain\"). All are solid, but the title line is one part of the idea.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The water tower (\"An electric pump fills a tank above the town\") does the same job as the whole system: spend energy to store potential, then release it instantly. It is set up in v1-1 and recurs in the chorus (\"stack the tower higher\") and bridge (\"the tower runs out\"). The lesson and narration use it. It is dropped in the second verse and pre-choruses, and the lesson doesn't revisit it after the opening, so it is not fully carried through.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "All five links are taught in order with causes: leak, then \"Leaking is downhill; fixing it is uphill,\" then ATP changing shape, then the predict question about negative charge, then the sodium rush with no ATP. The lesson and narration explain each step and the mechanism in detail. The song carries the gist, though it spends a lot on the poison and heart drug and says little about why leaking happens or why the pump must spend energy.",
+          "score": 5
+        },
+        "key_lines": {
+          "reason": "In order, they tell the chain: leak, uphill needs ATP, 1 ATP for 3 out and 2 in, negative potential, sodium rush gives action potential. Key line 1 is a question rather than a step and sits on i-1, and line 2 \"Electric pump = sodium-potassium pump; tank = sodium outside\" is a label/mapping, not a step. The final line is about the ouabain poison, so the chain doesn't end on the core idea. Several lines use arrows and symbols, but they are short and plain.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The core mechanism is correct: 3 Na+ out, 2 K+ in, one ATP, phosphorylation, resting potential about −70 mV, and no ATP for the sodium rush. The main imprecision is the chorus line \"Inside turns negative\" credited to the pump, though the lesson and narration correctly put the main cause on potassium leak. A teacher would tighten that and n28, but nothing a learner would carry away wrong.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "Most lines are whole spoken phrases with clean rhymes, and the chorus \"Three out, two in, then go again\" is chantable. Some rap lines run long, e.g. \"Without the gradient, the resting charge fades away\" and v2-5 \"Now the inside rests near minus seventy millivolts\", and the rhyme of \"millivolts/jolt\" is bent. v2-1/v2-2 rhyme \"outside/inside\" weakly and b-8 \"swell until it bursts from the water inside\" reads like a caption. The bridge is prose-like in places and the song is very long.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question, gives the big picture, builds on the why, has a predict question answered right away, names the misconception and explains it, and ends on a check that needs the core idea (why a blocked pump stops firing when the signal spends no ATP). The comparison table is helpful. It carries many new terms (about eight) plus extras like ouabain, digoxin and glucose transport, which stretch a first-time reader; the gut and drug sections could be cut.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lyric v1-6: \"Then flips to the outside and sets all three free\" / v2-1,v2-2: \"grabs two potassium from the fluid outside / Flips back to the cytoplasm and lets them inside\"",
+          "problem": "Minor: the song never mentions that the pump splits ATP's phosphate, so the shape change is unattributed, but this is not wrong.",
+          "correction": "No correction needed beyond optional mention of phosphate."
+        },
+        {
+          "claim": "Lyric c1-4 and the lesson/narration: \"Inside turns negative\" from the pump (chorus) and v2-3 \"Three plus charges out, but only two come home\"",
+          "problem": "The chorus credits the pump with making the inside negative, but the droplet itself says potassium leak is the main cause; the three-for-two swap contributes only a small part.",
+          "correction": "Say the inside is negative mainly because potassium leaks out, with the pump's three-for-two swap adding a little."
+        },
+        {
+          "claim": "Narration n28: \"through gradients the pump built beforehand\"",
+          "problem": "Sodium flows down its gradient through channels; the gradients are what the pump built, so the phrasing is garbled and could mislead about what the sodium passes through.",
+          "correction": "\"The signal is sodium flowing downhill through open channels, using the gradient the pump built beforehand.\""
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "Spending ATP, the pump pushes three sodium out and two potassium in, building gradients that power nerve signals.",
+      "why_chain": [
+        "Sodium leaks into the cell and potassium leaks out through channels, so their gradients would run down unless something restored them.",
+        "Pushing ions back against their gradients, from low to high concentration, takes energy, so the pump spends ATP: active transport.",
+        "Each ATP changes the pump's shape, so it carries three sodium out and two potassium in per cycle.",
+        "Potassium leaking out and the three-for-two swap leave the inside negative: the resting membrane potential.",
+        "When sodium channels open, sodium rushes in down its gradient with no ATP spent, starting an action potential."
+      ],
+      "title_line": "Pump sodium out, pull potassium in",
+      "bpm": 98,
+      "cost": {
+        "bundle": 1.5057,
+        "judge": 0.0754,
+        "unpriced": false
+      },
+      "seconds": 627.8
+    },
+    {
+      "id": "light-reactions",
+      "subject": "biology",
+      "level": "AP",
+      "topic": "the light reactions of photosynthesis",
+      "course": "AP Biology",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 1,
+        "repaired": 0,
+        "by_rule": {
+          "key-line": 1
+        },
+        "problems": [
+          "v1-2 key-line: the key line \"Solar panel = light reactions, battery pack = ATP + NADPH\" runs 11 words, over 10"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Split the water, catch the light\" is concrete, two actions on real things, and it is the core idea in miniature; it opens and closes the chorus and is easy to sing back. The lesson opens on \"Where does the oxygen you breathe actually come from?\", a question the learner wants answered. The narration opens on \"Every green leaf in the Sun is quietly turning light into energy it can use,\" which is from the learner's world, though a bit generic.",
+          "score": 5
+        },
+        "frame": {
+          "reason": "The solar panel charging a battery pack, with the Calvin cycle as the cordless drill, does the job of the whole process and is not a stock picture. It is set up early (v1-2) and recurs in \"another battery to fill,\" \"fully charged,\" \"Both batteries flat\" and \"sends the empties back... to charge anew\"; the lesson and narration carry it too. The mill wheel for ATP synthase fits inside it. It is weakened a little by the intro's \"charging up\" and the title line not naming the frame, and by the aside about numbering and the mitochondria digression, which break away from it.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "The lesson and narration teach all five links in order with causes: water is split \"to replace those electrons,\" the chain energy pumps protons, \"Protons can't cross the membrane on their own, so\" they pile up, and the \"only way back\" is ATP synthase. The song carries the gist and the bridge replays the chain in reverse. The weak spots are the photosystem I step, which says light re-energizes the electrons but not why that is needed to make NADPH, and the link from ATP and NADPH to the Calvin cycle, which is stated rather than caused.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "Most lines are steps in the chain and in order, such as \"Trapped H⁺ pile up → proton gradient\" and \"Photosystem I re-energizes e⁻ → NADPH.\" The first is a question, not a step, and it starts on the title line, and the second is a label-like equation (\"Solar panel = light reactions, battery pack = ATP + NADPH\"). Several lines start on the wrong lyric: \"Photosystem II splits water\" starts at v1-7, where the water splitting comes a line later at v1-8. \"Electron transport chain pumps H⁺\" starts at v1-9, before the pumping line in v1-10. \"H⁺ flowing back turns ATP synthase → ATP\" starts at v2-2, before the turning at v2-3, and the last line is a weed-killer application, not the core idea. The set never states the core idea or the pumping and gradient cause.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The core chemistry is correct: the oxygen comes from water, protons are pumped by the cytochrome complex, ATP synthase makes ATP, photosystem I leads to NADPH, and the herbicide effects are right. The imprecisions are the oxygen and protons both being \"released into the thylakoid space\" (f2 and the lesson step 2), the song's loose \"Electrons down the chain pack protons tight,\" and \"that's how ATP comes through\" for respiration. A teacher would tighten these, and they leave a learner with a slightly wrong picture, but not a wrong core idea. The thousand-fold ratio is stated in the narration and lesson as being about 1000 times more protons, which agrees with the guide.",
+          "score": 3
+        },
+        "singability": {
+          "reason": "The chorus is a strong chant: \"Split the water, catch the light / Electrons down the chain pack protons tight\" rhymes cleanly and is easy to sing back. Many verse lines, though, are long and read like textbook sentences: \"Protons crowd the thylakoid space, piling up inside,\" \"Next, the Calvin cycle spends them building sugar from CO2,\" and \"Then sends the empties back to the thylakoids to charge anew\" overrun the bar even for rap. Some rhymes bend meaning, such as \"the protons barge\" with \"fully charged,\" \"Floating in the stroma, that's the charger, flat green sacs\" for \"stacks,\" and \"though\" at the end of pc1-2 as a filler tag. The numbering aside (v1-5, v1-6) is cute but not helpful, and lines like v2-12 are filler.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a real question, gives a clear solar-charger big picture, and builds steps with their causes. It has a Predict question (\"where will they go?\") answered right after, names the oxygen misconception with the reason it is wrong, and ends on a check, \"Why does ATP synthase stop making ATP when a weed-killer blocks electrons...\", that needs the chain to answer. It is pitched at the right level and the \"Simplified\" note is honest. Flaws: the opening question is only answered much later in the Common mistake section, the misconception sits after the steps instead of next to the water-splitting step, and a few extras (chemiosmosis, mitochondria, the table) add terms for a first-time learner.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Narration n13: \"That releases oxygen, plus protons that stay inside the thylakoid space.\" Also the lesson step 2 and f2: \"the oxygen and protons are released into the thylakoid space.\"",
+          "problem": "The oxygen is released as O2 from the chloroplast, not into the thylakoid space as a proton-like product, and the sentence places both products in the space in a way that implies oxygen stays there.",
+          "correction": "Say water splits into electrons, protons (which stay in the thylakoid space) and oxygen, which leaves the plant as O2."
+        },
+        {
+          "claim": "Lyric v1-3/v1-4: \"Inside a chloroplast, there's thylakoids in stacks / Floating in the stroma, that's the charger, flat green sacs\"",
+          "problem": "The thylakoids are surrounded by the stroma, but \"charger\" here is misleading because the solar panel analogy puts the whole light reactions as the charger, not just the sacs.",
+          "correction": "Say the thylakoids sit in the stroma and are where the charging happens."
+        },
+        {
+          "claim": "Lyric v1-10 and c1-2: \"That drop pumps protons in across the wall\" and \"Electrons down the chain pack protons tight\"",
+          "problem": "The sung wording suggests every part of the chain pumps and that the electrons themselves pack protons, whereas only the cytochrome complex pumps, using the electrons' energy.",
+          "correction": "Say the electrons' energy pumps protons in."
+        },
+        {
+          "claim": "Lyric v2-9/v2-10: \"That proton trick? Your mitochondria use it too / In cellular respiration, that's how ATP comes through\"",
+          "problem": "This overstates it: most ATP in respiration comes from chemiosmosis, but substrate-level phosphorylation also makes some ATP.",
+          "correction": "Say mitochondria use the same trick to make most of their ATP."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "Light drives electrons from water down a chain, and that flow charges ATP and NADPH, the batteries for making sugar.",
+      "why_chain": [
+        "Light boosts electrons in photosystem II, which replaces them by splitting water, releasing oxygen.",
+        "The energized electrons flow down the electron transport chain, and their energy pumps protons into the thylakoid space.",
+        "Protons can't cross the membrane on their own, so they pile up into a proton gradient.",
+        "Their only way back out is through ATP synthase, and their flow turns it to make ATP.",
+        "Photosystem I re-energizes the electrons to make NADPH, and ATP and NADPH power the Calvin cycle."
+      ],
+      "title_line": "Split the water, catch the light",
+      "bpm": 110,
+      "cost": {
+        "bundle": 1.9602,
+        "judge": 0.0792,
+        "unpriced": false
+      },
+      "seconds": 838.4
+    },
+    {
+      "id": "derivative",
+      "subject": "calculus",
+      "level": "AP",
+      "topic": "what a derivative means",
+      "course": "AP Calculus AB",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "lyric-style": 2
+        },
+        "problems": [
+          "v2-1 lyric-style: \"Slopes go three, two point one, two point oh one in a row\" runs 13 words, over 12",
+          "v2-6 lyric-style: \"For x squared, that's two x, the power rule just saves you time\" runs 13 words, over 12"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": [
+            "The student did not mention the power rule as a shortcut for computing the derivative function; they only gave 2x for x² as an example."
+          ]
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Shrink the gap, read the dial\" is short, concrete, and sings back easily; it carries the core move (shrink the interval, get the instant reading). The lesson opens on a real question, \"How can a car have a speed at a single instant...\", which a learner wants answered. The narration opens in the learner's world, \"Picture a car's dashboard, where the trip display says you averaged fifty miles per hour.\" \"Read the dial\" is slightly vague on its own and it never names the average.",
+          "score": 5
+        },
+        "frame": {
+          "reason": "The speedometer versus trip display fits the whole job: instant rate versus average rate. It is set up in i-2 and v1-1 to v1-4, returns in the chorus (\"read the dial\") and in the outro (\"Not the trip's average, the speed you're going now\"), and also appears in the lesson and narration (n1-n4). It is a fitting picture, and the position-to-velocity example fits inside it. The bridge on |x| drops the frame, and so does the chorus c3-5/6 line about zooming, though that is minor.",
+          "score": 5
+        },
+        "why_chain": {
+          "reason": "The lesson and narration teach all five links in order with causes: an average hides the instant, a secant slope gives the average, shrinking the interval makes the secants close in, that limit is the derivative (with why h = 0 fails), and doing it everywhere gives f′ with the power rule as a shortcut. The numeric table and the 0/0 explanation make each step concrete. Link 5 gets the least cause: the lesson says the limit \"at every x gives a new function\" but only mentions it briefly. The song carries the chain's gist well.",
+          "score": 5
+        },
+        "key_lines": {
+          "reason": "In order the lines tell the chain well: \"An average over an interval hides the instant\", \"Secant line slope = average rate of change\", \"Shrink the gap → secant swings toward tangent line\", \"Limit of secant slopes = derivative = tangent line slope\". But the first, \"What does a derivative actually measure?\", is a question, not a step. The last line, about the sharp corner, is a side branch rather than the chain's end, so no line states the core idea. The line \"Limit of secant slopes = derivative = tangent line slope\" is on the dense side, and the first line starts at i-1 where the title is sung rather than at the dashboard step.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The content is accurate: the numbers 3, 2.1, 2.01 for the average velocities, the limit 2, f′(x) = 2x, the |x| corner with slopes −1 and +1, and the note that jumps and vertical tangents also fail. The lesson flags its one-example simplification. Small imprecisions are the song's \"zero over zero, not a thing\" and the vague pre-chorus about the power rule, but nothing a learner would carry away wrong.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "The chorus is a strong chant: \"Shrink the gap, read the dial\" opens and closes it, and the rhymes (while/dial) are clean. Many verse lines overrun the bar, such as \"Slide the points together, zoom till the curve looks straight\" and \"The tangent slope's the derivative, the instant rate\", and some read like textbook sentences, like \"Both sides must close in on the same number, left and right\" and \"Meters per second, that's velocity, the instant rate it's got\". The chorus c3 is long (7 lines), and rhymes bend with filler: \"the instant rate it's got\", \"not a thing\", \"the corner's twist\".",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a real question, builds the idea through the car and secant slopes, and asks a prediction (\"what number are these closing in on?\") answered right after. It names the power-rule misconception and why it is wrong, and ends with a check that needs the core idea: left slopes 3, right 5. The one drawback is bulk: it carries several new terms (secant, tangent, limit, f′) plus the no-derivative section and the \"where it leads\" section, which could be trimmed for a first meeting.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "v1-8: \"Plug zero in the gap? It's zero over zero, not a thing\"",
+          "problem": "Mildly misleading: 0/0 is undefined (indeterminate), and \"not a thing\" could suggest it means nothing rather than that the value can't be found by substitution.",
+          "correction": "Say it is undefined: zero over zero has no value, so we need a limit."
+        },
+        {
+          "claim": "p1-1: \"It's more than bringing down the exponent, that's a shortcut road\"",
+          "problem": "The sung line is vague about what the power rule shortcuts and could be taken to mean the exponent move is only part of the rule.",
+          "correction": "\"Bringing down the exponent is a shortcut for the limit; the derivative is the rate right now.\""
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "Shrink the interval, and the average rate of change closes in on the derivative: the rate at one instant.",
+      "why_chain": [
+        "A curve's steepness changes from point to point, so an average over a long interval hides what happens at one instant.",
+        "The slope of a secant line through two points gives the average rate of change over the interval between them.",
+        "Sliding the second point toward the first shrinks the interval, so the secant line swings toward the tangent line and its slope closes in on one number.",
+        "That number, the limit, is the derivative: the slope of the tangent line and the instantaneous rate of change, like a speedometer reading.",
+        "Because the limit can be taken at every point, the derivative is a new function, and the power rule is a shortcut for computing it."
+      ],
+      "title_line": "Shrink the gap, read the dial",
+      "bpm": 96,
+      "cost": {
+        "bundle": 1.5771,
+        "judge": 0.0982,
+        "unpriced": false
+      },
+      "seconds": 684.9
+    },
+    {
+      "id": "french-revolution",
+      "subject": "history",
+      "level": "AP",
+      "topic": "why the French Revolution happened",
+      "course": "AP European History",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "key-line": 2
+        },
+        "problems": [
+          "v2-3 key-line: the key line \"Voting by order → clergy and nobles outvote 2 to 1\" runs 11 words, over 10",
+          "b-5 key-line: the key line \"Troops near Paris → crowd storms Bastille → king loses Paris\" runs 11 words, over 10"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"The king went broke, the people rose\" is concrete, singable and close to the core idea, and it opens and closes the chorus. But it is two clauses of near-summary rather than a vivid action on real things, and it names the result more than the big move (asking for money and getting a vote). The lesson opens on a real question, \"How does a king's money problem end with a crowd storming a fortress?\", and the narration opens on bread (\"a poor French family could spend more than half its wages on bread\"), which is from the learner's world.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The pressure cooker (pot = Third Estate, lid = king's power, flame = debt) fits the whole crisis and is set up in v1-1 and v1-2, then returns in the chorus (\"the pressure grows\", \"Turn up the heat\") and the outro (\"The lid blew off\"). The lesson and narration use it too. The frame is somewhat stock, and it is dropped in the second verse and bridge. The bridge's harvest and bread are never tied to the pot, and the pyramid in the narration adds a second picture.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "The lesson walks the links in order with causes: debt, then \"The nobles refused to pay\" so the Estates-General was called, then \"wanted a real say\", then the stacked vote, then the Assembly, then the Bastille. The \"Predict\" box explains why 600 deputies still lose. Some links are thin: the lesson doesn't say why the debt pushed the king to tax the privileged, and \"why the Assembly's seizure of power led to troops\" is only implied. The narration spends time on the pyramid and the Marie Antoinette aside, which break the flow.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "Most lines are real steps with arrows, such as \"Voting by order → clergy and nobles outvote 2 to 1\" and \"Nobles refuse new taxes → king calls Estates-General\". The first, \"Why did France explode into revolution in 1789?\", is a question, not a step. The order is also off: the Enlightenment line comes before the nobles refusing, which breaks the chain's order, and the harvest line comes after the National Assembly but is a Third-Estate cause. The harvest line has no narration anchor, and the opening line is anchored to bread, not the king going broke. The last line lacks the core-idea payoff.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The facts match the study guide: debt from wars, about half of spending on interest, the 1614 Estates-General, voting by order, 17 June, the Tennis Court Oath and 14 July with seven prisoners. The song does, however, say \"Outvoted, they broke away, and the king's control was lost\", which merges the Assembly's step with the later loss of Paris. The song's ordering also puts the Enlightenment before the nobles' refusal. Nothing is wrong enough for a learner to carry away a false claim.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "The chorus is a clean, chantable block (\"Taxed and hungry, the pressure grows / Turn up the heat and the whole thing blows\"), and the rhymes are mostly clean. Many verse lines run long even for rap and read like textbook captions: \"The Third Estate's six hundred, as many as the other two\" and \"Forget the queen's cake, the royal court barely made a dent\". Some rhymes are bent to land, such as \"nobody's seen\" with \"sixteen-fourteen\" and \"on its back\" with \"main tax\". The third chorus adds two long lines that break the chant.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question, gives the big picture with the pressure cooker, and builds on causes. A Predict question (\"why couldn't it win a vote?\") is answered right after, and the misconception section names Marie Antoinette and explains why it is wrong. The closing check, \"If the crown had not been nearly bankrupt, why might the Third Estate never have gotten its chance in 1789?\", needs the core idea. The lesson carries many terms (Old Regime, Tennis Court Oath, Rousseau, bourgeoisie-like groups) and a \"What comes next\" section that could be cut.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lesson step 3 and narration n13-n14 / key line: \"Enlightenment ideas → Third Estate wants a real say\" with Rousseau as the main thinker, while the song (v1-5) has the Third Estate reading Rousseau before the nobles refuse",
+          "problem": "Placing the Enlightenment link before the nobles' refusal in the song and key lines mixes the chain's order, though this is minor and not factually false.",
+          "correction": "Keep the order of the why chain: nobles refuse, then the Estates-General is called, then the Third Estate presses for a real say."
+        },
+        {
+          "claim": "Song c3-2: \"Outvoted, they broke away, and the king's control was lost\"",
+          "problem": "This compresses two steps, implying the break-away itself cost the king control, when control of Paris was lost only after the Bastille on 14 July.",
+          "correction": "Say the Third Estate broke away and later the king lost control of Paris when the Bastille fell."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "A bankrupt king had to ask an overtaxed, hungry Third Estate for money, and they took power instead.",
+      "why_chain": [
+        "Costly wars left the crown so deep in debt that it was nearly bankrupt.",
+        "The nobles refused new taxes, so the king had to call the Estates-General to approve them.",
+        "The Third Estate paid most taxes, was hungry and had read Enlightenment ideas, so it wanted a real say.",
+        "Voting by order let the clergy and nobles outvote it, so it declared itself the National Assembly.",
+        "When the king gathered troops, Parisians stormed the Bastille, and he lost control of Paris."
+      ],
+      "title_line": "The king went broke, the people rose",
+      "bpm": 96,
+      "cost": {
+        "bundle": 1.8351,
+        "judge": 0.0589,
+        "unpriced": false
+      },
+      "seconds": 833.2
+    },
+    {
+      "id": "dramatic-irony",
+      "subject": "literature",
+      "level": "high school",
+      "topic": "dramatic irony in Romeo and Juliet",
+      "course": "English 9",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "key-line": 1,
+          "lyric-style": 1
+        },
+        "problems": [
+          "v1-7 key-line: the key line \"Characters act on wrong beliefs → audience sees where it leads\" runs 11 words, over 10",
+          "lyrics lyric-style: 3 lines end on a claim-free tag, over 2: \"But you know she's only sleeping, she'll be waking soon\"; \"They marry in secret, and you know where it's going\"; \"You know her secret husband's banished, that's her heartbreak\""
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 4,
+          "of": 4,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Wait, Romeo, she's only sleeping\" is concrete, singable after one hearing, and it opens and closes the chorus. It names the tomb moment, though, and not the whole core idea about the gap between audience and character. The lesson opens on a real question (\"Why would Shakespeare tell you how his play ends before the first scene even starts?\"), and the narration opens on a viewer on the couch, which is from the learner's world.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The frame is yelling at a scary movie, \"You can see the danger behind the door, and the character can't,\" and it does the same job as dramatic irony. It is set up in the lesson, in narration n1-n4 and in v1-1. It is a fairly common picture, though, and the song drops it after verse 1 and returns only with \"We shout at the stage\" in the outro. The chorus and bridge are about the tomb and not the movie picture.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "The lesson and narration walk through the Prologue, wrong beliefs, seeing where choices lead, and the gap that builds dread, with the tomb as the widest gap. The causes are given (\"Knowing the ending doesn't remove the suspense. It creates suspense about how and when\"). Link 3 is shown through Lady Capulet's weeping and not through a general explanation, and why the gap makes dread rather than just interest is stated more than explained. The letter's failure is a good causal sequence.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "The lines run in order and mostly tell the chain: \"Prologue reveals the ending → audience knows more than characters\" and \"Characters act on wrong beliefs → audience sees where it leads.\" Several fall short. The first is a question and the second is an analogy label. \"Not a twist: the character is surprised\" sits on a pre-chorus line and breaks the chain. \"We know what they don't → suspense and dread\" starts at \"Her family mourns her and they lay her in the tomb,\" which is a different step. \"Letter blocked\" comes last, after the tomb lines, so the chain does not finish on the core idea.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The play facts match the text: the fourteen-line sonnet, Friar John's quarantine, Balthasar's news, Romeo noticing red lips and cheeks, and the dagger. One imprecision a teacher would tighten is the claim in chorus c1-4 (\"We know the plan in the letter he never read\"). Romeo never received the letter, so \"never read\" is slightly off. The line \"we see where it's leading\" and the claim that the Prologue's gap is why the audience \"knows more than characters from the start\" are fair. The lesson's claim that the audience \"isn't surprised at all\" is a sound simplification.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "The chorus is a strong chant: \"Wait, Romeo, she's only sleeping / That's dramatic irony, we see where it's leading.\" The rhymes mostly land (dread/read, sleeping/leading, tomb/soon). Several rapped verse lines read like textbook sentences and run long, like \"Well, fourteen lines before a single scene begins\" and \"Now her mother thinks she's weeping for her cousin's sake.\" The bridge is a narrative list with strained rhymes (\"stuck in his hands,\" \"with his own blade / the lovers paid\"). \"Sleeping/leading\" is a slant rhyme, and the pre-chorus p2 reads as a textbook note (\"That's one kind of irony, but there's verbal too\").",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question, gives the big picture, and uses the movie analogy before the mechanism. It has a prediction question (\"What do you think Romeo believes when he finds Juliet in the tomb?\"), answered right away, and a Misconception section that explains why situational irony differs. The ending check, \"Why does the tomb scene feel so tense, even though the Prologue already told you how the tragedy ends?\", needs the core idea to answer. The lesson carries many terms (Prologue, Chorus, suspense, tragedy, situational irony, verbal irony) and a long plot account of the tomb, which could be trimmed.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lesson and narration n15: Juliet's potion makes her seem dead \"for forty-two hours\" (also v2-2 \"Forty-two hours, then she'll open up her eyes\")",
+          "problem": "The forty-two hours is the potion's duration in the play, but the line never gives its source, and it sits oddly next to the claim that the Friar's plan is for Romeo to come as she wakes, which is a detail a student might doubt. It does match the play (Friar Laurence says 'two and forty hours'), so it is not wrong, only worth checking.",
+          "correction": "No change needed to the figure."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "In dramatic irony, the audience knows what a character doesn't, so their hopeful choices fill us with dread.",
+      "why_chain": [
+        "The Prologue reveals the ending first, so the audience knows more than the characters from the start.",
+        "The characters keep acting on what they believe, which the audience knows is wrong.",
+        "Because the audience sees where each choice leads, the gap between what we know and what they know builds suspense and dread.",
+        "The gap is widest at the tomb, where Romeo thinks Juliet is dead but the audience knows she is only asleep."
+      ],
+      "title_line": "Wait, Romeo, she's only sleeping",
+      "bpm": 92,
+      "cost": {
+        "bundle": 1.3809,
+        "judge": 0.0678,
+        "unpriced": false
+      },
+      "seconds": 624.0
+    },
+    {
+      "id": "catalyst",
+      "subject": "chemistry",
+      "level": "college",
+      "topic": "how a catalyst speeds up a reaction",
+      "course": "General Chemistry",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 0,
+        "repaired": 0,
+        "by_rule": {},
+        "problems": []
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Take the low pass, the molecules go\" is concrete and singable, and it carries the frame, but it leans on a pronoun-ish \"the molecules go\" and does not name the catalyst or the lowered barrier. The lesson opens on a real question (\"Why does hydrogen peroxide fizz the moment it touches a cut?\"), and the narration opens on the learner's car exhaust (\"Every time a car runs...\"). The intro's second line (\"so CO won't stay CO\") is clunky, and the song opens without saying what is being passed.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "\"A lower road through a notch in the ridge\" is an apt picture of the whole job: same two valleys, a gentler climb, more travellers over per hour. It is not a stock frame. It is set up in v1, carried through the chorus (\"Take the low pass\"), the bridge (\"no lower climb\") and the outro (\"Same two valleys, just a lower road... comes back for the next load\"). The lesson and narration use it too, and \"the lower road still climbs\" is built into it. The catalytic converter scenes are an example, not a competing picture.",
+          "score": 5
+        },
+        "why_chain": {
+          "reason": "The lesson walks the links in order: collisions need Ea to reach the transition state, only a fraction have it, the catalyst gives a lower-barrier mechanism, a larger fraction succeeds (\"rate constant depends exponentially on Eₐ\"), and the catalyst is regenerated. Each link is explained, and the Predict question sits at the right place. The narration follows the same order. The lowest-energy link is the last one: why equilibrium is unchanged (both directions sped equally) is stated, and the song carries the gist (\"speeds both ways the same\"). It is nearly complete, but the link to ΔH comes only as a statement.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "Most lines are real steps and they run in order (\"Few collisions have enough energy → rate is limited\", \"Lower activation energy → rate constant rises exponentially\"). The first, \"How does a catalyst speed up a reaction?\", is a question rather than a step, and it sits on the intro line, which is the title. \"Lower road = new reaction mechanism, lower barrier\" is placed before the collision-energy steps, so the order of the chain is scrambled: the catalyst comes in before activation energy is introduced. \"No added energy; enthalpy change ΔH stays the same\" is two ideas, and it sits at a lyric that only mentions energy. Ten lines is a lot, and some are about the converter rather than the core idea.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The science is sound at the college level: Ea as the hump height, the Arrhenius k = A·e^(−Ea/RT), the 5.7 kJ/mol giving about a tenfold rise at 25 °C, regeneration of the catalyst, unchanged ΔH and equilibrium, and the lead poisoning of the converter all check out, and the simplification about one hump is flagged. The one thing a teacher would tighten is the song's \"CO stays CO\" and \"CO leaves unchanged\", which suggests the uncatalyzed reaction stops, while the lesson's own check question asks why it slows rather than stops. That is a small imprecision, nothing a learner would carry away wrong.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "Many lines are real phrases and the chorus is chantable (\"Take the low pass, the molecules go\"). But several verse lines read like textbook sentences: \"Molecules need activation energy to react\", \"Shave just under six kilojoules a mole off the climb\" and \"One step takes the catalyst, a later step gives it back\". Some run well past the bar (v2-7 \"So the CO from the engine comes in under one name\"; b-7 \"That's why a car with a catalyst has to run unleaded\"). Some rhymes bend meaning (\"plays fair\"/\"faster there\", \"the shortcut's dead\"), and \"CO2\" and \"delta H\" are written as numbers or symbols rather than as a singer says them. The chorus c1 is long, with c3 doubling it.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question (\"Why does hydrogen peroxide fizz...\"), gives the picture, builds the chain step by step, and has one Predict question answered right after. The misconception is named and refuted (\"extra energy or by changing ΔH... it opens a lower path\"). The closing check is a good one: \"why does the reaction slow to its uncatalyzed rate instead of stopping completely?\" needs the idea that the high path still exists. It is quite full for a first read: the table, the car, enzymes, equilibrium and the Arrhenius equation all arrive together, and the new terms (transition state, mechanism, rate constant, active site, equilibrium) are many.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "c3-1/c3-2 \"Same reactants, same products, the same delta H / Just a lower peak, so the whole thing picks up pace\" and the narration's \"the catalyst is never used up\" (n2) against v2-5 \"One step takes the catalyst\"",
+          "problem": "The 'whole thing' is imprecise, but more importantly n2 and the lyrics v2-7 say CO 'comes in under one name' as fine; the real imprecision is the converter story: CO2 'leaves the tailpipe' is fine, yet 'CO stays CO' in the bridge implies zero conversion without a catalyst, when the uncatalyzed rate is only slow.",
+          "correction": "Say the CO is converted far more slowly without the catalyst, so most of it passes out unchanged during its short time in the exhaust."
+        }
+      ],
+      "audience": "college",
+      "core_idea": "A catalyst opens a new path with lower activation energy, so more collisions react each second.",
+      "why_chain": [
+        "Molecules react only when a collision has at least the activation energy, enough to reach the transition state.",
+        "At a given temperature only a fraction of collisions have that much energy, so that fraction limits the rate.",
+        "A catalyst provides a different reaction mechanism whose highest barrier is lower.",
+        "With a lower activation energy, a much larger fraction of collisions succeed, so the rate constant rises exponentially.",
+        "The catalyst is regenerated in a later step, so it keeps working while ΔH and the equilibrium position stay the same."
+      ],
+      "title_line": "Take the low pass, the molecules go",
+      "bpm": 96,
+      "cost": {
+        "bundle": 1.448,
+        "judge": 0.0656,
+        "unpriced": false
+      },
+      "seconds": 654.7
+    },
+    {
+      "id": "supply-and-demand",
+      "subject": "economics",
+      "level": "high school",
+      "topic": "how supply and demand set a price",
+      "course": "Economics",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 3,
+        "repaired": 0,
+        "by_rule": {
+          "key-line": 3
+        },
+        "problems": [
+          "v1-9 key-line: the key line \"Price ↑ → more profit → sellers offer more (law of supply)\" runs 12 words, over 10",
+          "p2-1 key-line: the key line \"New trend shifts demand right → equilibrium price and quantity rise\" runs 11 words, over 10",
+          "b-1 key-line: the key line \"Price ceiling below equilibrium → price can't rise → shortage stays\" runs 11 words, over 10"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 3,
+          "of": 5,
+          "passed": true,
+          "missing": [
+            "Why buyers want less when price rises: the good costs more relative to other things they could buy (substitution), not just 'law of demand'.",
+            "Why sellers offer more when price rises: selling more becomes more profitable."
+          ]
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Supply meets demand, the price sits tight\" names the topic in abstract terms and could open any economics song. \"Sits tight\" is also misleading, since the core idea is that price moves. The lesson opens well on a question (\"Why do limited sneakers resell for more than the store price, while strawberries get cheaper...\"), and the narration opens on a sneaker drop from the learner's world.",
+          "score": 3
+        },
+        "frame": {
+          "reason": "The two-way auction (\"bidders stand for demand, items for sale for supply, and the auctioneer's call for the price\") is an apt picture of the whole mechanism: hands raised against items, price climbing or dropping. It is set up early in the lesson, narration (n5-n6) and song verse 1. It is then dropped. The chorus, bridge and outro do not use it, and the later sections run on shortage and surplus language alone.",
+          "score": 3
+        },
+        "why_chain": {
+          "reason": "The lesson and narration teach every link with its cause: \"because the good costs more compared with other things\", \"because selling becomes more profitable\", \"buyers compete for the scarce goods, so sellers can raise the price\", \"unsold goods pile up, so sellers cut the price\", and \"no shortage pushes it up and no surplus pushes it down\". They also say how each move closes the gap. The order is clear and the song carries the gist. The narration adds a tangent (the price ceiling) after the chain is done, but this does not break it.",
+          "score": 5
+        },
+        "key_lines": {
+          "reason": "Most lines are real steps with arrows: \"Price too low → shortage → price rises\", \"Price ↑ → more profit → sellers offer more\". But the first, \"How do buyers and sellers set a price?\", is a question and not a step. \"Auction: bidders = demand...\" is a label. The \"Price too high → surplus\" line starts at v2-7, the harvest line, not at the surplus step. The shift and price ceiling lines add material outside the chain, and the core idea itself is never stated as a final line.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The economics is sound: laws of demand and supply, shortage and surplus dynamics, equilibrium, and the price ceiling. Two song lines mislead slightly. \"The price sits tight\" suggests a fixed price, and \"the shortage gets compressed\" is vague. A teacher would tighten these, but a learner would not come away with a wrong model.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "Many lines are whole, speakable phrases (\"Think of the market as an auction room\"), and the chorus is a chantable, repeating hook. But there are textbook lines (\"Law of supply: a higher price, the profit's bigger\"), and several overrun the bar, such as \"Equilibrium's found by buyers' and sellers' hands\". Some rhymes bend meaning, such as \"Sellers offer less till the surplus is no more\". The long 12-line verses and 8-line bridge are dense, and \"profit's bigger / climbs higher\" is awkward.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question, gives the rule, builds the mechanism through the auction, has a Predict question answered right after, names the misconception and why it is wrong, and ends on a good check (\"A store prices a new game console below its equilibrium price...\"). However, it carries many terms (law of demand, law of supply, equilibrium, shortage, surplus, price ceiling), and it adds side topics on wages, shifts and price ceilings that crowd the core idea.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Song c1-1, i-1, o-3: \"Supply meets demand, the price sits tight\"",
+          "problem": "\"Sits tight\" suggests the price stays fixed, which hides that price moves until it reaches equilibrium. It is a rhyme-driven phrase.",
+          "correction": "Say something like \"Supply meets demand, the price finds its place\", so the line reflects the price settling."
+        },
+        {
+          "claim": "Song v2-6: \"And sellers bring more, so the shortage gets compressed\"",
+          "problem": "This is imprecise. It reads as if the shortage compresses because sellers offer more, and \"compressed\" is vague. The shortage closes because buyers want less and sellers offer more as the price rises.",
+          "correction": "\"As the price climbs, buyers want less and sellers bring more, so the shortage closes.\""
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "Price moves until buyers want exactly what sellers offer: shortages push it up, surpluses push it down.",
+      "why_chain": [
+        "When the price rises, buyers want less, because the good now costs more compared with other things they could buy.",
+        "When the price rises, sellers offer more, because selling more becomes more profitable.",
+        "Below the equilibrium price, buyers want more than sellers offer, so the shortage lets sellers raise the price.",
+        "Above the equilibrium price, sellers offer more than buyers want, so the surplus pushes sellers to cut the price.",
+        "At the equilibrium price the amounts match, so nothing pushes the price and it stops moving."
+      ],
+      "title_line": "Supply meets demand, the price sits tight",
+      "bpm": 100,
+      "cost": {
+        "bundle": 1.5947,
+        "judge": 0.0645,
+        "unpriced": false
+      },
+      "seconds": 663.4
+    },
+    {
+      "id": "moon-phases",
+      "subject": "earth and space science",
+      "level": "middle school",
+      "topic": "why the Moon has phases",
+      "course": "6th grade science",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 3,
+        "repaired": 1,
+        "by_rule": {
+          "lyric-style": 2,
+          "key-line": 1
+        },
+        "problems": [
+          "p2-1 lyric-style: \"Next up, eclipses, when the three line up in a row\" narrates the picture instead of being sung",
+          "music lyric-style: 47 lines at 96 bpm sing for about 118 s, outside 120 to 160",
+          "v1-5 key-line: the key line \"Sun lights the facing side → half the Moon always lit\" runs 11 words, over 10"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Sun lights half, the Moon goes round\" is concrete and sings back easily, and it is the core idea in miniature. It uses actions on real things, but it names two parts (half lit, orbit) and leaves out the \"we see more or less\" move. The lesson opens on a real question, \"If the Moon is a round ball, why does it look like a thin sliver on some nights and a full circle on others?\" The narration opens on the learner's world: \"Just after sunset, you can often see a thin Moon near where the Sun went down.\"",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The lamp and ball is a strong model that does the whole job, \"the lamp is the Sun, the ball is the Moon, and your head is Earth\". The song sets it up in v1-1 and the lesson and narration use it. But it drops out of the chorus, bridge and outro, and the song never mentions it again after v1. The day/night comparison is a second, side picture, and it does not fit inside the model. The frame is apt but is not carried through the whole song.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "All five links appear in order in the lesson, and the narration covers them: no light of its own (n8), half always lit (n9), orbit (n11), each place shows a different amount (n12-n17), and the same path gives a repeating cycle (n20). Link 4 is taught mostly by describing each phase's position, not by stating the cause each time. Link 5 says \"the same order repeats\" but the narration doesn't say that the same path is why. The song carries the gist in c3-1/c3-2.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "The first line, \"Why does the Moon change shape?\", is a question, not a step. The last, \"Earth blocks sunlight → lunar eclipse, only at full moon\", is off the core idea and the core idea is never stated. The \"Lamp = Sun, ball = Moon, your head = Earth\" line is a label. There is no line for link 4, the view changing with each new place, and the on-screen lines never close on the core idea. The middle lines are plain, short steps that start where they are sung and said.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The science is correct throughout: the phase order, the 29.5 days, the lit-half model, and the eclipse and 5-degree tilt facts. The claim that the lit far side at new moon is the far side is true, and the song's \"new to full is waxing\" is accurate. The only weakness is a gap: the Moon's rotation is not explained when the far side is brought in, and the \"Simplified\" note covers only the week spacing. A teacher would tighten that, but nothing a learner would carry away wrong.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "The chorus is a short, easy chant: \"Sun lights half, the Moon goes round\". Many verse lines fit the bar. Others are long, like v2-8 \"So the cycle repeats in the same order, phase by phase\" and v2-7 \"Back to new in about twenty-nine and a half days\", and the bridge lines b-5, b-7 and b-8 run over. The pre-chorus p2-1/p2-2 reads like a textbook preview. The rhymes are mostly clean, but \"phase by phase\" is a filler tag and \"seen from the ground\" is a bit forced. The bridge covers eclipses, which pulls it off the core idea.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a real question, builds from the lamp-and-ball model, asks a prediction question (\"what do you think we see when the Moon is on the far side of Earth from the Sun?\") and answers it right after. It names the misconception and says why it is wrong, and it ends on a check that needs the idea: \"why can't we see the Moon at all at new moon?\" It carries many terms (waxing, waning, crescent, gibbous, quarter, orbit) and the eclipse and tilt material, which is more than a first-time 11-year-old needs and could be cut.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lesson and narration (n12-n13, \"At new moon... the Moon's far side... is fully lit\"; lesson \"Here's a surprise: at new moon, the Moon's far side... is fully lit\")",
+          "problem": "The lesson's earlier text says the Moon turns once per orbit, and the Sun-facing half at new moon is indeed the far side. This is correct, but \"the Moon's far side\" is stated without the Moon's rotation being explained in the lesson or narration, so the learner could mix it up with the dark side.",
+          "correction": "Add a short note that the Moon spins once each orbit, so the same side always faces Earth, which is why the far side is the lit half at new moon."
+        }
+      ],
+      "audience": "about age 11",
+      "core_idea": "Sunlight always lights half the Moon; as the Moon orbits Earth, we see more or less of that half.",
+      "why_chain": [
+        "The Moon makes no light of its own, so it shines only by reflecting sunlight.",
+        "The Sun lights only the side facing it, so half the Moon is always lit.",
+        "The Moon orbits Earth about once a month, so its place around us keeps changing.",
+        "Each new place turns a different amount of the lit half toward Earth, so we see a different phase.",
+        "The Moon takes the same path every orbit, so the phases repeat in the same order about every 29.5 days."
+      ],
+      "title_line": "Sun lights half, the Moon goes round",
+      "bpm": 96,
+      "cost": {
+        "bundle": 1.5958,
+        "judge": 0.0577,
+        "unpriced": false
+      },
+      "seconds": 715.4
+    },
+    {
+      "id": "rocket-third-law",
+      "subject": "physics",
+      "level": "high school",
+      "topic": "how a rocket moves in space: Newton's third law",
+      "course": "Physics",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 8,
+        "repaired": 0,
+        "by_rule": {
+          "lyric-style": 5,
+          "motion": 1,
+          "key-line": 2
+        },
+        "problems": [
+          "p1-2 lyric-style: \"It pushes its own exhaust, so it works when the air is gone\" runs 13 words, over 12",
+          "v2-6 lyric-style: \"The gas is light, it gets flung back fast, and out it goes\" runs 13 words, over 12",
+          "v2-10 lyric-style: \"Than at sea level, where the air pushes back at the engine's base\" runs 13 words, over 12",
+          "b-6 lyric-style: \"It coasts straight on at the same speed, it doesn't stop at all\" runs 13 words, over 12",
+          "music lyric-style: 55 lines at 112 bpm sing for about 118 s, outside 120 to 160",
+          "b-1 motion: 8 lines in a row from b-1 on a diagram scene with nothing moving",
+          "v1-1 key-line: the key line \"Push on an object → it pushes back, equal and opposite\" runs 11 words, over 10",
+          "b-1 key-line: the key line \"Fuel runs out → no thrust → rocket coasts, same speed\" runs 11 words, over 10"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Throw the gas back, take flight\" is concrete, singable and close to the core idea in miniature, and it opens and closes the chorus. It is held back a little because \"take flight\" is vague. The lesson opens on the learner's own question, \"If there's no air in space, what is a rocket pushing on?\", and the narration opens on a balloon, which is from the learner's world. The song's i-2 line is a stretched, slightly odd intro.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The skateboarder throwing a heavy ball is an apt picture of the whole job (push mass backward, get pushed forward), and it is used in the song, lesson and narration. In the song it appears in verse 1 and in v2-12 (\"the skater's trick\"), but it is absent from the chorus, bridge and outro, where the balloon appears instead. The balloon in the intro, outro and narration opening is a second picture that competes with it, though it is the same mechanism.",
+          "score": 3
+        },
+        "why_chain": {
+          "reason": "The lesson and narration teach each link in order and give the cause for each: oxidizer so no air is needed, burning makes high-pressure gas, the nozzle speeds it up, the third-law reaction gives thrust, and the \"different objects, so they never cancel\" point is made explicitly. The lesson's predict section also explains why equal forces give different accelerations. The final link, that it pushes on its own exhaust and so works in space, is made in the misconception section. The song carries the gist, but several tangents (momentum, coasting, thrust at sea level) dilute the chain.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "Most lines are steps, not labels, for example \"Fuel + oxidizer burn → hot, high-pressure exhaust gas\" and \"Forces act on different objects → they don't cancel\". Several problems remain. \"No air in space: what does a rocket push against?\" is a question rather than a step. Line 4 is pinned to \"It hauls a fuel tank and an oxidizer tank\", which is the tanks and not the burning. The \"Pushes its own exhaust, not air → works in space\" line is pinned to \"the thrust's a little higher in space\". There are ten lines with detours into momentum and coasting, and \"Nozzle shoots...\" is pinned to a line about speeding the gas up.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The core physics is sound: third-law pairs, thrust, the vacuum thrust gain, the first-law coasting and the momentum link are all correct. The one real slip is n11, \"That gas starts in the fuel tank\", which misplaces where the exhaust is made. Other lines (\"its own oxygen\", the loose \"heavy, so it speeds up slow\") are small imprecisions, and the balloon's rubber \"squeezes air\" is fine. Nothing here is carried away badly wrong.",
+          "score": 3
+        },
+        "singability": {
+          "reason": "The chorus \"Throw the gas back, take flight / Push the gas left, the rocket goes right\" is a clean, singable chant. Verses are rapped and many lines fit that, but some are textbook sentences, such as \"Same size, opposite way, an action-reaction pair\" and \"Conservation of momentum, that's the next chapter's name\". Lines like \"Its own oxygen, so there's no air it has to thank\" and \"Than at sea level, where the air pushes back at the engine's base\" reach for rhymes or run long. c3-1/c3-2 are an added chorus section that breaks the chant, and the verses are very long.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on the learner's question, then gives the big picture, the skateboard picture and the engine steps, with a labelled Predict question answered straight after (equal forces, so why is the gas faster?) and a section for the misconception. The ending check, \"what does it push against, and why does that make it move forward?\", is good but can be answered by repeating the core idea. The lesson also carries many new terms (oxidizer, combustion chamber, nozzle, thrust, second law, first law, momentum) and sections for coasting and momentum that go beyond what was asked.",
+          "score": 3
+        }
+      },
+      "errors": [
+        {
+          "claim": "Narration n11: \"That gas starts in the fuel tank, which holds the fuel.\"",
+          "problem": "The exhaust gas does not start in the fuel tank; it is made when fuel and oxidizer burn in the combustion chamber.",
+          "correction": "Say the rocket carries fuel in a tank, and that the exhaust gas is made when the fuel burns in the combustion chamber."
+        },
+        {
+          "claim": "Lyric v1-9/v1-10: \"Its own oxygen, so there's no air it has to thank\"",
+          "problem": "The oxidizer is not always oxygen (it is a supply of oxygen only in some engines); stating it as simply \"its own oxygen\" is a mild oversimplification, and the line is filler.",
+          "correction": "Say it carries an oxidizer, often liquid oxygen, so it needs no air to burn."
+        },
+        {
+          "claim": "Lyric v2-5/v2-6 and narration n19: \"The rocket's heavy, so it speeds up slow / The gas is light, it gets flung back fast\"",
+          "problem": "Equal forces on the exhaust and the rocket explain unequal accelerations, but the rocket does not simply start heavy and slow; as the song states it, a learner might think the rocket is slow when it is actually accelerating hard.",
+          "correction": "Say the same-size force gives the light exhaust a huge acceleration and the heavy rocket a smaller one."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "A rocket pushes its exhaust backward, so the exhaust pushes the rocket forward; it needs no air.",
+      "why_chain": [
+        "Burning fuel with the oxidizer the rocket carries makes hot, high-pressure exhaust gas in the combustion chamber.",
+        "The engine pushes that gas backward out of the nozzle at high speed.",
+        "By Newton's third law, the gas pushes the rocket forward with an equal and opposite force, called thrust.",
+        "The two forces act on different objects, so they don't cancel, and the rocket speeds up.",
+        "Because the rocket pushes on its own exhaust, not on air, it moves in empty space."
+      ],
+      "title_line": "Throw the gas back, take flight",
+      "bpm": 112,
+      "cost": {
+        "bundle": 1.4158,
+        "judge": 0.0617,
+        "unpriced": false
+      },
+      "seconds": 624.1
+    },
+    {
+      "id": "p-value",
+      "subject": "statistics",
+      "level": "AP",
+      "topic": "what a p-value means",
+      "course": "AP Statistics",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 0,
+        "repaired": 0,
+        "by_rule": {},
+        "problems": []
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Assume the null, then shade the tail\" is concrete, two actions on real things, and opens and closes the chorus, so it is singable and holds the method in miniature. But \"the null\" is jargon a first-time learner can't picture, and the line names the procedure rather than the big move of doubting the null when the tail is rare. The lesson opens on a real question (\"Is it rigged, or just lucky?\") and the narration opens on a friend's coin, which is good learner-world material.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The criminal trial fits the whole job of a significance test: presumed innocent, evidence too surprising, verdict, and not guilty versus innocent. It is set up in verse 1, returns in v2-7 and b-6, and is used in the lesson and narration. It is a fairly common analogy for hypothesis testing, and the chorus and outro drop it for the tail-shading procedure. The trial also maps surprise only loosely onto the p-value.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "The lesson and narration teach every link in order, with causes: \"We assume the null... because that gives a specific value\"; \"Most results land near the null value... far out are rare\"; the tail area as \"how often chance alone\" goes that far; tiny p-value means rare under the null, so doubt it; then compare with alpha. The song carries the gist well in verse 1, the chorus and verse 2. Link 5 is partly a decision rule rather than a cause, but it is explained as the result landing beyond the cutoff.",
+          "score": 5
+        },
+        "key_lines": {
+          "reason": "Read in order they follow the chain: assume the null, calculate chances, the sampling distribution shows what chance gives, the tail is the p-value, tiny means doubt, below alpha means reject. Each is anchored to a fitting lyric and narration line. But the first, \"How rare is your data if nothing's going on?\", is a question rather than a step, and the second, \"Defendant presumed innocent = null hypothesis assumed true\", is a label-like equation. \"Tail beyond observed result = p-value\" is also an equation, and the last line (about 20 tests) does not close on the core idea.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The facts are correct: the p-value is computed assuming the null, 1/1024 ≈ 0.001, the reject and fail-to-reject wording, the Type I error rate, and the 20-test expectation. The misconception is handled correctly, and the lesson flags the one-sided simplification. The lines \"point zero zero one, no more\" and \"that 'fair' claim is done\" are slightly loose in a sung register but not wrong. I found no errors to correct.",
+          "score": 5
+        },
+        "singability": {
+          "reason": "Most lines are phrased as a singer would say them, and the chorus is a repeatable chant: \"Assume the null, then shade the tail / That's your p-value if chance alone prevails.\" The rhymes are mostly clean, though some are forced: \"so that tail is tiny, point zero zero one, no more\", \"a Type One error made / convicted anyway\". Several rapped lines run long (v1-10, v2-12, v2-6), and v1-12's \"no more\" and the pre-chorus \"held tight\" are filler. The chorus is also long at 5 to 7 lines.",
+          "score": 4
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question, gives the trial picture in a table, then builds on why step by step. It poses \"What do you think a p-value that tiny says about H₀?\" and answers it right after, names the misconception and explains why it is wrong, and ends on a check that needs the idea: \"Why does a p-value of 0.001 make you doubt H₀, while 0.40 does not?\" It carries many terms (null, alternative, sampling distribution, alpha, significant, Type I) and the final section on Type I error and 20 tests goes past the core idea, so something could be cut.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Song b-4: \"A tiny tail, though there's no real effect in it\"; also b-3 \"expect about one to hit\"",
+          "problem": "This is slightly loose: the 20-tests point is that about one test is expected to come out significant, which is an expected count, not a guarantee, and \"tiny tail\" suggests a tiny p-value, which is fine. Nothing here is actually wrong.",
+          "correction": "No correction needed."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "The p-value says how often chance alone would give data this extreme; rare means doubt the null hypothesis.",
+      "why_chain": [
+        "We assume the null hypothesis is true, because it gives a specific value to calculate chances from.",
+        "Assuming it, the sampling distribution shows what results chance alone usually gives: most near the null value, few far out.",
+        "The p-value is the tail area beyond the observed result, so it measures how often chance alone goes that far.",
+        "A small p-value means data like ours would be rare if the null were true, so we doubt the null.",
+        "When the p-value is below the significance level, we reject the null hypothesis in favor of the alternative."
+      ],
+      "title_line": "Assume the null, then shade the tail",
+      "bpm": 108,
+      "cost": {
+        "bundle": 1.7047,
+        "judge": 0.0653,
+        "unpriced": false
+      },
+      "seconds": 735.4
+    },
+    {
+      "id": "spanish-subjunctive",
+      "subject": "language",
+      "level": "high school",
+      "topic": "when Spanish uses the subjunctive",
+      "course": "Spanish 2",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "lyric-style": 1,
+          "motion": 1
+        },
+        "problems": [
+          "p2-1 lyric-style: \"Next up, the past: esperaba que vinieras\" narrates the picture instead of being sung",
+          "b-3 motion: 4 lines in a row from b-3 on a diagram scene with nothing moving"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 4,
+          "of": 4,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Wish, doubt or feel, switch the mood\" is short, repeatable and the core idea in miniature, but it is abstract. It names no concrete actions on real things, and \"mood\" is vague to a high schooler. The lesson opens on the learner's own question, \"Why does Spanish say *espero que vengas* and not *espero que vienes*?\", and the narration opens on a friend's party text, so both openings are strong.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The comic (panel = what's really happening, thought bubble = what's in a head) fits the whole idea of fact versus wish, doubt or feeling, and it is not a stock picture. It is set up in v1-1 to v1-4, and the outro returns to it with \"Up in the thought bubble, not in plain view\". But the chorus, bridge and pre-choruses drop it. The lesson and narration set it up and then barely revisit it after n6. The \"Me alegra que estés aquí\" case, where the event is real, also strains the bubble picture.",
+          "score": 3
+        },
+        "why_chain": {
+          "reason": "Links 1-3 are taught in order with causes: the main clause decides, and a wish or doubt means not stated as fact, so the verb goes subjunctive. \"Sé que vienes... because knowing states a fact\" covers the que link. The yo-form link is explained, including \"the g from vengo carries over\". The lesson spends a lot of space on change of subject, WEIRDO and commands, which pad the chain without being part of it. The song carries the gist well in the chorus and bridge.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "Read in order, the key lines tell the chain well: the question, the main clause deciding, hoped for not known, que only links, the yo-form recipe, the g carrying over, and dropping the doubt. Most are steps. But \"Panel = indicative; thought bubble = subjunctive\" is more a label than a cause-and-effect step. The first line starts at i-1, a slogan, not at where the question is posed in the song. The last line starts at b-1, which does not match the narration n24 it is paired with. There is no closing line stating the core idea.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The grammar is correct: vengo gives venga/vengas, hablo gives hable, ser gives sea, ir gives vaya, and no vengas and venga are subjunctive commands. The no creo / creo que contrast is right. \"Espero que vienes\" is correctly called a grammar error. One small imprecision: \"Que links on the que clause\" in v1-7 is awkward but not wrong. The key-line wording \"Hoped for, not known\" is a fair simplification. The \"errors\" entry above is a placeholder with no real problem. I found nothing to correct.",
+          "score": 5
+        },
+        "singability": {
+          "reason": "The chorus is a strong, repeatable chant (\"Wish, doubt or feel, switch the mood\"), and the rhymes are mostly clean (feels/real, here/venir). But many verse lines run long and read like captions, such as \"Que links on the que clause, where you come in\", \"Two different people, that's where the subjunctive begins\" and \"Tengo gives tenga, the g stays the same\". Some rhymes are forced: \"era\" for \"vinieras\", \"that's the cause\" as filler, and \"the other family\". Rapped verses can take up to 14 syllables, so most fit, but p1-2 and c3-2 overrun the bar. The pre-chorus and chorus are sung and carry heavier lines.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on the learner's question, gives the big picture with the comic and a contrast table, and names the misconception with its reason. It includes a predict question (\"What do you think its *tú* subjunctive form is?\") answered right after. It ends on a good check: why the verb becomes *viene* when you drop the *no*. But it carries many new terms (mood, indicative, subjunctive, main and dependent clause, trigger, WEIRDO, change of subject, opposite ending, irregulars, commands) and extra material such as the commands and past subjunctive, which a first-timer may struggle to hold. The misconception comes late, and the \"Why it happens\" step 3 reads as a side rule.",
+          "score": 3
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lesson and v2-3/v2-4/n18: \"-ar verbs take e... er and ir verbs take a\" combined with \"Venir is an -ir verb, so you get venga\"",
+          "problem": "Not an error: this is correct, so nothing to list.",
+          "correction": "None"
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "When the main clause wishes, doubts or feels, the verb after que turns subjunctive: it's not stated as fact.",
+      "why_chain": [
+        "The main clause's verb either states a fact or expresses a wish, a doubt or a feeling.",
+        "A wish, doubt or feeling presents the que clause's action as not a stated fact, so that verb goes subjunctive.",
+        "Que only links the clauses, so 'sé que vienes' stays indicative: knowing states a fact.",
+        "The subjunctive is built from the yo form with the opposite ending, so vengo gives vengas, not vienes."
+      ],
+      "title_line": "Wish, doubt or feel, switch the mood",
+      "bpm": 100,
+      "cost": {
+        "bundle": 1.5907,
+        "judge": 0.0593,
+        "unpriced": false
+      },
+      "seconds": 713.7
+    },
+    {
+      "id": "classical-conditioning",
+      "subject": "psychology",
+      "level": "AP",
+      "topic": "classical conditioning",
+      "course": "AP Psychology",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "lyric-style": 2
+        },
+        "problems": [
+          "v2-4 lyric-style: \"So the dog learns the tone means the food is next in line\" runs 13 words, over 12",
+          "c1-1 lyric-style: the chorus says too little of the core idea: at most one of its words"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 4,
+          "of": 5,
+          "passed": true,
+          "missing": [
+            "If the tone keeps sounding without food, the response weakens (extinction) but can return after a rest, because the link was suppressed, not erased."
+          ]
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Play a sound, then serve the meal\" is concrete, singable after one hearing, and names the big move (pair a signal before food). It is a little generic about the outcome, since it leaves out that the sound alone starts working. The lesson opens on a real question, \"Why does the lunch bell make you hungry?\", and the narration opens in the learner's world with \"When the lunch bell rings, you might feel hungry before you see any food.\" Strong, close to an example.",
+          "score": 5
+        },
+        "frame": {
+          "reason": "The forecast frame (\"Dark clouds roll in and you know the rain is near\", \"The forecast's just on mute\") is apt for a signal that predicts an event. It appears in the lesson, narration (n3) and song, and is carried to the bridge, chorus c3-1 and outro \"that sound became a forecast of a meal\". It is set up in v1 rather than the intro and drops out of the second verse and chorus, and it is somewhat common as a picture. Extinction as \"on mute\" fits inside it well.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "The lesson and narration go reflex, then neutral tone, then pairing with timing and Rescorla's prediction, then the tone alone triggering, then extinction and spontaneous recovery, and they give causes (\"because it triggers a response without any learning\", \"suppresses the association rather than erasing it\"). The link \"it becomes a reliable signal because it predicts food\" is carried by Rescorla and the chorus, \"'Cause the dog learned the tone means food is due\". Some added material (Garcia, discrimination, operant contrast) dilutes the chain, and the step from pairing to the tone's power is a bit declarative in places, but there are no missing links.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "The lines read as a sequence from reflex to extinction and recovery, and most are steps (\"Conditioned stimulus alone → conditioned response\"). The first is a question that sets up the idea, not a step. The acquisition line starts on c1-1, \"Play a sound, then serve the meal\", which is the repeated title line and not where acquisition is sung (v2-1), and it comes before the conditioned-stimulus line that v2-5 introduces. The \"After rest\" line starts at b-5, though the suppressed/erased point is sung in b-7. Some lines carry terms such as \"unconditioned\" that are needed here. The chain from the first link to the core idea is mostly complete, though it omits the \"tone becomes a reliable signal\" link as a separate line.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "Facts match the study guide: the half-second timing, Rescorla, Garcia, the UR/CR same-behavior point, and spontaneous recovery as \"usually weaker\". The song says Albert \"heard a loud noise with a white rat in view\", which is fine, and \"unconditioned response, it's hard-wired\" is a fair simplification. The error list contains no real error. One tightening: v2-2 \"Half a second early works best, so it's a prediction\" is fine too. A small item: \"Extinction only buried it\" matches the guide's suppression language. Nothing a learner would carry away wrong.",
+          "score": 5
+        },
+        "singability": {
+          "reason": "The chorus is a clear chant (\"Play a sound, then serve the meal / Again and again, till the link gets real\") and the rhymes are mostly clean. Many verse lines read like textbook captions and run long, e.g. v1-6 \"And the drool's the unconditioned response, it's hard-wired\" and v2-3 \"Not just how often they're paired, it's how reliable the sign\", which is also grammatically bent for the rhyme. The pre-chorus p2-2 \"Operant ties reinforcement or punishment to how you act\" is a textbook sentence. Term-heavy lines sit close to the 14-syllable rap ceiling. A few rhymes are stretched (\"a lesson of its own\"). Chorus c3 runs long.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question and the big picture, has a Predict prompt answered straight away (\"It salivates anyway\"), names the misconception and why it is wrong, and ends on a good check: \"Why would a tone that plays *after* the food work poorly as a conditioned stimulus?\". The final check requires the prediction idea, which fits the core. The weaknesses are that it carries many new terms (US, UR, NS, CS, CR, extinction, spontaneous recovery, generalization, discrimination), uses a table list for four processes, and adds Little Albert, Garcia and operant material that drift from the core idea.",
+          "score": 3
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lesson and narration n19, song v2-7/v2-8: Little Albert's fear \"spread to other furry objects\" presented as straightforward, 'People learn this way too' (n19)",
+          "problem": "Nothing is factually wrong here, but the claim is presented without noting that Albert's study is ethically controversial; this is a matter of style, not an error.",
+          "correction": "No correction needed."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "When a neutral signal reliably arrives just before something that triggers a reflex, the signal alone starts triggering it.",
+      "why_chain": [
+        "Food in the mouth makes a dog salivate automatically, because that reflex needs no learning.",
+        "A tone means nothing to the dog at first, so it triggers no response.",
+        "When the tone keeps sounding just before the food, it becomes a reliable signal that food is coming.",
+        "Because the dog has learned the tone predicts food, the tone alone now triggers salivating.",
+        "If the tone keeps sounding without food, the response weakens, but it can return after a rest because the link was suppressed, not erased."
+      ],
+      "title_line": "Play a sound, then serve the meal",
+      "bpm": 92,
+      "cost": {
+        "bundle": 1.4018,
+        "judge": 0.0608,
+        "unpriced": false
+      },
+      "seconds": 624.9
+    }
+  ],
+  "summary": {
+    "topics": 12,
+    "made": 12,
+    "judged": 12,
+    "failed": {},
+    "rubric": {
+      "hook": {
+        "mean": 4.17,
+        "lowest": 3,
+        "low": 0
+      },
+      "frame": {
+        "mean": 3.92,
+        "lowest": 3,
+        "low": 0
+      },
+      "why_chain": {
+        "mean": 4.33,
+        "lowest": 4,
+        "low": 0
+      },
+      "key_lines": {
+        "mean": 3,
+        "lowest": 3,
+        "low": 0
+      },
+      "accuracy": {
+        "mean": 4.08,
+        "lowest": 3,
+        "low": 0
+      },
+      "singability": {
+        "mean": 3.08,
+        "lowest": 3,
+        "low": 0
+      },
+      "lesson_clarity": {
+        "mean": 3.75,
+        "lowest": 3,
+        "low": 0
+      }
+    },
+    "checks": {
+      "left": 25,
+      "repaired": 1,
+      "per_droplet": 2.1,
+      "by_rule": {
+        "lyric-style": 13,
+        "key-line": 10,
+        "motion": 2
+      }
+    },
+    "learner": {
+      "tested": 12,
+      "first_passed": 12,
+      "first_core_idea": 12,
+      "first_links": 55,
+      "of": 58,
+      "rewritten": 0,
+      "passed_after_rewrite": 0
+    },
+    "errors": 22,
+    "cost": {
+      "bundle": 19.01,
+      "judge": 0.81,
+      "unpriced": false
+    }
+  }
 }

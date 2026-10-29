@@ -1,37 +1,42 @@
 {
   "hook": {
-    "reason": "The title line \"Shrink the gap, read the dial\" is concrete, singable after one hearing, and names the big move (shrink the interval, read the instantaneous rate). It opens and closes the chorus. The lesson opens on a real question, \"How can a car have a speed at a single instant...\", which is a good hook. The narration opens on a car dashboard from the learner's world. Slight deduction: \"dial\" is a little vague and the key-line label \"What does a derivative actually measure?\" doesn't match the title line.",
+    "reason": "The title line \"Shrink the gap, read the dial\" is short, concrete, and sings back easily; it carries the core move (shrink the interval, get the instant reading). The lesson opens on a real question, \"How can a car have a speed at a single instant...\", which a learner wants answered. The narration opens in the learner's world, \"Picture a car's dashboard, where the trip display says you averaged fifty miles per hour.\" \"Read the dial\" is slightly vague on its own and it never names the average.",
     "score": 5
   },
   "frame": {
-    "reason": "The speedometer vs. trip display frame fits the whole idea: instant rate vs. average rate. It is set up in the first verse (\"The trip display says fifty... The speedometer read zero\"), recurs in the chorus (\"read the dial\"), the outro (\"Not the trip's average, the speed you're going now\"), the lesson, and the narration. The position-as-car example fits inside it. Only the bridge on corners and some of the verse 2 material drift from it, which is minor.",
+    "reason": "The speedometer versus trip display fits the whole job: instant rate versus average rate. It is set up in i-2 and v1-1 to v1-4, returns in the chorus (\"read the dial\") and in the outro (\"Not the trip's average, the speed you're going now\"), and also appears in the lesson and narration (n1-n4). It is a fitting picture, and the position-to-velocity example fits inside it. The bridge on |x| drops the frame, and so does the chorus c3-5/6 line about zooming, though that is minor.",
     "score": 5
   },
   "why_chain": {
-    "reason": "The lesson and the narration both teach the chain in order: average hides instant, secant = average, shrink gives tangent, limit needed because 0/0, limit = derivative, new function. Causes are given: \"Plugging in h = 0 gives 0/0, which has no value. So the derivative is defined as a limit.\" The power rule link is covered (shortcut). The song carries the gist. One slight weakness: the \"why a curve's steepness changes so average hides it\" link is stated briefly, but it does follow from the speedometer picture.",
+    "reason": "The lesson and narration teach all five links in order with causes: an average hides the instant, a secant slope gives the average, shrinking the interval makes the secants close in, that limit is the derivative (with why h = 0 fails), and doing it everywhere gives f′ with the power rule as a shortcut. The numeric table and the 0/0 explanation make each step concrete. Link 5 gets the least cause: the lesson says the limit \"at every x gives a new function\" but only mentions it briefly. The song carries the chain's gist well.",
     "score": 5
   },
   "key_lines": {
-    "reason": "Read in order they mostly tell the chain: \"An average over an interval hides the instant\", \"Secant line slope = average rate of change\", \"Shrink the gap → secant swings toward tangent line\", \"Limit of secant slopes = derivative = tangent line slope\", \"Derivative at every x → new function f′(x)\". But the first, \"What does a derivative actually measure?\", is a question, not a step, so the chain opens without its first link. The last, about the sharp corner, is a side branch rather than the core idea, and the chain never closes on the core idea (instant rate/power rule shortcut). The 0/0 reason for needing a limit is missing as a line. The first line's start at i-1 is the title line, not a step.",
+    "reason": "In order the lines tell the chain well: \"An average over an interval hides the instant\", \"Secant line slope = average rate of change\", \"Shrink the gap → secant swings toward tangent line\", \"Limit of secant slopes = derivative = tangent line slope\". But the first, \"What does a derivative actually measure?\", is a question, not a step. The last line, about the sharp corner, is a side branch rather than the chain's end, so no line states the core idea. The line \"Limit of secant slopes = derivative = tangent line slope\" is on the dense side, and the first line starts at i-1 where the title is sung rather than at the dashboard step.",
     "score": 3
   },
   "errors": [
-    "Song v1-6 / lesson: \"Its slope's the average rate, the change in position over time\" is fine for position, but the line states it as a general definition of the secant slope; a mild imprecision only, not a real error.",
-    "Song p1-1: \"It's more than bringing down the exponent, that's a shortcut road\" is loose but correct.",
-    "Song v1-8: \"Plug zero in the gap? It's zero over zero, not a thing\" is fine as a simplification (0/0 is undefined).",
-    "Song v2-1: \"Slopes go three, two point one, two point oh one in a row\" skips the first interval label, but the values are correct for [1,2], [1,1.1], [1,1.01].",
-    "Song c1-2: \"The secant's the average over a while\" is acceptable."
+    {
+      "claim": "v1-8: \"Plug zero in the gap? It's zero over zero, not a thing\"",
+      "problem": "Mildly misleading: 0/0 is undefined (indeterminate), and \"not a thing\" could suggest it means nothing rather than that the value can't be found by substitution.",
+      "correction": "Say it is undefined: zero over zero has no value, so we need a limit."
+    },
+    {
+      "claim": "p1-1: \"It's more than bringing down the exponent, that's a shortcut road\"",
+      "problem": "The sung line is vague about what the power rule shortcuts and could be taken to mean the exponent move is only part of the rule.",
+      "correction": "\"Bringing down the exponent is a shortcut for the limit; the derivative is the rate right now.\""
+    }
   ],
   "accuracy": {
-    "reason": "The math is correct throughout: the secant slope values 3, 2.1, 2.01 for t² from t=1 are right, the limit of 2 is right, f′(x)=2x is right, |x| has slopes −1 and +1 so f′(0) does not exist, and the 0/0 argument is correct. The lesson flags its single-example simplification for non-differentiability. The song lines are loose in style but not wrong. The misconception statement is accurate. I found no real errors.",
-    "score": 5
+    "reason": "The content is accurate: the numbers 3, 2.1, 2.01 for the average velocities, the limit 2, f′(x) = 2x, the |x| corner with slopes −1 and +1, and the note that jumps and vertical tangents also fail. The lesson flags its one-example simplification. Small imprecisions are the song's \"zero over zero, not a thing\" and the vague pre-chorus about the power rule, but nothing a learner would carry away wrong.",
+    "score": 4
   },
   "singability": {
-    "reason": "The chorus is a strong chant (\"Shrink the gap, read the dial\") and the rhymes are mostly clean. But many verse lines are long and read like textbook captions: \"Its slope's the average rate, the change in position over time\", \"Both sides must close in on the same number, left and right\", \"No limit, no derivative, at zero f prime's not defined\". The bridge is wordy, and c1-3 \"Slide the points together, zoom till the curve looks straight\" is over the bar. Some rhymes bend wording (\"Meters per second, that's velocity, the instant rate it's got\"; \"the instant rate\" does not rhyme with \"straight\" cleanly, though it's a near-rhyme). Chorus c3 is long with the added lines. At 96 bpm rapped verses allow about 14 syllables, which most meet.",
+    "reason": "The chorus is a strong chant: \"Shrink the gap, read the dial\" opens and closes it, and the rhymes (while/dial) are clean. Many verse lines overrun the bar, such as \"Slide the points together, zoom till the curve looks straight\" and \"The tangent slope's the derivative, the instant rate\", and some read like textbook sentences, like \"Both sides must close in on the same number, left and right\" and \"Meters per second, that's velocity, the instant rate it's got\". The chorus c3 is long (7 lines), and rhymes bend with filler: \"the instant rate it's got\", \"not a thing\", \"the corner's twist\".",
     "score": 3
   },
   "lesson_clarity": {
-    "reason": "It opens on a real question, builds from the speedometer picture to secants to the limit, has a \"Predict\" prompt answered right after (\"They close in on 2\"), names the misconception and why it is wrong, and ends on a good check (secant slopes 3 from left and 5 from right) that needs the core idea. The cost is that it carries many new terms and extras: the f′(x) function, the |x| corner case, increasing/decreasing, units, \"Where it leads\", so some of it could be cut for a first-time learner. The \"You've seen this before\" section is useful, but the lesson is on the long side.",
+    "reason": "It opens on a real question, builds the idea through the car and secant slopes, and asks a prediction (\"what number are these closing in on?\") answered right after. It names the power-rule misconception and why it is wrong, and ends with a check that needs the core idea: left slopes 3, right 5. The one drawback is bulk: it carries several new terms (secant, tangent, limit, f′) plus the no-derivative section and the \"where it leads\" section, which could be trimmed for a first meeting.",
     "score": 4
   }
 }

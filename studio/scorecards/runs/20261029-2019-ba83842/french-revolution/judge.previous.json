@@ -1,0 +1,35 @@
+{
+  "hook": {
+    "reason": "The title line \"The king went broke, the people rose\" is concrete, sung back easily, and is the core idea in miniature. But it leans on a stock \"people rose\" and does not name the big move (asking for money, getting a vote demand). The lesson opens on a real question, \"How does a king's money problem end with a crowd storming a fortress?\" The narration opens on the bread detail, \"a poor French family could spend more than half its wages on bread,\" which is vivid but not from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The pressure cooker (pot, lid, flame) fits the whole crisis and not just a part. It appears in the lesson, the narration (n3-n5), the verse (\"France is a pot... Debt is the flame\"), the chorus (\"Turn up the heat\") and the outro (\"The lid blew off\"). It is a fairly common metaphor, and the picture drifts in the bridge and second verse, but it never misleads and it fits all the parts.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "Each link carries its cause: wars lead to debt, nobles refuse so the king calls the Estates-General, hunger and ideas lead the Third Estate to want a say, vote by order leads to the National Assembly, and troops lead to the Bastille. The lesson says why the vote was stacked and why Paris rose (\"feared he would crush the Assembly\"). It is slightly weak on why the Third Estate went from wanting a say to declaring itself the Assembly, and Enlightenment ideas are only briefly explained. The song carries the gist.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines are mostly cause-effect steps (\"Voting by order → clergy and nobles outvote 2 to 1\"). The first, \"Why did France explode into revolution in 1789?\", is a question rather than a step, and it starts at i-1 where the narration is about bread. The line \"Poor harvest → grain scarce → bread prices rise sharply\" sits out of chronological order and has no narration anchor. The chain ends at the Bastille without the core idea, and the lines are sometimes arrows of labels rather than sentences.",
+    "score": 3
+  },
+  "errors": [
+    "\"In 1789, a poor French family could spend more than half its wages on bread.\" The source says \"by 1789\" a poor family could spend more than half its wages on bread, a roughly accurate claim. It is not an error, but the song's bridge puts the harvest failure at 1788 and the price effect as one event, which is fine.",
+    "\"Next, in August, feudal privilege falls apart\" says the Rights of Man \"say free and equal from the start\"; the Declaration says men are born and remain free and equal in rights. This is a fair simplification, not a real error.",
+    "\"The king went broke, the people rose\" and \"the Third Estate's six hundred... outvote them two to one\": the Third Estate had about 600 deputies, as many as the other two combined, so the two-to-one outcome follows from voting by order, which is correct."
+  ],
+  "accuracy": {
+    "reason": "Facts match the source and the course: the debt came from wars, the 1614 Estates-General, voting by order, the 17 June declaration, the Tennis Court Oath and the Bastille details are all right. The misconception is handled correctly. One small imprecision a teacher might tighten: the nobles are shown as simply refusing to pay, and the bridge's \"Paris slips from his control\" compresses events. Nothing a learner would carry away wrong.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "Many verse lines are conversational and rhythmic, and the chorus is a clear, chantable five lines: \"Taxed and hungry, the pressure grows / Turn up the heat and the whole thing blows.\" But several rapped lines overrun the bar (\"Over half a poor family's pay goes to bread alone,\" \"The Estates-General, not called since sixteen-fourteen\") and some read like textbook captions (\"That oath turned a money crisis into revolution\"). The \"Paris fears he'll shut the Assembly down\" rhyme and \"the royal court barely made a dent\" are slightly strained. The third chorus adds two summary lines that break the chant.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture with the pressure cooker, builds on causes rather than a list of parts, has a predict question answered right away (\"why couldn't it win a vote?\"), names the misconception and says why it is wrong, and ends on a counterfactual check (\"If the crown had not been nearly bankrupt...\"). The terms are numerous (Old Regime, estates, Estates-General, National Assembly, Tennis Court Oath, Bastille) and the table adds weight. The \"What comes next\" section is more than a first-time learner needs.",
+    "score": 4
+  }
+}

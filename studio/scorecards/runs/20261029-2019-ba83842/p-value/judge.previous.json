@@ -1,0 +1,35 @@
+{
+  "hook": {
+    "reason": "The title line \"Assume the null, then shade the tail\" is concrete and two actions, and it is the method in miniature, but it leans on jargon (\"the null\", \"the tail\") a high schooler can't picture yet, and it does not name the core idea of rare data meaning doubt. The lesson opens well on \"Your friend's coin lands heads 10 times in a row. Is it rigged, or just lucky?\" and the narration opens on the same coin from the learner's world, so those are strong.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The criminal trial is an apt picture of the whole test: presumed innocent, evidence too surprising, verdict. It is set up in verse 1, returns in v2-7/8 and the bridge (\"innocent defendant who gets convicted anyway\"), and is used in the lesson table and narration (n3-n6, n19). It is a fairly standard picture for hypothesis testing, and it drops out of the chorus and outro, so it is not carried through every section.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order with a cause each: assume the null \"because that gives a specific value to calculate chances from\", the sampling distribution, the tail area, \"data like yours would rarely happen\" so doubt, then compare to alpha. The song carries the gist (v1-5, c1-3/4). The step from small p-value to alpha is stated more than explained (\"a p-value less than α means the result lands beyond that cutoff\" is dropped from the lesson), so link 5 is a rule more than a cause.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read alone they trace the chain from \"How rare is your data if nothing's going on?\" through assumption, distribution, tail, and \"Tiny p-value → data rare under null → doubt it\". Most are steps with arrows and start on the matching sung line. Weaknesses: the first is a question/slogan, \"Defendant presumed innocent = null hypothesis assumed true\" is a label-like mapping, \"Tail beyond observed result = p-value\" is a definition, and the last (\"True nulls, 20 tests → about one false alarm\") is a side topic rather than the core idea ending.",
+    "score": 3
+  },
+  "errors": [
+    "\"Ten heads from a fair coin? One in a thousand twenty-four\" / \"point zero zero one\": the probability of 10 heads is 1/1024 ≈ 0.00098, and the song says the tail is \"point zero zero one, no more\"; this is a fair rounding, but \"no more\" is slightly off since 0.00098 is a bit less, so it is only a trivial imprecision.",
+    "\"Every test in the course runs on this same design\" (v2-11) and \"the same reasoning runs every test in the course\": slightly overbroad but fair for AP Stats; no real error.",
+    "Bridge b-4 \"A tiny tail, though there's no real effect in it\" and \"Run 20 tests... about one is expected\": fine, though the guaranteed '5% per test' depends on valid conditions; a minor simplification."
+  ],
+  "accuracy": {
+    "reason": "The definition of the p-value, the null assumption, the misconception, fail-to-reject wording, and the 1/1024 calculation are all correct. The song's \"Under alpha? That's statistically significant\" and \"the tail's the bottom line\" are fair at this level. Only trivial imprecisions appear, such as \"no more\" after rounding 1/1024 to 0.001, and one-tail simplification which the lesson flags.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a clear chant (\"Assume the null, then shade the tail / That's your p-value if chance alone prevails\") and rhymes are mostly clean, but many verse lines overrun the rapped bar and read like captions: \"Then Exhibit A must look too strange for that to fit\", \"Reject the null hypothesis, the alternative's in\". c1-4 \"So doubt the null, 'cause chance rarely gets there\" is a clumsy line, and the rhymes \"rare/there\" and \"prevails/tail\" are slant. Terms such as \"statistically significant\" land awkwardly. The pre-chorus about \"Type One and Type Two\" and \"power of a test is coming into view\" is a textbook preview forced to rhyme.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the trial picture, builds on why, names the misconception and why it is wrong, and offers the question \"What do you think a p-value that tiny says about H₀?\" answered right after. It ends with a strong check, \"Why does a p-value of 0.001 make you doubt H₀, while a p-value of 0.40 does not?\", that needs the core idea. However, it carries many new terms (null, alternative, sampling distribution, significance level, statistically significant, Type I error) and a tangent on Type I error and 20 tests and simulation that a first-time learner may not need.",
+    "score": 4
+  }
+}

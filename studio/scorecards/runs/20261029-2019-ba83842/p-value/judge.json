@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Assume the null, then shade the tail\" is concrete, two actions on real things, and opens and closes the chorus, so it is singable and holds the method in miniature. But \"the null\" is jargon a first-time learner can't picture, and the line names the procedure rather than the big move of doubting the null when the tail is rare. The lesson opens on a real question (\"Is it rigged, or just lucky?\") and the narration opens on a friend's coin, which is good learner-world material.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The criminal trial fits the whole job of a significance test: presumed innocent, evidence too surprising, verdict, and not guilty versus innocent. It is set up in verse 1, returns in v2-7 and b-6, and is used in the lesson and narration. It is a fairly common analogy for hypothesis testing, and the chorus and outro drop it for the tail-shading procedure. The trial also maps surprise only loosely onto the p-value.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order, with causes: \"We assume the null... because that gives a specific value\"; \"Most results land near the null value... far out are rare\"; the tail area as \"how often chance alone\" goes that far; tiny p-value means rare under the null, so doubt it; then compare with alpha. The song carries the gist well in verse 1, the chorus and verse 2. Link 5 is partly a decision rule rather than a cause, but it is explained as the result landing beyond the cutoff.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Read in order they follow the chain: assume the null, calculate chances, the sampling distribution shows what chance gives, the tail is the p-value, tiny means doubt, below alpha means reject. Each is anchored to a fitting lyric and narration line. But the first, \"How rare is your data if nothing's going on?\", is a question rather than a step, and the second, \"Defendant presumed innocent = null hypothesis assumed true\", is a label-like equation. \"Tail beyond observed result = p-value\" is also an equation, and the last line (about 20 tests) does not close on the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Song b-4: \"A tiny tail, though there's no real effect in it\"; also b-3 \"expect about one to hit\"",
+      "problem": "This is slightly loose: the 20-tests point is that about one test is expected to come out significant, which is an expected count, not a guarantee, and \"tiny tail\" suggests a tiny p-value, which is fine. Nothing here is actually wrong.",
+      "correction": "No correction needed."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts are correct: the p-value is computed assuming the null, 1/1024 ≈ 0.001, the reject and fail-to-reject wording, the Type I error rate, and the 20-test expectation. The misconception is handled correctly, and the lesson flags the one-sided simplification. The lines \"point zero zero one, no more\" and \"that 'fair' claim is done\" are slightly loose in a sung register but not wrong. I found no errors to correct.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "Most lines are phrased as a singer would say them, and the chorus is a repeatable chant: \"Assume the null, then shade the tail / That's your p-value if chance alone prevails.\" The rhymes are mostly clean, though some are forced: \"so that tail is tiny, point zero zero one, no more\", \"a Type One error made / convicted anyway\". Several rapped lines run long (v1-10, v2-12, v2-6), and v1-12's \"no more\" and the pre-chorus \"held tight\" are filler. The chorus is also long at 5 to 7 lines.",
+    "score": 4
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the trial picture in a table, then builds on why step by step. It poses \"What do you think a p-value that tiny says about H₀?\" and answers it right after, names the misconception and explains why it is wrong, and ends on a check that needs the idea: \"Why does a p-value of 0.001 make you doubt H₀, while 0.40 does not?\" It carries many terms (null, alternative, sampling distribution, alpha, significant, Type I) and the final section on Type I error and 20 tests goes past the core idea, so something could be cut.",
+    "score": 4
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "p2-1",
+      "rule": "lyric-style",
+      "detail": "\"Next up, the past: esperaba que vinieras\" narrates the picture instead of being sung",
+      "repaired": false
+    },
+    {
+      "line_id": "b-3",
+      "rule": "motion",
+      "detail": "4 lines in a row from b-3 on a diagram scene with nothing moving",
+      "repaired": false
+    }
+  ]
+}
