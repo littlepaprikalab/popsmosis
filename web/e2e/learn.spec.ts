@@ -438,7 +438,7 @@ test.describe('studio settings', () => {
     const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
     expect((await claimed.json()).studio).toEqual({
-      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' },
+      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
     });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
@@ -476,6 +476,46 @@ test.describe('studio settings', () => {
     const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
     expect((await teacher.json()).song).toEqual({ provider: 'gemini' });
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
+  });
+
+  test('an admin sets a knob instead of its environment variable: the API\'s at once, the studio\'s for the teacher', async ({ page, context, request }) => {
+    const knobs = { POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: null, STUDIO_VIDEOS: null };
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { knobs } }); // none set, whatever an earlier run left
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const cooldown = page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS');
+    await expect(cooldown.getByTestId('knob-source')).toHaveText('Default');
+    await expect(cooldown.getByTestId('knob-facts')).toContainText('in force: 300 seconds');
+
+    // A value it does not take is never sent.
+    await cooldown.getByRole('textbox').fill('9000');
+    await expect(cooldown.getByRole('alert')).toHaveText('Takes a whole number from 0 to 3600.');
+    await expect(cooldown.getByRole('button', { name: 'Save' })).toBeDisabled();
+    await cooldown.getByRole('textbox').fill('120');
+    await cooldown.getByRole('textbox').press('Enter');
+    await expect(page.getByText('Cooldown between wake-ups: 120 seconds from now on.')).toBeVisible();
+    await expect(cooldown.getByTestId('knob-source')).toHaveText('Set here');
+    await expect(cooldown.getByTestId('knob-facts')).toContainText('in force: 120 seconds');
+    await page.reload();
+    await expect(page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS').getByRole('textbox')).toHaveValue('120');
+
+    // The studio's: a choice saves on a click, and the teacher reads it with its key; never the API's own.
+    const videos = page.getByTestId('knob-STUDIO_VIDEOS');
+    await expect(videos.getByTestId('knob-source')).toHaveText('Not set here');
+    await expect(videos.getByRole('radio', { checked: true })).toHaveCount(0);
+    await videos.getByRole('radio', { name: 'off' }).click();
+    await expect(videos.getByRole('radio', { name: 'off' })).toHaveAttribute('aria-checked', 'true');
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).knobs).toEqual({ STUDIO_VIDEOS: 'off' });
+
+    // Cleared, each is the environment's again.
+    await page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS').getByRole('button', { name: 'Clear' }).click();
+    await expect(page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS').getByTestId('knob-source')).toHaveText('Default');
+    await expect(page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS').getByRole('textbox')).toHaveValue('');
+    await videos.getByRole('button', { name: 'Clear' }).click();
+    await expect(videos.getByTestId('knob-source')).toHaveText('Not set here');
+    const after = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await after.json()).knobs).toEqual({});
   });
 
   test('is for admins only', async ({ page, context }) => {

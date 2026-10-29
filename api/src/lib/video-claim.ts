@@ -10,9 +10,11 @@
  * identity: one agent key runs every routine, so the agent alone cannot tell two of
  * its runs apart.
  */
+import { knob } from './knobs.js';
+
 const DEFAULT_VIDEO_MAX_ATTEMPTS = 2;
 
 export function videoMaxAttempts(): number {
-  const n = parseInt(process.env.VIDEO_MAX_ATTEMPTS ?? '', 10);
+  const n = parseInt(knob('VIDEO_MAX_ATTEMPTS') ?? '', 10);
   return Number.isNaN(n) || n <= 0 ? DEFAULT_VIDEO_MAX_ATTEMPTS : n;
 }

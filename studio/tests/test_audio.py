@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio.steps import audio
 from studio.tests import sample_media
 
@@ -167,6 +167,16 @@ def test_the_voice_can_be_changed(job, monkeypatch):
     assert sum("/text-to-speech/voice42/with-timestamps" in url for url in fake.urls()) == 1
 
 
+def test_the_voice_set_on_the_studio_page_wins_over_this_machines(job, monkeypatch):
+    fake = FakeEleven()
+    monkeypatch.setattr(audio, "send", fake)
+    monkeypatch.setenv("ELEVENLABS_VOICE_ID", "voice42")
+    jobs.keep_studio_settings(job, {"knobs": {"ELEVENLABS_VOICE_ID": "voice7"}})  # as the claim carried it
+    audio.run(job)
+    assert sum("/text-to-speech/voice7/with-timestamps" in url for url in fake.urls()) == 1
+    assert json.loads((job / audio.plan_path("narration")).read_text())["voice_id"] == "voice7"
+
+
 def test_made_files_are_never_asked_for_again_until_their_lines_change(job, monkeypatch):
     fake = FakeEleven()
     monkeypatch.setattr(audio, "send", fake)
@@ -318,6 +328,14 @@ def test_the_lyria_model_can_be_changed(job, monkeypatch):
     audio.run(job)
     assert fake.gemini()[0][0].endswith("/models/lyria-3-clip-preview:generateContent")
     assert json.loads((job / audio.plan_path("song")).read_text())["model_id"] == "lyria-3-clip-preview"
+
+
+def test_the_lyria_model_and_the_credits_price_set_on_the_studio_page_win_over_this_machines(job, monkeypatch):
+    monkeypatch.setenv("GEMINI_SONG_MODEL", "lyria-3-clip-preview")
+    monkeypatch.setenv(audio.ELEVENLABS_PRICE_VAR, "cheap")
+    knobs.use({"knobs": {"GEMINI_SONG_MODEL": "lyria-3.5", audio.ELEVENLABS_PRICE_VAR: 0.3}})
+    assert audio.gemini_song_model() == "lyria-3.5"
+    assert audio.eleven_usd_per_1k_credits() == 0.3
 
 
 @pytest.mark.parametrize("fake, reason", [

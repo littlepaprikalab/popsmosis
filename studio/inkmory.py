@@ -30,6 +30,8 @@ Settings:
                                      the beat runs on a Muse brain only (the Studio page's default or the
                                      topic's own), so every entry in the planner's record is Muse's
 
+The last two can be set on /admin/studio instead, which wins over the environment (studio/knobs.py).
+
 Best effort, all of it: a call that fails is printed and skipped, never retried in a loop, and never
 changes the run's outcome. A 400 about refs is sent once more without them, as the skill file does:
 the record matters more than its tags. When the record call itself fails, the studio still logs the
@@ -51,7 +53,7 @@ import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
-from studio import brain, jobs, ledger
+from studio import brain, jobs, knobs, ledger
 from studio.api import Api, ApiError
 from studio.schemas import FactCheckReport, PlannerRecord
 
@@ -232,16 +234,16 @@ def off_reason() -> str | None:
     missing = [name for name in (URL_VAR, KEY_VAR) if not os.environ.get(name, "").strip()]
     if missing:
         return f"{' and '.join(missing)} not set"
-    if brain.provider() != "meta" and os.environ.get(ON_CLAUDE_VAR) != "true":
+    if brain.provider() != "meta" and knobs.env(ON_CLAUDE_VAR) != "true":
         return (f"this topic's brain is {brain.current()['name']}, and the planner's record is Muse's "
-                f"({ON_CLAUDE_VAR}=true lets Claude write it)")
+                f"({ON_CLAUDE_VAR}=true, on /admin/studio or here, lets Claude write it)")
     return None
 
 
 def persona_mode() -> str:
-    mode = os.environ.get(PERSONA_VAR, "").strip() or "record"
+    mode = knobs.env(PERSONA_VAR).strip() or "record"
     if mode not in PERSONAS:
-        say(f"{PERSONA_VAR}={mode!r} is not one of {', '.join(PERSONAS)}: the persona goes into the record only")
+        say(f"{knobs.named(PERSONA_VAR)}={mode!r} is not one of {', '.join(PERSONAS)}: the persona goes into the record only")
         return "record"
     return mode
 
