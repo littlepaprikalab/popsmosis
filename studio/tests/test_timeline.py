@@ -177,10 +177,13 @@ def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(j
     direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="e-")
     direct(data, "v2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
     direct(data, "b-1", particles=["Thylakoid", "Cytochrome b6f"], carries="")
+    direct(data, "c2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="price")  # outside science, a plain word
     write_bundle(job, data)
     song = lines(make(job)["song"])
-    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1")}
-    assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)]}
+    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1", "c2-1")}
+    assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)],
+                      "c2-1": [("price", step.marker_colour("price"))]}
+    assert step.marker_colour("price") in step.OTHER_MARKERS
 
 
 def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
