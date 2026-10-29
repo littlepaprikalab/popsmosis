@@ -504,8 +504,8 @@ order, keyed by `line_id`:
 - `carries`: what those particles are, written on the moving dot: the molecule or ion as a
   textbook prints it, with its superscripts and subscripts ("H⁺", "e⁻", "O₂", "Ca²⁺",
   "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line.
-  Anything else that travels is named in a plain word ("price", "letter", "taxes"), so the
-  fact-check sees it too. It must be what really travels that path (protons through ATP
+  Anything else that travels is named in a plain word ("price", "letter", "taxes"), at most
+  8 letters too, so the fact-check sees it: a longer one is dropped and goes unchecked. It must be what really travels that path (protons through ATP
   synthase, electrons along the chain, the price up to equilibrium). "" when there are no
   particles, for a nerve signal or light, and on the analogy scene, where what moves is the
   everyday thing (its water stands for the protons, so marking it "H₂O" would mislead).
