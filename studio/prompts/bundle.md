@@ -502,7 +502,10 @@ In this order, each section a run of lines with its own `section` value:
 - **Verse**, 8 lines: the second half of the story, ending with what it makes and
   where that goes next.
 - **Pre-chorus**, 2 lines: link it to what comes next in the course (the next step or
-  topic in the unit), as the facts give it.
+  topic in the unit), as the facts give it. When the misconception is about something the
+  first verse has not sung yet (Caesar, in a story whose first verse ends before him), the two
+  pre-choruses swap: the first links forward, and this one busts the misconception, right
+  after the verse that sings what it is about.
 - **Chorus**, word for word again.
 - **Bridge**, 8 lines: a sung exam question. Name one thing that breaks the system (a drug,
   a toxin, a mutation, a missing part), then walk its effects in cause-and-effect order to

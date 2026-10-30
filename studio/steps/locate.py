@@ -45,6 +45,7 @@ from __future__ import annotations
 import math
 import re
 import shutil
+import sys
 import threading
 from pathlib import Path
 
@@ -99,6 +100,26 @@ class Spot(Strict):
     top: float
     right: float
     bottom: float
+
+
+LABELS_PROMPT = """You check where the labels of a textbook picture will be pinned before a video is made from \
+it. Each red dot on the picture, with a name in a white tag beside it, is where that name's label will point. A dot \
+is right when it sits on the thing the name means, anywhere on it, even near its edge. It is wrong when it sits on \
+something else: another part, the background, a layer or region that is not it, or the other one of two look-alike \
+things (the volcano for "Mountain"). List every name whose dot is wrong, and say in a few words what it sits on; \
+list none when every dot is right. Judge by what the picture shows, not by the tag's position: the tag is only \
+placed beside its dot."""
+
+
+class WrongLabel(Strict):
+    name: str
+    on: str
+
+
+class LabelCheck(Strict):
+    """The labels whose dot is not on what they name."""
+
+    wrong: list[WrongLabel]
 
 
 def run(job: Path, ask=brain.ask) -> str:
@@ -169,7 +190,56 @@ def find_all(job: Path, scene: Scene, ask) -> tuple[dict[str, tuple[np.ndarray, 
         if result is not None:
             mask, found, by = result
             located[structure.name], how[structure.name] = (mask, found), by
+    # Then the helper looks at where every label would be pinned, and a pin on the wrong thing is found again in the
+    # helper's box, or left out. Round 19's rock cycle pinned "Mountain" on a pale purple band underground: SAM had
+    # found the mountain and the band for "grey mountain", in a picture too muted for the colours to tell them apart.
+    for name in wrong_labels(job, scene, located, picture, ask):
+        structure = next(s for s in scene.structures if s.name == name)
+        again = in_helper_box(job, scene, structure, picture, ask, colours)
+        if again is None:
+            del located[name], how[name]
+        else:
+            located[name], how[name] = (again[0], again[1]), "sam-box"
     return located, how, colours.dropped
+
+
+def wrong_labels(job: Path, scene: Scene, located: dict[str, tuple[np.ndarray, svg.Found]], picture: Path,
+                 ask) -> list[str]:
+    """The located structures whose label anchor the helper sees on something else; none when the check fails."""
+    if not located:
+        return []
+    import tempfile
+
+    import skia
+
+    from studio.render import primitives as p
+
+    image = skia.Image.open(str(picture))
+    surface = skia.Surface(image.width(), image.height())
+    canvas = surface.getCanvas()
+    canvas.drawImage(image, 0, 0)
+    f = p.font("bold", 26)
+    for name, (_, found) in located.items():
+        x, y = found.label_anchor.x, found.label_anchor.y
+        canvas.drawCircle(x, y, 12, skia.Paint(AntiAlias=True, Color=skia.ColorWHITE))
+        canvas.drawCircle(x, y, 8, skia.Paint(AntiAlias=True, Color=p.argb("#FF2D55")))
+        width = p.text_width(f, name)
+        left = x + 18 if x + 18 + width + 12 < image.width() else x - 18 - width - 12
+        canvas.drawRoundRect(skia.Rect.MakeXYWH(left, y - 18, width + 12, 34), 8, 8,
+                             skia.Paint(AntiAlias=True, Color=p.argb("#FFFFFF", 0.92)))
+        p.draw_text(canvas, name, left + 6, y + p.cap_height(f) / 2, f, p.argb("#111111"))
+    names = ", ".join(located)
+    try:
+        with tempfile.TemporaryDirectory(prefix="popsmosis-labels-") as tmp:
+            preview = Path(tmp) / f"{scene.id}.png"
+            surface.makeImageSnapshot().save(str(preview), skia.kPNG)
+            check = LabelCheck(**ask("helper", f"The picture was asked for as: {scene.image_prompt}\n"
+                                               f"The names pinned on it: {names}.", LabelCheck, [preview],
+                                     system=LABELS_PROMPT, label=f"label check {scene.id}"))
+    except Exception as e:  # the check guards the labels; a check that fails never fails the step
+        print(f"locate: {scene.id}: the label check failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return []
+    return [w.name for w in check.wrong if w.name in located]
 
 
 def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
@@ -186,10 +256,17 @@ def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
             found = svg.locate(mask)
             if found is not None:
                 return mask, found, "sam"
+    return in_helper_box(job, scene, structure, picture, ask, colours)
+
+
+def in_helper_box(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
+                  colours: Colours) -> tuple[np.ndarray, svg.Found, str] | None:
+    """The one thing SAM finds in the helper's box around the structure; None when there is none."""
     box = helper_box(scene, structure, picture, ask)
     if box is None:
         return None
-    matched = [m for m in muse.segment(job, label + " box", picture, box=box) if colours.fits(m.mask, structure)]
+    label = f"locate {scene.id} {structure.name} box"
+    matched = [m for m in muse.segment(job, label, picture, box=box) if colours.fits(m.mask, structure)]
     if not matched:
         return None
     best = max(matched, key=lambda m: -1.0 if m.confidence is None else m.confidence)

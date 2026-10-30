@@ -28,8 +28,11 @@ an arrow, a word or something happening.
 - "overview": the map of the whole lesson, the one picture every step can be pointed at.
   For a process, the whole path, every part the steps pass through in order (a nephron, from
   the glomerulus to the collecting duct; the rock cycle with each kind of rock where it
-  forms). For a story in time, where it happens, with the people it turns on, each drawn
-  once and named. For an idea, the diagram or graph it is read on.
+  forms). For a story in time, its people in the order they come, standing left to right
+  like a timeline, each drawn once and named, with what the story turns on beside them (the
+  Senate house, the legions): the learner sees who comes next, and the narration can point
+  back along the line. Not a map with people on it: round 19's came back with the Senate
+  house in the sea and Marius in Sicily. For an idea, the diagram or graph it is read on.
 - Close-ups (short ids such as "tubule-detail"): one step seen up close, where the overview
   is too small to show what happens (things crossing a wall, the inside of a part). Its
   `picture` says what it is a close-up of. In a story in time, a scene for each turning

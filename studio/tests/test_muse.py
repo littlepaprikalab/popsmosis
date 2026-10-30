@@ -116,10 +116,11 @@ class FakeMuse:
 class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
-    def __init__(self, checks=None, boxes=None, writing=None):
+    def __init__(self, checks=None, boxes=None, writing=None, wrong=None):
         self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check, painted out ones included
         self.boxes = boxes or {}  # structure -> a Spot dict
         self.writing = writing or {}  # scene -> the Written dicts the helper boxes, each time it is asked
+        self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
         self.asked: list[tuple[str, str]] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -134,12 +135,19 @@ class FakeHelper:
         if schema is repair.Writing:
             assert system == repair.WRITING_PROMPT and prompt.startswith("A check saw this writing: ")
             return {"writing": self.writing.get(label.split()[2], [])}
+        if schema is locate.LabelCheck:
+            assert system == locate.LABELS_PROMPT and "The names pinned on it: " in prompt
+            return {"wrong": [{"name": name, "on": "something else"} for name in self.wrong.get(label.split()[2], [])]}
         assert schema is locate.Spot and system == locate.BOX_PROMPT
         name = next(n for n in SPOTS if label.endswith(" " + n))
         return self.boxes.get(name, {"seen": False, "left": 0, "top": 0, "right": 1, "bottom": 1})
 
     def labels(self):
-        return [label for label, _ in self.asked]
+        """What the helper was asked, but the label check every located scene gets."""
+        return [label for label, _ in self.asked if not label.startswith("label check ")]
+
+    def label_checks(self):
+        return [label for label, _ in self.asked if label.startswith("label check ")]
 
 
 # --- the art --------------------------------------------------------------------------------
@@ -527,6 +535,22 @@ def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monke
     with pytest.raises(media.StepFailed, match="scene synthase: SAM 3.1 found 0 of 1 structures; not ATP synthase"):
         locate.run(job, FakeHelper())
     assert not (job / media.LOCATIONS).exists()
+
+
+def test_a_label_pinned_on_the_wrong_thing_is_found_again_in_the_helpers_box_or_left_out(job, monkeypatch):
+    # Round 19's rock cycle pinned "Mountain" on a purple band underground: SAM's "grey mountain" found both.
+    painted(job, monkeypatch)
+    boxed = {"Cytochrome b6f": {"seen": True, "left": 0.7, "top": 0.4, "right": 0.8, "bottom": 0.6}}
+    helper = FakeHelper(boxes=boxed, wrong={"overview": ["Cytochrome b6f"]})
+    assert locate.run(job, helper) == "located 4 of 4 structures with SAM 3.1, 1 in the helper's box"
+    assert sorted(helper.label_checks()) == ["label check hook", "label check overview", "label check synthase"]
+    assert helper.labels() == ["locate box overview Cytochrome b6f"]
+    assert jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f").found_by == "sam-box"
+    pinned = next(prompt for label, prompt in helper.asked if label == "label check overview")
+    assert pinned.endswith("The names pinned on it: Thylakoid, Cytochrome b6f.")
+
+    unseen = FakeHelper(wrong={"overview": ["Cytochrome b6f"]})  # nor can the helper box it: left out
+    assert locate.run(job, unseen) == "located 3 of 4 structures with SAM 3.1; left out Cytochrome b6f on overview"
 
 
 class PlainWordsMuse(FakeMuse):

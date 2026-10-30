@@ -447,7 +447,9 @@ def test_on_meta_the_run_paints_the_art_then_sam_locates_it_and_bills_both(meta_
     assert art_models["muse-image-1.0"]["calls"] == 3 and art_models["muse-image-1.0"]["costUsd"] == pytest.approx(0.03)
     assert art_models["muse-spark-1.3"]["calls"] == 3 and art_models["muse-spark-1.3"]["costUsd"] > 0
     locate_models = {m["model"]: m for m in steps["locate"]["models"]}
-    assert locate_models == {"sam-3.1": {**locate_models["sam-3.1"], "calls": 4, "costUsd": pytest.approx(0.01)}}
+    assert locate_models["sam-3.1"] == {**locate_models["sam-3.1"], "calls": 4, "costUsd": pytest.approx(0.01)}
+    assert locate_models["muse-spark-1.3"]["calls"] == 3  # the helper's look at where each scene's labels are pinned
+    assert set(locate_models) == {"sam-3.1", "muse-spark-1.3"}
 
 
 def test_on_meta_a_failed_locate_keeps_the_pictures_and_the_retry_only_locates(meta_job):
