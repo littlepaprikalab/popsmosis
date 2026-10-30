@@ -172,6 +172,8 @@ def song_length_problems(bundle: Bundle) -> list[Problem]:
     it. Not part of review(): the bundle step adds it."""
     from studio.steps.audio import line_ms
 
+    if not bundle.sung:  # the lesson video alone (STUDIO_VIDEOS=lesson): no song to time
+        return []
     seconds = sum(line_ms(line.text) for line in bundle.lyrics) / 1000
     if SONG_MIN_S <= seconds <= SONG_MAX_S:
         return []
@@ -205,8 +207,8 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
     names real things from the droplet's own idea, not pronouns; a chorus that says the idea; verses no longer
     than the tempo asks for; a bridge that sings something new, not the verses again; few claim-free tags.
     Recorded, not repaired; the bundle step adds them. A bundle written before the why chain existed has nothing
-    to hold the hook to."""
-    if not bundle.why_chain:
+    to hold the hook to, and one for the lesson video alone has no song."""
+    if not bundle.why_chain or not bundle.sung:
         return []
     problems: list[Problem] = []
     runs: list[tuple[str, list]] = []
@@ -253,7 +255,9 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
 def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
     """The song's style against the bundle prompt's rule: one free-form description, not tags, that keeps what
     the learner asked for. Code can count only the tempo of that: the writer builds on the rest in its own words.
-    Recorded, not repaired, as the song's shape is."""
+    Recorded, not repaired, as the song's shape is. A bundle with no song has no style to hold to it."""
+    if not bundle.sung:
+        return []
     styles = bundle.music.positive_styles
     problems = []
     if len(styles) > 1:
@@ -316,7 +320,7 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
     for key in bundle.key_lines:
         words = key_line_words(key.text)
         if words > KEY_LINE_WORDS_MAX:
-            problems.append(Problem(line_id=key.from_line, rule="key-line", repaired=False,
+            problems.append(Problem(line_id=key.from_line or key.from_narration, rule="key-line", repaired=False,
                                     detail=f'the key line "{key.text}" runs {words} words, over {KEY_LINE_WORDS_MAX}'))
     return problems
 
@@ -324,6 +328,9 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
 def _check_key_lines(data: dict, problems: list) -> None:
     """Key lines in song order, one to a lyric line: one on a line the song does not have, or a second on the same
     line, is dropped, since the screen could not show it."""
+    if not data["lyrics"]:  # the lesson video alone: they are placed on the narration
+        _check_narrated_key_lines(data, problems)
+        return
     order = {line["id"]: i for i, line in enumerate(data["lyrics"])}
     kept, seen = [], set()
     for key in data["key_lines"]:
@@ -346,6 +353,23 @@ def _check_key_lines(data: dict, problems: list) -> None:
             key["from_narration"] = ""
         taken.add(key["from_narration"])
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_line"]])
+
+
+def _check_narrated_key_lines(data: dict, problems: list) -> None:
+    """Key lines with no song (STUDIO_VIDEOS=lesson, LessonBundle), in narration order, one to a sentence: one on a
+    sentence the narration does not have, or a second on the same sentence, is dropped."""
+    order = {n["id"]: i for i, n in enumerate(data["narration"])}
+    kept, seen = [], set()
+    for key in data["key_lines"]:
+        at = key.get("from_narration", "")
+        if at not in order or at in seen or not key["text"].strip():
+            problems.append(Problem(line_id=at or "key_lines", rule="key-line", repaired=True,
+                                    detail=f'dropped the key line "{key["text"]}": its narration sentence is unknown, '
+                                           f"taken, or it is empty"))
+            continue
+        seen.add(at)
+        kept.append(key)
+    data["key_lines"] = sorted(kept, key=lambda k: order[k["from_narration"]])
 
 
 STILL_LINES_MAX = 4  # lines in a row with nothing moving on a scene where things travel: a line that comments or sums up holds still
@@ -461,7 +485,9 @@ def _check_builds_up(data: dict, canon: dict[str, str], problems: list) -> None:
 
 def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
     """The styles name one tempo, the one the song's sections are timed by (Music.bpm), so the
-    music generator is never asked for one pace and given section lengths for another."""
+    music generator is never asked for one pace and given section lengths for another. A bundle with no song has none."""
+    if not bundle.sung:
+        return []
     bpm = bundle.music.bpm
     styles = [BPM_TAG.sub(lambda found: found[0] if round(float(found[1])) == bpm else f"{bpm} bpm", style)
               for style in music["positive_styles"]]

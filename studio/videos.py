@@ -2,7 +2,8 @@
 
 STUDIO_VIDEOS, an admin's knob on /admin/studio (studio/knobs.py): `on` (the default) makes both, `lesson` the
 lesson video alone, with no song and no hook cut (studio/media.py, lesson_only()), and `off` none: the droplet
-stays text.
+stays text. A bundle written while it was `lesson` has no song (studio/steps/bundle.py), so its videos are the
+lesson's alone whatever it says later.
 
 The media steps (studio/media.py) run once the lesson is posted, in this order:
 
@@ -87,7 +88,7 @@ def unavailable(job: Path | None = None, studio: dict | None = None) -> str | No
     settings = jobs.studio_settings(job) if job else studio or {}
     problem = brain.retired_problem() or brain.settings_problem() or brain.art_problem(settings.get("art"))
     song = settings.get("song") if isinstance(settings.get("song"), dict) else {}
-    lyria = not media.lesson_only() and song.get("provider") == "gemini"  # the lesson alone has no song
+    lyria = not media.lesson_only(job) and song.get("provider") == "gemini"  # the lesson alone has no song
     if not problem and lyria and not os.environ.get("GEMINI_API_KEY"):
         problem = ("the song needs GEMINI_API_KEY: Lyria sings it (an admin can pick ElevenLabs on /admin/studio)")
     if problem:

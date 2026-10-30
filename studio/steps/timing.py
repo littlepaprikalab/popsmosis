@@ -105,9 +105,9 @@ def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     if not audio_step.is_done(job):
         raise media.StepFailed("the audio step has not made every audio file from this bundle yet")
-    with_song = "song" in media.timed()
+    with_song = "song" in media.timed(job)
     # Not done until each is written again; the cached vocals are kept.
-    media.restart(job, *(media.timing_path(kind) for kind in media.timed()), *([REPORT] if with_song else []))
+    media.restart(job, *(media.timing_path(kind) for kind in media.timed(job)), *([REPORT] if with_song else []))
     parts = []
     for kind in audio_step.SPEECH:
         try:
@@ -143,7 +143,7 @@ def is_done(job: Path) -> bool:
         bundle = jobs.read(job / "bundle.json", Bundle)
         expected = {"song": [line.id for line in bundle.lyrics],
                     "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")]}
-        for kind in media.timed():
+        for kind in media.timed(job):
             path = job / media.timing_path(kind)
             if timing_problems(jobs.read(path, Timing), expected[kind]):
                 return False

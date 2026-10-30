@@ -147,7 +147,7 @@ def _retrying(what: str, call: Callable[[], T]) -> T:
 def public_files(job: Path) -> list[str]:
     """The videos, which must all be there, and the posters that are; the hook cut and its poster when it was made.
     The lesson alone: its video and poster, and no song's, even one left from a run that made it."""
-    videos = media.videos()
+    videos = media.videos(job)
     missing = [media.video_path(v) for v in videos if not (job / media.video_path(v)).is_file()]
     if missing:
         raise media.StepFailed(f"nothing to upload yet: {', '.join(missing)} not rendered")
@@ -170,12 +170,12 @@ def private_files(job: Path) -> tuple[list[str], list[str]]:
         named += [s.art for s in locations.scenes] + [m.mask for s in locations.scenes for m in s.structures]
     except (OSError, ValueError, ValidationError):
         pass  # locations.json itself is reported missing
-    named += ([media.audio_path(k) for k in media.timed()]
-              + [media.timing_path(k) for k in media.timed()]
-              + [media.timeline_path(v) for v in media.videos()]
+    named += ([media.audio_path(k) for k in media.timed(job)]
+              + [media.timing_path(k) for k in media.timed(job)]
+              + [media.timeline_path(v) for v in media.videos(job)]
               # The hook cut's, when the song has one, so a render picked up on another machine makes it too.
               + ([media.timeline_path(media.HOOK)]
-                 if "song" in media.videos() and (job / media.timeline_path(media.HOOK)).is_file() else []))
+                 if "song" in media.videos(job) and (job / media.timeline_path(media.HOOK)).is_file() else []))
     named = list(dict.fromkeys(named))  # the art is named by both
     there = [p for p in named if (job / p).is_file()]
     # What each Muse Image picture's check found, which the timeline discloses beside it: a timeline made

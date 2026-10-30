@@ -127,9 +127,9 @@ the timeline, render and upload. Who sings the song is picked on the Studio page
 `GEMINI_SONG_MODEL` picks another Lyria model). The narration is ElevenLabs either way.
 Switching it makes a job's song again on its next run, and only the song. `run` claims the videos as soon as it posts the lesson,
 and `videos` renews the claim before every step, so a render whose machine dies is handed
-to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=lesson` makes the
-narrated lesson video alone, with no song, hook clip or lyrics, and `STUDIO_VIDEOS=off` makes
-text-only droplets.
+to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=lesson` leaves the song
+out from the start: the lesson is written and fact-checked with no lyrics or music, and only the
+narrated lesson video is made, with no hook clip. `STUDIO_VIDEOS=off` makes text-only droplets.
 
 Every model call is logged to the job's `calls.jsonl` with its step, tokens, time and cost,
 and `show` ends with the bill of materials the page shows ([Bill of materials](#bill-of-materials)).

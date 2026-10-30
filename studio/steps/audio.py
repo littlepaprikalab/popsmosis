@@ -124,7 +124,7 @@ def plan_path(kind: str) -> str:
 
 def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
-    todo = [kind for kind in media.timed() if not _current(job, bundle, kind)]
+    todo = [kind for kind in media.timed(job) if not _current(job, bundle, kind)]
     provider = song_provider(job)
     if "song" in todo and provider not in SONG_PROVIDERS:
         raise media.StepFailed(f"the song's provider {provider!r} is not one this studio has "
@@ -145,7 +145,7 @@ def run(job: Path, ask=brain.ask) -> str:
     # Both at once: the song takes longest, and the voice is made while it is. One that
     # fails fails the step after the others are saved, so a retry makes only what is missing.
     made = ledger.parallel(make, todo, len(todo))
-    lengths = ", ".join(f"{kind} {duration(job / media.audio_path(kind)):.1f}s" for kind in media.timed())
+    lengths = ", ".join(f"{kind} {duration(job / media.audio_path(kind)):.1f}s" for kind in media.timed(job))
     return f"made {', '.join(made) or 'nothing (all cached)'}; {lengths}"
 
 
@@ -154,7 +154,7 @@ def is_done(job: Path) -> bool:
         bundle = jobs.read(job / "bundle.json", Bundle)
     except (OSError, ValueError):
         return False
-    return all(_current(job, bundle, kind) for kind in media.timed())
+    return all(_current(job, bundle, kind) for kind in media.timed(job))
 
 
 def _current(job: Path, bundle: Bundle, kind: str) -> bool:

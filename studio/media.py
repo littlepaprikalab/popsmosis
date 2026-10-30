@@ -29,8 +29,10 @@ from SAM 3.1.
 
 The lesson alone. While STUDIO_VIDEOS is `lesson` (an admin's knob on /admin/studio,
 studio/knobs.py) no song is made: audio, timing, timeline, render and upload make and
-send only the narration and the lesson video, and no hook cut, which is the song's.
-videos() and timed() say which this run makes; VIDEOS and TIMED name them all.
+send only the narration and the lesson video, and no hook cut, which is the song's. A
+bundle written then has no song to make (Bundle.sung), so its job stays the lesson's alone
+whatever the knob says later. videos() and timed() say which a job makes; VIDEOS and TIMED
+name them all.
 
 A step is a module studio/steps/<name>.py, for each name in MEDIA_STEPS, with
 
@@ -50,6 +52,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import json
 import re
 from pathlib import Path
 from types import ModuleType
@@ -71,19 +74,32 @@ LOCATIONS = "locations.json"
 LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
 
 
-def lesson_only() -> bool:
-    """Whether the videos are the lesson's alone: STUDIO_VIDEOS is `lesson`, on /admin/studio or in the environment."""
-    return knobs.env("STUDIO_VIDEOS").strip().lower() == LESSON_ONLY
+def lesson_only(job: Path | None = None) -> bool:
+    """Whether the videos are the lesson's alone: STUDIO_VIDEOS is `lesson`, on /admin/studio or in the environment,
+    or the job's bundle has no song to make (written while it was)."""
+    return knobs.env("STUDIO_VIDEOS").strip().lower() == LESSON_ONLY or (job is not None and not sung(job))
 
 
-def videos() -> tuple[str, ...]:
-    """The videos this run makes: the song and the lesson, or the lesson alone (lesson_only())."""
-    return ("lesson",) if lesson_only() else VIDEOS
+def sung(job: Path) -> bool:
+    """Whether the job's bundle has a song (Bundle.sung): read as JSON, not as a Bundle, since the steps ask often.
+    True when there is no bundle to read: the knob alone decides."""
+    try:
+        bundle = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return True
+    music = bundle.get("music") if isinstance(bundle, dict) else None
+    music = music if isinstance(music, dict) else {}
+    return bool(bundle.get("lyrics") or music.get("positive_styles") or music.get("negative_styles"))
 
 
-def timed() -> tuple[str, ...]:
-    """The audio files this run makes and times: the song and the narration, or the narration alone."""
-    return ("narration",) if lesson_only() else TIMED
+def videos(job: Path | None = None) -> tuple[str, ...]:
+    """The videos a job makes: the song and the lesson, or the lesson alone (lesson_only())."""
+    return ("lesson",) if lesson_only(job) else VIDEOS
+
+
+def timed(job: Path | None = None) -> tuple[str, ...]:
+    """The audio files a job makes and times: the song and the narration, or the narration alone."""
+    return ("narration",) if lesson_only(job) else TIMED
 
 
 class StepFailed(Exception):

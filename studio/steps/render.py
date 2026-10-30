@@ -28,8 +28,8 @@ LAYOUT = "h"  # the song and lesson videos; the hook cut is upright (media.HOOK_
 def videos(job: Path) -> list[tuple[str, str]]:
     """What this job renders, each video with its layout: the song and the lesson, and the hook cut when there is one;
     or the lesson alone."""
-    made = [(video, LAYOUT) for video in media.videos()]
-    if "song" in media.videos() and (job / media.timeline_path(media.HOOK)).exists():
+    made = [(video, LAYOUT) for video in media.videos(job)]
+    if "song" in media.videos(job) and (job / media.timeline_path(media.HOOK)).exists():
         made.append((media.HOOK, media.HOOK_LAYOUT))
     return made
 

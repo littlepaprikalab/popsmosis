@@ -2,8 +2,8 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from studio.brain import SCHEMA_KEYWORDS, strict_schema
-from studio.schemas import Bundle, FactAudit, FactCheck, tag_of
-from studio.tests.sample import bundle_data
+from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle, bundle_of, tag_of
+from studio.tests.sample import bundle_data, lesson_bundle_data
 
 
 def walk(node):
@@ -158,3 +158,26 @@ def test_a_process_in_stages_may_take_up_to_8_scenes():
         stage["stage_of"] = ""
     with pytest.raises(ValidationError, match="7 scenes, not 3-6"):
         Bundle.model_validate(data)
+
+
+def test_the_lesson_video_alone_is_asked_for_the_bundle_without_its_song():
+    """STUDIO_VIDEOS=lesson: the brain's schema is Bundle's, in its order, less the song."""
+    lesson, full = strict_schema(LessonBundle), strict_schema(Bundle)
+    assert list(lesson["properties"]) == [name for name in full["properties"] if name not in ("music", "lyrics")]
+    assert list(lesson["properties"]["key_lines"]["items"]["properties"]) == ["text", "from_narration"]
+    assert list(lesson["properties"]["tags"]["properties"]) == ["lesson"]
+    for name in ("facts", "scenes", "narration", "direction"):
+        assert lesson["properties"][name] == full["properties"][name]
+
+
+def test_a_bundle_with_no_song_reads_back_as_one_and_a_song_needs_its_lyrics():
+    keys = [{"text": "Light splits water → O₂", "from_narration": "n1"}]
+    bundle = bundle_of(LessonBundle.model_validate(lesson_bundle_data(keys)).model_dump())
+    assert not bundle.sung and bundle.lyrics == [] and bundle.music.positive_styles == [] and bundle.tags.song == []
+    assert [(k.from_line, k.from_narration) for k in bundle.key_lines] == [("", "n1")]
+    assert Bundle.model_validate_json(bundle.model_dump_json()) == bundle  # bundle.json reads back
+    assert Bundle.model_validate(bundle_data()).sung
+    # A song planned with no lines to sing is no bundle at all, as before.
+    styled = {**bundle.model_dump(), "music": {"positive_styles": ["upbeat pop"], "negative_styles": [], "sections": []}}
+    with pytest.raises(ValidationError, match="lyrics and narration must not be empty"):
+        Bundle.model_validate(styled)

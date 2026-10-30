@@ -118,10 +118,10 @@ INTRO_FADE_S = 0.5
 
 def run(job: Path, ask=None) -> str:
     """Write each video's timeline; `ask` is unused (no model calls)."""
-    media.restart(job, *(media.timeline_path(video) for video in media.videos()))
+    media.restart(job, *(media.timeline_path(video) for video in media.videos(job)))
     bundle = checks.load(job / "bundle.json")
     locations = read(job / media.LOCATIONS, Locations)
-    timed = {kind: read(job / media.timing_path(kind), Timing) for kind in media.timed()}
+    timed = {kind: read(job / media.timing_path(kind), Timing) for kind in media.timed(job)}
     expected = {
         "song": [line.id for line in bundle.lyrics],
         "narration": [n.id for n in bundle.narration],
@@ -132,7 +132,7 @@ def run(job: Path, ask=None) -> str:
 
     timelines = {}
     notices = art.notices(job, bundle)
-    for video in media.videos():
+    for video in media.videos(job):
         try:
             timeline = build(video, bundle, timed, locations)
             shown = {beat.scene for beat in timeline.beats}
@@ -228,11 +228,11 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
 
 def is_done(job: Path) -> bool:
     """Each video's timeline reads, and is newer than everything it was made from."""
-    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.timed()),
+    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.timed(job)),
               *(job / "art").glob("*.json")]  # what each picture's check found, for its notices
     try:
         newest_input = max(path.stat().st_mtime for path in inputs)
-        for video in media.videos():
+        for video in media.videos(job):
             path = job / media.timeline_path(video)
             read(path, Timeline)
             if path.stat().st_mtime < newest_input:

@@ -5,11 +5,12 @@ import zlib
 import pytest
 from pydantic import ValidationError
 
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio.__main__ import main
-from studio.schemas import (Box, Locations, Timeline, Timing, locations_problems, timeline_problems,
-                            timing_problems)
+from studio.schemas import (Box, LessonBundle, Locations, Timeline, Timing, bundle_of, locations_problems,
+                            timeline_problems, timing_problems)
 from studio.tests import sample_media
+from studio.tests.sample import lesson_bundle_data
 
 
 @pytest.fixture(scope="module")
@@ -169,3 +170,16 @@ def test_the_sample_job_round_trips_through_json(job):
     for video in media.VIDEOS:
         text = (job / media.timeline_path(video)).read_text(encoding="utf-8")
         assert Timeline.model_validate(json.loads(text)).model_dump_json(indent=2) + "\n" == text
+
+
+def test_a_bundle_written_with_no_song_keeps_its_job_the_lessons_alone_whatever_the_knob_says_later(tmp_path):
+    jobs.write(tmp_path / "bundle.json", bundle_of(LessonBundle.model_validate(lesson_bundle_data()).model_dump()))
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "on"}})
+    assert media.lesson_only(tmp_path) and media.videos(tmp_path) == ("lesson",) and media.timed(tmp_path) == ("narration",)
+    assert not media.lesson_only()  # the knob alone
+    jobs.write(tmp_path / "bundle.json", sample_media.bundle())  # a bundle with its song
+    assert not media.lesson_only(tmp_path) and media.videos(tmp_path) == media.VIDEOS
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    assert media.lesson_only(tmp_path)  # the knob still takes the song out of one written with it
+    knobs.use({"knobs": {}})
+    assert not media.lesson_only(tmp_path / "no-such-job")  # no bundle to read: the knob decides
