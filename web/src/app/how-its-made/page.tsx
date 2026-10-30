@@ -3,7 +3,7 @@ import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
 import { Wordmark } from '@/components/Wordmark';
 import { MakerChip } from '@/components/MakerChip';
-import { CheckCircleIcon, ExclamationTriangleIcon, PlayIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import { CheckIcon, PlayIcon } from '@heroicons/react/24/solid';
 
 export const metadata: Metadata = {
   title: 'How it’s made',
@@ -19,7 +19,7 @@ const card = { background: 'var(--bg-secondary)', border: '1px solid var(--borde
 const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 // An accent for small text, blended toward the text colour so it reads in both themes (as on the About page).
 const ink = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, var(--text-primary))`;
-// The flow's lines and arrowheads.
+// The rail's dashed line.
 const LINE = 'color-mix(in srgb, var(--text-muted) 55%, transparent)';
 
 type Kind = 'makes' | 'checks' | 'gate';
@@ -33,7 +33,7 @@ const KINDS: Record<Kind, { label: string; color: string }> = {
 // `discloses`: what the step cannot fix, the video says (the picture check's notes, Timeline.notices).
 interface Step { name: string; kind: Kind; text: string; discloses?: boolean }
 
-// The studio's steps, as the flow draws them: the lesson's one after another (a "gate" stops the droplet when it
+// The studio's steps, as the rail shows them: the lesson's one after another (a "gate" stops the droplet when it
 // fails), then the pictures and the sound side by side, as the studio makes them, then the video from both.
 const LESSON_STEPS: Step[] = [
   {
@@ -245,35 +245,25 @@ export default function HowItsMadePage() {
       <section aria-labelledby="steps-title" className="mb-12">
         <SectionTitle id="steps-title">How it works, step by step</SectionTitle>
         <p className="text-sm leading-relaxed mb-6 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
-          Each box is one step, in order. A droplet must pass the steps marked <KindChip kind="gate" />, or it
-          stops there.
+          Each number is one step, in order. If a droplet fails a step marked <KindChip kind="gate" /> it stops
+          there, and nothing is posted.
         </p>
 
-        <div className="md:px-40">
-          <FlowLabel>Making the lesson</FlowLabel>
-          <ol aria-label="Making the lesson" className="flex flex-col">
-            {LESSON_STEPS.map((step, i) => (
-              <li key={step.name}>
-                {i > 0 && <Arrow />}
-                <StepNode step={step} />
-              </li>
-            ))}
+        <div className="max-w-3xl">
+          <RailLabel indent>Making the lesson</RailLabel>
+          <ol aria-label="Making the lesson">
+            {LESSON_STEPS.map((step, i) => <RailStep key={step.name} n={i + 1} step={step} />)}
           </ol>
-          <Arrow />
-          <Milestone>The lesson is posted. You can read it now, while the videos are made.</Milestone>
-        </div>
-
-        <Fork />
-        <div className="grid gap-6 md:grid-cols-2 md:gap-8">
-          <Lane title="Pictures" steps={PICTURE_STEPS} />
-          <Lane title="Sound" steps={SOUND_STEPS} />
-        </div>
-        <Join />
-
-        <div className="md:px-40">
-          <StepNode step={VIDEO_STEP} />
-          <Arrow />
-          <Milestone>Both videos are done. The droplet goes on the Droplets tab for everyone.</Milestone>
+          <RailMilestone>The lesson is posted. You can read it now, while the videos are made.</RailMilestone>
+          <RailItem as="div" marker={<Junction />}>
+            <div className="pt-2.5"><RailLabel>Then, at the same time</RailLabel></div>
+            <div className="grid gap-x-8 gap-y-6 md:grid-cols-2">
+              <Lane title="Pictures" steps={PICTURE_STEPS} first={LESSON_STEPS.length + 1} />
+              <Lane title="Sound" steps={SOUND_STEPS} first={LESSON_STEPS.length + PICTURE_STEPS.length + 1} />
+            </div>
+          </RailItem>
+          <RailStep as="div" n={LESSON_STEPS.length + PICTURE_STEPS.length + SOUND_STEPS.length + 1} step={VIDEO_STEP} />
+          <RailMilestone last>Both videos are done. The droplet goes on the Droplets tab for everyone.</RailMilestone>
         </div>
 
         <p className="text-xs leading-relaxed mt-6 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
@@ -405,125 +395,96 @@ function Pledge({ color, title, children }: { color: string; title: string; chil
   );
 }
 
-function FlowLabel({ children }: { children: React.ReactNode }) {
+function RailLabel({ indent = false, children }: { indent?: boolean; children: React.ReactNode }) {
   return (
-    <p className="text-center text-[10px] uppercase tracking-wider font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
+    <p className={`text-[10px] uppercase tracking-wider font-bold mb-3 ${indent ? 'pl-13' : ''}`} style={{ color: 'var(--text-muted)' }}>
       {children}
     </p>
   );
 }
 
-/** One step of the flow. A step the droplet must pass says, beside it from md up (in the flow's gutter) and under it
- *  on a phone, that a fail stops the droplet; a step that discloses what it cannot fix says so under it, linking to
- *  the card the video shows. */
-function StepNode({ step }: { step: Step }) {
-  const gate = step.kind === 'gate';
+/** A stop on the rail: its marker in the left column, with the dashed line running on from it to the next stop,
+ *  and what it says beside it. The last stop has no line. */
+function RailItem({ as: Tag = 'li', marker, line = true, children }: {
+  as?: 'li' | 'div'; marker: React.ReactNode; line?: boolean; children: React.ReactNode;
+}) {
   return (
-    <div className="relative">
-      <div className="rounded-lg p-4" style={gate ? { ...card, border: `1px solid ${tint('var(--accent-orange)', 55)}` } : card}>
-        <p className="flex flex-wrap items-center gap-2 mb-1">
-          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{step.name}</span>
-          <KindChip kind={step.kind} />
-        </p>
-        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{step.text}</p>
+    <Tag className="grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-4">
+      <div aria-hidden className="flex flex-col items-center">
+        {marker}
+        {line && <span className="flex-1 w-0 my-1.5 border-l-2 border-dashed" style={{ borderColor: LINE }} />}
       </div>
-      {gate && (
-        <p className="relative inline-flex items-center gap-1.5 mt-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold md:absolute md:mt-0 md:left-full md:ml-4 md:top-1/2 md:-translate-y-1/2 md:w-32"
-          style={{ color: ink('var(--accent-red)', 75), background: tint('var(--accent-red)', 10), border: `1px solid ${tint('var(--accent-red)', 40)}` }}>
-          <span aria-hidden className="hidden md:block absolute right-full top-1/2 w-4 h-px" style={{ background: tint('var(--accent-red)', 60) }} />
-          <XCircleIcon aria-hidden className="w-3.5 h-3.5 shrink-0" />
-          Fails? Nothing is posted.
-        </p>
-      )}
+      <div className={line ? 'pb-7' : ''}>{children}</div>
+    </Tag>
+  );
+}
+
+/** One step: its number in a ring of its kind's colour, its name and kind, what it does, and what follows from it
+ *  when that matters: a step the droplet must pass stops it when it fails, and the picture check's mistakes it
+ *  cannot fix are said in the video (linking to the card). */
+function RailStep({ n, step, as, line }: { n: number; step: Step; as?: 'li' | 'div'; line?: boolean }) {
+  const { color } = KINDS[step.kind];
+  return (
+    <RailItem as={as} line={line} marker={
+      <span className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-sm font-bold"
+        style={{ border: `2px solid ${tint(color, 75)}`, color: ink(color, 80), background: 'var(--bg-primary)' }}>
+        {n}
+      </span>
+    }>
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-9 mb-1">
+        <span className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{step.name}</span>
+        <KindChip kind={step.kind} />
+      </p>
+      <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{step.text}</p>
+      {step.kind === 'gate' && <Then color="var(--accent-red)">Fails? Nothing is posted.</Then>}
       {step.discloses && (
-        <a href="#notice-title" className="flex gap-1.5 mt-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold leading-relaxed hover:brightness-110"
-          style={{ color: ink('var(--accent-yellow)', 55), background: tint('var(--accent-yellow)', 10), border: `1px solid ${tint('var(--accent-yellow)', 45)}` }}>
-          <ExclamationTriangleIcon aria-hidden className="w-3.5 h-3.5 shrink-0 mt-[0.2em]" />
-          <span>
-            Still wrong in a way that could mislead you? The video says so, right next to the
-            picture. <span className="underline whitespace-nowrap">See how ↓</span>
-          </span>
-        </a>
+        <Then color="var(--accent-yellow)" href="#notice-title">
+          Still wrong in a way that could mislead you? The video says so, right next to the
+          picture. <span className="not-italic underline whitespace-nowrap">See how ↓</span>
+        </Then>
       )}
-    </div>
+    </RailItem>
   );
 }
 
-function Milestone({ children }: { children: React.ReactNode }) {
+/** What follows from a step, after an arrow, in italics. */
+function Then({ color, href, children }: { color: string; href?: string; children: React.ReactNode }) {
+  const body = <><span aria-hidden className="not-italic mr-1.5">→</span>{children}</>;
+  const className = 'block mt-2 text-sm italic leading-relaxed';
+  const style = { color: ink(color, 60) };
+  return href
+    ? <a href={href} className={`${className} hover:brightness-125`} style={style}>{body}</a>
+    : <p className={className} style={style}>{body}</p>;
+}
+
+/** Where the droplet is ready for something: a check in a filled ring. */
+function RailMilestone({ last = false, children }: { last?: boolean; children: React.ReactNode }) {
+  const color = 'var(--accent-brand)';
   return (
-    <p className="rounded-lg px-4 py-2.5 text-xs font-bold text-center"
-      style={{ color: ink('var(--accent-brand)', 80), background: tint('var(--accent-brand)', 12), border: `1px solid ${tint('var(--accent-brand)', 45)}` }}>
-      <CheckCircleIcon aria-hidden className="inline-block w-4 h-4 mr-1.5 align-[-0.25em]" />
-      {children}
-    </p>
+    <RailItem as="div" line={!last} marker={
+      <span className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center"
+        style={{ border: `2px solid ${tint(color, 75)}`, color: ink(color, 80), background: tint(color, 18) }}>
+        <CheckIcon className="w-4 h-4" />
+      </span>
+    }>
+      <p className="min-h-9 flex items-center text-sm font-bold" style={{ color: ink(color, 80) }}>{children}</p>
+    </RailItem>
   );
 }
 
-function Arrow() {
-  return (
-    <div aria-hidden className="flex flex-col items-center py-1">
-      <span className="w-px h-4" style={{ background: LINE }} />
-      <svg viewBox="0 0 10 6" className="w-2.5 h-1.5" style={{ color: LINE }}><path d="M0 0h10L5 6z" fill="currentColor" /></svg>
-    </div>
-  );
+/** Where the rail opens onto the two lanes made at the same time: a small hollow stop. */
+function Junction() {
+  return <span className="w-3.5 h-3.5 mt-2.5 shrink-0 rounded-full" style={{ border: `2px solid ${LINE}`, background: 'var(--bg-primary)' }} />;
 }
 
-// The centre of each lane, from md up: half a column in from either side, less half the gap (md:gap-8) between them.
-const LANE_CENTER = 'calc(25% - 0.5rem)';
-
-/** Where the flow splits into the pictures and the sound: a fork from md up, an arrow and a sentence on a phone,
- *  where the lanes stack. */
-function Fork() {
+/** One of the two short rails made at the same time, numbered on from the lesson's steps. */
+function Lane({ title, steps, first }: { title: string; steps: Step[]; first: number }) {
   return (
-    <>
-      <div className="md:hidden">
-        <Arrow />
-        <p className="text-center text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Next, two things happen at the same time:</p>
-      </div>
-      <div aria-hidden className="hidden md:block relative h-12">
-        <span className="absolute left-1/2 top-0 h-5 w-px" style={{ background: LINE }} />
-        <span className="absolute top-5 h-px" style={{ left: LANE_CENTER, right: LANE_CENTER, background: LINE }} />
-        <span className="absolute top-5 bottom-0 w-px" style={{ left: LANE_CENTER, background: LINE }} />
-        <span className="absolute top-5 bottom-0 w-px" style={{ right: LANE_CENTER, background: LINE }} />
-        <span className="absolute left-0 right-0 top-7 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
-          at the same time
-        </span>
-      </div>
-    </>
-  );
-}
-
-/** Where the lanes meet again, for the video: the mirror of the fork. */
-function Join() {
-  return (
-    <>
-      <div className="md:hidden"><Arrow /></div>
-      <div aria-hidden className="hidden md:block relative h-8">
-        <span className="absolute top-0 h-4 w-px" style={{ left: LANE_CENTER, background: LINE }} />
-        <span className="absolute top-0 h-4 w-px" style={{ right: LANE_CENTER, background: LINE }} />
-        <span className="absolute top-4 h-px" style={{ left: LANE_CENTER, right: LANE_CENTER, background: LINE }} />
-        <span className="absolute left-1/2 top-4 bottom-0 w-px" style={{ background: LINE }} />
-      </div>
-      <div className="hidden md:block"><Arrow /></div>
-    </>
-  );
-}
-
-/** One of the two lanes made at the same time. From md up, a line runs on below its last step to where the lanes
- *  join, so the shorter lane meets the longer one. */
-function Lane({ title, steps }: { title: string; steps: Step[] }) {
-  return (
-    <div className="flex flex-col">
-      <FlowLabel>{title}</FlowLabel>
-      <ol aria-label={title} className="flex flex-col">
-        {steps.map((step) => (
-          <li key={step.name}>
-            <Arrow />
-            <StepNode step={step} />
-          </li>
-        ))}
+    <div className="min-w-0">
+      <RailLabel indent>{title}</RailLabel>
+      <ol aria-label={title} start={first}>
+        {steps.map((step, i) => <RailStep key={step.name} n={first + i} step={step} line={i < steps.length - 1} />)}
       </ol>
-      <span aria-hidden className="hidden md:block flex-1 min-h-4 w-px mx-auto" style={{ background: LINE }} />
     </div>
   );
 }

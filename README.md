@@ -603,8 +603,8 @@ These are not hashtags: a hashtag is a search the fact-check holds to the lesson
 ### How it's made
 
 `/how-its-made` (`web/src/app/how-its-made/page.tsx`) tells anyone, signed in or not, how a droplet is
-made and checked: the studio's steps as a flow, with the two checks a droplet must pass before it is
-posted and the pictures and the sound made side by side, the card a video shows beside a picture
+made and checked: the studio's steps as a numbered rail, with the two checks a droplet must pass before
+it is posted and the pictures and the sound made side by side, the card a video shows beside a picture
 with a known mistake (drawn as `draw_notice` draws it), six things that went wrong in the test rounds
 and what changed for each, the default models, and what the checks do not do yet. It is linked from
 every page's footer and from beside "Made with" on each droplet's page. It is written for a high school
