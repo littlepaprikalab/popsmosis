@@ -69,6 +69,8 @@ export function countPlaySql(answerId: string, video: PlayVideo, event: PlayEven
 
 export type PlayCounts = Record<PlayEvent, number>;
 
+export const NO_PLAYS: PlayCounts = Object.fromEntries(PLAY_EVENTS.map((e) => [e, 0])) as PlayCounts;
+
 /** A row's counts, and the share of its starts that finished: null before any start. */
 export function serializePlays(row: PlayCounts) {
   const counts = Object.fromEntries(PLAY_EVENTS.map((e) => [e, row[e]])) as PlayCounts;

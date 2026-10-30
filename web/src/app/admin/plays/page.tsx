@@ -9,6 +9,7 @@ import { LoadingMessage } from '@/components/LoadingMessage';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { useToast } from '@/components/Toast';
 import { formatCount } from '@/components/LikeButton';
+import { DropOffChart } from '@/components/DropOffChart';
 
 const VIDEOS: { video: PlayVideo; label: string; color: string }[] = [
   { video: 'song', label: 'Song', color: 'var(--accent-red)' },
@@ -85,6 +86,17 @@ export default function AdminPlaysPage() {
           admin&rsquo;s own plays. A page view counts a video once, however often it is replayed.
         </p>
       </div>
+
+      {/* Every droplet together, whatever the video and the minimum chosen below. An API older than it sends no totals. */}
+      {ranking?.totals && (
+        <section className="mb-6 rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>Where plays drop off</h3>
+          <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+            Of every play of each video, across all droplets, the share still going at each point.
+          </p>
+          <DropOffChart totals={ranking.totals} />
+        </section>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <nav aria-label="Video" className="inline-flex rounded-md overflow-hidden text-xs font-bold uppercase tracking-wider"

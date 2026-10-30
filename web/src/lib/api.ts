@@ -442,6 +442,8 @@ export interface PlayRanking {
   min: number; // the fewest starts a droplet needs to be ranked
   data: { id: string; title: string; course: string; topic: string; hidden: boolean; createdAt: string; plays: PlayCounts }[];
   fewer: number; // droplets with plays of this video, but fewer than min
+  // Each video's counts over every droplet, whatever min: the drop-off curve. Absent from an API older than it.
+  totals?: Record<PlayVideo, PlayCounts>;
 }
 
 export interface Agent {

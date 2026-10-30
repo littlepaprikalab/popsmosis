@@ -323,6 +323,12 @@ d('play counts', () => {
         plays: { started: 4, reached25: 4, reached50: 4, reached75: 4, finished: 3, shared: 0, downloaded: 0, finishRate: 0.75 },
       });
       expect(body.data[1]).toMatchObject({ hidden: true, plays: { started: 6, finished: 3, finishRate: 0.5 } });
+      // Each video's totals over every droplet, the ones under min and the hidden one too: the drop-off curve.
+      expect(body.totals).toEqual({
+        song: { started: 15, reached25: 12, reached50: 10, reached75: 9, finished: 8, shared: 0, downloaded: 0, finishRate: 8 / 15 },
+        lesson: { started: 1, reached25: 1, reached50: 1, reached75: 1, finished: 1, shared: 0, downloaded: 0, finishRate: 1 },
+        hook: { started: 0, reached25: 0, reached50: 0, reached75: 0, finished: 0, shared: 0, downloaded: 0, finishRate: null },
+      });
 
       // By default every droplet with a play is ranked; and each video has its own ranking.
       expect((await ranking('')).json().data.map((r: { topic: string }) => r.topic)).toEqual(['Quiet', 'Osmosis', 'Mitosis', 'ATP synthase']);

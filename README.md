@@ -572,7 +572,7 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
-| GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. The PLAYS page, `/admin/plays` |
+| GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer, totals: { song, lesson, hook } }`, `fewer` the droplets with plays but under `min`, `totals` each video's counts over every droplet whatever `min` (the page's drop-off curve). The PLAYS page, `/admin/plays` |
 
 ### Play counts
 
@@ -608,6 +608,11 @@ feed and the hook tile's Share and Download:
   with enough plays (`?min=`, the page's "At least").
 - **Across a deploy.** A web app that meets an API with no counts (a 404) stops sending them
   until the page is loaded again; a 429 or a failure stops only that play.
+
+`/admin/plays` opens with **where plays drop off**: one line each for the song, the lesson and
+the hook clip, the share of all their plays still going at the start, 25%, 50%, 75% and the end,
+every droplet together. Hovering a point, or tabbing to it, lists every video's count there, and
+the same numbers are in a table under the chart. Below it, the ranking.
 
 The ranking `/admin/plays` shows, as SQL (here for the song; `'LESSON'` or `'HOOK'` for the others).
 The page is picked from the counts alone and the droplets joined after, so only the bundles

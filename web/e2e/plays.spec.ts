@@ -191,6 +191,42 @@ test.describe('play counts', () => {
 });
 
 test.describe("the owner's page", () => {
+  test('shows where plays drop off, every droplet together, with the counts on hover, on focus and in a table', async ({ page, context, request }) => {
+    // A lesson play stopped past halfway, counted as the page would send it.
+    for (const event of STEPS.slice(0, 3)) {
+      expect((await request.post(apiUrl(`/api/droplets/${S.droplet}/plays`), { data: { video: 'lesson', event } })).status()).toBe(204);
+    }
+    const res = await request.get(apiUrl('/api/plays'), { headers: ADMIN });
+    const { totals } = await res.json();
+    expect(totals.lesson.started).toBeGreaterThan(0);
+
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/plays');
+    const chart = page.getByTestId('drop-off-chart');
+    await expect(chart.getByRole('list', { name: 'Videos' })).toContainText(`Lesson${totals.lesson.started} ${totals.lesson.started === 1 ? 'play' : 'plays'}`);
+    const points = chart.getByTestId('drop-off-point');
+    await expect(points).toHaveCount(5);
+    const tip = chart.getByTestId('drop-off-tooltip');
+
+    // Hovering the 50% point lists every video there.
+    await points.nth(2).hover();
+    await expect(tip).toContainText('50% played');
+    await expect(tip).toContainText(`Lesson · ${totals.lesson.reached50} of ${totals.lesson.started}`);
+    await page.mouse.move(1, 1);
+    await expect(tip).toHaveCount(0);
+
+    // So does the keyboard, and each point says it to a screen reader.
+    await points.nth(4).focus();
+    await expect(tip).toContainText('Finished (95% played)');
+    await expect(points.nth(4)).toHaveAttribute('aria-label', new RegExp(`Lesson \\d+%, ${totals.lesson.finished} of ${totals.lesson.started}`));
+
+    // And the numbers are in a table, for anyone who cannot see the chart or hover it.
+    await chart.getByText('The numbers').click();
+    const lesson = chart.getByTestId('drop-off-table').getByRole('row', { name: /^Lesson/ });
+    await expect(lesson.getByRole('cell').nth(0)).toHaveText(String(totals.lesson.started));
+    await expect(lesson.getByRole('cell').nth(2)).toHaveText(new RegExp(`^${totals.lesson.reached50} · `));
+  });
+
   test('ranks the droplets by how many plays finished, per video, for admins only', async ({ page, context, request }) => {
     // A play of the lesson to the end, and a start of the hook clip, counted as the page would send them.
     for (const [video, event] of [...STEPS.map((e) => ['lesson', e]), ['hook', 'started']]) {

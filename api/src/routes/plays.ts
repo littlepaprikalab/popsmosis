@@ -5,7 +5,7 @@ import { isForeignKeyViolation, sendError } from '../lib/errors.js';
 import { parseLimit } from '../lib/validation.js';
 import { dropletTitle } from '../lib/droplet.js';
 import { KeyedWindowCounter, WindowCounter, addressGroup, clientAddress } from '../lib/public-limit.js';
-import { PLAY_VIDEOS, PlayCounts, PlayVideo, countPlaySql, isLaterStep, playEventOf, serializePlays } from '../lib/plays.js';
+import { NO_PLAYS, PLAY_VIDEOS, PlayCounts, PlayVideo, countPlaySql, isLaterStep, playEventOf, serializePlays } from '../lib/plays.js';
 import { requireAdmin } from '../middleware/auth.js';
 
 export const PLAY_COUNT_URL = '/api/droplets/:id/plays';
@@ -78,14 +78,15 @@ export default async function playRoutes(app: FastifyInstance) {
   // (default), lesson or hook; ?min= the fewest starts a droplet needs to be ranked (default 1); ?limit= (default 50,
   // max 200). `fewer` is how many droplets have plays of that video but fewer starts than min. Hidden droplets are
   // in it, marked: what learners watched on /learn counts too. The page is chosen from the counts alone and the
-  // droplets joined after, so only the bundles shown are read: a bundle can be hundreds of KB.
+  // droplets joined after, so only the bundles shown are read: a bundle can be hundreds of KB. `totals` is each
+  // video's counts over every droplet, whatever min and limit: the PLAYS page's drop-off curve.
   app.get('/api/plays', { preHandler: [requireAdmin] }, async (request, reply) => {
     const { video = 'song', min, limit } = request.query as Record<string, string | undefined>;
     if (!PLAY_VIDEOS.includes(video as PlayVideo)) return sendError(reply, 'VALIDATION_ERROR', `video must be one of ${PLAY_VIDEOS.join(', ')}`);
     const fewest = parseLimit(min, 1, 1_000_000);
     const take = parseLimit(limit, 50, 200);
     const kind = Prisma.raw(`'${video.toUpperCase()}'::"DropletVideo"`); // from PLAY_VIDEOS
-    const [rows, [{ fewer }]] = await Promise.all([
+    const [rows, [{ fewer }], sums] = await Promise.all([
       prisma.$queryRaw<(PlayCounts & { id: string; createdAt: Date; hiddenAt: Date | null; bundle: unknown })[]>`
         SELECT a.id, a."createdAt", a."hiddenAt", jsonb_build_object('course', a.bundle->'course', 'topic', a.bundle->'topic') AS bundle,
                p.started, p."reached25", p."reached50", p."reached75", p.finished, p.shared, p.downloaded
@@ -99,7 +100,15 @@ export default async function playRoutes(app: FastifyInstance) {
       prisma.$queryRaw<{ fewer: number }[]>`
         SELECT count(*)::int AS fewer FROM droplet_plays WHERE video = ${kind} AND started < ${fewest}
       `,
+      // float8: a sum of ints is a bigint, which comes back as a BigInt; a float8 holds any count exactly to 2^53.
+      prisma.$queryRaw<(PlayCounts & { video: string })[]>`
+        SELECT video::text, sum(started)::float8 AS started, sum("reached25")::float8 AS "reached25",
+               sum("reached50")::float8 AS "reached50", sum("reached75")::float8 AS "reached75",
+               sum(finished)::float8 AS finished, sum(shared)::float8 AS shared, sum(downloaded)::float8 AS downloaded
+        FROM droplet_plays GROUP BY video
+      `,
     ]);
+    const totalOf = (v: PlayVideo) => serializePlays(sums.find((s) => s.video === v.toUpperCase()) ?? NO_PLAYS);
     return {
       video,
       min: fewest,
@@ -111,6 +120,7 @@ export default async function playRoutes(app: FastifyInstance) {
         plays: serializePlays(r),
       })),
       fewer,
+      totals: Object.fromEntries(PLAY_VIDEOS.map((v) => [v, totalOf(v)])) as Record<PlayVideo, ReturnType<typeof serializePlays>>,
     };
   });
 }
