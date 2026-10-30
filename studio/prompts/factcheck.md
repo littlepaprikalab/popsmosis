@@ -118,6 +118,12 @@ about what moves, where from, through what and where to.
   is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
   video, never rewritten.
 
+A motion that says "Something travels" is dots with nothing written on them: the video
+shows something going along that route without saying what (a nerve signal, light).
+SUPPORTED when the facts say something goes along that route, in that direction, whatever
+it is; UNSUPPORTED when the facts move nothing there (from a character to the audience,
+from one point of a graph to another), judged as above.
+
 A motion that says something "builds up" in a space ("H⁺ builds up in Thylakoid lumen")
 is the video filling that space with it as it arrives: SUPPORTED when the facts say it
 piles up or accumulates there, UNSUPPORTED otherwise, judged as above.

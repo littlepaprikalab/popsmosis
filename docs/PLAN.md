@@ -284,9 +284,11 @@ passed.
 
 The same call checks each video's hashtags and its marked motions ("H⁺ travels from
 Stroma to Cytochrome b6f to Thylakoid lumen": what a line's particles carry and their
-route), each once however many lines show it. Neither is ever rewritten or fails the job:
-a tag that fails is dropped, and a motion that fails is left out of the video. Motions
-add about $0.02 a lesson.
+route), each once however many lines show it. Unmarked particles are checked too, as
+"Something travels from Romeo to Audience", except on the hook and the analogy, where they
+are the everyday thing (the analogy's water): unchecked, the planner sent dots where nothing
+travels. Neither is ever rewritten or fails the job: a tag that fails is dropped, and a
+motion that fails is left out of the video. Motions add about $0.02 a lesson.
 
 There is no teacher approval step: the fact-check is the gate.
 

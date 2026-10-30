@@ -523,14 +523,16 @@ order, keyed by `line_id`:
   textbook prints it, with its superscripts and subscripts ("H⁺", "e⁻", "O₂", "Ca²⁺",
   "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line.
   Anything else that travels is named in a plain word ("price", "letter", "taxes"), at most
-  8 letters too, so the fact-check sees it: a longer one is dropped and goes unchecked. It
+  8 letters too, so the fact-check sees what it is: a longer one is dropped, leaving a blank
+  dot. It
   must be what really travels that path (protons through ATP synthase, electrons along the
   chain, the price up to equilibrium). "" when there are no particles, for a nerve signal
   or light, and on the analogy scene, where what moves is the everyday thing (its water
   stands for the protons, so marking it "H₂O" would mislead).
   When you cannot say what would travel a route, the facts do not give it: leave it out.
-  The fact-check holds each marked motion to the facts, as it does a line, and leaves out
-  one they do not support: every route a marked particle takes must follow from the facts.
+  The fact-check holds each motion to the facts, as it does a line (an unmarked one as
+  "something" travelling that route, except on the hook and the analogy), and leaves out
+  one they do not support: every route particles take must follow from the facts.
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.

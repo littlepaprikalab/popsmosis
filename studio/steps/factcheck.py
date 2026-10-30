@@ -18,7 +18,9 @@ It checks the marked motions the same way: what a line's particles carry and the
 they take ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"), since the video
 shows it as a claim. A motion that fails is left out of the video (no particles on its
 lines), never rewritten, and never fails the job; one shown on several lines is checked
-once. Unmarked particles (an analogy's water, a signal) are not sent.
+once. Unmarked particles are checked as "Something travels from Romeo to Audience", so a
+route nothing travels is left out too; on the hook and the analogy they are not sent, as
+there they are the everyday thing (the analogy's water), which the facts do not trace.
 
 Writes factcheck.json. When the check passes after corrections or dropped tags,
 bundle.json is rewritten with them and the writer's version is kept as bundle.draft.json.
@@ -47,6 +49,7 @@ TAG = "tag"  # a video's hashtag: passed, or dropped
 MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
 KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
 PASSING = ("SUPPORTED", "FILLER")
+EVERYDAY = ("hook", "analogy")  # scenes whose unmarked dots are not checked (studio/prompts/bundle.md)
 
 
 @dataclass(frozen=True)
@@ -93,12 +96,19 @@ def key_lines(bundle: Bundle) -> list[Line]:
 
 
 def motion_text(carries: str, particles: list[str], blocked: bool = False) -> str:
-    """A marked motion as the checker reads it: "H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen", or,
-    when its last stop blocks it, "e⁻ flow from Photosystem II is stopped at Herbicide"."""
+    """A motion as the checker reads it: "H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen", or,
+    when its last stop blocks it, "e⁻ flow from Photosystem II is stopped at Herbicide". Unmarked, "Something
+    travels from ..." and "The flow from ... is stopped at ..."."""
     if blocked:
         through = f" through {' and '.join(particles[1:-1])}" if len(particles) > 2 else ""
-        return f"{carries} flow from {particles[0]}{through} is stopped at {particles[-1]}"
-    return f"{carries} travels from " + " to ".join(particles)
+        return f"{carries + ' flow' if carries else 'The flow'} from {particles[0]}{through} is stopped at {particles[-1]}"
+    return f"{carries or 'Something'} travels from " + " to ".join(particles)
+
+
+def is_checked(scene: str, carries: str, particles: list[str]) -> bool:
+    """Whether a flow goes to the fact-check: every one with a path, but an unmarked one on the hook or the analogy.
+    Unmarked, the planner sent dots from Romeo to the audience and from one point of a graph to another (Oct 29)."""
+    return len(particles) >= 2 and (bool(carries) or scene not in EVERYDAY)
 
 
 def _motion(bundle: Bundle, flow) -> str:
@@ -129,12 +139,11 @@ def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> st
 
 
 def motion_lines(bundle: Bundle) -> list[Line]:
-    """What each line's particles show moving, when they are marked with what they carry, and what the
-    video shows piling up and turning."""
+    """What each line's particles show moving (is_checked), and what the video shows piling up and turning."""
     return [Line(MOTION, d.line_id, _motion(bundle, d)) for d in bundle.direction
-            if d.carries and len(d.particles) >= 2] + [
+            if is_checked(d.scene, d.carries, d.particles)] + [
         Line(MOTION, f"{d.line_id}+{k}", _motion(bundle, f)) for d in bundle.direction
-        for k, f in enumerate(d.also, 1) if f.carries and len(f.particles) >= 2] + [
+        for k, f in enumerate(d.also, 1) if is_checked(d.scene, f.carries, f.particles)] + [
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
         Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
         Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
@@ -251,11 +260,11 @@ def check_bundle(
         data = bundle.model_dump()
         for d in data["direction"]:
             blocked = bool(d["particles"]) and d["particles"][-1] in {b["structure"] for b in data["blocks"]}
-            if (d["carries"] and len(d["particles"]) >= 2
+            if (is_checked(d["scene"], d["carries"], d["particles"])
                     and motion_text(d["carries"], d["particles"], blocked) not in passed_motions):
                 d["particles"], d["carries"] = [], ""
             stoppers = {b["structure"] for b in data["blocks"]}
-            d["also"] = [f for f in d["also"] if not f["carries"] or len(f["particles"]) < 2
+            d["also"] = [f for f in d["also"] if not is_checked(d["scene"], f["carries"], f["particles"])
                          or motion_text(f["carries"], f["particles"], f["particles"][-1] in stoppers) in passed_motions]
         data["builds_up"] = [b for b in data["builds_up"]
                              if build_up_text(b["carries"], b["region"]) in passed_motions]
