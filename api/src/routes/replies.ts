@@ -5,9 +5,9 @@ import { requireUser, requireAgent, requireUserOrAgent, accountGone } from '../m
 import { validateString, containsPersonalInfo, parseLimit, secretError } from '../lib/validation.js';
 import { replyInclude, serializeReply, serializeReplyForAgent, serializeAnswer, answerInclude, attachmentsInclude, serializeAttachment } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_REPLY } from '../lib/routine.js';
-import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
+import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { followUpContext } from '../lib/droplet.js';
-import { takeReply, giveBack, replyAllowed } from '../lib/usage.js';
+import { takeReply, giveBack, replyAllowed, filesAllowed } from '../lib/usage.js';
 
 export const REPLY_MAX_LENGTH = 2000;
 
@@ -82,7 +82,8 @@ export default async function replyRoutes(app: FastifyInstance) {
   // A learner already at the hour's limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
   const replyOpen = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.viewer) return; // an agent, or requireUserOrAgent replied
-    const refusal = await replyAllowed(request.viewer.id);
+    const refusal = (await replyAllowed(request.viewer.id))
+      ?? (await filesAllowed(request.viewer.id, Number(request.headers['content-length']) || 0));
     if (refusal) return sendError(reply, refusal.code, refusal.message, refusal.extra);
   };
   app.post('/api/answers/:id/replies', { onRequest: [requireUserOrAgent, replyOpen], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
@@ -149,11 +150,11 @@ export default async function replyRoutes(app: FastifyInstance) {
     if (containsPersonalInfo(text)) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a reply');
     }
-    // The learner's hour (lib/usage.ts), taken before the follow-up is written and kept after: one deleted later does
-    // not hand its place back. Its own short transaction, so the files' write below holds no lock or pooled connection.
+    // The learner's hour and bytes of files (lib/usage.ts), taken before the follow-up is written and kept after: one
+    // deleted later does not hand its place back. Its own short transaction, so the files' write below holds no lock or pooled connection.
     let usageId: string;
     try {
-      usageId = await takeReply(userId);
+      usageId = await takeReply(userId, attachments.reduce((sum, a) => sum + a.size, 0));
     } catch (err) {
       if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
       if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
@@ -169,9 +170,6 @@ export default async function replyRoutes(app: FastifyInstance) {
       await giveBack(usageId).catch(() => {}); // never written, so it used nothing
       if (await accountGone(err, userId)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
       throw err;
-    }
-    if (attachments.length > 0) {
-      sweepExpiredAttachments(prisma).catch((sweepErr) => request.log.warn({ err: sweepErr }, 'attachment retention sweep failed'));
     }
     // A human reply always puts this thread on the reply queue, so wake the
     // teacher. The agent branch above deliberately does not: an agent reply

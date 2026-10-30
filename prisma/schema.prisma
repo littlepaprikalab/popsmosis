@@ -72,6 +72,7 @@ model UsageEvent {
   id        String    @id @default(cuid())
   userId    String
   kind      UsageKind
+  bytes     Int       @default(0) // the files sent with it, for the daily byte quota on attachments
   createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -235,7 +236,8 @@ model Attachment {
 
   @@index([questionId])
   @@index([replyId])
-  @@index([createdAt]) // the retention sweep
+  @@index([createdAt])
+  @@index([purgedAt, createdAt]) // the retention sweep: the files still held, oldest first
   @@map("attachments")
 }
 

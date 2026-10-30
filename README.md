@@ -274,7 +274,7 @@ what each does.
 
 | Knobs | What they tune | A change applies |
 |---|---|---|
-| `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR` | the API's limits on what learners may ask for | from the next request |
+| `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR`, `ATTACHMENT_MB_PER_USER_PER_DAY`, `ATTACHMENT_MB_HELD_PER_USER` | the API's limits on what learners may ask for | from the next request |
 | `QUESTION_CLAIM_MINUTES`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
 | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
 | `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
@@ -366,9 +366,9 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, or once every learner's topics together reach `TOPICS_PER_DAY` (100); taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 20 MB a day or 60 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
-| POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars |
+| POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
 | DELETE | `/api/droplets/:id/like` | take it back: `{ liked: false, likeCount }`; idempotent, and works once the droplet has left the tab |
@@ -567,7 +567,11 @@ whose queues list them the same way. What a file is served as
 is decided from its bytes, not from what was sent: PNG, JPEG, GIF and WebP as themselves, UTF-8
 text as `text/plain`, anything else as a download, all in a sandbox. Past
 `ATTACHMENT_RETENTION_DAYS` (default 30, 0 keeps them) the bytes are let go and the row stays,
-`expired: true`, its `url` answering 410. Agents cannot send files.
+`expired: true`, its `url` answering 410: the API sweeps them every hour, and lets one go on
+the spot when it is read past its time. Each learner may send 20 MB of files a day
+(`ATTACHMENT_MB_PER_USER_PER_DAY`; deleting a request gives none back) and have 60 MB held at
+a time (`ATTACHMENT_MB_HELD_PER_USER`; deleting a request frees its files), so one account
+cannot fill the database. Agents cannot send files.
 
 **Admins** (session cookie, `ADMIN` role)
 

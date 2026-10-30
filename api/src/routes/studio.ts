@@ -29,6 +29,8 @@ const IN_FORCE: Record<ApiKnob, () => KnobValue> = {
   TOPICS_PER_DAY: () => usageLimits().topicsPerDay,
   REPLIES_PER_USER_PER_HOUR: () => usageLimits().repliesPerUserPerHour,
   DROPLET_COMMENTS_PER_USER_PER_HOUR: commentsPerUserPerHour,
+  ATTACHMENT_MB_PER_USER_PER_DAY: () => usageLimits().attachmentMbPerUserPerDay,
+  ATTACHMENT_MB_HELD_PER_USER: () => usageLimits().attachmentMbHeldPerUser,
   QUESTION_CLAIM_MINUTES: claimMinutes,
   VIDEO_STALE_MINUTES: videoStaleMinutes,
   LESSON_HOLD_MINUTES: lessonHoldMinutes,

@@ -106,3 +106,40 @@ describe('servedAs and contentDisposition', () => {
     expect(contentDisposition('attachment', 'Grüße "a".txt')).toBe(`attachment; filename="Gr__e _a_.txt"; filename*=UTF-8''Gr%C3%BC%C3%9Fe%20%22a%22.txt`);
   });
 });
+
+describe('scheduleAttachmentSweep', () => {
+  it('runs a minute or so after start, then on its interval, never two at once, and stops', async () => {
+    const { vi } = await import('vitest');
+    const { scheduleAttachmentSweep } = await import('./attachments.js');
+    vi.useFakeTimers();
+    try {
+      let calls = 0;
+      let release: () => void = () => {};
+      const db = { $executeRaw: () => { calls += 1; return new Promise<number>((resolve) => { release = () => resolve(0); }); } };
+      const log = { info: () => {}, warn: () => {} };
+      const stop = scheduleAttachmentSweep(db, log, { ATTACHMENT_SWEEP_MINUTES: '10' });
+      await vi.advanceTimersByTimeAsync(59_000);
+      expect(calls).toBe(0);
+      await vi.advanceTimersByTimeAsync(31_000); // the first run, within 90 s
+      expect(calls).toBe(1);
+      await vi.advanceTimersByTimeAsync(10 * 60_000); // still running: the next is skipped
+      expect(calls).toBe(1);
+      release();
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(calls).toBe(2);
+      release();
+      stop();
+      await vi.advanceTimersByTimeAsync(60 * 60_000);
+      expect(calls).toBe(2);
+      expect(scheduleAttachmentSweep(db, log, { ATTACHMENT_RETENTION_DAYS: '0' })).toBeTypeOf('function'); // kept for good: no timers
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reads the fewest file bytes a body can carry from its length', async () => {
+    const { minimumFileBytes, MESSAGE_TEXT_ROOM } = await import('./attachments.js');
+    expect(minimumFileBytes(1000)).toBe(0);
+    expect(minimumFileBytes(MESSAGE_TEXT_ROOM + 4000)).toBe(3000);
+  });
+});

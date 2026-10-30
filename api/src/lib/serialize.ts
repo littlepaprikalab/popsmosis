@@ -8,12 +8,16 @@ import { serializeTags } from './tags.js';
 import { termsCurrent } from './terms.js';
 import { awaitingVideos, lessonProgress, readProgress, videoProgress } from './progress.js';
 import { claimMinutes } from './claim.js';
+import { pastRetention } from './attachments.js';
 
 export const userSelect = { id: true, name: true, avatarUrl: true } as const;
 export const agentSelect = { id: true, name: true } as const;
 // Never the bytes: a list of cards must not drag every file out of the database. GET /api/attachments/:id serves them.
-export const attachmentSelect = { id: true, name: true, mimeType: true, size: true, purgedAt: true } as const;
-export const attachmentsInclude = { select: attachmentSelect, orderBy: { createdAt: 'asc' as const } } as const;
+export const attachmentSelect = { id: true, name: true, mimeType: true, size: true, purgedAt: true, createdAt: true } as const;
+// A message's files share one createdAt (they are written together), so the id, made in the order they were sent,
+// keeps them in that order whatever the rows' order on disk (the retention sweep rewrites them).
+const attachmentsOrder: ({ createdAt: 'asc' } | { id: 'asc' })[] = [{ createdAt: 'asc' }, { id: 'asc' }];
+export const attachmentsInclude = { select: attachmentSelect, orderBy: attachmentsOrder } as const;
 
 export const replyInclude = {
   user: { select: userSelect },
@@ -41,6 +45,7 @@ type AttachmentRow = {
   mimeType: string;
   size: number;
   purgedAt: Date | null;
+  createdAt: Date;
 };
 
 type ReplyRow = {
@@ -106,7 +111,8 @@ export function serializeAttachment(a: AttachmentRow) {
     mimeType: a.mimeType,
     size: a.size,
     url: `/api/attachments/${a.id}`,
-    expired: a.purgedAt !== null, // past the retention: the row says what was sent, the bytes are gone
+    // Past the retention: the row says what was sent, the bytes are gone (or go at the sweep's next run).
+    expired: a.purgedAt !== null || pastRetention(a.createdAt),
   };
 }
 

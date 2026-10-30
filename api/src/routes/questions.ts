@@ -8,7 +8,7 @@ import { decodeCreatedAtIdCursor, encodeCreatedAtIdCursor } from '../lib/cursor.
 import { questionInclude, serializeQuestion, serializeQuestionForAgent } from '../lib/serialize.js';
 import { notifyRoutine, FIRE_REASON_QUESTION } from '../lib/routine.js';
 import { claimMinutes } from '../lib/claim.js';
-import { parseAttachments, attachmentsCreate, sweepExpiredAttachments, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
+import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { progressError, storedProgress } from '../lib/progress.js';
@@ -16,7 +16,7 @@ import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
 import { parseBrain } from '../lib/brains.js';
 import { studioForAgent } from '../lib/studio-settings.js';
-import { takeTopic, giveBack, pruneUsage, topicAllowed } from '../lib/usage.js';
+import { takeTopic, giveBack, pruneUsage, topicAllowed, filesAllowed } from '../lib/usage.js';
 
 export const QUESTION_MIN_LENGTH = 3; // a topic can be one short word: "DNA"
 export const QUESTION_MAX_LENGTH = 2000;
@@ -129,7 +129,8 @@ export default async function questionRoutes(app: FastifyInstance) {
   // A caller already at a limit is told so before the body (up to MESSAGE_BODY_LIMIT) is read and parsed.
   const topicOpen = async (request: FastifyRequest, reply: FastifyReply) => {
     if (!request.viewer) return; // requireUser replied
-    const refusal = await topicAllowed(request.viewer.id);
+    const refusal = (await topicAllowed(request.viewer.id))
+      ?? (await filesAllowed(request.viewer.id, Number(request.headers['content-length']) || 0));
     if (refusal) return sendError(reply, refusal.code, refusal.message, refusal.extra);
   };
   app.post('/api/questions', { onRequest: [requireUser, topicOpen], bodyLimit: MESSAGE_BODY_LIMIT }, async (request, reply) => {
@@ -147,12 +148,12 @@ export default async function questionRoutes(app: FastifyInstance) {
       return sendError(reply, 'VALIDATION_ERROR', 'Please do not include email addresses or phone numbers in a question');
     }
 
-    // The learner's 24 hours and the site's (lib/usage.ts), taken before the topic is written and kept after: a
-    // topic taken back or deleted later does not hand its place back. Taken in a short transaction of its own, so the
-    // files' write below holds no lock and no pooled connection while it runs.
+    // The learner's 24 hours and the site's (lib/usage.ts), and the learner's bytes of files, taken before the topic
+    // is written and kept after: a topic taken back or deleted later does not hand its place back. Taken in a short
+    // transaction of its own, so the files' write below holds no lock and no pooled connection while it runs.
     let usageId: string;
     try {
-      usageId = await takeTopic(request.viewer!.id);
+      usageId = await takeTopic(request.viewer!.id, attachments.reduce((sum, a) => sum + a.size, 0));
     } catch (err) {
       if (isAppError(err)) return sendError(reply, err.code, err.message, err.extra);
       if (await accountGone(err, request.viewer!.id)) return sendError(reply, 'UNAUTHORIZED', 'User not found');
@@ -173,9 +174,6 @@ export default async function questionRoutes(app: FastifyInstance) {
     // awaited: the asker's 201 does not wait on Anthropic's API.
     notifyRoutine(FIRE_REASON_QUESTION, request.log);
     pruneUsage(prisma).catch((pruneErr) => request.log.warn({ err: pruneErr }, 'usage prune failed'));
-    if (attachments.length > 0) {
-      sweepExpiredAttachments(prisma).catch((sweepErr) => request.log.warn({ err: sweepErr }, 'attachment retention sweep failed'));
-    }
     reply.status(201);
     return serializeQuestion(question, request.viewer!.id);
   });

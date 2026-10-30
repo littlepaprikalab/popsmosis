@@ -48,7 +48,11 @@ Optional API tuning: `DATABASE_POOL_SIZE` (default 5), `QUESTIONS_PER_USER_PER_D
 (default 10), `TOPICS_PER_DAY` (default 100; every learner's topics together in 24 hours,
 the ceiling on a day's model spend; 0 for none), `REPLIES_PER_USER_PER_HOUR` (default 30), `DROPLET_COMMENTS_PER_USER_PER_HOUR`
 (default 30; comments on the Droplets tab), `ATTACHMENT_RETENTION_DAYS` (default
-30; how long the files sent with messages keep their bytes in Postgres, 0 for good),
+30; how long the files sent with messages keep their bytes in Postgres, 0 for good; let go
+every `ATTACHMENT_SWEEP_MINUTES`, default 60, and on the spot when read),
+`ATTACHMENT_MB_PER_USER_PER_DAY` (default 20; the files one learner may send in 24 hours, 0
+for none), `ATTACHMENT_MB_HELD_PER_USER` (default 60; the files popsmosis holds of one
+learner at a time, 0 for none),
 `VIDEO_STALE_MINUTES` (default 60; a render that has not reported for this long reads as
 failed), `LESSON_HOLD_MINUTES` (default 0: `/learn` shows a lesson's text as soon as it is posted;
 a number of minutes holds the text back that long for its videos). All of these but

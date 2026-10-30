@@ -30,6 +30,8 @@ export const KNOBS = {
   TOPICS_PER_DAY: { where: 'api', kind: 'int', default: 100, min: 0, max: 100_000 },
   REPLIES_PER_USER_PER_HOUR: { where: 'api', kind: 'int', default: 30, min: 0, max: 1000 },
   DROPLET_COMMENTS_PER_USER_PER_HOUR: { where: 'api', kind: 'int', default: 30, min: 1, max: 1000 },
+  ATTACHMENT_MB_PER_USER_PER_DAY: { where: 'api', kind: 'int', default: 20, min: 0, max: 10_000 },
+  ATTACHMENT_MB_HELD_PER_USER: { where: 'api', kind: 'int', default: 60, min: 0, max: 100_000 },
   // The API: the leases and the renders (lib/claim.ts, lib/droplet.ts, lib/progress.ts, lib/video-claim.ts).
   QUESTION_CLAIM_MINUTES: { where: 'api', kind: 'int', default: 20, min: 1, max: 1440 },
   VIDEO_STALE_MINUTES: { where: 'api', kind: 'int', default: 60, min: 1, max: 1440 },

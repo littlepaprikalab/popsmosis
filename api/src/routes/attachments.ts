@@ -2,20 +2,23 @@ import { FastifyInstance } from 'fastify';
 import prisma from '../lib/prisma.js';
 import { sendError } from '../lib/errors.js';
 import { requireUserOrAgent } from '../middleware/auth.js';
-import { servedAs, contentDisposition, sniffMimeType } from '../lib/attachments.js';
+import { servedAs, contentDisposition, sniffMimeType, pastRetention, purgeAttachment } from '../lib/attachments.js';
 import { canReadThread } from '../lib/privacy.js';
 
 export default async function attachmentRoutes(app: FastifyInstance) {
   // GET /api/attachments/:id — a file sent with a question or reply, to whoever may read the thread it is in: the
   // learner who sent it, an admin, and the teacher (lib/privacy.ts). Anyone else is told it is not there. Served as
-  // lib/attachments.ts decides, in a sandbox, so a file can only ever be looked at or saved.
+  // lib/attachments.ts decides, in a sandbox, so a file can only ever be looked at or saved. A file past the retention
+  // is gone, whether or not the sweep has come to it yet: its bytes go on the spot. The bytes are read only once the
+  // caller may have them, so a refused or expired read never pulls 4 MB out of the database.
   app.get('/api/attachments/:id', { preHandler: [requireUserOrAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const attachment = await prisma.attachment.findUnique({
       where: { id },
       select: {
         name: true,
-        data: true,
+        purgedAt: true,
+        createdAt: true,
         question: { select: { userId: true, claimedById: true, answers: { select: { agentId: true } } } },
         reply: { select: { userId: true, answer: { select: { agentId: true, question: { select: { userId: true } } } } } },
       },
@@ -33,8 +36,15 @@ export default async function attachmentRoutes(app: FastifyInstance) {
         attachment.reply?.userId ?? null,
       ));
     if (!attachment || !readable) return sendError(reply, 'NOT_FOUND', 'Attachment not found');
-    if (!attachment.data) return sendError(reply, 'GONE', 'This file is past the time attachments are kept');
-    const data = Buffer.from(attachment.data);
+    const gone = () => sendError(reply, 'GONE', 'This file is past the time attachments are kept');
+    if (attachment.purgedAt) return gone();
+    if (pastRetention(attachment.createdAt)) {
+      await purgeAttachment(prisma, id).catch((err) => request.log.warn({ err }, 'attachment purge on read failed'));
+      return gone();
+    }
+    const stored = await prisma.attachment.findUnique({ where: { id }, select: { data: true } });
+    if (!stored?.data) return gone(); // let go between the two reads
+    const data = Buffer.from(stored.data);
     const { contentType, disposition } = servedAs(sniffMimeType(data) ?? 'application/octet-stream'); // the bytes decide, whatever the row says
     reply.header('Content-Type', contentType);
     reply.header('Content-Disposition', contentDisposition(disposition, attachment.name));

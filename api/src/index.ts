@@ -14,6 +14,7 @@ import { legacyPublicPrefix, storageConfig, storageReachable } from './lib/stora
 import { MOVE_EVERY_MS, sweepSupabaseVideos } from './lib/storage-move.js';
 import { keepKnobsFresh } from './lib/knobs.js';
 import { loadKnobs, reloadKnobs } from './lib/studio-settings.js';
+import { scheduleAttachmentSweep } from './lib/attachments.js';
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
 import replyRoutes from './routes/replies.js';
@@ -245,8 +246,11 @@ export async function buildApp() {
 const isMain = process.argv[1] && /index\.(ts|js)$/.test(process.argv[1]);
 if (isMain) {
   const app = await buildApp();
+  // Files past the retention go on a schedule, whether or not anyone sends one (lib/attachments.ts).
+  const stopSweep = scheduleAttachmentSweep(prisma, app.log);
   const shutdown = async () => {
     app.log.info('Shutting down...');
+    stopSweep();
     await app.close();
     await prisma.$disconnect();
     process.exit(0);

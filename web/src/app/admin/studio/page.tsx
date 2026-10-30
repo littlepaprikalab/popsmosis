@@ -56,6 +56,8 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
       TOPICS_PER_DAY: { label: 'Topics everyone may ask for in 24 hours', unit: 'topics', note: 'Every learner’s together: the ceiling on a day’s model spend, at about 70¢ to $1 a droplet. 0: no ceiling.' },
       REPLIES_PER_USER_PER_HOUR: { label: 'Follow-ups a learner may post in an hour', unit: 'follow-ups', note: 'Each one is a run of the teacher. A deleted follow-up does not give its place back.' },
       DROPLET_COMMENTS_PER_USER_PER_HOUR: { label: 'Comments a learner may post on the Droplets tab in an hour', unit: 'comments', note: 'Likes are held to 60 a minute and need no setting.' },
+      ATTACHMENT_MB_PER_USER_PER_DAY: { label: 'Files a learner may send in 24 hours', unit: 'MB', note: 'With their topics and follow-ups. 0: no limit. Deleting a request does not give its bytes back.' },
+      ATTACHMENT_MB_HELD_PER_USER: { label: 'Files popsmosis keeps of one learner at a time', unit: 'MB', note: 'The files live in the database, so this keeps one account from filling it. 0: no limit. Deleting a request frees its files.' },
     },
   },
   {
