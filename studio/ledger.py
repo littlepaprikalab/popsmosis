@@ -24,6 +24,15 @@ it filling in while the droplet is made (api/src/lib/progress.ts).
 
 A model's costUsd is null when one of its calls has no known price (an ElevenLabs call
 without ELEVENLABS_USD_PER_1K_CREDITS); its credits, when the provider said them, still are.
+
+The ceiling. check_ceiling(job) runs before every paid call (the brain's through run.logged_ask,
+Gemini's, Meta's and the audio's in their own modules) and raises OverCeiling once the topic's calls
+have cost what an admin allows a topic on /admin/studio (`spend.topicUsd` in settings.json, as the
+last claim said; 0 for none). It counts every call of the job, the lesson's, the videos' and every
+retry's, so a step that fails on it fails again at once, for nothing, and the topic is given up. A
+call already under way finishes and is billed, and calls running side by side (the pictures) may
+each start just under the ceiling, so a topic can end a few calls past it. A job no claim ever set
+up (a local `plan`) has no ceiling; a claim from an API older than the setting gives DEFAULT_TOPIC_USD.
 """
 
 from __future__ import annotations
@@ -39,7 +48,7 @@ import time
 from dataclasses import asdict, fields
 from pathlib import Path
 
-from studio import brain, media
+from studio import brain, jobs, media
 
 CALLS = "calls.jsonl"
 MAX_BYTES = 16 * 1024  # what the API takes (api/src/lib/breakdown.ts); a bigger one is left out, never refused
@@ -58,8 +67,17 @@ TOOLS = {
 LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
 
+# A claimed topic's ceiling when its claim came from an API older than the setting
+# (api/src/lib/studio-settings.ts, DEFAULT_SPEND): about two and a half times the dearest topic so far.
+DEFAULT_TOPIC_USD = 5.0
+
 _local = threading.local()
 _lock = threading.Lock()
+
+
+class OverCeiling(media.StepFailed):
+    """The topic has cost what an admin allows one topic: no more paid calls for it. Not a painter's or a
+    provider's error, so no step reads it as a refused picture and tries again."""
 
 
 @contextlib.contextmanager
@@ -127,6 +145,36 @@ def log(job: Path, calls: list[brain.Call]) -> None:
             out.write(rows)  # one write, so a kill leaves whole lines or, at worst, one cut short
     except (OSError, ValueError) as e:
         print(f"  calls not logged ({type(e).__name__}: {e}); the bill will be short", file=sys.stderr)
+
+
+def ceiling(job: Path) -> float | None:
+    """The most this topic may cost in dollars, or None for no ceiling: the admin's `spend.topicUsd` as the job's
+    last claim said (settings.json, studio/jobs.py), DEFAULT_TOPIC_USD from an API without it, none for a job no
+    claim set up (no settings.json: a local `plan`) or a ceiling of 0."""
+    if not (job / jobs.SETTINGS).exists():
+        return None
+    spend = jobs.studio_settings(job).get("spend")
+    limit = spend.get("topicUsd") if isinstance(spend, dict) else DEFAULT_TOPIC_USD
+    if isinstance(limit, bool) or not isinstance(limit, (int, float)) or not limit == limit or limit < 0:
+        limit = DEFAULT_TOPIC_USD  # a value the API would never send: the safe side
+    return float(limit) or None
+
+
+def spent(job: Path) -> float:
+    """What the job's calls have cost so far, in dollars: every priced call it logged, whatever step or run."""
+    return sum(r["cost_usd"] for r in read(job)
+               if isinstance(r.get("cost_usd"), (int, float)) and not isinstance(r.get("cost_usd"), bool))
+
+
+def check_ceiling(job: Path) -> None:
+    """Raise OverCeiling when the topic has cost its ceiling already; before every paid call."""
+    limit = ceiling(job)
+    if limit is None:
+        return
+    so_far = spent(job)
+    if so_far >= limit:
+        raise OverCeiling(f"the topic has cost ${so_far:.2f}, past the ${limit:.2f} a topic may cost (/admin/studio); "
+                          f"no more model calls are made for it")
 
 
 def call_row(call: brain.Call) -> str:

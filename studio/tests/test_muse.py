@@ -423,6 +423,21 @@ def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
         art.run(job, FakeHelper())
 
 
+def test_a_topic_past_its_spend_ceiling_asks_meta_for_nothing_and_fails_the_step(job, monkeypatch):
+    """The ceiling is checked before each picture, and is not a refused picture: the art step fails on it."""
+    sent = []
+    monkeypatch.setattr(muse, "send", lambda *a: sent.append(a) or (500, {}, b"{}"))
+    (job / "settings.json").write_text(json.dumps({"art": {"claude": "gemini", "meta": "muse"}, "spend": {"topicUsd": 1}}))
+    (job / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "muse-wonder-1.0", "cost_usd": 1.2}) + "\n")
+    with pytest.raises(ledger.OverCeiling, match=r"cost \$1\.20"):
+        muse.paint(job, "art hook", "a chloroplast")
+    with pytest.raises(ledger.OverCeiling):
+        muse.segment(job, "locate hook Thylakoid", job / media.art_path("hook"), phrase="thylakoid")
+    with pytest.raises(ledger.OverCeiling):
+        art.run(job, FakeHelper())
+    assert sent == []
+
+
 def test_switching_the_art_makes_it_again(job, monkeypatch):
     from studio.tests.test_art import FakeArtist
 

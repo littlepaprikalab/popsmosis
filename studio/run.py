@@ -733,9 +733,11 @@ def inside_steps(runs: list[dict]) -> str:
 
 
 def logged_ask(job: Path):
-    """brain.ask, logging each call to the job's calls.jsonl (tagged with its step) and stderr as it ends."""
+    """brain.ask, logging each call to the job's calls.jsonl (tagged with its step) and stderr as it ends. Each call
+    first checks the topic is under its spend ceiling (ledger.check_ceiling)."""
 
     def ask(*args, **kwargs):
+        ledger.check_ceiling(job)
         # Only this thread's calls: another thread may be asking at the same time.
         with brain.collect() as mine:
             try:

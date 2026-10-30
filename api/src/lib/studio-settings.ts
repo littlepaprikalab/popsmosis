@@ -20,6 +20,10 @@
  *
  * `knobs`: the environment variables an admin may set here instead, by name (lib/knobs.ts). The studio is sent its
  * own (where: 'studio'); the API's own are kept in force by each instance.
+ * `spend`: the most one topic may cost in model calls, its lesson and videos and every retry together, in US
+ * dollars (`topicUsd`; 0 for no ceiling). The studio adds up the job's calls.jsonl (studio/ledger.py) before each
+ * paid call and fails the step once the topic has reached it, so a retry costs nothing and the topic is given up.
+ * Calls with no known price (ElevenLabs without ELEVENLABS_USD_PER_1K_CREDITS) count as nothing.
  */
 import prisma from './prisma.js';
 import { BRAINS, type Brain } from './brains.js';
@@ -38,6 +42,10 @@ export type BrainSettings = { default: Brain; effort: Effort };
 export const SONG_PROVIDERS = ['elevenlabs', 'gemini'] as const;
 export type SongProvider = (typeof SONG_PROVIDERS)[number];
 export type SongSettings = { provider: SongProvider };
+export type SpendSettings = { topicUsd: number };
+// The highest ceiling an admin may set: well above any topic so far ($0.50 to $2 with its videos), low enough that a
+// slip of the keyboard is not a blank cheque.
+export const MAX_TOPIC_USD = 100;
 
 // What each brain's provider may paint with, its default first.
 export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
@@ -47,11 +55,14 @@ export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
 export const DEFAULT_ART: ArtSettings = { claude: 'gemini', meta: 'muse' };
 export const DEFAULT_BRAIN: BrainSettings = { default: 'claude', effort: 'high' };
 export const DEFAULT_SONG: SongSettings = { provider: 'elevenlabs' };
+// About two and a half times the dearest topic so far, retries included.
+export const DEFAULT_SPEND: SpendSettings = { topicUsd: 5 };
 
 const ART_KEY = 'art';
 const BRAIN_KEY = 'brain';
 const SONG_KEY = 'song';
 const KNOBS_KEY = 'knobs';
+const SPEND_KEY = 'spend';
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
@@ -82,6 +93,25 @@ export function brainFrom(stored: unknown): BrainSettings {
 /** The stored song settings over the defaults, as artFrom(). */
 export function songFrom(stored: unknown): SongSettings {
   return isObject(stored) && oneOf(SONG_PROVIDERS, stored.provider) ? { provider: stored.provider } : { ...DEFAULT_SONG };
+}
+
+const isCeiling = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= MAX_TOPIC_USD;
+
+/** The stored spend settings over the defaults, as artFrom(). */
+export function spendFrom(stored: unknown): SpendSettings {
+  return isObject(stored) && isCeiling(stored.topicUsd) ? { topicUsd: stored.topicUsd } : { ...DEFAULT_SPEND };
+}
+
+/** An admin's change to the spend, `{ topicUsd }` in dollars (0 for no ceiling), or why it cannot be taken. */
+export function parseSpendSettings(value: unknown): { spend?: SpendSettings; error?: string } {
+  if (!isObject(value)) return { error: 'spend must be an object' };
+  const extra = Object.keys(value).find((key) => key !== 'topicUsd');
+  if (extra) return { error: `spend takes topicUsd, not ${extra}` };
+  if (!isCeiling(value.topicUsd)) {
+    return { error: `spend.topicUsd must be a number of dollars from 0 (no ceiling) to ${MAX_TOPIC_USD}` };
+  }
+  return { spend: { topicUsd: Math.round(value.topicUsd * 100) / 100 } };
 }
 
 /** An admin's change to the song, `{ provider }`, or why it cannot be taken. */
@@ -127,7 +157,7 @@ export function parseBrainSettings(value: unknown): { brain?: Partial<BrainSetti
 }
 
 export async function readStudioSettings(db: Pick<typeof prisma, 'setting'> = prisma) {
-  const rows = await db.setting.findMany({ where: { key: { in: [ART_KEY, BRAIN_KEY, SONG_KEY, KNOBS_KEY] } } });
+  const rows = await db.setting.findMany({ where: { key: { in: [ART_KEY, BRAIN_KEY, SONG_KEY, KNOBS_KEY, SPEND_KEY] } } });
   const row = (key: string) => rows.find((r) => r.key === key);
   const times = rows.map((r) => r.updatedAt.getTime());
   return {
@@ -135,6 +165,7 @@ export async function readStudioSettings(db: Pick<typeof prisma, 'setting'> = pr
     song: songFrom(row(SONG_KEY)?.value),
     art: artFrom(row(ART_KEY)?.value),
     knobs: knobsFrom(row(KNOBS_KEY)?.value),
+    spend: spendFrom(row(SPEND_KEY)?.value),
     updatedAt: times.length ? new Date(Math.max(...times)).toISOString() : null,
   };
 }
@@ -146,8 +177,8 @@ function studioKnobs(knobs: Knobs): Knobs {
 
 /** What the studio reads: the settings in force, nothing about when they changed. */
 export async function studioForAgent() {
-  const { brain, song, art, knobs } = await readStudioSettings();
-  return { brain, song, art, knobs: studioKnobs(knobs) };
+  const { brain, song, art, knobs, spend } = await readStudioSettings();
+  return { brain, song, art, knobs: studioKnobs(knobs), spend };
 }
 
 /** The knobs as stored, for lib/knobs.ts to put in force. */
@@ -161,18 +192,19 @@ export function reloadKnobs(): Promise<void> {
 /**
  * Apply an admin's change: only the fields it names, merged into what is stored by Postgres itself (jsonb ||), so
  * two admins saving different fields at once both keep their change. Every key in one transaction, so a change to
- * the brain, the song, the art and the knobs lands whole or not at all. A knob set to null is taken out
+ * the brain, the song, the art, the knobs and the spend lands whole or not at all. A knob set to null is taken out
  * (jsonb_strip_nulls), so the environment's value is read again. The knobs are put in force here at once.
  */
 export async function writeStudioSettings(change: {
   brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>;
-  knobs?: Partial<Record<KnobName, KnobValue | null>>;
+  knobs?: Partial<Record<KnobName, KnobValue | null>>; spend?: SpendSettings;
 }) {
   const writes = [
     ...(change.brain ? [[BRAIN_KEY, change.brain] as const] : []),
     ...(change.song ? [[SONG_KEY, change.song] as const] : []),
     ...(change.art ? [[ART_KEY, change.art] as const] : []),
     ...(change.knobs ? [[KNOBS_KEY, change.knobs] as const] : []),
+    ...(change.spend ? [[SPEND_KEY, change.spend] as const] : []),
   ].map(([key, value]) => {
     const json = JSON.stringify(value);
     return prisma.$executeRaw`

@@ -417,7 +417,10 @@ test.describe('studio settings', () => {
     // From the defaults, whatever an earlier run left.
     await request.put(apiUrl('/api/studio/settings'), {
       headers: asAda(),
-      data: { brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' } },
+      data: {
+        brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+        spend: { topicUsd: 5 },
+      },
     });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
@@ -439,6 +442,7 @@ test.describe('studio settings', () => {
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
     expect((await claimed.json()).studio).toEqual({
       brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
+      spend: { topicUsd: 5 },
     });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
@@ -516,6 +520,26 @@ test.describe('studio settings', () => {
     await expect(videos.getByTestId('knob-source')).toHaveText('Not set here');
     const after = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
     expect((await after.json()).knobs).toEqual({});
+  });
+
+  test('an admin sets the per-topic spend ceiling, and the teacher reads it with its key', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 5 } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const spend = page.getByTestId('spend');
+    await expect(spend.getByTestId('spend-now')).toContainText('Now: $5.00.');
+    await spend.getByLabel('Dollars a topic:').fill('2.5');
+    await spend.getByRole('button', { name: 'Save' }).click();
+    await expect(spend.getByTestId('spend-now')).toContainText('Now: $2.50.');
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).spend).toEqual({ topicUsd: 2.5 });
+    // Out of range is refused on the page, and nothing is saved.
+    await spend.getByLabel('Dollars a topic:').fill('500');
+    await spend.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(/from 0 \(no ceiling\) to 100/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByTestId('spend').getByTestId('spend-now')).toContainText('Now: $2.50.');
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 5 } } });
   });
 
   test('is for admins only', async ({ page, context }) => {

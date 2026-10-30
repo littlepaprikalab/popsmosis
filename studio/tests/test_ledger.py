@@ -328,3 +328,61 @@ def test_parallel_work_all_ends_before_the_first_failure_is_raised():
     with pytest.raises(ValueError, match="item 2 broke"):  # the first in the items' order
         ledger.parallel(work, [1, 2, 3, 4], workers=4)
     assert sorted(ended) == [1, 4]  # the others were not cut short
+
+
+# --- the ceiling ------------------------------------------------------------------------------
+
+
+def claimed(job, spend="unset"):
+    """A job as a claim left it: settings.json with the admin's spend ceiling, or without one (an older API)."""
+    settings = {"art": {"claude": "gemini", "meta": "muse"}}
+    if spend != "unset":
+        settings["spend"] = spend
+    (job / "settings.json").write_text(json.dumps(settings))
+
+
+def test_the_ceiling_is_the_admins_setting_as_the_claim_said(tmp_path):
+    assert ledger.ceiling(tmp_path) is None  # never claimed: a local job has none
+    claimed(tmp_path)
+    assert ledger.ceiling(tmp_path) == ledger.DEFAULT_TOPIC_USD  # an API older than the setting
+    claimed(tmp_path, {"topicUsd": 2.5})
+    assert ledger.ceiling(tmp_path) == 2.5
+    claimed(tmp_path, {"topicUsd": 0})
+    assert ledger.ceiling(tmp_path) is None  # 0: no ceiling
+    for broken in ({"topicUsd": "lots"}, {"topicUsd": -1}, {"topicUsd": True}, {"topicUsd": float("nan")}, "cheap"):
+        claimed(tmp_path, broken)
+        assert ledger.ceiling(tmp_path) == ledger.DEFAULT_TOPIC_USD  # the safe side, never none
+
+
+def test_every_priced_call_of_the_job_counts_and_the_ceiling_stops_the_next(tmp_path):
+    claimed(tmp_path, {"topicUsd": 1.0})
+    with ledger.at_step("bundle"):
+        ledger.log(tmp_path, [call("bundle", cost=0.6)])
+    with ledger.at_step("audio"):
+        ledger.log(tmp_path, [call("song", model="music_v1", cost=None, credits=900)])  # no price: counts as nothing
+    ledger.check_ceiling(tmp_path)  # $0.60 of $1.00
+    with ledger.at_step("art"):
+        ledger.log(tmp_path, [call("art hook", cost=0.25), call("art check hook", cost=0.15)])
+    assert ledger.spent(tmp_path) == pytest.approx(1.0)
+    with pytest.raises(ledger.OverCeiling, match=r"cost \$1\.00, past the \$1\.00 a topic may cost"):
+        ledger.check_ceiling(tmp_path)
+    claimed(tmp_path, {"topicUsd": 0})
+    ledger.check_ceiling(tmp_path)  # an admin lifted it: the next claim carries that
+
+
+def test_logged_ask_makes_no_call_once_the_topic_is_past_its_ceiling(tmp_path, monkeypatch):
+    asked = []
+
+    def fake_ask(role, prompt, *args, label=None, **kwargs):
+        asked.append(label)
+        brain._record(call(label, cost=0.5))
+        return {}
+
+    monkeypatch.setattr(brain, "ask", fake_ask)
+    claimed(tmp_path, {"topicUsd": 0.75})
+    ask = operator_run.logged_ask(tmp_path)
+    ask("brain", "p", label="factcheck round 1")
+    ask("brain", "p", label="factcheck round 2")  # starts at $0.50: under the ceiling, so it runs and ends past it
+    with pytest.raises(ledger.OverCeiling):
+        ask("brain", "p", label="factcheck round 3")
+    assert asked == ["factcheck round 1", "factcheck round 2"]

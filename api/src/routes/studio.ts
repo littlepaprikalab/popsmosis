@@ -3,8 +3,9 @@ import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireUserOrAgent } from '../middleware/auth.js';
 import { BRAINS } from '../lib/brains.js';
 import {
-  ART_CHOICES, DEFAULT_ART, DEFAULT_BRAIN, DEFAULT_SONG, EFFORTS, SONG_PROVIDERS, parseArt, parseBrainSettings,
-  parseSongSettings, readStudioSettings, reloadKnobs, studioForAgent, writeStudioSettings,
+  ART_CHOICES, DEFAULT_ART, DEFAULT_BRAIN, DEFAULT_SONG, DEFAULT_SPEND, EFFORTS, MAX_TOPIC_USD, SONG_PROVIDERS, parseArt,
+  parseBrainSettings, parseSongSettings, parseSpendSettings, readStudioSettings, reloadKnobs, studioForAgent,
+  writeStudioSettings,
 } from '../lib/studio-settings.js';
 import { KNOBS, KNOB_NAMES, parseKnobs, type ApiKnob, type KnobValue, type Knobs } from '../lib/knobs.js';
 import { claimMinutes } from '../lib/claim.js';
@@ -15,8 +16,11 @@ import { debounceMs, fireBetaHeader } from '../lib/routine.js';
 import { usageLimits } from '../lib/usage.js';
 import { videoMaxAttempts } from '../lib/video-claim.js';
 
-const DEFAULTS = { brain: DEFAULT_BRAIN, song: DEFAULT_SONG, art: DEFAULT_ART };
-const CHOICES = { brain: { default: BRAINS, effort: EFFORTS }, song: { provider: SONG_PROVIDERS }, art: ART_CHOICES };
+const DEFAULTS = { brain: DEFAULT_BRAIN, song: DEFAULT_SONG, art: DEFAULT_ART, spend: DEFAULT_SPEND };
+const CHOICES = {
+  brain: { default: BRAINS, effort: EFFORTS }, song: { provider: SONG_PROVIDERS }, art: ART_CHOICES,
+  spend: { topicUsd: { min: 0, max: MAX_TOPIC_USD } },
+};
 
 // Each of the API's knobs as the code that reads it has it now: the value set here, else the environment's, else
 // the default, after that code's own reading of a value it cannot use.
@@ -64,8 +68,8 @@ async function requireAdminOrAgent(request: FastifyRequest, reply: FastifyReply)
  * change to the studio's reaches its next run; a change to the API's applies at once.
  */
 export default async function studioRoutes(app: FastifyInstance) {
-  // GET /api/studio/settings — admin: { brain, song, art, knobs, updatedAt, defaults, choices };
-  // agent: { brain, song, art, knobs }, where knobs are the studio's set here, by name
+  // GET /api/studio/settings — admin: { brain, song, art, knobs, spend, updatedAt, defaults, choices };
+  // agent: { brain, song, art, knobs, spend }, where knobs are the studio's set here, by name
   app.get('/api/studio/settings', { preHandler: [requireAdminOrAgent] }, async (request) => {
     if (request.agent) return studioForAgent();
     await reloadKnobs(); // what is in force on this instance, as of what is stored now
@@ -73,11 +77,13 @@ export default async function studioRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/studio/settings — admin: { brain?: { default?, effort? }, song?: { provider }, art?: { claude?, meta? },
-  // knobs?: { NAME: value | null } }; what is left out stays as it is, and a knob set to null is the environment's again.
+  // knobs?: { NAME: value | null }, spend?: { topicUsd } }; what is left out stays as it is, and a knob set to null is
+  // the environment's again.
   app.put('/api/studio/settings', { preHandler: [requireAdmin] }, async (request, reply) => {
-    const body = (request.body ?? {}) as { brain?: unknown; song?: unknown; art?: unknown; knobs?: unknown };
-    if (body.brain === undefined && body.song === undefined && body.art === undefined && body.knobs === undefined) {
-      return sendError(reply, 'VALIDATION_ERROR', 'brain, song, art or knobs is required');
+    const body = (request.body ?? {}) as { brain?: unknown; song?: unknown; art?: unknown; knobs?: unknown; spend?: unknown };
+    if (body.brain === undefined && body.song === undefined && body.art === undefined && body.knobs === undefined
+      && body.spend === undefined) {
+      return sendError(reply, 'VALIDATION_ERROR', 'brain, song, art, knobs or spend is required');
     }
     const brain = body.brain === undefined ? {} : parseBrainSettings(body.brain);
     if (brain.error) return sendError(reply, 'VALIDATION_ERROR', brain.error);
@@ -87,6 +93,10 @@ export default async function studioRoutes(app: FastifyInstance) {
     if (art.error) return sendError(reply, 'VALIDATION_ERROR', art.error);
     const knobs = body.knobs === undefined ? {} : parseKnobs(body.knobs);
     if (knobs.error) return sendError(reply, 'VALIDATION_ERROR', knobs.error);
-    return forAdmin(await writeStudioSettings({ brain: brain.brain, song: song.song, art: art.art, knobs: knobs.knobs }));
+    const spend = body.spend === undefined ? {} : parseSpendSettings(body.spend);
+    if (spend.error) return sendError(reply, 'VALIDATION_ERROR', spend.error);
+    return forAdmin(await writeStudioSettings({
+      brain: brain.brain, song: song.song, art: art.art, knobs: knobs.knobs, spend: spend.spend,
+    }));
   });
 }

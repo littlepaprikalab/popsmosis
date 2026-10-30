@@ -329,6 +329,8 @@ export type BrainSettings = { default: Brain; effort: Effort };
 // Who sings the song: ElevenLabs' Eleven Music or Lyria on the Gemini API. The narration is ElevenLabs' either way.
 export type SongProvider = 'elevenlabs' | 'gemini';
 export type SongSettings = { provider: SongProvider };
+/** The most one topic may cost in model calls, its lesson, videos and retries together, in dollars; 0 for no ceiling. */
+export type SpendSettings = { topicUsd: number };
 
 /**
  * An environment variable an admin can set on /admin/studio instead (api/src/lib/knobs.ts): set there, it wins over
@@ -352,11 +354,12 @@ export interface StudioSettings {
   song: SongSettings;
   art: ArtSettings;
   knobs: Record<string, Knob>; // by the variable's name
+  spend?: SpendSettings; // absent from an API older than the ceiling
   updatedAt: string | null; // null: never changed, the defaults
-  defaults: { brain: BrainSettings; song: SongSettings; art: ArtSettings };
+  defaults: { brain: BrainSettings; song: SongSettings; art: ArtSettings; spend?: SpendSettings };
   choices: {
     brain: { default: Brain[]; effort: Effort[] }; song: { provider: SongProvider[] };
-    art: { claude: Painter[]; meta: Painter[] };
+    art: { claude: Painter[]; meta: Painter[] }; spend?: { topicUsd: { min: number; max: number } };
   };
 }
 
@@ -550,6 +553,7 @@ export const api = {
   getStudioSettings: () => request<StudioSettings>('/studio/settings'),
   setStudioSettings: (change: {
     brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>; knobs?: Record<string, KnobValue | null>;
+    spend?: SpendSettings;
   }) =>
     request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify(change) }),
 };

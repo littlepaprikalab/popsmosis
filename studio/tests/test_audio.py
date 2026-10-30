@@ -576,3 +576,15 @@ def test_a_lyria_answer_with_no_song_is_not_logged_as_one(job, monkeypatch):
     with pytest.raises(media.StepFailed, match="no song"):
         audio.run(job)
     assert "song" not in [r["label"] for r in _logged(job)]  # only the voice, made at the same time
+
+
+def test_a_topic_past_its_spend_ceiling_asks_for_no_song_or_voice(job, monkeypatch):
+    from studio import ledger
+
+    fake = FakeEleven()
+    monkeypatch.setattr(audio, "send", fake)
+    jobs.keep_studio_settings(job, {"spend": {"topicUsd": 0.5}})
+    (job / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "claude-opus-5-5", "cost_usd": 0.6}) + "\n")
+    with pytest.raises(ledger.OverCeiling):
+        audio.run(job)
+    assert fake.requests == []

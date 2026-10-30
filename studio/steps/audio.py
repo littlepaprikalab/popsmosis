@@ -227,6 +227,7 @@ def _placed(planned: list[dict]) -> list[dict]:
 
 def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
     """Make the song; say who made it."""
+    ledger.check_ceiling(job)
     if provider != "gemini":
         _make_eleven_song(job, bundle)
         return "elevenlabs"
@@ -237,6 +238,7 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
         # Lyria refuses some grave topics' lyrics outright: "Why the Holocaust happened" was blocked twice
         # (blockReason OTHER) on Oct 30, where the same style without the lyrics was made. Eleven Music sang them.
         print(f"audio: {e}; Eleven Music makes the song instead", file=sys.stderr)
+        ledger.check_ceiling(job)  # a second paid song: outside the try, so the ceiling keeps its own code
         try:
             _make_eleven_song(job, bundle, instead_of={"provider": "gemini", "model_id": gemini_song_model(),
                                                        "reason": str(e)})
@@ -419,6 +421,7 @@ def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
     if len(text) > TTS_MAX_CHARS:
         raise media.StepFailed(f"the {kind} is {len(text)} characters; one text-to-speech call takes {TTS_MAX_CHARS}")
     voice = voice_id()
+    ledger.check_ceiling(job)
     started = time.monotonic()
     status, headers, answer = _eleven("POST", f"/v1/text-to-speech/{voice}/with-timestamps?output_format=mp3_44100_128",
                                       {"text": text, "model_id": TTS_MODEL})

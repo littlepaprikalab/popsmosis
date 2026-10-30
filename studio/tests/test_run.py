@@ -136,6 +136,23 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     assert [s["step"] for s in record["steps"]] == ["request", "bundle", "audit", "factcheck", "post"]
 
 
+def test_a_topic_past_its_spend_ceiling_fails_and_its_retry_spends_nothing(jobs_root):
+    """The ceiling is the admin's, from the claim: the lesson's calls stop once the topic has cost it, the step
+    fails with the reason, and the retry fails the same way at once, so the topic is given up."""
+    api, ask = FakeApi(studio={"brain": {"default": "claude", "effort": "high"}, "spend": {"topicUsd": 0.5}}), FakeBrain()
+    job = jobs_root / "q1"
+    job.mkdir()
+    (job / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "claude-opus-5-5", "step": "bundle",
+                                                 "cost_usd": 0.55}) + "\n")  # an earlier try, already past it
+    result, step, reason = operator_run.run("q1", api=api, ask=operator_run.logged_ask(job))
+    assert (result, step) == ("FAILED", "bundle")
+    assert reason.startswith("the topic has cost $0.55, past the $0.50 a topic may cost (/admin/studio)")
+    assert not (job / "bundle.json").exists()
+    assert operator_run.run("q1", api=api, ask=operator_run.logged_ask(job))[:2] == ("FAILED", "bundle")
+    assert [r["result"] for r in operator_run.read_jsonl(job / "runs.jsonl")] == ["FAILED", "FAILED"]
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+
+
 def test_a_photo_too_big_for_the_brain_is_left_out_rather_than_failing_every_try(jobs_root, monkeypatch):
     monkeypatch.setattr(operator_run, "IMAGE_MAX_BYTES", 4)
     assert operator_run.run("q1", api=FakeApi(), ask=FakeBrain())[0] == "DONE"

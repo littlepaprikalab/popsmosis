@@ -188,7 +188,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 
 Everything else is chosen by an admin on **STUDIO** in the nav (`/admin/studio`), kept in the
 database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, who sings
-the song, and who paints each brain's pictures. The studio reads them from the API, with its agent key, before
+the song, who paints each brain's pictures, and the most one topic may cost. The studio reads them from the API, with its agent key, before
 it claims a topic and from every claim after, so a change applies from the next run with no
 change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `STUDIO_BRAIN_EFFORT` and
 `SONG_PROVIDER`, which used to pick these, are no longer read: while one is still set, `run`,
@@ -202,6 +202,16 @@ page and remove it, so nothing changes without anyone seeing why.
 | Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
+| Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $5 |
+
+The ceiling is checked before every paid call, against the job's `calls.jsonl`
+(`studio/ledger.py`, `check_ceiling`). Once a topic has cost it, the step fails with `the
+topic has cost $X, past the $Y a topic may cost`; the retry fails the same way without a
+call, and the topic (or, once its lesson is posted, its videos) is given up. A call already
+under way finishes, and pictures painted side by side may each start just under it, so a
+topic can end a few calls past the ceiling. ElevenLabs calls count only when the runner has
+`ELEVENLABS_USD_PER_1K_CREDITS`. A local job (`plan`, `make`) has no ceiling: no claim set
+one.
 
 What runs, by the brain's provider:
 
