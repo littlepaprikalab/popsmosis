@@ -545,7 +545,12 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
 - **Once per scene:** load the art and the masks, and precompute each structure's ghost.
 - **Primitives** (`studio/render/primitives.py`):
   - **Camera:** the world is art pixel coordinates; per beat, ease zoom and pan toward
-    the target structure's centroid; clamp to the art's bounds.
+    the target structure's centroid; clamp to the art's bounds. A shot never stands still:
+    from the start of its line the camera drifts, pushing in (or, after pulling back, pulling
+    on back while the picture still fills the view, so a painting's edge never shows) up to 5%
+    further, ever more slowly. Lines in a row framing the same target are one shot, so the
+    drift runs on across them. The labels glide with it (under a third of a pixel a frame on
+    the light-reactions demo); they are placed afresh every frame, as in a move.
   - **Ghost:** unrevealed structures faded into the art's background through their mask (a
     wash in the background's colour, read off the art's edge, at ~85% alpha, blurred edge:
     pale on the SVG art's white, dark on Muse Image's slate); fade to full over 0.4 s when
@@ -562,8 +567,27 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     a polyline between the structures' label anchors (always inside them), and one lead
     particle with a trail eases from stop to stop, holding at each one beside the label's
     dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
-    have, keeps them readable on any colour. Lines in a row with the same path are one
-    run, so the motion carries on across them, and it waits for its stops to be revealed.
+    have, keeps them readable on any colour. Lines in a row that carry a flow (its path and
+    what it carries) are one run for it, so it carries on across them, whatever joins it or
+    leaves, and it waits for its stops to be revealed.
+  - **The system running:** a line that sums up (the whole scene, nothing spotlit, as the
+    bundle prompt asks of summing-up and chorus lines) runs every flow its scene has shown so
+    far beside its own, up to 4: on the light reactions, electrons down the chain, protons
+    pumped into the lumen and protons back through a turning ATP synthase, all at once. Each
+    was taught, and passed the fact-check, on an earlier line, so nothing new is claimed. A
+    flow along part of a longer one carrying the same thing gives way to the longer. Not on the
+    hook, nor on a scene once a flow on it is blocked; spaces fill only as the line's own flows
+    say (`studio/steps/timeline.py`). Upright, such a line keeps looking where the line before
+    it was, rather than swinging over to a flow it set going.
+  - **Parts react:** a part pops 8% bigger as its name is first heard (not where a later
+    scene carries its label over), bumps 5% as a particle reaches it, and rocks a few degrees
+    either way while particles pass through it (a pump, a carrier handing on). Each is the
+    picture cut out by the part's mask, turned and grown about its middle over its painted
+    copy, which it covers: a part only grows, and rocks only as far (3, 2 or 1.2 degrees) as
+    its shape, turned that far and grown 3%, still covers where it is painted; a long, thin
+    part swells and eases back instead. Never a space, a part that turns, or anything on a
+    graph (a scene with axes): grown or turned, a curve would no longer say what the graph
+    says. Rocking is not turning: `spins` stays the only claim that a part goes round.
     When the line's direction says what the particles carry, the lead particle is a badge
     with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
     kind has its own colour in every lesson (protons gold, electrons cyan), so a proton

@@ -165,11 +165,52 @@ def test_particles_come_from_the_direction(job):
             lyric["text"] = "From the thylakoid to b6f"
     data["scenes"][1]["structures"][1]["aliases"] = ["b6f"]
     direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f", "Cytochrome b6f"])
-    direct(data, "c1-1", particles=["Thylakoid", "ATP synthase"])  # not on the overview: too few stops left
+    # Not on the overview: too few stops left. Spotlit, so it is a line about one part, which runs only its own.
+    direct(data, "c1-1", particles=["Thylakoid", "ATP synthase"], spotlight="Thylakoid")
     write_bundle(job, data)
     song = lines(make(job)["song"])
     assert [(p.path, p.trail) for p in song["v1-2"].particles] == [(["Thylakoid", "Cytochrome b6f"], True)]
     assert song["c1-1"].particles == []
+
+
+def test_a_line_that_sums_up_runs_every_flow_its_scene_has_shown_so_far(monkeypatch):
+    from studio.schemas import Particles, TimelineCamera
+    from studio.steps.timeline import _run_all
+
+    def flow(*path, label="H⁺", blocked=False):
+        return Particles(path=list(path), color="#F2C230", trail=True, label=label, blocked=blocked)
+
+    def beat(scene, *flows, spotlight=None, target=None):
+        return {"scene": scene, "particles": list(flows), "spotlight": spotlight,
+                "camera": TimelineCamera(target=target, zoom=1.6 if target else 1.0)}
+
+    hand_off, chain = flow("PSII", "b6f", label="e⁻"), flow("PSII", "b6f", "PSI", label="e⁻")
+    pump, back = flow("Stroma", "b6f", "Lumen"), flow("Lumen", "ATP synthase", "Stroma")
+    beats = [beat("hook", flow("Sun", "Leaf")),
+             beat("membrane", hand_off, spotlight="PSII"),
+             beat("membrane", pump, spotlight="b6f", target="b6f"),
+             beat("membrane", chain, spotlight="PSI"),
+             beat("membrane", back),  # sums up: what the scene has shown runs beside its own
+             beat("membrane", back, spotlight="ATP synthase", target="ATP synthase"),  # about one part: its own only
+             beat("membrane"),  # sums up with nothing of its own
+             beat("hook")]  # the hook never does
+    _run_all(beats, "hook")
+    moving = [[(f.path[0], f.path[-1], f.label) for f in b["particles"]] for b in beats]
+    # The hand-off runs within the whole chain, which takes its place, rather than as a second dot on its leg.
+    assert moving[4] == [("Lumen", "Stroma", "H⁺"), ("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
+    assert moving[5] == [("Lumen", "Stroma", "H⁺")]
+    assert moving[6] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻"), ("Lumen", "Stroma", "H⁺")]
+    assert moving[7] == []
+    assert [len(b["particles"]) for b in beats[:4]] == [1, 1, 1, 1]  # lines that teach a step move only that step
+
+    # At most RUN_MAX at once, the beat's own first; and once a flow is blocked on a scene, it stays still.
+    monkeypatch.setattr(step, "RUN_MAX", 2)
+    beats = [beat("membrane", pump, spotlight="b6f"), beat("membrane", chain, spotlight="PSI"), beat("membrane", back),
+             beat("membrane", flow("PSII", "Herbicide", label="e⁻", blocked=True)), beat("membrane")]
+    _run_all(beats, "hook")
+    moving = [[(f.path[0], f.path[-1]) for f in b["particles"]] for b in beats]
+    assert moving[2] == [("Lumen", "Stroma"), ("Stroma", "Lumen")]
+    assert moving[3] == [("PSII", "Herbicide")] and moving[4] == []
 
 
 def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(job):
@@ -180,7 +221,8 @@ def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(j
     direct(data, "c2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="price")  # outside science, a plain word
     write_bundle(job, data)
     song = lines(make(job)["song"])
-    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1", "c2-1")}
+    # Each line's own flow, first (a line that sums up runs the scene's others after it).
+    marked = {line: [(f.label, f.color) for f in song[line].particles[:1]] for line in ("v1-2", "v2-1", "b-1", "c2-1")}
     assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)],
                       "c2-1": [("price", step.marker_colour("price"))]}
     assert step.marker_colour("price") in step.OTHER_MARKERS
@@ -216,6 +258,7 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
 def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job):
     data = sample_media.bundle().model_dump()
     direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    direct(data, "v2-1", spotlight="Thylakoid")  # a line about one part: nothing flows on it, so it slows to a stop
     data["spins"] = [{"structure": "Cytochrome b6f"}]
     write_bundle(job, data)
     song = make(job)["song"]
@@ -225,7 +268,9 @@ def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job
             assert beat.turning == []
             continue
         [turn] = beat.turning
-        assert turn.speed == (step.SPIN_SPEED if beat.line_id == "v1-2" else 0.0)
+        driven = any("Cytochrome b6f" in f.path[1:] for f in beat.particles)  # its own flow, or the scene running
+        assert driven == (beat.line_id != "v2-1" and beat.t0 >= lines(song)["v1-2"].t0)
+        assert turn.speed == (step.SPIN_SPEED if driven else 0.0)
         if before is not None:  # it runs on from where the beat before left it, never jumping
             turns, speed = before[0].at(before[1])
             assert turn.from_speed == pytest.approx(speed) and turn.turns == pytest.approx(turns % 1, abs=1e-5)

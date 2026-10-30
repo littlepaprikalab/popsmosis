@@ -41,6 +41,11 @@ SPOT_S = 0.6
 MOVE_S = 1.8  # a camera move between two stations
 SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
 SETTLE_ZOOM = 1.06
+# A shot never stands still: from the start of its line the camera drifts, pushing in (or, after pulling back, pulling
+# on back while the picture still fills the view) up to DRIFT further, about two thirds of it in DRIFT_S, ever more
+# slowly. Lines in a row framing the same target are one shot, so the drift runs on across them.
+DRIFT = 0.05
+DRIFT_S = 8.0
 STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
 NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
 NOTICE_GAP = 16  # frame px above and below the card in an upright frame, where it sits across the top of the picture
@@ -107,6 +112,20 @@ GLOW_HZ = 1.2
 GLOW_IN_S = 0.4
 ARROW_WIDTH = 1.2
 ARROW_TILT = 0.28
+# Parts react to what happens to them, so the picture moves with the story: a part pops POP bigger as its name is
+# first heard, over POP_S; bumps BUMP bigger as a particle reaches it, over BUMP_S; and rocks either way ROCK_HZ
+# times a second while particles pass through it (a pump, a carrier handing on), ROCK_COVER bigger. Each is drawn
+# over the picture's own copy of the part, which only ever grows, so the copy never shows; a part rocks only as
+# far (of ROCK_DEGS) as its shape, turned that far and grown ROCK_COVER, still covers it. Never a space, a part that
+# turns, or anything on a graph.
+POP = 0.08
+POP_S = 0.45
+BUMP = 0.05
+BUMP_S = 0.35
+ROCK_DEGS = (3.0, 2.0, 1.2)
+ROCK_HZ = 1.2
+ROCK_COVER = 0.03
+CUT_BLUR = 0.8  # a reacting part's edge, in art pixels: soft, so the mask's steps do not show
 AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
 DRAWN_INK = 15  # how far (the largest RGB channel) a drawn pixel is from the background, as _drawn_box has it
 
@@ -159,6 +178,8 @@ class SceneArt:
         self._crowd_points: dict[str, list[Point]] = {}
         self._discs: dict[str, tuple[float, float, float] | None] = {}
         self._glows: dict[str, skia.Image] = {}
+        self._cuts: dict[str, skia.Image] = {}
+        self._rocks: dict[str, float] = {}
         self._axes: tuple[axes.Line, axes.Line] | None = None
         self._drawn: np.ndarray | None = None
         for s in located.structures:
@@ -244,6 +265,42 @@ class SceneArt:
                              skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(GLOW_BLUR, GLOW_BLUR)))
             self._glows[name] = surface.makeImageSnapshot()
         return self._glows[name]
+
+    def cut(self, name: str) -> skia.Image:
+        """The structure's mask with a soft edge, alpha only: what a reacting part is cut out of the picture with."""
+        if name not in self._cuts:
+            surface = self._surface(alpha_only=True)
+            canvas = surface.getCanvas()
+            canvas.clear(skia.ColorTRANSPARENT)
+            canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
+                             skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(CUT_BLUR, CUT_BLUR)))
+            self._cuts[name] = surface.makeImageSnapshot()
+        return self._cuts[name]
+
+    def rock_deg(self, name: str) -> float:
+        """How far either way the part may rock: the largest of ROCK_DEGS that, turned that far either way and
+        grown ROCK_COVER about its middle, it still covers all but a speck of where it is painted; 0 for none (a
+        long, thin part, whose ends would swing clear of its painted copy). Worked out at half size."""
+        if name not in self._rocks:
+            inside = (_read(self._mask_files[name], skia.kGray_8_ColorType) > 127)[::2, ::2]
+            ys, xs = np.nonzero(inside)
+            self._rocks[name] = 0.0
+            if len(xs):
+                cx, cy = xs.mean(), ys.mean()
+                ux, uy = xs - cx, ys - cy
+                h, w = inside.shape
+
+                def covered(deg: float) -> bool:
+                    for a in (math.radians(deg), -math.radians(deg)):  # where each painted pixel comes from in it
+                        sx = np.round((math.cos(a) * ux + math.sin(a) * uy) / (1 + ROCK_COVER) + cx).astype(int)
+                        sy = np.round((-math.sin(a) * ux + math.cos(a) * uy) / (1 + ROCK_COVER) + cy).astype(int)
+                        on = (sx >= 0) & (sx < w) & (sy >= 0) & (sy < h)
+                        if inside[sy[on], sx[on]].sum() < 0.997 * len(xs):
+                            return False
+                    return True
+
+                self._rocks[name] = next((deg for deg in ROCK_DEGS if covered(deg)), 0.0)
+        return self._rocks[name]
 
     def spin_disc(self, name: str) -> tuple[float, float, float] | None:
         """The disc a face-on part turns in: its centre and a radius taking in all of it but stray
@@ -554,12 +611,18 @@ class BeatPlan:
     caption_out: float
     key_in: float  # the key line's run on screen, for its fades
     key_out: float
-    flow_in: float  # the particles' run: they set off once the run starts and its stops are revealed
-    flow_out: float
+    # Each of the beat's flows' run, in the order of its particles: (from, to). A flow sets off once its run starts
+    # and its stops are revealed, and goes on across the beats in a row on the scene that carry it, whatever else
+    # joins it or leaves.
+    runs: list[tuple[float, float]]
+    drift_from: float  # when the shot's drift set off: the start of the line its move is on
+    drift: float = 1.0  # which way the camera drifts: 1 pushing in, -1 pulling back
     fade_from: str | None = None  # the stage this one fades in over (Timeline.stages)
 
     def cam(self, t: float, view: Rect, art: SceneArt) -> Cam:
-        return clamp_cam(mix_cam(self.start, self.target, p.ease((t - self.move_at) / self.move_s)), view, art)
+        at = mix_cam(self.start, self.target, p.ease((t - self.move_at) / self.move_s))
+        on = 1 + self.drift * DRIFT * (1 - math.exp(-max(t - self.drift_from, 0.0) / DRIFT_S))
+        return clamp_cam(Cam(at.cx, at.cy, at.zoom * on), view, art)
 
 
 class Renderer:
@@ -582,6 +645,17 @@ class Renderer:
         for beat in timeline.beats:
             for r in beat.reveal:
                 self.revealed.setdefault(beat.scene, {}).setdefault(r.name, r.t)
+        # Where and when each part's name is first heard, which it pops at. A later scene's reveal is the label
+        # carried over from an earlier one, which is no news.
+        first: dict[str, tuple[float, str]] = {}
+        for beat in timeline.beats:
+            for r in beat.reveal:
+                if r.name not in first or r.t < first[r.name][0]:
+                    first[r.name] = (r.t, beat.scene)
+        self._pops: dict[str, list[tuple[str, float]]] = {}
+        for name, (at, scene_id) in first.items():
+            self._pops.setdefault(scene_id, []).append((name, at))
+        self._arrival_times: dict[tuple, tuple[float, list[tuple[float, str]], list[str]]] = {}
         # Each process's stages, which fade one into the next. What was shown on the stage before is on
         # the next from its first frame, rather than shown again from a pale wash.
         self._process = {sid: (n, k) for n, group in enumerate(timeline.stages) for k, sid in enumerate(group)}
@@ -679,16 +753,27 @@ class Renderer:
     def _plan(self) -> list[BeatPlan]:
         plans: list[BeatPlan] = []
         beats = self.timeline.beats
+        focus = None
         for i, beat in enumerate(beats):
             reveals = {r.name: r.t for r in beat.reveal}
-            focus = None
-            if self.portrait and beat.particles:  # where the beat's flow is: the middle of its stops
-                stops = self._path_points(beat.scene, beat.particles[0].path)
-                focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
+            # Upright, where the beat's flow is: the middle of its first flow's stops. A line whose first flow the line
+            # before was already showing on the scene keeps looking where it was, so a line that sets the scene's other
+            # flows running beside it does not swing the camera over to one of them.
+            carried = (focus is not None and beat.particles and beats[i - 1].scene == beat.scene
+                       and beat.particles[0] in beats[i - 1].particles)
+            if not carried:
+                focus = None
+                if self.portrait and beat.particles:
+                    stops = self._path_points(beat.scene, beat.particles[0].path)
+                    focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
             target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus)
             same = i > 0 and beats[i - 1].scene == beat.scene
             staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
-            if same:
+            drift_from = beat.t0
+            if same and plans[-1].target == target:  # one shot: its move and its drift go on as they were
+                start, move_at, move_s = plans[-1].start, plans[-1].move_at, plans[-1].move_s
+                drift_from = plans[-1].drift_from
+            elif same:
                 start = plans[-1].cam(beat.t0, self.view(beat.scene), self.scene(beat.scene))
                 move_at = max(beat.t0, reveals.get(beat.camera.target, beat.t0))
                 move_s = MOVE_S if beat.camera.ease == "inOut" else max(beat.t1 - move_at, 0.1)
@@ -717,27 +802,38 @@ class Renderer:
             while k + 1 < len(beats) and beats[k + 1].key_line == beat.key_line:
                 k += 1
             key_in, key_out = beats[j].t0, beats[k].t1
-            flow_in = flow_out = beat.t0
-            if beat.particles:
-                # Beats in a row on one scene with the same paths are one run: the particles
-                # keep going across them rather than starting over at every line.
-                def same_flow(other) -> bool:
-                    return other.scene == beat.scene and [f.path for f in other.particles] == [f.path for f in beat.particles]
+            runs = []
+            revealed = self.revealed.get(beat.scene, {})
+            for flow in beat.particles:
+                # Beats in a row on one scene that carry the flow are one run: its particles keep going across them
+                # rather than starting over at every line, or when a line that sums up sets the others going beside it.
+                def carries_on(other, flow=flow) -> bool:
+                    return other.scene == beat.scene and any(f.path == flow.path and f.label == flow.label
+                                                             for f in other.particles)
                 j = i
-                while j > 0 and same_flow(beats[j - 1]):
+                while j > 0 and carries_on(beats[j - 1]):
                     j -= 1
                 k = i
-                while k + 1 < len(beats) and same_flow(beats[k + 1]):
+                while k + 1 < len(beats) and carries_on(beats[k + 1]):
                     k += 1
-                revealed = self.revealed.get(beat.scene, {})
-                stops = [name for f in beat.particles for name in f.path]
-                flow_in = max([beats[j].t0] + [revealed.get(name, beats[j].t0) for name in stops])
-                flow_out = beats[k].t1
+                runs.append((max([beats[j].t0] + [revealed.get(name, beats[j].t0) for name in flow.path]), beats[k].t1))
             plans.append(BeatPlan(target=target, start=start, move_at=move_at, move_s=move_s, spot=beat.spotlight,
                                   spot_at=spot_at, prev_spot=prev_spot, caption_in=caption_in,
-                                  caption_out=caption_out, key_in=key_in, key_out=key_out, flow_in=flow_in, flow_out=flow_out,
+                                  caption_out=caption_out, key_in=key_in, key_out=key_out, runs=runs,
+                                  drift_from=drift_from, drift=self._drift(start, target),
                                   fade_from=beats[i - 1].scene if staged else None))
         return plans
+
+    @staticmethod
+    def _drift(start: Cam, target: Cam) -> float:
+        """Which way a shot drifts: on back after pulling back, while that keeps the whole picture filling the view
+        (past it, a painted picture's edge would show), and pushing in otherwise."""
+        return -1.0 if start.zoom > target.zoom * 1.001 and target.zoom * (1 - DRIFT) >= 1.0 else 1.0
+
+    def run_of(self, i: int, path: list[str], label: str) -> tuple[float, float] | None:
+        """The run of beat i's flow along `path` carrying `label`: (from, to); None when it has none."""
+        return next((run for f, run in zip(self.timeline.beats[i].particles, self.plans[i].runs)
+                     if f.path == path and f.label == label), None)
 
     def beat_index(self, t: float) -> int:
         """The index of the beat on screen at t (Timeline.beat_at)."""
@@ -845,11 +941,14 @@ class Renderer:
                                   self._ghosts(before, self.revealed.get(before, {}), t), {}, keep=False)
             canvas.saveLayerAlpha(None, round(255 * fade))
             self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False)
+            self._reacting(canvas, beat, plan, cam, view, t, ghosts, spots)  # its parts fade in with their stage
             canvas.restore()
         else:
             self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
         if beat.turning:
             self._turning(canvas, beat, cam, view, t, ghosts, spots, face=True)
+        if fade >= 1.0:
+            self._reacting(canvas, beat, plan, cam, view, t, ghosts, spots)
         if beat.crowds:
             self._crowds(canvas, beat, cam, view, t, ghosts, spots)
         if beat.turning:
@@ -1092,6 +1191,81 @@ class Renderer:
                 p.draw_turning_arrow(canvas, at, rx, ARROW_TILT * rx, turns, alpha)
                 canvas.restore()
 
+    def _arrivals(self, scene_id: str, flow) -> tuple[float, list[tuple[float, str]], list[str]]:
+        """A flow's trip, as its lead particle makes it (lead_at): how long a trip takes; when into each trip it
+        reaches each part it stops at (not a space), with the part; and the parts it passes through on the way."""
+        key = (scene_id, tuple(flow.path), flow.label, flow.blocked)
+        if key not in self._arrival_times:
+            lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
+            points = self._path_points(scene_id, flow.path, flow.blocked, lane)
+            stops = [loc for _, loc in self._path_stops(scene_id, flow.path, lane)]
+            legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+            part = [not self._is_space(scene_id, loc) for loc in stops]
+            reached = [(k * FLOW_PAUSE_S + sum(legs[:k]), stops[k].name) for k in range(1, len(points)) if part[k]]
+            through = [stops[k].name for k in range(1, len(points) - 1) if part[k]]
+            self._arrival_times[key] = (FLOW_PAUSE_S * len(points) + sum(legs), reached, through)
+        return self._arrival_times[key]
+
+    def _reacting(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float,
+                  ghosts: dict[str, float], spots: dict[str, float]) -> None:
+        """The parts reacting to what happens to them: popping as their name is first heard, bumping as a particle
+        reaches them (a blocked one only the once), and rocking while particles pass through them, or, a part too
+        long to rock, swelling and easing back. Each is the picture as it is now (its washes included) cut out by
+        the part's mask, turned and grown about its middle, over its painted copy. Nothing on a graph reacts: grown or
+        turned, a curve would no longer say what the graph says."""
+        if beat.scene in self.timeline.axes:
+            return
+        art = self.scene(beat.scene)
+        located = self.locations.scene(beat.scene)
+        turning = {turn.structure for turn in beat.turning}
+        grow: dict[str, float] = {}
+        work: dict[str, float] = {}  # how hard each part passed through works, 0-1, with its flows' fades
+        for name, at in self._pops.get(beat.scene, []):
+            if 0 <= t - at < POP_S:
+                grow[name] = grow.get(name, 0.0) + POP * math.sin(math.pi * (t - at) / POP_S)
+        for flow, (flow_in, flow_out) in zip(beat.particles, plan.runs):
+            alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
+            if alpha <= 0.01:
+                continue
+            trip, reached, through = self._arrivals(beat.scene, flow)
+            if trip <= 0:
+                continue  # none of its stops is on the scene
+            into = t - flow_in if flow.blocked else (t - flow_in) % trip
+            for at, name in reached:
+                if 0 <= into - at < BUMP_S:
+                    grow[name] = grow.get(name, 0.0) + BUMP * math.sin(math.pi * (into - at) / BUMP_S)
+            for name in through if not flow.blocked else []:
+                work[name] = max(work.get(name, 0.0), alpha)
+        scale, dx, dy = to_frame(cam, view, art)
+        swing = math.sin(2 * math.pi * ROCK_HZ * t)
+        for name in sorted(set(grow) | set(work)):
+            loc = located.get(name)
+            if (loc is None or name not in art.masks or self._is_space(beat.scene, loc)
+                    or (name in turning and art.spin_disc(name) is not None)):  # a wheel turning in place already moves
+                continue
+            size, deg = 1 + grow.get(name, 0.0), 0.0
+            if name in work and name not in turning and ghosts.get(name, 0.0) < 0.5:
+                rocks = art.rock_deg(name)
+                deg = rocks * work[name] * swing
+                size += ROCK_COVER * work[name] * (1.0 if rocks else 0.5 + 0.5 * swing)
+            if size - 1 < 1e-3 and abs(deg) < 0.02:
+                continue
+            _, composed = art.compose(ghosts, spots)
+            cx, cy = loc.centroid.x, loc.centroid.y
+            canvas.save()
+            canvas.clipRect(skia.Rect.MakeLTRB(*view))
+            canvas.translate(cx * scale + dx, cy * scale + dy)
+            canvas.rotate(deg)
+            canvas.scale(scale * size, scale * size)
+            canvas.translate(-cx, -cy)
+            canvas.saveLayer(skia.Rect.MakeLTRB(loc.box.x0 - 4, loc.box.y0 - 4, loc.box.x1 + 4, loc.box.y1 + 4))
+            canvas.drawImage(art.cut(name), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
+                             skia.Paint(Color=skia.ColorWHITE))
+            canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
+                             skia.Paint(BlendMode=skia.BlendMode.kSrcIn))
+            canvas.restore()
+            canvas.restore()
+
     def _glow(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float, ghosts: dict[str, float]) -> None:
         """The line's glowing part: lit with a warm light past its edge, pulsing, from the line's start."""
         art = self.scene(beat.scene)
@@ -1305,7 +1479,7 @@ class Renderer:
             pairs = self._path_stops(beat.scene, route.path, lane)
             points = self._path_points(beat.scene, route.path, lane=lane)  # where its particles go: it grows behind them
             # The arrow grows behind the lead particle on its first trip, then stays whole.
-            set_off = self.plans[self.beat_index(route.since)].flow_in
+            set_off = (self.run_of(self.beat_index(route.since), route.path, route.label) or (route.since,))[0]
             lead, at, done = lead_leg(points, t - set_off, self._bends(beat.scene, route.path, lane))
             if t < set_off:
                 continue
@@ -1352,20 +1526,20 @@ class Renderer:
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),
-        over the diagram and under the labels; they stop beside each label's dot."""
-        alpha = p.ease((t - plan.flow_in) / FLOW_IN_S) * p.ease((plan.flow_out - t) / FLOW_IN_S)
-        if alpha <= 0.01:
-            return
-        located = self.locations.scene(beat.scene)
+        over the diagram and under the labels; they stop beside each label's dot. Each flow fades in and out with
+        its own run."""
         scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
 
         def on_frame(q: Point) -> Point:
             return q[0] * scale + dx, q[1] * scale + dy
 
-        elapsed = t - plan.flow_in
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
-        for flow in beat.particles:
+        for flow, (flow_in, flow_out) in zip(beat.particles, plan.runs):
+            alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
+            if alpha <= 0.01:
+                continue
+            elapsed = t - flow_in
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
             bends = None if flow.blocked else self._bends(beat.scene, flow.path, lane)
