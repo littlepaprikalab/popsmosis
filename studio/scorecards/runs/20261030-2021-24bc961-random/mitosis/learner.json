@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Mitosis makes two genetically identical daughter cells by having the cell copy each chromosome first, then using spindle fibers to pull one copy of every chromosome to opposite sides before the cell splits.",
+      "why": "First, in interphase (before mitosis), the cell copies its DNA so each chromosome is two identical sister chromatids joined at a centromere. In prophase, the chromosomes coil up, the nuclear envelope breaks down, and spindle fibers grow from opposite poles and attach to the centromere, one fiber to each sister chromatid, so the copies will go opposite ways. In metaphase, the fibers line the chromosomes up across the middle so each pole can get one chromatid of every chromosome. In anaphase, the centromere splits and the shortening fibers pull the chromatids to opposite poles, so each pole gets one copy of every chromosome. In telophase and cytokinesis, a new nucleus forms around each set and the cytoplasm divides (a cleavage furrow in animals, a cell plate in plants). Because the DNA was copied before the split, each daughter cell ends up with the full 46 chromosomes in humans, not half.",
+      "what_if": "If the spindle fibers failed to attach to a pair of sister chromatids, or if that pair didn't separate in anaphase (nondisjunction), both copies would go to the same pole. One daughter cell would get an extra chromosome and the other would be missing one, so the cells wouldn't match the parent or each other and might not work properly. The lesson says the metaphase checkpoint exists to make sure every chromosome is attached before anaphase starts. The lesson doesn't say exactly what happens to cells with the wrong chromosome number beyond that they may not work properly."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

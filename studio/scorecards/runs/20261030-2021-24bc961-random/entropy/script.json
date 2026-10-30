@@ -1,0 +1,146 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "If entropy isn't really disorder, what is it?",
+    "core_idea": "Entropy counts the ways particles and energy can be arranged; things spread out because spread-out arrangements vastly outnumber concentrated ones.",
+    "why_chain": [
+      "A macrostate, like a gas's temperature and volume, can be produced by many microstates, which are exact arrangements of particles and energy.",
+      "Entropy measures how many microstates match a macrostate, so more ways means higher entropy.",
+      "Particles move and collide randomly, so a system keeps hopping from one microstate to another.",
+      "Spread-out macrostates have vastly more microstates than concentrated ones, so the system almost surely ends up spread out.",
+      "That is why the entropy of an isolated system rises to a maximum at equilibrium and never decreases: the second law of thermodynamics."
+    ],
+    "key_terms": [
+      "entropy",
+      "microstate",
+      "macrostate",
+      "isolated system",
+      "second law of thermodynamics",
+      "equilibrium"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "A microstate is one exact arrangement of the positions and energies of all the particles in a system. A macrostate is what we measure, such as temperature, pressure and volume, and many different microstates can give the same macrostate. Entropy measures how many microstates match a macrostate: Boltzmann's equation is S = k ln W, where W is the number of microstates, so more ways means higher entropy. Everyday picture: rolling two six-sided dice. The exact faces, such as a three and a four, are like a microstate, and the total you read off is like the macrostate. There are 36 possible face pairs; six of them total seven but only one, two ones, totals two, so a total of seven comes up six times as often as a total of two. Entropy is a count of how many microstates give the same macrostate, like counting the rolls that give one total.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "A sealed box that no energy or matter can enter or leave is an isolated system. If gas fills only the left half of such a box behind a partition and the partition is lifted, the molecules move randomly, constantly hopping from one microstate to another, and the gas spreads through the whole box. Nothing pushes the gas; the spread-out macrostate simply has overwhelmingly more microstates than the crowded one. Each molecule can be in the left half or the right half: four molecules have 16 possible arrangements, and only one has all four in the left half. For 100 molecules the chance that all sit in the left half at once is about 1 in 10^30, and a real gas has vastly more molecules, since a mole holds about 6 × 10^23, so it never gathers back into one half. So the spread-out gas has more entropy because it has more ways to be arranged. The second law of thermodynamics says the entropy of an isolated system never decreases: in a spontaneous change it rises until it reaches its maximum, at equilibrium.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "A mug of hot coffee left on a table cools to room temperature, and it never warms itself back up, because heat never flows on its own from a colder body to a hotter one. As energy flows from the hot coffee into the cooler room air, it spreads among more particles, which raises the total number of microstates, so the total entropy goes up. Clausius's rule says each entropy change equals the heat transferred divided by the absolute temperature, ΔS = Q/T. The hot coffee loses heat Q at a high temperature, so its entropy drops a little; the room air gains the same heat Q at a lower temperature, so its entropy rises more. The total entropy rises, which is why heat flows from hot to cold and never back on its own.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "Entropy is commonly described as disorder, and a common mistake is to think entropy means disorder or messiness. Disorder is only a loose metaphor, and it misleads: entropy counts microstates, not messiness. A messy bedroom and a tidy one have almost the same thermodynamic entropy, because moving a few objects barely changes the number of molecular microstates. The entropy of one part of a system can decrease if the total rises: a freezer turns water into ice, lowering the water's entropy, but it releases heat into the kitchen, raising the kitchen's entropy by more. If the freezer's motor stops, heat flows in from the warmer kitchen and the ice melts. The same total-entropy rule limits how efficient a heat engine can be, the next topic in a thermodynamics unit.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think entropy means disorder or messiness. Entropy actually counts the microstates that match a macrostate, so a system gains entropy when it has more ways to arrange its particles and energy, not when it looks messier.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A kitchen table in a room, with a steaming mug of hot coffee in the middle of the table."
+      },
+      {
+        "id": "analogy",
+        "picture": "Two six-sided dice in the center showing a three and a four, the microstate, with their total of seven, the macrostate, beside them. Below, a grid of all 36 face pairs, with the six pairs that total seven in one row and the single pair of two ones, totaling two, set apart."
+      },
+      {
+        "id": "overview",
+        "picture": "Two identical sealed boxes side by side, each an isolated system. In the left box, gas molecules crowd into the left half behind a partition. In the right box the partition is raised and the same molecules spread evenly through the whole box, the gas at equilibrium, its spread-out macrostate, with each molecule's exact spot together forming one microstate."
+      },
+      {
+        "id": "molecule-count",
+        "picture": "A close-up of a box holding just four molecules, drawn as sixteen small copies of the box, one for each microstate: every way to place the four molecules in the left half and the right half. Only one copy has all four molecules in the left half."
+      },
+      {
+        "id": "coffee-detail",
+        "picture": "A close-up of the wall of the coffee mug: hot coffee on the left with fast-moving molecules, and cooler room air on the right with slower molecules."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "Leave hot coffee on the table, and it always cools to room temperature.",
+          "It never warms itself back up.",
+          "That's entropy at work, and people call entropy disorder.",
+          "But what exactly gets messier in a cooling cup?",
+          "So what is entropy, really?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Roll two dice: the exact faces, say a three and a four, are a microstate.",
+          "The total you read off, seven, is the macrostate.",
+          "Of the thirty-six possible face pairs, six total seven, but only one totals two.",
+          "So seven comes up six times as often as two.",
+          "That's entropy: a count of how many microstates give the same macrostate."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Now swap the dice for gas molecules in a sealed box, an isolated system: no energy or matter gets in or out.",
+          "First, the gas crowds into the left half, behind a partition.",
+          "Then the partition lifts, and the molecules move randomly, hopping between microstates.",
+          "Soon the gas fills the whole box, though nothing pushes it there.",
+          "So why does it spread?"
+        ]
+      },
+      {
+        "scene": "molecule-count",
+        "lines": [
+          "Zoom in on a box with just four molecules.",
+          "Each molecule can sit in the left half or the right half.",
+          "That gives sixteen microstates, and only one has all four on the left.",
+          "So what are the chances that a hundred molecules all sit on the left at once?",
+          "About one in ten to the thirtieth power.",
+          "A real gas has vastly more molecules, so it never gathers back into one half."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back in the big box, the spread-out macrostate has overwhelmingly more microstates.",
+          "That's the second law of thermodynamics: the entropy of an isolated system never decreases.",
+          "It rises until it reaches its maximum, at equilibrium.",
+          "A common mistake is to think entropy means disorder.",
+          "But entropy counts microstates, not messiness: the spread-out gas has more entropy because it has more ways to be arranged."
+        ]
+      },
+      {
+        "scene": "coffee-detail",
+        "lines": [
+          "Now, why does the coffee cool?",
+          "Energy flows from the hot coffee into the cooler room air, spreading among more particles and raising the total microstates.",
+          "Each entropy change is the heat transferred divided by the absolute temperature.",
+          "The hot coffee loses heat at a high temperature, so its entropy drops a little.",
+          "The room air gains that same heat at a lower temperature, so its entropy rises more.",
+          "So the total rises, which is why heat never flows from cold to hot on its own."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "So entropy counts the ways particles and energy can be arranged.",
+          "Things spread out because spread-out arrangements vastly outnumber concentrated ones.",
+          "Entropy isn't disorder; it's the number of microstates behind the macrostate you measure."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 35,
+    "reworded": 0
+  }
+}

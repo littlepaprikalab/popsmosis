@@ -1,0 +1,58 @@
+{
+  "problems": [
+    {
+      "line_id": "n6",
+      "rule": "not-in-scene",
+      "detail": "names Centromere, which scene \"analogy\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n6",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"analogy\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n27",
+      "rule": "not-in-scene",
+      "detail": "names Anaphase, which scene \"nondisjunction\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n31",
+      "rule": "not-in-scene",
+      "detail": "names Anaphase, which scene \"nondisjunction\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n31",
+      "rule": "not-in-scene",
+      "detail": "names Spindle fibers, which scene \"nondisjunction\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "v1-2",
+      "rule": "lyric-style",
+      "detail": "\"A clip on every pair when it's done\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-7",
+      "rule": "lyric-style",
+      "detail": "\"Forty-six in a skin cell, here's the twist\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-4",
+      "rule": "lyric-style",
+      "detail": "\"The other's one short when the deal is done\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-6",
+      "rule": "lyric-style",
+      "detail": "\"So Metaphase checks each one's hooked tight\" runs 11 syllables, over 10",
+      "repaired": false
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "Leave hot coffee on the table, and it always cools to room temperature."
+    },
+    {
+      "id": "n2",
+      "text": "It never warms itself back up."
+    },
+    {
+      "id": "n3",
+      "text": "That's entropy at work, and people call entropy disorder."
+    },
+    {
+      "id": "n4",
+      "text": "But what exactly gets messier in a cooling cup?"
+    },
+    {
+      "id": "n5",
+      "text": "So what is entropy, really?"
+    },
+    {
+      "id": "n6",
+      "text": "Roll two dice: the exact faces, say a three and a four, are a microstate."
+    },
+    {
+      "id": "n7",
+      "text": "The total you read off, seven, is the macrostate."
+    },
+    {
+      "id": "n8",
+      "text": "Of the thirty-six possible face pairs, six total seven, but only one totals two."
+    },
+    {
+      "id": "n9",
+      "text": "So seven comes up six times as often as two."
+    },
+    {
+      "id": "n10",
+      "text": "That's entropy: a count of how many microstates give the same macrostate."
+    },
+    {
+      "id": "n11",
+      "text": "Now swap the dice for gas molecules in a sealed box, an isolated system: no energy or matter gets in or out."
+    },
+    {
+      "id": "n12",
+      "text": "First, the gas crowds into the left half, behind a partition."
+    },
+    {
+      "id": "n13",
+      "text": "Then the partition lifts, and the molecules move randomly, hopping between microstates."
+    },
+    {
+      "id": "n14",
+      "text": "Soon the gas fills the whole box, though nothing pushes it there."
+    },
+    {
+      "id": "n15",
+      "text": "So why does it spread?"
+    },
+    {
+      "id": "n16",
+      "text": "Zoom in on a box with just four molecules."
+    },
+    {
+      "id": "n17",
+      "text": "Each molecule can sit in the left half or the right half."
+    },
+    {
+      "id": "n18",
+      "text": "That gives sixteen microstates, and only one has all four on the left."
+    },
+    {
+      "id": "n19",
+      "text": "So what are the chances that a hundred molecules all sit on the left at once?"
+    },
+    {
+      "id": "n20",
+      "text": "About one in ten to the thirtieth power."
+    },
+    {
+      "id": "n21",
+      "text": "A real gas has vastly more molecules, so it never gathers back into one half."
+    },
+    {
+      "id": "n22",
+      "text": "Back in the big box, the spread-out macrostate has overwhelmingly more microstates."
+    },
+    {
+      "id": "n23",
+      "text": "That's the second law of thermodynamics: the entropy of an isolated system never decreases."
+    },
+    {
+      "id": "n24",
+      "text": "It rises until it reaches its maximum, at equilibrium."
+    },
+    {
+      "id": "n25",
+      "text": "A common mistake is to think entropy means disorder."
+    },
+    {
+      "id": "n26",
+      "text": "But entropy counts microstates, not messiness: the spread-out gas has more entropy because it has more ways to be arranged."
+    },
+    {
+      "id": "n27",
+      "text": "Now, why does the coffee cool?"
+    },
+    {
+      "id": "n28",
+      "text": "Energy flows from the hot coffee into the cooler room air, spreading among more particles and raising the total microstates."
+    },
+    {
+      "id": "n29",
+      "text": "Each entropy change is the heat transferred divided by the absolute temperature."
+    },
+    {
+      "id": "n30",
+      "text": "The hot coffee loses heat at a high temperature, so its entropy drops a little."
+    },
+    {
+      "id": "n31",
+      "text": "The room air gains that same heat at a lower temperature, so its entropy rises more."
+    },
+    {
+      "id": "n32",
+      "text": "So the total rises, which is why heat never flows from cold to hot on its own."
+    },
+    {
+      "id": "n33",
+      "text": "So entropy counts the ways particles and energy can be arranged."
+    },
+    {
+      "id": "n34",
+      "text": "Things spread out because spread-out arrangements vastly outnumber concentrated ones."
+    },
+    {
+      "id": "n35",
+      "text": "Entropy isn't disorder; it's the number of microstates behind the macrostate you measure."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "Leave hot coffee on the table, and it always cools to room temperature."
+    },
+    {
+      "id": "n2",
+      "text": "It never warms itself back up."
+    },
+    {
+      "id": "n3",
+      "text": "That's entropy at work, and people often call entropy disorder."
+    },
+    {
+      "id": "n4",
+      "text": "But what exactly gets messier in a cooling cup?"
+    },
+    {
+      "id": "n5",
+      "text": "So what is entropy, really?"
+    },
+    {
+      "id": "n6",
+      "text": "Roll two dice: the exact faces, say a three and a four, are a microstate."
+    },
+    {
+      "id": "n7",
+      "text": "The total you read off, seven, is the macrostate."
+    },
+    {
+      "id": "n8",
+      "text": "Of the thirty-six possible face pairs, six total seven, but only one totals two."
+    },
+    {
+      "id": "n9",
+      "text": "So seven comes up six times as often as two."
+    },
+    {
+      "id": "n10",
+      "text": "That's entropy: a count of how many microstates give the same macrostate, so more ways means more entropy."
+    },
+    {
+      "id": "n11",
+      "text": "Now swap the dice for gas molecules in a sealed box, an isolated system: no energy or matter gets in or out."
+    },
+    {
+      "id": "n12",
+      "text": "First, the gas crowds into the left half, behind a partition."
+    },
+    {
+      "id": "n13",
+      "text": "Then the partition lifts, and the molecules move randomly, hopping between microstates."
+    },
+    {
+      "id": "n14",
+      "text": "Soon the gas fills the whole box, though nothing pushes it there."
+    },
+    {
+      "id": "n15",
+      "text": "So why does it spread?"
+    },
+    {
+      "id": "n16",
+      "text": "Zoom in on a box with just four molecules."
+    },
+    {
+      "id": "n17",
+      "text": "Each molecule can sit in the left half or the right half."
+    },
+    {
+      "id": "n18",
+      "text": "That gives sixteen microstates, and only one has all four on the left."
+    },
+    {
+      "id": "n19",
+      "text": "Now take a hundred molecules: what are the chances they all sit on the left at once?"
+    },
+    {
+      "id": "n20",
+      "text": "It's about one in ten to the thirtieth power."
+    },
+    {
+      "id": "n21",
+      "text": "A real gas has vastly more molecules, so it never gathers back into one half."
+    },
+    {
+      "id": "n22",
+      "text": "Back in the big box, the spread-out macrostate has overwhelmingly more microstates."
+    },
+    {
+      "id": "n25",
+      "text": "This is where a common mistake creeps in: thinking entropy means disorder."
+    },
+    {
+      "id": "n26",
+      "text": "But entropy counts microstates, not messiness: the spread-out gas has more entropy because it has more ways to be arranged."
+    },
+    {
+      "id": "n23",
+      "text": "So entropy rises as the gas spreads, and that's the second law of thermodynamics: the entropy of an isolated system never decreases."
+    },
+    {
+      "id": "n24",
+      "text": "It rises until it reaches its maximum, at equilibrium."
+    },
+    {
+      "id": "n27",
+      "text": "Now, back to our coffee: why does the coffee cool?"
+    },
+    {
+      "id": "n28",
+      "text": "Energy flows from the hot coffee into the cooler room air, spreading among more particles and raising the total microstates."
+    },
+    {
+      "id": "n29",
+      "text": "To see how much, each entropy change is the heat transferred divided by the absolute temperature."
+    },
+    {
+      "id": "n30",
+      "text": "The hot coffee loses heat at a high temperature, so its entropy drops a little."
+    },
+    {
+      "id": "n31",
+      "text": "But the room air gains that same heat at a lower temperature, so its entropy rises more."
+    },
+    {
+      "id": "n32",
+      "text": "So the total rises, which is why heat never flows from cold to hot on its own."
+    },
+    {
+      "id": "n33",
+      "text": "So entropy counts the ways particles and energy can be arranged."
+    },
+    {
+      "id": "n34",
+      "text": "Things spread out because spread-out arrangements vastly outnumber concentrated ones."
+    },
+    {
+      "id": "n35",
+      "text": "That's what entropy really is: the number of microstates behind the macrostate you measure."
+    }
+  ]
+}

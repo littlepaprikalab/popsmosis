@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Entropy counts how many microscopic arrangements (microstates) match what we measure, and because spread-out arrangements vastly outnumber concentrated ones, an isolated system's entropy never decreases, so energy and particles spread out.",
+      "why": "First, a macrostate (like temperature or pressure) can be made by many different microstates, and entropy measures that number (S = k ln W). Second, molecules move randomly and keep hopping between microstates. Third, when the partition is lifted, the spread-out macrostate has overwhelmingly more microstates than the crowded one, so the gas almost certainly ends up spread out. Nothing pushes it. With 4 molecules, 1 in 16 arrangements has all on the left, and with 100 molecules it is about 1 in 10^30, so with a real gas it basically never goes back. For the coffee, heat Q leaves the hot coffee at a high temperature, so its entropy drops a little (Q/T), and the cooler room gains the same Q at a lower T, so its entropy rises more. The total goes up, which is why heat flows from hot to cold and not back on its own.",
+      "what_if": "If the rule that total entropy never decreases stopped working, heat could flow from the cold room back into the hot coffee, or a gas could gather itself into one half of a box. The lesson says these don't happen only because the spread-out states have far more microstates, so if that counting didn't hold, the coffee could warm itself up again. The lesson doesn't say what else would change, so I can't guess beyond that."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Roll the dice and count the ways\" is concrete, singable after one hearing, and names the counting idea, though it names the analogy and the counting rather than the big move of spreading out. The lesson opens on a real question the learner asked, \"If entropy isn't really disorder, what is it?\", which is strong. The narration opens with the hot coffee in n1-n2, which is from the learner's world, though n3 then brings in \"disorder\".",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The dice picture (faces = microstate, total = macrostate) is apt for counting ways and is set up in the verse and carried through the chorus \"Roll the dice and count the ways\", the lesson and the narration. But it only explains the counting link, not what the whole thing is for, which is why things spread out and never return. After v1 the song moves to the box, coffee and freezer, and the dice drop out of the narration after n10. The bridge freezer and the coffee have no connection to the dice frame.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk through the links in order: many microstates per macrostate, entropy as the count, random hopping (\"constantly hopping from one microstate to another\"), spread-out states outnumbering concentrated ones (4 molecules, 16 arrangements; 100 molecules, 1 in 10^30), and then the second law. Each link says why, and \"Nothing pushes it\" is explained by counting. The coffee and freezer extensions add the Q/T rule, which is a different route to the same conclusion and adds a little load. The song carries the gist.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines mostly follow the chain: dice faces = microstate, entropy = number of microstates, random motion, outnumbering, second law. But the first, \"If entropy isn't really disorder, what is it?\", is a question rather than a step, and it starts at i-1, \"Roll the dice and count the ways\". \"Entropy counts microstates, not messiness\" is a slogan with no narration anchor. \"Spread-out arrangements vastly outnumber crowded ones → gas spreads\" starts at v2-1, \"A hundred molecules, all left?\", which is a different step. \"Freezer's motor stops → heat flows in → ice melts\" starts at b-1, where the line sung is \"A freezer turns water into ice\". The core idea is never stated as a line, and the end of the chain is not stated either.",
+    "score": 2
+  },
+  "errors": [
+    {
+      "claim": "Lesson: \"As energy flows from the hot coffee into the cooler room air, it spreads among more particles, which raises the total number of microstates.\" alongside \"The hot coffee loses heat Q at a high temperature, so its entropy drops a little.\"",
+      "problem": "Presenting 'more particles' as the main reason and then a separate Q/T rule is fine, but the lesson also says heat \"never flows on its own from a colder body to a hotter one\" as a cause of cooling, which circles back to the second law rather than explaining it.",
+      "correction": "Say the coffee cools because the energy spreading into the room air raises total entropy more than the coffee loses, and heat flowing from cold to hot would lower total entropy."
+    },
+    {
+      "claim": "Song c3-1/c3-2: \"Dice that land, a cup that cools / Total entropy climbs, that's the rule\"; v2-4 \"Entropy climbs and never drops\"",
+      "problem": "\"Entropy climbs and never drops\" is stated without the isolated-system condition, so a learner could take it as true for any part (the song itself later shows the water's entropy dropping).",
+      "correction": "Say \"an isolated system's entropy never drops\" or \"total entropy never drops\"."
+    }
+  ],
+  "accuracy": {
+    "reason": "The physics is sound at the level: S = k ln W, 16 arrangements, 1 in 10^30 for 100 molecules (2^-100 ≈ 8×10^-31), and the Q/T coffee analysis. The remarks that messy and tidy rooms have almost the same entropy are fair. The one imprecision is v2-4, \"Entropy climbs and never drops\", which drops the isolated-system condition. The song's b-6 and b-7 \"heat runs hot to cold\" are fine.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a clean chant that can be sung back, with a repeated title line and the rhyme ways/stay. The dice verse (\"Two dice land, a three, a four / Seven's the total on the floor\") is singable. But several lines read as captions or textbook sentences: \"Same rule caps a heat engine's best / How efficient it can be: what's next\" is forced and sits outside the idea; \"Seal the box and lift the partition\" and \"Entropy counts the ways, like you do\" has a filler tag; \"Coffee's entropy dips, air's climbs more\" is dense. The bridge runs eight lines of explanation, and the third chorus is longer with the lines reordered.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens with a question, builds on counting with dice, and has a predict-the-answer moment (\"What do you think pushes the gas into the empty half? Nothing pushes it\") and names the disorder misconception clearly. It ends on a check that requires the core idea: \"why does the gas spread... even though nothing pushes it?\". But it carries many terms for a high school first-timer (microstate, macrostate, isolated system, equilibrium, Boltzmann's equation, Clausius's rule, ΔS = Q/T), and the freezer and heat-engine paragraph at the end could be cut. The misconception comes after the main explanation rather than at the start.",
+    "score": 3
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "World War I started because Europe's powers were already tense rivals tied together by alliances, so one assassination in Sarajevo set off a chain reaction that pulled them into war one after another.",
+      "why": "First, long-term tensions (militarism, alliances, imperialism, nationalism) made the great powers rivals, and Austria-Hungary saw Serbia as a threat. Then Franz Ferdinand was shot by a Bosnian Serb nationalist on June 28, 1914. Austria-Hungary blamed Serbia, and Germany gave it a 'blank check' of full support. Austria-Hungary sent a harsh ultimatum, Serbia didn't accept everything, so Austria-Hungary declared war on July 28. Russia saw itself as Serbia's protector and mobilized, so Germany declared war on Russia and then France, Russia's ally. Germany's Schlieffen Plan said to beat France fast and then turn on Russia, and the fastest route was through neutral Belgium. Germany invaded Belgium, and Britain had promised in the 1839 Treaty of London to protect Belgium, so Britain declared war on Germany. Each promise or alliance dragged in the next country. Later, Japan joined because of its alliance with Britain, the Ottoman Empire joined Germany's side, and colonies sent troops, making it a world war.",
+      "what_if": "If Germany's 'blank check' promise to Austria-Hungary had not existed, then Austria-Hungary might have been less bold with Serbia, since it would not be sure it had a strong backer. That might have kept the fight local between Austria-Hungary and Serbia, because Russia stepping in to protect Serbia is what made Germany get involved. The lesson doesn't say for sure what would have happened, but the chain would at least have started differently."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "missing": [
+        "The alliance system splitting Europe into two opposing camps, each power bound by promises of support, is not stated as its own link; alliances are only listed as a tension and mentioned in passing."
+      ]
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"One shot, the chain pulls Europe to war\" is concrete (a shot, a chain) and carries the core idea in miniature, and it opens and closes the chorus. But \"Europe to war\" is a little abstract, and \"the chain\" is somewhat general. The lesson opens on a real question (\"How did one assassination drag all of Europe into war?\"), but the narration opens on a dated scene (\"On June 28, 1914, Archduke Franz Ferdinand rode...\") rather than something from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The schoolyard where \"every kid has promised to back up a friend in any fight\" fits the whole job of alliances, and the lesson ties the \"two kids\" and \"promises\" to Austria-Hungary, Serbia and the alliance system. The lesson also flags where it breaks down (Britain's loose Entente). However, the song sets it up only in v1-1/v1-2 and then drops it for the chain image, and the narration does not return to it after n7. The chorus runs on \"chain\" instead, so two pictures compete a little.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "Each link is taught with its cause in order: \"Russia began mobilizing to protect Serbia, so Germany, seeing a threat, declared war\"; \"The quickest road to France ran through neutral Belgium, so German troops marched in\"; \"Britain had promised... so it declared war.\" The weak spot is the Austria-Hungary step, where the blank check and the ultimatum only loosely explain why war followed. The jump from Germany's declaration on Russia to why Germany also declared on France is explained only by the two-front plan.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "They run in order and mostly use arrows to show cause and effect (\"Russia mobilizes → Germany declares war on Russia, France\"; \"Belgium invaded → Britain declares war on Germany\"). Problems: the first is a question, not a step; \"Schlieffen Plan sends German troops through neutral Belgium\" has no cause; and \"Militarism, imperialism, nationalism\" is a list. Starts are off in places: the Franz Ferdinand line starts on n16 (\"Now back to the shooting\") and \"Germany's blank check → Austria-Hungary declares war\" starts at the blank check, not the declaration. The Japan line sits beyond the chain and the core idea never appears as a closing line.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Key line: \"Militarism, imperialism, nationalism → rival great powers\"; also the lesson's MAIN list, with alliances listed as a long-term tension",
+      "problem": "The key line leaves out alliances, which are the first letter of MAIN and the idea's core, and the chain's step 1 lists only three tensions, so the line and the lesson table differ.",
+      "correction": "Use \"Militarism, alliances, imperialism, nationalism → rival great powers\", or note that the alliances link follows next."
+    },
+    {
+      "claim": "Lyric p1-1/p1-2 and narration n20-n21: \"the long-term tensions turned a local fight into a European war\" sits right after the declaration on Serbia",
+      "problem": "The misconception is placed before the spread, which is fine, but narration n21 says the tensions turned it into a \"European war\" before the story of how it spread has been told.",
+      "correction": "Move the misconception after Britain joins, or say the tensions made a local fight likely to spread."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts are right: the dates (June 28, July 28, August 1, 3, 4), the blank check, the 1839 Treaty of London, Britain's loose Entente and the 37 days all check out. The song's \"Five great powers locked in a war\" is fine. The chief problem is the song's \"Each promise pulls in one power more\", which blurs that Britain was bound by the Belgium treaty, not the Entente, while the \"Two armed camps, the promises made\" line sets Britain as a firm member of one camp. The key line that leaves out alliances is a small slip.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are singable chants with clean rhymes: \"One shot, the chain pulls Europe to war\", \"Tense, armed rivals, tied up tight / One by one, they're in the fight.\" But the verses read like a timeline, with caption lines such as \"Germany: war on Russia, then France\" and \"Thirty-seven days since that shot was heard\", and several run well past 10 syllables (\"Troops through Belgium, Britain keeps its word\" is fine, but \"Empires draw troops from lands they command\" is wordy). Some rhymes bend: \"Franz Ferdinand's shot, now who's to blame?\" and \"the front won't budge\" with \"stuck\". The bridge crams the Japan, Ottoman and trench-war facts.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, uses the schoolyard picture, builds on the cause links, asks a predict-then-answer question (\"what do you think its plan was?\"), names the misconception and says why it is wrong, and ends on a check that needs the core idea (\"If there had been no alliance system, why might the fight... have stayed a local war?\"). The MAIN table and the late section on Japan, the Ottomans and trenches add terms and drift toward a list of facts. The check is also answerable from the opening schoolyard picture alone. The \"Got a follow-up question?\" line is a stray.",
+    "score": 4
+  }
+}

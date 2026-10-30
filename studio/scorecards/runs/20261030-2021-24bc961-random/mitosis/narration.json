@@ -1,0 +1,279 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "Scrape your knee, and new skin soon grows over the wound."
+    },
+    {
+      "id": "n2",
+      "text": "Every one of those new skin cells carries the same 46 chromosomes as the cells around it."
+    },
+    {
+      "id": "n3",
+      "text": "So how does one cell split into two that match exactly?"
+    },
+    {
+      "id": "n4",
+      "text": "Picture photocopying every page of a recipe book, then clipping each page to its copy."
+    },
+    {
+      "id": "n5",
+      "text": "Then you deal one page from every clipped pair into each of two binders."
+    },
+    {
+      "id": "n6",
+      "text": "In a cell, the pages are chromosomes, the clip is the centromere, and the binders are the two daughter cells."
+    },
+    {
+      "id": "n7",
+      "text": "Here is the whole path, from one cell on the left to two on the right."
+    },
+    {
+      "id": "n8",
+      "text": "It starts before mitosis, in interphase, when the cell copies all of its DNA."
+    },
+    {
+      "id": "n9",
+      "text": "A common mistake is to think mitosis itself does that copying."
+    },
+    {
+      "id": "n10",
+      "text": "But the copying is already done before mitosis begins, so mitosis only has to separate the copies."
+    },
+    {
+      "id": "n11",
+      "text": "First comes prophase: the chromosomes coil up thick, and spindle fibers grow from the two poles of the cell."
+    },
+    {
+      "id": "n12",
+      "text": "Up close, each chromosome is two identical sister chromatids, joined at the centromere."
+    },
+    {
+      "id": "n13",
+      "text": "That's one page clipped to its copy."
+    },
+    {
+      "id": "n14",
+      "text": "Spindle fibers from opposite poles attach at the centromere, one to each sister chromatid."
+    },
+    {
+      "id": "n15",
+      "text": "That matters, because now each copy will be pulled a different way."
+    },
+    {
+      "id": "n16",
+      "text": "Back on the path, metaphase comes next."
+    },
+    {
+      "id": "n17",
+      "text": "The spindle fibers line the chromosomes up single file across the middle of the cell."
+    },
+    {
+      "id": "n18",
+      "text": "Lined up like this, every chromosome is ready to split evenly between the two poles."
+    },
+    {
+      "id": "n19",
+      "text": "So what do you think happens when the fibers start to pull?"
+    },
+    {
+      "id": "n20",
+      "text": "In anaphase, the centromere splits and the sister chromatids come apart."
+    },
+    {
+      "id": "n21",
+      "text": "The spindle fibers shorten, pulling each sister chromatid to the opposite pole."
+    },
+    {
+      "id": "n22",
+      "text": "That's the dealing, one page of every pair to each binder."
+    },
+    {
+      "id": "n23",
+      "text": "So each pole now holds one copy of every chromosome."
+    },
+    {
+      "id": "n24",
+      "text": "Back on the path, telophase builds a new nucleus around each set at the two poles."
+    },
+    {
+      "id": "n25",
+      "text": "Last, in cytokinesis, the cell pinches in two in the middle."
+    },
+    {
+      "id": "n26",
+      "text": "That leaves two daughter cells, each with the same complete set."
+    },
+    {
+      "id": "n27",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?"
+    },
+    {
+      "id": "n28",
+      "text": "Both copies get pulled to the same pole."
+    },
+    {
+      "id": "n29",
+      "text": "So one daughter cell gets an extra chromosome, and the other is missing one."
+    },
+    {
+      "id": "n30",
+      "text": "The two cells no longer match, and they may not work properly."
+    },
+    {
+      "id": "n31",
+      "text": "That's why the cell checks that every chromosome is attached to spindle fibers before anaphase begins."
+    },
+    {
+      "id": "n32",
+      "text": "So a cell copies each chromosome, then spindle fibers pull one copy of each to opposite sides before splitting."
+    },
+    {
+      "id": "n33",
+      "text": "One cell with 46 chromosomes goes in, and two identical daughter cells with 46 each come out."
+    },
+    {
+      "id": "n34",
+      "text": "That's how a scraped knee fills with matching new skin."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "Scrape your knee, and new skin soon grows over the wound."
+    },
+    {
+      "id": "n2",
+      "text": "Every one of those new skin cells carries the same 46 chromosomes as the cells around it."
+    },
+    {
+      "id": "n33",
+      "text": "One cell with 46 chromosomes goes in, and two identical daughter cells with 46 each come out."
+    },
+    {
+      "id": "n34",
+      "text": "That's how a scraped knee fills with matching new skin."
+    },
+    {
+      "id": "n3",
+      "text": "But how does one cell split into two that match exactly?"
+    },
+    {
+      "id": "n4",
+      "text": "Picture photocopying every page of a recipe book, then clipping each page to its copy."
+    },
+    {
+      "id": "n5",
+      "text": "Then you deal one page from every clipped pair into each of two binders."
+    },
+    {
+      "id": "n6",
+      "text": "In a cell, the pages are chromosomes, the clip is the centromere, and the binders are the two daughter cells."
+    },
+    {
+      "id": "n7",
+      "text": "Here is the whole path, from one cell on the left to two on the right."
+    },
+    {
+      "id": "n8",
+      "text": "It starts before mitosis, in interphase, when the cell copies all of its DNA."
+    },
+    {
+      "id": "n9",
+      "text": "A common mistake is to think mitosis itself does that copying."
+    },
+    {
+      "id": "n10",
+      "text": "But the copying is already done before mitosis begins, so mitosis only has to separate the copies."
+    },
+    {
+      "id": "n11",
+      "text": "Then mitosis begins with prophase, when the chromosomes coil up thick and spindle fibers grow from the two poles of the cell."
+    },
+    {
+      "id": "n12",
+      "text": "Up close, each chromosome is two identical sister chromatids, joined at the centromere."
+    },
+    {
+      "id": "n13",
+      "text": "That's one page clipped to its copy."
+    },
+    {
+      "id": "n14",
+      "text": "Spindle fibers from opposite poles attach at the centromere, one to each sister chromatid."
+    },
+    {
+      "id": "n15",
+      "text": "That matters, because now each copy will be pulled a different way."
+    },
+    {
+      "id": "n16",
+      "text": "Back on the path, metaphase comes next."
+    },
+    {
+      "id": "n17",
+      "text": "The spindle fibers line the chromosomes up single file across the middle of the cell."
+    },
+    {
+      "id": "n18",
+      "text": "Lined up like this, every chromosome is ready to split evenly between the two poles."
+    },
+    {
+      "id": "n19",
+      "text": "So what do you think happens when the fibers start to pull?"
+    },
+    {
+      "id": "n20",
+      "text": "In anaphase, the centromere splits and the sister chromatids come apart."
+    },
+    {
+      "id": "n21",
+      "text": "Then the spindle fibers shorten, pulling each sister chromatid to the opposite pole."
+    },
+    {
+      "id": "n22",
+      "text": "That's the dealing, one page of every pair to each binder."
+    },
+    {
+      "id": "n23",
+      "text": "So each pole now holds one copy of every chromosome."
+    },
+    {
+      "id": "n24",
+      "text": "Back on the path, telophase builds a new nucleus around each set at the two poles."
+    },
+    {
+      "id": "n25",
+      "text": "Last, in cytokinesis, the cell pinches in two in the middle."
+    },
+    {
+      "id": "n26",
+      "text": "That leaves two daughter cells, each with the same complete set."
+    },
+    {
+      "id": "n27",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?"
+    },
+    {
+      "id": "n28",
+      "text": "Both copies get pulled to the same pole."
+    },
+    {
+      "id": "n29",
+      "text": "So one daughter cell gets an extra chromosome, and the other is missing one."
+    },
+    {
+      "id": "n30",
+      "text": "The two cells no longer match, and they may not work properly."
+    },
+    {
+      "id": "n31",
+      "text": "That's why the cell checks that every chromosome is attached to spindle fibers before anaphase begins."
+    },
+    {
+      "id": "n32",
+      "text": "So a cell copies each chromosome, then spindle fibers pull one copy of each to opposite sides before splitting."
+    }
+  ]
+}

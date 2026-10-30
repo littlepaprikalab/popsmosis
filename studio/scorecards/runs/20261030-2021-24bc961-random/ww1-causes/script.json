@@ -1,0 +1,152 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "How did one assassination drag all of Europe into war?",
+    "core_idea": "Alliances chained Europe's tense powers together, so one assassination pulled them into war one by one.",
+    "why_chain": [
+      "Militarism, imperialism and nationalism had made Europe's great powers rivals, ready for war.",
+      "The alliance system tied each power to promises of support, splitting Europe into two camps.",
+      "When a Bosnian Serb killed Franz Ferdinand, Austria-Hungary, backed by Germany, declared war on Serbia.",
+      "Russia mobilized to protect Serbia, so Germany declared war on Russia and on its ally France.",
+      "Germany's Schlieffen Plan sent troops through neutral Belgium, so Britain, which had promised to protect Belgium, joined the war."
+    ],
+    "key_terms": [
+      "Franz Ferdinand",
+      "Austria-Hungary",
+      "Serbia",
+      "alliance system",
+      "militarism",
+      "nationalism",
+      "Schlieffen Plan",
+      "Belgium"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "Before 1914, long-term tensions, often remembered as MAIN, made Europe's great powers rivals: militarism, as the powers raced to build bigger armies and navies, including the naval race between Britain and Germany to build battleships called dreadnoughts; the alliance system; imperialism, the competition for colonies in Africa and Asia; and nationalism. Serbian nationalists wanted Bosnia's Serbs and other South Slavs united with Serbia, but Austria-Hungary had annexed Bosnia in 1908, so Austria-Hungary saw Serbia as a threat to its empire. The alliance system split Europe into two camps: Germany, Austria-Hungary and Italy formed the Triple Alliance, while France, Russia and Britain formed the Triple Entente. Britain's place in the Entente was a loose understanding that did not bind it to fight. Russia saw itself as Serbia's protector. The alliance system worked like a schoolyard where every kid has promised to back up a friend in any fight: when two kids start shoving, their friends pile in, then their friends' friends. In 1914 the two kids were Austria-Hungary and Serbia, and the promises were the alliance system.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "On June 28, 1914, Archduke Franz Ferdinand, heir to Austria-Hungary's throne, was riding in an open car through the streets of Sarajevo, in Bosnia. Gavrilo Princip, a young Bosnian Serb nationalist in the crowd, shot and killed him. Princip had been armed with help from the Black Hand, a secret Serbian nationalist society. Austria-Hungary blamed Serbia. Germany promised Austria-Hungary its full, unconditional support, known as the 'blank check'. Austria-Hungary sent Serbia a harsh ultimatum on July 23. Serbia did not accept every demand, so Austria-Hungary declared war on Serbia on July 28, 1914.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "Russia, Serbia's protector, began mobilizing its army to protect Serbia. Germany saw Russia's mobilization as a threat and declared war on Russia on August 1, 1914, then on Russia's ally France two days later, on August 3. Germany's Schlieffen Plan aimed to avoid fighting on two fronts at once: defeat France quickly, then turn east to fight Russia before its large army was fully ready. The quickest road to France ran through neutral Belgium, so German troops marched into Belgium on August 4. Britain had promised in the 1839 Treaty of London to protect Belgium's neutrality, so Britain declared war on Germany that same day, August 4, 1914. That was just 37 days after the assassination, and by then Europe's great powers, Germany, Austria-Hungary, Russia, France and Britain, were at war. Italy stayed out at first and joined the Allies in 1915.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "A common mistake is to think the assassination alone caused World War I. Historians see it as only the spark: the long-term tensions of militarism, alliances, imperialism and nationalism are what turned a local fight between Austria-Hungary and Serbia into a European war. Alliances also helped turn it into a world war. Japan had been allied with Britain since 1902, so on August 23, 1914, Japan declared war on Germany, and the fighting spread to Asia. The Ottoman Empire joined Germany and Austria-Hungary as one of the Central Powers in late 1914, and Europe's empires drew troops from their colonies. In the west, Germany's quick advance stalled, and the war turned into trench warfare on the Western Front.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think the assassination of Franz Ferdinand alone caused the war. It was only the spark: long-term tensions of alliances, militarism, imperialism and nationalism turned a local fight into a European war.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A street in Sarajevo in 1914, with old stone buildings. Archduke Franz Ferdinand, in a plumed hat and uniform, sits in an open car in the middle of the street, and a crowd lines the pavement with a young Bosnian Serb standing among them."
+      },
+      {
+        "id": "analogy",
+        "picture": "A schoolyard with two kids squaring off in the middle, one shoving the other. Behind each kid stands a line of friends who have promised to back them up, and behind those friends stand their own friends."
+      },
+      {
+        "id": "overview",
+        "picture": "A timeline of ten figures standing left to right, each drawn once and named: Gavrilo Princip, Franz Ferdinand, then the countries as soldiers holding their flags in this order: Austria-Hungary, Serbia, Russia, Germany, France, Belgium, Britain, Japan."
+      },
+      {
+        "id": "tensions",
+        "picture": "A close-up of Europe's tensions before 1914. On the left, a British battleship and a German battleship sit side by side at sea; on the right, a Bosnian town labeled Bosnia flies Austria-Hungary's flag, while across a river in Serbia, Serbian nationalists wave Serbia's flag."
+      },
+      {
+        "id": "belgium",
+        "picture": "A close-up of the Schlieffen Plan on August 4, 1914: German troops march along a road past a border post into Belgium, with a German officer holding the Schlieffen Plan and a signpost ahead pointing to France. Across a strip of sea on the left stands a British soldier holding Britain's flag."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "On June 28, 1914, Archduke Franz Ferdinand rode through the streets of Sarajevo in an open car.",
+          "A young Bosnian Serb in the crowd shot and killed him.",
+          "Thirty-seven days later, Europe's great powers were at war.",
+          "So how did one assassination drag a whole continent into war?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Picture a schoolyard where every kid has promised to back up a friend in any fight.",
+          "When two kids start shoving, their friends pile in, then their friends' friends.",
+          "In 1914, the two kids were Austria-Hungary and Serbia, and the promises were the alliance system."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Here is the story's line-up, in the order each joins it.",
+          "The alliance system had split Europe into two camps.",
+          "Germany was allied with Austria-Hungary, while Russia was allied with France and backed Serbia.",
+          "Britain stood loosely with France and Russia, without a firm promise to fight."
+        ]
+      },
+      {
+        "scene": "tensions",
+        "lines": [
+          "But promises alone don't start wars, and Europe was already tense.",
+          "First, militarism: the powers raced to build bigger armies and navies.",
+          "Then nationalism: Serbian nationalists wanted Bosnia's Serbs united with Serbia.",
+          "But Austria-Hungary had annexed Bosnia in 1908, so it saw Serbia as a threat to its empire."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back on the timeline, Franz Ferdinand was heir to Austria-Hungary's throne.",
+          "Because his killer, Gavrilo Princip, was a Bosnian Serb, Austria-Hungary blamed Serbia.",
+          "Germany promised Austria-Hungary its full support.",
+          "On July 28, Austria-Hungary declared war on Serbia: that's the first shove.",
+          "A common mistake is to think the assassination alone caused the war.",
+          "It was only the spark; the long-term tensions turned a local fight into a European war.",
+          "What do you think Russia did next?",
+          "Russia mobilized its army to protect Serbia.",
+          "Germany saw that as a threat, so it declared war on Russia on August 1.",
+          "Two days later, it declared war on Russia's ally, France."
+        ]
+      },
+      {
+        "scene": "belgium",
+        "lines": [
+          "Germany's Schlieffen Plan was to defeat France quickly, so it could avoid fighting on two fronts at once.",
+          "The quickest road to France ran through neutral Belgium, so on August 4, German troops marched in.",
+          "Britain had promised in 1839 to protect Belgium's neutrality.",
+          "So that same day, Britain declared war on Germany."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Now, how did a European war become a world war?",
+          "Japan had been allied with Britain since 1902.",
+          "So on August 23, 1914, Japan declared war on Germany, and the fighting spread to Asia."
+        ]
+      },
+      {
+        "scene": "hook",
+        "lines": [
+          "Alliances chained Europe's tense powers together, so one assassination pulled them into war one by one.",
+          "That's how one shooting in Sarajevo became a world war, one promise at a time."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 34,
+    "reworded": 0
+  }
+}
