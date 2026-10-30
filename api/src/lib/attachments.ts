@@ -15,13 +15,29 @@ export const ATTACHMENTS_MAX_TOTAL_BYTES = 8 * 1024 * 1024;
 export const ATTACHMENT_NAME_MAX_LENGTH = 200;
 const MIME_TYPE_MAX_LENGTH = 100;
 
+/** Room in a message's body for its text and the JSON around it, beside its files. */
+export const MESSAGE_TEXT_ROOM = 256 * 1024;
 /** A message's body limit: its files as base64 (four bytes for every three) and room for its text. */
-export const MESSAGE_BODY_LIMIT = Math.ceil((ATTACHMENTS_MAX_TOTAL_BYTES * 4) / 3) + 256 * 1024;
+export const MESSAGE_BODY_LIMIT = Math.ceil((ATTACHMENTS_MAX_TOTAL_BYTES * 4) / 3) + MESSAGE_TEXT_ROOM;
+
+/** The fewest bytes of files a message body this long can carry: what is past the room for text, as base64. */
+export function minimumFileBytes(bodyLength: number): number {
+  return Math.max(0, Math.floor(((bodyLength - MESSAGE_TEXT_ROOM) * 3) / 4));
+}
 
 /** Days a file's bytes are kept; 0 keeps them for good. Past it the row stays, so a thread still lists what was sent. */
-export function attachmentRetentionDays(): number {
-  const days = parseInt(process.env.ATTACHMENT_RETENTION_DAYS || '30', 10);
+export function attachmentRetentionDays(env: NodeJS.ProcessEnv = process.env): number {
+  const days = parseInt(env.ATTACHMENT_RETENTION_DAYS || '30', 10);
   return Number.isFinite(days) && days > 0 ? days : 0;
+}
+
+/**
+ * Whether a file sent at `createdAt` is past the retention, whether or not the sweep has let its bytes go yet: a file
+ * is never served, listed as there, or read by the studio past its time, however long ago the sweep last ran.
+ */
+export function pastRetention(createdAt: Date, now: Date = new Date(), env: NodeJS.ProcessEnv = process.env): boolean {
+  const days = attachmentRetentionDays(env);
+  return days > 0 && now.getTime() - createdAt.getTime() > days * 24 * 60 * 60 * 1000;
 }
 
 export interface NewAttachment {
@@ -138,12 +154,75 @@ export function contentDisposition(disposition: 'inline' | 'attachment', name: s
   return `${disposition}; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(name)}`;
 }
 
-/** Let go of the bytes of every file older than the retention, keeping the rows. */
-export async function sweepExpiredAttachments(db: { $executeRaw: (query: Prisma.Sql) => Promise<number> }): Promise<number> {
-  const days = attachmentRetentionDays();
+type RawDb = { $executeRaw: (query: Prisma.Sql) => Promise<number> };
+
+const SWEEP_BATCH = 100; // files a statement lets go: each may be 4 MB, so a statement stays short
+const SWEEP_MAX_BATCHES = 50; // a run's most; the next run carries on
+
+/**
+ * Let go of the bytes of every file older than the retention, keeping the rows; the number let go. In short statements
+ * of SWEEP_BATCH files, oldest first, each committed on its own (never one long transaction holding a pooled
+ * connection), skipping rows another instance's sweep holds, so the API's instances can all run it.
+ */
+export async function sweepExpiredAttachments(db: RawDb, env: NodeJS.ProcessEnv = process.env): Promise<number> {
+  const days = attachmentRetentionDays(env);
   if (days === 0) return 0;
-  return db.$executeRaw(Prisma.sql`
-    UPDATE attachments SET data = NULL, "purgedAt" = now()
-    WHERE data IS NOT NULL AND "createdAt" < now() - make_interval(days => ${days})
-  `);
+  let total = 0;
+  for (let i = 0; i < SWEEP_MAX_BATCHES; i++) {
+    const n = await db.$executeRaw(Prisma.sql`
+      UPDATE attachments SET data = NULL, "purgedAt" = now()
+      WHERE id IN (
+        SELECT id FROM attachments
+        WHERE "purgedAt" IS NULL AND "createdAt" < now() - make_interval(days => ${days})
+        ORDER BY "createdAt"
+        LIMIT ${SWEEP_BATCH}
+        FOR UPDATE SKIP LOCKED
+      )
+    `);
+    total += n;
+    if (n < SWEEP_BATCH) break;
+  }
+  return total;
+}
+
+/** Let go of one file's bytes now: one found past the retention on its way out, before the sweep came to it. */
+export async function purgeAttachment(db: RawDb, id: string): Promise<void> {
+  await db.$executeRaw(Prisma.sql`UPDATE attachments SET data = NULL, "purgedAt" = now() WHERE id = ${id} AND "purgedAt" IS NULL`);
+}
+
+type SweepLog = { info: (obj: object, msg: string) => void; warn: (obj: object, msg: string) => void };
+
+/**
+ * Run the sweep on a schedule: a minute after the API starts, then every ATTACHMENT_SWEEP_MINUTES (default 60), so files
+ * go on time whether or not anyone sends one. Each instance runs its own; the sweep skips what another holds. Returns
+ * a function that stops it. The timers never keep the process alive.
+ */
+export function scheduleAttachmentSweep(db: RawDb, log: SweepLog, env: NodeJS.ProcessEnv = process.env): () => void {
+  if (attachmentRetentionDays(env) === 0) return () => {};
+  const minutes = parseInt(env.ATTACHMENT_SWEEP_MINUTES || '60', 10);
+  const every = (Number.isFinite(minutes) && minutes > 0 ? minutes : 60) * 60_000;
+  let running = false;
+  const run = async () => {
+    if (running) return; // a slow run is never overlapped by the next
+    running = true;
+    try {
+      const purged = await sweepExpiredAttachments(db, env);
+      if (purged > 0) log.info({ purged }, 'attachment retention sweep let files go');
+    } catch (err) {
+      log.warn({ err }, 'attachment retention sweep failed; the next run tries again');
+    } finally {
+      running = false;
+    }
+  };
+  let interval: NodeJS.Timeout | undefined;
+  const first = setTimeout(() => {
+    void run();
+    interval = setInterval(() => void run(), every);
+    interval.unref();
+  }, 60_000 + Math.floor(Math.random() * 30_000)); // instances started together spread out
+  first.unref();
+  return () => {
+    clearTimeout(first);
+    if (interval) clearInterval(interval);
+  };
 }

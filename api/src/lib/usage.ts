@@ -13,12 +13,23 @@
  * lock of its own: requests from different learners landing in the same instant can pass it by one or two. When the
  * request then fails to be written, its take is given back. Rows older than two days are let go (pruneUsage); an
  * account's go with it.
+ *
+ * Files are limited the same way, in bytes: what a learner sends a day (the take's row keeps its bytes, so deleting a
+ * request gives nothing back) and what popsmosis holds of theirs at a time (counted from the files themselves, since a
+ * deleted request's files are gone). A message may carry 8 MB, and follow-ups 30 an hour, so without these one account
+ * could add about 240 MB an hour to Postgres. Topics and follow-ups take the same per-learner lock, so one learner's
+ * messages sent at once cannot both pass the byte count.
  */
 import { AppError } from './errors.js';
 import { knob } from './knobs.js';
+import { attachmentRetentionDays, minimumFileBytes } from './attachments.js';
 import prisma, { runTransaction, type TxClient } from './prisma.js';
 
 const HOUR_MS = 60 * 60 * 1000;
+const MB = 1024 * 1024;
+// How long a take's files count as on their way when nothing says they arrived (a crash between the take and the
+// write): a body is read and parsed before the take, so only the insert itself (seconds for 8 MB) falls in between.
+const IN_FLIGHT_MS = 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const KEEP_MS = 2 * DAY_MS;
 
@@ -33,7 +44,57 @@ export function usageLimits(env: NodeJS.ProcessEnv = process.env) {
     // Site-wide, everyone's topics together: the ceiling on a day's model spend. 0: no ceiling.
     topicsPerDay: intEnv(knob('TOPICS_PER_DAY', env), 100),
     repliesPerUserPerHour: intEnv(knob('REPLIES_PER_USER_PER_HOUR', env), 30),
+    // Files, in MB. 0: no limit. A phone's photo of notes is 2 to 4 MB. Generous for the hackathon; lower them
+    // afterwards (20 a day and 60 held), here and in lib/knobs.ts, since the files live in the database.
+    attachmentMbPerUserPerDay: intEnv(knob('ATTACHMENT_MB_PER_USER_PER_DAY', env), 100),
+    attachmentMbHeldPerUser: intEnv(knob('ATTACHMENT_MB_HELD_PER_USER', env), 300),
   };
+}
+
+const mb = (bytes: number) => `${(bytes / MB).toFixed(1).replace(/\.0$/, '')} MB`;
+
+/** Why the caller may not send `bytes` of files now, or null: their day's bytes, then what is held of theirs. */
+async function bytesRefusal(db: Db, userId: string, bytes: number, env: NodeJS.ProcessEnv): Promise<AppError | null> {
+  if (bytes <= 0) return null;
+  const { attachmentMbPerUserPerDay: perDay, attachmentMbHeldPerUser: held } = usageLimits(env);
+  if (perDay > 0) {
+    const since = new Date(Date.now() - DAY_MS);
+    const sent = (await db.usageEvent.aggregate({ where: { userId, createdAt: { gte: since } }, _sum: { bytes: true } }))._sum.bytes ?? 0;
+    if (sent + bytes > perDay * MB) {
+      return new AppError('RATE_LIMITED',
+        `You can send ${perDay} MB of files a day and have sent ${mb(sent)} in the last 24 hours. Send smaller or fewer files, or send this without them.`,
+        { retryable: false });
+    }
+  }
+  if (held > 0) {
+    // The files of this learner's requests and follow-ups that popsmosis still holds, each found by its index; and the
+    // bytes of each take whose message is not written yet (filesPending, cleared by filesWritten()): the write follows
+    // the take, outside the lock, so two messages sent at once would otherwise each miss the other's files. A take
+    // left pending by a crash stops counting after IN_FLIGHT_MS.
+    const days = attachmentRetentionDays(env);
+    const fresh = days > 0 ? new Date(Date.now() - days * DAY_MS) : new Date(0);
+    const inFlight = new Date(Date.now() - IN_FLIGHT_MS);
+    const [row] = await db.$queryRaw<{ total: bigint | number | null; pending: bigint | number | null }[]>`
+      SELECT
+        COALESCE((SELECT SUM(a.size) FROM attachments a JOIN questions q ON q.id = a."questionId"
+                  WHERE q."userId" = ${userId} AND a."purgedAt" IS NULL AND a."createdAt" >= ${fresh}), 0)
+      + COALESCE((SELECT SUM(a.size) FROM attachments a JOIN replies r ON r.id = a."replyId"
+                  WHERE r."userId" = ${userId} AND a."purgedAt" IS NULL AND a."createdAt" >= ${fresh}), 0)
+      AS total,
+      COALESCE((SELECT SUM(bytes) FROM usage_events
+                WHERE "userId" = ${userId} AND "filesPending" AND "createdAt" >= ${inFlight}), 0) AS pending
+    `;
+    const kept = Number(row?.total ?? 0);
+    const pending = Number(row?.pending ?? 0);
+    if (kept + pending + bytes > held * MB) {
+      return new AppError('RATE_LIMITED',
+        `Popsmosis keeps up to ${held} MB of your files at a time and is keeping ${mb(kept + pending)}. `
+        + (days > 0 ? `Each file goes ${days} days after you send it; ` : '')
+        + 'deleting an old request lets its files go now. Or send this without files.',
+        { retryable: false });
+    }
+  }
+  return null;
 }
 
 type Db = typeof prisma | TxClient;
@@ -78,26 +139,40 @@ export async function replyAllowed(userId: string, env: NodeJS.ProcessEnv = proc
 }
 
 /**
- * Take one topic from the caller's allowance and the site's: the id of the usage row it wrote, to give back if the
- * topic is not written after all. Throws RATE_LIMITED when either is used up.
+ * The same look for files, from the body's announced length (Content-Length): a body too long to be text alone carries
+ * at least minimumFileBytes() of files, and a learner with less room than that is refused before 11 MB is read.
  */
-export async function takeTopic(userId: string, env: NodeJS.ProcessEnv = process.env): Promise<string> {
+export async function filesAllowed(userId: string, bodyLength: number, env: NodeJS.ProcessEnv = process.env): Promise<AppError | null> {
+  return bytesRefusal(prisma, userId, minimumFileBytes(bodyLength), env);
+}
+
+/**
+ * Take one topic, with `bytes` of files, from the caller's allowances and the site's: the id of the usage row it wrote,
+ * to give back if the topic is not written after all. Throws RATE_LIMITED when one is used up.
+ */
+export async function takeTopic(userId: string, bytes = 0, env: NodeJS.ProcessEnv = process.env): Promise<string> {
   return runTransaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage-topics:${userId}`}))`;
-    const refusal = await topicRefusal(tx, userId, env);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${userId}`}))`;
+    const refusal = (await topicRefusal(tx, userId, env)) ?? (await bytesRefusal(tx, userId, bytes, env));
     if (refusal) throw refusal;
-    return (await tx.usageEvent.create({ data: { userId, kind: 'TOPIC' }, select: { id: true } })).id;
+    return (await tx.usageEvent.create({ data: { userId, kind: 'TOPIC', bytes, filesPending: bytes > 0 }, select: { id: true } })).id;
   });
 }
 
-/** Take one follow-up from the caller's hourly allowance: the usage row's id, as takeTopic. Throws RATE_LIMITED. */
-export async function takeReply(userId: string, env: NodeJS.ProcessEnv = process.env): Promise<string> {
+/** Take one follow-up, with `bytes` of files, from the caller's allowances: the usage row's id, as takeTopic. */
+export async function takeReply(userId: string, bytes = 0, env: NodeJS.ProcessEnv = process.env): Promise<string> {
   return runTransaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage-replies:${userId}`}))`;
-    const refusal = await replyRefusal(tx, userId, env);
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`usage:${userId}`}))`;
+    const refusal = (await replyRefusal(tx, userId, env)) ?? (await bytesRefusal(tx, userId, bytes, env));
     if (refusal) throw refusal;
-    return (await tx.usageEvent.create({ data: { userId, kind: 'REPLY' }, select: { id: true } })).id;
+    return (await tx.usageEvent.create({ data: { userId, kind: 'REPLY', bytes, filesPending: bytes > 0 }, select: { id: true } })).id;
   });
+}
+
+/** The take's message is written, its files with it: they count as held from the files now. Best-effort: a take left
+ * pending stops counting after IN_FLIGHT_MS. */
+export async function filesWritten(usageId: string): Promise<void> {
+  await prisma.usageEvent.updateMany({ where: { id: usageId, filesPending: true }, data: { filesPending: false } });
 }
 
 /** Give a take back: the request it was for was never written. Best-effort; a row left behind only costs one place. */

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  artFrom, brainFrom, songFrom, parseArt, parseBrainSettings, parseSongSettings, DEFAULT_ART, DEFAULT_BRAIN, DEFAULT_SONG,
-  ART_CHOICES,
+  artFrom, brainFrom, songFrom, spendFrom, parseArt, parseBrainSettings, parseSongSettings, parseSpendSettings, DEFAULT_ART,
+  DEFAULT_BRAIN, DEFAULT_SONG, DEFAULT_SPEND, ART_CHOICES,
 } from './studio-settings.js';
 
 describe('artFrom', () => {
@@ -77,5 +77,27 @@ describe('songFrom and parseSongSettings', () => {
     expect(parseSongSettings({ provider: 'suno' }).error).toBe('song.provider must be one of elevenlabs, gemini');
     expect(parseSongSettings({ provider: 'gemini', model: 'lyria-3.5' }).error).toBe('song takes provider, not model');
     expect(parseSongSettings('gemini').error).toBe('song must be an object');
+  });
+});
+
+describe('spendFrom and parseSpendSettings', () => {
+  it('is $20 a topic with nothing stored, takes a stored ceiling, and 0 for none', () => {
+    expect(DEFAULT_SPEND).toEqual({ topicUsd: 20 });
+    for (const stored of [undefined, null, 5, { topicUsd: '5' }, { topicUsd: -1 }, { topicUsd: 1e9 }, { topicUsd: NaN }]) {
+      expect(spendFrom(stored)).toEqual(DEFAULT_SPEND);
+    }
+    expect(spendFrom({ topicUsd: 2.5 })).toEqual({ topicUsd: 2.5 });
+    expect(spendFrom({ topicUsd: 0 })).toEqual({ topicUsd: 0 });
+  });
+
+  it('takes a number of dollars to the cent, and refuses anything else', () => {
+    expect(parseSpendSettings({ topicUsd: 3 })).toEqual({ spend: { topicUsd: 3 } });
+    expect(parseSpendSettings({ topicUsd: 0 })).toEqual({ spend: { topicUsd: 0 } });
+    expect(parseSpendSettings({ topicUsd: 1.234 })).toEqual({ spend: { topicUsd: 1.23 } });
+    const range = 'spend.topicUsd must be a number of dollars from 0 (no ceiling) to 100';
+    for (const topicUsd of [-0.01, 100.01, '5', null, Infinity]) expect(parseSpendSettings({ topicUsd }).error).toBe(range);
+    expect(parseSpendSettings({}).error).toBe(range);
+    expect(parseSpendSettings({ topicUsd: 5, daily: 50 }).error).toBe('spend takes topicUsd, not daily');
+    expect(parseSpendSettings(5).error).toBe('spend must be an object');
   });
 });

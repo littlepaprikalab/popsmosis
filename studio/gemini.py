@@ -54,6 +54,8 @@ Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 class GeminiError(media.StepFailed):
     """The Gemini API did not give back what was asked."""
 
+    code = "Gemini failed"
+
 
 class Declined(GeminiError):
     """Gemini would not make this picture."""
@@ -96,6 +98,7 @@ def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> 
         "generationConfig": {"responseModalities": ["IMAGE"],
                              "imageConfig": {"aspectRatio": ASPECT_RATIO, "imageSize": IMAGE_SIZE}},
     }
+    ledger.check_ceiling(job)
     started = time.monotonic()
     status, answer = _post(f"/models/{urllib.parse.quote(MODEL, safe='')}:generateContent", body)
     if status != 200:

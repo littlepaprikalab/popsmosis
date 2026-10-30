@@ -64,14 +64,18 @@ d('studio settings', () => {
       song: { provider: 'elevenlabs' },
       art: { claude: 'gemini', meta: 'muse' },
       knobs: expect.any(Object),
+      spend: { topicUsd: 20 },
+      review: { required: false },
       updatedAt: null,
       defaults: {
         brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+        spend: { topicUsd: 20 }, review: { required: false },
       },
       choices: {
         brain: { default: ['claude', 'muse-wonder', 'muse-spark'], effort: ['low', 'medium', 'high', 'xhigh', 'max'] },
         song: { provider: ['elevenlabs', 'gemini'] },
         art: { claude: ['gemini', 'muse', 'svg'], meta: ['muse', 'gemini'] },
+        spend: { topicUsd: { min: 0, max: 100 } },
       },
     });
   });
@@ -82,6 +86,7 @@ d('studio settings', () => {
     expect(asTeacher.json()).toEqual({
       brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
       knobs: {},
+      spend: { topicUsd: 20 },
     });
     expect((await app.inject({ method: 'PUT', url: '/api/studio/settings', headers: asAgent, payload: { art: { claude: 'muse' } } })).statusCode).toBe(401);
     expect((await get(learnerCookie)).statusCode).toBe(403);
@@ -123,6 +128,24 @@ d('studio settings', () => {
     expect(teacher.json().song).toEqual({ provider: 'gemini' });
   });
 
+  it('keeps the per-topic spend ceiling, and refuses one out of range', async () => {
+    expect((await put(adminCookie, { spend: { topicUsd: 2.5 } })).json().spend).toEqual({ topicUsd: 2.5 });
+    expect((await put(adminCookie, { spend: { topicUsd: 500 } })).statusCode).toBe(400);
+    expect((await put(adminCookie, { spend: { topicUsd: 0 }, art: { meta: 'svg' } })).statusCode).toBe(400);
+    const teacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
+    expect(teacher.json().spend).toEqual({ topicUsd: 2.5 });
+    expect((await put(adminCookie, { spend: { topicUsd: 0 } })).json().spend).toEqual({ topicUsd: 0 });
+  });
+
+  it('keeps whether droplets wait for review, and never tells the studio', async () => {
+    expect((await put(adminCookie, { review: { required: false } })).json().review).toEqual({ required: false });
+    expect((await put(adminCookie, { review: { required: 'no' } })).statusCode).toBe(400);
+    expect((await put(adminCookie, { review: { required: true, by: 'ada' } })).statusCode).toBe(400);
+    expect((await get(adminCookie)).json().review).toEqual({ required: false });
+    const teacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
+    expect(teacher.json().review).toBeUndefined();
+  });
+
   it('keeps both of two changes saved at the same moment', async () => {
     const saves = await Promise.all([
       put(adminCookie, { art: { claude: 'muse' } }),
@@ -147,17 +170,18 @@ d('studio settings', () => {
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
     const brain = { default: 'claude', effort: 'high' };
     const song = { provider: 'elevenlabs' };
-    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {} });
-    await put(adminCookie, { art: { claude: 'svg' }, knobs: { ELEVENLABS_VOICE_ID: 'Voice42' } });
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {}, spend: { topicUsd: 20 } });
+    await put(adminCookie, { art: { claude: 'svg' }, knobs: { ELEVENLABS_VOICE_ID: 'Voice42' }, spend: { topicUsd: 3 } });
     const knobs = { ELEVENLABS_VOICE_ID: 'Voice42' };
-    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' }, knobs });
+    const spend = { topicUsd: 3 };
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' }, knobs, spend });
 
     const answered = await prisma.question.create({ data: { userId, content: 'Osmosis', status: 'ANSWERED' } });
     const answer = await prisma.answer.create({
       data: { questionId: answered.id, agentId, content: 'A lesson.', bundle: { topic: 'osmosis' }, factcheck: { status: 'passed' } },
     });
     const videos = await app.inject({ method: 'POST', url: `/api/answers/${answer.id}/video/claim`, headers: asAgent, payload: {} });
-    expect(videos.json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' }, knobs });
+    expect(videos.json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' }, knobs, spend });
   });
 
   it('shows an admin every knob: what it takes, its default, and for the API\'s own its environment and what is in force', async () => {

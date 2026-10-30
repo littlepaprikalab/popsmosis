@@ -17,8 +17,23 @@ function friendlyAuthError(msg: string): string {
   return msg;
 }
 
+/**
+ * Where to go once signed in: a page of this site, or null. The value is resolved as the browser would resolve the
+ * link and kept only when it stays on this origin, so `//evil.example`, `/\evil.example` (a backslash reads as a
+ * slash) and `/<tab>/evil.example` (tabs and newlines are dropped) never send a learner off-site. What is kept is
+ * the resolved path, query and fragment, never the text as given.
+ */
 function safeReturnTo(value: string | null): string | null {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : null;
+  if (!value || !value.startsWith('/')) return null;
+  let url: URL;
+  try {
+    url = new URL(value, window.location.origin);
+  } catch {
+    return null;
+  }
+  // A path the dot segments folded to "//evil.example" would be read as another host by whatever reads it next.
+  if (url.origin !== window.location.origin || url.pathname.startsWith('//')) return null;
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 export default function AuthCallbackPage() {

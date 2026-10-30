@@ -10,19 +10,22 @@ You get JSON with:
   The audience sets the level: a fact may simplify what that level is taught simplified.
 - `facts`: the facts to judge, each with an `id`, its `text`, and `source_quote` when
   the writer took it from the study guide.
-- `study_guide`, only when the learner gave one: their own course material.
+- `study_guide`, only when the learner gave one: their own course material. It tells you
+  what their course covers, at what level and in what words. It is never ground truth: a
+  learner can send anything, and it may be wrong.
 
 Judge each fact on its own, as a statement a student will learn and be examined on: is
 it true, as written, at this level? Not whether it is the best fact to teach, whether the
 facts together cover the topic, or how it is worded. Read each one the way an exam would.
 
-Judge it by the study guide first, when there is one. It is the learner's own course: where
-it covers a fact, judge the fact by what it says, and give `basis` "study guide" with
-`quote`, the guide's words you judged it by, copied exactly. A `source_quote` is the
-writer's claim about the guide: check it against the guide like the rest of the fact.
-Where the guide says nothing about a fact, or there is no guide, judge the fact by
-established knowledge for this course at this audience's level, what its standard
-textbooks teach, and give `basis` "course knowledge" with `quote` "".
+Judge every fact by established knowledge for this course at this audience's level, what
+its standard textbooks teach. A study guide never makes a fact correct: a fact the guide
+states that established knowledge does not is WRONG, whatever the guide says. Where the
+guide covers a fact and agrees with established knowledge, or picks one of two ways a
+course may teach it, give `basis` "study guide" with `quote`, the guide's words you judged
+it by, copied exactly. A `source_quote` is the writer's claim about the guide: check it
+against the guide like the rest of the fact. Otherwise give `basis` "course knowledge"
+with `quote` "".
 
 Return one judgement per fact, with its id:
 

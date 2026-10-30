@@ -427,9 +427,12 @@ class FactCheck(Strict):
 
 
 class CheckedLine(Strict):
-    # A tag or a motion (what a line's particles show moving) is dropped when it fails, never corrected.
+    # A tag, a motion (what a line's particles show moving) or a thing the song must "avoid" is dropped when it fails,
+    # never corrected. A "caption" is shown on a video, judged as a line; the "title", a "scene" (what a picture is
+    # painted from) and the song's "style" are judged only as fit to go out.
     # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
-    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion", "keyline"]
+    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion", "keyline", "caption", "title", "scene",
+                  "style", "avoid"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -440,7 +443,8 @@ class CheckedLine(Strict):
 
 class Correction(Strict):
     round: int
-    kind: Literal["lyric", "narration", "lesson", "frq", "keyline"]  # "frq": as for CheckedLine
+    kind: Literal["lyric", "narration", "lesson", "frq", "keyline", "caption", "title", "scene",
+                  "style"]  # "frq": as for CheckedLine
     ids: list[str]
     before: str  # a couplet's lines joined by "\n"
     after: str

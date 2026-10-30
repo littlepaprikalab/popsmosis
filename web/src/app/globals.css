@@ -217,6 +217,7 @@ html {
 .md pre { background: var(--code-block-bg); padding: 0.75em 1em; border-radius: 6px; overflow-x: auto; margin: 0 0 0.75em; }
 .md pre code { background: none; padding: 0; }
 .md a { color: var(--accent-blue); text-decoration: underline; }
+.md .md-image-left-out { color: var(--text-muted); font-style: italic; }
 .md blockquote { border-left: 2px solid var(--border); padding-left: 0.75em; color: var(--text-secondary); margin: 0 0 0.75em; }
 .md strong { color: var(--text-hover); }
 .md .md-table { overflow-x: auto; margin: 0 0 0.75em; }

@@ -247,7 +247,12 @@ test.describe('videos on /learn', () => {
     await expect(bill.getByTestId('breakdown-total')).toBeVisible();
   });
 
-  test('a lesson shows while its videos render, then the players appear above it without a reload; an admin can hide it from the tab', async ({ page, context, request }) => {
+  test('a lesson shows while its videos render, then the players appear above it without a reload; an admin approves it, and can hide it from the tab', async ({ page, context, request }) => {
+    // Review on (it is off by default): each droplet waits for an admin before it lists.
+    await request.put(apiUrl('/api/studio/settings'), {
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' },
+      data: { review: { required: true } },
+    });
     // Ada asks, the teacher answers and starts the render, all through the API.
     const text = `E2E ${Date.now()}: the Calvin cycle`;
     const asked = await request.post(apiUrl('/api/questions'), {
@@ -283,8 +288,13 @@ test.describe('videos on /learn', () => {
     await expect(card.locator('.md strong', { hasText: 'fixes carbon' })).toBeVisible();
     await expect(card.getByLabel('song video')).toHaveAttribute('src', SONG);
 
-    // It is on the public tab, until Ada (an admin) hides it.
+    // It waits off the public tab until Ada (an admin) approves it; then it is on it, until she hides it.
     const onTab = async () => (await (await request.get(apiUrl('/api/droplets'))).json()).data.some((d: { id: string }) => d.id === answerId);
+    await expect(card.getByTestId('awaiting-review')).toContainText('Waiting for review');
+    expect(await onTab()).toBe(false);
+    expect((await request.get(apiUrl(`/api/droplets/${answerId}`))).status()).toBe(404);
+    await card.getByTestId('approve-droplet').click();
+    await expect(card.getByRole('link', { name: 'On the public Droplets tab' })).toBeVisible();
     expect(await onTab()).toBe(true);
     await card.getByTestId('toggle-hidden').click();
     await expect(card.getByText('Hidden from the Droplets tab.')).toBeVisible();
@@ -292,6 +302,10 @@ test.describe('videos on /learn', () => {
     await card.getByTestId('toggle-hidden').click();
     await expect(card.getByRole('link', { name: 'On the public Droplets tab' })).toBeVisible();
     expect(await onTab()).toBe(true);
+    await request.put(apiUrl('/api/studio/settings'), { // back to the default
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' },
+      data: { review: { required: false } },
+    });
   });
 
   test("a finished lesson shows both videos' tags under them, each a search of the tab", async ({ page, context }) => {

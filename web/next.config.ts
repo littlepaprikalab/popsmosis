@@ -38,6 +38,33 @@ const inkmoryUrl = (() => {
   return url.origin;
 })();
 
+// Where the droplet videos and posters are served from, the one place besides this site that pages may load
+// pictures and video from (the Content-Security-Policy below): the R2 bucket's public domain, the API's
+// R2_PUBLIC_URL (render.yaml copies it), and, only while a droplet still plays from the old Supabase bucket (the
+// API's boot log says so), that project's URL. Built in, like the others. Unset: pages load media from this site
+// alone, which is how the seeded sample droplets play.
+const mediaOrigin = (name: string, example: string): string => {
+  const raw = sanitize(process.env[name] || '').replace(/\/+$/, '');
+  if (!raw) return '';
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`${name} is not a URL: "${raw}"`);
+  }
+  const originOnly = url.pathname === '/' && !/[?#]/.test(raw) && !url.username && !url.password;
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !originOnly) {
+    throw new Error(`${name} must be an origin alone, like ${example}: "${raw}"`);
+  }
+  return url.origin;
+};
+const mediaUrl = mediaOrigin('NEXT_PUBLIC_MEDIA_URL', 'https://media.popsmosis.com');
+const legacyMediaUrl = mediaOrigin('NEXT_PUBLIC_SUPABASE_URL', 'https://<project-ref>.supabase.co');
+if (!mediaUrl && process.env.NODE_ENV === 'production' && process.env.RENDER) {
+  console.warn('NEXT_PUBLIC_MEDIA_URL is not set: the Content-Security-Policy blocks the droplet videos and posters');
+}
+const mediaSources = [mediaUrl, legacyMediaUrl].filter(Boolean).map((origin) => ` ${origin}`).join('');
+
 const nextConfig: NextConfig = {
   outputFileTracingRoot: resolve(process.cwd()),
   env: {
@@ -46,6 +73,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: apiUrl,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || '',
     NEXT_PUBLIC_INKMORY_URL: inkmoryUrl,
+    NEXT_PUBLIC_MEDIA_URL: mediaUrl,
+    NEXT_PUBLIC_SUPABASE_URL: legacyMediaUrl,
   },
   async headers() {
     return [
@@ -58,9 +87,12 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
               "style-src 'self' 'unsafe-inline'",
-              'img-src \'self\' https: data:',
-              // The droplet videos and posters come from the R2 bucket's own domain, R2_PUBLIC_URL on the API (docs/PLAN.md, section 10).
-              "media-src 'self' https:",
+              // Pictures from this site, the droplets' posters where their videos are, and the Google profile pictures
+              // of people signed in; never from any other host, so a lesson or reply cannot pull an image (or a
+              // tracking pixel) from anywhere onto pages minors read (components/Markdown.tsx says the same).
+              `img-src 'self' data: https://*.googleusercontent.com${mediaSources}`,
+              // The droplet videos come from the R2 bucket's own domain, R2_PUBLIC_URL on the API (docs/PLAN.md, section 10).
+              `media-src 'self'${mediaSources}`,
               `connect-src 'self' ${apiUrl} https://accounts.google.com`,
               "font-src 'self'",
               "object-src 'none'",

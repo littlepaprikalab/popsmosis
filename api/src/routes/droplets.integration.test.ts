@@ -4,7 +4,9 @@
  *
  * Covers: what is listed (READY and not hidden, newest first, by cursor), that
  * nothing about the learner ever leaves through the public endpoints, the admin's
- * hide switch, the poster URLs on the video, and the per-visitor rate limit.
+ * hide switch, a droplet waiting for an admin's review when /admin/studio asks for it,
+ * the poster URLs on the video, and the per-visitor rate limit. Review is off for the
+ * rest, which are about what a READY droplet does once listed.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -69,7 +71,8 @@ d('the Droplets tab', () => {
   });
 
   beforeEach(async () => {
-    await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
+    await prisma.$executeRawUnsafe('TRUNCATE settings, replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
+    await prisma.setting.create({ data: { key: 'review', value: { required: false } } });
     const { generateApiKey } = await import('../lib/apikey.js');
     const key = generateApiKey();
     agentKey = key.raw;
@@ -258,8 +261,39 @@ d('the Droplets tab', () => {
     const card = (await get(`/api/questions?mine=true`, { cookie: learnerCookie })).json().data[0];
     expect(card.answer).toMatchObject({ id, hidden: true, video: { status: 'READY' } });
 
-    expect((await hide(id, { hidden: false })).json()).toEqual({ id, hidden: false, hiddenAt: null });
+    expect((await hide(id, { hidden: false })).json()).toEqual({ id, hidden: false, hiddenAt: null, awaitingReview: false });
     expect((await get('/api/droplets')).json().data.map((x: { id: string }) => x.id)).toEqual([id]);
+  });
+
+  it('with review on, keeps a droplet whose videos go READY off the tab until an admin approves it', async () => {
+    await prisma.setting.update({ where: { key: 'review' }, data: { value: { required: true } } });
+    const id = await droplet(10, { videoStatus: 'RENDERING', songVideoUrl: SONG });
+    const ready = await app.inject({ method: 'PATCH', url: `/api/answers/${id}/video`, headers: { authorization: `Bearer ${agentKey}` }, payload: { status: 'READY' } });
+    expect(ready.json().status).toBe('READY');
+    // Off the tab, its page, its likes and its comments, for anyone; the learner still has it on /learn.
+    expect((await get('/api/droplets')).json().data).toEqual([]);
+    expect((await get(`/api/droplets/${id}`)).statusCode).toBe(404);
+    const like = await app.inject({ method: 'POST', url: `/api/droplets/${id}/like`, headers: { cookie: learnerCookie, 'x-requested-with': 'XMLHttpRequest' } });
+    expect(like.statusCode).toBe(404);
+    const card = (await get(`/api/questions?mine=true`, { cookie: learnerCookie })).json().data[0];
+    expect(card.answer).toMatchObject({ id, awaitingReview: true, hidden: false, video: { status: 'READY' } });
+
+    expect((await hide(id, { approved: true }, learnerCookie)).statusCode).toBe(403);
+    expect((await hide(id, { approved: 'yes' })).statusCode).toBe(400);
+    expect((await hide(id, {})).statusCode).toBe(400);
+    expect((await hide(id, { approved: true })).json()).toEqual({ id, hidden: false, hiddenAt: null, awaitingReview: false });
+    expect((await get('/api/droplets')).json().data.map((x: { id: string }) => x.id)).toEqual([id]);
+    // Sent back to wait, and approved and hidden in one go.
+    expect((await hide(id, { approved: false })).json().awaitingReview).toBe(true);
+    expect((await get('/api/droplets')).json().data).toEqual([]);
+    expect((await hide(id, { approved: true, hidden: true })).json()).toMatchObject({ hidden: true, awaitingReview: false });
+    expect((await get('/api/droplets')).json().data).toEqual([]);
+
+    // Turned off, the next READY lists at once; the setting never touches a droplet already made.
+    await prisma.setting.update({ where: { key: 'review' }, data: { value: { required: false } } });
+    const next = await droplet(5, { videoStatus: 'RENDERING', songVideoUrl: SONG });
+    await app.inject({ method: 'PATCH', url: `/api/answers/${next}/video`, headers: { authorization: `Bearer ${agentKey}` }, payload: { status: 'READY' } });
+    expect((await get('/api/droplets')).json().data.map((x: { id: string }) => x.id)).toEqual([next]);
   });
 
   it('keeps a poster for each video, sent with it or later', async () => {

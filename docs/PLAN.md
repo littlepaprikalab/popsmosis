@@ -280,10 +280,11 @@ arrows and the conversions. So the facts are judged first (`studio/steps/audit.p
 `studio/prompts/audit.md`), by a separate brain call with a prompt of its own and none of
 the planner's conversation. It sees the course, topic and audience, the facts, and the
 study guide when there is one, and judges each fact on its own: `CORRECT`, `WRONG` with a
-corrected version, or `UNSURE`. With a study guide it judges by the guide first, quoting
-it (code checks the quote is there); where the guide is silent, or there is none, by
-established knowledge for the course at the droplet's level. Each verdict says which
-(`basis`), and `audit.json` says what the facts were judged against.
+corrected version, or `UNSURE`, by established knowledge for the course at the droplet's
+level. A study guide is context, never ground truth, since a learner can send anything: a
+fact it states that the field does not is `WRONG` (threat model T6). Where the guide covers
+a fact and agrees, the verdict quotes it (code checks the quote is there). Each verdict says
+which (`basis`), and `audit.json` says what the facts were judged against.
 
 A fact judged wrong is corrected once, in the first call; a second call judges each
 correction on its own, with any fact the first call skipped. `bundle.json` then has the
@@ -307,11 +308,11 @@ and the lyric written from it then corrected by the fact-check (`studio/tests/te
 
 ### Step 2: fact-check
 
-A separate brain call that sees only the facts (and the study guide, if one was given)
-and the lines, never the writer's reasoning or the operator's note. The lines are every
+A separate brain call that sees only the facts (and the study guide, if one was given, as
+context for what the course covers: never ground truth, never a source) and the lines, never the writer's reasoning or the operator's note. The lines are every
 couplet of the song, every narration sentence, and every sentence of `lesson_markdown`
 (code splits it). For each it
-returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id or study-guide quote, and for
+returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id it rests on, and for
 an unsupported line a corrected one. A corrected lyric stays about the same length and
 keeps the structure's name, so the timing and the direction still fit. Code applies the
 fixes and re-checks only the changed lines, up to 3 rounds; if any line still fails, the
@@ -348,7 +349,19 @@ are the everyday thing (the analogy's water): unchecked, the brain sent dots whe
 travels. Neither is ever rewritten or fails the job: a tag that fails is dropped, and a
 motion that fails is left out of the video. Motions add about $0.02 a lesson.
 
-There is no teacher approval step: the fact-check is the gate.
+It checks what else goes out with the droplet, for whether it is fit to: the public
+title, every caption shown on a video (as a line, against the facts), the description
+each picture is painted from, the song's style and what it must avoid
+(`studio/prompts/factcheck.md`, "Public text"). A title, caption, description or style
+(often the learner's own words) that fails is corrected; a thing to avoid that fails is
+dropped.
+
+The song is held to its lyrics after it is sung: when the aligner cannot hear more than
+half of its lines (step 6), the timing fails and the song is made again on the retry.
+
+There is no teacher approval step: the fact-check is the gate. An admin can turn on
+review (`/admin/studio`, off by default), and then a person looks at each droplet before
+it lists on the public Droplets tab.
 
 The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):
 SUPPORTED when a tag names something the facts cover, FILLER when it names only the topic,
@@ -954,11 +967,11 @@ For a topic:
    entry when the studio worked a topic (`DONE` or `FAILED`; not on a run that only
    answered follow-ups), its first life story when it has none and a rewrite about every
    10 beats, and a profile change when its bio or vibe no longer fits; the journal entry
-   and the cycle log carry a ref for each topic the run touched (below). Before writing, it
-   fetches and prints its Inkmory skill file (`GET /api/agents/me/skill`), which documents
-   the endpoints for the record; the popsmosis skill file decides what goes in it. That
-   file reads its key from `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the
-   skill file says so. It takes the run's facts from
+   and the cycle log carry a ref for each topic the run touched (below). The popsmosis
+   skill file holds the four Inkmory calls, their fields and limits: the operator never
+   fetches Inkmory's own skill file or follows its safety instruction or actions, so
+   whoever controls Inkmory's answers cannot steer a run that holds the popsmosis key.
+   It takes the run's facts from
    `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary <id>`
    prints them in one paragraph), so it reports what happened rather than what it
    remembers.

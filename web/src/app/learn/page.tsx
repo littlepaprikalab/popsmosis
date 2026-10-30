@@ -55,7 +55,9 @@ function isArmed(q: Question, now = Date.now()): boolean {
 function videoKey(a: Answer | null): string {
   const v = a?.video;
   const bill = a?.breakdown ? `${a.breakdown.steps.length}|${a.breakdown.seconds}` : 'no-bill';
-  return v ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden, bill].join('|') : `none|${a?.hidden}|${bill}`;
+  return v
+    ? [v.status, v.songVideoUrl, v.lessonVideoUrl, v.songPosterUrl, v.lessonPosterUrl, v.error, a?.hidden, a?.awaitingReview, bill].join('|')
+    : `none|${a?.hidden}|${bill}`;
 }
 
 /** The same for where the studio is with the droplet: the steps running and every line of the bill so far. */
@@ -155,13 +157,14 @@ function TeacherNotesLink({ href }: { href: string }) {
  * page — markdown, thread and all — re-renders on a tick that changed one of
  * them. Callers must pass stable callbacks for that to hold.
  */
-const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerChange, onRequestDelete, onSetHidden }: {
+const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerChange, onRequestDelete, onSetHidden, onApprove }: {
   q: Question;
   index: number;
   isAdmin: boolean;
   onAnswerChange: (questionId: string, answer: Answer) => void;
   onRequestDelete: (questionId: string) => void;
   onSetHidden: (questionId: string, answer: Answer, hidden: boolean) => void;
+  onApprove: (questionId: string, answer: Answer) => void;
 }) {
   const answer = q.answer;
   // Only re-derived when the answer text itself changes; a re-render must not
@@ -292,7 +295,21 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 </div>
                 {(answer.video?.status === 'READY' || notesUrl) && (
                   <p className="text-[10px] mt-2 flex flex-wrap items-center gap-x-3 gap-y-1" style={{ color: 'var(--text-muted)' }}>
-                    {answer.video?.status === 'READY' && (
+                    {answer.video?.status === 'READY' && answer.awaitingReview && (
+                      <>
+                        <span data-testid="awaiting-review">
+                          {isAdmin ? 'Waiting for review: not on the Droplets tab until an admin approves it.'
+                            : 'It goes on the public Droplets tab once a person has looked at it.'}
+                        </span>
+                        {isAdmin && (
+                          <button onClick={() => onApprove(q.id, answer)} className="uppercase tracking-wider hover-text"
+                            style={{ color: 'var(--accent-green)' }} data-testid="approve-droplet">
+                            approve
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {answer.video?.status === 'READY' && !answer.awaitingReview && (
                       <>
                         {answer.hidden ? <span>Hidden from the Droplets tab.</span> : <Link href={`/droplets/${answer.id}`} className="underline hover-text">On the public Droplets tab</Link>}
                         {isAdmin && (
@@ -535,6 +552,16 @@ function LearnContent() {
     }
   }, [showToast]);
 
+  const approve = useCallback(async (questionId: string, answer: Answer) => {
+    try {
+      await api.setDropletApproved(answer.id, true);
+      setQuestions((prev) => prev.map((q) => (q.id === questionId && q.answer ? { ...q, answer: { ...q.answer, awaitingReview: false } } : q)));
+      showToast(answer.hidden ? 'Approved; it stays hidden until you put it back.' : 'Approved: it is on the Droplets tab.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Failed to approve it', 'error');
+    }
+  }, [showToast]);
+
   if (authLoading) return <LoadingMessage />;
 
   if (unreachable) return <ServerUnavailable onRetry={retry} />;
@@ -712,6 +739,7 @@ function LearnContent() {
               onAnswerChange={updateAnswer}
               onRequestDelete={setPendingDelete}
               onSetHidden={setHidden}
+              onApprove={approve}
             />
           ))}
         </div>

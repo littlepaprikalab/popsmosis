@@ -1,34 +1,23 @@
 import { PrismaClient } from '../generated/prisma/client.js';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { withDbRetry, inTransaction, transactionScope } from './db-retry.js';
+import { databaseTls } from './db-tls.js';
 
-// Prisma 7 driver adapter over node-postgres. Cloud providers (Supabase,
-// Render, Neon) require TLS and use CAs outside Node's trust store, so TLS is
-// on without certificate verification for any non-local host, or whenever the
-// URL asks for it. Local Postgres (localhost / 127.0.0.1) has no TLS at all.
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
+// Prisma 7 driver adapter over node-postgres. A database that is not on this machine is reached over TLS with its
+// certificate checked, chain and host name; Supabase's CA, which Node does not trust by itself, comes from
+// DATABASE_CA_CERT (lib/db-tls.ts). Local Postgres (localhost / 127.0.0.1) has no TLS at all.
+if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is required');
 }
-
-function needsTls(url: string): boolean {
-  if (/sslmode=(require|verify-full|verify-ca|no-verify|prefer)/.test(url)) return true;
-  if (/sslmode=disable/.test(url)) return false;
-  try {
-    const host = new URL(url).hostname;
-    return !(host === 'localhost' || host === '127.0.0.1' || host === '::1' || host === 'db');
-  } catch {
-    return false;
-  }
-}
-const wantsSsl = needsTls(connectionString);
+const tls = databaseTls(process.env.DATABASE_URL);
+if (tls.warning) console.warn(`[prisma] ${tls.warning}`);
 
 const adapter = new PrismaPg({
-  connectionString,
+  connectionString: tls.connectionString,
   max: parseInt(process.env.DATABASE_POOL_SIZE || '5', 10),
   idleTimeoutMillis: 10 * 60 * 1000,
   connectionTimeoutMillis: 10_000,
-  ...(wantsSsl ? { ssl: { rejectUnauthorized: false } } : {}),
+  ...(tls.ssl ? { ssl: tls.ssl } : {}),
 });
 
 const basePrisma = new PrismaClient({

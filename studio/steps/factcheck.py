@@ -1,7 +1,7 @@
 """Step 2: the fact-check, the gate before anything is posted or sung.
 
-A fresh brain call sees only the facts (and the study guide, if one was given) and
-the lines: every couplet of the song, every narration sentence and every sentence of the
+A fresh brain call sees only the facts (and the study guide, if one was given, as context: never
+ground truth, never a source, since a learner can send anything) and the lines: every couplet of the song, every narration sentence and every sentence of the
 lesson, in one call. Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
@@ -17,6 +17,12 @@ The same call checks each video's hashtags, which are public and what the Drople
 is searched by: a tag the checker does not pass is dropped from both videos, never
 rewritten, and never fails the job. A tag that gets no verdict in three rounds is dropped
 too, so only checked tags are posted.
+
+What else goes out with the droplet is checked in the same call for whether it is fit to: the public title,
+every caption shown on a video (judged as a line, against the facts), the description each picture is painted
+from, the song's style and what it must avoid (prompts/factcheck.md, Public text). A title, a caption, a
+picture's description or the song's style (often the learner's own words) that fails is corrected like a line; a
+thing to avoid that fails is dropped.
 
 It checks the key lines and the core idea, which the song writes on screen, like a lesson sentence: a
 correction rewrites one, and one still wrong with no correction is taken off the screen (a key line dropped,
@@ -60,10 +66,15 @@ PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").r
 MAX_ROUNDS = 3
 KEY = "keyline"  # a key line, or the core idea: written on screen in the song
 LYRIC = "lyric"  # a couplet of the song, its lines joined by "\n"
-KINDS = (LYRIC, "narration", "lesson", KEY)  # the lines a correction rewrites
+KINDS = (LYRIC, "narration", "lesson", "caption", KEY)  # the lines a correction rewrites, besides the below
+TITLE = "title"  # "course: topic", the droplet's public title: fit to go out, corrected like a line
+SCENE = "scene"  # what a picture is painted from: fit to go out, corrected like a line
+STYLE = "style"  # the song's style, free-form words, often the learner's own: fit to go out, corrected like a line
+AVOID = "avoid"  # one thing the song must not sound like: fit to go out, or dropped
 TAG = "tag"  # a video's hashtag: passed, or dropped
 MOTION = "motion"  # what a line's particles show moving: passed, or left out of the video
-KEPT_OR_DROPPED = (TAG, MOTION)  # never corrected, and never failing the check
+NO_SOURCE = (TITLE, SCENE, STYLE, AVOID)  # judged as fit to go out, against no fact, so a SUPPORTED one cites none
+KEPT_OR_DROPPED = (TAG, MOTION, AVOID)  # never corrected, and never failing the check
 PASSING = ("SUPPORTED", "FILLER")
 COURSE_KNOWLEDGE = "course knowledge"  # a lyric's source when it is true but the facts do not say it
 SONGWRITER = "songwriter.json"  # the corrections the songwriter wrote (write_songwriter())
@@ -137,7 +148,23 @@ def lines_of(bundle: Bundle) -> list[Line]:
     lines = couplets(bundle)
     lines += [Line("narration", n.id, n.text) for n in bundle.narration]
     lines += [Line("lesson", str(i), s.text) for i, s in enumerate(split_sentences(bundle.lesson_markdown), 1)]
-    return lines + key_lines(bundle) + tag_lines(bundle) + motion_lines(bundle)
+    lines += [Line("caption", d.line_id, d.caption.strip()) for d in bundle.direction if d.caption.strip()]
+    return lines + key_lines(bundle) + tag_lines(bundle) + motion_lines(bundle) + public_lines(bundle)
+
+
+def title_text(bundle: Bundle) -> str:
+    """The droplet's public title as the Droplets tab builds it (api/src/lib/droplet.ts, dropletTitle)."""
+    course, topic = bundle.course.strip(), bundle.topic.strip()
+    return f"{course}: {topic}" if course and topic else topic or course
+
+
+def public_lines(bundle: Bundle) -> list[Line]:
+    """What goes out with the droplet besides its lines: the title, each picture's description, the song's style and
+    what it must avoid."""
+    return ([Line(TITLE, "title", title_text(bundle))]
+            + [Line(SCENE, scene.id, scene.image_prompt) for scene in bundle.scenes]
+            + [Line(STYLE, str(i), style) for i, style in enumerate(bundle.music.positive_styles, 1)]
+            + [Line(AVOID, str(i), style) for i, style in enumerate(bundle.music.negative_styles, 1)])
 
 
 def couplets(bundle: Bundle) -> list[Line]:
@@ -298,8 +325,9 @@ def check_bundle(
         for line in pending:
             check = checks.get(line.key)
             # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
-            # on what is true at the audience's level; every other line rests on the facts.
-            if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)
+            # on what is true at the audience's level; the public text rests on nothing; every other line rests
+            # on the facts.
+            if check and (check.verdict != "SUPPORTED" or line.kind in NO_SOURCE or cites(check.source, facts)
                           or (line.kind == LYRIC and COURSE_KNOWLEDGE in check.source.lower())):
                 verdicts[(line.kind, line.text)] = (check, round_no)
         # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
@@ -308,7 +336,7 @@ def check_bundle(
         if not wrong or round_no == max_rounds:
             continue
 
-        # A narration or lesson line with no correction fails the check: found before a songwriter is paid.
+        # A narration, lesson or public line with no correction fails the check: found before a songwriter is paid.
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
             if line.kind not in (LYRIC, KEY) and not corrected(line, check):
@@ -361,6 +389,12 @@ def check_bundle(
         bundle = bundle.model_copy(update={"tags": tags.model_copy(update={
             "song": [t for t in tags.song if t in passed_tags],
             "lesson": [t for t in tags.lesson if t in passed_tags]})})
+    # Only checked things to avoid go to the singer: one that failed, or never got a verdict, is dropped.
+    passed_avoid = {c.text for c in checked if c.kind == AVOID and c.verdict in PASSING}
+    music = bundle.music
+    if any(s not in passed_avoid for s in music.negative_styles):
+        bundle = bundle.model_copy(update={"music": music.model_copy(update={
+            "negative_styles": [s for s in music.negative_styles if s in passed_avoid]})})
     # Only checked motions are shown: one that failed, or never got a verdict, has its particles taken out.
     passed_motions = {c.text for c in checked if c.kind == MOTION and c.verdict in PASSING}
     if any(line.text not in passed_motions for line in motion_lines(bundle)):
@@ -447,6 +481,16 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
         line["text"] = became.get(line["text"], new.get(line["id"], line["text"]))
     for line in data["narration"]:
         line["text"] = fixes.get(("narration", line["text"]), line["text"])
+    for d in data["direction"]:
+        if d["caption"].strip() and ("caption", d["caption"].strip()) in fixes:
+            d["caption"] = fixes[("caption", d["caption"].strip())]
+    for scene in data["scenes"]:
+        scene["image_prompt"] = fixes.get((SCENE, scene["image_prompt"]), scene["image_prompt"])
+    data["music"]["positive_styles"] = [fixes.get((STYLE, s), s) for s in data["music"]["positive_styles"]]
+    title = fixes.get((TITLE, title_text(bundle)))
+    if title:
+        course, sep, topic = title.partition(":")
+        data["course"], data["topic"] = (course.strip(), topic.strip()) if sep and topic.strip() else ("", title.strip())
     for key in data["key_lines"]:
         key["text"] = fixes.get((KEY, key["text"]), key["text"])
     data["key_lines"] = [key for key in data["key_lines"] if key["text"].strip()]
@@ -457,13 +501,12 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     return Bundle.model_validate(data)
 
 
-def cites(source: str, facts: dict[str, str], study_guide: str) -> bool:
-    """A real fact id (or several, comma-separated), or a quote of 3+ words from the study guide."""
+def cites(source: str, facts: dict[str, str]) -> bool:
+    """A real fact id, or several, comma-separated. Never the study guide: a learner's material is context, and a line
+    that only it supports is not supported."""
     source = source.strip()
     ids = [part.strip() for part in source.split(",")]
-    if source and all(i in facts for i in ids):
-        return True
-    return quotes_guide(source, study_guide)
+    return bool(source) and all(i in facts for i in ids)
 
 
 def quotes_guide(text: str, study_guide: str) -> bool:

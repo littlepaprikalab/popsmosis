@@ -188,7 +188,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 
 Everything else is chosen by an admin on **STUDIO** in the nav (`/admin/studio`), kept in the
 database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, who sings
-the song, and who paints each brain's pictures. The studio reads them from the API, with its agent key, before
+the song, who paints each brain's pictures, and the most one topic may cost. The studio reads them from the API, with its agent key, before
 it claims a topic and from every claim after, so a change applies from the next run with no
 change to the environment. `BRAIN_PROVIDER`, `STUDIO_BRAIN_MODEL`, `STUDIO_BRAIN_EFFORT` and
 `SONG_PROVIDER`, which used to pick these, are no longer read: while one is still set, `run`,
@@ -202,6 +202,17 @@ page and remove it, so nothing changes without anyone seeing why.
 | Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
+| Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $20 (generous for the hackathon; $5 is about two and a half times the dearest topic so far) |
+| Review before the Droplets tab: an admin approves each droplet on `/learn` before it lists (the API reads it; the studio never does) | on, off | off: a droplet lists once its videos are done, after the fact-check |
+
+The ceiling is checked before every paid call, against the job's `calls.jsonl`
+(`studio/ledger.py`, `check_ceiling`). Once a topic has cost it, the step fails with `the
+topic has cost $X, past the $Y a topic may cost`; the retry fails the same way without a
+call, and the topic (or, once its lesson is posted, its videos) is given up. A call already
+under way finishes, and pictures painted side by side may each start just under it, so a
+topic can end a few calls past the ceiling. ElevenLabs calls count only when the runner has
+`ELEVENLABS_USD_PER_1K_CREDITS`. A local job (`plan`, `make`) has no ceiling: no claim set
+one.
 
 What runs, by the brain's provider:
 
@@ -264,7 +275,7 @@ what each does.
 
 | Knobs | What they tune | A change applies |
 |---|---|---|
-| `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR` | the API's limits on what learners may ask for | from the next request |
+| `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR`, `ATTACHMENT_MB_PER_USER_PER_DAY`, `ATTACHMENT_MB_HELD_PER_USER` | the API's limits on what learners may ask for | from the next request |
 | `QUESTION_CLAIM_MINUTES`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
 | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
 | `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
@@ -330,7 +341,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 | POST | `/api/droplets/:id/plays` | count one step of a play: `{ video: song\|lesson\|hook, event: started\|reached25\|reached50\|reached75\|finished\|shared\|downloaded }` (`shared` and `downloaded` the hook's only); 204 whether or not a count moved. No cookie needed or read. Limits of its own, apart from the 60 a minute: [Play counts](#play-counts) |
@@ -356,9 +367,9 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/questions` | the caller's own topics, newest first; an admin gets everyone's (their own with `?mine=true`); `?status=PENDING\|ANSWERED\|FAILED`, `?cursor=`, or `?ids=a,b` for specific ones |
 | GET | `/api/questions/:id` | one of the caller's topics (anyone's, for an admin) with its lesson and follow-ups; 404 otherwise |
 | GET | `/api/questions/status` | `{ latestAt }` for polling, scoped like the list |
-| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, or once every learner's topics together reach `TOPICS_PER_DAY` (100); taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
+| POST | `/api/questions` | ask for a topic: `{ content, attachments?, brain? }` 3–2000 chars; `attachments` see [Attachments](#attachments). `brain`, admins only (403 from anyone else): `claude`, `muse-wonder` or `muse-spark`, the brain that makes it ([One topic on another brain](#one-topic-on-another-brain)); left out, the teacher's own. 429 past `QUESTIONS_PER_USER_PER_DAY` (10) in 24 hours, once every learner's topics together reach `TOPICS_PER_DAY` (100), or when its files would pass the learner's 100 MB a day or 300 MB held; taking a topic back or deleting it does not give its place back (`api/src/lib/usage.ts`) |
 | DELETE | `/api/questions/:id` | own topic. With no lesson yet it is deleted; with one it is taken back: the words, files and follow-ups go, the lesson stays, naming no one |
-| POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars |
+| POST | `/api/answers/:id/replies` | a follow-up under the caller's own lesson: `{ content, attachments? }` 1–2000 chars; 429 past `REPLIES_PER_USER_PER_HOUR` (30), or when its files would pass the learner's file limits |
 | DELETE | `/api/replies/:id` | own reply |
 | PUT | `/api/droplets/:id/like` | thumbs-up a droplet on the tab: `{ liked: true, likeCount }`; idempotent, so a second PUT changes nothing; 404 unless it is on the tab. 60 a minute with the DELETE |
 | DELETE | `/api/droplets/:id/like` | take it back: `{ liked: false, likeCount }`; idempotent, and works once the droplet has left the tab |
@@ -376,7 +387,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab (with review on, once an admin approves it), and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; `{ uploadUrl, headers, path, publicUrl }`: a signed R2 URL to PUT the file to with `headers` (its Content-Type, which is signed into the URL so R2 takes no other, and for `droplets` a long Cache-Control), and for `droplets` where anyone will read it. While `SUPABASE_URL` is still set, the video PATCH also takes this droplet's own files in the old Supabase bucket, which the API moves to R2 within the hour. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`) |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
@@ -394,8 +405,9 @@ reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#wh
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
-`awaitingVideos`, true while the page holds the text back for the videos (only with `LESSON_HOLD_MINUTES`, below); and
-`hidden`, true when an admin took it off the Droplets tab. The question carries `progress` while its droplet is being
+`awaitingVideos`, true while the page holds the text back for the videos (only with `LESSON_HOLD_MINUTES`, below);
+`hidden`, true when an admin took it off the Droplets tab; and `awaitingReview`, true while it waits for an admin to
+approve it. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
@@ -557,7 +569,12 @@ whose queues list them the same way. What a file is served as
 is decided from its bytes, not from what was sent: PNG, JPEG, GIF and WebP as themselves, UTF-8
 text as `text/plain`, anything else as a download, all in a sandbox. Past
 `ATTACHMENT_RETENTION_DAYS` (default 30, 0 keeps them) the bytes are let go and the row stays,
-`expired: true`, its `url` answering 410. Agents cannot send files.
+`expired: true`, its `url` answering 410: the API sweeps them every hour, and lets one go on
+the spot when it is read past its time. Each learner may send 100 MB of files a day
+(`ATTACHMENT_MB_PER_USER_PER_DAY`; deleting a request gives none back) and have 300 MB held at
+a time (`ATTACHMENT_MB_HELD_PER_USER`; deleting a request frees its files), so one account
+cannot fill the database. Those defaults are generous for the hackathon; 20 and 60 suit a
+small database better. Agents cannot send files.
 
 **Admins** (session cookie, `ADMIN` role)
 
@@ -571,7 +588,7 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 | GET | `/api/agents/:id/skill` | skill file with the real base URL |
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
-| PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
+| PATCH | `/api/answers/:id` | `{ hidden?, approved? }`: take a droplet off the Droplets tab, or put it back; approve one that waits for review (`false` sends it back to wait); the lesson stays on `/learn` |
 | GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. With `?totals=1`, `totals: { song, lesson, hook }` too: each video's counts over every droplet, whatever `min` (the page's drop-off curve, asked for once; it sums every row, about 90 ms at 300,000 droplets), left out when it cannot be read. The PLAYS page, `/admin/plays` |
 
 ### Play counts

@@ -55,14 +55,15 @@ from pydantic import ValidationError
 
 from studio import brain, jobs, knobs, ledger, media
 from studio.api import Api, ApiError
-from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, job_chosen, job_dir,
-                        keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
+from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, default_brain, failure_code, job_chosen,
+                        job_dir, keep_brain, lesson_model, logged_ask, one_line, only_run, read_jsonl, record_interrupted)
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
 TAIL = ("timeline", "render", "upload")
 LOCAL_TAIL = ("timeline", "render")  # a local job has no posted lesson to upload the videos to
 STARTED, RUNNING, RECOVER, NONE = "STARTED", "RUNNING", "RECOVER", "NONE"
+UNAVAILABLE = "the videos cannot be made here"  # the code of a run that stopped on unavailable()
 CLAIM = "videos.json"  # {answerId, attempt}: the attempt this machine holds
 BACKGROUND = "videos.background.json"  # {pid, runs}: the detached run and where its outcome will be
 LOG = "videos.log"
@@ -175,16 +176,18 @@ class Record:
             self.failed.discard(step)
             self._save()
 
-    def end(self, step: str, seconds: float, result: str, reason: str = "") -> None:
+    def end(self, step: str, seconds: float, result: str, reason: str = "", code: str = "") -> None:
         """reason: the line the step ended on. A done step's is kept with the run too (an art step names the
-        pictures it refused), so `summary` can tell the operator what went wrong inside a step that passed."""
+        pictures it refused), so `summary` can tell the operator what went wrong inside a step that passed. code: a
+        step that did not succeed says why in fixed words (studio/run.py, failure_code)."""
         print(f"{step}: {result.lower()} in {seconds:.0f}s" + (f": {reason}" if reason else ""), file=sys.stderr)
         with self.lock:
             del self.running[step]
             if result == FAILED:
                 self.failed.add(step)
             self.steps.append({"step": step, "seconds": seconds, "result": result,
-                               **({"detail": one_line(reason)} if reason and result == DONE else {})})
+                               **({"detail": one_line(reason)} if reason and result == DONE else {}),
+                               **({"code": code} if code and result != DONE else {})})
             self._save()
 
     def report(self, api: Api) -> None:
@@ -200,10 +203,14 @@ class Record:
             self.reporter.send(lambda: api.report_video_progress(
                 answer, held_attempt(self.job), ledger.progress(self.job, "videos", running, failed)))
 
-    def finish(self, result: str, step: str, reason: str) -> tuple[str, str, str]:
+    def finish(self, result: str, step: str, reason: str, code: str = "") -> tuple[str, str, str]:
+        """code: why the run did not end DONE, when no step of it says (a claim refused); else the failed step's."""
         reason = one_line(reason)
+        if result != DONE and not code:
+            code = next((s.get("code", "") for s in reversed(self.steps) if s["step"] == step and s["result"] != DONE), "")
         record = {"started": self.started, "part": "videos", "seconds": round(time.monotonic() - self.clock, 1),
-                  "result": result, "step": step, "reason": reason, "steps": self.steps}
+                  "result": result, "step": step, "reason": reason, "steps": self.steps,
+                  **({"code": code} if code and result != DONE else {})}
         with (self.job / "runs.jsonl").open("a", encoding="utf-8") as log:
             log.write(json.dumps(record, ensure_ascii=False) + "\n")
         (self.job / "run.current.json").unlink(missing_ok=True)
@@ -229,16 +236,16 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
     api = refresh_settings(job, api)
     why = unavailable(job)
     if why:
-        return record.finish(STOPPED, "videos", why)
+        return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
     try:
         api = api or Api.from_env()
         claimed = claim(api, job)
     except Stop as e:
-        return record.finish(STOPPED, "claim", str(e))
+        return record.finish(STOPPED, "claim", str(e), code=failure_code(e.__cause__ or e))
     except media.StepFailed as e:
-        return record.finish(FAILED, "claim", str(e))
+        return record.finish(FAILED, "claim", str(e), code=failure_code(e.__cause__ or e))
     except ApiError as e:  # not configured
-        return record.finish(*_outcome(e, "claim"))
+        return record.finish(*_outcome(e, "claim"), code=failure_code(e))
     # Who paints is the admin's setting as of this claim, for the whole run: the heartbeats do not change it.
     jobs.keep_studio_settings(job, claimed.get("studio"))
     if not (job / BRAIN_FILE).exists():  # a job from before the brain was kept: the one its lesson was written on
@@ -248,7 +255,7 @@ def _videos(job: Path, api: Api | None, ask) -> tuple[str, str, str]:
         brain.choose(name, effort)
     why = unavailable(job)  # a painter the setting just changed to may need a key this machine lacks
     if why:  # the render goes quiet and `recover` hands it on once the setting or the key is fixed
-        return record.finish(STOPPED, "videos", why)
+        return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
 
     return record.finish(*_make(job, api, ask, record, TAIL))
 
@@ -282,7 +289,7 @@ def local(job: Path, ask=None) -> tuple[str, str, str]:
         knobs.use(jobs.studio_settings(job))  # as its last claim said, if it had one
         why = unavailable(job)
         if why:
-            return record.finish(STOPPED, "videos", why)
+            return record.finish(STOPPED, "videos", why, code=UNAVAILABLE)
         with job_chosen(job):  # the brain the job was made on (`plan --brain`), else the default
             return record.finish(*_make(job, None, ask or logged_ask(job), record, LOCAL_TAIL))
 
@@ -302,6 +309,7 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: 
     for step in steps[first:]:
         record.begin(step)
         clock = time.monotonic()
+        code = ""
         try:
             with ledger.at_step(step):
                 if api is not None:  # a local job (`make`) has no claim to renew, and no page to tell
@@ -310,16 +318,17 @@ def _run_steps(job: Path, steps: tuple[str, ...], api: Api | None, ask, record: 
                 reason = media.step_module(step).run(job, ask=ask) or f"{step} done"
             result = DONE
         except Stop as e:
-            result, reason = STOPPED, str(e)
+            result, reason, code = STOPPED, str(e), failure_code(e.__cause__ or e)
         except (media.StepFailed, brain.BrainError) as e:
-            result, reason = FAILED, str(e)
+            # A claim that failed is the API's failure, not the step's: its cause says which.
+            result, reason, code = FAILED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
         except ApiError as e:
-            result, reason = api_outcome(e)
+            (result, reason), code = api_outcome(e), failure_code(e)
         except Exception as e:  # a bug, or a step not built: the run still ends with its one line
             traceback.print_exc(file=sys.stderr)
-            result, reason = FAILED, f"{type(e).__name__}: {e}"
+            result, reason, code = FAILED, f"{type(e).__name__}: {e}", failure_code(e)
         ran = True
-        record.end(step, round(time.monotonic() - clock, 1), result, one_line(reason))
+        record.end(step, round(time.monotonic() - clock, 1), result, one_line(reason), code)
         # Done or failed, the page hears it now: the other branch may run on for minutes. The upload's READY
         # already carried the last bill, and a run that was stopped has nothing to report.
         if api is not None and (result == FAILED or (result == DONE and step != "upload")):
@@ -412,7 +421,8 @@ def wait(question_id: str, minutes: float = WAIT_MINUTES, poll_s: float = 5.0) -
                     with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
                         log.write(json.dumps({"started": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "part": "videos",
                                               "seconds": None, "result": FAILED, "step": "videos",
-                                              "reason": reason, "steps": []}) + "\n")
+                                              "reason": reason, "code": "the background run ended without an outcome",
+                                              "steps": []}) + "\n")
                     return FAILED, "videos", reason
         if time.monotonic() >= deadline:
             try:

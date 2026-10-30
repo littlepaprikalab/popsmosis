@@ -24,6 +24,22 @@ test.describe('signed out', () => {
     await expect(page).toHaveURL(/\/learn$/);
   });
 
+  test('sign-in keeps a page of this site to come back to, and never another site', async ({ page }) => {
+    const kept = async (returnTo: string) => {
+      await page.goto(`/auth/callback?returnTo=${encodeURIComponent(returnTo)}`);
+      await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+      const saved = await page.evaluate(() => sessionStorage.getItem('auth_return_to'));
+      await page.evaluate(() => sessionStorage.removeItem('auth_return_to'));
+      return saved;
+    };
+    expect(await kept('/droplets/abc?tab=song#comments')).toBe('/droplets/abc?tab=song#comments');
+    // A backslash reads as a slash, and tabs and newlines are dropped: each of these resolves off-site.
+    for (const offSite of ['/\\evil.example', '//evil.example', '/\t/evil.example', '/\n/evil.example', 'https://evil.example/',
+      '/\\/evil.example/learn', '/.//evil.example', '/x/..//evil.example', '/%2e//evil.example']) {
+      expect(await kept(offSite), offSite).toBeNull();
+    }
+  });
+
   test('admin page refuses anonymous visitors', async ({ page }) => {
     await page.goto('/admin/agents');
     await expect(page.getByText('Admin access required.')).toBeVisible();
@@ -156,6 +172,9 @@ test.describe('signed in', () => {
     const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
     expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);
     expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`, lessonVideoUrl: `${BASE}/samples/lesson.mp4` })).status()).toBe(200);
+    // Approved by an admin, which review would ask for if it were on, so it is on the public tab either way.
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    expect((await request.patch(apiUrl(`/api/answers/${answerId}`), { headers: asAda, data: { approved: true } })).status()).toBe(200);
 
     await signIn(context, S.users.ben);
     await page.goto('/learn');
@@ -293,6 +312,32 @@ test.describe('signed in', () => {
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asAda })).status()).toBe(204);
   });
 
+  test('a lesson shows pictures from this site only, and its links say nobody vouched for them', async ({ page, context, request }) => {
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const text = `E2E ${Date.now()}: a lesson with links and pictures`;
+    const asked = await request.post(apiUrl('/api/questions'), { headers: asAda, data: { content: text } });
+    const id = (await asked.json()).id;
+    const teacher = agent(request, S.POPSMOSIS_API_KEY);
+    await teacher.claim(id);
+    const lesson = 'See [the textbook](https://example.com/osmosis).\n\n![a tracking pixel](https://evil.example/p.png)\n\n'
+      + '![the song still](/samples/song.jpg)';
+    expect((await teacher.answer(id, lesson)).status()).toBe(201);
+
+    await signIn(context, S.users.ada);
+    const response = await page.goto('/learn');
+    // The policy names this site, Google's profile pictures and the storage host, never every https: host.
+    const csp = response!.headers()['content-security-policy'];
+    expect(csp).toMatch(/img-src 'self' data: https:\/\/\*\.googleusercontent\.com/);
+    expect(csp).not.toMatch(/img-src[^;]* https:(;| )/);
+    expect(csp).not.toMatch(/media-src[^;]* https:(;| )/);
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByRole('link', { name: 'the textbook' })).toHaveAttribute('rel', 'nofollow ugc noopener noreferrer');
+    await expect(card.getByTestId('md-image-left-out')).toHaveText('[picture: a tracking pixel]');
+    await expect(card.locator('img[src*="evil.example"]')).toHaveCount(0);
+    await expect(card.locator('.md img[src="/samples/song.jpg"]')).toBeVisible();
+    expect((await request.delete(apiUrl(`/api/questions/${id}`), { headers: asAda })).status()).toBe(204);
+  });
+
   test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
@@ -417,7 +462,10 @@ test.describe('studio settings', () => {
     // From the defaults, whatever an earlier run left.
     await request.put(apiUrl('/api/studio/settings'), {
       headers: asAda(),
-      data: { brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' } },
+      data: {
+        brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+        spend: { topicUsd: 20 },
+      },
     });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
@@ -439,6 +487,7 @@ test.describe('studio settings', () => {
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
     expect((await claimed.json()).studio).toEqual({
       brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
+      spend: { topicUsd: 20 },
     });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { art: { claude: 'gemini' } } });
@@ -516,6 +565,59 @@ test.describe('studio settings', () => {
     await expect(videos.getByTestId('knob-source')).toHaveText('Not set here');
     const after = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
     expect((await after.json()).knobs).toEqual({});
+  });
+
+  test('an admin sets the per-topic spend ceiling, and the teacher reads it with its key', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 20 } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const spend = page.getByTestId('spend');
+    await expect(spend.getByTestId('spend-now')).toContainText('Now: $20.00.');
+    await spend.getByLabel('Dollars a topic:').fill('2.5');
+    await spend.getByRole('button', { name: 'Save' }).click();
+    await expect(spend.getByTestId('spend-now')).toContainText('Now: $2.50.');
+    const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
+    expect((await teacher.json()).spend).toEqual({ topicUsd: 2.5 });
+    // Out of range is refused on the page, and nothing is saved.
+    await spend.getByLabel('Dollars a topic:').fill('500');
+    await spend.getByRole('button', { name: 'Save' }).click();
+    await expect(page.getByText(/from 0 \(no ceiling\) to 100/)).toBeVisible();
+    await page.reload();
+    await expect(page.getByTestId('spend').getByTestId('spend-now')).toContainText('Now: $2.50.');
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 20 } } });
+  });
+
+  test('an admin turns review before the Droplets tab off and on, and the learner is told it waits', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { review: { required: true } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const review = page.getByTestId('review');
+    await expect(review.getByRole('radio', { name: /An admin approves each droplet/ })).toHaveAttribute('aria-checked', 'true');
+    await review.getByRole('radio', { name: /List as soon as the videos are done/ }).click();
+    await expect(review.getByRole('radio', { name: /List as soon as the videos are done/ })).toHaveAttribute('aria-checked', 'true');
+    expect((await (await request.get(apiUrl('/api/studio/settings'), { headers: asAda() })).json()).review).toEqual({ required: false });
+    await review.getByRole('radio', { name: /An admin approves each droplet/ }).click();
+    await expect(review.getByRole('radio', { name: /An admin approves each droplet/ })).toHaveAttribute('aria-checked', 'true');
+
+    // Ben's droplet, done while review is on: he sees it, and that it goes public once someone has looked.
+    const text = `E2E ${Date.now()}: osmosis, reviewed`;
+    const benHeaders = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const asked = await request.post(apiUrl('/api/questions'), { headers: benHeaders, data: { content: text } });
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const questionId = (await asked.json()).id;
+    await bot.claim(questionId);
+    const answerId = (await (await bot.answer(questionId, 'Water moves toward **more solute**.')).json()).id;
+    const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    await bot.video(answerId, { status: 'RENDERING' });
+    expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4` })).status()).toBe(200);
+    await context.clearCookies();
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('awaiting-review')).toHaveText('It goes on the public Droplets tab once a person has looked at it.');
+    await expect(card.getByTestId('approve-droplet')).toHaveCount(0);
+    expect((await request.delete(apiUrl(`/api/questions/${questionId}`), { headers: benHeaders })).status()).toBe(204);
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { review: { required: false } } }); // the default
   });
 
   test('is for admins only', async ({ page, context }) => {

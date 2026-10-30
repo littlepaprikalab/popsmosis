@@ -60,6 +60,8 @@ Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 class MuseError(media.StepFailed):
     """Meta's API did not give back what was asked."""
 
+    code = "Meta's API failed"
+
 
 class Declined(MuseError):
     """Muse Image would not make this picture (its content policy)."""
@@ -102,6 +104,7 @@ def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> 
     """One picture of the prompt at the art's aspect ratio, as PNG bytes (any size: the caller fits it). With a
     reference picture it is redrawn from that one, which keeps its framing and look (a process's later stages
     from its first)."""
+    ledger.check_ceiling(job)
     body = {
         "model": IMAGE_MODEL,
         "prompt": prompt,
@@ -138,6 +141,7 @@ def segment(job: Path, label: str, art: Path, *, phrase: str | None = None, box:
 
     Each match's mask is the whole art's size. No match is an empty list, not an error.
     """
+    ledger.check_ceiling(job)
     from meta_sam_parser import FramePrompt, PromptBox, PromptObject, build_object_prompt
 
     if (phrase is None) == (box is None):

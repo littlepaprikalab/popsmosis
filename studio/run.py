@@ -36,8 +36,8 @@ the step with the reason, so the topic is given up with it rather than holding u
 queue. The brain is kept in brain.json, so `videos`, `step` and a retry stay on it.
 
 Every run appends what it did to runs.jsonl (each step with the line it ended on, so
-`summary` can say what went wrong inside a step that passed) and prints one line, its
-outcome:
+`summary` can say what went wrong inside a step that passed, and a run that did not end
+DONE with a fixed `code` for why: failure_code) and prints one line, its outcome:
 
     DONE post: lesson posted as answer <id>
     FAILED <step>: <reason>        run again to retry that step
@@ -110,6 +110,36 @@ class Stop(Exception):
     """Nothing a retry can fix: the topic was deleted, answered, given up or taken, or the key was refused."""
 
 
+def failure_code(e: BaseException) -> str:
+    """Why a step did not succeed, in a few fixed words of the studio's own. The message stays with the run (the
+    operator's log, `show`, the reason a topic is given up with); this is what `summary` says, since the summary goes
+    on Inkmory, which is public, and a message can quote a rejected line, a picture's writing or a provider's answer,
+    all made from what a learner sent."""
+    if isinstance(e, StepFailed):  # the spend ceiling, the fact-check, a provider, a media step: each names its own
+        return e.code
+    if isinstance(e, brain.Refused):
+        return "the model declined"
+    if isinstance(e, brain.Truncated):
+        return "the answer was cut off"
+    if isinstance(e, brain.InvalidOutput):
+        return "the answer did not fit its schema"
+    if isinstance(e, brain.BrainError):
+        return "the model call failed"
+    if isinstance(e, ApiError):
+        if e.status == 0:
+            return "the API did not answer"
+        if e.status == 404:
+            return "the topic was deleted"
+        if e.status == 409:
+            return "the topic was answered, given up or taken"
+        if e.status in (401, 403):
+            return "the API refused the key"
+        return f"the API answered {e.status}" if 100 <= e.status <= 599 else "the API failed"
+    if isinstance(e, Stop):
+        return "stopped"
+    return "a studio error"
+
+
 def job_dir(question_id: str) -> Path:
     if not ID_RE.fullmatch(question_id):
         raise ValueError(f"{question_id!r} is not a question id")
@@ -159,7 +189,7 @@ def record_interrupted(job: Path) -> None:
         current.unlink(missing_ok=True)
         return
     step = record.get("step", "run")
-    record.update(result=FAILED, step=step,
+    record.update(result=FAILED, step=step, code="interrupted",
                   reason=f"{step} was interrupted: the run stopped before the step finished (a time limit or a kill)")
     record.setdefault("steps", []).append({"step": step, "seconds": None, "result": FAILED})
     with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
@@ -260,7 +290,7 @@ def use_brain(job: Path, question: dict, check: bool) -> None:
         _put_brain(job, default, effort, "the default")
         problem = brain.settings_problem()
     if problem and own:
-        raise StepFailed(f"the studio cannot run this topic's brain here: {problem}")
+        raise StepFailed(f"the studio cannot run this topic's brain here: {problem}", code="brain cannot run here")
     if problem:
         raise Stop(f"the studio's settings are wrong: {problem}")
 
@@ -288,7 +318,7 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
-    result, step, reason = DONE, "post", "the lesson was already posted"
+    result, step, reason, code = DONE, "post", "the lesson was already posted", ""
     # From the first step that is not done, every step runs: a new bundle makes the fact-check stale.
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
     for step in STEPS[first:] if not is_done(job, "post") else ():
@@ -308,16 +338,17 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
                         reason = make_bundle(job, api, question, ask, note=note)
                     else:
                         reason = STEP_RUNNERS[step](job, api, question, ask)
-            result = DONE
+            result, code = DONE, ""
         except Stop as e:
-            result, reason = STOPPED, str(e)
+            result, reason, code = STOPPED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
         except (StepFailed, brain.BrainError) as e:
-            result, reason = FAILED, str(e)
+            # A claim that failed is the API's failure, not the step's: its cause says which.
+            result, reason, code = FAILED, str(e), failure_code(e.__cause__ if isinstance(e.__cause__, ApiError) else e)
         except ApiError as e:
-            result, reason = api_outcome(e)
+            (result, reason), code = api_outcome(e), failure_code(e)
         except Exception as e:  # a bug: the run still ends with its one line
             traceback.print_exc(file=sys.stderr)
-            result, reason = FAILED, f"{type(e).__name__}: {e}"
+            result, reason, code = FAILED, f"{type(e).__name__}: {e}", failure_code(e)
         seconds = round(time.monotonic() - step_clock, 1)
         done_steps.append({"step": step, "seconds": seconds, "result": result,
                            **({"detail": one_line(reason)} if result == DONE and reason else {})})
@@ -331,7 +362,7 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     reason = one_line(reason)
     if done_steps:  # a run with nothing left to do is not one the record should count
         record = {"started": started, "seconds": round(time.monotonic() - clock, 1), "result": result, "step": step,
-                  "reason": reason, "steps": done_steps}
+                  "reason": reason, "steps": done_steps, **({"code": code} if code else {})}
         if note:
             record["note"] = note
         with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
@@ -560,14 +591,14 @@ def make_bundle(job: Path, api: Api, question: dict, ask, note: str = "") -> str
 def make_audit(job: Path, api: Api, question: dict, ask) -> str:
     report = audit_step.run(job, ask=ask)
     if report.status == "failed":
-        raise StepFailed(report.reason)
+        raise StepFailed(report.reason, code="the fact audit failed")
     return audit_step.describe(report)
 
 
 def make_factcheck(job: Path, api: Api, question: dict, ask) -> str:
     report = factcheck_step.run(job, ask=ask)
     if report.status == "failed":
-        raise StepFailed(report.reason)
+        raise StepFailed(report.reason, code="the fact-check failed")
     dropped = len(factcheck_step.dropped_tags(report))
     still = len(factcheck_step.dropped_motions(report))
     sung = sum(c.by == "songwriter" for c in report.corrections)
@@ -658,8 +689,10 @@ def summary(question_id: str) -> str:
     cycle log, then, once a media step has run, a second one with what the art, locate and timing
     steps said last (inside_steps()), for its journal: what went wrong inside a step that passed.
 
-    It names the topic by the bundle's course and topic, never by request.json,
-    which holds the learner's own words and must never reach Inkmory.
+    Inkmory is public, so it holds only what is public already or the studio's own words. It names
+    the topic by the bundle's course and topic, never by request.json, which holds the learner's own
+    words; a run that failed by its step and fixed code (failure_code), never its reason, which can
+    quote a rejected line; and what a step said with anything in quotes taken out.
     """
     job = job_dir(question_id)
     running = False
@@ -676,7 +709,7 @@ def summary(question_id: str) -> str:
         parts.append(f"job {job.name} (no bundle yet).")
     runs = read_jsonl(job / "runs.jsonl")
     if runs:
-        told = [f"run {i} {r['result']} at {r['step']}" + (f" ({_short(r['reason'], 160)})" if r["result"] != DONE else "")
+        told = [f"run {i} {r['result']} at {r['step']}" + (f" ({r['code']})" if r["result"] != DONE and r.get("code") else "")
                 for i, r in enumerate(runs, 1)]
         parts.append(f"{len(runs)} run(s): " + "; ".join(told) + ".")
         took = {}
@@ -726,16 +759,32 @@ def inside_steps(runs: list[dict]) -> str:
     if not said:
         return ""
     return _short("Inside the steps, as each last said: " + " ".join(
-        f"{step}: {_short(said[step], DETAIL_MAX).rstrip('.')}." for step in NOTED_STEPS if step in said), CYCLE_LOG_MAX)
+        f"{step}: {_short(unquoted(said[step]), DETAIL_MAX).rstrip('.')}." for step in NOTED_STEPS if step in said),
+        CYCLE_LOG_MAX)
+
+
+# A quotation: in single quotes (never an apostrophe, which has a letter before it), double or curly quotes, or a
+# parenthesis holding one ("writing in it ('ATP', 'Ben')"); and one a cut left open, which runs to the end of the line.
+QUOTED = re.compile(r"\([^()]*(?<!\w)'[^()]*(?:\)|$)|(?<!\w)'[^']*(?:'(?!\w)|$)|\"[^\"]*(?:\"|$)|“[^”]*(?:”|$)|‘[^’]*(?:’|$)")
+# What a provider said when it would not make a picture: its words, which may echo the description it was given.
+PROVIDER_WORDS = re.compile(r"(declined the picture|refused the picture|refused the song|blocked the song's prompt):[^;]*")
+
+
+def unquoted(text: str) -> str:
+    """A step's line without what it quotes (the writing found in a picture) or a provider's own words, for Inkmory:
+    each is cut short on the way, so a quote can arrive with no end, and runs to the end of the line then."""
+    return " ".join(QUOTED.sub("…", PROVIDER_WORDS.sub(r"\1", text)).split())
 
 
 # --- shared with python -m studio ---------------------------------------------------
 
 
 def logged_ask(job: Path):
-    """brain.ask, logging each call to the job's calls.jsonl (tagged with its step) and stderr as it ends."""
+    """brain.ask, logging each call to the job's calls.jsonl (tagged with its step) and stderr as it ends. Each call
+    first checks the topic is under its spend ceiling (ledger.check_ceiling)."""
 
     def ask(*args, **kwargs):
+        ledger.check_ceiling(job)
         # Only this thread's calls: another thread may be asking at the same time.
         with brain.collect() as mine:
             try:

@@ -136,6 +136,23 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     assert [s["step"] for s in record["steps"]] == ["request", "bundle", "audit", "factcheck", "post"]
 
 
+def test_a_topic_past_its_spend_ceiling_fails_and_its_retry_spends_nothing(jobs_root):
+    """The ceiling is the admin's, from the claim: the lesson's calls stop once the topic has cost it, the step
+    fails with the reason, and the retry fails the same way at once, so the topic is given up."""
+    api, ask = FakeApi(studio={"brain": {"default": "claude", "effort": "high"}, "spend": {"topicUsd": 0.5}}), FakeBrain()
+    job = jobs_root / "q1"
+    job.mkdir()
+    (job / "calls.jsonl").write_text(json.dumps({"label": "bundle", "model": "claude-opus-5-5", "step": "bundle",
+                                                 "cost_usd": 0.55}) + "\n")  # an earlier try, already past it
+    result, step, reason = operator_run.run("q1", api=api, ask=operator_run.logged_ask(job))
+    assert (result, step) == ("FAILED", "bundle")
+    assert reason.startswith("the topic has cost $0.55, past the $0.50 a topic may cost (/admin/studio)")
+    assert not (job / "bundle.json").exists()
+    assert operator_run.run("q1", api=api, ask=operator_run.logged_ask(job))[:2] == ("FAILED", "bundle")
+    assert [r["result"] for r in operator_run.read_jsonl(job / "runs.jsonl")] == ["FAILED", "FAILED"]
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+
+
 def test_a_photo_too_big_for_the_brain_is_left_out_rather_than_failing_every_try(jobs_root, monkeypatch):
     monkeypatch.setattr(operator_run, "IMAGE_MAX_BYTES", 4)
     assert operator_run.run("q1", api=FakeApi(), ask=FakeBrain())[0] == "DONE"
@@ -312,11 +329,50 @@ def test_the_summary_names_the_topic_by_the_bundle_never_the_learners_words(jobs
         + json.dumps({"label": "factcheck round 1", "model": "claude-opus-5-5", "cost_usd": 0.2}) + "\n")
     operator_run.run("q1", api=api, ask=FakeBrain())
     text = operator_run.summary("q1")
-    assert text.startswith("job q1: AP Biology / the light reactions. 2 run(s): run 1 FAILED at bundle (overloaded); "
-                           "run 2 DONE at post.")
+    assert text.startswith("job q1: AP Biology / the light reactions. 2 run(s): run 1 FAILED at bundle "
+                           "(the model call failed); run 2 DONE at post.")
     assert "Fact-check passed in 1 round(s), 0 correction(s). Lesson posted. 2 model call(s), $0.70." in text
     assert "ATP synthesis" not in text and "exam" not in text
     assert len(text) <= operator_run.CYCLE_LOG_MAX
+
+
+def test_the_summary_never_quotes_a_rejected_line_or_what_a_step_found(jobs_root):
+    """A failed fact-check's reason quotes the lines it rejected, which come from what the learner sent; the summary
+    goes on Inkmory, so it says the step and a fixed code, and a step's line without what it quotes."""
+    api = FakeApi()
+    assert operator_run.run("q1", api=api, ask=FakeBrain(verdict="UNSUPPORTED"))[:2] == ("FAILED", "factcheck")
+    [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
+    assert " is unsupported" in record["reason"] and record["code"] == "the fact-check failed"
+    text = operator_run.summary("q1")  # the message stays in runs.jsonl, for the operator; never in the summary
+    assert "run 1 FAILED at factcheck (the fact-check failed)" in text and "is unsupported" not in text
+
+    record["steps"].append({"step": "art", "seconds": 1.0, "result": "DONE",
+                            "detail": "painted 3 scenes; 1 picture refused: hook: writing in it ('Ben Okafor', 'P3') "
+                                      "and Broca's area was \"Ben's notes\""})
+    (jobs_root / "q1" / "runs.jsonl").write_text(json.dumps(record) + "\n")
+    inside = operator_run.summary("q1").split("\n\n")[1]
+    assert "Ben" not in inside and "P3" not in inside
+    assert "writing in it …" in inside and "Broca's area" in inside  # an apostrophe is not a quote
+    # A quote the cut left open, and a provider's own words, go too.
+    assert operator_run.unquoted("s2: writing in it ('Mrs Patel period 4…', 'Ben Okafor notes page 3 photosynthe…") == (
+        "s2: writing in it …")
+    assert operator_run.unquoted("hook: the label says 'Ben Oka…") == "hook: the label says …"
+    assert operator_run.unquoted("1 picture refused: hook: Muse Image declined the picture: a chloroplast for Ben; "
+                                 "overview: students' notes") == (
+        "1 picture refused: hook: Muse Image declined the picture; overview: students' notes")
+
+
+def test_every_run_that_does_not_end_done_keeps_a_fixed_code(jobs_root):
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")
+    operator_run.run("q1", api=api, ask=FakeBrain())
+    api.errors["post_answer"] = ApiError(409, "CONFLICT", "answered")
+    operator_run.run("q1", api=api, ask=FakeBrain())
+    assert [r.get("code") for r in operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")] == [
+        "the API answered 503", "the topic was answered, given up or taken"]
+    assert operator_run.failure_code(ApiError(0, "", "no answer")) == "the API did not answer"
+    assert operator_run.failure_code(brain.Truncated("x")) == "the answer was cut off"
+    assert operator_run.failure_code(ValueError("x")) == "a studio error"
 
 
 def test_a_reason_is_one_short_line():

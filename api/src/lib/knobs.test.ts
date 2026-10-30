@@ -28,6 +28,8 @@ describe('KNOBS', () => {
       topicsPerUserPerDay: KNOBS.QUESTIONS_PER_USER_PER_DAY.default,
       topicsPerDay: KNOBS.TOPICS_PER_DAY.default,
       repliesPerUserPerHour: KNOBS.REPLIES_PER_USER_PER_HOUR.default,
+      attachmentMbPerUserPerDay: KNOBS.ATTACHMENT_MB_PER_USER_PER_DAY.default,
+      attachmentMbHeldPerUser: KNOBS.ATTACHMENT_MB_HELD_PER_USER.default,
     });
     expect(commentsPerUserPerHour()).toBe(KNOBS.DROPLET_COMMENTS_PER_USER_PER_HOUR.default);
     expect(claimMinutes()).toBe(KNOBS.QUESTION_CLAIM_MINUTES.default);
@@ -91,9 +93,10 @@ describe('knob', () => {
   });
 
   it('wins over an environment passed in, as the limits are read', () => {
-    putKnobs({ TOPICS_PER_DAY: 0, QUESTIONS_PER_USER_PER_DAY: 3 });
-    expect(usageLimits({ TOPICS_PER_DAY: '50', REPLIES_PER_USER_PER_HOUR: '4' })).toEqual({
+    putKnobs({ TOPICS_PER_DAY: 0, QUESTIONS_PER_USER_PER_DAY: 3, ATTACHMENT_MB_HELD_PER_USER: 7 });
+    expect(usageLimits({ TOPICS_PER_DAY: '50', REPLIES_PER_USER_PER_HOUR: '4', ATTACHMENT_MB_HELD_PER_USER: '500' })).toEqual({
       topicsPerUserPerDay: 3, topicsPerDay: 0, repliesPerUserPerHour: 4,
+      attachmentMbPerUserPerDay: KNOBS.ATTACHMENT_MB_PER_USER_PER_DAY.default, attachmentMbHeldPerUser: 7,
     });
   });
 

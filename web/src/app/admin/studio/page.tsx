@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import {
-  api, ArtSettings, BrainSettings, Effort, Knob, KnobValue, Painter, SongProvider, SongSettings, StudioSettings,
+  api, ArtSettings, BrainSettings, Effort, Knob, KnobValue, Painter, ReviewSettings, SongProvider, SongSettings,
+  SpendSettings, StudioSettings,
 } from '@/lib/api';
 import { BRAIN_MODELS, type Brain } from '@/lib/brains';
 import { useAuth } from '@/lib/auth';
@@ -55,6 +56,8 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
       TOPICS_PER_DAY: { label: 'Topics everyone may ask for in 24 hours', unit: 'topics', note: 'Every learner’s together: the ceiling on a day’s model spend, at about 70¢ to $1 a droplet. 0: no ceiling.' },
       REPLIES_PER_USER_PER_HOUR: { label: 'Follow-ups a learner may post in an hour', unit: 'follow-ups', note: 'Each one is a run of the teacher. A deleted follow-up does not give its place back.' },
       DROPLET_COMMENTS_PER_USER_PER_HOUR: { label: 'Comments a learner may post on the Droplets tab in an hour', unit: 'comments', note: 'Likes are held to 60 a minute and need no setting.' },
+      ATTACHMENT_MB_PER_USER_PER_DAY: { label: 'Files a learner may send in 24 hours', unit: 'MB', note: 'With their topics and follow-ups. 0: no limit. Deleting a request does not give its bytes back.' },
+      ATTACHMENT_MB_HELD_PER_USER: { label: 'Files popsmosis keeps of one learner at a time', unit: 'MB', note: 'The files live in the database, so this keeps one account from filling it. 0: no limit. Deleting a request frees its files.' },
     },
   },
   {
@@ -96,6 +99,7 @@ function knobSections(knobs: Record<string, Knob>) {
     { id: 'other', title: 'Other', note: '', names: other },
   ].filter((section) => section.names.length > 0);
 }
+const dollars = (usd: number) => (usd === 0 ? 'no ceiling' : `$${usd.toFixed(2)}`);
 
 /**
  * Admin page: the studio's settings (api/src/lib/studio-settings.ts). The default brain, who sings and who paints
@@ -109,11 +113,14 @@ export default function AdminStudioPage() {
   const [settings, setSettings] = useState<StudioSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [ceiling, setCeiling] = useState(''); // the spend ceiling as typed, until it is saved
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setSettings(await api.getStudioSettings());
+      const loaded = await api.getStudioSettings();
+      setSettings(loaded);
+      setCeiling(loaded.spend ? String(loaded.spend.topicUsd) : '');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to load the studio settings', 'error');
     } finally {
@@ -128,11 +135,14 @@ export default function AdminStudioPage() {
 
   const save = async (what: string, change: {
     brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>; knobs?: Record<string, KnobValue | null>;
+    spend?: SpendSettings; review?: ReviewSettings;
   }, done: string) => {
     if (saving) return;
     setSaving(what);
     try {
-      setSettings(await api.setStudioSettings(change));
+      const saved = await api.setStudioSettings(change);
+      setSettings(saved);
+      if (change.spend && saved.spend) setCeiling(String(saved.spend.topicUsd));
       showToast(done, 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to save', 'error');
@@ -152,6 +162,24 @@ export default function AdminStudioPage() {
   const pickSinger = (provider: SongProvider) => {
     if (settings?.song.provider === provider) return;
     save('song', { song: { provider } }, `${singerOf(provider).label} sings from the next droplet's videos.`);
+  };
+  const saveCeiling = (event: FormEvent) => {
+    event.preventDefault();
+    const topicUsd = Number(ceiling);
+    const max = settings?.choices.spend?.topicUsd.max ?? 100;
+    if (ceiling.trim() === '' || !Number.isFinite(topicUsd) || topicUsd < 0 || topicUsd > max) {
+      showToast(`The ceiling is a number of dollars from 0 (no ceiling) to ${max}`, 'error');
+      return;
+    }
+    if (settings?.spend?.topicUsd === topicUsd) return;
+    save('spend', { spend: { topicUsd } },
+      topicUsd === 0 ? 'Topics have no spend ceiling from the next step.' : `Each topic stops at ${dollars(topicUsd)} from the next step.`);
+  };
+  const pickReview = (required: boolean) => {
+    if (settings?.review?.required === required) return;
+    save('review', { review: { required } }, required
+      ? 'From the next droplet, each waits for an admin before it lists on the Droplets tab.'
+      : 'From the next droplet, each lists on the Droplets tab as soon as its videos are done.');
   };
   const pickEffort = (effort: Effort) => {
     if (settings?.brain.effort === effort) return;
@@ -190,7 +218,7 @@ export default function AdminStudioPage() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">STUDIO</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-          The brain that writes each lesson, who sings its song and who paints its pictures. The teacher reads this as it starts each topic
+          The brain that writes each lesson, who sings its song, who paints its pictures and the most a topic may cost. The teacher reads this as it starts each topic
           and each droplet&rsquo;s videos, so a change applies from the next run. Its machine holds only the API keys. Below them,
           the <a href="#knobs" className="underline">knobs</a> that used to need a redeploy.
         </p>
@@ -250,6 +278,53 @@ export default function AdminStudioPage() {
             ))}
           </div>
         </section>
+
+        {settings.review && (
+          <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+            data-testid="review">
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Review before the Droplets tab</h3>
+            <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+              Whether a person looks at each droplet before it lists on the public Droplets tab, which people 13 and up
+              watch. With review on, a droplet whose videos are done waits until an admin approves it on the LEARN page;
+              the learner who asked sees it either way. A change applies to droplets finished after it.
+            </p>
+            <div className="space-y-2" role="radiogroup" aria-label="Review before the Droplets tab">
+              <Choice on={settings.review.required} disabled={saving !== null} label="An admin approves each droplet"
+                note="Nothing lists until someone has watched it. Approve on the LEARN page, where each waiting droplet says so."
+                isDefault={settings.defaults.review?.required === true} onClick={() => pickReview(true)} />
+              <Choice on={!settings.review.required} disabled={saving !== null} label="List as soon as the videos are done"
+                note="The fact-check and the classroom check are the only gates. An admin can still hide a droplet afterwards."
+                isDefault={settings.defaults.review?.required === false} onClick={() => pickReview(false)} />
+            </div>
+          </section>
+        )}
+
+        {settings.spend && (
+          <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+            data-testid="spend">
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Spend ceiling</h3>
+            <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+              The most one topic may cost in model calls: its lesson, its videos and every retry together. Once a topic has
+              cost this much, the teacher makes no more calls for it, and the topic or its videos are given up with the reason.
+              A topic has cost $0.50 to $2 so far. ElevenLabs calls count only when the teacher has
+              ELEVENLABS_USD_PER_1K_CREDITS. 0 for no ceiling.
+            </p>
+            <form className="flex flex-wrap items-center gap-2" onSubmit={saveCeiling} noValidate>
+              <label className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--text-muted)' }}
+                htmlFor="spend-ceiling">Dollars a topic:</label>
+              <input id="spend-ceiling" type="number" min={0} max={settings.choices.spend?.topicUsd.max ?? 100} step="0.01"
+                inputMode="decimal" value={ceiling} onChange={(e) => setCeiling(e.target.value)} disabled={saving !== null}
+                className="w-24 rounded px-2 py-1 text-sm"
+                style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }} />
+              <button type="submit" disabled={saving !== null || ceiling === String(settings.spend.topicUsd)}
+                className="px-3 py-1 rounded text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                style={{ color: 'var(--accent-purple)', border: '1px solid var(--accent-purple)' }}>Save</button>
+            </form>
+            <p className="text-[11px] mt-1.5" style={{ color: 'var(--text-muted)' }} data-testid="spend-now">
+              Now: {dollars(settings.spend.topicUsd)}.{settings.defaults.spend ? ` Default: ${dollars(settings.defaults.spend.topicUsd)}.` : ''}
+            </p>
+          </section>
+        )}
 
         {BRAINS.map(({ provider, title, who }) => (
           <section key={provider} className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}

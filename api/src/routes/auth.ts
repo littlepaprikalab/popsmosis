@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { OAuth2Client } from 'google-auth-library';
 import prisma, { runTransaction } from '../lib/prisma.js';
-import { sendError, AppError, isAppError, isNotFound } from '../lib/errors.js';
+import { sendError, AppError, isAppError, isNotFound, isUniqueViolation } from '../lib/errors.js';
 import { requireUser, invalidateUserCache } from '../middleware/auth.js';
 import { detachQuestions } from '../lib/privacy.js';
 import { termsAccepted } from '../lib/terms.js';
@@ -24,6 +24,12 @@ export default async function authRoutes(app: FastifyInstance) {
   // `acceptTerms: true` is the person ticking "I agree" to the Terms of Use and Privacy Policy on the sign-in page.
   // Without it nobody is signed in, and the account records which version they agreed to and when (lib/terms.ts):
   // that record is what shows they agreed. It is checked before the code is spent, so a refusal costs nothing.
+  //
+  // An account is its Google identity (`sub`), never its email: Google must have verified the address, and an address
+  // already on an account under another Google identity is refused, never moved to the new one. A Workspace address
+  // that a school reissues to someone else, or a Google account made on an address its owner never proved, would
+  // otherwise take over the old account, its topics and its admin role. So ADMIN_EMAILS stays with the Google identity
+  // that first signed in with the address.
   app.post('/api/auth/google', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { code, acceptTerms } = (request.body ?? {}) as { code?: string; acceptTerms?: unknown };
     if (!code || typeof code !== 'string') {
@@ -50,6 +56,10 @@ export default async function authRoutes(app: FastifyInstance) {
       if (!payload?.email || !payload.sub) {
         return sendError(reply, 'VALIDATION_ERROR', 'Invalid Google token payload');
       }
+      if (payload.email_verified !== true) {
+        return sendError(reply, 'UNAUTHORIZED',
+          'Google has not verified this account\'s email address. Verify it with Google, then sign in again.');
+      }
 
       const email = payload.email.toLowerCase();
       // ADMIN_EMAILS grants the role here and again on every session
@@ -67,15 +77,17 @@ export default async function authRoutes(app: FastifyInstance) {
           },
         });
       } catch (err: unknown) {
-        // Same email already exists under a different googleId: link the accounts.
-        if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'P2002') {
-          user = await prisma.user.update({
-            where: { email },
-            data: { googleId: payload.sub, name: payload.name ?? null, avatarUrl: payload.picture ?? null, ...agreed, ...(role ? { role } : {}) },
-          });
-        } else {
-          throw err;
+        if (!isUniqueViolation(err)) throw err;
+        // Two first sign-ins of the same Google account at once (a double click): the other one made the account.
+        const raced = await prisma.user.findUnique({ where: { googleId: payload.sub } });
+        if (!raced) {
+          // The email is an account under another Google identity: never move it to this one.
+          const owner = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+          request.log.warn({ userId: owner?.id }, 'sign-in refused: the email is an account under another Google identity');
+          return sendError(reply, 'CONFLICT',
+            'This email address is already on a popsmosis account that signs in with a different Google account. Sign in with that one, or ask an admin for help.');
         }
+        user = raced;
       }
 
       const token = app.jwt.sign({ sub: user.id }, { expiresIn: SESSION_EXPIRES_IN });

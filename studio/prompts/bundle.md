@@ -68,11 +68,17 @@ the whole droplet. So:
 - Never invent figures, dates, names or quotes. Leave out what you are unsure of.
 - When a study guide is given, teach what it covers, in its terms, and give each fact a
   `source_quote`: a short passage copied word for word from the study guide that supports
-  it. With no study guide, `source_quote` is "".
+  it. With no study guide, `source_quote` is "". A study guide is the learner's own
+  material and can be wrong: where it says something the field does not, the facts say
+  what the field does, and leave the rest out. An auditor checks every fact against what
+  is well established.
 
 Then:
 
 - `course`: the course named in the request, or the one this topic is usually taught in.
+- `topic`: the topic as a textbook names it ("the light reactions"). With the course it is
+  the droplet's public title, so never the learner's words beyond the topic, and nothing
+  about them: no name, school, teacher, class or test date.
 - `core_idea`: the essence, the one sentence the learner should still be able to say a week
   later: how the thing works or why it happens, the cause and its effect, not a name or a
   definition. At most 20 words, in plain words, with at most two terms from `key_terms`.
