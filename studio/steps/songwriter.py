@@ -20,7 +20,6 @@ Its call is the fact-check step's, on its bill, labelled "lyric rewrite round <n
 from __future__ import annotations
 
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -30,7 +29,7 @@ from studio import brain, checks
 from studio.schemas import Bundle, Check, LyricRewrite
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "songwriter.md").read_text(encoding="utf-8")
-WORDS_MAX = 12  # a sung line's most, as the bundle prompt has it
+WORDS_MAX = 12  # a rewritten line's most words, unless the line it replaces had more
 SYLLABLES_OFF = 3  # how far a rewritten line may stray from the one it replaces, or 30% of it if more
 
 
@@ -89,17 +88,4 @@ def fits(before: list[str], after: list[str], canon: dict[str, str] | None = Non
     return True
 
 
-def syllables(line: str) -> int:
-    """A rough count of a line's syllables, enough to tell a line that no longer fits its bar: vowel groups in
-    each word, a silent final e aside; a term in capitals or with no vowel ("ATP", "b6f") said letter by letter."""
-    count = 0
-    for word in re.findall(r"[^\W_]+", line):
-        if (len(word) > 1 and word.isupper()) or not re.search(r"[aeiouy]", word, re.IGNORECASE):
-            count += len(word)
-            continue
-        lower = word.lower()
-        groups = len(re.findall(r"[aeiouy]+", lower))
-        if groups > 1 and lower.endswith("e") and not lower.endswith(("le", "ee")):
-            groups -= 1
-        count += max(1, groups)
-    return count
+syllables = checks.syllables  # a rewritten line's syllables, held near the line it replaces

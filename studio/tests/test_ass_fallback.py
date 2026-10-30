@@ -71,7 +71,7 @@ def test_a_line_the_song_never_sings_gets_no_subtitle(tmp_path, monkeypatch):
     ass_fallback.make(job)
     events = [row for row in seen["ass"].splitlines() if row.startswith("Dialogue:")]
     assert len(events) == len(sample_media.bundle().lyrics) - 1
-    assert "Light" not in seen["ass"] and "Every" in seen["ass"]  # v1-1 is not shown; v1-2 is
+    assert "Light" not in seen["ass"] and "Each" in seen["ass"]  # v1-1 is not shown; v1-2 is
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")

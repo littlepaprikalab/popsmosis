@@ -118,7 +118,27 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
     data["blocks"] = kept
 
 
-LYRIC_WORDS_MAX = 12
+def syllables(line: str) -> int:
+    """A rough count of a line's syllables, enough to tell a line too full to sing: vowel groups in each word, a
+    silent final e aside; a term in capitals or with no vowel ("ATP", "b6f") said letter by letter."""
+    count = 0
+    for word in re.findall(r"[^\W_]+", line):
+        if (len(word) > 1 and word.isupper()) or not re.search(r"[aeiouy]", word, re.IGNORECASE):
+            count += len(word)
+            continue
+        lower = word.lower()
+        groups = len(re.findall(r"[aeiouy]+", lower))
+        if groups > 1 and lower.endswith("e") and not lower.endswith(("le", "ee")):
+            groups -= 1
+        count += max(1, groups)
+    return count
+
+
+# A sung line is 6 to 9 syllables, so the singer has room to hold a note: round 17's lines of 12 and 13 came back
+# at 5 to 6 syllables a second, the speed of speech, sung or rapped. A rapped line, when the learner asks for rap,
+# can carry more.
+LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
+RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
 # A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
 # next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
@@ -129,34 +149,39 @@ DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watc
 
 
 def _check_lyric_style(data: dict, problems: list) -> None:
-    """A sung line is not a stage direction and is not long: both are only recorded (a better bundle, by the
-    prompt, is the fix), so the operator sees which droplets sing them."""
+    """A sung line is not a stage direction and is not too full to sing: both are only recorded (a better bundle,
+    by the prompt, is the fix), so the operator sees which droplets sing them."""
+    rapped = RAPPED.search(" ".join((data.get("music") or {}).get("positive_styles") or []))
+    most = LYRIC_SYLLABLES_RAPPED if rapped else LYRIC_SYLLABLES_MAX
     for line in data["lyrics"]:
         text = line["text"]
         why = ("narrates the picture instead of being sung" if DIRECTION_LINE.match(text) else
-               f"runs {len(text.split())} words, over {LYRIC_WORDS_MAX}" if len(text.split()) > LYRIC_WORDS_MAX else "")
+               f"runs {syllables(text)} syllables, over {most}" if syllables(text) > most else "")
         if why:
             problems.append(Problem(line_id=line["id"], rule="lyric-style", repaired=False,
                                     detail=f'"{text}" {why}'))
 
 
-SONG_MIN_S, SONG_MAX_S = 120, 160  # the prompt asks for 2 to 2½ minutes; a song outside this is only recorded
+# The singer takes the time the lines need (audio.line_ms), so the song has no set length; one far outside this
+# has too few lines or too many, and is only recorded.
+SONG_MIN_S, SONG_MAX_S = 90, 240
 
 
 def song_length_problems(bundle: Bundle) -> list[Problem]:
-    """How long the sung lines come to at the song's tempo (one bar a line below 130 bpm). Recorded, not repaired:
-    only a better bundle fixes it. Not part of review(): the bundle step adds it."""
+    """How long the sung lines take to sing (audio.line_ms). Recorded, not repaired: only a better bundle fixes
+    it. Not part of review(): the bundle step adds it."""
     from studio.steps.audio import line_ms
 
-    seconds = len(bundle.lyrics) * line_ms(bundle) / 1000
+    seconds = sum(line_ms(line.text) for line in bundle.lyrics) / 1000
     if SONG_MIN_S <= seconds <= SONG_MAX_S:
         return []
     return [Problem(line_id="music", rule="lyric-style", repaired=False,
-                    detail=f"{len(bundle.lyrics)} lines at {bundle.music.bpm} bpm sing for about "
-                           f"{seconds:.0f} s, outside {SONG_MIN_S} to {SONG_MAX_S}")]
+                    detail=f"{len(bundle.lyrics)} lines sing for about {seconds:.0f} s, outside {SONG_MIN_S} to "
+                           f"{SONG_MAX_S}")]
 
 
 CHORUSES = 3  # the chorus comes back after each pre-chorus and once more at the end
+VERSE_LINES_MAX = 8  # at any tempo: the song fills its length with the chorus coming back, not longer verses
 # A bridge line is sung already when this share of its words is in the verses; a bridge with half its lines sung
 # already retells them. Of six droplets on Oct 29, the two that retold their verses (a play's plot, the steps to a
 # revolution) had 4 and 6 such lines of 8; the four that took a new case (a poison, a corner, a law) had 0 or 1.
@@ -206,11 +231,10 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
         if len(named) < 2:
             problems.append(Problem(line_id=choruses[0][0].id, rule="lyric-style", repaired=False,
                                     detail="the chorus says too little of the core idea: at most one of its words"))
-    most = 8 if bundle.music.bpm < 100 or bundle.music.bpm >= 130 else 12
     for section, lines in runs:
-        if section == "verse" and len(lines) > most:
+        if section == "verse" and len(lines) > VERSE_LINES_MAX:
             problems.append(Problem(line_id=lines[0].id, rule="lyric-style", repaired=False,
-                                    detail=f"a verse of {len(lines)} lines, over {most} at {bundle.music.bpm} bpm"))
+                                    detail=f"a verse of {len(lines)} lines, over {VERSE_LINES_MAX}"))
     verses = _stems(" ".join(line.text for section, lines in runs if section == "verse" for line in lines))
     bridge = [line for section, lines in runs if section == "bridge" for line in lines]
     retold = [line for line in bridge if (words := _stems(line.text)) and len(words & verses) >= RETOLD_SHARE * len(words)]

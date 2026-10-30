@@ -307,11 +307,13 @@ explanation to the narration, and every word of it is easy to hear.
   description of a few clauses. A strong one names the genre and how the verses are delivered,
   the production's texture, the tempo and the feel of the beat, the voice (its timbre, and how
   it moves from the verses into the chorus), and what leads and what accents: "Bright pop with
-  hip-hop verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat;
-  clear female vocal with a low, dark, raspy edge in rapped verses, rising into a big sing-along
-  chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a warm Rhodes", "a
-  808 that slides", "gang vocals on the hook") make a better song than adjectives ("catchy",
-  "nice", "educational").
+  melodic sung verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm
+  beat; female vocal with a low, dark, raspy edge, holding the ends of the verse lines, rising
+  into a big sing-along chorus; shimmering synths lead, claps accent the beat". Concrete sounds
+  ("a warm Rhodes", "a 808 that slides", "gang vocals on the hook") make a better song than
+  adjectives ("catchy", "nice", "educational"). The verses are sung, with a melody: rap only
+  when the learner asks for it. Rapped verses carrying a lesson come back recited, like
+  sentences read aloud.
   - **When the learner asked for a song style**, it is your brief. It may come on its own line
     ("The song style the learner asked for") or anywhere in the topic or request, in their own
     words ("ATP synthesis. Style: pop-punk", "make the song K-pop"). Keep everything they asked
@@ -326,13 +328,13 @@ explanation to the narration, and every word of it is easy to hear.
     bpm either way to suit the topic's mood), and write your own description from it, choosing
     the voice, the instruments, the textures and the mood for this topic, so that two droplets
     from the same seed sound different. With none, describe a vocals-first pop style a teenager
-    plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A faster
+    plays for fun, with sung verses and a sung chorus, between 92 and 112 bpm. A faster
     or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
   - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
     death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities). A
     dance beat under it sounds like a celebration. Write a slow, respectful song instead:
     80 to 90 bpm, a solemn, reflective mood, a sparse piano ballad with one solo cello or
-    violin, verses in a slow, plain rap or sung, and a sung chorus that is memorable without
+    violin, plainly sung verses, and a sung chorus that is memorable without
     being euphoric. Keep it sparse, so the words stay clear: never a full or epic orchestra
     (brass, timpani, a swelling choir), which sounds like a war film's victory. An
     instrument from a culture only when it belongs to the people the topic is about (an
@@ -343,49 +345,65 @@ explanation to the narration, and every word of it is easy to hear.
     map make tokens of the dead. Goods, ships and money may move; the camera and the
     spotlight show where people were taken. The rest of history keeps the rotation: a
     revolution's causes or a war's alliances are not grave in this sense.
-  - Only when there is neither, for high school and older: pop with rapped hip-hop verses,
-    K-pop, R&B, dance-pop, pop-punk and their neighbours. These work well, slowest first;
-    write in their spirit rather than copying one:
-    - Laid-back R&B with smooth rapped verses; warm electric piano, deep round bass and soft
-      finger snaps; a smooth sung chorus with stacked harmonies; clear female vocal; 85 bpm
-    - Upbeat pop with clear rapped verses and a catchy sung chorus; female vocals over bright
+  - Only when there is neither, for high school and older: pop, K-pop, R&B, dance-pop,
+    pop-punk and their neighbours, with sung verses. These work well, slowest first; write in
+    their spirit rather than copying one:
+    - Laid-back R&B with smooth sung verses; warm electric piano, deep round bass and soft
+      finger snaps; a smooth chorus with stacked harmonies; female vocal; 85 bpm
+    - Upbeat pop with a bouncy verse melody and a catchy sung chorus; female vocals over bright
       synths and punchy drums; 96 bpm
-    - K-pop with sharp, clear rapped verses from male group vocals, rising into a big catchy
-      sung chorus; punchy synth bass, crisp claps and bright synth stabs; 98 bpm
-    - Bright pop with hip-hop verses and a big sing-along chorus; clear female vocal;
-      shimmering synths lead, claps accent the beat; 104 bpm
+    - K-pop with melodic verses traded between male group vocals, rising into a big catchy
+      chorus; punchy synth bass, crisp claps and bright synth stabs; 98 bpm
+    - Bright pop with sung verses and a big sing-along chorus; female vocal; shimmering synths
+      lead, claps accent the beat; 104 bpm
     - Dance-pop on a four-on-the-floor beat; energetic male vocal into a euphoric sing-along
       chorus; bright plucked synths, handclaps and a pulsing bass; 124 bpm
     - (only when the learner asks) A pop-punk anthem with a driving straight-ahead pulse;
       energetic male lead and gang vocals on the chorus; driving electric guitars, punchy live
       drums and a bright radio-ready master; 150 bpm
   - For a younger audience: bright, playful pop with a big sing-along chorus, a clear lead
-    vocal, sung verses or light, unhurried rap, and a tempo they can sing along to. Dense,
-    fast rap is hard for young listeners to follow.
+    vocal, sung verses, and a tempo they can sing along to.
   - Name the tempo once, as "<n> bpm", from 80 to 160: the learner's tempo when they gave
-    one, otherwise the one that fits the style and the topic's mood. Code times every
-    section of the song from it.
+    one, otherwise the one that fits the style and the topic's mood.
   - Never name an artist, band or song; the music generator refuses them.
-- `music.negative_styles` are short things to avoid, a list, that keep the words clear and the
-  song right for a classroom: always "mumbled vocals", "long instrumental intro", "vocals
-  buried in the mix" and "explicit lyrics", and anything the learner said they did not want.
+- `music.negative_styles` are short things to avoid, a list, that keep the song right for a
+  classroom: always "long instrumental intro" and "explicit lyrics", and anything the learner
+  said they did not want. Nothing more about diction: a singer told again and again to make
+  every word clear sings like someone reading.
 - `music.sections` is exactly intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus,
   bridge, chorus, outro (The parts, below).
 - `lyrics` is every line as sung, in order, section by section, so the chorus appears
-  three times. Below 130 bpm each line is one bar, short and punchy: about 2.4 seconds at
-  100 bpm. From 130 bpm it is two bars: about 3.2 seconds at 150. Either way a sung line
-  is roughly 6 to 10 syllables; a rapped line can carry a few more, up to about 14. The
-  song runs 2 to 2½ minutes: each verse has 8 lines below 100 bpm, 12 from 100 to 129 bpm,
-  and 8 from 130 bpm, where each line is two bars. Fill the length with the chorus coming
-  back, not with longer verses.
+  three times. A line is 6 to 9 syllables, so the singer has room to hold a note (a rapped
+  line, when the learner asks for rap, up to about 14). The singer takes the time the lines
+  need, at any tempo; each verse has 8 lines, and the song fills its length with the chorus
+  coming back, not with longer verses.
 
 ### How it sounds
 
-- **Sung, not read.** Write each line the way someone talks: whole phrases, with the
-  small words that carry the rhythm ("so", "now", "then", "that's"), never a headline
-  with the articles dropped. Say each line aloud: if it sounds like a caption or a
+- **A song, not sentences.** A lyric is the idea turned into something the listener sees,
+  feels and sings back, not a sentence with the facts in it cut into lines. A line can be a
+  fragment, a call, a question, a list, a word sung twice. Keep the small words that carry
+  the rhythm ("so", "now", "then", "that's"), never a headline with the articles dropped.
+  Sing a verse in your head: if it sounds like a paragraph cut into lines, or a caption, or a
   textbook sentence, rewrite it. Not "Sodium channels open, the membrane depolarizes", but
-  "The gates swing open, sodium floods in / Now the inside's positive, the spike begins".
+  "Click, the gate swings, sodium's in / Now the inside flips, the spike begins".
+- **Say each idea with a device, not a statement.** The song carries 3 to 5 ideas and says
+  each of them more than one way; the narration explains the rest. Mix these through the
+  song, a few of each, never the same one on every line:
+  - an image the listener can see, in place of the claim: "A pool of acid, churning all
+    day", not "the stomach breaks down protein with acid";
+  - call and response, where the answer is the term to remember: "Who splits the water? /
+    Photosystem two!";
+  - a list chant: "Light, water, CO2 in / Sugar and oxygen out";
+  - a contrast pair, two lines built the same way: "Prices up, the buyers go / Prices down,
+    the shelves run low";
+  - a part that acts like a person (the fact-check judges the point it makes): "The enzyme
+    grabs it, twists it, lets it go";
+  - a question the next line answers: "Why's a leaf so green? / It throws the green light
+    away";
+  - a number as a hook: "Minus seventy, waiting to fire";
+  - a line sung again with one word changed, so the change is the lesson: "More who want
+    it, the price climbs / More to sell, the price declines".
 - **Rhyming couplets.** Lines 1 and 2 rhyme, then 3 and 4, and so on; a near rhyme is
   fine. Rhyme on plain words, since terms are hard to rhyme. Never bend a line's meaning
   or grammar to reach a rhyme: a line that only makes sense for its rhyme sounds wrong,
@@ -396,7 +414,7 @@ explanation to the narration, and every word of it is easy to hear.
   wants in"). Things the listener can picture and count beat abstract words.
 - **Lines that are sung, never directions.** Every line is something a singer says to the listener. Never
   narrate the picture or the camera ("zoom inside to the chloroplast", "now look at the membrane"), never
-  announce a section ("here comes the bridge"). A line is at most 12 words.
+  announce a section ("here comes the bridge"). A line is 6 to 9 syllables: room to hold a note.
 - **One frame, all the way through.** Carry the droplet's frame (the everyday picture of the
   whole idea, chosen in the facts) from the intro to the outro, so every section adds to it:
   set it up in the first lines of verse 1 ("You can't spend sunshine, that's the catch / So the
@@ -432,7 +450,7 @@ In this order, each section a run of lines with its own `section` value:
   real things ("Open the gates, let sodium in", "Split the water, catch the light"), never
   pronouns standing in for them ("Pump them in, they spin it out" names nothing). It is the
   hook, the song's name, and a line of the chorus.
-- **Verse**, 8 or 12 lines (by tempo, above): the frame first, then the first half of the
+- **Verse**, 8 lines: the frame first, then the first half of the
   story, in order, one step a line or a couplet, with the surprise in it.
 - **Pre-chorus**, 2 lines: bust the misconception. Sing the right idea, and the mistake
   only as what it is not; the chorus that follows lands the right idea. Say it with a fact, not a
@@ -445,7 +463,7 @@ In this order, each section a run of lines with its own `section` value:
   opens and ends on the title line. It is word for word the same each time;
   give each repeat its own ids. A learner should be able to sing it back after hearing it
   twice.
-- **Verse**, 8 or 12 lines: the second half of the story, ending with what it makes and
+- **Verse**, 8 lines: the second half of the story, ending with what it makes and
   where that goes next.
 - **Pre-chorus**, 2 lines: link it to what comes next in the course (the next step or
   topic in the unit), as the facts give it.
@@ -469,7 +487,8 @@ catchy lines.
 ### Lines and names
 
 - Tag each line with the id of the fact it teaches, or "filler" for a line that teaches
-  nothing (a call-out, a line of pure attitude). Make most lines teach.
+  nothing (a call-out, a line of pure attitude). Make most lines carry one of the song's ideas; a line that
+  says one again in a new way carries it too.
 - A line does not have to name a structure. When it names one the viewer should see, the
   structure's label appears the first time it is sung, so use the `name` or an alias of
   a structure drawn in the scene that line plays over, exactly as written. Group words

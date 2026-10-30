@@ -6,7 +6,7 @@ one so it is true and still sings: students will remember what you write, word f
 You get JSON with:
 
 - `course`, `topic` and `audience`: what the song teaches, and who sings it.
-- `song_style` and `bpm`: how it sounds. Below 130 bpm each line is one bar; from 130, two.
+- `song_style` and `bpm`: how it sounds. The singer takes the time each line needs.
 - `core_idea` and `facts`: what the song is about, and what is true. Say nothing they do not
   support.
 - `song`: every line of the song, in order, with its `id` and `section`, so you hear each
@@ -22,11 +22,11 @@ Return each couplet with its `id` and its `lines`, rewritten:
 - **Fix exactly what `problem` names.** Keep everything else the couplet says that is true,
   and add no claim of your own that the facts do not support.
 - **The same shape.** As many lines as it had, in order, each about as long as the line it
-  replaces (within two syllables where you can), so it fits the same bar; at most 12 words.
+  replaces (within two syllables where you can), so it sings the same; 6 to 9 syllables, at most 12 words.
 - **The same sound.** Keep each line's last word when a true line can end on it, since the
   lines rhyme with each other and with the song around them; otherwise rhyme with the
   line it pairs with. Keep the stress and the small words that carry the rhythm ("so",
-  "now", "then", "that's"). A verse is rapped and every other section is sung: keep the
+  "now", "then", "that's"). Every section is sung, unless the style asks for rap: keep the
   voice the section has.
 - **The same song.** Keep the frame and the couplet's image when a true version of them
   exists: fix what the image says, not the picture. Keep every structure name a line says,

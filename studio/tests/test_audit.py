@@ -16,7 +16,7 @@ from studio.tests.test_run import FakeApi
 # holds lines to the facts, so a lyric that says what a wrong fact says passes it.
 WRONG = "Every electron hand-off in the thylakoid membrane pumps a proton into the thylakoid lumen."
 RIGHT = FACTS[1]["text"]  # "Only cytochrome b6f pumps protons into the thylakoid lumen; the other carriers..."
-SEEDED = "Every electron hand-off pumps a proton"  # lyric v1-2, written from f2
+SEEDED = "Each electron hand-off pumps a proton"  # lyric v1-2, written from f2
 FIXED = "Only b6f pumps a proton through"
 FIRST = "Light lands on the thylakoid"  # lyric v1-1, the line SEEDED is sung in a couplet with
 GUIDE = "In the light reactions, only cytochrome b6f pumps protons into the lumen. ATP synthase makes ATP."
@@ -53,14 +53,14 @@ def check_by_the_facts(payload):
     says_every = [f["id"] for f in payload["facts"] if "every electron hand-off" in f["text"].lower()]
     checks = []
     for line in payload["lines"]:
-        if "every electron hand-off" in line["text"].lower() and not says_every:
-            fixed = "\n".join(FIXED if "every electron hand-off" in part.lower() else part
+        if "electron hand-off" in line["text"].lower() and not says_every:
+            fixed = "\n".join(FIXED if "electron hand-off" in part.lower() else part
                                for part in line["text"].split("\n"))  # a couplet keeps its other line
             checks.append({"id": line["id"], "verdict": "UNSUPPORTED", "source": "",
                            "problem": "only cytochrome b6f pumps", "corrected": fixed})
         else:
             checks.append({"id": line["id"], "verdict": "SUPPORTED", "source": says_every[0] if says_every and
-                           "every" in line["text"].lower() else "f1", "problem": "", "corrected": ""})
+                           "electron hand-off" in line["text"].lower() else "f1", "problem": "", "corrected": ""})
     return FactCheck.model_validate({"checks": checks}).model_dump()
 
 

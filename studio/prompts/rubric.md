@@ -87,16 +87,16 @@ empty list is a real answer when there is nothing to correct.
 
 ## singability
 
-The song as words to be sung, at its style and tempo (one bar a line below 130 bpm; verses rapped, the
-other sections sung).
+The song as words to be sung, at its style (verses and chorus sung; rap only where the learner asked for it).
 
-- 5: Every line sounds like something a singer says: whole phrases, with the small words that carry the
-  rhythm. Lines fit the bar (about 6 to 10 syllables sung, up to about 14 rapped). The rhymes are clean
-  and never bend a line's meaning or grammar to land. The chorus is a chant a learner could sing back
-  after hearing it twice. Terms are written as a singer says them and land mid-line.
-- 3: Mostly singable, but several lines read like captions or textbook sentences, overrun the bar, or
+- 5: Every line sounds like something a singer sings, not a sentence cut into lines: short phrases with the
+  small words that carry the rhythm, 6 to 9 syllables with room to hold a note (up to about 14 rapped). Its
+  ideas come as images, calls and answers, list chants, contrast pairs and lines sung again with a twist. The
+  rhymes are clean and never bend a line's meaning or grammar to land. The chorus is a chant a learner could
+  sing back after hearing it twice. Terms are written as a singer says them and land mid-line.
+- 3: Mostly singable, but several lines read like captions or textbook sentences, run past 10 syllables, or
   reach their rhyme with a forced word or a tag that says nothing ("for real", "no doubt").
-- 1: Prose broken into lines: it could not be sung at that tempo.
+- 1: Prose broken into lines: it could not be sung as a song.
 
 ## lesson_clarity
 

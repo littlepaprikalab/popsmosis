@@ -63,7 +63,6 @@ def made(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setattr(audio, "send", FakeEleven())
     monkeypatch.setattr(audio, "duration", lambda path: 30.1)
-    monkeypatch.setattr(audio, "TWO_BAR_BPM", 0)  # two bars a line, room for the fake singer's steady words
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
@@ -87,7 +86,7 @@ def test_the_song_is_aligned_section_by_section_in_song_time(made):
     timed, report = timing.song_timing(made, bundle, align=even_aligner(calls), vocals=vocals)
     assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
     assert len(calls) == 6  # one per section
-    assert calls[0][1] == ["light", "lands", "on", "the", "thylakoid", "every", "electron", "handoff", "pumps", "a",
+    assert calls[0][1] == ["light", "lands", "on", "the", "thylakoid", "each", "electron", "handoff", "pumps", "a",
                            "proton"]
     assert calls[1][1] == ["protons", "flow", "and", "eitipi", "grows"]
     chorus = timed.line("c1-1")
@@ -132,7 +131,7 @@ def test_a_section_with_no_singing_in_its_chunk_is_not_sung(made):
     assert report["unsung"] == ids == ["v1-1", "v1-2"]
     assert [r for r in report["lines"] if r["line_id"] == "v1-1"][0] == {
         "line_id": "v1-1", "text": texts["v1-1"], "seconds": 0.0, "score": None, "sung": False}
-    assert "NOT SUNG, their section instrumental: v1-1, v1-2" in timing.song_notes(report)
+    assert "NOT SUNG: v1-1, v1-2" in timing.song_notes(report)
     assert report["unsure"] == []
 
 
@@ -181,6 +180,51 @@ def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
     assert timed.duration == 41.0
 
 
+def test_the_lines_lyria_says_it_left_out_are_found_in_its_own_text():
+    texts = {"a": "Filter the blood", "b": "Pack the good back", "c": "Dump it all out", "d": "Again and again",
+             "e": "Pack the good back in"}
+    plan = {"sections_pinned": False, "sections": [{"line_ids": ["a", "b", "c"]}, {"line_ids": ["d", "e"]}]}
+    timed = {**plan, "text": "[[A0]]\n[0.0:] Filter the blood\n[2.5:] Pack the good back\n[5.0:] Dump it out\n"
+                             "[[B1]]\n[7.5:] Again and again"}
+    assert timing.left_out(timed, texts) == {"e"}  # "Dump it out" is c, a word short: still sung
+    bare = {**plan, "text": "[[A0]]\n[:] Filter the blood\n[:] Pack the good back\n[:] Again and again\n"
+                            "[:] Pack the good back in"}
+    assert timing.left_out(bare, texts) == {"c"}
+    assert timing.left_out({**plan, "text": "[Verse]\nFilter the blood"}, texts) == set()  # not the song's text
+    assert timing.left_out({**plan, "sections_pinned": True, "text": bare["text"]}, texts) == set()  # Eleven Music
+    assert timing.left_out(plan, texts) == set()  # no text at all
+
+
+def test_a_line_lyria_left_out_is_not_sung_and_the_rest_are_aligned_without_it(tmp_path, monkeypatch):
+    """Round 17's kidney song stopped after its last chorus, as its own text said; the aligner, asked for the
+    outro too, crammed seven lines into the song's last seven seconds, flashed in the band and never sung."""
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(audio, "send", FakeGemini())
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)
+    monkeypatch.setattr(audio, "duration", lambda path: 30.0)
+    job = tmp_path / "sample"
+    job.mkdir()
+    bundle = sample_media.bundle()
+    jobs.write(job / "bundle.json", bundle)
+    jobs.keep_studio_settings(job, {"song": {"provider": "gemini"}})
+    audio.run(job)
+    plan_file = job / audio.plan_path("song")
+    plan = json.loads(plan_file.read_text())
+    *sung, last = bundle.lyrics
+    plan["text"] = "\n".join(f"[:] {line.text}" for line in sung)  # all but the last chorus
+    plan_file.write_text(json.dumps(plan))
+
+    calls = []
+    timed, report = timing.song_timing(job, bundle, align=even_aligner(calls), vocals=_sung(30.0))
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    (_, words), = calls
+    assert len(words) == sum(len(words_of(line.text)) for line in sung)  # the aligner is not asked for it
+    gone = timed.line(last.id)
+    assert not gone.sung and gone.start == gone.end == timed.line(sung[-1].id).end
+    assert report["unsung"] == [last.id] and f"NOT SUNG: {last.id}" in timing.song_notes(report)
+
+
 def test_a_song_plan_from_before_the_choice_is_aligned_section_by_section():
     plan = {"sections": [{"section": "verse", "line_ids": ["a"], "start_ms": 0, "duration_ms": 4300},
                          {"section": "chorus", "line_ids": ["b"], "start_ms": 4300, "duration_ms": 4300}]}
@@ -227,7 +271,7 @@ def test_a_line_pulled_out_of_place_is_heard_alone_between_its_neighbours(made):
     assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
     first, second, chorus = timed.line("v1-1"), timed.line("v1-2"), timed.line("c1-1")
     heard, words = calls[-1]
-    assert words == ["every", "electron", "handoff", "pumps", "a", "proton"]
+    assert words == ["each", "electron", "handoff", "pumps", "a", "proton"]
     assert heard == pytest.approx((chorus.start - first.end) * timing.SAMPLE_RATE, abs=2)  # between its neighbours
     assert second.words[0].start == pytest.approx(first.end + timing.MARGIN_S + 0.2, abs=1e-3)
     assert [b.start - a.start for a, b in zip(second.words, second.words[1:])] == pytest.approx([0.6] * 5, abs=2e-3)
