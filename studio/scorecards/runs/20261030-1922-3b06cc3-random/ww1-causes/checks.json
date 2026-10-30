@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "c1-1",
+      "rule": "lyric-style",
+      "detail": "the title line \"Two shots fired, the allies pile in\" names nothing from the core idea, why chain or key terms, or leans on pronouns",
+      "repaired": false
+    },
+    {
+      "line_id": "c1-1",
+      "rule": "lyric-style",
+      "detail": "the chorus says too little of the core idea: at most one of its words",
+      "repaired": false
+    }
+  ]
+}

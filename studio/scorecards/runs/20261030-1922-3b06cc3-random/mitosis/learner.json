@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Mitosis turns one cell into two genetically identical cells by first copying every chromosome and then using spindle fibers to pull the copies apart so each new cell gets one full set.",
+      "why": "First, during interphase, the cell copies all its DNA, so each chromosome becomes two identical sister chromatids joined at the centromere. This has to come first so the cell never splits its only copy of an instruction. In prophase the long DNA coils into compact chromosomes so it can be moved without tangling, the nuclear envelope breaks down, and spindle fibers grow from the two poles. In metaphase the fibers attach to every chromosome and line them up across the middle, and the cell checks that all are attached. In anaphase the sister chromatids separate and the fibers pull them to opposite poles, so each pole gets one copy of every chromosome. Since the chromatids are identical copies, the two sets are identical. In telophase a new nuclear envelope forms around each set and the chromosomes uncoil. In cytokinesis the cytoplasm divides, making two separate cells, each with the full number of chromosomes (46 in humans).",
+      "what_if": "If the spindle fibers stopped working, the sister chromatids could not be pulled to opposite poles, so the cell could not give each new cell its own set of chromosomes and would stay stuck in mitosis, often dying. The lesson says this is how drugs like taxol work on cancer cells. It also says these drugs hurt fast-dividing hair follicle cells, which is why some chemo causes hair loss. The lesson does not say exactly how the fibers pull, so I can't explain more than that."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

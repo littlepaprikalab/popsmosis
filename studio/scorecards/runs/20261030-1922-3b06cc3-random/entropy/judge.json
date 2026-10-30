@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Count the ways, let the energy spread\" is short, concrete and close to the core idea, and it opens and closes the chorus so it sticks. \"Count the ways\" is a bit abstract, since the 'ways' are not a real thing until the dice come in. The lesson opens on the learner's own puzzle, \"If entropy means disorder, why does a neat crystal of ice ever form?\", which is strong. The narration opens on hot coffee cooling, which is from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The droplet's everyday picture is dice, a model of counting outcomes. The song sets it up early (\"Roll the dice, and the seven comes out ahead\") and the lesson and narration use it, but the song's later sections drop it for coffee and the freezer. Dice fit the counting idea well, but they are not an everyday thing doing the same job as the whole of entropy, namely energy spreading out. Narration n2 pictures a box of gas before it reaches the dice, so two pictures compete. It is apt for the counting half and weaker for energy spreading.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk through macrostate, microstate, entropy as a count, random hopping, the biggest count winning, huge numbers, and then the second law. Each step carries its cause, for example \"The molecules keep colliding and trading energy, so the box hops between microstates\" and the explanation of why the colder object gains more entropy. The freezer example adds the link that a part can lose entropy if the surroundings gain more. One thin spot is how counting microstates connects to energy spreading out: the claim that spread-out energy has more ways is asserted in the song (\"spread-out has more\") rather than shown with energy examples.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The ten lines mostly read as steps in order, such as \"Molecules collide → system hops between microstates at random\" and \"Huge particle numbers → practically always found spread out\". The first line, \"Why does energy spread out on its own?\", is a question, not a step, and it starts at i-1, where the song sings \"Count the ways\" but the narration is about coffee. \"Entropy ≠ disorder\" is closer to a slogan, and \"Dice total = macrostate\" is a label. The chain ends on the freezer, not on the core idea itself. The set is also long.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Song c3-2: \"More ways, more entropy, and spread-out's what you'll find\"; also lyric v1-4 \"a total of seven's got six, so it comes up the most\"",
+      "problem": "This is not really wrong, but v1-4 is fine. The only real issue is lyric v2-4 \"The cold gains more entropy than the hot gives away\", which is fine for the ΔS=Q/T case. No real error found in this line.",
+      "correction": "No correction needed."
+    }
+  ],
+  "accuracy": {
+    "reason": "The physics is sound for high school: S = k ln W, the 16 microstates and 6-way split, ΔS = Q/T with the steady-temperature caveat, and the freezer accounting are all correct. The song holds to the same standard: \"Heat goes hot to cold, the gas fills the space\" and \"Entropy's not mess\" are fair. Saying \"Total entropy climbs\" without \"isolated system\" in the chorus is a small looseness.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "The chorus is a clean chant that repeats and is easy to sing back. Many verse lines overrun the rapped limit of about 14 syllables, for example v1-8 \"Sixteen ways to arrange them, and they keep shuffling past\" and v2-2 \"Heat flows to the cooler room air till their temps are the same\". Several read like textbook sentences, such as v2-6 \"In an isolated system it never drops at all\", and some rhymes are loose or forced (\"cases/passes\", \"home\" for \"on its own\"). The bridge and verses are long but still mostly whole phrases.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a real question, builds on dice then gas, and has a Predict step answered right after. It names the disorder misconception and explains why it is wrong with the freezing water example. The closing check, \"Nothing pushes a gas into the empty half of a box, so why does it end up spread through both halves?\", can be answered with the counting idea. It carries a fair number of new terms (microstate, macrostate, second law, isolated system, Boltzmann's formula, ΔS=Q/T), and the engine remark at the end could be cut.",
+    "score": 4
+  }
+}

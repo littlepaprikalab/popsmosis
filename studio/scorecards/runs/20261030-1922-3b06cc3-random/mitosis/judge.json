@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Copy the chromosomes, pull the pairs apart\" is concrete actions on real things and is the core idea in miniature. It opens and closes the chorus and can be sung back after one hearing. The lesson opens on a real question, \"When you scrape your knee, where do the new skin cells come from?\", and the narration opens on the same knee scrape from the learner's world. The one small flaw is that \"pairs\" is slightly abstract.",
+    "score": 5
+  },
+  "frame": {
+    "reason": "The folders-and-pages picture, \"filling two folders with the same packet of pages\", does the same job as the whole process: copy everything, clip each copy to its original, then pull the clipped pairs apart. It is set up in v1-1, returns in the chorus (\"Each new cell gets every page\") and the outro, and appears in the lesson and narration. The picture is dropped in verse 2 and the bridge, and the lesson never uses it again after the analogy section, so it is not carried through every step. The clipped pairs map neatly onto sister chromatids.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration give the causes: \"The copying comes first so that the cell never splits its only copy of any instruction\"; coiling happens because the DNA would otherwise tangle (\"about 2 metres\"); and the pull gives \"one copy of every chromosome\", so the two sets match because the chromatids are identical. Each link follows from the one before. Metaphase is thinner: the lesson never says why lining up in the middle matters, only that the cell checks every attachment. Telophase and cytokinesis are described but not given a reason. The song carries the gist through v2-5 and v2-6.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines read in order as a chain: copy, coil, line up, pull apart, telophase and cytokinesis. Several are steps with consequences, such as \"Prophase: chromosomes coil tight → moved without tangling\". But the first is a question, not a step. \"Folders = new cells, pages = chromosomes\" is a label. \"Each new cell gets the full set, not half\" has no narration anchor. The line about the prophase step starts on v1-5 and not at the start of the prophase step. The final line, about the drug, is a tangent, and the core idea line is missing at the end.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Key line \"Prophase: chromosomes coil tight → moved without tangling\" (from lyric v1-5 and narration n12)",
+      "problem": "v1-5 sings only the 2-metre length and v1-6 gives the coiling, so the line starts one lyric line before its step is sung.",
+      "correction": "Start this key line at v1-6 \"So prophase coils it tight...\" (or move the line so it matches the sung step)."
+    }
+  ],
+  "accuracy": {
+    "reason": "The science is correct at high-school level: copying in interphase, sister chromatids joined at the centromere, coiling in prophase, the 46 chromosomes, the spindle, taxol, and meiosis dividing twice. One imprecision is that the key line says \"Prophase: chromosomes coil tight → moved without tangling\" while the lyric at that line is about length, not coiling. Another is that the narration describes the lesson's \"cell checks\" step without naming the checkpoint. I find nothing a learner would carry away wrong.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "The chorus is a strong, chantable hook with clean rhymes (\"apart/part\", \"whole/goal\"). Many verse lines run long for a bar, even rapped: v1-5 \"Unwound, one cell's DNA would run about two metres long\" and v2-1 \"In metaphase the fibers hook each chromosome from both sides\" are heavy. Some read like textbook sentences: v1-4 \"Each chromosome's two sister chromatids, clipped as one\" and p2-2 \"But it divides twice, so its cells hold half, for egg and sperm\", which has no rhyme and overruns. v2-7 and v2-8 reach for rhyme with \"and then\" and \"grow again\".",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the knee question, gives the big idea and the folders analogy, and goes step by step. It has a Predict prompt (\"What do you think happens when the fibers start to pull?\") answered right after in anaphase. The misconception is named and corrected, and it ends on \"If a cell started mitosis without first copying its DNA, why could it not make two identical cells?\", which tests the core idea. Weaknesses: eight-plus new terms, and a side trip into taxol and meiosis that is not essential for a first read.",
+    "score": 4
+  }
+}

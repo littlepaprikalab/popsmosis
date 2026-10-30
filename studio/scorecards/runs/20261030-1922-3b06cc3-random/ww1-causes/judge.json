@@ -1,0 +1,52 @@
+{
+  "hook": {
+    "reason": "The title line \"Two shots fired, the allies pile in\" is concrete, easy to sing back and close to the core idea, but \"the allies pile in\" is slightly vague and the Allies were not yet formed in the way it implies. The lesson opens on a real question, \"How could two shots fired in one city pull Europe's great powers into a world war?\". The narration opens on the Archduke's car taking a wrong turn, which is a vivid scene but not from the learner's own world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The schoolyard with two crews promising backup fits the whole alliance mechanism, and it is carried through the lyric (v1-1, v1-2, b-5), the lesson and the narration, with Italy fitting inside it. But it is a somewhat stock picture of escalating fights. It is dropped from the chorus and the second verse, and the narration's \"kid in green\" is never tied to Serbia. It also covers the alliance link better than the Belgium and Schlieffen link.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk through the links in order with causes: \"Fearing each other, the powers split...\", \"Russia, which saw itself as protector of Serbia, began to mobilize\", \"To reach France fast... marched through neutral Belgium\", \"Britain had promised in 1839... so it declared war\". The step from Russian mobilization to Germany declaring war on Russia is only stated, not explained, since the lesson never says Germany treated mobilization as a threat or was bound to Austria. Why Germany declared war on France is left to the check question. The Italy and Marne sections add material outside the chain.",
+    "score": 3
+  },
+  "key_lines": {
+    "reason": "Most lines are steps with arrows, such as \"Fear → Triple Alliance vs. Triple Entente, promising partners help\", and they are short and plain. Several problems remain. The first, \"How did one assassination start a world war?\", is a question rather than a step. \"Germany backs Austria-Hungary → war on Serbia\" is placed at c1-2, away from where Germany's support is sung (v2-1). The Russia line starts at the chorus. The final line leaves the chain at the Marne and Italy, and no line states the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric p1-2: \"Alliances and armies made one killing a world war\" and c1-4 \"France and Britain join\" in the sequence",
+      "problem": "The lyric's chorus order implies France joined after Russia mobilized, and in c1-3 the line \"Russia mobilizes, Germany declares war\" skips that Germany declared on Russia and France as separate steps, which blurs who acted; this is minor and mostly compression.",
+      "correction": "Keep the wording but make clear that Germany declared war on Russia and then France, and that Britain joined over Belgium."
+    },
+    {
+      "claim": "Lyric i-1/c1-1 \"Two shots fired, the allies pile in\"",
+      "problem": "\"The allies\" suggests the Allied powers were all drawn in by the shots, but the Central Powers and the Allies are different sides, and Germany and Austria acted first.",
+      "correction": "Use wording such as \"the powers pile in\" to cover both sides."
+    },
+    {
+      "claim": "Lyric v2-4: \"Germany declared on Russia, then on France, its ally\"",
+      "problem": "\"Its ally\" reads as Germany's ally, but France was Russia's ally.",
+      "correction": "\"then on France, Russia's ally\"."
+    },
+    {
+      "claim": "Lyric c3-1 and the lesson's \"Italy had signed the Triple Alliance... In 1915 it joined the Allies\" with b-6 \"in 1914 it sat tight\"",
+      "problem": "The lyric's claim that Italy's treaty was simply \"just defense\" and that Austria 'made the first move' is fine, but the lesson says Britain's ties had 'no firm promise' while the narration says Britain acted over Belgium, so the schoolyard 'pulled in by promises' framing slightly overstates alliance promises as the cause of Britain's entry.",
+      "correction": "Say plainly that Britain entered because of its 1839 treaty with Belgium, not because of an alliance promise."
+    }
+  ],
+  "accuracy": {
+    "reason": "The main facts are right: the dates, the Schlieffen Plan, the Belgium treaty of 1839, Italy's neutrality and its 1915 switch. The song has a few loose lines, such as \"its ally\" for France in v2-4, which reads as Germany's ally, and \"the allies pile in\" used before the Allies existed as a bloc. The lesson also lets the alliance-promise picture cover Britain, whose entry came from the Belgium treaty. A teacher would tighten these, but a learner would carry away nothing badly wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines read like textbook captions and overrun the bar, such as \"Triple Alliance in the middle, Triple Entente on the flanks\", \"The Schlieffen Plan: beat France first, 'cause Russia mobilizes late\" and \"Germany declared on Russia, then on France, its ally\" (which also bends grammar to rhyme). \"Late/wait\" and \"side/wide\" rhymes are fine. The chorus is a simple, repeatable chant. The long bridge on Italy is a clumsy fit in a song with limited space.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, and the table, the schoolyard picture and the numbered chain are clear. It asks \"What do you think Russia did next?\" and answers it straight away, names the misconception, and ends on a good check, \"why did Germany declare war on France?\". But the misconception sits late, after the chain. The Italy and Marne sections plus NATO add terms and material beyond the core idea, and the check is hard to answer from the lesson, since the Russia-to-France link is never explained.",
+    "score": 3
+  }
+}
