@@ -80,8 +80,6 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
       ELEVENLABS_VOICE_ID: { label: 'The narration’s voice', note: 'Any ElevenLabs voice id, on the ElevenLabs key. A droplet already narrated keeps its voice.' },
       GEMINI_SONG_MODEL: { label: 'The Lyria model, when Lyria sings', note: 'lyria-3.5 sings full songs ($0.08 a song); lyria-3-clip-preview makes 30-second clips ($0.04).', suggest: ['lyria-3.5', 'lyria-3-clip-preview'] },
       ELEVENLABS_USD_PER_1K_CREDITS: { label: 'What 1,000 ElevenLabs credits cost', unit: 'USD', note: 'On your plan, e.g. 0.30, so a droplet’s bill shows its ElevenLabs lines in dollars as well as credits. Unset: credits only.' },
-      STUDIO_PLANNER_PERSONA: { label: 'Where the planner’s persona goes', note: 'record: into its Inkmory record only. lesson: into the bundle prompt as well, so it shapes how the lesson and the song sound. The fact-check never sees it.' },
-      INKMORY_PLANNER_ON_CLAUDE: { label: 'The planner’s record on Claude topics', note: 'true lets the planner keep its Inkmory record on a topic whose brain is Claude; false keeps its record Muse’s only.' },
     },
   },
 ];

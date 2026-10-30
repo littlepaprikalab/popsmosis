@@ -37,11 +37,3 @@ def no_paid_keys(monkeypatch):
     for name in PAID_KEYS:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(brain, "_clients", {})  # nor a client made with a real key before the tests began
-
-
-@pytest.fixture(autouse=True)
-def no_planner_record(monkeypatch):
-    """No test writes to a real Inkmory: a machine with the planner's key set (a routine's environment)
-    would otherwise post to its public record from every test that runs the studio. The planner's own
-    tests (test_inkmory.py) set a key and send to a stand-in."""
-    monkeypatch.delenv("INKMORY_PLANNER_API_KEY", raising=False)

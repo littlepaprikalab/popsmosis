@@ -52,8 +52,6 @@ export const KNOBS = {
     rule: 'a Lyria model id: lowercase letters, digits, dots and hyphens',
   },
   ELEVENLABS_USD_PER_1K_CREDITS: { where: 'studio', kind: 'number', default: null, min: 0, max: 100 },
-  STUDIO_PLANNER_PERSONA: { where: 'studio', kind: 'choice', default: 'record', choices: ['record', 'lesson'] },
-  INKMORY_PLANNER_ON_CLAUDE: { where: 'studio', kind: 'choice', default: 'false', choices: ['false', 'true'] },
 } as const satisfies Record<string, Spec>;
 
 export type KnobName = keyof typeof KNOBS;

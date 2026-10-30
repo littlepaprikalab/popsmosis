@@ -768,7 +768,6 @@ voice are not priced), and SAM found 20 of 20 parts.
 - The SVG art (`ART_PROVIDER=svg`) through the videos: round 16 drew one plan's scenes with it,
   but made no videos from them. Muse Wonder as the brain only for the bundle and fact-check
   (round 5), not through the videos.
-- The planner's Inkmory record (`INKMORY_ENABLED` is not set).
 
 ## Running a round again
 

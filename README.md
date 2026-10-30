@@ -262,7 +262,7 @@ what each does.
 | `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR` | the API's limits on what learners may ask for | from the next request |
 | `QUESTION_CLAIM_MINUTES`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
 | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
-| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS`, `STUDIO_PLANNER_PERSONA`, `INKMORY_PLANNER_ON_CLAUDE` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
+| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
 
 Each API instance keeps the knobs in memory, so the code that reads them stays as fast as an
 environment variable: the instance that takes a change has it at once, and another reads it
@@ -273,33 +273,26 @@ the job's last claim said. Not knobs: the keys, secrets and URLs; what is read o
 machine's (`STUDIO_RENDER_WORKERS`, `STUDIO_JOBS_DIR`); `ATTACHMENT_RETENTION_DAYS`, which the
 Privacy Policy states; and `INKMORY_ENABLED`, which the teacher's own record reads in its shell.
 
-### The planner's record on Inkmory
+### The teacher's record on Inkmory
 
-The brain is also the planner, an agent with a public record on
-[Inkmory](https://inkmory.com): Boojum, adopted from its nursery
-([docs/PLAN.md](docs/PLAN.md), section 11). On every `run` that writes the bundle or the
-fact-check, the studio reads Boojum's context first and, once the run has ended (after the
-post, so the lesson never waits for it), asks the brain to write Boojum's record of the run
-and posts it (`studio/inkmory.py`): a journal entry, its life story when due (its first,
-then a rewrite about every ten beats), a bio or vibe change with the inner thought Inkmory
-requires, and the cycle log, always and last. The journal entry and the cycle log are
-tagged `popsmosis:<id>`, so the lesson card's "Teacher's notes" finds them. It is best
-effort: a failed call is logged and skipped, never the run's outcome, and when the record
-call itself fails the studio still logs the cycle. The operator can hand the planner an
-observation for a topic's lesson, from what it has seen go wrong in recent droplets:
-`python -m studio run <id> --note "..."` ends the bundle prompt with it, and the
-planner's record gets it too ([docs/PLAN.md](docs/PLAN.md), section 11, "The operator's
-note to the planner"). The record call is logged to
-`calls.jsonl` at the step `planner`, outside the droplet's bill: about 15 seconds, and a
-cent or two on Muse Spark.
+The teacher, the studio's operator, keeps a public record on [Inkmory](https://inkmory.com)
+as Muon: on a run that found work it reads who it is first and writes down what happened
+last, a journal entry and the cycle log tagged `popsmosis:<id>`, so the lesson card's
+"Teacher's notes" finds them ([docs/popsmosis-agent-skill.md](docs/popsmosis-agent-skill.md),
+steps 1 and 5; [docs/PLAN.md](docs/PLAN.md), section 11). The studio never calls Inkmory. The
+brain keeps no record of its own: it is one model call per step, not an agent, and carries
+nothing from one topic to the next.
+
+What the teacher learns reaches the brain one way. It can hand the brain an observation for a
+topic's lesson, from what it has seen go wrong in recent droplets: `python -m studio run <id>
+--note "..."` ends the bundle prompt with it, and the fact-check never sees it
+([docs/PLAN.md](docs/PLAN.md), section 11, "The operator's note to the brain").
 
 | Variable | Values | Default | What it does |
 |---|---|---|---|
-| `INKMORY_API_URL` | Inkmory's base URL | none | The same one the operator's record uses |
-| `INKMORY_PLANNER_API_KEY` | Boojum's `sk_inkmory_…` key, from the sponsor dashboard | none | Turns the planner's record on. Only `studio/inkmory.py` reads it |
-| `INKMORY_ENABLED` | `false` | on | `false` turns Inkmory off: both agents' records |
-| `STUDIO_PLANNER_PERSONA` | `record` or `lesson` | `record` | Where Boojum's persona and memory go: into the record call only, or into the bundle prompt as well, so they shape how the lesson and the song sound. The fact-check never sees them. A [knob](#knobs) |
-| `INKMORY_PLANNER_ON_CLAUDE` | `true` | unset | Lets the planner keep its record on a topic whose brain is Claude. Unset, it keeps one only on a Muse brain (Muse Wonder or Muse Spark, the Studio page's default or a topic's own), so every entry in Boojum's record is Muse's. A [knob](#knobs) |
+| `INKMORY_API_URL` | Inkmory's base URL | none | With the key, turns the teacher's record on |
+| `INKMORY_OPERATOR_API_KEY` | Muon's `sk_inkmory_…` key, from the sponsor dashboard | none | Read only by the skill file's commands |
+| `INKMORY_ENABLED` | `false` | on | `false` turns Inkmory off and leaves everything else as it is |
 
 ## Tests
 

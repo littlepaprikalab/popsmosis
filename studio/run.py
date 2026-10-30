@@ -9,15 +9,10 @@ from the queue and runs this on its id. The steps, each done once its file exist
     factcheck  factcheck.json               done only once it has passed
     post       posted.json                  the lesson, bundle and fact-check, saved on the API
 
-`run <id> --note "..."` hands the planner an observation from the operator, from what
+`run <id> --note "..."` hands the brain an observation from the operator, from what
 it has seen in the work (a picture that keeps coming back with text in it): it ends the
 bundle prompt, and the fact-check never sees it (NOTE_MAX characters, an observation that
 changes no rule; docs/popsmosis-agent-skill.md says when to pass one).
-
-A run that runs the bundle or the fact-check is also the planner's beat on Inkmory
-(studio/inkmory.py): it reads the planner's context before the first of them, and
-writes the planner's record once the run has ended. Best effort: it never changes the
-run's outcome.
 
 `run` starts at the first step that is not done, so running it again after a
 failure retries the step that failed. Before each step but the post it claims the
@@ -61,7 +56,7 @@ import time
 import traceback
 from pathlib import Path
 
-from studio import brain, checks, inkmory, jobs, knobs, ledger
+from studio import brain, checks, jobs, knobs, ledger
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -75,7 +70,7 @@ EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3}
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
 REASON_MAX = 400  # POST /api/questions/:id/fail takes 500, with the step in front
 CYCLE_LOG_MAX = 1000  # what an Inkmory cycle log holds (docs/PLAN.md, section 11)
-NOTE_MAX = 500  # the operator's note to the planner: an observation or two, never a brief
+NOTE_MAX = 500  # the operator's note to the brain: an observation or two, never a brief
 # The media steps whose line says what went wrong inside them even when they passed: the pictures refused,
 # the structures left out, the song lines the aligner was unsure of or that drifted.
 NOTED_STEPS = ("art", "locate", "timing")
@@ -154,7 +149,7 @@ def record_interrupted(job: Path) -> None:
 
 def run(question_id: str, api: Api | None = None, ask=None, note: str = "") -> tuple[str, str, str]:
     """Run the steps that are not done yet; return (DONE | FAILED | STOPPED, step, reason). note: the
-    operator's observation for the planner, given to the bundle if this run writes one."""
+    operator's observation for the brain, given to the bundle if this run writes one."""
     note = clean_note(note)
     if ask is None:  # the real brain: the default brain is checked before the topic is claimed
         retired = brain.retired_problem()
@@ -273,7 +268,6 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
     started, clock = time.strftime("%Y-%m-%dT%H:%M:%S%z"), time.monotonic()
     done_steps: list[dict] = []
     reporter = ledger.Reporter()
-    planner = inkmory.Planner()  # its beat: begun before its first step this run, if any
     result, step, reason = DONE, "post", "the lesson was already posted"
     # From the first step that is not done, every step runs: a new bundle makes the fact-check stale.
     first = next((i for i, name in enumerate(STEPS) if not is_done(job, name)), len(STEPS))
@@ -289,10 +283,8 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
                     use_brain(job, question, check_brain)
                 if step != "post":  # the post makes the answer, which the videos' reports go on
                     report_progress(reporter, job, api, {step: step_clock})
-                if step in inkmory.STEPS:
-                    planner.begin()
                 if step == "bundle":
-                    reason = make_bundle(job, api, question, ask, persona=planner.lesson_voice(), note=note)
+                    reason = make_bundle(job, api, question, ask, note=note)
                 else:
                     reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
@@ -324,10 +316,6 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
         with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
             log.write(json.dumps(record, ensure_ascii=False) + "\n")
     (job / "run.current.json").unlink(missing_ok=True)
-    # Last, once the run is on record: the lesson is never held up by it, a kill now is not a failed
-    # run, and the record sees this run's outcome.
-    # The note is the planner's to answer only when this run's bundle was written with it.
-    planner.finish(job, ask, note=note if any(s["step"] == "bundle" for s in done_steps) else "")
     return result, step, reason
 
 
@@ -421,8 +409,8 @@ def download(api: Api, url: str) -> bytes | None:
         raise
 
 
-def make_bundle(job: Path, api: Api, question: dict, ask, persona: str = "", note: str = "") -> str:
-    bundle = bundle_step.run(job, ask=ask, persona=persona, note=note)
+def make_bundle(job: Path, api: Api, question: dict, ask, note: str = "") -> str:
+    bundle = bundle_step.run(job, ask=ask, note=note)
     return f"{bundle.course} / {bundle.topic}"
 
 

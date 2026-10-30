@@ -1,7 +1,7 @@
 """The knobs an admin sets on /admin/studio over this machine's environment (api/src/lib/knobs.ts).
 
 Each is an environment variable the studio has always read: STUDIO_VIDEOS, ELEVENLABS_VOICE_ID,
-GEMINI_SONG_MODEL, ELEVENLABS_USD_PER_1K_CREDITS, STUDIO_PLANNER_PERSONA and INKMORY_PLANNER_ON_CLAUDE.
+GEMINI_SONG_MODEL and ELEVENLABS_USD_PER_1K_CREDITS.
 Set on the page, its value wins; cleared there, the variable is read again, else the code's default.
 
 The page's values come with the studio's settings, as `knobs`, by name: from GET /api/studio/settings

@@ -107,7 +107,7 @@ def motion_text(carries: str, particles: list[str], blocked: bool = False) -> st
 
 def is_checked(scene: str, carries: str, particles: list[str]) -> bool:
     """Whether a flow goes to the fact-check: every one with a path, but an unmarked one on the hook or the analogy.
-    Unmarked, the planner sent dots from Romeo to the audience and from one point of a graph to another (Oct 29)."""
+    Unmarked, the brain sent dots from Romeo to the audience and from one point of a graph to another (Oct 29)."""
     return len(particles) >= 2 and (bool(carries) or scene not in EVERYDAY)
 
 

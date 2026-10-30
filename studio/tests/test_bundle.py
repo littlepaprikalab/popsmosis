@@ -29,7 +29,7 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
 
 def test_the_prompt_holds_for_topics_outside_science():
     # Six droplets on Oct 29 (literature, history, calculus, economics, chemistry, biology): outside science the
-    # planner sent unmarked dots between characters, ended the narration on "in goes a function, out comes a
+    # brain sent unmarked dots between characters, ended the narration on "in goes a function, out comes a
     # number", and sang the verses' story again in the bridge.
     prompt = " ".join(bundle_step.PROMPT.split())
     assert "never a route made up to keep the dots busy" in prompt and "their scenes hold still" in prompt

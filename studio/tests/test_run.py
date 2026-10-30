@@ -652,7 +652,7 @@ def test_a_brain_this_studio_does_not_have_stops_rather_than_gives_the_topic_up(
     assert (result, step) == ("STOPPED", "request") and "update the studio" in reason
 
 
-# --- the operator's note to the planner, and each step's line -------------------------------
+# --- the operator's note to the brain, and each step's line ---------------------------------
 
 
 class Recording(FakeBrain):
