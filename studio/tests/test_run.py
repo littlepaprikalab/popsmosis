@@ -924,7 +924,7 @@ def test_the_command_line_starts_the_lesson_in_the_background_and_waits_on_it(jo
     assert capsys.readouterr().out.splitlines()[-1] == "RUNNING bundle: still going"
 
 
-def test_with_the_song_off_on_the_studio_page_the_lesson_is_written_checked_and_posted_with_no_song(jobs_root):
+def test_with_the_song_off_on_the_studio_page_the_lesson_is_written_checked_and_posted_with_no_song(jobs_root, capsys):
     """STUDIO_VIDEOS=lesson, as the claim carries it: the bundle is asked for without its song, the fact-check
     checks no lyric, style or song tag and never calls the songwriter, and the lesson posted has no song."""
     api, ask = FakeApi(), FakeBrain()
@@ -938,4 +938,9 @@ def test_with_the_song_off_on_the_studio_page_the_lesson_is_written_checked_and_
     assert not [c for c in report.lines if c.kind in ("lyric", "style", "avoid") or c.id.startswith("song-")]
     assert ("keyline", "n1") in {(c.kind, c.id) for c in report.lines}
     assert api.posted["bundle"]["lyrics"] == [] and api.posted["bundle"]["tags"]["song"] == []
+    from studio.__main__ import main
+
+    capsys.readouterr()
+    assert main(["show", "q1"]) == 0
+    assert "No song: written for the lesson video alone" in capsys.readouterr().out
 
