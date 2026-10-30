@@ -306,18 +306,34 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   memorized. Numbered steps for a process, a small table to compare or sort, an analogy
   where it makes an abstract idea concrete. Use markdown (GitHub-flavored, so tables work
   too). Keep to `key_terms`; any other name at most once.
+- **Carry the analogy through.** Set it up once, near the top, saying in words what each
+  of its parts stands for (never by a colour or a place in a picture: the lesson has no
+  picture), then call each step by its part of the analogy as the step is taught ("Copy
+  first: every page gets its photocopy"). An analogy kept to a section of its own is
+  forgotten by the second step.
 - **Make the learner think once in the middle.** One "predict" question before the answer
   is given ("What do you think happens to the protons piling up in the lumen?"), answered
-  in the next sentence.
+  in the next sentence. Ask it where the steps just taught give the learner what they need
+  to work the answer out, and before any sentence gives it away: never a fact they have not
+  met yet ("What do you think Russia did next?" before they know Russia backed Serbia), and
+  never what the sentence before it has just said.
 - **Link to what they know.** Where the facts give it, one sentence on what this resembles
-  that they have met before.
+  that they have met before, inside the step it explains.
 - **Pitch it to the audience.** Write for a learner at that level meeting the topic for
   the first time, unless the request says they know more.
 - **Make it vivid.** Explain with the droplet's analogy, a concrete example and why it
-  matters to the learner, all from the facts. Leave out fun facts that don't help explain
-  the idea: they pull attention away from it.
-- **Correct the misconception.** After the right idea, name the common mistake once and
-  say why it is wrong.
+  matters to the learner, all from the facts. Leave out fun facts and side details that
+  don't help explain the idea: they pull attention away from it.
+- **Correct the misconception where it would form.** Name the common mistake once, right
+  after the step or idea it is about, and say why it is wrong, so the learner meets the
+  right idea and the trap together. Never before they have met what it is about, and never
+  in a section of its own after the steps.
+- **One path, then the end.** After the last step comes at most one case (one example the
+  facts give, worked cause before effect, in a short paragraph), then the check. What the
+  topic leads to next in the course is one sentence before the check, or nothing. Nothing
+  else follows the path: the facts also carry what the song and the videos need (the
+  song's surprise, its bridge, what comes next), and the lesson uses each only where it
+  explains a step.
 - **Be right.** Say when something is simplified. Never invent figures, dates or quotes;
   leave out what you are unsure of rather than guess.
 - **End with a check on the essence.** Close with one short question that a learner can
