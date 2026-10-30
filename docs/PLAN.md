@@ -375,11 +375,13 @@ drawing goes on the house page, the dark slate blue the painted art is asked for
 bundle's colours are picked for. A graph (a scene with `axes`) also has its lines drawn flat
 at one weight with a soft glow of their own colour, its axes (which the brain marks
 `<g data-role="axes">`) pale with arrowheads over a faint grid, and its points (marked
-`data-role="point"`) as rings. The glow is part of its structure's mask, so a line's ghost
-and its spotlight take its glow with it. The drawing is kept as the brain made it and styled
+`data-role="point"`) as rings. A line keeps its dash and its fading, a band its width, and
+a shape its mask. The glow is one layer under every structure, one blur however many there
+are, and each structure's copy in it is part of that structure's mask, so a line's ghost and
+its spotlight take its glow with it. The drawing is kept as the brain made it and styled
 before it is rasterised, so a new look (`svg.LOOK`, kept with each scene's locations) is no
 new drawing: the art step styles the kept drawings again, with no call to the brain. Styling
-takes under a millisecond; a graph's glows add about half a second to rasterising it, once.
+takes under a millisecond, and the glow about a fifth of a second to rasterise, once a scene.
 
 ### Step 4: locate
 

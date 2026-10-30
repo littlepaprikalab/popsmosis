@@ -172,9 +172,10 @@ def masks(root: ET.Element, names: list[str]) -> dict[str, np.ndarray]:
 
     A soft shadow or glow drawn inside the structure's own group (see-through, under a
     filter that only blurs) is not the structure, so it is left out of the mask, unless
-    the structure is nothing else. The house's glow (style(), marked data-role="glow") is part
-    of how the structure looks, so it is in the mask: the renderer's washes then dim it with
-    its line while the line is a ghost, and leave it lit while the line is the spotlight.
+    the structure is nothing else. The house's glow (style(): a layer marked data-role="glow",
+    each copy in it marked data-glow-of its structure) is part of how the structure looks, so it
+    is in the mask: the renderer's washes then dim it with its line while the line is a ghost,
+    and leave it lit while the line is the spotlight.
     """
     prepared = _prepared(root)
     found = {}
@@ -229,12 +230,21 @@ LOOK = "1"  # the look below, kept with each scene's locations: change it whenev
 PAGE = "#28374B"  # the dark slate blue behind every drawing
 ROLE = "data-role"  # what a graph's context is: "axes" on the group of its axes, "point" on a point's circle
 LINE_WIDTH = 8.0  # a graph's lines, whatever width they were drawn
+BAND = 28.0  # a stroke wider than this is a band (a region drawn as one stroke), not a line: it keeps its width
 AXIS_WIDTH = 3.0
+AXIS_SHARE = 0.3  # an axis spans this share of the canvas's width (across) or height (up) at least; shorter is a tick
 POINT_WIDTH = 5.0  # a point's ring
 ARROW = 16.0  # an axis's arrowhead, from its tip back
 GRID_STEP = 72.0  # between a graph's grid lines, from where its axes cross
-GLOW = "house-glow"  # the id of the glow's filter, under every structure of a graph
+GLOW = "house-glow"  # the id of the glow's filter
+GLOW_OF = "data-glow-of"  # on each structure's copy in the glow: whose glow it is
 GLOW_BLUR, GLOW_SPREAD, GLOW_OPACITY = 7.0, 3.0, 0.45  # its blur, its width as a multiple of the line's, how strong
+# What a repaint replaces. A mask or a clip, which shape what is drawn, and a dash, which may mean something (an
+# asymptote), are kept.
+REPAINTED = ("fill", "stroke", "opacity", "fill-opacity", "stroke-opacity", "filter", "stroke-width", "stroke-linecap",
+             "stroke-linejoin", "stroke-dasharray")
+NUMBER = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
+PATH_TOKEN = re.compile(rf"[A-Za-z]|{NUMBER.pattern}")
 
 
 def _mix(color: str, white: float) -> str:
@@ -272,25 +282,28 @@ def _style_graph(root: ET.Element, parent: dict, colours: dict[str, str]) -> Non
     # The brain's shading: shadows and highlights, see-through or blurred shapes in black or white.
     for el in [el for el in root.iter() if _local(el.tag) in SHAPES and _drawn(el, parent) and _shading(el, parent)]:
         parent[el].remove(el)
-    for axes in [g for g in root.iter(f"{{{NS}}}g") if g.get(ROLE) == "axes" and _owner(g, parent) is None]:
+    for axes in [g for g in root.iter(f"{{{NS}}}g")
+                 if g.get(ROLE) == "axes" and _drawn(g, parent) and _owner(g, parent) is None]:
         _style_axes(root, defs, axes, parent)
-    for group in [g for g in root.iter() if g.get(MARK) in colours]:
+    groups = [g for g in root.iter() if g.get(MARK) in colours and _drawn(g, parent)]
+    for group in groups:
         _style_structure(group, colours[group.get(MARK)], parent)
+    if groups:
+        _glow(root, groups, parent)
 
 
 def _style_axes(root: ET.Element, defs: ET.Element, axes: ET.Element, parent: dict) -> None:
     """Pale, thin axes with an arrowhead at the far end of each (right, up), over a faint grid from where they
-    cross. Only <line>s are measured for the arrowheads and the grid; any other shape is just repainted."""
+    cross. An axis is a straight line, path or polyline across or up most of the canvas; a tick is too short."""
     across, up = [], []
-    for el in axes.iter():
-        if _local(el.tag) not in SHAPES:
-            continue
+    for el in [el for el in axes.iter() if _local(el.tag) in SHAPES and _drawn(el, parent)]:
         _repaint(el, fill="none", stroke=AXIS_INK, **{"stroke-width": f"{AXIS_WIDTH:g}", "stroke-linecap": "round"})
-        if _local(el.tag) == "line" and not _transformed(el, parent):
-            x1, y1, x2, y2 = (_number(el.get(k)) for k in ("x1", "y1", "x2", "y2"))
-            if abs(y2 - y1) <= 0.05 * abs(x2 - x1):
+        if _moved(el, axes, parent):
+            continue  # its coordinates are not the axes group's
+        for x1, y1, x2, y2 in _segments(el):
+            if abs(y2 - y1) <= 0.05 * abs(x2 - x1) and abs(x2 - x1) >= AXIS_SHARE * ART_WIDTH:
                 across.append((min(x1, x2), max(x1, x2), (y1 + y2) / 2))
-            elif abs(x2 - x1) <= 0.05 * abs(y2 - y1):
+            elif abs(x2 - x1) <= 0.05 * abs(y2 - y1) and abs(y2 - y1) >= AXIS_SHARE * ART_HEIGHT:
                 up.append((min(y1, y2), max(y1, y2), (x1 + x2) / 2))
     a, w = ARROW, ARROW * 0.6
     for _, x1, y in across:
@@ -303,7 +316,8 @@ def _style_axes(root: ET.Element, defs: ET.Element, axes: ET.Element, parent: di
         return
     left, right = min(x0 for x0, _, _ in across), max(x1 for _, x1, _ in across)
     top, bottom = min(y0 for y0, _, _ in up), max(y1 for _, y1, _ in up)
-    cx, cy = up[0][2], across[0][2]
+    cx = max(up, key=lambda line: line[1] - line[0])[2]  # where the longest of each crosses
+    cy = max(across, key=lambda line: line[1] - line[0])[2]
     grid = ET.Element(f"{{{NS}}}g")
     # Each line carries its own paint: skia does not hand a group's stroke down to the lines in it.
     paint = {"stroke": GRID_INK, "stroke-width": "1.5"}
@@ -311,7 +325,7 @@ def _style_axes(root: ET.Element, defs: ET.Element, axes: ET.Element, parent: di
         ET.SubElement(grid, f"{{{NS}}}line", x1=f"{x:g}", y1=f"{top:g}", x2=f"{x:g}", y2=f"{bottom:g}", **paint)
     for y in _steps(cy, top, bottom):
         ET.SubElement(grid, f"{{{NS}}}line", x1=f"{left:g}", y1=f"{y:g}", x2=f"{right:g}", y2=f"{y:g}", **paint)
-    root.insert(list(root).index(defs) + 1, grid)  # under everything
+    root.insert(list(root).index(defs) + 1, _placed(grid, axes, parent, root))  # under everything
 
 
 def _steps(origin: float, low: float, high: float) -> list[float]:
@@ -321,43 +335,124 @@ def _steps(origin: float, low: float, high: float) -> list[float]:
 
 
 def _style_structure(group: ET.Element, colour: str, parent: dict) -> None:
-    """A graph's structure, flat in its colour: a line at LINE_WIDTH, a filled shape (a region, a marked corner)
-    filled with its colour where it had a gradient, a point a ring on the page; then a glow of its colour under it,
-    blurred and see-through, which masks() counts as the structure's (data-role="glow") and no other's."""
+    """A graph's structure, flat in its colour: a line at LINE_WIDTH (a band keeps its width), a filled shape (a
+    region, a marked corner) filled with its colour where it had a gradient, a point a ring on the page. A line's
+    dash and a see-through line or region (an earlier secant drawn faded) keep what they mean."""
     for el in group.iter():
+        if not _drawn(el, parent):
+            continue  # in a mask, a clip or a gradient: its paint shapes what is drawn
         el.attrib.pop("filter", None)  # the brain's own shadow or glow: the house draws its own
         if _local(el.tag) not in SHAPES:
             continue
-        fill = _paint(el, parent, "fill", "none" if _local(el.tag) == "line" else "black")
-        stroke = _paint(el, parent, "stroke", "none")
+        fill = _inherited(el, parent, "fill", "none" if _local(el.tag) == "line" else "black")
+        stroke = _inherited(el, parent, "stroke", "none")
+        kept = {k: v for k in ("opacity", "fill-opacity", "stroke-opacity", "stroke-dasharray")
+                if (v := _prop(el, k)) is not None}
         if el.get(ROLE) == "point":
-            _repaint(el, fill=PAGE, stroke=colour, **{"stroke-width": f"{POINT_WIDTH:g}"})
+            _repaint(el, fill=PAGE, stroke=colour, **{"stroke-width": f"{POINT_WIDTH:g}"}, **kept)
         elif fill == "none":
-            _repaint(el, fill="none", stroke=colour, **{"stroke-width": f"{LINE_WIDTH:g}", "stroke-linecap": "round",
-                                                        "stroke-linejoin": "round"})
+            width = _number(_inherited(el, parent, "stroke-width", "1"), 1.0)
+            _repaint(el, fill="none", stroke=colour, **{"stroke-width": f"{width if width > BAND else LINE_WIDTH:g}",
+                                                        "stroke-linecap": "round", "stroke-linejoin": "round"}, **kept)
         else:
-            # A region may be see-through; its outline keeps its width, in the structure's colour.
-            kept = {k: v for k in ("opacity", "fill-opacity", "stroke-width")
-                    if (v := _style(el).get(k, el.get(k))) is not None}
+            if (width := _prop(el, "stroke-width")) is not None:
+                kept["stroke-width"] = width  # an outline keeps its width, in the structure's colour
             _repaint(el, fill=colour if URL.search(fill) else fill, stroke=colour if stroke != "none" else "none",
                      **kept)
-    halo = ET.Element(f"{{{NS}}}g", {"filter": f"url(#{GLOW})", "opacity": f"{GLOW_OPACITY:g}"})
-    for child in list(group):
-        halo.append(copy.deepcopy(child))
-    for el in halo.iter():
-        el.attrib.pop("id", None)
-        el.attrib.pop(ROLE, None)
-        if _local(el.tag) in SHAPES and el.get("stroke", "none") != "none":
-            el.set("stroke-width", f"{_number(el.get('stroke-width'), 1.0) * GLOW_SPREAD:g}")
-    halo.set(ROLE, "glow")  # after: the copies' roles (a point's) are dropped above
-    group.insert(0, halo)
 
 
-def _paint(el: ET.Element, parent: dict, key: str, default: str) -> str:
-    """The paint an element is drawn with, its own or the nearest group's that sets it."""
+def _glow(root: ET.Element, groups: list[ET.Element], parent: dict) -> None:
+    """One layer under every structure, of a copy of each in its colour, wider, blurred and see-through: one blur
+    for the whole graph, however many structures it has (a blur each took 0.2 s apiece). Each copy names its
+    structure (GLOW_OF), and masks() counts it as that structure's and no other's."""
+    layer = ET.Element(f"{{{NS}}}g", {ROLE: "glow", "filter": f"url(#{GLOW})", "opacity": f"{GLOW_OPACITY:g}"})
+    for group in groups:
+        halo = copy.deepcopy(group)
+        halo.set(GLOW_OF, halo.attrib.pop(MARK))
+        for el in halo.iter():
+            el.attrib.pop("id", None)
+            if el is not halo:
+                el.attrib.pop(ROLE, None)
+                el.attrib.pop(MARK, None)
+            if _local(el.tag) in SHAPES and el.get("stroke", "none") != "none":
+                el.set("stroke-width", f"{_number(el.get('stroke-width'), 1.0) * GLOW_SPREAD:g}")
+        layer.append(_placed(halo, parent.get(group), parent, root))
+    top = groups[0]
+    while parent.get(top) is not root:
+        top = parent[top]
+    root.insert(list(root).index(top), layer)
+
+
+def _placed(el: ET.Element, inside: ET.Element | None, parent: dict, root: ET.Element) -> ET.Element:
+    """el, to go at the root, wrapped in the transforms of `inside` and the groups it is in, so it lands where it
+    would inside `inside`."""
+    at = inside
+    while at is not None and at is not root:
+        if at.get("transform"):
+            wrapper = ET.Element(f"{{{NS}}}g", transform=at.get("transform"))
+            wrapper.append(el)
+            el = wrapper
+        at = parent.get(at)
+    return el
+
+
+def _segments(el: ET.Element) -> list[tuple[float, float, float, float]]:
+    """The straight pieces of a line, a polyline or a path of straight moves only (M, L, H, V, Z), each as
+    (x1, y1, x2, y2); [] for anything with a curve in it, or that does not read."""
+    tag = _local(el.tag)
+    try:
+        if tag == "line":
+            return [(_number(el.get("x1")), _number(el.get("y1")), _number(el.get("x2")), _number(el.get("y2")))]
+        if tag == "polyline":
+            v = [float(n) for n in NUMBER.findall(el.get("points", ""))]
+            points = list(zip(v[0::2], v[1::2]))
+            return [(*a, *b) for a, b in zip(points, points[1:])]
+        if tag != "path":
+            return []
+        tokens, i, out = PATH_TOKEN.findall(el.get("d", "")), 0, []
+        x = y = 0.0
+        start, command = (0.0, 0.0), None
+        while i < len(tokens):
+            if tokens[i].isalpha():
+                command, i = tokens[i], i + 1
+            if command is None or command.upper() not in "MLHVZ":
+                return []
+            relative, kind = command.islower(), command.upper()
+            if kind == "Z":
+                out.append((x, y, *start))
+                (x, y), command = start, None
+            elif kind in "ML":
+                nx, ny = float(tokens[i]), float(tokens[i + 1])
+                i += 2
+                if relative:
+                    nx, ny = x + nx, y + ny
+                if kind == "M":
+                    start, command = (nx, ny), ("l" if relative else "L")  # pairs after a move are lines
+                else:
+                    out.append((x, y, nx, ny))
+                x, y = nx, ny
+            else:
+                n = float(tokens[i])
+                i += 1
+                nx, ny = ((x + n if relative else n), y) if kind == "H" else (x, (y + n if relative else n))
+                out.append((x, y, nx, ny))
+                x, y = nx, ny
+        return out
+    except (ValueError, IndexError):
+        return []
+
+
+def _prop(el: ET.Element, key: str) -> str | None:
+    """A presentation property of the element itself, its style attribute first."""
+    value = _style(el).get(key)
+    return value if value is not None else el.get(key)
+
+
+def _inherited(el: ET.Element, parent: dict, key: str, default: str) -> str:
+    """A property the element is drawn with, its own or the nearest group's that sets it."""
     at = el
     while at is not None:
-        value = _style(at).get(key)
+        value = _prop(at, key)
         if value is not None and value != "inherit":
             return value
         at = parent.get(at)
@@ -365,11 +460,10 @@ def _paint(el: ET.Element, parent: dict, key: str, default: str) -> str:
 
 
 def _repaint(el: ET.Element, **props: str) -> None:
-    """Set an element's paint, dropping whatever paint and stroke styling it had, in attributes or its style."""
-    gone = set(PAINT_PROPS) | {"stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-dasharray"}
-    for key in gone:
+    """Set an element's paint, dropping whatever REPAINTED it had, in attributes or its style."""
+    for key in REPAINTED:
         el.attrib.pop(key, None)
-    rest = [p for p in el.get("style", "").split(";") if p.strip() and p.partition(":")[0].strip() not in gone]
+    rest = [p for p in el.get("style", "").split(";") if p.strip() and p.partition(":")[0].strip() not in REPAINTED]
     if rest:
         el.set("style", ";".join(rest))
     else:
@@ -396,22 +490,31 @@ def _owner(el: ET.Element, parent: dict) -> str | None:
     return None
 
 
+def _moved(el: ET.Element, within: ET.Element, parent: dict) -> bool:
+    """Whether a transform moves the element inside `within`: on itself or a group between them."""
+    while el is not None and el is not within:
+        if el.get("transform"):
+            return True
+        el = parent.get(el)
+    return False
+
+
 NAMED = {"black": "#000000", "white": "#FFFFFF"}
 
 
 def _shading(el: ET.Element, parent: dict) -> bool:
     """A shadow or a highlight: black or near white, and see-through or blurred, itself or by a group it is in."""
-    fill = _paint(el, parent, "fill", "none" if _local(el.tag) == "line" else "black")
+    fill = _inherited(el, parent, "fill", "none" if _local(el.tag) == "line" else "black")
     key = "fill" if fill != "none" else "stroke"
-    paint = fill if fill != "none" else _paint(el, parent, "stroke", "none")
+    paint = fill if fill != "none" else _inherited(el, parent, "stroke", "none")
     color = _hex(NAMED.get(paint, paint))
     if color is None or not (color == "#000000" or min(int(color[i:i + 2], 16) for i in (1, 3, 5)) >= 0xC8):
         return False
-    if _opacity(_paint(el, parent, f"{key}-opacity", "1")) < 1:
+    if _opacity(_inherited(el, parent, f"{key}-opacity", "1")) < 1:
         return True
     at = el
     while at is not None:
-        if _opacity(_style(at).get("opacity")) < 1 or _style(at).get("filter"):
+        if _opacity(_prop(at, "opacity")) < 1 or _prop(at, "filter"):
             return True
         at = parent.get(at)
     return False
@@ -425,15 +528,6 @@ def _covers_page(rect: ET.Element) -> bool:
     x, y = size("x", ART_WIDTH), size("y", ART_HEIGHT)
     return (x <= 0 and y <= 0 and x + size("width", ART_WIDTH) >= ART_WIDTH
             and y + size("height", ART_HEIGHT) >= ART_HEIGHT)
-
-
-def _transformed(el: ET.Element, parent: dict) -> bool:
-    """Whether a transform moves the element, on itself or any group it is in."""
-    while el is not None:
-        if el.get("transform"):
-            return True
-        el = parent.get(el)
-    return False
 
 
 def _number(value: str | None, default: float = 0.0) -> float:
@@ -552,7 +646,7 @@ def _painted(root: ET.Element, name: str, keep_soft: bool = False) -> ET.Element
         stroke_op = _opacity(props.get("stroke-opacity")) if "stroke-opacity" in props else stroke_op
         opacity *= _opacity(props.get("opacity"))
         blurred = blurred or any(ref.lstrip("#") in soft for ref in URL.findall(props.get("filter", "")))
-        owner = el.get(MARK, owner)
+        owner = el.get(MARK, el.get(GLOW_OF, owner))
         glow = glow or el.get(ROLE) == "glow"
         for key in PAINT_PROPS:
             el.attrib.pop(key, None)

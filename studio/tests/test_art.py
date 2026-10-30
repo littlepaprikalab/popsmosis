@@ -1,6 +1,7 @@
 """The art and locate steps, with a stand-in brain that answers with the SVGs in studio/tests/art/."""
 
 import copy
+import xml.etree.ElementTree as ET
 import shutil
 from pathlib import Path
 
@@ -449,19 +450,27 @@ def shapes(root, structure: str | None = None):
     return [el for g in groups for el in g.iter() if svg._local(el.tag) in svg.SHAPES]
 
 
+def glow_layer(root):
+    return [el for el in root if el.get(svg.ROLE) == "glow"][0]
+
+
+def without_glow(root):
+    plain = copy.deepcopy(root)
+    plain.remove(glow_layer(plain))
+    return plain
+
+
 def test_a_graph_is_drawn_in_the_house_look():
     root = styled(a_graph())
     colours = lambda els, key: {el.get(key) for el in els}
-    halo, *drawn = [el for el in root.iter() if el.get(svg.MARK) == "Curve"][0]
-    assert halo.get("filter") == f"url(#{svg.GLOW})" and float(halo.get("opacity")) < 0.5  # soft: masks leave it out
-    line = [el for el in drawn if el.get(svg.ROLE) != "point"]
+    curve = shapes(root, "Curve")
+    line = [el for el in curve if el.get(svg.ROLE) != "point"]
     # The brain's outline, gradient and highlight are one flat line now, in its colour, at the house weight.
     assert len(line) == 2 and colours(line, "stroke") == {"#4FC3F7"} and colours(line, "stroke-width") == {"8"}
-    point = [el for el in drawn if el.get(svg.ROLE) == "point"][0]
+    point = [el for el in curve if el.get(svg.ROLE) == "point"][0]
     assert (point.get("fill"), point.get("stroke")) == (svg.PAGE, "#4FC3F7")  # a ring on the page
-    corner = shapes(root, "Corner")
-    assert [el.tag.split("}")[1] for el in corner] == ["circle", "circle"]  # its glow, and it: the highlight is gone
-    assert corner[1].get("fill") == "#FF4D4D" and corner[1].get("stroke") == "#FF4D4D"
+    [corner] = shapes(root, "Corner")  # its highlight is gone
+    assert corner.get("fill") == "#FF4D4D" and corner.get("stroke") == "#FF4D4D"
     # The page and the shadow are gone.
     assert not [el for el in root.iter() if el.get("width") == "100%"]
     assert not [el for el in shapes(root) if el.get("stroke") == "#000000"]
@@ -475,6 +484,12 @@ def test_a_graph_is_drawn_in_the_house_look():
     ys = sorted(float(el.get("y1")) for el in grid if el.get("y1") == el.get("y2"))
     assert xs[0] == 380 + svg.GRID_STEP and xs[-1] < 1470 and all(b - a == svg.GRID_STEP for a, b in zip(xs, xs[1:]))
     assert ys[-1] == 880 - svg.GRID_STEP and ys[0] > 120
+    # One glow for the whole graph, under every structure, with a copy of each.
+    layer = glow_layer(root)
+    order = list(root)
+    assert order.index(grid) < order.index(layer) < min(order.index(g) for g in root if g.get(svg.MARK))
+    assert [el.get(svg.GLOW_OF) for el in layer] == ["Curve", "Corner"]
+    assert sum(f"url(#{svg.GLOW})" in (el.get("filter") or "") for el in root.iter()) == 1
 
 
 def test_the_glow_is_its_structures_and_hides_no_other():
@@ -483,17 +498,16 @@ def test_the_glow_is_its_structures_and_hides_no_other():
     tangent = ('<g data-structure="Tangent"><line x1="600" y1="760" x2="940" y2="610" stroke="#FFD23F" '
                'stroke-width="10"/></g>')
     things = [CURVE, CORNER, Structure(name="Tangent", aliases=[], sam_phrase="yellow line", color_hex="#FFD23F")]
-    checked = svg.check(a_graph(tangent), things).root
-    root = svg.style(checked, things, graph=True)
-    plain = copy.deepcopy(root)
-    for group in [g for g in plain.iter() if g.get(svg.MARK)]:
-        group.remove(group[0])  # the same lines without their glow
-    glowing, flat = svg.masks(root, ["Curve", "Tangent"]), svg.masks(plain, ["Curve", "Tangent"])
+    root = svg.style(svg.check(a_graph(tangent), things).root, things, graph=True)
+    glowing, flat = svg.masks(root, ["Curve", "Tangent"]), svg.masks(without_glow(root), ["Curve", "Tangent"])
     for name in ("Curve", "Tangent"):
         assert (glowing[name] >= flat[name]).all() and glowing[name].sum() > 2 * flat[name].sum(), name
-    # Where the tangent's glow lies over the curve, beside the tangent itself, the curve is still the curve.
-    under_glow = flat["Curve"] & glowing["Tangent"] & ~flat["Tangent"]
-    assert under_glow.any() and (glowing["Curve"] >= under_glow).all()
+    # The glow is under every structure: where the tangent's glow reaches the curve, the curve is the curve.
+    reaches = flat["Curve"] & ~flat["Tangent"] & svg.masks(root, ["Tangent"])["Tangent"]
+    assert not reaches.any() and (glowing["Curve"] >= flat["Curve"]).all()
+    near_the_curve = np.zeros_like(flat["Curve"])
+    near_the_curve[1:-1, 1:-1] = flat["Curve"][:-2, 1:-1] | flat["Curve"][2:, 1:-1]
+    assert (glowing["Tangent"] & near_the_curve & ~flat["Curve"]).any()  # it glows right up to the curve's edge
     pixels = svg.rasterise(root).astype(int)
     assert tuple(pixels[5, 5]) == PAGE
     on, near = pixels[840 - 20, 420 + 22], pixels[840 - 20 - 14, 420 + 22]  # on the curve's left end, and beside it
@@ -505,6 +519,49 @@ def test_the_glow_is_its_structures_and_hides_no_other():
                       'stroke-width="44"/></g>')
     mask = svg.masks(svg.style(svg.check(shaded, [CURVE]).root, [CURVE], graph=False), ["Curve"])["Curve"]
     assert not mask[760, 896] and mask[500, 896]
+
+
+def test_the_glow_follows_a_structure_moved_by_a_group_around_it():
+    moved = svg_text(AXES_SVG, '<g transform="translate(200 -100)"><g data-structure="Curve">'
+                               '<path d="M420 820 L1200 400" fill="none" stroke="#4FC3F7" stroke-width="8"/></g></g>')
+    root = styled(moved)
+    glowing, flat = (svg.masks(r, ["Curve"])["Curve"] for r in (root, without_glow(root)))
+    assert (glowing >= flat).all() and glowing.sum() > 2 * flat.sum()
+    ys, xs = np.nonzero(glowing & ~flat)
+    assert xs.min() > 560 and xs.max() < 1440  # around the line where it was moved to, not where it was drawn
+
+
+def test_what_a_line_means_is_kept():
+    # A dashed line, an earlier secant drawn faded, a band drawn as one wide stroke and a curve cut by a mask keep
+    # their dash, their fading, their width and their mask; the paint inside the mask is left alone.
+    root = styled(svg_text(
+        '<defs><mask id="m"><rect x="0" y="0" width="900" height="1024" fill="#FFFFFF"/></mask></defs>', AXES_SVG,
+        '<g data-structure="Curve">'
+        '<path d="M420 820 L1400 200" fill="none" stroke="#4FC3F7" stroke-width="16" stroke-dasharray="20 12"/>'
+        '<path d="M420 820 L1400 400" fill="none" stroke="#4FC3F7" stroke-width="16" opacity="0.4"/>'
+        '<path d="M420 600 L1400 600" fill="none" stroke="#4FC3F7" stroke-width="60"/>'
+        '<path d="M420 700 Q900 500 1400 300" fill="none" stroke="url(#g)" stroke-width="12" mask="url(#m)"/></g>'))
+    dashed, faded, band, cut = shapes(root, "Curve")
+    assert dashed.get("stroke-dasharray") == "20 12" and dashed.get("stroke-width") == "8"
+    assert faded.get("opacity") == "0.4"
+    assert band.get("stroke-width") == "60" and band.get("stroke") == "#4FC3F7"
+    assert cut.get("mask") == "url(#m)" and cut.get("stroke") == "#4FC3F7"
+    assert root.find(f".//{{{svg.NS}}}mask/{{{svg.NS}}}rect").get("fill") == "#FFFFFF"
+
+
+def test_axes_drawn_as_a_path_get_arrowheads_and_a_grid_and_ticks_do_not():
+    axes = ('<g data-role="axes"><path d="M380 120 V880 H1470" fill="none" stroke="#5F6B73" stroke-width="5"/>'
+            '<line x1="452" y1="872" x2="452" y2="888" stroke="#5F6B73"/>'  # a tick, against the prompt
+            '<polyline points="300,880 380,880" stroke="#5F6B73"/></g>')
+    root = styled(svg_text(axes, '<g data-structure="Curve"><path d="M420 820 L1400 200" fill="none" '
+                                 'stroke="#4FC3F7"/></g>'))
+    tips = [el.get("points") for el in root.iter(f"{{{svg.NS}}}polygon")]
+    assert len(tips) == 2 and tips[0].startswith("1486,880 ") and tips[1].startswith("380,104 ")
+    grid = list(root)[1]
+    assert len(grid) and all(el.get("stroke") == svg.GRID_INK for el in grid)
+    assert svg._segments(ET.fromstring('<path d="m10 10 h100 v50 z"/>')) == [(10, 10, 110, 10), (110, 10, 110, 60),
+                                                                            (110, 60, 10, 10)]
+    assert svg._segments(ET.fromstring('<path d="M10 10 C20 20 30 30 40 40"/>')) == []  # a curve is no axis
 
 
 def test_the_renderer_finds_a_styled_graphs_axes_and_not_its_grid():

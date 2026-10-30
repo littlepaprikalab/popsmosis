@@ -86,8 +86,8 @@ arrowheads over a faint grid, every marked point a ring. So draw only what is th
 where it is:
 
 - The axes: two plain `<line>` elements in one `<g data-role="axes">`, outside every
-  structure's group, meeting where the request says. No ticks, arrowheads, numbers or
-  words.
+  structure's group, meeting where the request says. No ticks, arrowheads, grid, numbers
+  or words.
 - Each line (a curve, a secant, a tangent) is a plain stroke in its structure's colour,
   with `fill="none"`: no gradient, outline, highlight, shadow or glow.
 - A point marked on a line is `<circle data-role="point" r="12">`, in the group of the
