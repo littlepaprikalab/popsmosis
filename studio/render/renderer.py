@@ -941,6 +941,7 @@ class Renderer:
                                   self._ghosts(before, self.revealed.get(before, {}), t), {}, keep=False)
             canvas.saveLayerAlpha(None, round(255 * fade))
             self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False)
+            self._reacting(canvas, beat, plan, cam, view, t, ghosts, spots)  # its parts fade in with their stage
             canvas.restore()
         else:
             self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
@@ -1227,6 +1228,8 @@ class Renderer:
             if alpha <= 0.01:
                 continue
             trip, reached, through = self._arrivals(beat.scene, flow)
+            if trip <= 0:
+                continue  # none of its stops is on the scene
             into = t - flow_in if flow.blocked else (t - flow_in) % trip
             for at, name in reached:
                 if 0 <= into - at < BUMP_S:

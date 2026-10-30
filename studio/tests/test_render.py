@@ -509,6 +509,18 @@ def test_a_part_rocks_only_as_far_as_its_shape_still_covers_its_painted_copy(job
     assert graph_art(graph, "overview").rock_deg("Supply curve") == 0.0  # a long, thin line: its ends would swing clear
 
 
+def test_a_part_named_as_its_stage_fades_in_pops_with_it(job, monkeypatch):
+    b6f = Reveal(name="Cytochrome b6f", t=4.1)
+    beats = [flow_beat(0, 4, path=[], labels=["Thylakoid"]).model_copy(update={"scene": "hook"}),
+             flow_beat(4, 8, path=[], labels=FLOW, reveal=[b6f])]
+    timeline = flowing(beats).model_copy(update={"stages": [["hook", "overview"]]})
+    during = 4.1 + renderer_module.POP_S / 2  # inside the stage's fade
+    assert during < 4 + renderer_module.STAGE_FADE_S
+    popping = Renderer(job, timeline).frame(during).copy()
+    reacting_off(monkeypatch)
+    assert (popping != Renderer(job, timeline).frame(during)).any()  # not held back to jump in when the fade ends
+
+
 def test_nothing_on_a_graph_reacts(graph, monkeypatch):
     timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
     peak = Renderer(graph, timeline)._pops["overview"]
