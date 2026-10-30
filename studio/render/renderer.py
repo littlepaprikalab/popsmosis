@@ -52,6 +52,7 @@ NOTICE_GAP = 16  # frame px above and below the card in an upright frame, where 
 NOTICE_MAX = 3  # notes on the card; any more are counted
 NOTICE_FONT = 22
 AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) without a notice card
+BRAND_GAP = 12  # frame px between the brand and the title band's bottom: a two-line topic clears it
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_PAD = 1.1  # the whole scene keeps this much around what is drawn: labels sit against the structures
@@ -688,6 +689,7 @@ class Renderer:
                     labels.append(flow.label)
                 self._lanes.setdefault((beat.scene, tuple(flow.path), flow.label), labels.index(flow.label))
         self.keyed = any(beat.key_line for beat in timeline.beats)  # a key band only in a video with key lines
+        self.brand = p.brand_size(self.layout.brand_font)
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
@@ -966,7 +968,11 @@ class Renderer:
         top = layout.margin + (layout.caption_font * 1.75 + 24 if caption_alpha > 0 else 0)
         notes = self.timeline.notices.get(beat.scene, [])
         tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
-        bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
+        # The brand is in the picture's bottom right corner, unless the picture has moved over for a notice card
+        # (it is then under the card) or there is a title band (it is in that).
+        branded = not layout.title_h and beat.scene not in self._beside
+        strip = max(AI_TAG_FONT * 1.7 if tagged else 0.0, self.brand[1] if branded else 0.0)
+        bottom = layout.margin + (strip + 10 if strip else 0)  # labels keep clear of the tag and the brand
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
         arrows = self._arrow_points(beat.scene, cam, view)
         places = self._pill_places(beat.scene, cam, view, bounds, arrows)
@@ -1001,12 +1007,17 @@ class Renderer:
         key_alpha = p.ease((t - plan.key_in) / KEY_FADE_S) * p.ease((plan.key_out - t) / KEY_FADE_S)
         if layout.title_h and self.keyed:
             p.draw_title_key(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, beat.key_line,
-                             self.timeline.key_terms, layout.title_font, layout.key_font, key_alpha)
+                             self.timeline.key_terms, layout.title_font, layout.key_font, key_alpha,
+                             foot=self.brand[1] + BRAND_GAP + 4)
         elif layout.title_h:
             p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font)
         if self.keyed and layout.key_h:
             p.draw_key_band(canvas, (0, layout.title_h, layout.width, layout.title_h + layout.key_h), beat.key_line,
                             self.timeline.key_terms, layout.key_font, key_alpha)
+        # The brand, in the same place on every frame: the bottom right corner of the title band where there is one,
+        # else of the picture, across from the tag.
+        corner = layout.title_h - BRAND_GAP if layout.title_h else layout.height - layout.band_h - layout.margin
+        p.draw_brand(canvas, layout.width - layout.margin - self.brand[0], corner - self.brand[1], layout.brand_font)
 
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                      arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:

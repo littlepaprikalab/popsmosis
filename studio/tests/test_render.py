@@ -863,6 +863,25 @@ def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
     assert not max(pixel(carded.frame(2.0), carded_view[0] + margin + 6, spot[1])) < 120  # the card instead
 
 
+def test_every_frame_carries_the_brand_in_one_place_and_upright_in_the_title_band(job):
+    beat = flow_beat(0, 4, path=[])
+    chip = p.rgb("#0B7499")
+    wide = Renderer(job, flowing([beat]))
+    carded = Renderer(job, flowing([beat]).model_copy(update={"notices": {"overview": ["A note."]}}))
+    layout, (w, h) = wide.layout, wide.brand
+    spot = (layout.width - layout.margin - w + 3, layout.height - layout.band_h - layout.margin - h / 2)  # in the chip
+    assert pixel(wide.frame(0.0), *spot) == pixel(wide.frame(3.9), *spot) == chip
+    assert pixel(carded.frame(2.0), *spot) == chip and carded.view("overview")[2] < spot[0]  # under the card
+    titled = flowing([beat]).model_copy(update={"title": "the light reactions"})
+    keyed = titled.model_copy(update={"beats": [beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})]})
+    for timeline in (titled, keyed):  # upright, in the title band's corner, with a key line or without
+        upright = Renderer(job, timeline, "v")
+        v, (w, h) = upright.layout, upright.brand
+        frame = upright.frame(2.0)
+        assert pixel(frame, v.width - v.margin - w + 3, v.title_h - renderer_module.BRAND_GAP - h / 2) == chip
+        assert pixel(frame, v.width - v.margin - w + 3, v.height - v.band_h - v.margin - h / 2) != chip  # not twice
+
+
 def test_a_stage_fading_into_the_next_keeps_its_tag_and_card_on(job):
     def beat(t0, t1, scene):
         return Beat(t0=t0, t1=t1, scene=scene, camera=TimelineCamera(target=None, zoom=1.0), reveal=[],

@@ -84,7 +84,7 @@ def darken(hex_color: str, contrast: float = 5.0) -> str:
 
 @functools.cache
 def typeface(weight: str) -> skia.Typeface:
-    """Inter Bold, SemiBold or ExtraBold, from studio/render/fonts/."""
+    """Inter Regular, SemiBold, Bold or ExtraBold, from studio/render/fonts/."""
     return skia.Typeface.MakeFromFile(str(FONTS / f"Inter-{weight}.ttf"))
 
 
@@ -743,8 +743,9 @@ def draw_key_band(canvas: skia.Canvas, rect: Rect, text: str, terms: list[str], 
 
 
 def draw_title_key(canvas: skia.Canvas, rect: Rect, title: str, text: str, terms: list[str], title_font: float,
-                   font_size: float, alpha: float) -> None:
-    """An upright frame's title band with a key line: the topic small on top, the scene's key line below it."""
+                   font_size: float, alpha: float, foot: float = 14) -> None:
+    """An upright frame's title band with a key line: the topic small on top, the scene's key line below it, above
+    the band's bottom `foot` px (where the brand sits in its corner)."""
     x0, y0, x1, y1 = rect
     canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
     kicker_h = 0.0
@@ -753,7 +754,7 @@ def draw_title_key(canvas: skia.Canvas, rect: Rect, title: str, text: str, terms
         row = wrap(title, f, (x1 - x0) - 2 * KEY_PAD)[0]
         kicker_h = title_font * 0.55 * 1.9
         draw_text(canvas, row, (x0 + x1) / 2 - text_width(f, row) / 2, y0 + kicker_h * 0.72, f, KICKER)
-    draw_key_line(canvas, (x0, y0 + kicker_h, x1, y1 - 14), text, terms, font_size, alpha)
+    draw_key_line(canvas, (x0, y0 + kicker_h, x1, y1 - foot), text, terms, font_size, alpha)
 
 
 KEY_PAD = 60  # frame px a key line keeps from each side
@@ -836,6 +837,27 @@ def draw_ai_tag(canvas: skia.Canvas, x0: float, bottom: float, font_size: float,
     draw_text(canvas, NOTICE_TITLE, x0 + font_size * 0.8, bottom - h / 2 + cap_height(f) / 2, f,
               with_alpha(0xFFFFFFFF, alpha * 0.92))
     return bottom - h
+
+
+BRAND_CHIP = 0xFF0B7499  # the site's wordmark chip (web: --brand-chip)
+
+
+def brand_size(font_size: float) -> tuple[float, float]:
+    """How wide and tall the brand is, its text this size."""
+    width = text_width(font("ExtraBold", font_size), "POP") + text_width(font("Regular", font_size), "smosis")
+    return width + 2 * 0.55 * font_size, 1.6 * font_size
+
+
+def draw_brand(canvas: skia.Canvas, x0: float, top: float, font_size: float) -> None:
+    """The site's wordmark (web/src/components/Wordmark.tsx), its top-left corner at (x0, top): "POP" heavy and
+    "smosis" lighter, white on the aqua chip."""
+    w, h = brand_size(font_size)
+    canvas.drawRRect(rounded((x0, top, x0 + w, top + h), 0.3 * font_size),
+                     skia.Paint(AntiAlias=True, Color=BRAND_CHIP))
+    heavy, light = font("ExtraBold", font_size), font("Regular", font_size)
+    x, baseline = x0 + 0.55 * font_size, top + h / 2 + cap_height(heavy) / 2
+    draw_text(canvas, "POP", x, baseline, heavy, 0xFFFFFFFF)
+    draw_text(canvas, "smosis", x + text_width(heavy, "POP"), baseline, light, with_alpha(0xFFFFFFFF, 0.8))
 
 
 def draw_caption(canvas: skia.Canvas, text: str, centre_x: float, top: float, font_size: float, alpha: float) -> None:
