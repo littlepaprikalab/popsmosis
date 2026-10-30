@@ -223,6 +223,16 @@ together they go from what the learner already knows to the parts they are learn
   names, and each extra adjective makes it likelier to miss: "yellow flashlight", not
   "golden yellow small flashlight". No positions, commands or negations: the model goes
   by what the thing looks like. `color_hex` is its colour as #RRGGBB.
+- `axes`: on a graph, what each axis measures, as a textbook prints it, in a word or two:
+  "Quantity" across and "Price" up; "Reaction progress" and "Potential energy". "" for
+  both on any other scene, and for an axis the graph does not have. The video writes them
+  at the ends of the axes from the scene's first frame, in both videos, since the picture
+  has no writing: the learner reads the graph before anything on it is named. An axis is
+  never a structure: a structure's label shows only once its name is sung, and a common
+  word like "price" would reveal it on every line that says it. The `image_prompt` asks
+  for the axes as two plain lines, says where they meet (at the bottom left; at the
+  middle, crossing, for a graph with negative values), and asks for nothing written on
+  them.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct,
   bright mid-tone colours that stand out on the art's dark slate blue background; never
   navy, slate, dark grey or near black, which disappear into it. Only an analogy part
@@ -523,14 +533,16 @@ order, keyed by `line_id`:
   textbook prints it, with its superscripts and subscripts ("H⁺", "e⁻", "O₂", "Ca²⁺",
   "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line.
   Anything else that travels is named in a plain word ("price", "letter", "taxes"), at most
-  8 letters too, so the fact-check sees it: a longer one is dropped and goes unchecked. It
+  8 letters too, so the fact-check sees what it is: a longer one is dropped, leaving a blank
+  dot. It
   must be what really travels that path (protons through ATP synthase, electrons along the
   chain, the price up to equilibrium). "" when there are no particles, for a nerve signal
   or light, and on the analogy scene, where what moves is the everyday thing (its water
   stands for the protons, so marking it "H₂O" would mislead).
   When you cannot say what would travel a route, the facts do not give it: leave it out.
-  The fact-check holds each marked motion to the facts, as it does a line, and leaves out
-  one they do not support: every route a marked particle takes must follow from the facts.
+  The fact-check holds each motion to the facts, as it does a line (an unmarked one as
+  "something" travelling that route, except on the hook and the analogy), and leaves out
+  one they do not support: every route particles take must follow from the facts.
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.

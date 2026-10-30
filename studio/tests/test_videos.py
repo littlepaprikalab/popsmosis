@@ -263,6 +263,21 @@ def test_recover_rebuilds_the_job_from_what_the_api_stored_never_the_learners_wo
     assert {c[2] for c in api.calls if c[0] == "claim_videos"} == {2}  # kept the attempt it was handed
 
 
+def test_recover_keeps_a_jobs_files_made_before_a_field_was_added_to_the_bundle(setup):
+    api = VideoApi()
+    job = jobs.ROOT / "q9"
+    job.mkdir(parents=True)
+    old = bundle_data()  # as written before Scene.axes: no "axes" on any scene
+    assert all("axes" not in scene for scene in old["scenes"])
+    (job / "bundle.json").write_text(json.dumps(old), encoding="utf-8")
+    (job / "art").mkdir()
+    (job / "art" / "hook.png").write_bytes(b"painted")  # paid for: must not be set aside
+    api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]
+    assert videos.recover(api=api)[:2] == ("RECOVER", "q9")
+    assert (job / "art" / "hook.png").read_bytes() == b"painted"
+    assert not list(jobs.ROOT.glob("q9.before-*"))
+
+
 def test_recover_takes_nothing_where_the_videos_cannot_be_made(setup, monkeypatch):
     api = VideoApi()
     api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]

@@ -464,3 +464,15 @@ def test_a_second_flow_moves_on_the_same_beat_in_its_own_colour(job):
                                                            (["Cytochrome b6f", "Thylakoid"], "O₂")]
     assert beat.particles[0].color != beat.particles[1].color
     assert {r.label for r in beat.routes} >= {"H⁺", "O₂"}
+
+
+def test_a_graphs_axis_names_go_to_the_videos_that_show_it(job):
+    data = bundle_data()
+    data["scenes"][2]["axes"] = {"x": "Time", "y": ""}  # only the lesson shows the synthase, and not the overview
+    data["scenes"][1]["axes"] = {"x": "Quantity", "y": "Price"}
+    write_bundle(job, data)
+    timelines = make(job)
+    assert {scene: (a.x, a.y) for scene, a in timelines["song"].axes.items()} == {"overview": ("Quantity", "Price")}
+    assert {scene: (a.x, a.y) for scene, a in timelines["lesson"].axes.items()} == {"synthase": ("Time", "")}
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    assert hook.axes == timelines["song"].axes  # the hook cut is the song's, and shows the overview

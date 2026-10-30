@@ -313,8 +313,9 @@ def key(bundle: Bundle, scene: Scene) -> str:
 
 
 def _dump(scene: Scene) -> dict:
-    # Without an empty stage_of: a scene that is no stage keeps the key it had before stages existed.
-    return scene.model_dump(exclude=set() if scene.stage_of else {"stage_of"})
+    # Without an empty stage_of or axes: a scene that is no stage and no graph keeps the key it had before either
+    # existed, so finished jobs are not painted again.
+    return scene.model_dump(exclude={name for name in ("stage_of", "axes") if not getattr(scene, name)})
 
 
 @dataclass
@@ -347,6 +348,11 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
         lines.append(f'- {s.name}{also}: {s.sam_phrase}. Colour {s.color_hex}. '
                      f'Group: <g {svg.MARK}="{s.name}">')
     parts.append("Structures to draw, each as one group:\n" + "\n".join(lines))
+    if scene.axes:  # found in the drawing as lines of their own (studio/render/axes.py), so in no structure's group
+        named = " and ".join(f'"{name}" at the {end}' for name, end in ((scene.axes.x, "right end of the horizontal one"),
+                                                                       (scene.axes.y, "top of the vertical one")) if name)
+        parts.append("Axes: draw the graph's two axes as plain, thin dark lines outside every group, with nothing "
+                     f"written on or beside them: the video writes {named}.")
     others = [o for o in bundle.scenes if o.id != scene.id]
     if others:
         parts.append("The video's other scenes, drawn separately; draw shared structures the same way:\n" + "\n".join(
@@ -379,6 +385,9 @@ NO_TEXT = ("No text, labels, letters, numbers or chemical symbols (no H+, no e-,
 # the process itself (lightning bolts, H+ in circles, water molecules, an electron path) on two tries in a row.
 ONLY_PARTS = ("Draw only the parts named above, standing still: no ions, electrons, small molecules, arrows, "
               "lightning or light rays that are not named.")
+# A graph's axes are found in its picture as long, thin, straight lines of their own (studio/render/axes.py), and
+# the video writes their names at their ends (Scene.axes).
+AXES = "Its axes are two plain, thin white lines with nothing on or beside them: no ticks, numbers or words."
 STYLE = f"{LOOK} {MOLECULES} {ONLY_PARTS} {NO_TEXT}"  # a diagram's
 EVERYDAY_STYLE = f"{LOOK} {NO_TEXT}"  # the hook's and the analogy's: everyday things, no molecules
 EVERYDAY = ("hook", "analogy")
@@ -620,6 +629,8 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     every extra line was a chance to miss. A later stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
     parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
+    if scene.axes:
+        parts.append(AXES)
     if redrawn and (stage := Stage.of(bundle, scene)):
         parts.insert(0, REDRAW.format(process=stage.process))
     if problems:
@@ -676,7 +687,9 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
-            + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
+            + f"\nWhat the scene should show: {scene.image_prompt}"
+            + (f"\n{AXES} They are asked for, and are no part to find." if scene.axes else "")
+            + "\nIt must show each of these:\n" + "\n".join(lines))
 
 
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:

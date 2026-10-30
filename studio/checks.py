@@ -60,6 +60,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     _check_stages(data, problems)
+    _check_axes(data, problems)
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
     _check_conversions(data, canon, problems)
@@ -80,6 +81,25 @@ def _check_stages(data: dict, problems: list) -> None:
             problems.append(Problem(line_id=f"scene:{scene['id']}", rule="stages", repaired=True,
                                     detail=f"the only stage of {scene['stage_of']}; an ordinary scene instead"))
             scene["stage_of"] = ""
+
+
+AXIS_MAX = 28  # characters an axis name holds ("Number of molecules"); a longer one would run across the graph
+
+
+def _check_axes(data: dict, problems: list) -> None:
+    """An axis name is short, as a textbook prints it, and is none of its scene's structures, which are labelled
+    already. Any other is left off the screen."""
+    for scene in data["scenes"]:
+        named = {fold(word) for s in scene["structures"] for word in (s["name"], *s["aliases"])}
+        for side in ("x", "y"):
+            name = " ".join(scene["axes"][side].split())
+            why = (f"runs {len(name)} characters, over {AXIS_MAX}" if len(name) > AXIS_MAX else
+                   "names a structure of the scene" if fold(name) in named else "")
+            if why:
+                problems.append(Problem(line_id=f"scene:{scene['id']}", rule="axes", repaired=True,
+                                        detail=f'left the {side} axis name "{name}" off the screen: it {why}'))
+                name = ""
+            scene["axes"][side] = name
 
 
 def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:

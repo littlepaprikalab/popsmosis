@@ -60,6 +60,18 @@ class Structure(Strict):
         return _hex_color(value)
 
 
+class Axes(Strict):
+    x: str = Field(description='What the horizontal axis measures, as a textbook prints it ("Quantity"); "" for none')
+    y: str = Field(description='What the vertical axis measures ("Price"); "" for none')
+
+    def __bool__(self) -> bool:
+        return bool(self.x or self.y)
+
+
+def _no_axes() -> Axes:
+    return Axes(x="", y="")
+
+
 class Scene(Strict):
     id: str
     image_prompt: str
@@ -68,6 +80,11 @@ class Scene(Strict):
     # later stage redrawn from the first), and the video cross-fades between them. "" in a bundle before.
     stage_of: str = Field(default_factory=str, description='The process this scene is one stage of ("mitosis"), its stages '
                                                             'in scene order; "" for any other scene')
+    # A graph's axes are read, not taught: the renderer writes their names at their ends from the scene's first
+    # frame, since the art has no writing, rather than reveal them as structures when the song happens to sing
+    # "quantity". Both "" in a bundle written before Oct 30.
+    axes: Axes = Field(default_factory=_no_axes, description='On a graph, what each axis measures, written at its end; '
+                                                             '"" for both on any other scene')
 
 
 def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
@@ -332,7 +349,7 @@ class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style"]
+                  "tempo", "song-style", "axes"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -733,6 +750,8 @@ class Timeline(Strict):
     # The scenes whose picture a model made, each tagged as AI-generated: every scene, as the studio makes its
     # art (Muse Image paints it, or the brain draws it as SVG); a picture from anywhere else would be left out.
     ai_pictures: list[str] = []
+    # Each graph's axis names, by scene (Scene.axes): written at the ends of the axes found in its picture.
+    axes: dict[str, Axes] = {}
 
     @field_validator("palette")
     @classmethod

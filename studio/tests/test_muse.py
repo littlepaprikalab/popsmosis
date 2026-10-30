@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 from studio import brain, checks, jobs, ledger, media, muse, repair, svg
-from studio.schemas import Box, Bundle, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
+from studio.schemas import Axes, Box, Bundle, Locations, Scene, Structure, Timeline, locations_problems, timeline_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 
@@ -213,8 +213,18 @@ def test_a_later_stage_is_painted_again_whenever_its_first_stage_is(job, monkeyp
     moved = bundle.model_copy(deep=True)
     moved.scenes[1].image_prompt = "A thylakoid membrane, seen from above."
     assert art.key(moved, moved.scenes[2]) != art.key(bundle, synthase)
-    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of"})], sort_keys=True)
+    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of", "axes"})], sort_keys=True)
     assert art.key(bundle, hook) == hashlib.sha256(before.encode()).hexdigest()[:16]
+
+
+def test_a_scene_with_no_axes_keeps_the_art_key_it_had_before_axes_existed():
+    # The keys main gave the sample's scenes before Scene.axes: a field added with a default must not make every
+    # finished job's art look stale, which would paint it all again.
+    bundle = sample_media.bundle()
+    assert {s.id: art.key(bundle, s) for s in bundle.scenes} == {
+        "hook": "ee481cd7f80f2d2b", "overview": "367fe4f994221ec2", "synthase": "0eb39285f943171e"}
+    graph = bundle.scenes[1].model_copy(update={"axes": Axes(x="Quantity", y="Price")})
+    assert art.key(bundle, graph) != art.key(bundle, bundle.scenes[1])  # naming the axes asks for them in the art
 
 
 def test_a_stage_muse_image_will_not_redraw_is_painted_afresh(job, monkeypatch):

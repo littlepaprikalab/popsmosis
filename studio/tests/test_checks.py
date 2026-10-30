@@ -445,3 +445,19 @@ def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded()
                   [("v1-1", "Light lands on the thylakoid, for real"), ("v1-2", "Protons pile up, no doubt"),
                    ("v2-1", "Only b6f pumps them in, it's true")])
     assert any("3 lines end on a claim-free tag" in f for f in tags)
+
+
+def test_an_axis_name_is_trimmed_and_left_off_when_long_or_a_structures_name():
+    data = bundle_data()
+    data["scenes"][1]["axes"] = {"x": "  Quantity ", "y": "Number of protons pumped per second"}
+    data["scenes"][2]["axes"] = {"x": "atp synthase", "y": "Price"}
+    bundle, report = checks.review(Bundle.model_validate(data))
+    assert [(s.axes.x, s.axes.y) for s in bundle.scenes] == [("", ""), ("Quantity", ""), ("", "Price")]
+    assert [(p.line_id, p.rule, p.repaired) for p in report.problems if p.rule == "axes"] == [
+        ("scene:overview", "axes", True), ("scene:synthase", "axes", True)]
+
+
+def test_a_bundle_written_before_axes_has_none():
+    data = bundle_data()
+    assert "axes" not in data["scenes"][0]
+    assert not any(scene.axes for scene in Bundle.model_validate(data).scenes)

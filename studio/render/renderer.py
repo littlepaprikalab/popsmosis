@@ -22,6 +22,7 @@ import numpy as np
 import skia
 
 from studio import jobs, media
+from studio.render import axes
 from studio.render import primitives as p
 from studio.render.layouts import LAYOUTS, Layout, Rect
 from studio.schemas import Locations, SceneLocations, Timeline
@@ -106,6 +107,8 @@ GLOW_HZ = 1.2
 GLOW_IN_S = 0.4
 ARROW_WIDTH = 1.2
 ARROW_TILT = 0.28
+AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
+DRAWN_INK = 15  # how far (the largest RGB channel) a drawn pixel is from the background, as _drawn_box has it
 
 Point = tuple[float, float]
 
@@ -156,6 +159,8 @@ class SceneArt:
         self._crowd_points: dict[str, list[Point]] = {}
         self._discs: dict[str, tuple[float, float, float] | None] = {}
         self._glows: dict[str, skia.Image] = {}
+        self._axes: tuple[axes.Line, axes.Line] | None = None
+        self._drawn: np.ndarray | None = None
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -254,6 +259,35 @@ class SceneArt:
                     disc = (cx, cy, r)
             self._discs[name] = disc
         return self._discs[name]
+
+    def axis_lines(self) -> tuple[axes.Line, axes.Line]:
+        """Its graph's x axis and y axis, in art pixels, as found in the picture (studio/render/axes.py). One not
+        found runs along the bottom or the left of what is drawn, from the end of the other where it was found."""
+        if self._axes is None:
+            pixels = self.art.toarray(colorType=skia.kBGRA_8888_ColorType)
+            covered = np.zeros(pixels.shape[:2], bool)
+            for mask_file in self._mask_files.values():
+                covered |= _read(mask_file, skia.kGray_8_ColorType) > 127
+            far = axes.distance(pixels, (skia.ColorGetB(self.paper), skia.ColorGetG(self.paper),
+                                         skia.ColorGetR(self.paper)))
+            del pixels
+            across, up = axes.find(far, covered)
+            x0, y0, x1, y1 = self.content
+            across = across or axes.Line(at=up.end if up else y1, start=up.at if up else x0, end=x1)
+            up = up or axes.Line(at=across.start, start=y0, end=across.at)
+            self._axes = across, up
+            self._drawn = (far > DRAWN_INK) | covered
+        return self._axes
+
+    def drawn_share(self, box: tuple[float, float, float, float]) -> float:
+        """How much of an art-pixel box has something drawn in it: 1 over the picture, 0 over bare background, and
+        1 off the art, where nothing can be read."""
+        self.axis_lines()
+        x0, y0 = max(int(box[0]), 0), max(int(box[1]), 0)
+        x1, y1 = min(int(math.ceil(box[2])), self.width), min(int(math.ceil(box[3])), self.height)
+        inside = max(x1 - x0, 0) * max(y1 - y0, 0)
+        whole = max((box[2] - box[0]) * (box[3] - box[1]), 1.0)
+        return (float(self._drawn[y0:y1, x0:x1].sum()) + whole - inside) / whole if inside else 1.0
 
     def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[tuple, skia.Image]:
         """The art with each ghost and spotlight wash at its level (0-1), kept for reuse; and its key."""
@@ -588,6 +622,7 @@ class Renderer:
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
+        self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
@@ -836,8 +871,14 @@ class Renderer:
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
         arrows = self._arrow_points(beat.scene, cam, view)
         places = self._pill_places(beat.scene, cam, view, bounds, arrows)
-        # Labels keep clear of the arrows and of every reaction pill the scene shows, sampled as points.
-        pill_points = [(px, py) for x0, y0, x1, y1 in places.values()
+        # A graph's axis names are on from its first frame; a stage fading in fades in its own, unless the stage
+        # before has the same.
+        same_axes = plan.fade_from is not None and (self.timeline.axes.get(plan.fade_from)
+                                                    == self.timeline.axes.get(beat.scene))
+        axis_rects = self._axis_names(canvas, beat.scene, cam, view, bounds, 1.0 if same_axes else fade)
+        # Labels keep clear of the arrows, of every reaction pill the scene shows and of the axis names, sampled as
+        # points.
+        pill_points = [(px, py) for x0, y0, x1, y1 in [*places.values(), *axis_rects]
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points)
@@ -906,6 +947,70 @@ class Renderer:
                     best = (score, rect)
             places[conv.structure] = best[1]
         return places
+
+    def _axis_rect(self, side: str, spot: int, end: tuple[float, float], size: tuple[float, float]) -> Rect:
+        """Where an axis name goes beside its axis's end (frame pixels): the x axis's right end, below it, past it or
+        above it; the y axis's top, left of it, above it or right of it."""
+        (x, y), (w, h), g = end, size, AXIS_GAP
+        if side == "x":
+            return [(x - w, y + g, x, y + g + h), (x + g, y - h / 2, x + g + w, y + h / 2),
+                    (x - w, y - g - h, x, y - g)][spot]
+        return [(x - g - w, y, x - g, y + h), (x - w / 2, y - g - h, x + w / 2, y - g),
+                (x + g, y, x + g + w, y + h)][spot]
+
+    def _axis_ends(self, scene_id: str, cam: Cam, view: Rect) -> dict[str, tuple[float, float]]:
+        """Where each axis name is written from, in frame pixels: the x axis's right end, the y axis's top."""
+        art = self.scene(scene_id)
+        across, up = art.axis_lines()
+        scale, dx, dy = to_frame(cam, view, art)
+        return {"x": (across.end * scale + dx, across.at * scale + dy), "y": (up.at * scale + dx, up.start * scale + dy)}
+
+    def _axis_names(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
+                    alpha: float) -> list[Rect]:
+        """A graph's axis names (Timeline.axes), written at its axes' ends from the scene's first frame, since the
+        picture has no writing. Each takes the spot beside its end that, framed whole, stays in the frame over the
+        least of the picture, chosen once so it never jumps. Where the camera leaves its end out (a close-up, the
+        upright frame's sides), it stays at the frame's edge on that side, so the graph still reads: what "up" and
+        "across" measure. Returns where they landed."""
+        names = self.timeline.axes.get(scene_id)
+        if not names:
+            return []
+        art = self.scene(scene_id)
+        font = self.layout.label_font
+        sizes = {side: (p.text_width(p.font("Bold", font), text), font * 1.3)
+                 for side, text in (("x", names.x), ("y", names.y)) if text}
+        if scene_id not in self._axis_spots:  # from the scene alone, so every frame range picks the same
+            whole = self._whole(scene_id, view)
+            scale, dx, dy = to_frame(whole, view, art)
+            ends = self._axis_ends(scene_id, whole, view)
+            m = self.layout.margin
+            inside = (view[0] + m, view[1] + m, view[2] - m, view[3] - m)
+            picked = []
+            for side in ("x", "y"):
+                if side not in sizes:
+                    picked.append(0)
+                    continue
+
+                def score(spot: int) -> tuple:
+                    x0, y0, x1, y1 = self._axis_rect(side, spot, ends[side], sizes[side])
+                    off = (x0 < inside[0] or y0 < inside[1] or x1 > inside[2] or y1 > inside[3])
+                    drawn = art.drawn_share(((x0 - dx) / scale, (y0 - dy) / scale, (x1 - dx) / scale, (y1 - dy) / scale))
+                    return off, round(drawn, 2), spot
+                picked.append(min(range(3), key=score))
+            self._axis_spots[scene_id] = (picked[0], picked[1])
+        rects = []
+        ends = self._axis_ends(scene_id, cam, view)
+        for side, spot in zip(("x", "y"), self._axis_spots[scene_id]):
+            if side not in sizes:
+                continue
+            x0, y0, x1, y1 = self._axis_rect(side, spot, ends[side], sizes[side])
+            shift_x = min(max(bounds[0] - x0, 0.0), bounds[2] - x1)  # into the frame, along its axis or across it
+            shift_y = min(max(bounds[1] - y0, 0.0), bounds[3] - y1)
+            rect = (x0 + shift_x, y0 + shift_y, x1 + shift_x, y1 + shift_y)
+            if alpha > 0.01:
+                p.draw_axis_name(canvas, names.x if side == "x" else names.y, rect, font, art.paper, alpha)
+                rects.append(rect)
+        return rects
 
     def _conversions(self, canvas: skia.Canvas, beat, view: Rect, bounds: Rect, t: float,
                      places: dict[str, tuple[float, float, float, float]]) -> None:
