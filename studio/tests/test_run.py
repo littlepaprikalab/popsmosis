@@ -129,7 +129,9 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     bundle = json.loads((job / "bundle.json").read_text())
     breakdown = api.posted.pop("breakdown")
     assert api.posted == {"content": bundle["lesson_markdown"], "bundle": bundle,
-                          "factcheck": json.loads((job / "factcheck.json").read_text()), "model": "claude-opus-5-5"}
+                          "factcheck": json.loads((job / "factcheck.json").read_text()), "model": "claude-opus-5-5",
+                          # What the code checks found, for an admin's review (studio/review.py).
+                          "checks": json.loads((job / "checks.json").read_text())}
     # The steps before the post, each timed; the call logged before this run is the bundle's.
     assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "audit", "factcheck"]
     assert breakdown["steps"][1]["models"] == [{"model": "claude-opus-5-5", "calls": 1, "costUsd": None, "credits": None}]

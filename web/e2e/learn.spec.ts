@@ -659,3 +659,63 @@ test.describe('API unavailable', () => {
     await expect(page.getByTestId('server-unavailable')).toHaveCount(0);
   });
 });
+
+test.describe('an admin reviews a droplet', () => {
+  test('the fact-check, the code checks and the art checks fold under the lesson, for admins only', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: antibiotics, reviewed`;
+    const benHeaders = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const asked = await request.post(apiUrl('/api/questions'), { headers: benHeaders, data: { content: text } });
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const questionId = (await asked.json()).id;
+    await bot.claim(questionId);
+    const answer = await bot.answer(questionId, 'Antibiotics block **jobs only bacteria have**.', {
+      bundle: { course: 'Biology', topic: 'how antibiotics kill bacteria' },
+      factcheck: {
+        status: 'passed', reason: '', rounds: 2,
+        lines: [{ kind: 'lyric', id: 'c1', text: 'Block the jobs,\nbacteria fall', verdict: 'SUPPORTED', source: 'f1', round: 1, problem: '' }],
+        corrections: [{ round: 1, kind: 'scene', ids: ['overview'], before: 'as a Campbell Biology figure', after: 'as a textbook figure', problem: 'Names a brand.' }],
+      },
+      checks: { problems: [{ line_id: 'n4', rule: 'not-in-scene', detail: 'names bacterium, which scene "analogy" does not draw', repaired: false }] },
+    });
+    expect(answer.status()).toBe(201);
+    const answerId = (await answer.json()).id;
+    const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    await bot.video(answerId, { status: 'RENDERING' });
+    expect((await bot.video(answerId, {
+      status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`,
+      artChecks: { scenes: [{
+        scene: 'strep-case', file: 'a1/art/strep-case.png', model: 'muse-image-1.0', kept: 2,
+        check: { text: [], misplaced: [], unnamed: [], wrong: ['the throat stands outside the head'], notes: [] },
+        tries: [{ try: 1, declined: 'Muse Image declined the picture' }, { try: 2, text: [], misplaced: [], unnamed: [], wrong: ['the throat stands outside the head'], notes: [] }],
+      }] },
+    })).status()).toBe(200);
+
+    // Ben asked for it: he reads the lesson, never the review.
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    let card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.locator('.md strong', { hasText: 'jobs only bacteria have' })).toBeVisible();
+    await expect(card.getByTestId('droplet-review')).toHaveCount(0);
+
+    // Ada is an admin: folded under the lesson, loaded once she opens it.
+    await context.clearCookies();
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    const review = card.getByTestId('droplet-review');
+    await expect(review).toContainText('admins only');
+    await review.getByText('Review', { exact: true }).click();
+    await expect(review).toContainText('passed in 2 rounds · 1 supported · 0 filler · 0 unsupported');
+    await expect(review.getByTestId('review-corrections')).toContainText('Names a brand.');
+    await expect(review.getByTestId('review-corrections')).toContainText('as a textbook figure');
+    await expect(review.getByTestId('review-checks')).toContainText('names bacterium, which scene "analogy" does not draw');
+    const scene = review.getByTestId('review-scene');
+    await expect(scene).toContainText('strep-case');
+    await expect(scene).toContainText('muse-image-1.0, try 2 of 2');
+    await expect(scene).toContainText('wrong: the throat stands outside the head');
+    await expect(scene).toContainText('Try 1 declined by the painter: Muse Image declined the picture');
+    // No storage here, so nothing to show the picture from.
+    await expect(scene).toContainText('no picture to show');
+    expect((await request.delete(apiUrl(`/api/questions/${questionId}`), { headers: benHeaders })).status()).toBe(204);
+  });
+});

@@ -29,7 +29,8 @@ are marked READY with their public URLs and posters, and only after that is
 uploaded.json written: done means the page knows. If the report does not get through
 the step fails, and running it again only sends the report. The READY report also
 carries the videos' breakdown (studio/ledger.py): each media step's time, cost and
-models, this step's up to the report, for the page to show under the videos.
+models, this step's up to the report, for the page to show under the videos; and the art
+checker's look at each picture with where it went (studio/review.py), for an admin's review.
 
 upload_file() uploads one file on its own, for a run that copies each intermediate as
 its step finishes (the job folder dies with the routine's machine).
@@ -53,7 +54,7 @@ from typing import Callable, Literal, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from studio import brain, jobs, ledger, media
+from studio import brain, jobs, ledger, media, review
 from studio.api import Api, ApiError
 from studio.schemas import Bundle, Locations
 
@@ -225,12 +226,15 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
         missing=missing,
     )
     breakdown = ledger.try_breakdown(job, "videos", running=("upload", round(time.monotonic() - started, 1)))
+    # What the art checker found in each picture, with where the picture went, for an admin's review (studio/review.py).
+    art_checks = review.art_checks(job, {path: entry.remote for path, entry in progress.files.items()
+                                         if entry.bucket == PRIVATE})
     _retrying("files uploaded, but marking the videos READY failed", lambda: api.set_video(
         answer, "READY", attempt=attempt,
         song_video_url=uploaded.song_video_url, lesson_video_url=uploaded.lesson_video_url,
         song_poster_url=uploaded.song_poster_url, lesson_poster_url=uploaded.lesson_poster_url,
         hook_video_url=uploaded.hook_video_url, hook_poster_url=uploaded.hook_poster_url,
-        breakdown=breakdown))
+        breakdown=breakdown, art_checks=art_checks))
     jobs.write(job / UPLOADED, uploaded)  # last: done means READY was sent
 
     kept = len(public) + len(private) - sent

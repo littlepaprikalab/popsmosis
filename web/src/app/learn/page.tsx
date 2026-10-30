@@ -21,6 +21,7 @@ import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
+import { DropletReview } from '@/components/DropletReview';
 import { Wordmark } from '@/components/Wordmark';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
@@ -273,6 +274,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   The lesson is written and checked. The teacher is making its song and lesson videos; the lesson shows here with them.
                 </p>
                 <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} defaultOpen />
+                {isAdmin && <DropletReview answerId={answer.id} />}
               </div>
               <div className="flex justify-end mt-2">
                 <CollapseButton onClick={collapse} />
@@ -327,6 +329,8 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 {(answer.breakdown || q.progress) && (
                   <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={answer.video?.status === 'RENDERING' ? q.progress : null} />
                 )}
+                {/* What the studio's checks found, beside approve and hide: only an admin's page has it. */}
+                {isAdmin && <DropletReview answerId={answer.id} />}
                 <ReplyThread answer={answer} canReply={q.isOwner} onChange={(a) => onAnswerChange(q.id, a)} />
               </div>
               <div className="flex justify-end mt-2">

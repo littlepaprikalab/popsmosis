@@ -4,15 +4,20 @@ import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireAgent } from '../middleware/auth.js';
 import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoField, type VideoStatus } from '../lib/droplet.js';
 import { secretError } from '../lib/validation.js';
-import { BUCKETS, bucketFileError, dropletFileUrlError, fileError, signUpload, storageConfig, STORAGE_SETTINGS, type Bucket } from '../lib/storage.js';
+import { BUCKETS, bucketFileError, dropletFileUrlError, fileError, r2Reason, signRead, signUpload, storageConfig, STORAGE_SETTINGS, type Bucket } from '../lib/storage.js';
 import { breakdownError } from '../lib/breakdown.js';
+import { artChecksError, artFile, serializeReview } from '../lib/review.js';
 import { bundleTags } from '../lib/tags.js';
 import { Prisma } from '../generated/prisma/client.js';
 import { reviewRequired } from '../lib/studio-settings.js';
 
 // The agent's half of a droplet's videos (docs/PLAN.md, section 10), for the agent's
 // own answers only: a key can finish its own droplets, never another agent's. And
-// the admin's switch that takes a droplet off the public Droplets tab.
+// the admin's switch that takes a droplet off the public Droplets tab, and what the
+// studio's checks found in it, for an admin looking it over (lib/review.ts).
+// A kept picture is a PNG of a megabyte or two; anything far past that is not one.
+const ART_IMAGE_MAX_BYTES = 20 * 1024 * 1024;
+
 export default async function answerRoutes(app: FastifyInstance) {
   // The answer, or null once the error has been sent.
   async function ownAnswer(id: string, agentId: string, reply: FastifyReply) {
@@ -47,13 +52,14 @@ export default async function answerRoutes(app: FastifyInstance) {
   }
 
   // PATCH /api/answers/:id/video — { status, songVideoUrl?, lessonVideoUrl?,
-  // songPosterUrl?, lessonPosterUrl?, hookVideoUrl?, hookPosterUrl?, error?, attempt?, breakdown? }. RENDERING when the media steps
+  // songPosterUrl?, lessonPosterUrl?, hookVideoUrl?, hookPosterUrl?, error?, attempt?, breakdown?, artChecks? }. RENDERING when the media steps
   // start (and again as each video lands), READY when they are done, FAILED with one
   // line on why. A URL left out keeps the one already saved, so the song can be posted
   // before the lesson video exists. With the attempt a run holds (routes/videos.ts) it
   // applies only while that attempt is the current render: a run whose render went
   // quiet and was handed to another cannot mark its stale videos READY over the new one.
-  // With READY, the breakdown of the media steps (lib/breakdown.ts) is stored beside the lesson's.
+  // With READY, the breakdown of the media steps (lib/breakdown.ts) is stored beside the lesson's, and the art
+  // checker's look at each picture (lib/review.ts) for an admin's review.
   app.patch('/api/answers/:id/video', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as Record<string, unknown>;
@@ -91,6 +97,12 @@ export default async function answerRoutes(app: FastifyInstance) {
     }
     const breakdownProblem = breakdownError(breakdown);
     if (breakdownProblem) return sendError(reply, 'VALIDATION_ERROR', breakdownProblem);
+    const { artChecks } = body;
+    if (artChecks !== undefined && status !== 'READY') {
+      return sendError(reply, 'VALIDATION_ERROR', 'artChecks is only for status READY');
+    }
+    const artProblem = artChecksError(artChecks);
+    if (artProblem) return sendError(reply, 'VALIDATION_ERROR', artProblem);
 
     const answer = await ownAnswer(id, request.agent!.id, reply);
     if (!answer) return reply;
@@ -124,6 +136,7 @@ export default async function answerRoutes(app: FastifyInstance) {
         // unreadable, or a READY by hand) drops the bill so far the progress reports kept: shown as the total,
         // it would leave out the render and the upload.
         ...(status === 'READY' && { videoBreakdown: breakdown === undefined ? Prisma.DbNull : (breakdown as Prisma.InputJsonObject) }),
+        ...(artChecks !== undefined && { artChecks: artChecks as Prisma.InputJsonObject }),
         ...(awaitingReview && { awaitingReviewSince: new Date() }),
         ...tags,
       },
@@ -167,6 +180,50 @@ export default async function answerRoutes(app: FastifyInstance) {
     if (!config) return sendError(reply, 'UNAVAILABLE', `File storage is not configured on this API (${STORAGE_SETTINGS.join(', ')})`);
     if ('problem' in config) return sendError(reply, 'UNAVAILABLE', `File storage is misconfigured on this API: ${config.problem}`);
     return signUpload(config, bucket as Bucket, id, file as string);
+  });
+
+  // GET /api/answers/:id/review — admin: what the studio's checks found in the droplet (lib/review.ts): the
+  // fact-check's verdict on every line and its fixes, the code checks, and the art checker's look at each picture.
+  app.get('/api/answers/:id/review', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const row = await prisma.answer.findUnique({ where: { id }, select: { id: true, factcheck: true, checks: true, artChecks: true } });
+    if (!row) return sendError(reply, 'NOT_FOUND', 'Answer not found');
+    const config = storageConfig();
+    reply.header('cache-control', 'private, no-store');
+    return serializeReview(row, !!config && !('problem' in config));
+  });
+
+  // GET /api/answers/:id/review/art/:scene — admin: a scene's kept picture, read out of the private bucket where the
+  // upload put it, for the review beside it. Through the API rather than a signed link, so the page's
+  // Content-Security-Policy still loads pictures only from this site and the public media domain.
+  app.get('/api/answers/:id/review/art/:scene', { preHandler: [requireAdmin] }, async (request, reply) => {
+    const { id, scene } = request.params as { id: string; scene: string };
+    const row = await prisma.answer.findUnique({ where: { id }, select: { artChecks: true } });
+    if (!row) return sendError(reply, 'NOT_FOUND', 'Answer not found');
+    const file = artFile(row.artChecks, scene);
+    if (!file) return sendError(reply, 'NOT_FOUND', 'This droplet has no picture of that scene in storage');
+    const config = storageConfig();
+    if (!config) return sendError(reply, 'UNAVAILABLE', `File storage is not configured on this API (${STORAGE_SETTINGS.join(', ')})`);
+    if ('problem' in config) return sendError(reply, 'UNAVAILABLE', `File storage is misconfigured on this API: ${config.problem}`);
+    let res: Response;
+    try {
+      res = await fetch(signRead(config, 'studio', id, file), { signal: AbortSignal.timeout(15_000) });
+    } catch (err) {
+      return sendError(reply, 'UNAVAILABLE', `Storage did not answer: ${(err as Error).message}`);
+    }
+    if (res.status === 404) {
+      await res.body?.cancel();
+      return sendError(reply, 'NOT_FOUND', 'The picture is not in storage');
+    }
+    if (!res.ok) return sendError(reply, 'UNAVAILABLE', `Storage refused the picture (${await r2Reason(res)})`);
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (bytes.length > ART_IMAGE_MAX_BYTES) return sendError(reply, 'UNAVAILABLE', 'The picture in storage is too large to be one');
+    // Served as a PNG whatever storage says it is, and never sniffed as anything else.
+    return reply
+      .header('content-type', 'image/png')
+      .header('x-content-type-options', 'nosniff')
+      .header('cache-control', 'private, max-age=3600')
+      .send(bytes);
   });
 
   // PATCH /api/answers/:id — admin: { hidden?, approved? }. hidden: true takes the droplet off the public Droplets

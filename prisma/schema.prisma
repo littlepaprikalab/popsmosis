@@ -148,6 +148,10 @@ model Answer {
   // them (lib/serialize.ts); the reply queue reads a compact context out of the bundle (lib/droplet.ts).
   bundle    Json? // bundle.json as it passed the fact-check
   factcheck Json? // factcheck.json: the verdict on every line
+  // What the studio's checks found, for an admin reviewing the droplet (GET /api/answers/:id/review); omitted like the
+  // two above. Null for a droplet made before they were sent.
+  checks    Json? // checks.json: the code checks on the bundle, sent with the lesson
+  artChecks Json? // the art checker's look at each scene's picture, every try, sent with READY (lib/review.ts)
 
   videoStatus     VideoStatus?
   songVideoUrl    String?

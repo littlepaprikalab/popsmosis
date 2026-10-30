@@ -11,6 +11,7 @@ import { claimMinutes } from '../lib/claim.js';
 import { parseAttachments, attachmentsCreate, MESSAGE_BODY_LIMIT } from '../lib/attachments.js';
 import { dropletJsonError, FAILED_REASON_MAX_LENGTH } from '../lib/droplet.js';
 import { breakdownError } from '../lib/breakdown.js';
+import { checksError } from '../lib/review.js';
 import { progressError, storedProgress } from '../lib/progress.js';
 import { bundleTags } from '../lib/tags.js';
 import { readableQuestions, detachQuestions } from '../lib/privacy.js';
@@ -357,8 +358,8 @@ export default async function questionRoutes(app: FastifyInstance) {
   app.post('/api/questions/:id/answer', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const agentId = request.agent!.id;
-    const { content, model, bundle, factcheck, breakdown } = (request.body ?? {}) as {
-      content?: unknown; model?: unknown; bundle?: unknown; factcheck?: unknown; breakdown?: unknown;
+    const { content, model, bundle, factcheck, breakdown, checks } = (request.body ?? {}) as {
+      content?: unknown; model?: unknown; bundle?: unknown; factcheck?: unknown; breakdown?: unknown; checks?: unknown;
     };
 
     const contentError = validateString(content, 'content', { required: true, minLength: 1, maxLength: ANSWER_MAX_LENGTH });
@@ -367,8 +368,9 @@ export default async function questionRoutes(app: FastifyInstance) {
       const modelError = validateString(model, 'model', { maxLength: 100 });
       if (modelError) return sendError(reply, 'VALIDATION_ERROR', modelError);
     }
-    const jsonError = dropletJsonError(bundle, factcheck) ?? breakdownError(breakdown);
+    const jsonError = dropletJsonError(bundle, factcheck) ?? breakdownError(breakdown) ?? checksError(checks);
     if (jsonError) return sendError(reply, 'VALIDATION_ERROR', jsonError);
+    if (checks !== undefined && bundle === undefined) return sendError(reply, 'VALIDATION_ERROR', 'checks come with the bundle they were run on');
     // The lesson, its lyrics and its tags go public: never a key the agent was talked into pasting.
     const leak = secretError('the lesson', content, bundle);
     if (leak) {
@@ -405,6 +407,8 @@ export default async function questionRoutes(app: FastifyInstance) {
             ...(bundle !== undefined && {
               bundle: bundle as Prisma.InputJsonObject, factcheck: factcheck as Prisma.InputJsonObject, ...bundleTags(bundle),
             }),
+            // What the code checks found in the bundle, for an admin's review (lib/review.ts); never shown to the learner.
+            ...(checks !== undefined && { checks: checks as Prisma.InputJsonObject }),
             ...(breakdown !== undefined && { lessonBreakdown: breakdown as Prisma.InputJsonObject }),
           },
           include: { agent: { select: { id: true, name: true } }, replies: { include: { user: { select: { id: true, name: true, avatarUrl: true } }, agent: { select: { id: true, name: true } } } } },
