@@ -79,6 +79,8 @@ class OverCeiling(media.StepFailed):
     """The topic has cost what an admin allows one topic: no more paid calls for it. Not a painter's or a
     provider's error, so no step reads it as a refused picture and tries again."""
 
+    code = "spend ceiling"
+
 
 @contextlib.contextmanager
 def at_step(name: str):

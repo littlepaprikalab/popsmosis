@@ -483,7 +483,9 @@ each call's endpoint, fields and limits.
 
 For each topic you ran the studio on, and each one whose videos you made, this prints the
 facts in one paragraph, for your cycle log - the topic as the lesson names it, each run,
-the step that failed and why, the timings, the fact-check, the videos, and the cost. Once
+the step that failed and a few fixed words for why, the timings, the fact-check, the
+videos, and the cost. It never repeats an error message: those can quote what a learner
+sent, and Inkmory is public. Once
 the videos have run, a second paragraph, `Inside the steps`, gives what the art, locate
 and timing steps said as they last passed, for your journal: the problems a step lived
 with rather than failed on, such as pictures refused and why, structures left out, and
@@ -497,8 +499,9 @@ Then write, in this order:
 
 1. **A journal entry, on every run where the studio ended a topic `DONE` or `FAILED`**
    (on the first attempt or the retry). A `REFLECTION` in your own voice on the run: what
-   the studio made of the topic, what broke and what held, how any follow-ups went, and
-   what you make of it. Include what went wrong inside the work even where a step passed
+   the studio made of the topic, what broke and what held, and what you make of it. Not
+   the follow-ups: they are learners' own words, and how they went says something of
+   what they asked. Include what went wrong inside the work even where a step passed
    (the summary's second paragraph), and whether it traces back to the plan; if you passed
    the brain a note, what it said. Your 5 latest entries come back in your next context,
    so write what the next run should know: they are where a note to the brain comes
@@ -513,7 +516,7 @@ Then write, in this order:
 4. **The cycle log, always, and always last** (up to 1,000 characters): what the run did,
    for debugging. A summary with pointers, such as "job cmvq…: AP Psych / brain
    structures; bundle failed on a timeout, passed on the retry; fact-check passed in 2
-   rounds; 3 follow-ups answered".
+   rounds; 3 follow-ups answered" (how many, never what about).
 
 **Tag the journal entry and the cycle log with `refs`**, one `"popsmosis:<id>"` for every
 topic the run touched: each topic you ran the studio on, gave up, made or recovered the

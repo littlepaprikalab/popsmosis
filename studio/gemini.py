@@ -54,6 +54,8 @@ Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 class GeminiError(media.StepFailed):
     """The Gemini API did not give back what was asked."""
 
+    code = "Gemini failed"
+
 
 class Declined(GeminiError):
     """Gemini would not make this picture."""

@@ -329,11 +329,43 @@ def test_the_summary_names_the_topic_by_the_bundle_never_the_learners_words(jobs
         + json.dumps({"label": "factcheck round 1", "model": "claude-opus-5-5", "cost_usd": 0.2}) + "\n")
     operator_run.run("q1", api=api, ask=FakeBrain())
     text = operator_run.summary("q1")
-    assert text.startswith("job q1: AP Biology / the light reactions. 2 run(s): run 1 FAILED at bundle (overloaded); "
-                           "run 2 DONE at post.")
+    assert text.startswith("job q1: AP Biology / the light reactions. 2 run(s): run 1 FAILED at bundle "
+                           "(the model call failed); run 2 DONE at post.")
     assert "Fact-check passed in 1 round(s), 0 correction(s). Lesson posted. 2 model call(s), $0.70." in text
     assert "ATP synthesis" not in text and "exam" not in text
     assert len(text) <= operator_run.CYCLE_LOG_MAX
+
+
+def test_the_summary_never_quotes_a_rejected_line_or_what_a_step_found(jobs_root):
+    """A failed fact-check's reason quotes the lines it rejected, which come from what the learner sent; the summary
+    goes on Inkmory, so it says the step and a fixed code, and a step's line without what it quotes."""
+    api = FakeApi()
+    assert operator_run.run("q1", api=api, ask=FakeBrain(verdict="UNSUPPORTED"))[:2] == ("FAILED", "factcheck")
+    [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
+    assert " is unsupported" in record["reason"] and record["code"] == "the fact-check failed"
+    text = operator_run.summary("q1")  # the message stays in runs.jsonl, for the operator; never in the summary
+    assert "run 1 FAILED at factcheck (the fact-check failed)" in text and "is unsupported" not in text
+
+    record["steps"].append({"step": "art", "seconds": 1.0, "result": "DONE",
+                            "detail": "painted 3 scenes; 1 picture refused: hook: writing in it ('Ben Okafor', 'P3') "
+                                      "and Broca's area was \"Ben's notes\""})
+    (jobs_root / "q1" / "runs.jsonl").write_text(json.dumps(record) + "\n")
+    inside = operator_run.summary("q1").split("\n\n")[1]
+    assert "Ben" not in inside and "P3" not in inside
+    assert "writing in it …" in inside and "Broca's area" in inside  # an apostrophe is not a quote
+
+
+def test_every_run_that_does_not_end_done_keeps_a_fixed_code(jobs_root):
+    api = FakeApi()
+    api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")
+    operator_run.run("q1", api=api, ask=FakeBrain())
+    api.errors["post_answer"] = ApiError(409, "CONFLICT", "answered")
+    operator_run.run("q1", api=api, ask=FakeBrain())
+    assert [r.get("code") for r in operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")] == [
+        "the API answered 503", "the topic was answered, given up or taken"]
+    assert operator_run.failure_code(ApiError(0, "", "no answer")) == "the API did not answer"
+    assert operator_run.failure_code(brain.Truncated("x")) == "the answer was cut off"
+    assert operator_run.failure_code(ValueError("x")) == "a studio error"
 
 
 def test_a_reason_is_one_short_line():

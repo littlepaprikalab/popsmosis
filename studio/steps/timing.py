@@ -125,7 +125,8 @@ def run(job: Path, ask=brain.ask) -> str:
     if mismatch:
         # Made again on the retry (the audio step makes only what is missing), never timed and published as it is.
         (job / media.audio_path("song")).unlink(missing_ok=True)
-        raise media.StepFailed(f"{mismatch}; the song is deleted, so the retry sings it again")
+        raise media.StepFailed(f"{mismatch}; the song is deleted, so the retry sings it again",
+                               code="the song did not sing its lyrics")
     jobs.write(job / media.timing_path("song"), timing)
     return f"song {len(timing.lines)} lines in {timing.duration:.1f}s, {song_notes(report)}; " + ", ".join(parts)
 

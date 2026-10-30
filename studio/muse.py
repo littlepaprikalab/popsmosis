@@ -60,6 +60,8 @@ Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
 class MuseError(media.StepFailed):
     """Meta's API did not give back what was asked."""
 
+    code = "Meta's API failed"
+
 
 class Declined(MuseError):
     """Muse Image would not make this picture (its content policy)."""

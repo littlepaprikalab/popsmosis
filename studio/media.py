@@ -65,7 +65,17 @@ LOCATIONS = "locations.json"
 
 
 class StepFailed(Exception):
-    """The step ran and did not succeed; running it again retries it."""
+    """The step ran and did not succeed; running it again retries it.
+
+    `code` says why in fixed words of the studio's own, for what goes public (studio/run.py, failure_code): the
+    message can quote a line, a picture's writing or a provider's answer, all of them made from what a learner sent."""
+
+    code = "step failed"
+
+    def __init__(self, message: str = "", code: str | None = None):
+        super().__init__(message)
+        if code:
+            self.code = code
 
 
 def slug(name: str) -> str:

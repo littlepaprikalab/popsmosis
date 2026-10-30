@@ -76,6 +76,9 @@ the whole droplet. So:
 Then:
 
 - `course`: the course named in the request, or the one this topic is usually taught in.
+- `topic`: the topic as a textbook names it ("the light reactions"). With the course it is
+  the droplet's public title, so never the learner's words beyond the topic, and nothing
+  about them: no name, school, teacher, class or test date.
 - `core_idea`: the essence, the one sentence the learner should still be able to say a week
   later: how the thing works or why it happens, the cause and its effect, not a name or a
   definition. At most 20 words, in plain words, with at most two terms from `key_terms`.
