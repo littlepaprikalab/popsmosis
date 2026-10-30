@@ -39,34 +39,32 @@ const LESSON_STEPS: Step[] = [
   {
     name: 'Plan',
     kind: 'makes',
-    text: 'The AI writer plans the whole lesson first: the question, the one big idea, the facts, and a picture for '
-      + 'each part. The text lesson, the spoken lesson and the song are all written from this one plan.',
+    text: 'The AI writer plans the whole lesson first: the big idea, the facts, and a picture for each part. The '
+      + 'lesson, the spoken lesson and the song all come from this one plan.',
   },
   {
     name: 'Rule check',
     kind: 'checks',
-    text: 'Simple computer rules check what can be counted. Is every part a line talks about in its picture? Is every '
-      + 'song line short enough to sing? Some problems get fixed here, and the rest are noted.',
+    text: 'Simple computer rules check what can be counted, like whether every song line is short enough to sing. '
+      + 'Some problems get fixed right here.',
   },
   {
     name: 'Student test',
     kind: 'checks',
-    text: 'A second AI pretends to be a student who has never seen the topic. It reads only the lesson and explains '
-      + 'it back. If it misses the big idea, or most of why it works, the lesson is rewritten once and tested again.',
+    text: 'A second AI plays a student who has never seen the topic. It reads only the lesson and explains it back, '
+      + 'and if it misses the big idea or why it works, the lesson is rewritten once.',
   },
   {
     name: 'Fact check',
     kind: 'gate',
-    text: 'The AI starts fresh, without seeing how the lesson was written, and checks each fact on its own against '
-      + 'what textbooks teach at your level. A wrong fact is fixed, and the fix is checked too. Notes you send help it '
-      + 'see what your class covers, but they never make a fact true.',
+    text: 'The AI starts fresh and checks each fact on its own against what textbooks teach at your level. Wrong facts '
+      + 'are fixed, and the fixes are checked again.',
   },
   {
     name: 'Line check',
     kind: 'gate',
-    text: 'Starting fresh again, it checks every line against those facts: the lesson, the spoken lesson, the song, '
-      + 'and every caption and title. A line that doesn’t match is rewritten and checked again, for up to three rounds. '
-      + 'Anything not right for a classroom fails too.',
+    text: 'Starting fresh again, it checks every line of the lesson, the song and the captions against those facts, '
+      + 'and for whether it is fit for a classroom. A line that fails is rewritten and checked again, up to three rounds.',
   },
 ];
 
@@ -74,24 +72,21 @@ const PICTURE_STEPS: Step[] = [
   {
     name: 'Pictures',
     kind: 'makes',
-    text: 'An AI paints each picture like a textbook diagram, with no words in it. The video adds every label and word '
-      + 'itself. When Claude writes the lesson (our default), charts and anything that must be to scale are drawn by '
-      + 'code from the real numbers instead.',
+    text: 'An AI paints each picture like a textbook diagram with no words; the video adds the labels. With Claude '
+      + 'writing (our default), charts and anything to scale are drawn by code from the real numbers instead.',
   },
   {
     name: 'Picture check',
     kind: 'checks',
-    text: 'A second AI looks at each painted picture. Is a part missing, in the wrong place, or facing the wrong way? '
-      + 'Is there any writing? If so, the picture is painted one more time. A picture with writing in it is never '
-      + 'used.',
+    text: 'A second AI looks at each painted picture for parts that are missing or out of place, and for any writing. '
+      + 'If it finds one, the picture is painted once more.',
     discloses: true,
   },
   {
     name: 'Labels',
     kind: 'checks',
-    text: 'Another AI finds each part in the picture, so its label points to the right spot. It only counts a spot in '
-      + 'that part’s color. Then an AI looks at every label to catch one in the wrong place. A part it can’t find gets '
-      + 'no label, not a guess.',
+    text: 'Another AI finds each part so its label points to the right spot, and then checks where every label landed. '
+      + 'A part it can’t find gets no label, not a guess.',
   },
 ];
 
@@ -99,16 +94,15 @@ const SOUND_STEPS: Step[] = [
   {
     name: 'Song and voice',
     kind: 'makes',
-    text: 'AI voices sing the song and read the spoken lesson. Each word is then matched to the moment it is heard, so '
-      + 'the lyrics and labels show up on time. If most of the song’s lines can’t be made out, the song is made again.',
+    text: 'AI voices sing the song and read the spoken lesson, and each word is matched to the moment it is heard. If '
+      + 'most of the song can’t be made out, it is made again.',
   },
 ];
 
 const VIDEO_STEP: Step = {
   name: 'Video',
   kind: 'makes',
-  text: 'Code puts it all together, frame by frame: the pictures, labels, captions, the notes about mistakes, and '
-    + 'moving dots that show what goes where. The moving dots are checked against the facts too.',
+  text: 'Code puts it all together, frame by frame: the pictures, labels, captions, and the notes about mistakes.',
 };
 
 // A note the art check wrote on a real picture, round 16's mitosis hook (docs/test-rounds.md).
@@ -230,7 +224,7 @@ export default function HowItsMadePage() {
           </p>
         </div>
         <ul className="grid gap-3 mt-6 sm:grid-cols-3">
-          <Pledge color="var(--accent-green)" title="Every fact checked">
+          <Pledge color="var(--accent-orange)" title="Every fact checked">
             against what textbooks teach at your level
           </Pledge>
           <Pledge color="var(--accent-orange)" title="Every line checked">
