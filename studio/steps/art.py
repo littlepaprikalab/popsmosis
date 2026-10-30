@@ -130,11 +130,22 @@ def drawn(job: Path, bundle: Bundle, scene: Scene) -> bool:
     stage of its process with it (the stages share one picture's framing), when the brain in force can draw."""
     if painter(job) == "svg":
         return True
-    if "svg" not in brain.ART_CHOICES[brain.provider()]:
+    if "svg" not in brain.ART_CHOICES[brain.provider()] or _painted_instead(job, bundle, scene):
         return False
     stage = Stage.of(bundle, scene)
     group = stage_groups(bundle.scenes)[stage.process] if stage else [scene]
-    return any(s.exact() for s in group)
+    # The hook and the analogy are everyday pictures: marked to scale by mistake, they are still painted.
+    return any(s.axes or (s.to_scale and s.id not in EVERYDAY) for s in group)
+
+
+def _painted_instead(job: Path, bundle: Bundle, scene: Scene) -> bool:
+    """Whether the scene, to be drawn as SVG, was painted instead, since no drawing of it could be used (paint()'s
+    record says so, for the scene as the bundle now has it): a droplet with a painted chart, not none."""
+    try:
+        made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(made, dict) and bool(made.get("instead_of_svg")) and made.get("key") == key(bundle, scene)
 
 
 def drawn_locations(job: Path, bundle: Bundle, scene: Scene) -> SceneLocations | None:
@@ -528,6 +539,10 @@ def run_painted(job: Path, ask) -> str:
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
+    if not resume:  # a run from scratch tries again to draw what was painted instead of drawn
+        for scene in bundle.scenes:
+            if _painted_instead(job, bundle, scene):
+                _painting(job, scene).unlink()
     to_draw = [scene for scene in bundle.scenes if drawn(job, bundle, scene)]  # to scale: the brain's SVG
     drawn_ids = {scene.id for scene in to_draw}
     to_paint = [scene for scene in bundle.scenes if scene.id not in drawn_ids]
@@ -543,14 +558,23 @@ def run_painted(job: Path, ask) -> str:
     def make(scene: Scene):
         if scene.id not in drawn_ids:
             return paint(job, bundle, scene, ask)
-        drawing = draw(job, bundle, scene, ask, resume)
+        try:
+            drawing = draw(job, bundle, scene, ask, resume)
+        except Exception as e:  # no drawing it can use, or the brain failed: painted, as before SVG for charts
+            why = f"{type(e).__name__}: {e}"
+            print(f"art: {scene.id}: drawn as SVG failed, painted instead: {why}", file=sys.stderr)
+            return paint(job, bundle, scene, ask, instead_of_svg=why)
         save(job, scene, drawing)  # the locate step takes its locations from the drawing kept (drawn_locations())
         return drawing
 
     # The scenes at the same time, those drawn as SVG with them, then each process's later stages, redrawn from its
     # first stage's picture. One that fails fails the step once the others are saved.
     made = ledger.parallel(make, to_draw + first, WORKERS)
-    drawings, results = made[:len(to_draw)], made[len(to_draw):]
+    painted_instead = [scene for scene, m in zip(to_draw, made) if not isinstance(m, Drawing)]
+    drawings = [(scene, m) for scene, m in zip(to_draw, made) if isinstance(m, Drawing)]
+    to_draw = [scene for scene, _ in drawings]
+    results = [m for m in made if not isinstance(m, Drawing)]
+    first = painted_instead + first
     results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
                                later, WORKERS)
     todo = first + later
@@ -566,12 +590,15 @@ def run_painted(job: Path, ask) -> str:
     elif kept or not to_draw:
         lines.append(f"kept the {kept} scene{'s' if kept != 1 else ''} {by.title} painted before")
     if to_draw:
-        left_out = [f"{name} on {scene.id}" for scene, drawing in zip(to_draw, drawings) for name in drawing.left_out(scene)]
+        left_out = [f"{name} on {scene.id}" for scene, drawing in drawings for name in drawing.left_out(scene)]
         lines.append(f"drew {len(to_draw)} scene{'s' if len(to_draw) != 1 else ''} to scale as SVG ("
                      + ", ".join(scene.id for scene in to_draw) + ")"
-                     + refusals([f"{scene.id}: {why}" for scene, drawing in zip(to_draw, drawings)
-                                 for why in drawing.refused], "drawing")
+                     + refusals([f"{scene.id}: {why}" for scene, drawing in drawings for why in drawing.refused],
+                                "drawing")
                      + (f"; left out {', '.join(left_out)}" if left_out else ""))
+    if painted_instead:
+        lines.append("painted " + ", ".join(scene.id for scene in painted_instead) + " instead of drawing "
+                     + ("it" if len(painted_instead) == 1 else "them") + " as SVG")
     return "; ".join(lines)
 
 
@@ -601,11 +628,13 @@ def refusal(tried: dict) -> str | None:
     return str(found[0]) if found else None
 
 
-def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None) -> tuple[Painting, int]:
+def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None,
+          instead_of_svg: str = "") -> tuple[Painting, int]:
     """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
     how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
     (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
-    not, or the painter cannot, it is painted afresh."""
+    not, or the painter cannot, it is painted afresh. `instead_of_svg` says why a scene to be drawn as SVG is
+    painted instead (drawn(), _painted_instead())."""
     by = painter_of(job)
     if not by.redraws:
         reference = None
@@ -664,6 +693,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         best.check = best.check.model_copy(update={"notes": kept})
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
                                   **({"notes_unconfirmed": unconfirmed} if unconfirmed else {}),
+                                  **({"instead_of_svg": instead_of_svg} if instead_of_svg else {}),
                                   "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
                                   and stage.number > 1 else "",
                                   "try": best.attempt, "check": best.check.model_dump(), "tries": tries})

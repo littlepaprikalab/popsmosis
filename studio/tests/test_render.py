@@ -1216,9 +1216,9 @@ def test_what_travels_is_drawn_as_an_arrow_at_each_hand_off_and_a_crossing_as_pa
     travelling = moving("filtrate", "travels")
     flow = travelling.timeline.beats[0].particles[0]
     assert travelling._travels("overview", flow)
-    [(tail, tip)] = travelling._handoffs("overview", flow)  # one hand-off: from the thylakoid into b6f
+    [(tail, tip, into)] = travelling._handoffs("overview", flow)  # one hand-off: from the thylakoid into b6f
     b6f = located(job, "overview", "Cytochrome b6f").box
-    assert b6f.y0 - 60 <= tip[1] <= b6f.y1 + 60 and tip != tail
+    assert b6f.y0 - 60 <= tip[1] <= b6f.y1 + 60 and tip != tail and into.name == "Cytochrome b6f"
     start = travelling.plans[0].runs[0][0]  # when it sets off
     travelling.frame(start + renderer_module.HANDOFF_GROW_S / 2)  # drawing itself in
     travelling.frame(8.0)  # long since drawn in
@@ -1256,3 +1256,20 @@ def test_with_no_word_from_the_bundle_a_route_that_bends_or_runs_along_a_part_tr
     assert through([(100.0, 500.0), (700.0, 500.0), (100.0, 540.0)], (690, 712))  # out and nearly back: it bends
     assert not through([(100.0, 500.0), (700.0, 500.0), (100.0, 500.0)], (300, 1100),
                        ("Lumen", "Pump", "Lumen"))  # out through a part and back: it crosses the part
+
+
+def test_a_value_the_camera_leaves_out_is_not_written_over_the_band(job, monkeypatch):
+    from studio.schemas import Written
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    beats = list(timeline.beats)
+    inside, edge = (Written(text="$1,210", at=Point(x=900, y=400), since=0.0),
+                    Written(text="Year 0", at=Point(x=900, y=1020), side="below", since=0.0))  # below the picture
+    beats[on[0]] = beats[on[0]].model_copy(update={"values": [inside, edge]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    drawn = []
+    monkeypatch.setattr(p, "draw_value", lambda canvas, text, rect, *a, **k: drawn.append((text, rect)))
+    renderer.frame(beats[on[0]].t1 - 0.01)
+    view = renderer.view("overview")
+    assert [text for text, _ in drawn] == ["$1,210"]
+    assert all(view[0] <= r[0] and view[1] <= r[1] and r[2] <= view[2] and r[3] <= view[3] for _, r in drawn)

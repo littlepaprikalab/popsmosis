@@ -166,7 +166,13 @@ def handoff(a: np.ndarray, b: np.ndarray, toward: Point) -> tuple[Point, Point]:
     touch = _grown(a, 2) & _grown(b, 2)
     ys, xs = np.nonzero(touch)
     if not len(ys):
-        return _span(a, b)
+        (x0, y0), (x1, y1) = _span(a, b)
+        if math.hypot(x1 - x0, y1 - y0) >= 2 * ARROW_CELLS * GRID:
+            return (x0, y0), (x1, y1)
+        # Nearly touching: an arrow as long as any other, across the gap's middle, rather than a stub of a head.
+        middle = np.array([(x0 + x1) / 2, (y0 + y1) / 2]) / GRID
+        way = np.array([x1 - x0, y1 - y0]) if (x0, y0) != (x1, y1) else np.array([toward[0] - x0, toward[1] - y0])
+        return _ends(middle, way)
     if len(ys) >= ALONG_MIN:
         spread = np.cov(np.vstack([xs, ys]))
         values, vectors = np.linalg.eigh(spread)

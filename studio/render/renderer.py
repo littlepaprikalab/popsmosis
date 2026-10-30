@@ -722,7 +722,8 @@ class Renderer:
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
         self._travelling: dict[tuple[str, str], bool] = {}  # (scene, what travels) -> drawn as hand-off arrows
-        self._handoff_arrows: dict[tuple, list[tuple[Point, Point]]] = {}  # each such flow's arrows, in art pixels
+        self._handoff_arrows: dict[tuple, list] = {}  # each such flow's arrows, in art pixels, with the part entered
+        self._arrowed_labels: dict[str, set[str]] = {}  # per scene, what travels as arrows (the legend's)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
 
@@ -1221,6 +1222,9 @@ class Renderer:
             x, y = v.at.x * scale + dx, v.at.y * scale + dy
             rect = {"above": (x - w / 2, y - g - h, x + w / 2, y - g), "below": (x - w / 2, y + g, x + w / 2, y + g + h),
                     "left": (x - g - w, y - h / 2, x - g, y + h / 2), "right": (x + g, y - h / 2, x + g + w, y + h / 2)}[v.side]
+            if rect[0] < view[0] or rect[1] < view[1] or rect[2] > view[2] or rect[3] > view[3]:
+                continue  # the camera leaves its point out (a close-up, the upright frame's sides): a cut-off number
+                # would be misread, and it would spill over the lyric band or a notice card
             if shown > 0.01:
                 pop = 0.0 if v.tick else 1 - p.ease((t - v.since) / p.VALUE_POP_S)
                 p.draw_value(canvas, v.text, rect, size, art.paper, shown, v.tick, pop)
@@ -1347,7 +1351,7 @@ class Renderer:
             if alpha <= 0.01:
                 continue
             if self._travels(beat.scene, flow):  # each part bumps once, as the arrow into it draws in
-                for k, (_, loc) in enumerate(self._path_stops(beat.scene, flow.path)[1:]):
+                for k, (_, _, loc) in enumerate(self._handoffs(beat.scene, flow)):
                     at = t - flow_in - k * HANDOFF_STEP_S - HANDOFF_GROW_S
                     if 0 <= at < BUMP_S and not self._is_space(beat.scene, loc):
                         grow[loc.name] = grow.get(loc.name, 0.0) + BUMP * math.sin(math.pi * at / BUMP_S)
@@ -1623,7 +1627,7 @@ class Renderer:
             for path, label, color in routes:
                 flow = self._flow_of(scene_id, path, label)
                 if flow is not None and self._travels(scene_id, flow):  # its arrows, not the route between its stops
-                    for tail, tip in self._handoffs(scene_id, flow):
+                    for tail, tip, _ in self._handoffs(scene_id, flow):
                         n = max(int(math.dist(tail, tip) / ARROW_SAMPLE), 1)
                         samples += [(p.lerp(tail[0], tip[0], k / n), p.lerp(tail[1], tip[1], k / n)) for k in range(n + 1)]
                     continue
@@ -1648,9 +1652,11 @@ class Renderer:
                      if f.path == path and f.label == label), None)
 
     def _arrowed(self, scene_id: str) -> set[str]:
-        """What travels on the scene as hand-off arrows, which the legend keys with an arrow."""
-        return {f.label for b in self.timeline.beats if b.scene == scene_id for f in b.particles
-                if f.label and self._travels(scene_id, f)}
+        """What travels on the scene as hand-off arrows, which the legend keys with an arrow; once per scene."""
+        if scene_id not in self._arrowed_labels:
+            self._arrowed_labels[scene_id] = {f.label for b in self.timeline.beats if b.scene == scene_id
+                                              for f in b.particles if f.label and self._travels(scene_id, f)}
+        return self._arrowed_labels[scene_id]
 
     def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
         """The key to what moves on the scene: (colour, kind, alpha) for each kind of particle its flows and spaces have
@@ -1760,9 +1766,10 @@ class Renderer:
         art = self.scene(scene_id)
         return any(routing.inside(route, art.cells(name)) > THROUGH_MAX for name in stops[1:-1])
 
-    def _handoffs(self, scene_id: str, flow) -> list[tuple[Point, Point]]:
-        """A travelling flow's arrows, tail and tip in art pixels: one where it passes from each part into the next
-        (routing.handoff), pointing on toward the stop after; beside another's on the same stops (its lane)."""
+    def _handoffs(self, scene_id: str, flow) -> list[tuple[Point, Point, object]]:
+        """A travelling flow's arrows, tail and tip in art pixels, each with the part it enters: one where it passes
+        from each part into the next (routing.handoff), pointing on toward the stop after; beside another's on the
+        same stops (its lane). Worked out once per flow, as every frame asks."""
         key = (scene_id, tuple(flow.path), flow.label)
         if key not in self._handoff_arrows:
             art = self.scene(scene_id)
@@ -1778,7 +1785,7 @@ class Renderer:
                     nx, ny = -(y1 - y0) / length * LANE_GAP * lane, (x1 - x0) / length * LANE_GAP * lane
                     x0, y0, x1, y1 = x0 + nx, y0 + ny, x1 + nx, y1 + ny
                 if (x0, y0) != (x1, y1):
-                    arrows.append(((x0, y0), (x1, y1)))
+                    arrows.append(((x0, y0), (x1, y1), pairs[i + 1][1]))
             self._handoff_arrows[key] = arrows
         return self._handoff_arrows[key]
 
@@ -1790,7 +1797,7 @@ class Renderer:
         n = len(arrows)
         drawn_in = n * HANDOFF_STEP_S + HANDOFF_GROW_S
         cycle = n * HANDOFF_STEP_S + FLOW_PAUSE_S
-        for k, (tail, tip) in enumerate(arrows):
+        for k, (tail, tip, _) in enumerate(arrows):
             grown = p.ease((elapsed - k * HANDOFF_STEP_S) / HANDOFF_GROW_S)
             pulse = 0.0
             if elapsed >= drawn_in:

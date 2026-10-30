@@ -239,3 +239,41 @@ def test_a_graph_is_drawn_to_scale_and_on_muses_brain_painted():
     assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, True, False]
     with brain.chosen("muse-spark"):  # Muse's brain draws no SVG: its painter paints the graph too
         assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, False, False]
+
+
+def test_a_scene_to_scale_with_no_usable_drawing_is_painted_instead_and_located_by_sam(job, monkeypatch):
+    # A chart the brain cannot draw is painted, as before charts were drawn: a droplet with a painted chart, not none.
+    bundle = to_scale(job)
+    painter, sam = FakeGemini().install(monkeypatch), FakeMuse().install(monkeypatch)
+
+    class Refused(FakeDrawer):
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if system == art.PROMPT:
+                self.drawn.append((label, prompt))
+                return {"text": "<svg>not a drawing"}
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    ask = Refused(FakeHelper())
+    result = art.run(job, ask)
+    assert len(ask.drawn) == art.MAX_TRIES and result.endswith("; painted overview instead of drawing it as SVG")
+    assert sorted(label for label, _ in painter.painted) == ["art hook", "art overview", "art synthase"]
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert "no usable drawing" in made["instead_of_svg"]
+    overview = bundle.scenes[1]
+    assert not art.drawn(job, bundle, overview) and art.is_done(job)
+    locate.run(job, ask)
+    assert locate.is_done(job)
+    assert {s.found_by for s in jobs.read(job / media.LOCATIONS, Locations).scene("overview").structures} == {"sam"}
+
+    # Resumed, it stays painted; from scratch, it is drawn again.
+    ask.drawn.clear()
+    (job / "art" / "hook.json").unlink()
+    art.run(job, ask)
+    assert ask.drawn == []
+    art.run(job, FakeDrawer(FakeHelper()))
+    assert art.drawn(job, bundle, overview) and (job / "art" / "overview.svg").exists()
+
+
+def test_an_everyday_scene_marked_to_scale_is_still_painted(job):
+    bundle = to_scale(job, "hook")
+    assert not art.drawn(job, bundle, bundle.scenes[0])

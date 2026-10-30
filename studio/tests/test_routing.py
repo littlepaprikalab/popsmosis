@@ -116,3 +116,13 @@ def test_parts_meet_when_they_touch_and_a_path_is_measured_inside_a_part():
     across = [(0.0, 10 * g), (20 * g, 10 * g), (40 * g, 10 * g)]  # two steps, their middles at cells 10 and 30
     assert routing.inside(across, a) == 20 * g and routing.inside(across, far) == 20 * g
     assert routing.inside(across, b) == 0.0  # neither step's middle is in b
+
+
+def test_parts_that_nearly_touch_get_an_arrow_as_long_as_any_other_across_their_gap():
+    a = np.zeros((40, 60), bool)
+    b = np.zeros((40, 60), bool)
+    a[10:30, 5:20] = True
+    b[10:30, 25:40] = True  # five cells apart: no meeting, a gap too short for an arrow of its own
+    (x0, y0), (x1, y1) = routing.handoff(a, b, (60 * routing.GRID, 20 * routing.GRID))
+    assert math.hypot(x1 - x0, y1 - y0) == pytest.approx(2 * routing.ARROW_CELLS * routing.GRID)
+    assert x1 > x0 and 20 * routing.GRID <= (x0 + x1) / 2 <= 25 * routing.GRID  # across the gap, toward b
