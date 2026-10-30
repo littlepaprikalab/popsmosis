@@ -506,17 +506,17 @@ def keyed(data):
     data["key_terms"] = ["ATP synthase", "lumen"]
 
 
-def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_the_last_chorus(job):
+def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_every_chorus(job):
     data = bundle_data()
     keyed(data)
     bundle = write_bundle(job, data)
     timelines = make(job)
     song = timelines["song"]
     shown = {b.line_id: b.key_line for b in song.beats if b.line_id}
+    # Each chorus sings the core idea, so it shows it, until the next key line (the bridge has none of its own).
     assert shown == {"v1-1": "How does a leaf make fuel from light?", "v1-2": "How does a leaf make fuel from light?",
-                     "c1-1": "How does a leaf make fuel from light?", "v2-1": "Light pumps H⁺ into the lumen",
-                     "c2-1": "Light pumps H⁺ into the lumen", "b-1": "Light pumps H⁺ into the lumen",
-                     "c3-1": bundle.core_idea}
+                     "c1-1": bundle.core_idea, "v2-1": "Light pumps H⁺ into the lumen",
+                     "c2-1": bundle.core_idea, "b-1": bundle.core_idea, "c3-1": bundle.core_idea}
     for i, beat in enumerate(song.beats):  # a gap holds the line before it
         if not beat.line_id and i:
             assert beat.key_line == song.beats[i - 1].key_line

@@ -458,9 +458,9 @@ def _says_core_idea(bundle: Bundle) -> int:
 
 def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
-    sentence in the lesson), held through the gaps after it. From the last chorus, or the narration's last
-    sentence that says it, to the end, the core idea, the whole why chain in one line, unless a key line starts
-    later."""
+    sentence in the lesson), held through the gaps after it. From each chorus (the core idea sung), or the
+    narration's last sentence that says it, the core idea, the whole why chain in one line, until a key line
+    starts later: round 19's Rome song held "Gracchi killed → politics settled by force" over its first chorus."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -469,13 +469,11 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
         return  # a bundle written before key lines: no band, the picture as it was
     if video == "song":
         choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
-        finale = choruses[-1] if choruses else len(lines)
-        while finale > 0 and finale - 1 in choruses:
-            finale -= 1  # where the last chorus starts
+        core_from = [i for i in choruses if i - 1 not in choruses]  # where each chorus starts
     else:
-        finale = _says_core_idea(bundle)
+        core_from = [_says_core_idea(bundle)]
     if bundle.core_idea.strip():
-        starts.append((finale, " ".join(bundle.core_idea.split())))
+        starts += [(at, " ".join(bundle.core_idea.split())) for at in core_from]
     starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
     for i, beat in enumerate(beats):
         if beat["line_id"] in order:
