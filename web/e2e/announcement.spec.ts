@@ -59,4 +59,27 @@ test.describe('the announcement', () => {
     await comeBack(page);
     await expect(banner).toHaveCount(0);
   });
+
+  test('closing it in one tab closes it in the browser\'s other tabs', async ({ context, request }) => {
+    await request.put(apiUrl('/api/announcement'), { headers: asAda(), data: { message: 'Songs are off.' } });
+    const one = await context.newPage();
+    const two = await context.newPage();
+    await one.goto('/droplets');
+    await two.goto('/about');
+    await expect(two.getByTestId('announcement')).toContainText('Songs are off.');
+    await one.getByTestId('announcement').getByRole('button', { name: 'Close the announcement' }).click();
+    await expect(two.getByTestId('announcement')).toHaveCount(0);
+  });
+
+  // The web app and the API deploy one at a time: a page newer than its API shows no banner and works as before.
+  test('an API older than the announcement leaves every page as it was', async ({ page, context }) => {
+    await page.route((url) => url.pathname === '/api/announcement', (route) => route.fulfill({
+      status: 404, contentType: 'application/json', body: '{"error":{"code":"NOT_FOUND","message":"Route not found"}}',
+    }));
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    await expect(page.getByTestId('brain-default')).toBeVisible();
+    await expect(page.getByTestId('announcement-editor').getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect(page.getByTestId('announcement')).toHaveCount(0);
+  });
 });

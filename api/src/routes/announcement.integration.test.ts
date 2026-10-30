@@ -56,6 +56,7 @@ d('announcement', () => {
     const shown = await read();
     expect(shown.statusCode).toBe(200);
     expect(shown.headers['set-cookie']).toBeUndefined();
+    expect(shown.headers['cache-control']).toBe('no-store');
     expect(shown.json()).toEqual({ announcement });
     expect(shown.json().announcement.updatedAt).toBe(res.json().announcement.updatedAt);
   });

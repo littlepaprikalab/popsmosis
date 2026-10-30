@@ -29,8 +29,8 @@ function dismissedAt(): string | null {
 
 /**
  * The announcement an admin set on /admin/studio, under the nav on every page, for everyone, signed in or not. Closing
- * it hides that one on this browser; the next one put up shows again. While the API cannot be reached, the last one
- * read stays.
+ * it hides that one on this browser, in its other open tabs too; the next one put up shows again. While the API cannot
+ * be reached, or is older than the announcement (no route), the last one read stays, or none.
  */
 export function AnnouncementBanner() {
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
@@ -41,8 +41,14 @@ export function AnnouncementBanner() {
     setDismissed(dismissedAt());
     load();
     const onChanged = (event: Event) => setAnnouncement((event as CustomEvent<Announcement | null>).detail);
+    // Closed in another tab of this browser: closed here too.
+    const onStorage = (event: StorageEvent) => { if (event.key === DISMISSED_KEY) setDismissed(event.newValue); };
     window.addEventListener(ANNOUNCEMENT_CHANGED, onChanged);
-    return () => window.removeEventListener(ANNOUNCEMENT_CHANGED, onChanged);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(ANNOUNCEMENT_CHANGED, onChanged);
+      window.removeEventListener('storage', onStorage);
+    };
   }, [load]);
   usePolling(load, POLL_MS);
 

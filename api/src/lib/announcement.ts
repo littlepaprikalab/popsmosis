@@ -4,12 +4,14 @@
  * table under `announcement`, so a change needs no redeploy. No row: nothing is shown.
  *
  * Every open page asks for it about once a minute, signed in or not, so each instance keeps what it read for
- * CACHE_MS: the instance that takes a change has it at once, another within CACHE_MS.
+ * CACHE_MS and reads it once however many ask at the same moment (SharedRead): the instance that takes a change has
+ * it at once, another within CACHE_MS, and the database is asked at most once per CACHE_MS per instance, even while
+ * it is down (each instance then gives the last one it read).
  *
  * `tone`: how it looks. `info` for news, `warning` for something that does not work as it should.
  */
 import prisma from './prisma.js';
-import { TtlCache } from './ttl-cache.js';
+import { SharedRead } from './ttl-cache.js';
 
 export const TONES = ['info', 'warning'] as const;
 export type Tone = (typeof TONES)[number];
@@ -21,7 +23,6 @@ export const MAX_MESSAGE_LENGTH = 500;
 export const CACHE_MS = 10_000;
 
 const KEY = 'announcement';
-const cache = new TtlCache<Announcement | null>(1);
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
@@ -61,13 +62,11 @@ export async function readAnnouncement(db: Pick<typeof prisma, 'setting'> = pris
   return row ? announcementFrom(row.value, row.updatedAt) : null;
 }
 
+const shared = new SharedRead(() => readAnnouncement(), CACHE_MS);
+
 /** What every page shows, as of at most CACHE_MS ago on this instance. */
-export async function currentAnnouncement(): Promise<Announcement | null> {
-  const hit = cache.get(KEY);
-  if (hit !== undefined) return hit;
-  const announcement = await readAnnouncement();
-  cache.set(KEY, announcement, CACHE_MS);
-  return announcement;
+export function currentAnnouncement(): Promise<Announcement | null> {
+  return shared.get();
 }
 
 /** Put an announcement up in place of any before it, or take it down (null). In force on this instance at once. */
@@ -76,6 +75,6 @@ export async function writeAnnouncement(change: AnnouncementChange | null): Prom
     ? await prisma.setting.upsert({ where: { key: KEY }, create: { key: KEY, value: change }, update: { value: change } })
       .then((row) => announcementFrom(row.value, row.updatedAt))
     : await prisma.setting.deleteMany({ where: { key: KEY } }).then(() => null);
-  cache.set(KEY, announcement, CACHE_MS);
+  shared.set(announcement);
   return announcement;
 }

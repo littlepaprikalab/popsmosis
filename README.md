@@ -297,8 +297,10 @@ are off until tomorrow: we are out of quota." It is set at the top of **STUDIO**
 redeploy. `info` shows it in blue, `warning` in orange; it is plain text, up to 500 characters.
 Each open page asks for it once a minute and again when it comes back into view, and each API
 instance keeps it for 10 seconds, so a change reaches every open page within about a minute
-(the admin's own page at once). Anyone can close it on their browser; a new or changed one
-shows again. Taking it down removes it everywhere.
+(the admin's own page at once). An instance reads it from the database at most once in those
+10 seconds however many pages ask, and while the database is down it keeps giving the last one
+it read, so an announcement about an outage stays up through it. Anyone can close it on their
+browser (in all its tabs); a new or changed one shows again. Taking it down removes it everywhere.
 
 ### The teacher's record on Inkmory
 
