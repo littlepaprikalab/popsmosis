@@ -39,6 +39,9 @@ No model calls, so it is free to run again:
 - Particles whose last stop is a blocker (Bundle.blocks) are marked blocked: the renderer
   piles them up there. A line's glow, like its spotlight, needs its structure located on
   the scene and named by then.
+- A beat that sums up (the whole scene, nothing spotlit) runs every flow its scene has shown so far, beside its
+  own, up to RUN_MAX: the system running, as a textbook's summary figure draws it. Each was taught, and
+  fact-checked, on an earlier line, so nothing new is claimed; the spaces fill only from the beat's own.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
@@ -97,6 +100,7 @@ DRAIN_S = 10.0  # seconds of them leaving that would empty it
 CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
+RUN_MAX = 4  # flows moving at once on a beat that sums up: more is a swarm, not a pathway
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
@@ -397,8 +401,9 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     duration = round(max(cursor, voice.duration) + TAIL_S, 3)
     beats[-1]["t1"] = duration
     _fill_crowds(beats, bundle, located)
-    _turn(beats, bundle, located)
     _convert(beats, bundle, located)
+    _run_all(beats, hook)
+    _turn(beats, bundle, located)
     _route(beats)
     _key_lines(beats, bundle, video)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
@@ -488,6 +493,39 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
                        since=scene[c.structure])
             for c in bundle.conversions if c.structure in scene]
+
+
+def _within(short: Particles, long: Particles) -> bool:
+    """Whether one flow runs along part of another (or all of it) carrying the same thing."""
+    n = len(short.path)
+    return short.label == long.label and any(long.path[k:k + n] == short.path for k in range(len(long.path) - n + 1))
+
+
+def _run_all(beats: list[dict], hook: str) -> None:
+    """On a beat that sums up (the whole scene in view, nothing spotlit), every flow its scene has shown so far
+    moves at once beside the beat's own. A flow along part of a longer one carrying the same thing gives way to the
+    longer, so the whole pathway runs rather than two dots on one leg; at most RUN_MAX move. Not on the hook, nor on
+    a scene once a flow on it has been blocked: after the block, the stillness is the point. Runs after the spaces
+    are filled, so a space fills or empties only as the beat's own flows say."""
+    taught: dict[str, list[Particles]] = {}  # per scene, each unblocked flow in the order it was first shown
+    stopped: set[str] = set()  # scenes where a flow has been blocked
+    for beat in beats:
+        scene, own = beat["scene"], beat["particles"]
+        shown = taught.setdefault(scene, [])
+        if any(f.blocked for f in own):
+            stopped.add(scene)
+        if scene != hook and scene not in stopped and beat["spotlight"] is None and beat["camera"].target is None:
+            running = list(own)
+            for flow in shown:
+                if any(_within(flow, g) for g in running):
+                    continue  # already moving, itself or within a longer flow
+                shorter = [g for g in running if _within(g, flow)]
+                if len(running) - len(shorter) < RUN_MAX:
+                    running = [g for g in running if g not in shorter] + [flow]
+            beat["particles"] = running
+        for flow in own:
+            if not flow.blocked and not any(g.path == flow.path and g.label == flow.label for g in shown):
+                shown.append(flow)
 
 
 def _route(beats: list[dict]) -> None:

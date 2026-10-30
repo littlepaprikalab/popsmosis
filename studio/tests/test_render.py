@@ -284,9 +284,9 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
         flow_beat(0, 4, labels=FLOW, reveal=[reveal_b6f]), flow_beat(4, 8, labels=FLOW),  # one run of two lines
         flow_beat(8, 10, path=[], labels=FLOW), flow_beat(10, 12, labels=FLOW),  # a break, then a new run
     ])).plans
-    assert (plans[0].flow_in, plans[0].flow_out) == (2.0, 8.0)  # from the reveal of its last stop
-    assert (plans[1].flow_in, plans[1].flow_out) == (2.0, 8.0)
-    assert (plans[3].flow_in, plans[3].flow_out) == (10.0, 12.0)
+    assert plans[0].runs == [(2.0, 8.0)]  # from the reveal of its last stop
+    assert plans[1].runs == [(2.0, 8.0)]
+    assert plans[3].runs == [(10.0, 12.0)]
 
 
 def test_particles_travel_between_the_structures_and_fade_in(job):
@@ -405,6 +405,108 @@ def test_a_glowing_part_is_lit_and_pulses(job):
     plain = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
     changed = [int((lit.frame(t).copy() != plain.frame(t)).any(-1).sum()) for t in (1.0, 1.4, 1.8)]
     assert all(c > 500 for c in changed) and len(set(changed)) > 1  # lit throughout, and pulsing
+
+
+def test_the_camera_drifts_on_while_a_line_holds_and_lines_on_one_shot_run_on(job):
+    close = TimelineCamera(target="Cytochrome b6f", zoom=1.8)
+    renderer = Renderer(job, flowing([flow_beat(0, 8, path=[], labels=FLOW), flow_beat(8, 16, path=[], labels=FLOW),
+                                      flow_beat(16, 30, path=[], labels=FLOW).model_copy(update={"camera": close})]))
+    view, art = renderer.layout.view, renderer.scene("overview")
+    zoom = lambda i, t: renderer.plans[i].cam(t, view, art).zoom
+    # The opening pulls back from close in, and pulls on back, ever more slowly, across both lines of the shot.
+    settled = renderer.plans[0].move_at + renderer.plans[0].move_s
+    assert renderer.plans[0].drift == -1 and zoom(0, settled) > zoom(0, 7.9) > zoom(1, 15.9)
+    assert zoom(0, settled) - zoom(0, 7.9) > zoom(1, 8.1) - zoom(1, 15.9) > 0
+    assert renderer.plans[1].cam(8.0, view, art) == renderer.plans[0].cam(8.0, view, art)  # no jump at the line
+    assert (renderer.frame(6.0).copy() != renderer.frame(7.0)).any()  # no frame stands still
+    # A close-up pushes on in after its move, never past DRIFT.
+    held = renderer.plans[2].move_at + renderer.plans[2].move_s
+    assert renderer.plans[2].drift == 1 and zoom(2, held) < zoom(2, 29.9) < renderer.plans[2].target.zoom * (
+        1 + renderer_module.DRIFT)
+    # Pulled back to a picture that just fills the view, it pushes in instead: further back, its edge would show.
+    assert Renderer._drift(renderer_module.Cam(0, 0, 1.06), renderer_module.Cam(0, 0, 1.0)) == 1.0
+    assert Renderer._drift(renderer_module.Cam(0, 0, 1.6), renderer_module.Cam(0, 0, 1.3)) == -1.0
+
+
+def test_a_flow_runs_on_when_another_joins_it(job):
+    back = ["Cytochrome b6f", "Thylakoid"]
+    joined = flow_beat(4, 8, labels=FLOW)
+    joined = joined.model_copy(update={"particles": joined.particles + [
+        Particles(path=back, color="#4CC9F0", trail=True, label="e⁻")]})
+    plans = Renderer(job, flowing([flow_beat(0, 4, labels=FLOW), joined, flow_beat(8, 12, path=back, labels=FLOW,
+                                                                                    label="e⁻", color="#4CC9F0")])).plans
+    assert plans[0].runs == [(0.0, 8.0)] and plans[1].runs == [(0.0, 8.0), (4.0, 12.0)]  # it keeps going, unrestarted
+    assert plans[2].runs == [(4.0, 12.0)]
+
+
+def reacting_off(monkeypatch):
+    monkeypatch.setattr(Renderer, "_reacting", lambda *args, **kwargs: None)
+
+
+def changed_box(a, b):
+    ys, xs = np.nonzero((a != b).any(-1))
+    return (xs.min(), ys.min(), xs.max(), ys.max()) if len(xs) else None
+
+
+def part_on_frame(renderer, t, name, grow=0.0):
+    """The part's box on the frame, grown by `grow` of its size each side, and 8 px for its soft edge and the sample's
+    boxes, which are read off every 4th column."""
+    box = located(renderer.job, "overview", name).box
+    (x0, y0), (x1, y1) = renderer.art_to_frame(t, box.x0, box.y0), renderer.art_to_frame(t, box.x1, box.y1)
+    w, h = (x1 - x0) * grow, (y1 - y0) * grow
+    return x0 - w - 8, y0 - h - 8, x1 + w + 8, y1 + h + 8
+
+
+def test_a_part_pops_as_its_name_is_first_heard_and_not_when_a_later_scene_carries_its_label(job, monkeypatch):
+    def heard(t):
+        return [Reveal(name="Cytochrome b6f", t=t)]
+
+    beats = [flow_beat(0, 4, path=[], labels=["Thylakoid"]).model_copy(update={"scene": "hook", "labels": ["Thylakoid"],
+                                                                                "reveal": [Reveal(name="Thylakoid", t=1.0)]}),
+             flow_beat(4, 12, path=[], labels=FLOW, reveal=[Reveal(name="Thylakoid", t=4.0)] + heard(6.0))]
+    peak, after = 6.0 + renderer_module.POP_S / 2, 6.0 + renderer_module.POP_S + 0.1
+    popping = Renderer(job, flowing(beats))
+    frames = {t: popping.frame(t).copy() for t in (4.2, peak, after)}
+    reacting_off(monkeypatch)
+    plain = Renderer(job, flowing(beats))
+    x0, y0, x1, y1 = changed_box(frames[peak], plain.frame(peak))
+    bx0, by0, bx1, by1 = part_on_frame(plain, peak, "Cytochrome b6f", grow=renderer_module.POP / 2)
+    assert bx0 <= x0 and by0 <= y0 and x1 <= bx1 and y1 <= by1  # only the part, grown about its middle
+    assert (frames[after] == plain.frame(after)).all()  # and back as it was
+    # The overview's thylakoid was named on the hook: its label is carried over, and it does not pop there.
+    assert (frames[4.2] == plain.frame(4.2)).all()
+
+
+def test_a_part_bumps_as_a_particle_reaches_it_and_rocks_while_particles_pass_through_it(job, monkeypatch):
+    into = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW)]))
+    trip, [(at, name)], through = into._arrivals("overview", into.timeline.beats[0].particles[0])
+    assert name == "Cytochrome b6f" and through == []  # the thylakoid is a space: never bumped, nor rocked
+    bump = at + renderer_module.BUMP_S / 2
+    bumped = {t: into.frame(t).copy() for t in (bump, at + renderer_module.BUMP_S + 0.05)}
+    across = ["Thylakoid", "Cytochrome b6f", "Thylakoid"]
+    passing = Renderer(job, flowing([flow_beat(0, 12, path=across, labels=FLOW)]))
+    assert passing._arrivals("overview", passing.timeline.beats[0].particles[0])[2] == ["Cytochrome b6f"]
+    swing = (6 + 0.25 / renderer_module.ROCK_HZ, 6 + 0.75 / renderer_module.ROCK_HZ)  # one way, then the other
+    rocked = [passing.frame(t).copy() for t in swing]
+    reacting_off(monkeypatch)
+    plain_into, plain_passing = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW)])), Renderer(
+        job, flowing([flow_beat(0, 12, path=across, labels=FLOW)]))
+    x0, y0, x1, y1 = changed_box(bumped[bump], plain_into.frame(bump))
+    bx0, by0, bx1, by1 = part_on_frame(plain_into, bump, "Cytochrome b6f", grow=renderer_module.BUMP / 2)
+    assert bx0 <= x0 and by0 <= y0 and x1 <= bx1 and y1 <= by1
+    late = at + renderer_module.BUMP_S + 0.05
+    assert (bumped[late] == plain_into.frame(late)).all()
+    for t, frame in zip(swing, rocked):
+        x0, y0, x1, y1 = changed_box(frame, plain_passing.frame(t))
+        bx0, by0, bx1, by1 = part_on_frame(plain_passing, t, "Cytochrome b6f", grow=0.08)
+        assert bx0 <= x0 and by0 <= y0 and x1 <= bx1 and y1 <= by1
+    assert (rocked[0] != rocked[1]).any()
+
+
+def test_a_part_rocks_only_as_far_as_its_shape_still_covers_its_painted_copy(job, graph):
+    art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
+    assert art.rock_deg("Cytochrome b6f") == max(renderer_module.ROCK_DEGS)  # an upright oval: the furthest
+    assert graph_art(graph, "overview").rock_deg("Supply curve") == 0.0  # a long, thin line: its ends would swing clear
 
 
 def test_label_text_is_dark_enough_to_read_on_white():
