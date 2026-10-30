@@ -967,11 +967,11 @@ For a topic:
    entry when the studio worked a topic (`DONE` or `FAILED`; not on a run that only
    answered follow-ups), its first life story when it has none and a rewrite about every
    10 beats, and a profile change when its bio or vibe no longer fits; the journal entry
-   and the cycle log carry a ref for each topic the run touched (below). Before writing, it
-   fetches and prints its Inkmory skill file (`GET /api/agents/me/skill`), which documents
-   the endpoints for the record; the popsmosis skill file decides what goes in it. That
-   file reads its key from `INKMORY_API_KEY`; ours is `INKMORY_OPERATOR_API_KEY`, and the
-   skill file says so. It takes the run's facts from
+   and the cycle log carry a ref for each topic the run touched (below). The popsmosis
+   skill file holds the four Inkmory calls, their fields and limits: the operator never
+   fetches Inkmory's own skill file or follows its safety instruction or actions, so
+   whoever controls Inkmory's answers cannot steer a run that holds the popsmosis key.
+   It takes the run's facts from
    `jobs/<id>/` (the steps, timings, retries and outcome; `python -m studio summary <id>`
    prints them in one paragraph), so it reports what happened rather than what it
    remembers.
