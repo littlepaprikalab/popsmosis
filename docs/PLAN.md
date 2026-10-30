@@ -567,15 +567,17 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     was taught, and passed the fact-check, on an earlier line, so nothing new is claimed. A
     flow along part of a longer one carrying the same thing gives way to the longer. Not on the
     hook, nor on a scene once a flow on it is blocked; spaces fill only as the line's own flows
-    say (`studio/steps/timeline.py`).
+    say (`studio/steps/timeline.py`). Upright, such a line keeps looking where the line before
+    it was, rather than swinging over to a flow it set going.
   - **Parts react:** a part pops 8% bigger as its name is first heard (not where a later
     scene carries its label over), bumps 5% as a particle reaches it, and rocks a few degrees
     either way while particles pass through it (a pump, a carrier handing on). Each is the
     picture cut out by the part's mask, turned and grown about its middle over its painted
     copy, which it covers: a part only grows, and rocks only as far (3, 2 or 1.2 degrees) as
     its shape, turned that far and grown 3%, still covers where it is painted; a long, thin
-    part swells and eases back instead. Never a space, nor a part that turns. Rocking is not
-    turning: `spins` stays the only claim that a part goes round.
+    part swells and eases back instead. Never a space, a part that turns, or anything on a
+    graph (a scene with axes): grown or turned, a curve would no longer say what the graph
+    says. Rocking is not turning: `spins` stays the only claim that a part goes round.
     When the line's direction says what the particles carry, the lead particle is a badge
     with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
     kind has its own colour in every lesson (protons gold, electrons cyan), so a proton

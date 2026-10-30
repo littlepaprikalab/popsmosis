@@ -509,6 +509,37 @@ def test_a_part_rocks_only_as_far_as_its_shape_still_covers_its_painted_copy(job
     assert graph_art(graph, "overview").rock_deg("Supply curve") == 0.0  # a long, thin line: its ends would swing clear
 
 
+def test_nothing_on_a_graph_reacts(graph, monkeypatch):
+    timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
+    peak = Renderer(graph, timeline)._pops["overview"]
+    times = [at + renderer_module.POP_S / 2 for _, at in peak]  # each curve and the equilibrium, as it is named
+    frames = [Renderer(graph, timeline).frame(t).copy() for t in times]
+    reacting_off(monkeypatch)
+    assert all((frame == Renderer(graph, timeline).frame(t)).all() for frame, t in zip(frames, times))
+
+
+def test_upright_a_line_that_sets_the_scenes_flows_running_keeps_looking_where_it_was(tmp_path):
+    from types import SimpleNamespace
+
+    shapes = {"overview": {"Left": (400, 512, 120, 120), "Middle": (896, 512, 120, 120), "Right": (1400, 512, 120, 120)}}
+    palette = {"Left": "#E07A2F", "Middle": "#2E8B57", "Right": "#3366CC"}
+    scene = SimpleNamespace(structures=[SimpleNamespace(name=n, color_hex=c) for n, c in palette.items()])
+    sample_media.write_art(tmp_path, SimpleNamespace(scenes=[scene]), shapes)
+    jobs.write(tmp_path / media.LOCATIONS, sample_media.locations(shapes))
+    left, right = ["Left", "Middle"], ["Middle", "Right"]
+
+    def beat(t0, *paths):
+        return Beat(t0=t0, t1=t0 + 4, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=[],
+                    spotlight=None, labels=list(palette), caption=None, line_id=f"l{t0}", line="", words=[],
+                    particles=[Particles(path=path, color="#F2C230", trail=True) for path in paths])
+
+    beats = [beat(0, left), beat(4, left, right), beat(8, right, left), beat(12), beat(16, right)]
+    timeline = Timeline(video="song", duration=20, fps=30, audio=[], beats=beats, palette=palette)
+    aims = [plan.target.cx for plan in Renderer(tmp_path, timeline, "v").plans]
+    assert aims[0] == aims[1] == aims[2]  # the left flow goes on, with the right one set going beside it
+    assert aims[4] > aims[0] + 200  # a line that sets off a flow of its own looks at it
+
+
 def test_label_text_is_dark_enough_to_read_on_white():
     for color in ("#F2C230", "#2E8B57", "#E07A2F", "#3366CC", "#FFFFFF"):
         r, g, b = p.rgb(p.darken(color))

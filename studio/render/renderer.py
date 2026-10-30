@@ -116,8 +116,8 @@ ARROW_TILT = 0.28
 # first heard, over POP_S; bumps BUMP bigger as a particle reaches it, over BUMP_S; and rocks either way ROCK_HZ
 # times a second while particles pass through it (a pump, a carrier handing on), ROCK_COVER bigger. Each is drawn
 # over the picture's own copy of the part, which only ever grows, so the copy never shows; a part rocks only as
-# far (of ROCK_DEGS) as its shape, turned that far and grown ROCK_COVER, still covers it. Never a space, nor a part
-# that turns.
+# far (of ROCK_DEGS) as its shape, turned that far and grown ROCK_COVER, still covers it. Never a space, a part that
+# turns, or anything on a graph.
 POP = 0.08
 POP_S = 0.45
 BUMP = 0.05
@@ -753,12 +753,19 @@ class Renderer:
     def _plan(self) -> list[BeatPlan]:
         plans: list[BeatPlan] = []
         beats = self.timeline.beats
+        focus = None
         for i, beat in enumerate(beats):
             reveals = {r.name: r.t for r in beat.reveal}
-            focus = None
-            if self.portrait and beat.particles:  # where the beat's flow is: the middle of its stops
-                stops = self._path_points(beat.scene, beat.particles[0].path)
-                focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
+            # Upright, where the beat's flow is: the middle of its first flow's stops. A line whose first flow the line
+            # before was already showing on the scene keeps looking where it was, so a line that sets the scene's other
+            # flows running beside it does not swing the camera over to one of them.
+            carried = (focus is not None and beat.particles and beats[i - 1].scene == beat.scene
+                       and beat.particles[0] in beats[i - 1].particles)
+            if not carried:
+                focus = None
+                if self.portrait and beat.particles:
+                    stops = self._path_points(beat.scene, beat.particles[0].path)
+                    focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
             target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus)
             same = i > 0 and beats[i - 1].scene == beat.scene
             staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
@@ -1203,7 +1210,10 @@ class Renderer:
         """The parts reacting to what happens to them: popping as their name is first heard, bumping as a particle
         reaches them (a blocked one only the once), and rocking while particles pass through them, or, a part too
         long to rock, swelling and easing back. Each is the picture as it is now (its washes included) cut out by
-        the part's mask, turned and grown about its middle, over its painted copy."""
+        the part's mask, turned and grown about its middle, over its painted copy. Nothing on a graph reacts: grown or
+        turned, a curve would no longer say what the graph says."""
+        if beat.scene in self.timeline.axes:
+            return
         art = self.scene(beat.scene)
         located = self.locations.scene(beat.scene)
         turning = {turn.structure for turn in beat.turning}
