@@ -217,6 +217,20 @@ def test_each_media_step_lists_the_software_it_runs_at_the_version_installed_her
     assert steps["timeline"]["tools"] == []  # the studio's own code
 
 
+def test_the_lesson_video_alone_times_the_voice_with_no_song_software(tmp_path, monkeypatch):
+    """STUDIO_VIDEOS=lesson: no Demucs or aligner runs, so the bill does not say they did."""
+    from studio import knobs
+
+    monkeypatch.setattr(ledger, "version", lambda name: "1.0")
+    (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [
+        {"step": "audio", "seconds": 2.0}, {"step": "timing", "seconds": 0.1}, {"step": "render", "seconds": 6.0}]}))
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    steps = {s["step"]: s for s in ledger.breakdown(tmp_path, "videos")["steps"]}
+    assert steps["timing"]["tools"] == []
+    assert [t["name"] for t in steps["audio"]["tools"]] == ["ffmpeg"]  # ffprobe still reads the voice's length
+    assert [t["name"] for t in steps["render"]["tools"]] == ["skia-python", "ffmpeg"]
+
+
 def test_the_lessons_steps_run_no_software_of_their_own(tmp_path):
     with ledger.at_step("bundle"):
         ledger.log(tmp_path, [call("bundle")])

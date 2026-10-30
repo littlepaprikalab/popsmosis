@@ -99,9 +99,11 @@ export function serializeVideo(a: VideoRow, now: Date = new Date()) {
 /**
  * What a follow-up is answered from: the bundle without its scenes, direction and
  * narration, so a thread stays a couple of thousand tokens. Whichever model answers
- * reads the same context. Null when the lesson was posted without a bundle.
+ * reads the same context. Null when the lesson was posted without a bundle. Without
+ * `sung`, no lyrics: the videos were made with no song (STUDIO_VIDEOS=lesson), so the
+ * learner never heard them and an answer must not quote them.
  */
-export function followUpContext(bundle: unknown) {
+export function followUpContext(bundle: unknown, sung = true) {
   if (!isObject(bundle)) return null;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
   const list = (v: unknown) => (Array.isArray(v) ? v.filter(isObject) : []);
@@ -112,7 +114,7 @@ export function followUpContext(bundle: unknown) {
     coreIdea: str(bundle.core_idea),
     facts: list(bundle.facts).map((f) => ({ id: str(f.id), text: str(f.text) })),
     misconception: str(bundle.misconception),
-    lyrics: list(bundle.lyrics).map((l) => ({ section: str(l.section), text: str(l.text) })),
+    lyrics: sung ? list(bundle.lyrics).map((l) => ({ section: str(l.section), text: str(l.text) })) : [],
   };
 }
 
