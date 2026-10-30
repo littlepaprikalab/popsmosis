@@ -564,7 +564,10 @@ def test_the_plainer_words_are_the_structures_colour_and_the_phrases_last_noun()
     assert asked("blue region", "#3A86FF") == ["blue region"]  # nothing plainer left to ask
     assert asked("the cytochrome b6f", "#E07A2F") == ["the cytochrome b6f", "orange region"]
     words = {"#E76F51": "orange", "#D64550": "red", "#2A9D8F": "teal", "#6A4C93": "purple", "#277DA1": "blue",
-             "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey"}
+             "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey",
+             # the pinks and purples round 17 named wrong ("red", "light pink"), and plain pink, once "light red"
+             "#F06292": "pink", "#BA68C8": "light purple", "#9C27B0": "purple", "#FFC0CB": "pink",
+             "#DC143C": "red"}
     assert {h: art.colour_word(h) for h in words} == words
 
 

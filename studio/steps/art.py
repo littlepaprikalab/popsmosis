@@ -652,9 +652,11 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     return " ".join(parts)
 
 
-# Hue bands in degrees, for colour_word.
+# Hue bands in degrees, for colour_word. Purples run past 290 (#9C27B0 is 291) and pinks to 345 (#F06292 is
+# 340): with the bands at 290 and 335, round 17 asked for a purple Roman Empire as "light pink" and its pink
+# civil wars as "red", and the label "Civil wars" went on the Empire.
 HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
-        (290, "purple"), (335, "pink"), (360, "red"))
+        (310, "purple"), (345, "pink"), (360, "red"))
 
 
 def colour_word(color_hex: str) -> str:
@@ -669,7 +671,7 @@ def colour_word(color_hex: str) -> str:
     if value < 0.4:
         return f"dark {name}"
     if saturation < 0.5 and value > 0.6:
-        return f"light {name}"
+        return "pink" if name == "red" else f"light {name}"  # light red is what everyone calls pink (#FFC0CB)
     return name
 
 
