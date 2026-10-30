@@ -50,7 +50,8 @@ def test_an_edit_that_drops_a_sentence_runs_long_or_fails_leaves_the_narration_a
     dropped = answering([{"id": first.id, "text": first.text}])
     assert narration.edit(b, dropped, tmp_path) is b
     assert "exactly once" in json.loads((tmp_path / narration.RECORD).read_text())["why"]
-    long = answering([{"id": first.id, "text": first.text + " and" * 40}, {"id": second.id, "text": second.text}])
+    long = answering([{"id": first.id, "text": first.text + " and" * 12},  # each sentence short enough...
+                      {"id": second.id, "text": second.text + " and" * 12}])  # ...but the whole far longer
     assert narration.edit(b, long) is b
     empty = answering([{"id": first.id, "text": " "}, {"id": second.id, "text": second.text}])
     assert narration.edit(b, empty) is b
@@ -67,3 +68,12 @@ def test_the_step_by_itself_edits_the_bundle_and_the_fact_check_must_run_again(t
     assert said == "narration edited: 2 sentences in new places, 0 reworded"
     assert [n.id for n in read(tmp_path / "bundle.json", Bundle).narration] == [second.id, first.id]
     assert not (tmp_path / "factcheck.json").exists() and (tmp_path / "checks.json").exists()
+
+
+def test_a_sentence_the_editor_draws_out_past_the_longest_keeps_the_writers_words(tmp_path):
+    b = bundle()
+    first, second = b.narration
+    longer = first.text + " and so on, " * 6
+    out = narration.edit(b, answering([{"id": second.id, "text": second.text}, {"id": first.id, "text": longer}]))
+    assert [n.id for n in out.narration] == [second.id, first.id]  # still moved
+    assert out.narration[1].text == first.text  # but in its own words

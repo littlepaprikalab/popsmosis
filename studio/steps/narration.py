@@ -27,6 +27,9 @@ from studio.schemas import Bundle, Strict
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "narration.md").read_text(encoding="utf-8")
 RECORD = "narration.json"
 WORDS_OFF = 0.25  # the edited narration may run this share more or fewer words than the writer's
+# A sentence the editor makes longer than this keeps the writer's words: round 19's rock cycle ended on a 25-word
+# sentence of the editor's, and the caption shrank to fit it.
+SENTENCE_WORDS_MAX = 22
 
 
 class EditedSentence(Strict):
@@ -78,11 +81,13 @@ def edit(bundle: Bundle, ask, job: Path | None = None) -> Bundle:
         edited = NarrationEdit.model_validate(answer).lines
     except Exception as e:  # an edit that fails leaves the narration as written, never fails the droplet
         return _kept(job, bundle, f"the call failed: {type(e).__name__}: {e}")
+    written = {n.id: n for n in bundle.narration}
+    edited = [e.model_copy(update={"text": _spoken(e.text, written[e.id].text)}) if e.id in written else e
+              for e in edited]
     why = problem(bundle, edited)
     if why:
         return _kept(job, bundle, why)
-    written = {n.id: n for n in bundle.narration}
-    narration = [written[e.id].model_copy(update={"text": " ".join(e.text.split())}) for e in edited]
+    narration = [written[e.id].model_copy(update={"text": e.text}) for e in edited]
     order = {n.id: k for k, n in enumerate(narration)}
     # A narration sentence's direction follows it: the lyrics' first, then the narration's in its new order.
     direction = ([d for d in bundle.direction if d.line_id not in order]
@@ -91,6 +96,12 @@ def edit(bundle: Bundle, ask, job: Path | None = None) -> Bundle:
     if job is not None:
         write(job / RECORD, {"kept": True, "before": _lines(bundle), "after": _lines(out)})
     return out
+
+
+def _spoken(edited: str, written: str) -> str:
+    """The editor's words for a sentence, unless they run past SENTENCE_WORDS_MAX and the writer's did not."""
+    words = edited.split()
+    return written if len(words) > max(SENTENCE_WORDS_MAX, len(written.split())) else " ".join(words)
 
 
 def _kept(job: Path | None, bundle: Bundle, why: str) -> Bundle:
