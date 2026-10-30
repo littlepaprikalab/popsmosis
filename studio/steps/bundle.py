@@ -29,16 +29,23 @@ from studio.styles import style_for
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
 SONG_SECTION = ("\n## The song\n", "\n## The narration\n")  # cut from the brief for the lesson video alone
+# Two sections: the first is the script writer's too (studio/steps/script.py, BRIEF_SECTIONS), the second the plan's.
 NO_SONG = """
 
 ## No song for this droplet
 
-This droplet is made without its song: the text lesson and the narrated lesson video alone.
-The schema has no `music` and no `lyrics`. Wherever this brief speaks of the song, its lyrics,
-its chorus or bridge, or the song video, leave that part out, and write no scene for the song
-alone. Where it gives the song a job, the narration and the lesson do it: the narration opens
-on the hook, and the surprising detail and what a failure looks like go in the narration and
-the lesson where they fit.
+This droplet is made without its song: the text lesson and the narrated lesson video alone,
+so there is no songwriter and no song video. Where this brief gives the song a job, the
+narration and the lesson do it: the narration opens on the hook, and the surprising detail and
+what a failure looks like go in the narration and the lesson where they fit. Write no scene
+for the song alone.
+
+## The plan without the song
+
+The schema has no `music` and no `lyrics`. Where a rule above is written for the song's
+lines, apply it to the narration's sentences: plan the motion across the whole narration,
+build each pathway up one step a sentence as the narration teaches it, show the whole pathway
+on the sentences that sum it up, and keep captions to a few in the whole narration.
 
 - Tag each narration sentence with the id of the fact it teaches, or "filler" for one that
   teaches nothing. `names` lists every structure name or alias the sentence says, exactly as
@@ -51,14 +58,19 @@ the lesson where they fit.
   one sentence and none on the last. The first can ask the script's `question`. Write each
   `text` as "On screen" says.
 - `tags.lesson` only, as "Tags" says for the lesson video.
+- The people a grave topic (a genocide, slavery) is about are never particles: dots marked
+  "people" or "trains" carried across a map make tokens of the dead. Goods, ships and money
+  may move; the camera and the spotlight show where people were taken.
 """
 
 
 def without_song(brief: str) -> str:
     """The brief for the lesson video alone: its song section cut out (from "## The song" to "## The narration"),
-    and NO_SONG at its end."""
-    start, end = brief.index(SONG_SECTION[0]), brief.index(SONG_SECTION[1])
-    return brief[:start] + brief[end:] + NO_SONG
+    and NO_SONG at its end. A brief whose headings were renamed keeps its song section rather than break the
+    import in every mode; the tests say when it no longer cuts."""
+    start, end = brief.find(SONG_SECTION[0]), brief.find(SONG_SECTION[1])
+    cut = brief[:start] + brief[end:] if 0 <= start < end else brief
+    return cut + NO_SONG
 
 
 LESSON_ONLY_PROMPT = without_song(PROMPT)

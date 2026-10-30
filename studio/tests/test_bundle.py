@@ -150,3 +150,15 @@ def test_a_lesson_alone_that_does_not_hold_together_is_kept_for_a_look(tmp_path)
     with pytest.raises(brain.InvalidOutput, match="no direction for n2"):
         bundle_step.run(tmp_path, ask=_asking(broken, {}))
     assert (tmp_path / "bundle.invalid.json").exists() and not (tmp_path / "bundle.json").exists()
+
+
+def test_the_lesson_alone_brief_cuts_the_song_and_survives_a_renamed_heading():
+    """The cut is made where the brief's headings are; a brief whose headings were renamed keeps its song section
+    rather than break the import of every step in every mode."""
+    assert "## The song\n" in bundle_step.PROMPT and "## The narration\n" in bundle_step.PROMPT  # else nothing is cut
+    assert "## The song\n" not in bundle_step.LESSON_ONLY_PROMPT
+    assert len(bundle_step.LESSON_ONLY_PROMPT) < 0.8 * len(bundle_step.PROMPT)
+    renamed = "Intro\n\n## Songs\n\nSing.\n\n## Narration\n\nSay.\n"
+    assert bundle_step.without_song(renamed) == renamed + bundle_step.NO_SONG
+    # The grave-topic rule the song section carried is said again for the plan.
+    assert 'never particles: dots marked\n  "people" or "trains"' in bundle_step.NO_SONG

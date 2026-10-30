@@ -49,7 +49,7 @@ The runner needs these in its environment:
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
 | `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria when it sings: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
-| `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (no lyrics written or fact-checked, the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
+| `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (a lesson written while it is set has no lyrics to write or fact-check; the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
 
 `ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL` and `STUDIO_VIDEOS`
 are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the

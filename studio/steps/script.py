@@ -28,7 +28,9 @@ from studio.schemas import Bundle, Fact, Strict
 
 PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 RECORD = "script.json"
-BRIEF_SECTIONS = ("The audience", "The facts")  # taken from the writer's brief (prompts/bundle.md) as they stand
+# Taken from the writer's brief (prompts/bundle.md) as they stand. "No song for this droplet" is in the brief only for
+# the lesson video alone (studio/steps/bundle.py, NO_SONG).
+BRIEF_SECTIONS = ("The audience", "The facts", "No song for this droplet")
 
 
 class ScriptScene(Strict):
