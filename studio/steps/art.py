@@ -716,7 +716,10 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     None for a drawing (the brain's SVG), which is not checked this way."""
     found = {}
     for scene in bundle.scenes:
-        if not _painted(job, bundle, scene):
+        # An analogy is an everyday picture standing in for the topic: nothing in it can teach the topic wrong.
+        # Round 20's Rome analogy carried a card the whole time it was on screen, for four committee members where
+        # the analogy had five.
+        if scene.id == "analogy" or not _painted(job, bundle, scene):
             continue
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
         notes = [n.strip() for n in (made.get("check") or {}).get("notes") or [] if n.strip()]

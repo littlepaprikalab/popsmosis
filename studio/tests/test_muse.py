@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import shutil
 import re
 import threading
 import time
@@ -258,6 +259,12 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     assert len(made["tries"]) == 2 and made["check"]["notes"] == [note]  # still wrong after both tries
     bundle = checks.load(job / "bundle.json")
     assert art.notices(job, bundle) == {"synthase": [note]}
+    # The same picture as the lesson's analogy says nothing: an everyday picture cannot teach the topic wrong.
+    as_analogy = bundle.model_copy(update={"scenes": [s.model_copy(update={"id": "analogy"}) if s.id == "synthase"
+                                                      else s for s in bundle.scenes]})
+    shutil.copy(job / "art" / "synthase.png", job / "art" / "analogy.png")
+    (job / "art" / "analogy.json").write_text(json.dumps({**made, "key": art.key(as_analogy, as_analogy.scenes[-1])}))
+    assert art._painted(job, as_analogy, as_analogy.scenes[-1]) and art.notices(job, as_analogy) == {}
     staged(job)  # a changed bundle: the pictures are no longer this bundle's, so nothing is disclosed for them
     assert art.notices(job, checks.load(job / "bundle.json")) == {}
 
