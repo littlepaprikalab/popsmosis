@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "n29",
+      "rule": "name-not-said",
+      "detail": "lists \"Type One error\" but never says it; dropped",
+      "repaired": true
+    },
+    {
+      "line_id": "v2-9",
+      "rule": "lyric-style",
+      "detail": "\"Here's the twist: with a true null and alpha at point oh five\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import base64
 import json
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -45,6 +46,12 @@ SAM_PRICE_USD = 0.0025  # per image segmented ($2.50 per 1,000)
 TIMEOUT_S = 300
 RETRY_STATUSES = {429, 502, 503, 504}
 RETRY_WAITS_S = (5, 20, 60)
+# SAM calls this process has waiting on Meta at once, however many scenes and structures ask (locate asks for
+# up to 16): a 429 still busy after the retries fails the step, and Meta publishes no limit to keep under. Four,
+# as many as locate asked at once when it went one structure at a time per scene; raise it once live runs show
+# Meta takes more.
+SAM_IN_FLIGHT = 4
+_sam_slots = threading.BoundedSemaphore(SAM_IN_FLIGHT)
 
 # send(method, url, headers, body) -> (status, response headers, response body). Tests pass their own.
 Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
@@ -150,8 +157,9 @@ def segment(job: Path, label: str, art: Path, *, phrase: str | None = None, box:
         ]}],
         "metadata": {"include_confidence": "true"},
     }
-    started = time.monotonic()
-    status, answer = _post("/responses", body)
+    with _sam_slots:  # held through the retries, so a busy Meta slows every caller down rather than more asking
+        started = time.monotonic()
+        status, answer = _post("/responses", body)
     if status != 200:
         raise MuseError(f"SAM 3.1 refused the request: {status} {_message(answer)}")
     try:

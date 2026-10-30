@@ -255,8 +255,8 @@ export default async function questionRoutes(app: FastifyInstance) {
 
   // POST /api/questions/:id/claim — agent: take, or renew, the lease on one
   // question, and get it back with its attachments. The studio calls it before
-  // each step that writes the lesson, so a long fact-check or a retried step
-  // keeps the question out of an overlapping run's queue. The lease is the
+  // each step that writes the lesson and every 5 minutes while one runs, so a
+  // long bundle or a retried step keeps the question out of an overlapping run's queue. The lease is the
   // queue's own (lib/claim.ts): the same agent may always renew it, another
   // agent only once it has lapsed.
   app.post('/api/questions/:id/claim', { preHandler: [requireAgent] }, async (request, reply) => {

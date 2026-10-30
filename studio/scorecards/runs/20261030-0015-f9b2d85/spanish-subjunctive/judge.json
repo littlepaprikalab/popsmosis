@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Make a wish, then switch the ending\" is catchy, singable and echoes the core idea (wish → switch the verb ending), and it opens and closes the chorus. But it is fairly abstract: \"the ending\" is vague and it doesn't name the real thing (que/subjunctive). The lesson opens on the learner's own question, \"Why does Spanish say espero que vengas and not espero que vienes?\", and the narration opens on a party invite, so the openings do pull the learner in.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The receipt versus wish list picture fits the whole job of the two moods (record of what is real vs. what is wanted but unconfirmed). It is set up in v1-1/v1-2 and the narration (n4-n5), the lesson has a \"Receipts and wish lists\" section, and chorus c3-1/c3-2 restates it. It is dropped in the bridge and outro, though, and the lesson's later sections barely use it, so it is not carried through every section.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach the links in order: the main clause sets the view, then wish/feeling/doubt makes the action unconfirmed, so subjunctive; knowledge or belief counts as fact, so indicative; then different subjects; then \"espero que vengas\" applied. Each step is given its \"so\" (n10, n11). The different-subjects step is stated rather than explained: n15-n16 say \"the two clauses need different subjects\" and give an example, but never say why the infinitive replaces que when the subject is the same. The WEIRDO list and the verb-forming section also add material beyond the chain.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines run from the question to the receipt/wish-list frame, the main clause deciding, the wish/know split, WEIRDO, subjects, \"Que alone triggers nothing\", forming vengas, and \"Add no\". Most are steps, and each starts on its matching lyric and narration sentence. But the first is only a question, \"Receipt = indicative, wish list = subjunctive\" is a label-like equation, and the WEIRDO line is a label that introduces a mnemonic term. Several lines are stretched across two or more links or are not causal, and the list ends on the \"no\" example without returning to the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson: \"Spanish verbs can present an action as a fact or as something not confirmed\" with \"Different subjects only\" step 4, and chorus c1-2/c1-3 \"If the main clause wants it, feels it, doubts it too / Then the verb after que gets the subjunctive cue\"",
+      "problem": "The rule is stated without the same-subject exception, which could lead learners to use the subjunctive even when subjects are the same (it appears elsewhere, but not in the chorus the learner repeats).",
+      "correction": "Chorus should note the condition, e.g. \"If the main clause wants it, and the subjects differ...\" or the chorus should be kept consistent with the different-subjects rule."
+    },
+    {
+      "claim": "Song v2-9 to v2-10: \"Vienes is a fact, it's for things that are real / Vengas is a hope\"",
+      "problem": "Vienes is a form (indicative), and being indicative it is not always about a fact; the line is a loose simplification that treats vienes as inherently a fact.",
+      "correction": "Say that vienes is the indicative, used when the speaker treats the coming as fact, and vengas the subjunctive, used when it is only a hope."
+    }
+  ],
+  "accuracy": {
+    "reason": "The grammar is correct: the present subjunctive formation (hablo→hables, como→comas, vengo→vengas), the irregulars (sea, vaya, esté), the creo/no creo switch and the infinitive rule for the same subject are all right. The remaining flaws are loose phrasing, such as the chorus giving the rule without its different-subject condition and v2-9/v2-10 treating vienes as simply \"a fact\". Nothing in them would leave a learner with a wrong rule, and the lesson itself states the condition.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are singable and rhyme cleanly (\"Make a wish, then switch the ending\" / \"'cause it's still pending\"). The rapped verses are often long and prose-like: \"Ojalá's the O, it came from Arabic way back\" and \"Drop the o, keep the veng, and the new part clicks in\" overrun the bar. The chorus is long (five to seven lines) and not easily sung back after two hearings, and lines like v1-12 \"Same subject? Infinitive, so it's espero venir\" bend the rhythm to land the rhyme. Some lines read like textbook captions (\"Impersonal, recommend and doubting too\").",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the learner's own question and gives the big picture early, builds on the main-clause-decides idea with the receipt/wish-list frame, includes a Predict question (same subject → infinitive) answered right after, and names the que misconception with the reason. It ends on a check that only a learner who grasped the idea can answer: why \"no\" switches creo que vienes to no creo que vengas. It does carry a lot of new terms (WEIRDO, ojalá, yo form, infinitive, irregular forms, past subjunctive preview), and the Arabic origin and past subjunctive note are more than a first-time learner needs.",
+    "score": 4
+  }
+}

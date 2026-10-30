@@ -1,11 +1,13 @@
 import json
+import os
+import time
 
 import pytest
 
 from studio import brain, jobs
 from studio import run as operator_run
 from studio.api import PROGRESS_TIMEOUT_S, Api, ApiError
-from studio.schemas import Bundle, FactCheck, Request
+from studio.schemas import Bundle, FactAudit, FactCheck, Request
 from studio.tests.sample import bundle_data
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
@@ -67,11 +69,13 @@ class FakeApi:
 
 
 class FakeBrain:
-    """Stands in for brain.ask: a sample bundle, and a fact-check that supports every line (or none)."""
+    """Stands in for brain.ask: a sample bundle, a fact audit that judges every fact as `fact` says, and a
+    fact-check that supports every line (or none)."""
 
-    def __init__(self, bundle_error=None, verdict="SUPPORTED"):
+    def __init__(self, bundle_error=None, verdict="SUPPORTED", fact="CORRECT"):
         self.bundle_error = bundle_error
         self.verdict = verdict
+        self.fact = fact
         self.labels = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -80,6 +84,11 @@ class FakeBrain:
             if self.bundle_error:
                 raise self.bundle_error
             return bundle_data()
+        if schema is FactAudit:
+            return FactAudit.model_validate({"facts": [
+                {"id": fact["id"], "basis": "course knowledge", "quote": "", "verdict": self.fact,
+                 "problem": "" if self.fact == "CORRECT" else "wrong", "corrected": ""}
+                for fact in json.loads(prompt)["facts"]]}).model_dump()
         lines = json.loads(prompt)["lines"]
         bad = self.verdict == "UNSUPPORTED"
         return FactCheck.model_validate({"checks": [
@@ -103,8 +112,8 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     # Claimed again before every step but the post, so the lease outlasts a slow step; and each of those steps
     # tells the page it is running.
     assert api.names() == ["claim", "report_progress", "download", "download", "claim", "report_progress",
-                           "claim", "report_progress", "post_answer"]
-    assert ask.labels == ["bundle", "factcheck round 1"]
+                           "claim", "report_progress", "claim", "report_progress", "post_answer"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
 
     job = jobs_root / "q1"
     request = jobs.read(job / "request.json", Request)
@@ -118,13 +127,13 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     assert api.posted == {"content": bundle["lesson_markdown"], "bundle": bundle,
                           "factcheck": json.loads((job / "factcheck.json").read_text()), "model": "claude-opus-5-5"}
     # The steps before the post, each timed; the call logged before this run is the bundle's.
-    assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "factcheck"]
+    assert [s["step"] for s in breakdown["steps"]] == ["request", "bundle", "audit", "factcheck"]
     assert breakdown["steps"][1]["models"] == [{"model": "claude-opus-5-5", "calls": 1, "costUsd": None, "credits": None}]
     assert all(s["tries"] == 1 and s["seconds"] is not None for s in breakdown["steps"])
     assert json.loads((job / "posted.json").read_text())["id"] == "ans1"
     [record] = operator_run.read_jsonl(job / "runs.jsonl")
     assert (record["result"], record["step"]) == ("DONE", "post")
-    assert [s["step"] for s in record["steps"]] == ["request", "bundle", "factcheck", "post"]
+    assert [s["step"] for s in record["steps"]] == ["request", "bundle", "audit", "factcheck", "post"]
 
 
 def test_a_photo_too_big_for_the_brain_is_left_out_rather_than_failing_every_try(jobs_root, monkeypatch):
@@ -158,7 +167,8 @@ def test_each_step_tells_the_page_it_is_running_with_the_bill_so_far_and_whether
     monkeypatch.setattr(videos, "unavailable", lambda job=None, studio=None: None)
     api = FakeApi()
     assert operator_run.run("q1", api=api, ask=FakeBrain())[0] == "DONE"
-    assert [[r["step"] for r in report["running"]] for report in api.reports] == [["request"], ["bundle"], ["factcheck"]]
+    assert [[r["step"] for r in report["running"]] for report in api.reports] == [
+        ["request"], ["bundle"], ["audit"], ["factcheck"]]
     assert all(r["running"][0]["seconds"] < 5 and r["failed"] == [] and r["videos"] is True for r in api.reports)
     # The bill so far is the steps already done, never the one just starting.
     assert "breakdown" not in api.reports[0] or api.reports[0]["breakdown"]["steps"] == []
@@ -210,7 +220,7 @@ def test_running_again_resumes_at_the_step_that_failed(jobs_root):
     ask = FakeBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
     assert "download" not in api.names()  # request.json was already written
-    assert ask.labels == ["bundle", "factcheck round 1"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
     runs = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert [(r["result"], r["step"]) for r in runs] == [("FAILED", "bundle"), ("DONE", "post")]
 
@@ -230,15 +240,15 @@ def test_a_failed_fact_check_is_retried_on_the_same_bundle_and_nothing_is_posted
 
     ask = FakeBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.labels == ["factcheck round 1"]  # the bundle was kept
+    assert ask.labels == ["factcheck round 1"]  # the bundle and its audit were kept
 
 
 def test_a_new_bundle_runs_every_step_after_it(jobs_root):
     operator_run.run("q1", api=FakeApi(), ask=FakeBrain(verdict="UNSUPPORTED"))
-    (jobs_root / "q1" / "bundle.json").unlink()  # by hand: the factcheck.json beside it is now stale
+    (jobs_root / "q1" / "bundle.json").unlink()  # by hand: the audit.json and factcheck.json beside it are now stale
     ask = FakeBrain()
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
-    assert ask.labels == ["bundle", "factcheck round 1"]
+    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
 
 
 @pytest.mark.parametrize("error, reason", [
@@ -550,7 +560,7 @@ def test_a_topic_sent_to_its_own_brain_is_made_on_it_and_its_job_keeps_it(jobs_r
     api = FakeApi({**QUESTION, "brain": "muse-spark"}, studio={"brain": {"default": "claude", "effort": "high"}})
     ask = SpyBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("meta", "muse-spark-1.3")] * 2  # the bundle and the fact-check
+    assert ask.brains == [("meta", "muse-spark-1.3")] * 3  # the bundle, the fact audit and the fact-check
     assert operator_run.job_brain(jobs_root / "q1") == "muse-spark"
     assert brain.chosen_name() is None  # nothing in force once the run ends
 
@@ -568,14 +578,14 @@ def test_a_topic_without_a_brain_of_its_own_is_made_on_the_default_at_its_effort
     api = FakeApi({**QUESTION, "brain": None}, studio={"brain": {"default": "muse-wonder", "effort": "medium"}})
     ask = SpyBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("meta", "muse-wonder-1.0")] * 2
+    assert ask.brains == [("meta", "muse-wonder-1.0")] * 3
     assert (operator_run.job_brain(jobs_root / "q1"), operator_run.job_effort(jobs_root / "q1")) == ("muse-wonder", "medium")
 
 
 def test_with_no_settings_from_the_api_the_brain_is_claude_opus(jobs_root):
     api, ask = FakeApi(), SpyBrain()  # an API too old to send them
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("claude", "claude-opus-5-5")] * 2
+    assert ask.brains == [("claude", "claude-opus-5-5")] * 3
 
 
 def test_a_topics_brain_the_studio_cannot_run_fails_the_topic_rather_than_holding_up_the_queue(jobs_root, monkeypatch):
@@ -710,7 +720,143 @@ def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_r
     [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert [(s["step"], s.get("detail")) for s in record["steps"]] == [
         ("request", "1 image(s), 1 text file(s)"), ("bundle", "AP Biology / the light reactions"),
+        ("audit", "3 fact(s) judged by course knowledge, in 1 call(s)"),
         ("factcheck", "passed in 1 round(s), 0 correction(s)"), ("post", None)]
     assert record["reason"] == "503 UNAVAILABLE: down"
     # No media step has run, so the summary is the one paragraph for the cycle log.
     assert "\n" not in operator_run.summary("q1")
+
+
+# --- a long step, and the lesson in the background ---------------------------------------------
+
+
+def slow_bundle(seconds, then=None):
+    """A FakeBrain whose bundle call takes `seconds` (a bundle can take 20 minutes or more), calling `then` halfway."""
+    brain_ = FakeBrain()
+
+    def ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        if schema is Bundle:
+            time.sleep(seconds / 2)
+            if then:
+                then()
+            time.sleep(seconds / 2)
+        return brain_(role, prompt, schema, images, system=system, label=label)
+    return ask
+
+
+def test_a_step_longer_than_the_lease_claims_its_topic_again_while_it_runs(jobs_root, monkeypatch):
+    monkeypatch.setattr(operator_run, "RENEW_S", 0.05)
+    api = FakeApi()
+    assert operator_run.run("q1", api=api, ask=slow_bundle(0.5))[0] == "DONE"
+    names = api.names()
+    # The bundle's claim and report, then its renewals, then the audit's claim and report.
+    bundle = [i for i, name in enumerate(names) if name == "report_progress"][1]
+    audit = names.index("report_progress", bundle + 1)
+    assert names[bundle + 1:audit].count("claim") >= 1 + 4
+    # Only while a step runs: the renewals end with it, and none outlives the run.
+    calls = len(api.calls)
+    time.sleep(0.2)
+    assert len(api.calls) == calls and names[-1] == "post_answer"
+
+
+def test_renewals_end_once_the_api_refuses_the_claim_for_good(jobs_root, monkeypatch, capsys):
+    monkeypatch.setattr(operator_run, "RENEW_S", 0.05)
+    api = FakeApi()
+    taken = {}
+
+    def take():  # another agent takes the topic while the bundle is being written
+        api.errors["claim"] = ApiError(409, "CONFLICT", "Another agent holds the claim on this question")
+        taken["at"] = len(api.calls)
+
+    assert operator_run.run("q1", api=api, ask=slow_bundle(0.6, take))[:2] == ("STOPPED", "audit")
+    # One refused renewal, and the audit's claim, which stops the run: no more renewals after the refusal.
+    assert api.names()[taken["at"]:].count("claim") == 2
+    assert "claim: no longer renewed during the step: Another agent holds the claim" in capsys.readouterr().err
+
+
+def test_a_renewal_that_fails_is_said_once_and_tried_again(jobs_root, monkeypatch, capsys):
+    monkeypatch.setattr(operator_run, "RENEW_S", 0.05)
+    api = FakeApi()
+
+    def down_then_up():  # the API down for a few renewals while the bundle is being written, then back
+        api.errors["claim"] = ApiError(503, "UNAVAILABLE", "try again")
+        time.sleep(0.2)
+        del api.errors["claim"]
+
+    assert operator_run.run("q1", api=api, ask=slow_bundle(0.6, down_then_up))[0] == "DONE"
+    assert capsys.readouterr().err.count("claim: a renewal during the step failed") == 1
+
+
+def test_background_detaches_the_run_and_wait_gives_its_outcome_line(jobs_root, monkeypatch):
+    # The run it starts is a real `python -m studio run`: with no API to read the settings from, it stops at once,
+    # before it claims anything, so runs.jsonl never has its outcome: wait reads the line it printed.
+    monkeypatch.setenv("STUDIO_JOBS_DIR", str(jobs_root))
+    monkeypatch.delenv("POPSMOSIS_API_URL", raising=False)
+    monkeypatch.delenv("POPSMOSIS_API_KEY", raising=False)
+    result, step, reason = operator_run.background("q1", note="keep labels out")
+    assert (result, step) == ("STARTED", "run"), reason
+    assert operator_run.waits_on_lesson("q1")
+    assert operator_run.background("q1")[0] in ("STOPPED", "STARTED")  # never two at once
+    assert operator_run.wait("q1", minutes=0.5, poll_s=0.1) == (
+        "STOPPED", "run", "the API refused the key: POPSMOSIS_API_URL and POPSMOSIS_API_KEY must both be set")
+
+
+def test_background_refuses_a_topic_whose_run_is_still_going(jobs_root):
+    job = jobs_root / "q1"
+    job.mkdir()
+    with operator_run.only_run(job):  # a run of it started by hand, in the foreground
+        result, _, reason = operator_run.background("q1")
+    assert result == "STOPPED" and "still going" in reason
+    assert not (job / operator_run.BACKGROUND).exists()
+
+
+def test_wait_says_running_while_the_lesson_is_being_made(jobs_root):
+    job = jobs_root / "q1"
+    job.mkdir()
+    jobs.write(job / operator_run.BACKGROUND, {"pid": os.getpid(), "runs": 0})
+    jobs.write(job / "run.current.json", {"started": "x", "step": "bundle", "steps": []})
+    assert operator_run.wait("q1", minutes=0)[:2] == ("RUNNING", "bundle")
+
+
+def test_a_background_lesson_killed_in_a_step_is_a_failed_run_of_it_and_can_be_given_up(jobs_root):
+    api = FakeApi()
+    job = jobs_root / "q1"
+    job.mkdir()
+    jobs.write(job / operator_run.BACKGROUND, {"pid": 2 ** 22 + 7, "runs": 0})  # no such process: it is gone
+    (job / operator_run.OUTCOME).write_text("")  # killed before it printed its line
+    jobs.write(job / "run.current.json", {"started": "x", "step": "bundle", "steps": []})
+    result, step, reason = operator_run.wait("q1", minutes=0)
+    assert (result, step) == ("FAILED", "bundle") and "interrupted" in reason
+    (job / "run.current.json").unlink(missing_ok=True)
+    jobs.write(job / operator_run.BACKGROUND, {"pid": 2 ** 22 + 7, "runs": 1})  # a second one, dead with no trace
+    result, step, reason = operator_run.wait("q1", minutes=0)
+    assert (result, step) == ("FAILED", "run") and "without an outcome" in reason
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+    assert "without an outcome" in api.calls[-1][2]
+
+
+def test_wait_is_for_whichever_of_the_lesson_and_the_videos_went_to_the_background_last(jobs_root):
+    from studio import videos
+
+    job = jobs_root / "q1"
+    job.mkdir()
+    assert not operator_run.waits_on_lesson("q1")  # nothing in the background: the videos' wait says so
+    jobs.write(job / operator_run.BACKGROUND, {"pid": 1, "runs": 0})
+    assert operator_run.waits_on_lesson("q1")
+    jobs.write(job / videos.BACKGROUND, {"pid": 1, "runs": 0})
+    os.utime(job / operator_run.BACKGROUND, ns=(1, 1))  # the lesson's, long before
+    assert not operator_run.waits_on_lesson("q1")
+
+
+def test_the_command_line_starts_the_lesson_in_the_background_and_waits_on_it(jobs_root, monkeypatch, capsys):
+    from studio.__main__ import main
+
+    got = {}
+    monkeypatch.setattr(operator_run, "background", lambda question, note="": got.update(question=question, note=note)
+                        or ("STARTED", "run", "the lesson, in the background"))
+    assert main(["run", "q1", "--note", "keep labels out", "--background"]) == 0
+    assert got == {"question": "q1", "note": "keep labels out"}
+    monkeypatch.setattr(operator_run, "waits_on_lesson", lambda question: True)
+    monkeypatch.setattr(operator_run, "wait", lambda question, minutes=None: ("RUNNING", "bundle", "still going"))
+    assert main(["wait", "q1"]) == 4
+    assert capsys.readouterr().out.splitlines()[-1] == "RUNNING bundle: still going"

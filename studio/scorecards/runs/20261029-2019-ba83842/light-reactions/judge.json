@@ -1,0 +1,52 @@
+{
+  "hook": {
+    "reason": "The title line \"Split the water, catch the light\" is concrete, two actions on real things, and it is the core idea in miniature; it opens and closes the chorus and is easy to sing back. The lesson opens on \"Where does the oxygen you breathe actually come from?\", a question the learner wants answered. The narration opens on \"Every green leaf in the Sun is quietly turning light into energy it can use,\" which is from the learner's world, though a bit generic.",
+    "score": 5
+  },
+  "frame": {
+    "reason": "The solar panel charging a battery pack, with the Calvin cycle as the cordless drill, does the job of the whole process and is not a stock picture. It is set up early (v1-2) and recurs in \"another battery to fill,\" \"fully charged,\" \"Both batteries flat\" and \"sends the empties back... to charge anew\"; the lesson and narration carry it too. The mill wheel for ATP synthase fits inside it. It is weakened a little by the intro's \"charging up\" and the title line not naming the frame, and by the aside about numbering and the mitochondria digression, which break away from it.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach all five links in order with causes: water is split \"to replace those electrons,\" the chain energy pumps protons, \"Protons can't cross the membrane on their own, so\" they pile up, and the \"only way back\" is ATP synthase. The song carries the gist and the bridge replays the chain in reverse. The weak spots are the photosystem I step, which says light re-energizes the electrons but not why that is needed to make NADPH, and the link from ATP and NADPH to the Calvin cycle, which is stated rather than caused.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most lines are steps in the chain and in order, such as \"Trapped H⁺ pile up → proton gradient\" and \"Photosystem I re-energizes e⁻ → NADPH.\" The first is a question, not a step, and it starts on the title line, and the second is a label-like equation (\"Solar panel = light reactions, battery pack = ATP + NADPH\"). Several lines start on the wrong lyric: \"Photosystem II splits water\" starts at v1-7, where the water splitting comes a line later at v1-8. \"Electron transport chain pumps H⁺\" starts at v1-9, before the pumping line in v1-10. \"H⁺ flowing back turns ATP synthase → ATP\" starts at v2-2, before the turning at v2-3, and the last line is a weed-killer application, not the core idea. The set never states the core idea or the pumping and gradient cause.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Narration n13: \"That releases oxygen, plus protons that stay inside the thylakoid space.\" Also the lesson step 2 and f2: \"the oxygen and protons are released into the thylakoid space.\"",
+      "problem": "The oxygen is released as O2 from the chloroplast, not into the thylakoid space as a proton-like product, and the sentence places both products in the space in a way that implies oxygen stays there.",
+      "correction": "Say water splits into electrons, protons (which stay in the thylakoid space) and oxygen, which leaves the plant as O2."
+    },
+    {
+      "claim": "Lyric v1-3/v1-4: \"Inside a chloroplast, there's thylakoids in stacks / Floating in the stroma, that's the charger, flat green sacs\"",
+      "problem": "The thylakoids are surrounded by the stroma, but \"charger\" here is misleading because the solar panel analogy puts the whole light reactions as the charger, not just the sacs.",
+      "correction": "Say the thylakoids sit in the stroma and are where the charging happens."
+    },
+    {
+      "claim": "Lyric v1-10 and c1-2: \"That drop pumps protons in across the wall\" and \"Electrons down the chain pack protons tight\"",
+      "problem": "The sung wording suggests every part of the chain pumps and that the electrons themselves pack protons, whereas only the cytochrome complex pumps, using the electrons' energy.",
+      "correction": "Say the electrons' energy pumps protons in."
+    },
+    {
+      "claim": "Lyric v2-9/v2-10: \"That proton trick? Your mitochondria use it too / In cellular respiration, that's how ATP comes through\"",
+      "problem": "This overstates it: most ATP in respiration comes from chemiosmosis, but substrate-level phosphorylation also makes some ATP.",
+      "correction": "Say mitochondria use the same trick to make most of their ATP."
+    }
+  ],
+  "accuracy": {
+    "reason": "The core chemistry is correct: the oxygen comes from water, protons are pumped by the cytochrome complex, ATP synthase makes ATP, photosystem I leads to NADPH, and the herbicide effects are right. The imprecisions are the oxygen and protons both being \"released into the thylakoid space\" (f2 and the lesson step 2), the song's loose \"Electrons down the chain pack protons tight,\" and \"that's how ATP comes through\" for respiration. A teacher would tighten these, and they leave a learner with a slightly wrong picture, but not a wrong core idea. The thousand-fold ratio is stated in the narration and lesson as being about 1000 times more protons, which agrees with the guide.",
+    "score": 3
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant: \"Split the water, catch the light / Electrons down the chain pack protons tight\" rhymes cleanly and is easy to sing back. Many verse lines, though, are long and read like textbook sentences: \"Protons crowd the thylakoid space, piling up inside,\" \"Next, the Calvin cycle spends them building sugar from CO2,\" and \"Then sends the empties back to the thylakoids to charge anew\" overrun the bar even for rap. Some rhymes bend meaning, such as \"the protons barge\" with \"fully charged,\" \"Floating in the stroma, that's the charger, flat green sacs\" for \"stacks,\" and \"though\" at the end of pc1-2 as a filler tag. The numbering aside (v1-5, v1-6) is cute but not helpful, and lines like v2-12 are filler.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a real question, gives a clear solar-charger big picture, and builds steps with their causes. It has a Predict question (\"where will they go?\") answered right after, names the oxygen misconception with the reason it is wrong, and ends on a check, \"Why does ATP synthase stop making ATP when a weed-killer blocks electrons...\", that needs the chain to answer. It is pitched at the right level and the \"Simplified\" note is honest. Flaws: the opening question is only answered much later in the Common mistake section, the misconception sits after the steps instead of next to the water-splitting step, and a few extras (chemiosmosis, mitochondria, the table) add terms for a first-time learner.",
+    "score": 4
+  }
+}

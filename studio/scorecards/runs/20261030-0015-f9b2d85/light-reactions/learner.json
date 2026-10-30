@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The light reactions use light energy to pull electrons from water and let them flow downhill, and that flow is traded for ATP and NADPH, which the cell can spend, while oxygen is released as a by-product.",
+      "why": "First, light hits photosystem II and kicks electrons up to a high energy level so they leave. Photosystem II replaces them by splitting water, which releases O2 and H+ into the lumen. The electrons then fall down the electron transport chain, and as they lose energy cytochrome b6f uses it to pump H+ from the stroma into the lumen. Photosystem I re-energizes the electrons with light, and an enzyme on the stroma side uses them and H+ to turn NADP+ into NADPH. Meanwhile H+ piles up in the lumen, making a proton gradient. The H+ can only flow back to the stroma through ATP synthase, and that flow spins part of it, which joins ADP and phosphate into ATP. So light causes electron movement, which causes the gradient, which causes ATP, and the electrons also end up making NADPH. The lesson did not explain exactly how the enzyme makes NADPH or how the spinning makes ATP.",
+      "what_if": "If photosystem II stopped working, like with the herbicides in the lesson, electrons would not leave it and nothing would enter the chain. The pump would stop, the proton gradient would run down, and ATP synthase could not make ATP. Photosystem I would also get no electrons, so no NADPH would be made. Without both ATP and NADPH, the Calvin cycle could not build sugar from CO2, so the plant would die."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

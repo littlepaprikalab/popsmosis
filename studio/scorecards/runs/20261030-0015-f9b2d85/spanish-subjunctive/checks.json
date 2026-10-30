@@ -1,0 +1,10 @@
+{
+  "problems": [
+    {
+      "line_id": "p2-1",
+      "rule": "lyric-style",
+      "detail": "\"When the hope is in the past, the verb goes back in time\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A catalyst speeds up a reaction by giving the molecules a different path with a lower activation energy, so a larger fraction of collisions have enough energy to react, without the catalyst being used up or the reactants and products changing.",
+      "why": "First, molecules only react if they collide with enough energy and the right orientation to reach the transition state at the top of the energy barrier. The minimum energy needed is the activation energy, and at a given temperature only some collisions have at least that much, which limits the rate. A catalyst provides a new mechanism whose highest barrier is lower. Since the temperature is the same, the molecules have the same energy as before, but now a much bigger fraction of collisions clear the lower barrier, so more react each second. The Arrhenius equation backs this up: the rate constant depends exponentially on Ea, so a small drop in Ea (about 5.7 kJ/mol at 25 °C) makes k about ten times bigger if A stays the same. The catalyst is used in an early step and regenerated in a later one, so a little can convert a lot of reactant. It does not change the energies of reactants and products or ΔH.",
+      "what_if": "If the active sites in a catalytic converter were blocked, like lead coating the platinum, the CO and O2 could no longer stick and react on the metal. The reaction would lose its lower-barrier path and fall back to the slow uncatalyzed path with the higher activation energy, so most CO would leave the tailpipe unchanged. The lesson says it slows to the uncatalyzed rate rather than stopping, but it doesn't fully explain why. My guess is that the original path still exists, but I'm not sure from the lesson alone."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

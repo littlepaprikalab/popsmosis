@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Take the low pass, the molecules go\" is concrete and singable, and it carries the frame, but it leans on a pronoun-ish \"the molecules go\" and does not name the catalyst or the lowered barrier. The lesson opens on a real question (\"Why does hydrogen peroxide fizz the moment it touches a cut?\"), and the narration opens on the learner's car exhaust (\"Every time a car runs...\"). The intro's second line (\"so CO won't stay CO\") is clunky, and the song opens without saying what is being passed.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "\"A lower road through a notch in the ridge\" is an apt picture of the whole job: same two valleys, a gentler climb, more travellers over per hour. It is not a stock frame. It is set up in v1, carried through the chorus (\"Take the low pass\"), the bridge (\"no lower climb\") and the outro (\"Same two valleys, just a lower road... comes back for the next load\"). The lesson and narration use it too, and \"the lower road still climbs\" is built into it. The catalytic converter scenes are an example, not a competing picture.",
+    "score": 5
+  },
+  "why_chain": {
+    "reason": "The lesson walks the links in order: collisions need Ea to reach the transition state, only a fraction have it, the catalyst gives a lower-barrier mechanism, a larger fraction succeeds (\"rate constant depends exponentially on Eₐ\"), and the catalyst is regenerated. Each link is explained, and the Predict question sits at the right place. The narration follows the same order. The lowest-energy link is the last one: why equilibrium is unchanged (both directions sped equally) is stated, and the song carries the gist (\"speeds both ways the same\"). It is nearly complete, but the link to ΔH comes only as a statement.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most lines are real steps and they run in order (\"Few collisions have enough energy → rate is limited\", \"Lower activation energy → rate constant rises exponentially\"). The first, \"How does a catalyst speed up a reaction?\", is a question rather than a step, and it sits on the intro line, which is the title. \"Lower road = new reaction mechanism, lower barrier\" is placed before the collision-energy steps, so the order of the chain is scrambled: the catalyst comes in before activation energy is introduced. \"No added energy; enthalpy change ΔH stays the same\" is two ideas, and it sits at a lyric that only mentions energy. Ten lines is a lot, and some are about the converter rather than the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "c3-1/c3-2 \"Same reactants, same products, the same delta H / Just a lower peak, so the whole thing picks up pace\" and the narration's \"the catalyst is never used up\" (n2) against v2-5 \"One step takes the catalyst\"",
+      "problem": "The 'whole thing' is imprecise, but more importantly n2 and the lyrics v2-7 say CO 'comes in under one name' as fine; the real imprecision is the converter story: CO2 'leaves the tailpipe' is fine, yet 'CO stays CO' in the bridge implies zero conversion without a catalyst, when the uncatalyzed rate is only slow.",
+      "correction": "Say the CO is converted far more slowly without the catalyst, so most of it passes out unchanged during its short time in the exhaust."
+    }
+  ],
+  "accuracy": {
+    "reason": "The science is sound at the college level: Ea as the hump height, the Arrhenius k = A·e^(−Ea/RT), the 5.7 kJ/mol giving about a tenfold rise at 25 °C, regeneration of the catalyst, unchanged ΔH and equilibrium, and the lead poisoning of the converter all check out, and the simplification about one hump is flagged. The one thing a teacher would tighten is the song's \"CO stays CO\" and \"CO leaves unchanged\", which suggests the uncatalyzed reaction stops, while the lesson's own check question asks why it slows rather than stops. That is a small imprecision, nothing a learner would carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are real phrases and the chorus is chantable (\"Take the low pass, the molecules go\"). But several verse lines read like textbook sentences: \"Molecules need activation energy to react\", \"Shave just under six kilojoules a mole off the climb\" and \"One step takes the catalyst, a later step gives it back\". Some run well past the bar (v2-7 \"So the CO from the engine comes in under one name\"; b-7 \"That's why a car with a catalyst has to run unleaded\"). Some rhymes bend meaning (\"plays fair\"/\"faster there\", \"the shortcut's dead\"), and \"CO2\" and \"delta H\" are written as numbers or symbols rather than as a singer says them. The chorus c1 is long, with c3 doubling it.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question (\"Why does hydrogen peroxide fizz...\"), gives the picture, builds the chain step by step, and has one Predict question answered right after. The misconception is named and refuted (\"extra energy or by changing ΔH... it opens a lower path\"). The closing check is a good one: \"why does the reaction slow to its uncatalyzed rate instead of stopping completely?\" needs the idea that the high path still exists. It is quite full for a first read: the table, the car, enzymes, equilibrium and the Arrhenius equation all arrive together, and the new terms (transition state, mechanism, rate constant, active site, equilibrium) are many.",
+    "score": 4
+  }
+}

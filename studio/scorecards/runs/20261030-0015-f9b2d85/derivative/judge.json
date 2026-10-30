@@ -1,0 +1,31 @@
+{
+  "hook": {
+    "reason": "The title line \"Shrink the gap and read the speed\" is concrete, short, singable, and holds the core idea in miniature, opening and closing the chorus. The lesson opens on a real question, \"How can a car have a speed at one single instant...\", and the narration opens on \"Picture a car on the highway: how fast is it going right now?\" Both are strong. \"Read the speed\" leans a bit on the dashboard, and \"the gap\" is abstract before the picture is set, so it falls just short of the model.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The odometer/speedometer dashboard is an apt picture of the whole idea: a rate of a running total at this instant. It is set up in the lesson, the narration (n2-n4) and song verse 1, and it recurs in the pre-chorus (\"Parked with miles, the speedometer still reads zero\") and in the title line. The chorus, bridge and outro drift to secant, tangent and slopes, so the car is not carried through the whole song. The verse 2 and bridge material is mostly graph language.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "All five links are taught in order with causes in both lesson and narration: \"One point alone has no change to divide\", \"An average hides the details\", \"the second point slides... so the secant line tips toward the tangent line\", \"You can't just set h = 0... 0/0\", \"That limit is the derivative\". The song carries the gist in verse 1, verse 2 and the chorus. The reason the limit is needed (0/0) is stated, and the worked table shows the slopes settling. One small gap: it never says why the settling number must be the tangent slope beyond the zoom-in remark.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Read in order, they tell the chain well: \"An average over a long gap hides the changes\", \"Shrink the gap → secant line tips toward tangent line\", \"h = 0 gives 0/0, so derivative = limit of slopes\". But the first, \"How do you find a rate at one instant?\", is a question rather than a step. Several are misaligned. \"Tangent line slope = instantaneous rate of change\" starts at the zoom-in line v2-5. \"Shrink the gap → secant line tips...\" starts at narration n11, a question that does not state it. The last two (f′(x)/power rule and the corner) add material beyond the core chain, and \"Corner: slopes 1 and −1 disagree\" is long.",
+    "score": 3
+  },
+  "errors": [],
+  "accuracy": {
+    "reason": "Facts check out: difference quotient 6 + h, slopes 7/6.1/6.01, f′(x) = 2x, |x| slopes ±1, the 0/0 point, and the sign meaning. The lesson honestly flags the smooth-graph simplification. Song line v2-6 says \"that line's slope is the rate\" and p1-1 \"how fast, not how far\" are fine. Nothing a learner would carry away wrong.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "Much of the chorus is a chant, with \"Shrink the gap and read the speed\" repeated as a hook. But many lines overrun the bar badly: \"Its slope's the average rate of change, rise over run too\", \"Do it at every x, and you get a new function, f prime\", and the bridge lines \"No limit means no derivative where the corner sits\". Some read like textbook captions: \"Absolute value of x has a sharp corner at zero\". Some rhymes are forced or bend meaning: \"rise over run too\" (filler to rhyme with \"through\"), \"slopes approach\" with \"zero's no hope\", and \"slopes can rest\" with \"flips\". c2 \"settle down / right now\" are fine, but c3-1 and c3-2 add a long extra chorus.",
+    "score": 2
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the picture, builds step by step on why, asks \"What do you think happens to the secant line as the points close in?\" and answers it immediately, and names the misconception with the parked-car reason. It ends on a check that needs understanding: why |x| has no derivative at 0 when it has one at 2. Weaknesses: a long run of terms (difference quotient, secant, tangent, limit, instantaneous rate, f′), and extras such as the power rule, sign, local linearity and the corner section that a first-time learner may not need. The misconception comes late, after those extras.",
+    "score": 4
+  }
+}

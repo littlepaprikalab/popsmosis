@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"The crown went broke, the people rose\" is concrete and singable, and it opens and closes the chorus. But it names only the start and the end, \"the crown went broke\" and \"the people rose\", and it skips the Estates-General turn, so it isn't the core idea in miniature. The lesson opens on a real question (\"How does a government run out of money and end up handing power to an assembly?\"). The narration opens on bread eating half a family's income, which is from the learner's world, though that is a strong image the song's intro barely uses.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The dinner table with an unpaid bill is an apt picture of the whole thing: who pays, who votes, and who walks away to start their own table. The lesson, the narration (n4-n6) and the first verse all use it. But it is dropped after verse 1: the chorus, bridge and outro don't mention diners or a table, and the lesson never uses it again after its own section. The bread, Bastille and England parts sit outside the picture.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration give the causes in order: wars lead to debt, the privileged refuse to pay, so the king calls the Estates-General, voting by order lets the privileged outvote the Third, so it declares the National Assembly. n13 asks \"why didn't the king just tax...\" and answers it. The last link is thinner. The bread link says crowds \"backed the Assembly\" and stormed the Bastille, but it doesn't clearly connect hunger and troop movements to backing the Assembly. The Enlightenment is a bare statement rather than a link. Core idea \"seize power\" is only implied by the assembly declaration. The England section adds an analogy, but it doesn't complete the chain.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most are steps in order: \"Privileged refuse new taxes → king calls Estates-General\", \"Vote by order: First and Second outvote Third Estate\". Several start where the step is sung or said. But the first, \"Why did the French Revolution break out in 1789?\", is a question rather than a step. \"Unpaid bill = the crown's war debt\" is a label. The last two (\"Next: privileges abolished...\" and \"England 1640...\") are off the core chain. The chain's final links, the Third Estate seizing power and the Bastille, are squeezed into one line.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson and n1/i-2/o-1: \"bread could eat up more than half of a working family's income\" used as the song's opening while the intro also says \"Bread cost over half your pay\"",
+      "problem": "Mildly misleading ordering: it presents the bread crisis as the first reason in the intro, while the lesson's own chain and the core idea put the debt first. This is a framing issue rather than a factual error, so no correction is needed beyond the wording.",
+      "correction": "No factual change needed."
+    },
+    {
+      "claim": "Song v2-3 to v2-4: \"Enlightenment says the power comes from the people\" (applied as all of the Enlightenment)",
+      "problem": "The lesson and song credit only Rousseau's idea, which gives the Enlightenment as a single claim; Montesquieu and rights were also part of it, a simplification.",
+      "correction": "Say Enlightenment thinkers argued that power comes from the people and should be limited."
+    }
+  ],
+  "accuracy": {
+    "reason": "Dates, the 1614 meeting, voting by order, the tennis court and the Bastille's seven prisoners are all correct, and the misconception is handled well. The one issue is that \"Enlightenment says the power comes from the people\" gives only one thinker's view as the whole movement. The song's \"Third Estate breaks off, speaks the nation's will\" is fair. Also, \"Two beat one, so the Third can't win a thing\" is loose but fair for the level. A teacher might tighten the Enlightenment line, but nothing wrong is carried away.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a chant a learner could sing back after two hearings, and the rhymes are mostly clean. But many verse lines read like captions or run long: \"Enlightenment says the power comes from the people, so\" and \"Third Estate's ninety-seven percent, and they carry the load\". The rhyme at v2-3/v2-4, \"so\" and \"whole\", is forced. Rhymes like \"fight\" and \"tight\" and \"dies\" and \"side\" bend the sentence: \"the crown can't hold the city tight\" is awkward. The bridge is a narrated recap of the English story, which is a list of events. The first verses carry the term list (\"First Estate's the clergy\") as definitions.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture and the dinner picture, and handles the misconception (\"France was one of Europe's richest kingdoms\") clearly. It asks one prediction question (\"What do you think its deputies did next?\") and answers it right after. The closing check, \"If the First and Second Estates had agreed to pay new taxes in 1787, why might the Estates-General never have been called?\", can be answered only by a learner who understands the chain. But the lesson carries many terms and dates, plus the England section and the \"What comes next\" section, which pad it. The table is a list of parts, but it supports the why. It is mostly clear, with some things worth cutting.",
+    "score": 4
+  }
+}

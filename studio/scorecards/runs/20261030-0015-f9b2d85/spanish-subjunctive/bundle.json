@@ -1,0 +1,2260 @@
+{
+  "course": "Spanish 2",
+  "topic": "when Spanish uses the subjunctive",
+  "audience": "high school",
+  "core_idea": "If the main clause wants, feels or doubts, the verb after que isn't a fact, so it's subjunctive.",
+  "why_chain": [
+    "The main clause tells you how the speaker sees the action after que: as a fact, or as something wished, felt about or doubted.",
+    "When the main clause wishes, feels, recommends or doubts, the action after que is not a confirmed fact, so its verb takes the subjunctive.",
+    "When the main clause states knowledge or belief, the action is treated as fact, so the verb after que stays indicative.",
+    "This switch happens when the two clauses have different subjects; with one subject, Spanish uses the infinitive instead.",
+    "In espero que vengas, my hope is the main clause and your coming isn't a fact yet, so it's vengas."
+  ],
+  "key_terms": [
+    "subjunctive",
+    "indicative",
+    "mood",
+    "main clause",
+    "yo form",
+    "WEIRDO",
+    "ojalá",
+    "infinitive"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Spanish verbs come in moods. The indicative presents an action as a fact, something the speaker treats as real: Sé que vienes means 'I know you are coming.' The subjunctive presents an action as not a confirmed fact: something someone wishes for, has feelings about, doubts or recommends. The subjunctive is a mood, not a tense: it has present and past forms. A good everyday picture: the indicative is like a receipt, a record of what is real, and the subjunctive is like a wish list, what someone wants, hopes or doubts that nobody has confirmed. The question of espero que vengas versus espero que vienes comes up whenever someone invites a friend: Espero que vengas a mi fiesta, 'I hope you come to my party,' uses vengas because the friend's coming is only a hope, not a fact yet. That one verb form tells the listener whether the speaker is stating a fact or sharing a hope.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "The subjunctive usually appears in a clause that begins with que, after a main clause, which comes first. The meaning of the main clause decides the mood of the verb after que. The subjunctive follows a main clause that expresses a wish (espero que, quiero que), an emotion (me alegro de que, tengo miedo de que), an impersonal expression of opinion (es importante que, es necesario que), a recommendation (recomiendo que, sugiero que), doubt or denial (dudo que, no creo que), or the word ojalá. Many Spanish teachers sum these triggers up with the mnemonic WEIRDO: Wishes, Emotions, Impersonal expressions, Recommendations, Doubt and denial, Ojalá. Ojalá comes from Arabic, from a phrase meaning 'if God wills,' and Spanish has used it for centuries; it means 'I hope' or 'hopefully,' and it is followed by the subjunctive: Ojalá que vengas.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "The subjunctive after que is used when the two clauses have different subjects: in Espero que vengas, I (yo) do the hoping and you (tú) do the coming. When there is only one subject, Spanish drops que and uses the infinitive instead: Espero venir means 'I hope to come.' A common mistake is to think that the word que by itself triggers the subjunctive. It does not: que only links the two clauses, and after a main clause of knowledge, certainty or belief, such as sé que, es verdad que or creo que, the verb after que is in the indicative, because the action is treated as a fact: Sé que vienes, Creo que vienes. Adding no to creer turns belief into doubt, so the mood switches: Creo que vienes takes the indicative, but No creo que vengas takes the subjunctive, just like Dudo que vengas.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "To form the present subjunctive, start with the yo form of the present indicative, drop the final -o and add the opposite vowel in the endings: -ar verbs take endings with e (hablo becomes hable, hables) and -er and -ir verbs take endings with a (como becomes coma, comas; vivo becomes viva, vivas). Because the stem comes from the yo form, an irregular yo form carries over: venir is an -ir verb with the yo form vengo, so the g stays and its subjunctive is venga, vengas; tener gives tengo, so tenga, tengas. A few verbs have irregular subjunctive forms: ser becomes sea, ir becomes vaya, estar becomes esté, saber becomes sepa, dar becomes dé, haber becomes haya. These same forms are used for usted commands and negative tú commands (Venga usted; No vengas tarde, 'Don't come late'), so students who know those commands have already used them. When the main clause is in the past, Spanish uses the past (imperfect) subjunctive instead: Esperaba que vinieras, 'I was hoping you would come'; it is usually taught next, after the present subjunctive.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "Many students think the word que by itself triggers the subjunctive. It doesn't: que only links the clauses and the main clause's meaning decides, so after a main clause of knowledge like sé que, the verb stays indicative: sé que vienes.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a Spanish textbook draws a scene from everyday life, of a pink party invitation card standing open on a wooden table in the centre of the picture, a small bunch of balloons printed on its front. The card is blank inside. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Party invite",
+          "aliases": [
+            "party invite",
+            "invite",
+            "party"
+          ],
+          "sam_phrase": "pink card",
+          "color_hex": "#FF6FA8"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a textbook draws an everyday comparison, of two pieces of paper lying side by side on a desk: on the left a long, narrow light blue shop receipt with blank printed lines; on the right a purple notepad page used as a wish list, with a column of empty hand-drawn checkboxes. Both papers are blank. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Receipt",
+          "aliases": [
+            "receipt"
+          ],
+          "sam_phrase": "light blue receipt",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Wish list",
+          "aliases": [
+            "wish list"
+          ],
+          "sam_phrase": "purple notepad",
+          "color_hex": "#B57BFF"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a Spanish grammar textbook draws it, of a simple decision chart: a large rounded orange box on the left; on the right, three rounded boxes stacked one above another, a purple box at the top, a light blue box in the middle and a green box at the bottom; a plain thin grey line joins the orange box to each of the three boxes. All the boxes are blank. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Main clause",
+          "aliases": [
+            "main clause"
+          ],
+          "sam_phrase": "orange box",
+          "color_hex": "#FF9F43"
+        },
+        {
+          "name": "Subjunctive",
+          "aliases": [
+            "subjunctive"
+          ],
+          "sam_phrase": "purple box",
+          "color_hex": "#B57BFF"
+        },
+        {
+          "name": "Indicative",
+          "aliases": [
+            "indicative"
+          ],
+          "sam_phrase": "light blue box",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Infinitive",
+          "aliases": [
+            "infinitive"
+          ],
+          "sam_phrase": "green box",
+          "color_hex": "#6BDB7B"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "weirdo-detail",
+      "image_prompt": "Educational diagram, as a Spanish grammar textbook draws it, of a sorting chart: on the left a vertical column of six small red square tiles stacked one above another; on the right a large rounded purple box; a plain thin grey line joins the column of tiles to the box. The tiles and the box are blank. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "WEIRDO",
+          "aliases": [],
+          "sam_phrase": "red tiles",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "Subjunctive",
+          "aliases": [
+            "subjunctive"
+          ],
+          "sam_phrase": "purple box",
+          "color_hex": "#B57BFF"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "forms-detail",
+      "image_prompt": "Educational diagram, as a Spanish grammar textbook draws it, of two jigsaw puzzle pieces fitted together in the centre of the picture: a large cyan piece on the left and a smaller yellow piece on the right, its tab locked into the cyan piece. Both pieces are blank and flat. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Yo form",
+          "aliases": [
+            "yo form"
+          ],
+          "sam_phrase": "cyan puzzle piece",
+          "color_hex": "#3FE0D0"
+        },
+        {
+          "name": "Opposite vowel",
+          "aliases": [
+            "opposite vowel"
+          ],
+          "sam_phrase": "yellow puzzle piece",
+          "color_hex": "#FFD93D"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "# Why *espero que vengas*?\n\n**Why does Spanish say *espero que vengas* and not *espero que vienes*?**\n\nThe answer is a mood called the **subjunctive**. Spanish verbs can present an action as a fact or as something not confirmed, and the **main clause** decides which: if the main clause wants, feels or doubts, the verb after *que* isn't a fact, so it's subjunctive.\n\n## Receipts and wish lists\n\nThink of two pieces of paper. A receipt records what is real: that's the **indicative** (*Sé que vienes*, I know you're coming). A wish list holds what someone wants but nobody has confirmed: that's the **subjunctive** (*Espero que vengas*, I hope you come).\n\nWhen you invite a friend with *Espero que vengas a mi fiesta*, their coming is only a hope, not a fact yet, so the verb is *vengas*.\n\n## How the choice works\n\n1. **The main clause sets the view.** Its meaning tells you whether the action after *que* is a fact or something wished, felt about or doubted.\n2. **Wish, feeling or doubt → subjunctive.** The action after *que* is not a confirmed fact, so its verb takes the subjunctive.\n3. **Knowledge or belief → indicative.** The action is treated as a fact, so the verb stays indicative.\n4. **Different subjects only.** In *Espero que vengas*, I hope and you come: two subjects.\n\n| Main clause | Verb after *que* | Example |\n|---|---|---|\n| Wish | Subjunctive | *Espero que vengas.* |\n| Doubt | Subjunctive | *Dudo que vengas.* |\n| Knowledge | Indicative | *Sé que vienes.* |\n| Belief | Indicative | *Creo que vienes.* |\n\nMany teachers sum up the triggers with **WEIRDO**: Wishes, Emotions, Impersonal expressions (*es importante que*), Recommendations, Doubt and denial, and **ojalá**. *Ojalá* comes from an Arabic phrase meaning *if God wills*, and it is followed by the subjunctive.\n\n**Predict:** what happens if the person hoping and the person coming are the same? Spanish drops *que* and uses the **infinitive**: *Espero venir*, I hope to come.\n\n## Building *vengas*\n\nStart with the **yo form**, drop the *-o*, and add the opposite vowel: *-ar* verbs take *e* (*hablo → hables*), *-er* and *-ir* verbs take *a* (*como → comas*).\n\nBecause you start from the yo form, *vengo* keeps its *g*: *vengas*.\n\nA few verbs are irregular: *ser → sea*, *ir → vaya*, *estar → esté*.\n\nYou've already used these forms in commands: *Venga usted*, *No vengas tarde*.\n\n## A common mistake\n\nMany students think the word *que* triggers the subjunctive by itself. It doesn't: *que* only links the clauses, so *Sé que vienes* stays indicative.\n\nWatch what one *no* does: *Creo que vienes* (belief, indicative) becomes *No creo que vengas* (doubt, subjunctive).\n\nThis droplet covers the present subjunctive. When the main clause is in the past, Spanish uses the past subjunctive, usually taught next: *Esperaba que vinieras*.\n\n**Check yourself:** Why does *Creo que vienes* change to *No creo que vengas* when you add *no*?\n\nHave a follow-up question? Ask away!",
+  "music": {
+    "positive_styles": [
+      "K-pop with sharp, clear rapped verses traded between male group vocals; punchy synth bass, crisp claps and bright plucked synth stabs with a playful whistled hook; bouncy, tight 100 bpm beat; bright, youthful male voices that rap crisp and close in the verses, lift through a breathy pre-chorus and burst into a big, stacked sing-along chorus with gang-vocal echoes on the title line; synth stabs lead, claps snap on every backbeat"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "heavy autotune",
+      "muddy low end"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i1",
+      "section": "intro",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i2",
+      "section": "intro",
+      "text": "Espero que vengas, that's the invite I'm sending",
+      "names": [
+        "invite"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Some verbs read like a receipt, a record of what's real",
+      "names": [
+        "receipt"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "Some read like a wish list, what you want, not yet sealed",
+      "names": [
+        "wish list"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "The main clause comes first, and it makes the call",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Is the next verb real, or not a fact at all?",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Know it's real? Indicative tells it like news",
+      "names": [
+        "indicative"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Want it, doubt it? Subjunctive's what you use",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Wishes and emotions start the WEIRDO crew",
+      "names": [
+        "WEIRDO"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Impersonal, recommend and doubting too",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-9",
+      "section": "verse",
+      "text": "Ojalá's the O, it came from Arabic way back",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-10",
+      "section": "verse",
+      "text": "It meant if God wills, so the subjunctive's on track",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-11",
+      "section": "verse",
+      "text": "Two different subjects, that's when que comes in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-12",
+      "section": "verse",
+      "text": "Same subject? Infinitive, so it's espero venir",
+      "names": [
+        "infinitive"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "Que alone won't flip it, sé que vienes stays the same",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "It's what the main clause means that's calling the game",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "If the main clause wants it, feels it, doubts it too",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Then the verb after que gets the subjunctive cue",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Espero que vengas, 'cause it's still pending",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Start from the yo form, vengo's where we begin",
+      "names": [
+        "yo form"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Drop the o, keep the veng, and the new part clicks in",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "That's the opposite vowel, snapping on at the end",
+      "names": [
+        "opposite vowel"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Ar gets an e, while er and ir get an a instead",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "The g from vengo stays, so it keeps that sound",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Tengo turns to tengas, the same way around",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "A few go their own way, like ser turns into sea",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Ir turns into vaya, estar turns into esté",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-9",
+      "section": "verse",
+      "text": "Vienes is a fact, it's for things that are real",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-10",
+      "section": "verse",
+      "text": "Vengas is a hope, and espero seals the deal",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-11",
+      "section": "verse",
+      "text": "These forms aren't new, they're in commands you've heard",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-12",
+      "section": "verse",
+      "text": "No vengas tarde, don't come late, the same word",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "When the hope is in the past, the verb goes back in time",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Esperaba que vinieras, that's the next step in line",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "If the main clause wants it, feels it, doubts it too",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Then the verb after que gets the subjunctive cue",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Espero que vengas, 'cause it's still pending",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Creo que vienes, I believe you're on your way",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Belief counts as a fact, so indicative will stay",
+      "names": [
+        "indicative"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Now put a no in front, and the belief turns to doubt",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Doubt's the D in WEIRDO, so the fact gets crossed out",
+      "names": [
+        "WEIRDO"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "The verb after que flips to the subjunctive side",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "No creo que vengas, one small no, and it switched sides",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Same que, same venir, but the main clause changed its mind",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "From a fact into a doubt, so the verb falls in line",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Facts go on the receipt, the things you know are real",
+      "names": [
+        "receipt"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Hopes and doubts go on the wish list, nothing sealed",
+      "names": [
+        "wish list"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "If the main clause wants it, feels it, doubts it too",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Then the verb after que gets the subjunctive cue",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Espero que vengas, 'cause it's still pending",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Espero que vengas, that's the invite I'm sending",
+      "names": [
+        "invite"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "It's a hope, not a fact, so the answer's still pending",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Make a wish, then switch the ending",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Picture a party invite that says espero que vengas a mi fiesta, I hope you come to my party.",
+      "names": [
+        "party invite"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n2",
+      "text": "Why vengas, and not vienes, the form you learned first?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n3",
+      "text": "Because your friend's coming is not a fact yet, only a hope.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "Think of a receipt: a record of what is real.",
+      "names": [
+        "receipt"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "Now think of a wish list: what someone wants, but nobody has confirmed.",
+      "names": [
+        "wish list"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "Spanish verbs have two moods that work the same way.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "The indicative presents an action as a fact, as in sé que vienes, I know you're coming.",
+      "names": [
+        "indicative"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "The subjunctive presents it as wished for, felt about or doubted, not confirmed.",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "The main clause, the part before que, decides which mood comes next.",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n10",
+      "text": "When it wants, feels or doubts, the action after que is not a fact, so its verb goes subjunctive.",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "When it states knowledge or belief, the action counts as a fact, so the verb stays indicative.",
+      "names": [
+        "indicative"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n12",
+      "text": "To spot the triggers, many teachers use the word WEIRDO.",
+      "names": [
+        "WEIRDO"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "Wishes, emotions, impersonal expressions like es importante que, recommendations, doubt and denial, and ojalá.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "Ojalá comes from an Arabic phrase meaning if God wills, and it is followed by the subjunctive.",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "One more condition: the two clauses need different subjects.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n16",
+      "text": "In espero que vengas, I hope, and you come.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n17",
+      "text": "So what happens when the same person hopes and comes?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n18",
+      "text": "Spanish drops que and uses the infinitive: espero venir, I hope to come.",
+      "names": [
+        "infinitive"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "A common mistake is to think que by itself triggers the subjunctive.",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "It does not: que only links the clauses, so sé que vienes stays indicative.",
+      "names": [
+        "indicative"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "So how do you build vengas?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n22",
+      "text": "Start with the yo form of the present tense, vengo.",
+      "names": [
+        "yo form"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "Drop the final o and add the opposite vowel.",
+      "names": [
+        "opposite vowel"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n24",
+      "text": "Ar verbs take e, so hablo becomes hables, and er and ir verbs take a, so como becomes comas.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "Because you start from the yo form, the g in vengo stays: vengas.",
+      "names": [
+        "yo form"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "A few verbs are irregular: ser becomes sea, ir becomes vaya, estar becomes esté.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "You've already used these forms in commands, like no vengas tarde, don't come late.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Now test it with creer: creo que vienes takes the indicative, because belief counts as fact.",
+      "names": [
+        "indicative"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n29",
+      "text": "Add no, belief turns into doubt, and no creo que vengas takes the subjunctive.",
+      "names": [
+        "subjunctive"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n30",
+      "text": "Next in the course, a past main clause takes the past subjunctive: esperaba que vinieras.",
+      "names": [
+        "main clause",
+        "subjunctive"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n31",
+      "text": "So remember: if the main clause wants, feels or doubts, the verb after que isn't a fact, so it's subjunctive.",
+      "names": [
+        "main clause",
+        "subjunctive"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n32",
+      "text": "The cause is a main clause of hoping, feeling or doubting, and the result is espero que vengas, not espero que vienes.",
+      "names": [
+        "main clause"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n33",
+      "text": "That one form tells your listener whether you're stating a fact or sharing a hope.",
+      "names": [],
+      "fact_id": "f1"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i2",
+      "scene": "hook",
+      "camera": {
+        "target": "Party invite",
+        "zoom": 1.5
+      },
+      "spotlight": "Party invite",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "Espero que vengas",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Receipt",
+        "zoom": 1.6
+      },
+      "spotlight": "Receipt",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Wish list",
+        "zoom": 1.6
+      },
+      "spotlight": "Wish list",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "WEIRDO",
+        "zoom": 1.6
+      },
+      "spotlight": "WEIRDO",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "WEIRDO",
+        "zoom": 1.6
+      },
+      "spotlight": "WEIRDO",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-9",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "WEIRDO",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-10",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-12",
+      "scene": "overview",
+      "camera": {
+        "target": "Infinitive",
+        "zoom": 1.6
+      },
+      "spotlight": "Infinitive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Opposite vowel",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite vowel",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Opposite vowel",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-9",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-10",
+      "scene": "overview",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-12",
+      "scene": "overview",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "WEIRDO",
+        "zoom": 1.6
+      },
+      "spotlight": "WEIRDO",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "Subjunctive",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "No creo que vengas",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Receipt",
+        "zoom": 1.4
+      },
+      "spotlight": "Receipt",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Wish list",
+        "zoom": 1.4
+      },
+      "spotlight": "Wish list",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "Party invite",
+        "zoom": 1.5
+      },
+      "spotlight": "Party invite",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "Party invite",
+        "zoom": 1.5
+      },
+      "spotlight": "Party invite",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Party invite",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Receipt",
+        "zoom": 1.6
+      },
+      "spotlight": "Receipt",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "Wish list",
+        "zoom": 1.6
+      },
+      "spotlight": "Wish list",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Main clause",
+        "zoom": 1.6
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "WEIRDO",
+        "zoom": 1.6
+      },
+      "spotlight": "WEIRDO",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "WEIRDO",
+        "zoom": 1.6
+      },
+      "spotlight": "WEIRDO",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "weirdo-detail",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "Infinitive",
+        "zoom": 1.6
+      },
+      "spotlight": "Infinitive",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Yo form",
+        "zoom": 1.6
+      },
+      "spotlight": "Yo form",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Opposite vowel",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite vowel",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "Opposite vowel",
+        "zoom": 1.6
+      },
+      "spotlight": "Opposite vowel",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Yo form",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "forms-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "Indicative",
+        "zoom": 1.6
+      },
+      "spotlight": "Indicative",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "Subjunctive",
+        "zoom": 1.6
+      },
+      "spotlight": "Subjunctive",
+      "particles": [],
+      "carries": "",
+      "glow": "Subjunctive",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Main clause",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n32",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n33",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [
+    {
+      "structure": "Yo form",
+      "inputs": [
+        "vengo"
+      ],
+      "outputs": [
+        "vengas"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i1",
+      "text": "Why espero que vengas, not vienes?",
+      "from_narration": "n2"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Receipt = indicative, wish list = subjunctive",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "Main clause decides the mood of the verb after que",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Want, feel, doubt → subjunctive; know, believe → indicative",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "WEIRDO trigger in main clause → subjunctive after que",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "v1-11",
+      "text": "Different subjects → que + subjunctive; same → infinitive",
+      "from_narration": "n15"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "Que alone triggers nothing: sé que vienes stays indicative",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Yo form vengo − o + opposite vowel → vengas",
+      "from_narration": "n22"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Add no: belief → doubt → subjunctive",
+      "from_narration": "n28"
+    }
+  ],
+  "tags": {
+    "song": [
+      "spanishsubjunctive",
+      "subjunctive",
+      "spanishgrammar",
+      "spanish2",
+      "spanish",
+      "learnspanish",
+      "kpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "spanishsubjunctive",
+      "subjunctive",
+      "spanishgrammar",
+      "spanish2",
+      "spanish",
+      "learnspanish",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

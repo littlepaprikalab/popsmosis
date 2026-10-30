@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The sodium-potassium pump uses ATP to keep sodium concentrated outside the cell and potassium inside, storing energy in those gradients so ions rush back through channels when they open, which lets neurons and muscles send signals.",
+      "why": "First, ions constantly leak through channels, so the gradients would run down if nothing fixed them. The pump works against the gradients, which is active transport, so it needs ATP. With the pump open to the inside, three Na+ bind. ATP splits into ADP and a phosphate, and the phosphate attaches to the pump (phosphorylation). That changes the pump's shape so it opens to the outside and releases the 3 Na+. Then two K+ bind from outside, the phosphate comes off, and the pump goes back to its inward-facing shape and lets the K+ go inside. Because 3 positives leave and only 2 come in, the inside gets slightly more negative. The result is sodium high outside and potassium high inside. This stored energy is used when channels open: K+ leaking out mostly sets the resting potential of about -70 mV, and Na+ rushing in fires an action potential. The lesson says the pump does not reset the membrane after each action potential; K+ flowing out does that, and the pump just works slowly in the background.",
+      "what_if": "If the pump stopped, like when ouabain binds it, the sodium that leaks in would no longer be pushed back out, so it would build up inside the cell. Water would follow by osmosis, so the cell could swell and burst. Also the gradients would slowly run down, so there would be less stored energy, and neurons and muscle cells could no longer fire action potentials. The lesson doesn't say exactly how long this takes, only that it happens eventually, since the pump works slowly in the background and the gradients can last over many signals."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,2166 @@
+{
+  "course": "AP European History",
+  "topic": "why the French Revolution happened",
+  "audience": "high school",
+  "core_idea": "The crown went broke, the privileged refused to pay, so calling the Estates-General let the Third Estate seize power.",
+  "why_chain": [
+    "Costly wars, including aid to the American Revolution, left the French crown deep in debt.",
+    "The crown could not raise taxes because the First and Second Estates paid little and refused new ones.",
+    "Out of options, the king called the Estates-General in 1789, the first since 1614.",
+    "Voting by order let the privileged outvote the Third Estate, which, armed with Enlightenment ideas, declared itself the National Assembly.",
+    "Soaring bread prices angered Paris, so crowds backed the Assembly and stormed the Bastille."
+  ],
+  "key_terms": [
+    "Estates-General",
+    "Third Estate",
+    "First Estate",
+    "Second Estate",
+    "National Assembly",
+    "Tennis Court Oath",
+    "Enlightenment",
+    "Bastille"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "In Old Regime France, society was divided into three estates: the First Estate was the clergy, the Second Estate was the nobility, and the Third Estate was everyone else, about 97 percent of the people, from peasants and city workers to the wealthy middle class, or bourgeoisie. The First Estate paid almost no taxes and the nobles were exempt from the main land tax, so the Third Estate paid most of the taxes to the crown. Costly wars, including the Seven Years' War and France's help for the American Revolution, left the crown deep in debt; it kept borrowing, the debt kept growing, and by 1788 the government was nearly bankrupt. A common mistake is to think the revolution happened because France was a poor country: France was one of Europe's richest and most populous kingdoms, but its government was broke because the privileged estates paid so little tax.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "When King Louis XVI's finance ministers proposed taxing the nobles and clergy, the privileged refused in 1787 and insisted that only the Estates-General, a meeting of deputies from all three estates, could approve new taxes. Out of options, the king called the Estates-General to solve the debt, and it met at Versailles in May 1789 for the first time since 1614. Each estate voted as one bloc, called voting by order, so the First and Second Estates could outvote the Third two to one, even though the Third Estate had about as many deputies as the other two combined; the Third Estate demanded one vote per deputy and was refused. One way to picture it: France was a dinner table with a huge unpaid bill run up by the crown's wars; the clergy and noble diners refused to pay their share, the rule of one vote per diner let those two outvote the Third Estate, the diner who had always paid most of it, and so that diner got up and started a table of its own, the National Assembly.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "Enlightenment ideas gave the Third Estate its argument: Rousseau taught that a government's power comes from the people, Montesquieu argued that power should be separated and limited, and the American Revolution had just shown that a people could replace a king's rule with a government based on rights. Led mostly by lawyers and other educated members of the bourgeoisie, the Third Estate's deputies declared themselves the National Assembly on June 17, 1789, claiming to speak for the whole nation; three days later, locked out of their meeting hall, they met on an indoor tennis court and swore the Tennis Court Oath, promising not to separate until France had a constitution. Meanwhile a bad harvest in 1788 sent bread prices soaring, and by 1789 bread could take more than half of a working family's income, so hunger and anger spread among ordinary people in Paris. When the king gathered troops near Paris and dismissed a popular minister, Parisian crowds backed the National Assembly, and on July 14, 1789 they stormed the Bastille, a royal fortress and prison, to seize gunpowder; it held only seven prisoners, but its fall showed that the king had lost control of his capital.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "The result was power shifting from the king to an assembly that claimed to represent the people: in August 1789 the National Assembly abolished the privileges of the nobles and clergy and issued the Declaration of the Rights of Man and of the Citizen, which said that people are born free and equal in rights, and later the revolution turned more radical. The same pattern appears earlier in the course, in England: Charles I ruled without Parliament for eleven years, but in 1640 he needed money to fight a rebellion in Scotland, so he had to call Parliament; Parliament used its control over taxes to demand limits on his power, the quarrel became the English Civil War in 1642, Parliament's army defeated the royal side, and Charles I was tried and beheaded in 1649.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think the revolution happened because France was a poor country. In fact France was one of Europe's richest kingdoms; its government was broke because the privileged estates paid so little tax.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as an AP European History textbook draws it, of a Paris street in 1789: a baker's shop on the left, with a few golden-brown loaves of bread on its counter; the Bastille fortress on the right in the distance, its stone walls and round towers tinted coral red, the stonework showing through; the street empty between them. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Bread",
+          "aliases": [
+            "bread"
+          ],
+          "sam_phrase": "golden bread",
+          "color_hex": "#D9A04A"
+        },
+        {
+          "name": "Bastille",
+          "aliases": [],
+          "sam_phrase": "red fortress",
+          "color_hex": "#F0645A"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a textbook draws an everyday analogy, of a dinner table seen from the front: a long table across the middle covered in empty plates; behind it three diners seated side by side, on the left a priest in violet robes, in the middle a nobleman in a light blue coat and powdered wig, on the right a working man in a green jacket; a long white paper bill lying on the table in front of the working man. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Unpaid bill",
+          "aliases": [
+            "unpaid bill"
+          ],
+          "sam_phrase": "white paper",
+          "color_hex": "#F2F2F2"
+        },
+        {
+          "name": "Clergy diner",
+          "aliases": [
+            "clergy diner"
+          ],
+          "sam_phrase": "violet robe",
+          "color_hex": "#B07CF5"
+        },
+        {
+          "name": "Noble diner",
+          "aliases": [
+            "noble diner"
+          ],
+          "sam_phrase": "blue coat",
+          "color_hex": "#4FB3F0"
+        },
+        {
+          "name": "Working diner",
+          "aliases": [
+            "working diner"
+          ],
+          "sam_phrase": "green jacket",
+          "color_hex": "#4CC870"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as an AP European History textbook draws it, of the social structure of France under the Old Regime as a pyramid in the centre of the picture: at its point the king in gold robes and a crown; below him a thin band tinted violet with a few small clergymen; below that a thin band tinted light blue with a few small noblemen; and a wide base tinted green with many small peasants and workers. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Louis XVI",
+          "aliases": [
+            "the king",
+            "The king"
+          ],
+          "sam_phrase": "gold figure",
+          "color_hex": "#F5C542"
+        },
+        {
+          "name": "First Estate",
+          "aliases": [],
+          "sam_phrase": "violet band",
+          "color_hex": "#B07CF5"
+        },
+        {
+          "name": "Second Estate",
+          "aliases": [],
+          "sam_phrase": "blue band",
+          "color_hex": "#4FB3F0"
+        },
+        {
+          "name": "Third Estate",
+          "aliases": [],
+          "sam_phrase": "green band",
+          "color_hex": "#4CC870"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "estates-general",
+      "image_prompt": "Educational illustration, as an AP European History textbook draws it, of the Estates-General in the great hall at Versailles in 1789, seen from the front: the king in gold robes seated on a throne on a raised stage at the back centre; in front of him three separate groups of seated deputies, the clergy on the left in violet robes, the nobles in the middle in light blue coats, and the Third Estate on the right in green coats, the Third Estate's group about as large as the other two together. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Louis XVI",
+          "aliases": [
+            "the king",
+            "The king"
+          ],
+          "sam_phrase": "gold figure",
+          "color_hex": "#F5C542"
+        },
+        {
+          "name": "First Estate",
+          "aliases": [],
+          "sam_phrase": "violet crowd",
+          "color_hex": "#B07CF5"
+        },
+        {
+          "name": "Second Estate",
+          "aliases": [],
+          "sam_phrase": "blue crowd",
+          "color_hex": "#4FB3F0"
+        },
+        {
+          "name": "Third Estate",
+          "aliases": [],
+          "sam_phrase": "green crowd",
+          "color_hex": "#4CC870"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "tennis-court",
+      "image_prompt": "Educational illustration, as an AP European History textbook draws it, of the Tennis Court Oath of June 1789: the inside of a tall indoor tennis court with plain walls and high windows, a crowd of deputies in teal coats standing together on its floor with their right arms raised, one deputy standing on a table in their middle. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "National Assembly",
+          "aliases": [],
+          "sam_phrase": "teal crowd",
+          "color_hex": "#3FD1C4"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "english",
+      "image_prompt": "Educational illustration, as an AP European History textbook draws it, of King Charles I and Parliament in 1640s England: Charles I standing on the left in an orange robe with his crown; on the right, the chamber of the House of Commons, its rows of lime green benches filled with seated members of Parliament. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Charles I",
+          "aliases": [
+            "Charles"
+          ],
+          "sam_phrase": "orange robe",
+          "color_hex": "#F59A42"
+        },
+        {
+          "name": "Parliament",
+          "aliases": [],
+          "sam_phrase": "lime benches",
+          "color_hex": "#B8E04A"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "## Why did the French Revolution happen?\n\n**How does a government run out of money and end up handing power to an assembly?**\n\nIn 1789, France's crown was nearly bankrupt, and the people who could pay refused. The core idea: the crown went broke, the privileged refused to pay, so calling the Estates-General let the Third Estate seize power. This lesson simplifies the story to its main causes.\n\n### Picture a dinner bill\n\nImagine a dinner table with a huge unpaid bill, run up by the crown's wars. The clergy and noble diners refuse to pay their share. The rule is one vote per diner, so those two outvote the Third Estate, the diner who has always paid most of it. So that diner gets up and starts a table of its own: the National Assembly.\n\n### Who paid in Old Regime France?\n\n| Estate | Who | Taxes |\n|---|---|---|\n| First Estate | The clergy | Almost none |\n| Second Estate | The nobles | Exempt from the main land tax |\n| Third Estate | Everyone else, about 97% of people | Most of the taxes |\n\n### The chain of causes\n\n1. **The crown went deep into debt.** Costly wars, including the Seven Years' War and France's help for the American Revolution, left it nearly bankrupt by 1788.\n2. **The privileged blocked reform.** When the king's ministers proposed taxing nobles and clergy, the privileged refused in 1787 and said only the Estates-General could approve new taxes.\n3. **The king had to call the Estates-General.** This meeting of deputies from all three estates opened at Versailles in May 1789, for the first time since 1614.\n4. **The voting favoured the privileged.** Each estate voted as one bloc, so the First and Second Estates could outvote the Third two to one, even though the Third had about as many deputies as the other two combined.\n\nThe Third Estate demanded one vote per deputy and was refused. What do you think its deputies did next? On June 17, 1789, they declared themselves the National Assembly, claiming to speak for the whole nation.\n\nEnlightenment ideas gave them their argument: Rousseau taught that a government's power comes from the people. Their leaders were mostly lawyers and other educated members of the bourgeoisie. Three days later, locked out of their hall, they met on an indoor tennis court and swore the **Tennis Court Oath**, promising not to separate until France had a constitution.\n\n### Bread and the Bastille\n\nA bad harvest in 1788 sent bread prices soaring, and by 1789 bread could take more than half of a working family's income. When the king gathered troops near Paris, angry crowds backed the National Assembly. On July 14, 1789, they stormed the **Bastille**, a royal fortress and prison, to seize gunpowder. It held only seven prisoners, but its fall showed that the king had lost control of his capital.\n\n### A common mistake\n\nA common mistake is to think the revolution happened because France was a poor country. In fact, France was one of Europe's richest kingdoms; its government was broke because the privileged estates paid so little tax.\n\n### You've seen this before\n\nThe same pattern appears in England. Charles I ruled without Parliament for eleven years, but in 1640 he needed money to fight a rebellion in Scotland, so he had to call Parliament. Parliament used its control over taxes to demand limits on his power, and the quarrel became the English Civil War in 1642. Parliament's army defeated the royal side, and Charles I was tried and beheaded in 1649.\n\n### What comes next\n\nIn August 1789, the National Assembly abolished the privileges of the nobles and clergy and issued the Declaration of the Rights of Man and of the Citizen, which said people are born free and equal in rights. Later, the revolution turned more radical.\n\n### Check yourself\n\nIf the First and Second Estates had agreed to pay new taxes in 1787, why might the Estates-General never have been called at all?\n\nCurious about any step? Ask a follow-up question.",
+  "music": {
+    "positive_styles": [
+      "Latin pop on a light dembow groove at 96 bpm with crisp, rhythmic rapped verses; a clear, warm male vocal that rides the beat in the verses and opens up into a bright, catchy sung chorus with stacked harmonies on the hook; a nylon-string guitar plucks a looping minor-key riff with a hint of tension, handclaps and a soft shaker accent the dembow, and a round, warm sub bass sits underneath; clean, airy production with the vocal right up front"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "heavy autotune"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Bread cost over half your pay, the anger grows",
+      "names": [
+        "Bread"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Picture a dinner with an unpaid bill stacked high",
+      "names": [
+        "unpaid bill"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "Wars ran it up, like helping America fight",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "First Estate's the clergy, hardly paying any tax",
+      "names": [
+        "First Estate"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Second Estate's the nobles, the main tax off their backs",
+      "names": [
+        "Second Estate"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Third Estate's ninety-seven percent, and they carry the load",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "The debt keeps growing, and the crown's about to fold",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Ask the rich to pay? They said, 'Only the Estates can choose'",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Not called since sixteen-fourteen, and the king's out of moves",
+      "names": [
+        "the king"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "France wasn't poor, it was one of the richest lands",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "The rich paid so little, the crown had empty hands",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "The rich won't pay, so the debt just grows",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "The king calls the Estates to fix the bill",
+      "names": [
+        "The king"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Third Estate breaks off, speaks the nation's will",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "One vote per estate, that's the rule they bring",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Two beat one, so the Third can't win a thing",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Enlightenment says the power comes from the people, so",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "They're the National Assembly now, speaking for the whole",
+      "names": [
+        "National Assembly"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Locked out of their hall, they find a tennis court",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "And swear they'll write a constitution, not cut it short",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Bread prices soar, so Paris backs the Assembly's fight",
+      "names": [
+        "Bread"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "The Bastille falls, the crown can't hold the city tight",
+      "names": [
+        "Bastille"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Next they end the privileges and write the Rights of Man",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Born free and equal in rights, that's the plan",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "The rich won't pay, so the debt just grows",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "The king calls the Estates to fix the bill",
+      "names": [
+        "The king"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Third Estate breaks off, speaks the nation's will",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Charles ruled eleven years, kept Parliament away",
+      "names": [
+        "Charles",
+        "Parliament"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Then Scotland rebels, and he's got a war to pay",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Same kind of bill, so he calls Parliament back in",
+      "names": [
+        "Parliament"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Parliament holds the taxes, that's where the fights begin",
+      "names": [
+        "Parliament"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "It wants his power limited, and the quarrel spreads",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "By sixteen forty-two, it's civil war instead",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Parliament's army beats the royal side",
+      "names": [
+        "Parliament"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "In sixteen forty-nine, Charles is tried and dies",
+      "names": [
+        "Charles"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Broke crown, and the rich won't pay their share",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Hungry streets and new ideas in the air",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "The rich won't pay, so the debt just grows",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "The king calls the Estates to fix the bill",
+      "names": [
+        "The king"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Third Estate breaks off, speaks the nation's will",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Bread cost over half your pay, the anger grows",
+      "names": [
+        "Bread"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "The rich wouldn't pay, so the old order goes",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "The crown went broke, the people rose",
+      "names": [],
+      "fact_id": "f1"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "In 1789, bread could eat up more than half of a working family's income.",
+      "names": [
+        "bread"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "That July, crowds in Paris stormed the Bastille, a royal fortress and prison.",
+      "names": [
+        "Bastille"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "So why did the French Revolution happen?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n4",
+      "text": "Picture a dinner with a huge unpaid bill, run up by wars.",
+      "names": [
+        "unpaid bill"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n5",
+      "text": "The clergy diner and noble diner refuse to pay their share.",
+      "names": [
+        "clergy diner",
+        "noble diner"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n6",
+      "text": "The working diner always paid most of it, and one vote per diner lets the other two outvote him.",
+      "names": [
+        "working diner"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n7",
+      "text": "In Old Regime France, the First Estate, the clergy, paid almost no taxes.",
+      "names": [
+        "First Estate"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "The Second Estate, the nobles, was exempt from the main land tax.",
+      "names": [
+        "Second Estate"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "The Third Estate, about 97 percent of the people, paid most of the taxes.",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Costly wars, including help for the American Revolution, left the government of Louis XVI nearly bankrupt by 1788.",
+      "names": [
+        "Louis XVI"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "A common mistake is to think France was simply a poor country.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n12",
+      "text": "In fact it was one of Europe's richest kingdoms, but its government was broke because the privileged paid so little tax.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n13",
+      "text": "So why didn't the king just tax the nobles and clergy?",
+      "names": [
+        "the king"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "His ministers tried, but the privileged refused and insisted only the Estates-General could approve new taxes.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "That meeting of deputies from all three estates had not been held since 1614.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "Out of options, the king called it to Versailles in May 1789.",
+      "names": [
+        "the king"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "Each estate voted as one bloc, so the First Estate and Second Estate could outvote the Third Estate two to one.",
+      "names": [
+        "First Estate",
+        "Second Estate",
+        "Third Estate"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "Yet the Third Estate had about as many deputies as the other two combined.",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "Its demand for one vote per deputy was refused.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n20",
+      "text": "Armed with the Enlightenment idea that power comes from the people, its deputies declared themselves the National Assembly in June 1789.",
+      "names": [
+        "National Assembly"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "Three days later, locked out of their hall, they met on an indoor tennis court.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "There they swore the Tennis Court Oath, promising not to separate until France had a constitution.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "Meanwhile, a bad harvest had sent bread prices soaring, and anger spread in Paris.",
+      "names": [
+        "bread"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "When royal troops gathered near Paris, crowds stormed the Bastille to seize gunpowder.",
+      "names": [
+        "Bastille"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n25",
+      "text": "It held only seven prisoners, but its fall showed the crown had lost control of its capital.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n26",
+      "text": "In August, the National Assembly abolished the privileges of the nobles and clergy and issued the Declaration of the Rights of Man.",
+      "names": [
+        "National Assembly"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "You may have met this pattern before, in England.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Charles I ruled without Parliament for eleven years, until a rebellion in Scotland forced him to call it for money in 1640.",
+      "names": [
+        "Charles I",
+        "Parliament"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "Parliament demanded limits on his power, and in 1642 that quarrel became the English Civil War.",
+      "names": [
+        "Parliament"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n30",
+      "text": "Parliament's army won, and Charles I was tried and beheaded in 1649.",
+      "names": [
+        "Parliament",
+        "Charles I"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n31",
+      "text": "The crown went broke, the privileged refused to pay, so calling the Estates-General let the Third Estate seize power.",
+      "names": [
+        "Third Estate"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n32",
+      "text": "The cause was a government that could not tax its richest people, and the result was power moving from the king to an assembly.",
+      "names": [
+        "the king"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n33",
+      "text": "That matters because it led to a Declaration saying people are born free and equal in rights.",
+      "names": [],
+      "fact_id": "f4"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Bread",
+        "zoom": 1.6
+      },
+      "spotlight": "Bread",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Unpaid bill",
+        "zoom": 1.6
+      },
+      "spotlight": "Unpaid bill",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "First Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "First Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Second Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Second Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Third Estate",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Second Estate",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "estates-general",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "estates-general",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "estates-general",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "National Assembly",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "National Assembly",
+        "zoom": 1.6
+      },
+      "spotlight": "National Assembly",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "hook",
+      "camera": {
+        "target": "Bread",
+        "zoom": 1.6
+      },
+      "spotlight": "Bread",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "hook",
+      "camera": {
+        "target": "Bastille",
+        "zoom": 1.6
+      },
+      "spotlight": "Bastille",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "National Assembly",
+        "zoom": 1.6
+      },
+      "spotlight": "National Assembly",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "english",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Charles I",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "english",
+      "camera": {
+        "target": "Charles I",
+        "zoom": 1.6
+      },
+      "spotlight": "Charles I",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "english",
+      "camera": {
+        "target": "Parliament",
+        "zoom": 1.6
+      },
+      "spotlight": "Parliament",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "english",
+      "camera": {
+        "target": "Parliament",
+        "zoom": 1.6
+      },
+      "spotlight": "Parliament",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "english",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Charles I",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "english",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "english",
+      "camera": {
+        "target": "Parliament",
+        "zoom": 1.6
+      },
+      "spotlight": "Parliament",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "english",
+      "camera": {
+        "target": "Charles I",
+        "zoom": 1.6
+      },
+      "spotlight": "Charles I",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "Bread",
+        "zoom": 1.6
+      },
+      "spotlight": "Bread",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "Bread",
+        "zoom": 1.6
+      },
+      "spotlight": "Bread",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Bastille",
+        "zoom": 1.6
+      },
+      "spotlight": "Bastille",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Unpaid bill",
+        "zoom": 1.6
+      },
+      "spotlight": "Unpaid bill",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Working diner",
+      "particles": [
+        "Working diner",
+        "Unpaid bill"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "First Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "First Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "Second Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Second Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Third Estate",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Second Estate",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "estates-general",
+      "camera": {
+        "target": "Louis XVI",
+        "zoom": 1.6
+      },
+      "spotlight": "Louis XVI",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "estates-general",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "estates-general",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "estates-general",
+      "camera": {
+        "target": "Third Estate",
+        "zoom": 1.6
+      },
+      "spotlight": "Third Estate",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "National Assembly",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "National Assembly",
+        "zoom": 1.6
+      },
+      "spotlight": "National Assembly",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "hook",
+      "camera": {
+        "target": "Bread",
+        "zoom": 1.6
+      },
+      "spotlight": "Bread",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "hook",
+      "camera": {
+        "target": "Bastille",
+        "zoom": 1.6
+      },
+      "spotlight": "Bastille",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Bastille",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "tennis-court",
+      "camera": {
+        "target": "National Assembly",
+        "zoom": 1.6
+      },
+      "spotlight": "National Assembly",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "english",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "english",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Charles I",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "english",
+      "camera": {
+        "target": "Parliament",
+        "zoom": 1.6
+      },
+      "spotlight": "Parliament",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "english",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n32",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Third Estate",
+        "Louis XVI"
+      ],
+      "carries": "taxes",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n33",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "Why did the French Revolution break out in 1789?",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Unpaid bill = the crown's war debt",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "War debt + privileged paying little tax → bankrupt crown",
+      "from_narration": "n7"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Privileged refuse new taxes → king calls Estates-General",
+      "from_narration": "n14"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Vote by order: First and Second outvote Third Estate",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "Enlightenment ideas → Third Estate declares itself National Assembly",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Bread prices soar → Paris crowds storm the Bastille",
+      "from_narration": "n23"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "Next: privileges abolished, Declaration of the Rights of Man",
+      "from_narration": "n26"
+    },
+    {
+      "from_line": "b-1",
+      "text": "England 1640: Charles I needs money, calls Parliament → civil war",
+      "from_narration": "n27"
+    }
+  ],
+  "tags": {
+    "song": [
+      "frenchrevolution",
+      "apeuro",
+      "estatesgeneral",
+      "thirdestate",
+      "europeanhistory",
+      "bastille",
+      "latinpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "frenchrevolution",
+      "apeuro",
+      "estatesgeneral",
+      "thirdestate",
+      "europeanhistory",
+      "bastille",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

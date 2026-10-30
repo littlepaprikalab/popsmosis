@@ -127,7 +127,7 @@ export function serializeReply(r: ReplyRow, viewerId?: string) {
 
 /**
  * `videosPlanned`: the studio said, while it wrote the lesson, that the videos come after it (lib/progress.ts);
- * it holds the text back in the moment between the post and the videos' first claim.
+ * with LESSON_HOLD_MINUTES set, it holds the text back in the moment between the post and the videos' first claim.
  */
 export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned = false, now = new Date()) {
   const replies = a.replies.map((r) => serializeReply(r, viewerId));
@@ -148,7 +148,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned =
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,
-    // True while the page holds the lesson text back until its videos are done, or LESSON_HOLD_MINUTES pass.
+    // True while the page holds the lesson text back for its videos: never, unless LESSON_HOLD_MINUTES is set.
     awaitingVideos: awaitingVideos(a, video, videosPlanned, now),
   };
 }

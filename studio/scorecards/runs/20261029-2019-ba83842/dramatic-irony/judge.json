@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Wait, Romeo, she's only sleeping\" is concrete, singable after one hearing, and it opens and closes the chorus. It names the tomb moment, though, and not the whole core idea about the gap between audience and character. The lesson opens on a real question (\"Why would Shakespeare tell you how his play ends before the first scene even starts?\"), and the narration opens on a viewer on the couch, which is from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The frame is yelling at a scary movie, \"You can see the danger behind the door, and the character can't,\" and it does the same job as dramatic irony. It is set up in the lesson, in narration n1-n4 and in v1-1. It is a fairly common picture, though, and the song drops it after verse 1 and returns only with \"We shout at the stage\" in the outro. The chorus and bridge are about the tomb and not the movie picture.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk through the Prologue, wrong beliefs, seeing where choices lead, and the gap that builds dread, with the tomb as the widest gap. The causes are given (\"Knowing the ending doesn't remove the suspense. It creates suspense about how and when\"). Link 3 is shown through Lady Capulet's weeping and not through a general explanation, and why the gap makes dread rather than just interest is stated more than explained. The letter's failure is a good causal sequence.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines run in order and mostly tell the chain: \"Prologue reveals the ending → audience knows more than characters\" and \"Characters act on wrong beliefs → audience sees where it leads.\" Several fall short. The first is a question and the second is an analogy label. \"Not a twist: the character is surprised\" sits on a pre-chorus line and breaks the chain. \"We know what they don't → suspense and dread\" starts at \"Her family mourns her and they lay her in the tomb,\" which is a different step. \"Letter blocked\" comes last, after the tomb lines, so the chain does not finish on the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson and narration n15: Juliet's potion makes her seem dead \"for forty-two hours\" (also v2-2 \"Forty-two hours, then she'll open up her eyes\")",
+      "problem": "The forty-two hours is the potion's duration in the play, but the line never gives its source, and it sits oddly next to the claim that the Friar's plan is for Romeo to come as she wakes, which is a detail a student might doubt. It does match the play (Friar Laurence says 'two and forty hours'), so it is not wrong, only worth checking.",
+      "correction": "No change needed to the figure."
+    }
+  ],
+  "accuracy": {
+    "reason": "The play facts match the text: the fourteen-line sonnet, Friar John's quarantine, Balthasar's news, Romeo noticing red lips and cheeks, and the dagger. One imprecision a teacher would tighten is the claim in chorus c1-4 (\"We know the plan in the letter he never read\"). Romeo never received the letter, so \"never read\" is slightly off. The line \"we see where it's leading\" and the claim that the Prologue's gap is why the audience \"knows more than characters from the start\" are fair. The lesson's claim that the audience \"isn't surprised at all\" is a sound simplification.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant: \"Wait, Romeo, she's only sleeping / That's dramatic irony, we see where it's leading.\" The rhymes mostly land (dread/read, sleeping/leading, tomb/soon). Several rapped verse lines read like textbook sentences and run long, like \"Well, fourteen lines before a single scene begins\" and \"Now her mother thinks she's weeping for her cousin's sake.\" The bridge is a narrative list with strained rhymes (\"stuck in his hands,\" \"with his own blade / the lovers paid\"). \"Sleeping/leading\" is a slant rhyme, and the pre-chorus p2 reads as a textbook note (\"That's one kind of irony, but there's verbal too\").",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture, and uses the movie analogy before the mechanism. It has a prediction question (\"What do you think Romeo believes when he finds Juliet in the tomb?\"), answered right away, and a Misconception section that explains why situational irony differs. The ending check, \"Why does the tomb scene feel so tense, even though the Prologue already told you how the tragedy ends?\", needs the core idea to answer. The lesson carries many terms (Prologue, Chorus, suspense, tragedy, situational irony, verbal irony) and a long plot account of the tomb, which could be trimmed.",
+    "score": 4
+  }
+}

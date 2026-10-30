@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Split the water, catch the light\" is two concrete actions on real things, short, easy to sing back, and it names the big move. It opens and closes the chorus. The lesson opens on a real question, \"Where does the oxygen in your next breath come from?\", and the narration opens on \"The oxygen in every breath you take\", which is from the learner's world. The line names the water-splitting and light-capture end of the idea but not the electron flow or the cash-in, so it is not the full core idea in miniature.",
+    "score": 5
+  },
+  "frame": {
+    "reason": "The currency exchange booth fits the whole job (\"trade the energy of light for two currencies the cell can spend\"), with the Calvin cycle as the market stall that spends the cash. It is set up in the song's intro (\"Sunshine's money that a leaf can't spend outright\") and carried through the chorus (\"that's the deal\"), the bridge (\"the trade breaks down\") and the outro. The lesson and narration use it too. It is a little thinner in the middle steps, where the electrons and the pump get stairs rather than money, but the stairs are a part-picture that fits inside the frame.",
+    "score": 5
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order with causes: electrons leave, \"so\" water is split to replace them, the energy released pumps H⁺, photosystem I re-energizes them for NADPH, piled-up H⁺ can only leave through ATP synthase, which spins, and the Calvin cycle spends both currencies. The herbicide case then traces the chain backwards, which tests it. The song carries the gist. The one soft spot is the claim that photosystem I needs light to excite electrons \"giving them the energy needed to make NADPH\", which is stated rather than explained. It is still a clear cause.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "They run from the question through the steps to the herbicide case, and most are steps with arrows. But the first, \"How does a leaf turn light into usable energy?\", is a question, not a step, and the second, \"Exchange booth = thylakoid, market stall = Calvin cycle\", is a label. The Calvin line starts at p2-1 and has no narration anchor, and the proton-gradient line starts at v2-5 where the song never says what the protons do next. The \"H⁺ flows through ATP synthase → ATP\" step is therefore not said where it appears, and the final line is a herbicide application, not the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric v1-12: \"And each step down powers the pump to push more protons there\" and v1-9 \"Oxygen floats off, and protons pile in the lumen\" followed by c1-2 \"Electrons fall and pack the protons tight\"",
+      "problem": "The chorus says the falling electrons directly pack the protons, skipping that water splitting also adds H⁺ and that b6f is what pumps them. This is a shorthand that could be taken as electrons physically packing protons.",
+      "correction": "Electrons falling powers cytochrome b6f, which pumps H⁺ into the lumen."
+    },
+    {
+      "claim": "Lyric v2-3 \"On the stroma side, they're loaded onto NADP plus\" and key line \"Light re-energizes electrons at photosystem I → NADPH\"",
+      "problem": "This is a minor gap: the electrons reach NADP⁺ by way of ferredoxin and NADP⁺ reductase, and it is not stated that H⁺ is also needed. It is a fair simplification for the level, so it is only a small imprecision.",
+      "correction": "Say that NADP⁺ reductase uses two electrons and an H⁺ to make NADPH (as the narration does)."
+    }
+  ],
+  "accuracy": {
+    "reason": "The science is sound at AP level: water as the source of O₂, b6f as the only pump, ATP synthase spinning, chemiosmosis, the herbicide chain, and the numbering explanation are all correct. The song's chorus shorthand \"Electrons fall and pack the protons tight\" and \"Protons spin ATP synthase like a wheel\" compress the mechanism and could be tightened, but nothing a learner would carry away wrong. The lyric \"Found second, so they named it two, though it's first in time\" garbles the discovery-order fact, since photosystem I was discovered first, so \"found second\" is misleading. That is one real imprecision.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant (\"Split the water, catch the light / ... that's the deal\") with clean rhymes and short lines. The verses are rapped and mostly fit, with some run-ons like \"Both currencies drop out into the stroma, ready to spend\" and \"Where the sugar-building starts and the light part ends\" that read as caption lines. Several lines rhyme weakly or bend for rhyme (\"two\" / \"first in time\", \"ADP\" / \"currency\"). The pre-chorus lines such as \"The oxygen you breathe was water, not CO2\" are textbook-sounding. The bridge lines are a flat list of consequences, and b-2 \"the electrons can't get out\" does not rhyme with b-1.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture with the exchange booth, builds on why each step happens, and has a labeled **Predict:** question answered right away (\"H⁺ keeps piling up in the lumen. What will it do?\"). It names the misconception and says where the oxygen comes from, and ends on a check that needs the core idea (\"Why would ATP synthase soon stop making ATP if a plant were kept in the dark\"). Its weaker side is the number of new terms for a first-time learner (photosystems, b6f, NADP⁺ reductase, chemiosmosis, lumen, stroma) and the aside on numbering and the mitochondria section, which could be cut. The misconception is stated but the reason it is wrong is only \"it comes from water\", not why.",
+    "score": 4
+  }
+}

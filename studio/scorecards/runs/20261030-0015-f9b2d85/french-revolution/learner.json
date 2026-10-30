@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The French crown went broke from expensive wars, the clergy and nobles refused to pay taxes, and this forced the king to call the Estates-General, where the Third Estate broke away and took power as the National Assembly.",
+      "why": "First, the crown ran up huge debts from wars like the Seven Years' War and helping the American Revolution, so it was nearly bankrupt by 1788. Second, the clergy and nobles paid almost no taxes while the Third Estate (about 97% of people) paid most of them, so when ministers tried to tax the privileged in 1787, they refused and said only the Estates-General could approve new taxes. Third, that forced the king to call the Estates-General in May 1789, the first time since 1614. Fourth, each estate voted as one bloc, so the First and Second Estates could outvote the Third two to one even though the Third had about as many deputies as the other two combined. When the Third Estate's demand for one vote per deputy was refused, they declared themselves the National Assembly on June 17, using Enlightenment ideas like Rousseau's that power comes from the people. Then they swore the Tennis Court Oath. Bad harvests and high bread prices made people angry, and when the king gathered troops near Paris, crowds stormed the Bastille on July 14, showing the king had lost control of his capital.",
+      "what_if": "If the voting rule had been one vote per deputy instead of one vote per estate, the Third Estate would probably have been able to win votes without breaking away, since it had about as many deputies as the other two estates combined. The lesson suggests the National Assembly was created because the Third Estate was outvoted two to one and refused, so with fair voting there might not have been that split or that seizure of power. The lesson doesn't say exactly what would have happened next, so I can't be sure the revolution would have been avoided entirely, especially with the bread prices and debt still there."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

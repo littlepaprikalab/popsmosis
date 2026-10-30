@@ -1,0 +1,2808 @@
+{
+  "course": "AP Biology",
+  "topic": "the light reactions of photosynthesis",
+  "audience": "high school",
+  "core_idea": "Light pulls electrons from water, and their flow downhill is cashed in for ATP and NADPH.",
+  "why_chain": [
+    "Light excites electrons in photosystem II, so they leave, and it splits water to replace them, releasing O₂ and H⁺.",
+    "The electrons fall to lower energy down the electron transport chain, and that energy lets cytochrome b6f pump H⁺ into the lumen.",
+    "Light re-energizes the electrons at photosystem I, giving them the energy to turn NADP⁺ into NADPH.",
+    "H⁺ piled up in the lumen can only flow back out through ATP synthase, so its flow spins it and makes ATP.",
+    "ATP and NADPH go into the stroma, where the Calvin cycle spends them to build sugar."
+  ],
+  "key_terms": [
+    "thylakoid",
+    "photosystem II",
+    "photosystem I",
+    "electron transport chain",
+    "proton gradient",
+    "ATP synthase",
+    "ATP",
+    "NADPH"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "The light reactions are the first stage of photosynthesis. They take place in the thylakoids, stacks of disc-shaped membrane sacs inside the chloroplasts of a leaf's cells; the space inside each thylakoid is the thylakoid lumen, and the fluid around the thylakoids is the stroma. The light reactions work like a currency exchange booth: light is like money the cell cannot spend directly, so the thylakoid trades the energy of light for two currencies the cell can spend, ATP and NADPH, cashing in the electrons' flow. Both are released into the stroma, where the next stage, the Calvin cycle, spends them like cash at a market stall to build sugar from carbon dioxide (CO₂) taken in from the air. The light reactions themselves make no sugar, and they run only while light is shining. Water and light go in; oxygen, ATP and NADPH come out.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Light is absorbed first by photosystem II, a protein complex in the thylakoid membrane whose chlorophyll catches light energy; that energy kicks electrons up to a high energy level, and they leave photosystem II. Photosystem II replaces those electrons by splitting water (H₂O) on the lumen side, so the electrons are pulled from water, and splitting it releases oxygen (O₂) and hydrogen ions (H⁺, also called protons) into the thylakoid lumen. The oxygen in the air you breathe was released by photosynthesis splitting water this way. A common mistake is to think this oxygen comes from carbon dioxide (CO₂); it comes from water. Photosystem II goes first even though it is numbered two, because the photosystems were numbered in the order they were discovered and photosystem I was found first.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "The excited electrons then flow downhill in energy along the electron transport chain, a series of carriers in the thylakoid membrane, including plastoquinone, cytochrome b6f and plastocyanin, that runs from photosystem II to photosystem I. As they go down the chain the electrons drop to lower energy, like walking down stairs, and cytochrome b6f, the chain's proton pump, uses that released energy to pump H⁺ from the stroma into the thylakoid lumen; in the light reactions, only cytochrome b6f pumps protons. At photosystem I, light excites the electrons to a high energy level again, giving them the energy needed to make NADPH. Then NADP⁺ reductase, an enzyme on the stroma side of the membrane, uses two electrons and one H⁺ to turn NADP⁺ into NADPH.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "Because water splitting releases H⁺ into the lumen and cytochrome b6f pumps more in, H⁺ piles up in the thylakoid lumen, far more concentrated than in the stroma: this difference across the membrane is the proton gradient, a store of energy. H⁺ can flow back out to the stroma only through ATP synthase, and as it flows down its gradient through it, part of ATP synthase spins like a wheel; that turning joins ADP and phosphate (Pᵢ) from the stroma into ATP, which is released into the stroma. This way of making ATP is called chemiosmosis, the same method mitochondria use to make ATP in cellular respiration. Some herbicides, such as diuron (DCMU), kill weeds by blocking electrons from leaving photosystem II: no electrons reach the electron transport chain, so cytochrome b6f stops pumping H⁺, the proton gradient runs down, ATP synthase stops spinning and making ATP, photosystem I gets no electrons to make NADPH, and without ATP and NADPH the Calvin cycle cannot build sugar.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think the oxygen released in photosynthesis comes from carbon dioxide; it actually comes from water split at photosystem II.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a biology textbook opens its chapter on photosynthesis, of a single green leaf in bright sunshine: the yellow Sun in the upper left with its soft glow, and one large green leaf on the right, its veins showing, angled toward the Sun. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Sun",
+          "aliases": [
+            "Sunshine"
+          ],
+          "sam_phrase": "yellow sun",
+          "color_hex": "#FFC93C"
+        },
+        {
+          "name": "Leaf",
+          "aliases": [
+            "leaf"
+          ],
+          "sam_phrase": "green leaf",
+          "color_hex": "#5CBF3A"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a friendly textbook draws an everyday comparison, of a small town square: a plain green currency exchange booth with a service window on the left, and a market stall with a cyan awning and baskets of bread on the right, an open stone path between them. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Exchange booth",
+          "aliases": [
+            "exchange booth",
+            "booth"
+          ],
+          "sam_phrase": "green booth",
+          "color_hex": "#4FC95A"
+        },
+        {
+          "name": "Market stall",
+          "aliases": [
+            "market stall"
+          ],
+          "sam_phrase": "cyan stall",
+          "color_hex": "#3DDBD9"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of one chloroplast cut open lengthwise, a large oval in the centre of the picture: its smooth double outer membrane around the edge; inside it, the stroma filling the chloroplast, tinted pink; several stacks of green coin-shaped thylakoids standing in the stroma across the middle; and the Calvin cycle as a ring of cyan arrows in the stroma near the right end. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer.",
+      "structures": [
+        {
+          "name": "Thylakoid",
+          "aliases": [
+            "thylakoid",
+            "thylakoids"
+          ],
+          "sam_phrase": "green stack",
+          "color_hex": "#4FC95A"
+        },
+        {
+          "name": "Stroma",
+          "aliases": [
+            "stroma"
+          ],
+          "sam_phrase": "pink oval",
+          "color_hex": "#F59AD3"
+        },
+        {
+          "name": "Calvin cycle",
+          "aliases": [
+            "Calvin cycle"
+          ],
+          "sam_phrase": "cyan ring",
+          "color_hex": "#3DDBD9"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "membrane",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of a thylakoid membrane in cross-section: the membrane, a tan phospholipid bilayer, runs straight across the middle of the picture, the stroma above it tinted pink, the thylakoid lumen below it tinted light blue. Along the membrane from left to right: photosystem II, an orange protein complex passing through the membrane; cytochrome b6f, a purple protein complex passing through the membrane; photosystem I, a red protein complex passing through the membrane; NADP⁺ reductase, a small yellow enzyme sitting on the upper surface of the membrane in the stroma just right of photosystem I; and at the right end ATP synthase in lime green, shaped like a mushroom, its stalk passing through the membrane and its round cap above the membrane in the stroma. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer.",
+      "structures": [
+        {
+          "name": "Stroma",
+          "aliases": [
+            "stroma"
+          ],
+          "sam_phrase": "pink band",
+          "color_hex": "#F59AD3"
+        },
+        {
+          "name": "Thylakoid lumen",
+          "aliases": [
+            "thylakoid lumen",
+            "lumen"
+          ],
+          "sam_phrase": "light blue band",
+          "color_hex": "#5CB8FF"
+        },
+        {
+          "name": "Photosystem II",
+          "aliases": [
+            "photosystem two"
+          ],
+          "sam_phrase": "orange blob",
+          "color_hex": "#FF9933"
+        },
+        {
+          "name": "Cytochrome b6f",
+          "aliases": [
+            "pump"
+          ],
+          "sam_phrase": "purple blob",
+          "color_hex": "#B07CFF"
+        },
+        {
+          "name": "Photosystem I",
+          "aliases": [
+            "photosystem one"
+          ],
+          "sam_phrase": "red blob",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "NADP⁺ reductase",
+          "aliases": [
+            "NADP plus reductase"
+          ],
+          "sam_phrase": "yellow blob",
+          "color_hex": "#FFE14D"
+        },
+        {
+          "name": "ATP synthase",
+          "aliases": [
+            "ATP synthase"
+          ],
+          "sam_phrase": "green mushroom",
+          "color_hex": "#A6E84A"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "herbicide",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of a thylakoid membrane in cross-section: the membrane, a tan phospholipid bilayer, runs straight across the middle of the picture, the stroma above it tinted pink, the thylakoid lumen below it tinted light blue. Along the membrane from left to right: photosystem II, an orange protein complex passing through the membrane; cytochrome b6f, a purple protein complex passing through the membrane; photosystem I, a red protein complex passing through the membrane; NADP⁺ reductase, a small yellow enzyme sitting on the upper surface of the membrane in the stroma just right of photosystem I; and at the right end ATP synthase in lime green, shaped like a mushroom, its stalk passing through the membrane and its round cap above the membrane in the stroma. A small white herbicide molecule sits against the upper right side of photosystem II. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere.",
+      "structures": [
+        {
+          "name": "Stroma",
+          "aliases": [
+            "stroma"
+          ],
+          "sam_phrase": "pink band",
+          "color_hex": "#F59AD3"
+        },
+        {
+          "name": "Thylakoid lumen",
+          "aliases": [
+            "thylakoid lumen",
+            "lumen"
+          ],
+          "sam_phrase": "light blue band",
+          "color_hex": "#5CB8FF"
+        },
+        {
+          "name": "Photosystem II",
+          "aliases": [
+            "photosystem two"
+          ],
+          "sam_phrase": "orange blob",
+          "color_hex": "#FF9933"
+        },
+        {
+          "name": "Cytochrome b6f",
+          "aliases": [
+            "pump"
+          ],
+          "sam_phrase": "purple blob",
+          "color_hex": "#B07CFF"
+        },
+        {
+          "name": "Photosystem I",
+          "aliases": [
+            "photosystem one"
+          ],
+          "sam_phrase": "red blob",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "NADP⁺ reductase",
+          "aliases": [
+            "NADP plus reductase"
+          ],
+          "sam_phrase": "yellow blob",
+          "color_hex": "#FFE14D"
+        },
+        {
+          "name": "ATP synthase",
+          "aliases": [
+            "ATP synthase"
+          ],
+          "sam_phrase": "green mushroom",
+          "color_hex": "#A6E84A"
+        },
+        {
+          "name": "Herbicide",
+          "aliases": [
+            "herbicide",
+            "herbicides"
+          ],
+          "sam_phrase": "white sphere",
+          "color_hex": "#F2F2F2"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "# Light Reactions: Trading Light for Cash\n\n**Where does the oxygen in your next breath come from?**\n\nIt was released by photosynthesis splitting water. That happens in the light reactions, the first stage of photosynthesis. The big idea: **light pulls electrons from water, and their flow downhill is cashed in for ATP and NADPH.**\n\n## A currency exchange in the chloroplast\n\nA market stall won't take foreign money, and a cell can't spend light directly. So the light reactions work like a currency exchange booth: they trade the energy of light for two currencies the cell *can* spend, **ATP** and **NADPH**.\n\nThe exchange happens in the **thylakoids**, stacks of disc-shaped membrane sacs inside a chloroplast. The space inside each sac is the thylakoid lumen. The fluid around the thylakoids is the stroma, where the next stage, the Calvin cycle, spends the cash to build sugar from CO₂.\n\n## Why each step happens\n\n1. **Light hits photosystem II first.** Its energy kicks electrons up to a high energy level, so they leave.\n2. **Photosystem II splits water to replace them.** Splitting H₂O releases O₂ and H⁺ (protons) into the lumen.\n3. **The electrons fall down the electron transport chain.** As they drop to lower energy, cytochrome b6f uses that energy to pump H⁺ from the stroma into the lumen.\n4. **Photosystem I re-energizes them.** Light excites the electrons again, and an enzyme on the stroma side uses them and H⁺ to turn NADP⁺ into **NADPH**.\n\nOdd but true: photosystem II works before photosystem I because the photosystems were numbered in the order they were discovered, not the order they work.\n\n**Predict:** H⁺ keeps piling up in the lumen. What will it do?\n\nIt flows back out to the stroma, down its **proton gradient**, and the only way through the membrane is **ATP synthase**. As H⁺ rushes through, part of ATP synthase spins like a wheel, and that turning joins ADP and phosphate into **ATP**.\n\nThis is simplified: the chain also has smaller carriers between the big complexes.\n\n| Goes in | Comes out |\n|---|---|\n| Water (H₂O) and light | Oxygen (O₂) |\n| NADP⁺, ADP and phosphate | NADPH and ATP, released into the stroma |\n\n## You've met this trick before\n\nMitochondria make ATP the same way in cellular respiration, with H⁺ flowing through ATP synthase. This method is called chemiosmosis.\n\n## A common mistake\n\nMany students think the oxygen plants release comes from carbon dioxide. It doesn't: it comes from water, split at photosystem II.\n\n## When the trade breaks\n\nSome herbicides kill weeds by blocking electrons from leaving photosystem II. With no electrons on the chain, the pump stops and the proton gradient runs down, so ATP synthase stops making ATP. Photosystem I gets no electrons to make NADPH, and without both currencies, no sugar can be built.\n\n## Check yourself\n\nWhy would ATP synthase soon stop making ATP if a plant were kept in the dark, even with plenty of water?\n\nGot a follow-up question? Ask away.",
+  "music": {
+    "positive_styles": [
+      "Breezy indie-pop with light, conversational rapped verses; warm, friendly male lead who talks the verses over the groove and lifts into a bright sung chorus, with gang vocals joining on the hook; bright strummed acoustic guitar, a plucky muted electric riff and a round, bouncing bass; crisp handclaps on the backbeat and a sunny, airy, open mix; relaxed, swinging 110 bpm groove"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Sunshine's money that a leaf can't spend outright",
+      "names": [
+        "Sunshine",
+        "leaf"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "The market stall won't take your sunlight as pay",
+      "names": [
+        "market stall"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "So you swap it at the booth for two kinds of cash today",
+      "names": [
+        "booth"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "In a chloroplast, the thylakoid runs that trade",
+      "names": [
+        "thylakoid"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "And it's spent out in the stroma, all the cash it made",
+      "names": [
+        "stroma"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Light hits photosystem two, the first in line",
+      "names": [
+        "photosystem two"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Found second, so they named it two, though it's first in time",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Light kicks its electrons up, and off they soar",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "So it splits a water molecule to get some more",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-9",
+      "section": "verse",
+      "text": "Oxygen floats off, and protons pile in the lumen",
+      "names": [
+        "lumen"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-10",
+      "section": "verse",
+      "text": "That's the air you breathe, passed on from plants to humans",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-11",
+      "section": "verse",
+      "text": "Through the electron transport chain they tumble down the stairs",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-12",
+      "section": "verse",
+      "text": "And each step down powers the pump to push more protons there",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "The oxygen you breathe was water, not CO2",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "It came from splitting water in photosystem two",
+      "names": [
+        "photosystem two"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Electrons fall and pack the protons tight",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Protons spin ATP synthase like a wheel",
+      "names": [
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "ATP and NADPH, that's the deal",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Down the chain to photosystem one they glide",
+      "names": [
+        "photosystem one"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Another hit of light and they're boosted back up high",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "On the stroma side, they're loaded onto NADP plus",
+      "names": [
+        "stroma"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "That makes NADPH, a second cash the cell can trust",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Now the lumen's crowded, protons packed in tight",
+      "names": [
+        "lumen"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "They want to rush back out, but there's one door in sight",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Through ATP synthase, they stream back down",
+      "names": [
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "And part of it starts spinning, round and round and round",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-9",
+      "section": "verse",
+      "text": "Every turn builds ATP from ADP",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-10",
+      "section": "verse",
+      "text": "That's the proton gradient cashed in for currency",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-11",
+      "section": "verse",
+      "text": "Both currencies drop out into the stroma, ready to spend",
+      "names": [
+        "stroma"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-12",
+      "section": "verse",
+      "text": "Where the sugar-building starts and the light part ends",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "The Calvin cycle takes the cash and spends it there",
+      "names": [
+        "Calvin cycle"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Building sugar out of CO2 from the air",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Electrons fall and pack the protons tight",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Protons spin ATP synthase like a wheel",
+      "names": [
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "ATP and NADPH, that's the deal",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Spray a weed with herbicide, and the trade breaks down",
+      "names": [
+        "herbicide"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "It jams photosystem two, the electrons can't get out",
+      "names": [
+        "photosystem two"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "No electrons down the chain, so the pump won't run",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "And the proton gradient fades until it's done",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "ATP synthase stops, there's no flow to make it spin",
+      "names": [
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "And photosystem one has no electrons coming in",
+      "names": [
+        "photosystem one"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "No ATP and no NADPH to spend",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "So the weed can't build its sugar in the end",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Water and light go in, and oxygen goes out the door",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "ATP and NADPH, that's what the trade is for",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Electrons fall and pack the protons tight",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Protons spin ATP synthase like a wheel",
+      "names": [
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "ATP and NADPH, that's the deal",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Sunshine's money that a leaf can't spend outright",
+      "names": [
+        "Sunshine",
+        "leaf"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "So it trades it in for cash whenever days are bright",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Split the water, catch the light",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "The oxygen in every breath you take was released when a leaf like this one split water using the Sun's light.",
+      "names": [
+        "leaf",
+        "Sun"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n2",
+      "text": "That is the work of the light reactions, the first stage of photosynthesis.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "But a cell cannot spend light directly.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "Think of a currency exchange booth.",
+      "names": [
+        "exchange booth"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "A market stall won't take foreign money, so you trade it at the booth for cash.",
+      "names": [
+        "market stall",
+        "booth"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "The light reactions trade light energy for two currencies the cell can spend, ATP and NADPH.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "That trade happens in the thylakoids, stacks of disc-shaped membrane sacs inside a chloroplast.",
+      "names": [
+        "thylakoids"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "The fluid around them is the stroma.",
+      "names": [
+        "stroma"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "There the next stage, the Calvin cycle, spends that cash to build sugar from carbon dioxide.",
+      "names": [
+        "Calvin cycle"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Inside each sac is the thylakoid lumen, and the stroma lies outside.",
+      "names": [
+        "thylakoid lumen",
+        "stroma"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "Light reaches photosystem two first and kicks its electrons up to high energy, so they leave.",
+      "names": [
+        "photosystem two"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "It works first even though it is numbered two, because the photosystems were numbered in the order they were found.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "To replace the electrons it lost, photosystem two splits water.",
+      "names": [
+        "photosystem two"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "That releases oxygen and protons into the thylakoid lumen.",
+      "names": [
+        "thylakoid lumen"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "A common mistake is to think this oxygen comes from carbon dioxide, but it comes from water.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "The excited electrons then travel down the electron transport chain in the membrane.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n17",
+      "text": "As they go down, they lose energy, like someone walking down stairs.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "Cytochrome b6f, the chain's pump, uses that energy to push protons from the stroma into the lumen.",
+      "names": [
+        "Cytochrome b6f",
+        "pump",
+        "stroma",
+        "lumen"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "It is the only part of the light reactions that pumps protons.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "Then the electrons reach photosystem one, where light excites them again.",
+      "names": [
+        "photosystem one"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "On the stroma side, NADP plus reductase uses two electrons and a proton to turn NADP plus into NADPH.",
+      "names": [
+        "stroma",
+        "NADP plus reductase"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "Meanwhile, protons keep piling up in the lumen, so what do you think they will do?",
+      "names": [
+        "lumen"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "They flow back toward the stroma, where there are far fewer, but only through ATP synthase.",
+      "names": [
+        "stroma",
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n24",
+      "text": "That difference across the membrane is the proton gradient, and it stores energy.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "As protons rush through ATP synthase, part of it spins like a wheel.",
+      "names": [
+        "ATP synthase"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Each turn joins ADP and phosphate from the stroma into ATP, the other currency.",
+      "names": [
+        "stroma"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "Your mitochondria make ATP the same way, a method called chemiosmosis.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Some herbicides kill weeds by blocking electrons from leaving photosystem two.",
+      "names": [
+        "herbicides",
+        "photosystem two"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "With no electrons on the chain, the pump stops, and the proton gradient runs down.",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n30",
+      "text": "So ATP synthase stops making ATP, and photosystem one gets no electrons to make NADPH.",
+      "names": [
+        "ATP synthase",
+        "photosystem one"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n31",
+      "text": "Without either currency, the plant cannot build sugar.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n32",
+      "text": "Light pulls electrons from water, and their flow downhill is cashed in for ATP and NADPH.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n33",
+      "text": "Water and light go in, and oxygen, ATP and NADPH come out.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n34",
+      "text": "That cash is what a plant spends to build sugar from carbon dioxide.",
+      "names": [],
+      "fact_id": "f1"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Leaf",
+        "zoom": 1.5
+      },
+      "spotlight": "Leaf",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Market stall",
+        "zoom": 1.6
+      },
+      "spotlight": "Market stall",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Exchange booth",
+      "particles": [
+        "Exchange booth",
+        "Market stall"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Thylakoid",
+        "zoom": 1.6
+      },
+      "spotlight": "Thylakoid",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Stroma",
+      "particles": [
+        "Thylakoid",
+        "Calvin cycle"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [],
+      "carries": "",
+      "glow": "Photosystem II",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-9",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thylakoid lumen",
+      "particles": [
+        "Photosystem II",
+        "Thylakoid lumen"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Photosystem II",
+            "Thylakoid lumen"
+          ],
+          "carries": "H⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "v1-10",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Thylakoid lumen"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-11",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f",
+        "Photosystem I"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-12",
+      "scene": "membrane",
+      "camera": {
+        "target": "Cytochrome b6f",
+        "zoom": 1.7
+      },
+      "spotlight": "Cytochrome b6f",
+      "particles": [
+        "Stroma",
+        "Cytochrome b6f",
+        "Thylakoid lumen"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Photosystem II",
+            "Thylakoid lumen"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Photosystem II",
+        "Thylakoid lumen"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "Photosystem II",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f",
+        "Photosystem I",
+        "NADP⁺ reductase"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "Cytochrome b6f",
+            "Thylakoid lumen"
+          ],
+          "carries": "H⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "NADP⁺ reductase",
+            "Stroma"
+          ],
+          "carries": "NADPH"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem I",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem I",
+      "particles": [
+        "Cytochrome b6f",
+        "Photosystem I"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem I",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem I",
+      "particles": [],
+      "carries": "",
+      "glow": "Photosystem I",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem I",
+        "zoom": 1.6
+      },
+      "spotlight": "Stroma",
+      "particles": [
+        "Photosystem I",
+        "NADP⁺ reductase"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "NADP⁺ reductase"
+          ],
+          "carries": "NADP⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "NADP⁺ reductase",
+        "Stroma"
+      ],
+      "carries": "NADPH",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thylakoid lumen",
+      "particles": [
+        "Stroma",
+        "Cytochrome b6f",
+        "Thylakoid lumen"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "membrane",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.6
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "membrane",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.7
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "membrane",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.8
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-9",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Stroma",
+        "ATP synthase"
+      ],
+      "carries": "ADP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "ATP synthase",
+            "Stroma"
+          ],
+          "carries": "ATP"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-10",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-11",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Stroma",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "NADP⁺ reductase",
+            "Stroma"
+          ],
+          "carries": "NADPH"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid",
+        "Calvin cycle"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Calvin cycle",
+        "zoom": 1.6
+      },
+      "spotlight": "Calvin cycle",
+      "particles": [
+        "Thylakoid",
+        "Calvin cycle"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Calvin cycle",
+        "zoom": 1.6
+      },
+      "spotlight": "Calvin cycle",
+      "particles": [
+        "Stroma",
+        "Calvin cycle"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "Photosystem II",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f",
+        "Photosystem I",
+        "NADP⁺ reductase"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "Cytochrome b6f",
+            "Thylakoid lumen"
+          ],
+          "carries": "H⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "NADP⁺ reductase",
+            "Stroma"
+          ],
+          "carries": "NADPH"
+        }
+      ]
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "herbicide",
+      "camera": {
+        "target": "Herbicide",
+        "zoom": 1.7
+      },
+      "spotlight": "Herbicide",
+      "particles": [
+        "Photosystem II",
+        "Herbicide"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "herbicide",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Photosystem II",
+        "Herbicide"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "herbicide",
+      "camera": {
+        "target": "Cytochrome b6f",
+        "zoom": 1.7
+      },
+      "spotlight": "Cytochrome b6f",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "herbicide",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thylakoid lumen",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "herbicide",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.7
+      },
+      "spotlight": "ATP synthase",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "herbicide",
+      "camera": {
+        "target": "Photosystem I",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem I",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "herbicide",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "herbicide",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Photosystem II",
+            "Thylakoid lumen"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "NADP⁺ reductase",
+            "Stroma"
+          ],
+          "carries": "NADPH"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "Photosystem II",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f",
+        "Photosystem I",
+        "NADP⁺ reductase"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "Cytochrome b6f",
+            "Thylakoid lumen"
+          ],
+          "carries": "H⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "NADP⁺ reductase",
+            "Stroma"
+          ],
+          "carries": "NADPH"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "Leaf",
+        "zoom": 1.5
+      },
+      "spotlight": "Leaf",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Leaf",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Leaf",
+        "zoom": 1.5
+      },
+      "spotlight": "Leaf",
+      "particles": [
+        "Sun",
+        "Leaf"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Exchange booth",
+        "zoom": 1.6
+      },
+      "spotlight": "Exchange booth",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Market stall",
+      "particles": [
+        "Exchange booth",
+        "Market stall"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Exchange booth",
+        "Market stall"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "Thylakoid",
+        "zoom": 1.6
+      },
+      "spotlight": "Thylakoid",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Stroma",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Calvin cycle",
+        "zoom": 1.6
+      },
+      "spotlight": "Calvin cycle",
+      "particles": [
+        "Thylakoid",
+        "Calvin cycle"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "Calvin cycle"
+          ],
+          "carries": "CO₂"
+        }
+      ]
+    },
+    {
+      "line_id": "n10",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thylakoid lumen",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f"
+      ],
+      "carries": "e⁻",
+      "glow": "Photosystem II",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thylakoid lumen",
+      "particles": [
+        "Photosystem II",
+        "Thylakoid lumen"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Photosystem II",
+            "Thylakoid lumen"
+          ],
+          "carries": "H⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n15",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem II",
+        "zoom": 1.6
+      },
+      "spotlight": "Photosystem II",
+      "particles": [
+        "Photosystem II",
+        "Thylakoid lumen"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f",
+        "Photosystem I"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "membrane",
+      "camera": {
+        "target": "Cytochrome b6f",
+        "zoom": 1.7
+      },
+      "spotlight": "Cytochrome b6f",
+      "particles": [
+        "Stroma",
+        "Cytochrome b6f",
+        "Thylakoid lumen"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytochrome b6f",
+      "particles": [
+        "Stroma",
+        "Cytochrome b6f",
+        "Thylakoid lumen"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "membrane",
+      "camera": {
+        "target": "Photosystem I",
+        "zoom": 1.7
+      },
+      "spotlight": "Photosystem I",
+      "particles": [
+        "Cytochrome b6f",
+        "Photosystem I"
+      ],
+      "carries": "e⁻",
+      "glow": "Photosystem I",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "membrane",
+      "camera": {
+        "target": "NADP⁺ reductase",
+        "zoom": 1.7
+      },
+      "spotlight": "NADP⁺ reductase",
+      "particles": [
+        "Photosystem I",
+        "NADP⁺ reductase"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "NADP⁺ reductase"
+          ],
+          "carries": "NADP⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n22",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Thylakoid lumen",
+      "particles": [
+        "Stroma",
+        "Cytochrome b6f",
+        "Thylakoid lumen"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "membrane",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.6
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "membrane",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.8
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "membrane",
+      "camera": {
+        "target": "ATP synthase",
+        "zoom": 1.6
+      },
+      "spotlight": "ATP synthase",
+      "particles": [
+        "Stroma",
+        "ATP synthase"
+      ],
+      "carries": "ADP",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Stroma",
+            "ATP synthase"
+          ],
+          "carries": "Pᵢ"
+        }
+      ]
+    },
+    {
+      "line_id": "n27",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "herbicide",
+      "camera": {
+        "target": "Herbicide",
+        "zoom": 1.7
+      },
+      "spotlight": "Herbicide",
+      "particles": [
+        "Photosystem II",
+        "Herbicide"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "herbicide",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytochrome b6f",
+      "particles": [
+        "Thylakoid lumen",
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "H⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "herbicide",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "ATP synthase",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "herbicide",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n32",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Photosystem II",
+        "Cytochrome b6f",
+        "Photosystem I",
+        "NADP⁺ reductase"
+      ],
+      "carries": "e⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n33",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Thylakoid lumen",
+        "Photosystem II"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Photosystem II",
+            "Thylakoid lumen"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "n34",
+      "scene": "membrane",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP synthase",
+        "Stroma"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [
+    {
+      "carries": "H⁺",
+      "region": "Thylakoid lumen"
+    }
+  ],
+  "spins": [
+    {
+      "structure": "ATP synthase"
+    }
+  ],
+  "blocks": [
+    {
+      "structure": "Herbicide"
+    }
+  ],
+  "conversions": [
+    {
+      "structure": "Photosystem II",
+      "inputs": [
+        "H₂O"
+      ],
+      "outputs": [
+        "O₂",
+        "H⁺",
+        "e⁻"
+      ]
+    },
+    {
+      "structure": "NADP⁺ reductase",
+      "inputs": [
+        "NADP⁺",
+        "H⁺",
+        "e⁻"
+      ],
+      "outputs": [
+        "NADPH"
+      ]
+    },
+    {
+      "structure": "ATP synthase",
+      "inputs": [
+        "ADP",
+        "Pᵢ"
+      ],
+      "outputs": [
+        "ATP"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How does a leaf turn light into usable energy?",
+      "from_narration": "n2"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Exchange booth = thylakoid, market stall = Calvin cycle",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Light excites photosystem II → electrons leave",
+      "from_narration": "n11"
+    },
+    {
+      "from_line": "v1-8",
+      "text": "Photosystem II splits H₂O → O₂ + H⁺ + e⁻",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "v1-11",
+      "text": "Electron transport chain powers b6f → H⁺ pumped into lumen",
+      "from_narration": "n16"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Light re-energizes electrons at photosystem I → NADPH",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Proton gradient: H⁺ flows through ATP synthase → ATP",
+      "from_narration": "n22"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "ATP + NADPH → Calvin cycle builds sugar from CO₂",
+      "from_narration": ""
+    },
+    {
+      "from_line": "b-1",
+      "text": "Herbicide blocks photosystem II → no gradient, no ATP, no sugar",
+      "from_narration": "n28"
+    }
+  ],
+  "tags": {
+    "song": [
+      "photosynthesis",
+      "lightreactions",
+      "thylakoid",
+      "atpsynthase",
+      "biology",
+      "apbio",
+      "indiepop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "photosynthesis",
+      "lightreactions",
+      "thylakoid",
+      "atpsynthase",
+      "biology",
+      "apbio",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

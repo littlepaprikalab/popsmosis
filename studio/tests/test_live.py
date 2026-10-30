@@ -47,6 +47,64 @@ def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
     assert checks["lyric:v1-3"].verdict == "SUPPORTED"
 
 
+def test_the_song_is_held_to_what_a_student_would_believe_and_a_wrong_couplet_rewritten_to_sing():
+    """A couplet that compresses and adds a true detail the facts leave out must pass; the seeded couplet must
+    fail, and the songwriter's rewrite of it keep its shape."""
+    from studio.schemas import Bundle
+    from studio.steps import songwriter
+    from studio.tests.sample import bundle_data
+
+    data = bundle_data()
+    data["facts"] = [{"id": i, "text": text, "source_quote": ""} for i, text in PHOTOSYNTHESIS.items()]
+    bundle = Bundle.model_validate(data)
+    fine = Line("lyric", "v1-1,v1-2", "Green chlorophyll grabs the morning light\nSplit the water, oxygen takes flight",
+                ("v1-1", "v1-2"))
+    wrong = Line("lyric", "v1-3,v1-4", "Down the chain the electrons hop\nEvery hand-off pumps a proton, non-stop",
+                 ("v1-3", "v1-4"))
+    context = {"course": "AP Biology", "topic": "the light reactions", "audience": "high school",
+               "song_style": "upbeat pop, 112 bpm"}
+    checks = ask_checker([fine, wrong], [fine, wrong], PHOTOSYNTHESIS, "", brain.ask, 1, context)
+    for key, check in checks.items():
+        print(f"{key}: {check.verdict} {check.source} {check.problem} {check.corrected!r}")
+    assert checks[fine.key].verdict == "SUPPORTED"
+    assert checks[wrong.key].verdict == "UNSUPPORTED"
+
+    written = songwriter.rewrite(bundle, [(wrong, checks[wrong.key])], brain.ask, 1)
+    print("songwriter:", written)
+    for call in brain.calls[-2:]:
+        print(f"{call.label}: {call.model} {call.input_tokens} in, {call.output_tokens} out, "
+              f"${call.cost_usd or 0:.4f}, {call.seconds}s")
+    assert "every hand-off" not in written.get(wrong.id, "").lower()
+
+
+def test_the_audit_corrects_a_fact_saying_every_hand_off_pumps_a_proton():
+    """The fact-check case moved into the planner's own facts, where the fact-check cannot see it: the audit must
+    correct it in its first call, pass the correction in its second, and leave the right facts alone."""
+    from studio.schemas import Bundle
+    from studio.steps import audit
+    from studio.tests.sample import bundle_data
+
+    data = bundle_data()
+    data["facts"] = [{"id": i, "text": text, "source_quote": ""} for i, text in PHOTOSYNTHESIS.items()]
+    data["facts"][1]["text"] = (
+        "Electrons pass from photosystem II through plastoquinone, cytochrome b6f, plastocyanin and photosystem I "
+        "to NADP+ reductase, which makes NADPH, and every electron hand-off along the way pumps a proton into the "
+        "thylakoid lumen.")
+    before = len(brain.calls)
+    report, audited = audit.audit_bundle(Bundle.model_validate(data), "", brain.ask)
+    for fact in report.facts:
+        print(f"{fact.id}: {fact.verdict} ({fact.basis}) {fact.problem}")
+    for correction in report.corrections:
+        print(f"{correction.id} corrected: {correction.after}")
+    for call in brain.calls[before:]:
+        print(f"{call.label}: {call.model} {call.input_tokens} in, {call.output_tokens} out, "
+              f"${call.cost_usd or 0:.4f}, {call.seconds}s")
+
+    assert report.status == "passed" and [c.id for c in report.corrections] == ["f2"]
+    assert "every electron hand-off" not in audited.facts[1].text.lower()
+    assert [f.verdict for f in report.facts if f.id != "f2"] == ["CORRECT", "CORRECT"]
+
+
 def test_the_brain_draws_a_scene_the_checks_accept(monkeypatch, tmp_path):
     """One scene of the sample bundle, drawn live by Claude Opus 5.5, as when an admin has Claude draw the art."""
     from studio.steps import art

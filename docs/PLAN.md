@@ -75,7 +75,7 @@ the churn until the video fields land; do it then if at all.
 
 ```
 topic ──► API ──fire──► Claude routine ──► python -m studio run <id>
-                                             │ brain: bundle, fact-check
+                                             │ brain: bundle, fact audit, fact-check
                                              ├──► lesson text posted to the API
                                              │ art + masks    ┐ at the same time
                                              │ audio + timing ┘
@@ -158,10 +158,12 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
 ## 5. The studio pipeline
 
 `python -m studio run <question-id>`. Each step writes into `jobs/<id>/` (git-ignored).
-`run` resumes from the first step whose file is missing (a fact-check counts once it has
-passed) and runs every step after it, so running it again retries a failed step (section
-11). Before each step until the lesson is posted it claims the topic again
-(`POST /api/questions/:id/claim`), which renews the queue's lease. Every run appends to
+`run` resumes from the first step whose file is missing (a fact audit counts once it has
+passed the facts `bundle.json` has, a fact-check once it has passed) and runs every step
+after it, so running it again retries a failed step (section 11). Before each step until
+the lesson is posted it claims the topic again (`POST /api/questions/:id/claim`), which
+renews the queue's lease, and again every 5 minutes while the step runs: a bundle can take
+20 minutes or more, longer than the lease. Every run appends to
 `runs.jsonl` and prints one line: `DONE`, `FAILED <step>: <reason>` or
 `STOPPED <step>: <reason>` (the topic was deleted, answered, given up or taken: nothing
 to retry). Files are written whole or not at all, only one run of a job goes at a time,
@@ -172,6 +174,7 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | # | Step | Who | Writes |
 |---|---|---|---|
 | 1 | Bundle | Brain, one call | `bundle.json` |
+| | Fact audit | Brain, a fresh context: one call, or two when a fact is corrected | `audit.json` |
 | 2 | Fact-check | Brain, a fresh context | `factcheck.json` |
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Gemini 3.1 Flash Image or Muse Image + helper; or the brain's SVG (`/admin/studio`) | `art/<scene>.png` |
@@ -192,9 +195,11 @@ before the ones ahead of it exist: their paths and the rules for a media step in
 <name> <job>` runs a media step as soon as its module is in `studio/steps/`; wiring them
 into `run`, after the post, comes once they are built.
 
-That is two or three brain calls per topic: the bundle, the fact-check, and a re-check of
-any lines the fact-check changed (plus one per scene for the SVG art, with the Claude
-brain). The helper is called per image and per fallback.
+That is three to five brain calls per topic: the bundle, the fact audit (and a second look
+at any fact it corrected), the fact-check, and a re-check of any lines the fact-check
+changed, with a songwriter's rewrite before it when a couplet of the song failed (plus one
+per scene for the SVG art, with the Claude brain). The helper is called
+per image and per fallback.
 
 ### Step 1: bundle
 
@@ -267,18 +272,73 @@ with a size limit, and the bundle's schema outgrew it on Oct 28 (with `direction
 `tags`): a schema the API refuses for that is asked for in the prompt instead, and the
 answer validated as every answer is (`studio/brain.py`).
 
+### Between steps 1 and 2: the fact audit
+
+The fact-check holds every line to the bundle's `facts`, which the same planner call
+wrote: a wrong fact passes it and spreads to the lesson, the song, the key lines, the
+arrows and the conversions. So the facts are judged first (`studio/steps/audit.py`,
+`studio/prompts/audit.md`), by a separate brain call with a prompt of its own and none of
+the planner's conversation. It sees the course, topic and audience, the facts, and the
+study guide when there is one, and judges each fact on its own: `CORRECT`, `WRONG` with a
+corrected version, or `UNSURE`. With a study guide it judges by the guide first, quoting
+it (code checks the quote is there); where the guide is silent, or there is none, by
+established knowledge for the course at the droplet's level. Each verdict says which
+(`basis`), and `audit.json` says what the facts were judged against.
+
+A fact judged wrong is corrected once, in the first call; a second call judges each
+correction on its own, with any fact the first call skipped. `bundle.json` then has the
+corrected facts (the writer's version stays in `bundle.draft.json`). An `UNSURE` fact is
+kept and recorded. The step fails, and the run retries it, unless every fact ends judged
+`CORRECT` or `UNSURE` as it now reads: a wrong fact with no correction, a correction
+judged wrong again, a fact first judged wrong in the second call (no call is left to
+judge its correction), or a fact with no verdict after both calls.
+
+The fact-check then reads the corrected facts, each with `was` (what it said before), and
+the lyrics and narration written from a corrected fact (their `fact_id`) carry
+`written_from`, so a line that repeats the mistake is caught and corrected in its usual
+rounds. With no fact corrected the fact-check's call is unchanged. An audit call is
+about 1,300 tokens in (its prompt and four facts; a study guide adds its own length) and,
+with thinking, 700 to 3,000 out: about $0.02 to $0.07 on Opus 5.5 at high effort, and the
+second call, on the corrections alone, about half that. Estimated from the prompt's size,
+not yet measured on a paid run.
+
+Regression test: a fact saying "every electron hand-off pumps a proton" must be corrected,
+and the lyric written from it then corrected by the fact-check (`studio/tests/test_audit.py`).
+
 ### Step 2: fact-check
 
 A separate brain call that sees only the facts (and the study guide, if one was given)
 and the lines, never the writer's reasoning or the operator's note. The lines are every
-lyric line, every narration sentence, and every sentence of `lesson_markdown` (code
-splits it). For each it
+couplet of the song, every narration sentence, and every sentence of `lesson_markdown`
+(code splits it). For each it
 returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id or study-guide quote, and for
 an unsupported line a corrected one. A corrected lyric stays about the same length and
 keeps the structure's name, so the timing and the direction still fit. Code applies the
 fixes and re-checks only the changed lines, up to 3 rounds; if any line still fails, the
 job fails with the reason shown on the droplet. Nothing is posted or sung that has not
 passed.
+
+The song is checked differently from the lesson, since a song compresses, implies and
+speaks in images, and its claims run across its lines. Its lines go a couplet at a time
+(each section's lines in pairs from its start, an odd last line joining the pair before
+it), and a couplet fails only when a student who sings it would come away believing
+something false, or it is unfit for a classroom: not for being loose, plain or true in
+words the facts do not use. Where the facts say nothing, a couplet may pass on what is true
+for the course at the audience's level (`source` "course knowledge"); the lesson, the
+narration and the key lines are held to the facts alone. A couplet that fails is rewritten
+by the songwriter (`studio/steps/songwriter.py`, `studio/prompts/songwriter.md`), one brain
+call a round for every failing couplet, which hears the whole song, its style and tempo,
+the facts, the checker's problem and the checker's own version, and keeps the couplet's
+shape, rhyme, voice and frame. Code keeps a rewrite only if it has a line for each line,
+each near the length of the line it replaces and still saying every structure the line
+named (what reveals it on screen); the fact-check then judges it like any changed line.
+Each couplet goes to the songwriter once: if its rewrite fails too, or it has none, the
+checker's correction is used, and the checker's correction from before the rewrite when the
+checker has none for the rewrite. A line sung in two couplets (the title line in the intro,
+the choruses and the outro) keeps one wording wherever it is sung, the chorus's. The
+songwriter's corrections are listed in `songwriter.json`, beside `factcheck.json`, which
+stays in the shape a studio from before the songwriter reads. The songwriter costs a call only in a round where a couplet failed: about 2,500
+tokens in and, with thinking, 1,000 to 3,000 out, $0.03 to $0.07 on Opus 5.5 (estimated).
 
 The same call checks each video's hashtags and its marked motions ("H⁺ travels from
 Stroma to Cytochrome b6f to Thylakoid lumen": what a line's particles carry and their
@@ -502,9 +562,9 @@ studio/
   run.py           run, fail, summary: one topic from the queue to a posted lesson
   api.py           the popsmosis agent endpoints the studio calls
   media.py         the files steps 3-9 pass to each other, and how a media step is built
-  prompts/         bundle, fact-check and helper prompts
+  prompts/         bundle, fact audit, fact-check, songwriter, helper and scorecard rubric prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
-  steps/           bundle, factcheck, art, locate, audio, timing, timeline, render, upload
+  steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Bold/SemiBold/ExtraBold)
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/

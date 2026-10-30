@@ -1,0 +1,31 @@
+{
+  "hook": {
+    "reason": "The title line \"Assume it's chance, then ask how rare\" is concrete enough to sing back and captures the big move, and it opens and closes the chorus. It has no real objects, though, and \"it\" is a pronoun. The lesson opens with a real question (\"Is it rigged, or was that just luck?\") and the narration opens with a lucky coin, which is strong. The lesson's opening is slightly diluted because it follows immediately with the definition.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The courtroom (\"A test works like a trial... presumed innocent\") is an apt picture for the whole test and is used in the lesson, narration and song. It is not stock for this topic. But in the song it is set up in v1 and then mostly dropped from the chorus and bridge, and returns only in v2-6 to v2-8 and the outro. The chorus and bridge carry the chance-and-rarity idea, not the trial.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration cover all five links in order with causes: assume null, so sampling distribution, so tail area, so rare means doubt (\"would rarely happen if the null were true, so it is evidence against\"), then compare with alpha. The alpha link is thinner on why: the cutoff is just \"chosen\" and the jury-standard analogy is only gestured at. The Type I material is good but extra. The song carries the gist well.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read alone, the lines run from chance, to presumed innocent, to the sampling distribution, to p-value, to tiny p means doubt, to the alpha decision. Most are steps with arrows, such as \"Tiny p-value → rare if null true → doubt the null\". The first, \"If it's only chance, how rare is your result?\", is more a question than a step. \"p-value = chance of a result at least this extreme\" is a definition, not a cause. The last two cover the Type I and multiple-testing extras. Their starts line up well with where each step is sung and said.",
+    "score": 4
+  },
+  "errors": [],
+  "accuracy": {
+    "reason": "The coin example is correct: P(X≥16 | n=20, p=0.5) is about 0.0059. The 64% figure (1 − 0.95^20 ≈ 0.64) and the 1-in-20 Type I rate are correct. The misconception is stated correctly, and the \"accept the null\" caveat is correct. Nothing a learner would carry away wrong.",
+    "score": 5
+  },
+  "singability": {
+    "reason": "The chorus is a chant that can be sung back, and the lines rhyme cleanly. Many verse lines overrun the bar and read like textbook sentences, though: v1-2 \"The jury asks: if they're innocent, how often's this exhibit seen?\" and v1-7 \"The sampling distribution's every count a fair coin makes\". v1-12 \"gets a side-eye\" is a loose rhyme tag. v2-8 \"so saying accept's a no\" is forced. c1-3 and c1-4 are long for a sung chorus. v2-11 and v2-12 are prose-like.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, builds the why step by step, includes a Predict question answered immediately (0.006), names the misconception and says why it is wrong, and ends with a good check (\"Why can't a p-value of 0.006 mean there's a 0.6% chance the coin is fair?\"). It does carry many terms: null, alternative, sampling distribution, significance level, statistically significant, Type I error, power. The Type I section and the 20-tests material push toward more than a first reading needs.",
+    "score": 4
+  }
+}

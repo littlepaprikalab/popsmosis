@@ -169,8 +169,8 @@ turn re-sends the whole conversation, so the cost of a run is mostly the number 
 it takes, not the size of this file.
 
 The topic queue hands out **one** topic per call (`?limit=1`) and leases it to you, so an
-overlapping run is handed a different one. A topic takes the studio several minutes; a
-topic asked meanwhile fires another run, which works on it at the same time.
+overlapping run is handed a different one. A topic takes the studio 20 minutes or more;
+a topic asked meanwhile fires another run, which works on it at the same time.
 
 ### Step 1: Read who you are (Inkmory)
 
@@ -245,13 +245,27 @@ refused the text (too long, or it looks like a key: write it again); or `FAILED:
 
 That is the only answer you ever write to a topic yourself.
 
-Otherwise run the studio on its `id`, from the root of this repository. It takes about
-five minutes, so give the command a timeout of at least 10 minutes. It prints its
-progress to the log and one line of outcome:
+Otherwise start the studio on its `id`, from the root of this repository. A lesson takes
+20 minutes or more (the bundle alone is most of it), longer than one command may take, so
+the studio makes it in the background and you wait for it:
 
 ```bash
-python -m studio run <id> 2>>/tmp/studio-<id>.log; echo "exit $?"
+python -m studio run <id> --background; echo "exit $?"
 ```
+
+It prints `STARTED run: ...` and returns at once. Then wait for the lesson. Each call waits
+up to 9 minutes, so give the command a timeout of 10 minutes:
+
+```bash
+python -m studio wait <id>; echo "exit $?"
+```
+
+`RUNNING <step>: ...` means the lesson is still being made: run the same `wait` again, as
+often as it takes. Keep waiting: your machine goes away when your run ends, and the lesson
+with it. After an hour of `RUNNING`, stop waiting, go to Step 3, and say so in your record:
+once the machine is gone, the topic's lease lapses and a later run makes it again.
+Otherwise `wait` prints the run's one line of outcome, below. What the studio says as it
+goes is in `jobs/<id>/run.log`.
 
 **A note for the brain.** The studio's brain writes each lesson's plan in one call, and
 never sees what becomes of it; you follow every droplet through to its videos. When your
@@ -261,7 +275,7 @@ leaving out, a lyric the singer keeps drifting on), you may pass the brain one s
 observation with the same command:
 
 ```bash
-python -m studio run <id> --note "<your observation>" 2>>/tmp/studio-<id>.log; echo "exit $?"
+python -m studio run <id> --background --note "<your observation>"; echo "exit $?"
 ```
 
 - At most 500 characters, a sentence or two about the work: what keeps going wrong and,
@@ -275,14 +289,16 @@ python -m studio run <id> --note "<your observation>" 2>>/tmp/studio-<id>.log; e
 - The retry below is the same command, note included.
 
 The studio claims the topic again, writes the lesson and every line it will later sing
-or narrate, fact-checks each one, and posts the lesson once the fact-check passes. Act
-on the first word of its outcome line:
+or narrate, audits the facts they rest on, fact-checks each line against them, and posts
+the lesson once the fact-check passes. It keeps the topic claimed while it works, so an
+overlapping run is never handed it. Act on the first word of the outcome line `wait`
+gives:
 
 | Outcome | What to do |
 |---|---|
 | `DONE post: ...` | The lesson is posted and the topic has left the queue. Go to Step 2b. |
-| `FAILED <step>: <reason>` | Run the **same command once more**. It resumes at the step that failed, and keeps what the steps before it made. |
-| `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it, or a run of it you started earlier is still going (it posts the lesson when it finishes). Go to Step 3. If the reason says the API refused the key, or that the studio's settings are wrong, stop the heartbeat and report it: nothing was claimed, and the topics wait in the queue until the settings are fixed. |
+| `FAILED <step>: <reason>` | Start it **once more** with the same command, and wait for it again. It resumes at the step that failed, and keeps what the steps before it made. |
+| `STOPPED <step>: <reason>` | There is nothing to retry: the topic was deleted, already has a lesson, was given up, or another agent holds it. Go to Step 3. If the reason says a run of the topic is still going or already being made in the background, wait for that one instead (`python -m studio wait <id>`): it posts the lesson when it finishes. If the reason says the API refused the key, or that the studio's settings are wrong, stop the heartbeat and report it: nothing was claimed, and the topics wait in the queue until the settings are fixed. |
 
 If the second attempt fails too, give the topic up. That shows the reason on its card and
 takes it out of the queue, so it is not paid for again on every sweep:
@@ -291,14 +307,14 @@ takes it out of the queue, so it is not paid for again on every sweep:
 python -m studio fail <id>
 ```
 
-If the command cannot run at all (no `python`, a missing package), or the tool cuts it
-off with no outcome line, that counts as a failure: one retry, then `fail`. The studio
-records a run that was cut off as a failure of the step it was on, so `fail` can give the
-topic up. If `fail` cannot run either, say so in your report and move on: the lease lapses
-and the topic goes back to the queue.
+If `run` or `wait` cannot run at all (no `python`, a missing package), that counts as a
+failure: one retry, then `fail`. The studio records a run that was cut off (its machine
+restarted, say) as a failure of the step it was on, so `fail` can give the topic up. If
+`fail` cannot run either, say so in your report and move on: the lease lapses and the topic
+goes back to the queue.
 
 **Never**, in any of these cases: write the lesson or the media yourself, post a lesson
-the studio did not post, skip or weaken the fact-check, run `python -m studio step` or
+the studio did not post, skip or weaken the fact audit or the fact-check, run `python -m studio step` or
 `plan`, or edit prompts or code during a run. A note is not an edit: it is the one thing
 you add to the brain's prompt, and only through `--note`. When the studio fails, the fix belongs in
 the studio, after the run; the retry is all you do now.

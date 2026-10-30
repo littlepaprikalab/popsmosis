@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A rocket moves in space by pushing its exhaust gas backward, and by Newton's third law the gas pushes the rocket forward with an equal and opposite force (thrust), so it doesn't need air to push against.",
+      "why": "First, the rocket carries fuel and its own oxidizer, so the fuel can burn even though there's no air in space. Second, the fuel and oxidizer go into the combustion chamber and burn, making very hot, high-pressure gas. Third, that gas escapes backward through the nozzle at very high speed as exhaust. Because the rocket pushes the gas backward, the gas pushes the rocket forward with an equal force in the opposite direction, which is thrust. The two forces don't cancel because they act on different objects, one on the gas and one on the rocket, so the gas speeds backward and the rocket speeds up forward. Pushing out more gas each second, or faster gas, gives a bigger push.",
+      "what_if": "If the fuel or oxidizer ran out, no more exhaust gas would be pushed out, so there would be no action-reaction pair and the thrust would drop to zero. The rocket wouldn't stop, though, because in space there's no air resistance, so by Newton's first law it keeps moving in a straight line at the same speed unless another force like gravity acts on it. The lesson doesn't explain exactly how gravity would change its path in detail, since it mostly leaves gravity out."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

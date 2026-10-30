@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Spanish uses the subjunctive for an action after que when the main clause shows a wish, feeling or doubt, so the action isn't a confirmed fact, and uses the indicative when it's treated as known or believed.",
+      "why": "First, the main clause sets the view by its meaning. If it expresses a wish, emotion, doubt, recommendation or something like es importante que, the action after que is only hoped for or uncertain, not a confirmed fact, so the verb is subjunctive (Espero que vengas). If the main clause says you know or believe something, the action is treated as a fact, like a receipt, so the verb stays indicative (Sé que vienes). The word que doesn't cause this; it only links the two clauses. It also needs two different subjects. To make the form, you take the yo form, drop the -o, and add the opposite vowel: e for -ar verbs and a for -er/-ir verbs. That is why vengo becomes vengas.",
+      "what_if": "If the main clause stopped setting the view of the action, for example if Spanish speakers ignored whether the main clause showed wish or doubt, then Spanish couldn't tell a hope from a fact. Espero que vienes would sound like you're stating that the person is definitely coming, which is wrong because it hasn't happened or been confirmed. The lesson shows this with no: Creo que vienes becomes No creo que vengas because the doubt changes the meaning. The lesson doesn't say much about what happens in real conversation if someone mixes them up, so I can't say how confusing it would be."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

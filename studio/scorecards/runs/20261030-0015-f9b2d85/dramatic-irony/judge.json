@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"We see the trap, Romeo walks in\" is concrete, singable and bookends the chorus, but it names the trap rather than the big move, and \"trap\" is left vague at the start. The lesson opens on a real question (\"Why would Shakespeare give away his ending before the play even starts?\") and the narration opens in the learner's world (\"Picture a scary movie\"), which are both strong.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The scary-movie picture (\"a shadow in the hall\", \"yell at the screen\") fits the whole idea, because the audience sees danger the character can't and cannot warn them. It is set up in the intro, the verse, the lesson, the narration and the outro, and it returns in c3-2. It is somewhat familiar as a way to explain irony, but it does the job of the whole thing, not one part. The bridge and the irony-types section drift away from it.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The chain runs Prologue, then secrets, then darker meanings, then no warning, then suspense and dread, then the tomb, and the lesson and narration teach it in order. The causes are stated (\"Because we know more... we can't warn them, so suspense and dread build\"). Link 3 is only asserted: no worked example shows a hopeful line turning dark, so how words gain a second meaning is named rather than shown. The long plot recap (Tybalt, Mercutio, quarantine) carries the story more than the causes, which dilutes the chain.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines are mostly steps with arrows (\"Prologue gives away the ending → we know they'll die\", \"Letter stuck in quarantine → Romeo hears only that she died\") and they read in order toward the peak. Several problems remain. The first is a question, not a step. \"Not a surprise twist\" is a misconception line placed mid-chain. The v2-1 line \"We know more → their hopeful plans fill us with dread\" starts on a lyric about Paris that does not say it. The Oedipus line adds a term-free but off-chain step, and the chain never states the core idea in a final line.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Song intro i-2 and chorus: \"You yell at the screen, but they can't hear a thing\" / \"We see the trap, Romeo walks in\" combined with narration n20 \"a servant brings news to Mantua that she is dead\" and lesson \"the tomb... Juliet is only asleep from a potion\" as who doesn't know",
+      "problem": "The lesson table and chain say the tomb irony is that Romeo doesn't know, but the lesson omits that Romeo never received the Friar's letter was the gap that matters, and the song's v2-7 \"as he drinks the poison dry\" is fine; the real misleading item is the lesson's statement that Tybalt and Mercutio 'do not know why' alongside the claim Romeo kills Tybalt after Mercutio dies without noting Romeo's refusal was to Tybalt's challenge being a response to Romeo's earlier insult.",
+      "correction": "No change needed to the tomb; if kept, note that Romeo's refusal is the irony and that Mercutio only dies because he steps in."
+    },
+    {
+      "claim": "Song c3-1 \"From the first lines to the tomb, we knew more\"",
+      "problem": "Minor: Romeo isn't the only one walking in; the 'trap' is not named, but more importantly 'Romeo walks in' omits Juliet, who is equally unaware of the fate.",
+      "correction": "Say \"they walk in\" or name both lovers."
+    }
+  ],
+  "accuracy": {
+    "reason": "The plot and the idea are sound: dramatic irony is correctly defined, the Prologue, the secret marriage, the quarantined Friar John, the potion and the Oedipus myth are all accurate. The errors I listed are minor or contested, not facts the learner would carry away wrong. Two small imprecisions remain: \"we know the ending before it begins\" and the chorus's \"every sweet word\" are broader than strictly needed, and \"Romeo walks in\" sidelines Juliet, who also acts in ignorance. The sonnet's own line says the lovers' deaths end the feud, which the droplet only half uses.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a clean, repeatable chant (\"We see the trap, Romeo walks in / We know the ending before it begins\"), and most verse lines sit in a rapped bar. Several lines are plot summary overrunning the bar or reading like captions, such as v2-4 \"But the letter from Verona's stuck in quarantine instead\" (a rhyme-driven \"instead\") and v2-7 \"We know she's only sleeping as he drinks the poison dry\". The pre-chorus pc2-1/2 is textbook (\"It's one of three kinds, there's verbal irony too\"), and c3-1/c3-2 add lines that crowd the chorus.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big idea, uses the scary-movie picture, includes a Predict question answered right after, and names the misconception with its reason. It ends on a check that needs the core idea: \"If the audience didn't know about Juliet's potion, would Romeo's death... still be dramatic irony?\" The plot recap and the table are long, the Oedipus and three-types sections add terms (verbal, situational) a first-time learner doesn't need, and the Predict question is about Tybalt, which is a plot fact, not the core idea.",
+    "score": 4
+  }
+}

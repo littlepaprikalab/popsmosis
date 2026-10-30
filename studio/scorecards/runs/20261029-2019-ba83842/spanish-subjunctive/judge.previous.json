@@ -1,0 +1,36 @@
+{
+  "hook": {
+    "reason": "The title line \"Wish, doubt or feel, switch the mood\" is rhythmic and singable, and it is the core idea in miniature. But it is abstract (wish, doubt, feel, mood), not concrete actions on real things, and it does not name the verb change. The lesson opens on the learner's own question, \"Why does Spanish say *espero que vengas* and not *espero que vienes*?\", and the narration opens on a friend's text, which is from the learner's world. Those two openings are strong, but the title line is only catchy.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The comic (panel versus thought bubble) fits the whole idea of reality versus what is only in someone's head. It is set up in v1-1 to v1-4, and it returns in the outro (\"Up in the thought bubble, not in plain view\") and in the lesson and narration. However, the chorus never uses it, and the bridge and second verse drop it. It is also somewhat a picture of mood in general, and a few sections (formation of the endings) do not fit inside it.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach each link with its cause: the main clause decides, a wish or doubt is not a stated fact so the verb goes subjunctive, \"que only links\" with \"knowing states a fact\", and the yo form plus the opposite ending, which explains vengas and the g. The flip example (\"No trigger left, so the indicative's back\") reinforces the causes. The change-of-subject step is added as a rule without a clear reason why, and the formation link is a rule more than a cause. The song carries the gist well.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "In order they tell the chain well: the question, the panel and bubble, the main clause decides, hoped for not known, que only links, yo form with the opposite ending, vengo to vengas, and drop the doubt. Most are steps, short and plain. But the first is a question label that starts at \"Wish, doubt or feel, switch the mood\", where the question is not sung. \"Panel = indicative; thought bubble = subjunctive\" is a label equation. The last line is not the core idea and never ties back to it, and the \"Drop the doubt\" line starts at b-1, which is the doubt example, not the dropping.",
+    "score": 3
+  },
+  "errors": [
+    "\"A subjunctive sentence has a main clause containing a trigger, the word que, and a dependent clause\" (f2) and \"joined by que\" in n7: the song and narration present que as part of every subjunctive sentence, but que is not required (e.g., 'Espero venir' has none, and some subjunctive uses have no que). Minor imprecision.",
+    "v1-7/v1-8: \"Que links on the que clause, where you come in / Two different people, that's where the subjunctive begins\": the subjunctive does not begin with a change of subject; the trigger starts it, and change of subject is a condition for wish/desire verbs only. Misleading.",
+    "\"Using the indicative after a trigger... costs points on a test\" is fine, but n12 and the WEIRDO list say 'no creer' is doubt without noting that 'creo que' takes the indicative; this is covered later, so not an error.",
+    "\"Ojalá\" is placed as a 'trigger' like the others without noting it takes no que; very minor and not wrong."
+  ],
+  "accuracy": {
+    "reason": "The facts match the grammar: vengo to vengas, the opposite-ending rule, sé que vienes indicative, no creo que venga versus creo que viene, and the negative tú and usted commands. The main slip is the song's \"Two different people, that's where the subjunctive begins\", which overstates change of subject as the start of the subjunctive when it applies only to wish verbs. The mention of que as part of every subjunctive sentence is a small imprecision. Nothing a learner would carry away badly wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Most lines are whole phrases and the chorus is a very chantable, repeated chorus (\"Wish, doubt or feel, switch the mood / The main clause tells the verb what to do\"). The rhymes are mostly clean. But some lines overrun the bar or read as textbook captions: \"Two different people, that's where the subjunctive begins\", \"Wish, emotion, impersonal, recommend\", \"Me alegra que estés aquí, you're here, that's real\", and \"That's why it's vengas: you hope, you don't know, that's the root\". A few rhymes are forced (\"family\", \"earlier era\", \"Doubt gets venga, belief gets viene, after all\"). The song is also long, with a lot of grammar jargon.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the learner's question, gives the big picture with the comic, builds on the why, names the misconception (que triggers the subjunctive) and why it is wrong, and has a predict question (\"What do you think its *tú* subjunctive form is?\") answered right after. The final check, \"Why does the verb become *viene* when you drop the *no*?\", needs the core idea. But it carries many new terms for a first-time learner (WEIRDO, main and dependent clause, trigger, yo form, change of subject, irregulars, commands, past subjunctive), and the WEIRDO table drifts toward a list of parts. The misconception comes late.",
+    "score": 3
+  }
+}

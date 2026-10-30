@@ -1,10 +1,11 @@
 """Run the studio.
 
-    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the brain
+    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the brain;
+                                                 # --background on a routine
     python -m studio fail <question-id>          # give it up with its last run's reason
     python -m studio summary <question-id>       # what its runs did, for the operator's record
     python -m studio videos <question-id>        # a posted lesson's videos; --background on a routine
-    python -m studio wait <question-id>          # the background videos' outcome, waiting up to 9 minutes
+    python -m studio wait <question-id>          # the background lesson's or videos' outcome, waiting up to 9 minutes
     python -m studio recover                     # take a render that died with its machine, rebuild its job
     python -m studio fetch <attachment-id> ...   # a follow-up's files, saved by id (studio/files.py)
     python -m studio reply <answer-id> <reply-to-id> --file F   # post the teacher's follow-up answer from a file
@@ -13,10 +14,13 @@
     python -m studio plan --topic "brain structures" --course "AP Psych"   # a local job, never posted
     python -m studio plan --topic "..." --videos  # and then its videos: a whole test round in one command
     python -m studio make <job-id>               # a local job's videos, in `videos`' order, with no API
-    python -m studio step factcheck <job-id>     # re-run one step: bundle, check, factcheck
+    python -m studio step factcheck <job-id>     # re-run one step: bundle, check, audit, factcheck
     python -m studio step render <job-id>        # or a media step, once it is built (studio/media.py)
-    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, fact-check, timing, runs, calls
+    python -m studio show <job-id> [--brief]     # facts, scenes, lyrics, checks, audit, fact-check, timing, runs, calls
     python -m studio fallback <job-id>           # the ffmpeg karaoke video, once the song is timed
+
+    python -m studio scorecard run               # a fixed set of topics through the bundle step, scored (paid)
+    python -m studio scorecard compare <run> <run>   # two scorecards side by side (studio/scorecard.py)
 
 `run`, `fail`, `summary`, `videos`, `wait`, `recover`, `fetch`, `reply` and `answer` are the operator's
 (studio/run.py, studio/videos.py, studio/files.py, studio/post.py); they need POPSMOSIS_API_URL and POPSMOSIS_API_KEY,
@@ -43,18 +47,19 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post
+from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post, scorecard
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
 from studio.run import logged_ask
-from studio.schemas import CheckReport, FactCheckReport, Request, Timing
+from studio.schemas import AuditReport, CheckReport, FactCheckReport, Request, Timing
+from studio.steps import audit as audit_step
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 from studio.steps import timing as timing_step
 
-STEPS = {"bundle": bundle_step.run, "check": checks.run, "factcheck": factcheck_step.run}
-# STARTED: the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
+STEPS = {"bundle": bundle_step.run, "check": checks.run, "audit": audit_step.run, "factcheck": factcheck_step.run}
+# STARTED: the lesson or the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
 EXIT_CODES = {**operator_run.EXIT_CODES, operator_videos.STARTED: 0, operator_videos.RECOVER: 0,
               operator_videos.NONE: 0, operator_videos.RUNNING: 4}
 
@@ -70,10 +75,12 @@ def main(argv: list[str] | None = None) -> int:
         if name == "run":
             command.add_argument("--note", default="", help=f"the operator's observation for the brain, ending the "
                                  f"bundle prompt (at most {operator_run.NOTE_MAX} characters)")
+            command.add_argument("--background", action="store_true", help="start the run detached and return at once")
     make = commands.add_parser("videos", help="a posted lesson's videos; resumes at the first media step not done")
     make.add_argument("question")
     make.add_argument("--background", action="store_true", help="claim, start the run detached, and return at once")
-    waiting = commands.add_parser("wait", help="the background videos' outcome line, or RUNNING after --minutes")
+    waiting = commands.add_parser("wait", help="the outcome line of the lesson or the videos, whichever went to the "
+                                               "background last, or RUNNING after --minutes")
     waiting.add_argument("question")
     waiting.add_argument("--minutes", type=float, default=operator_videos.WAIT_MINUTES)
     commands.add_parser("recover", help="take one render that died with its machine and rebuild its job here")
@@ -87,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     answering.add_argument("question")
     answering.add_argument("--model", required=True)
     answering.add_argument("--file", type=Path, required=True)
-    plan = commands.add_parser("plan", help="start a job: the bundle, then the fact-check")
+    plan = commands.add_parser("plan", help="start a job: the bundle, the fact audit, then the fact-check")
     plan.add_argument("--topic", required=True)
     plan.add_argument("--course", default="")
     plan.add_argument("--request", default="", help="the learner's request in their own words")
@@ -105,17 +112,34 @@ def main(argv: list[str] | None = None) -> int:
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=[*STEPS, *media.MEDIA_STEPS])
     step.add_argument("job")
-    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, fact-check, runs and calls")
+    show = commands.add_parser("show", help="print a job's facts, scenes, lyrics, checks, audit, fact-check, runs and calls")
     show.add_argument("job")
     fallback = commands.add_parser("fallback", help="make the karaoke fallback video from the art, the song and its timing")
     fallback.add_argument("job")
     for command in (plan, step, show):
         command.add_argument("--brief", action="store_true", help="leave out the line-by-line fact-check table")
+    card = commands.add_parser("scorecard", help="score the bundle prompt on a fixed set of topics, or compare two runs")
+    card_actions = card.add_subparsers(dest="action", required=True)
+    card_run = card_actions.add_parser("run", help="make and score each topic's bundle (paid calls; no art or audio)")
+    card_run.add_argument("--topics", default="", help="topic ids, comma-separated (default: all of them)")
+    card_run.add_argument("--resume", help="a run that stopped: make and score only what it is missing")
+    card_run.add_argument("--rejudge", action="store_true",
+                          help="with --resume: judge every droplet again, by the rubric and judge as they are now")
+    card_run.add_argument("--workers", type=int, default=scorecard.WORKERS, help="topics at a time")
+    card_run.add_argument("--budget", type=float, default=scorecard.BUDGET_USD,
+                          help="dollars; no topic starts once the run has spent this")
+    card_run.add_argument("--brain", choices=list(brain.CHOICES), help=f"the brain (default: {brain.DEFAULT_BRAIN})")
+    card_run.add_argument("--effort", choices=list(brain.EFFORTS), help=f"Claude's effort (default: {brain.DEFAULT_EFFORT})")
+    card_compare = card_actions.add_parser("compare", help="two runs side by side")
+    card_compare.add_argument("runs", nargs=2, help="run names (studio/scorecards/runs/) or folders")
+    card_compare.add_argument("--out", help="also write the comparison to this file")
     args = parser.parse_args(argv)
     retired = brain.retired_problem()
-    if retired and args.command in ("plan", "step"):  # `run`, `videos` and `recover` stop and say so
+    if retired and args.command in ("plan", "step", "scorecard"):  # `run`, `videos` and `recover` stop and say so
         print(f"note: {retired}", file=sys.stderr)
 
+    if args.command == "scorecard":
+        return scorecard.main(args)
     if args.command in ("reply", "answer"):
         if args.command == "reply":
             result, detail = post.reply(args.answer, args.reply_to, args.file)
@@ -134,7 +158,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in ("videos", "wait"):
         if not operator_run.ID_RE.fullmatch(args.question):
             parser.error(f"{args.question!r} is not a question id")
-        if args.command == "wait":
+        if args.command == "wait" and operator_run.waits_on_lesson(args.question):
+            result, step, reason = operator_run.wait(args.question, minutes=args.minutes)
+        elif args.command == "wait":
             result, step, reason = operator_videos.wait(args.question, minutes=args.minutes)
         elif args.background:
             result, step, reason = operator_videos.background(args.question)
@@ -152,7 +178,10 @@ def main(argv: list[str] | None = None) -> int:
             result, reason = operator_run.mark_failed(args.question)
             print(f"{result} fail: {reason}")
             return EXIT_CODES[result]
-        result, step, reason = operator_run.run(args.question, note=args.note)
+        if args.background:
+            result, step, reason = operator_run.background(args.question, note=args.note)
+        else:
+            result, step, reason = operator_run.run(args.question, note=args.note)
         print(f"{result} {step}: {reason}")
         return EXIT_CODES[result]
 
@@ -191,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
             operator_run.keep_brain(job, args.brain, args.effort)
         print(f"job {job.name}", file=sys.stderr)
         with brain.chosen(args.brain, args.effort):
-            ok = run_steps(job, ["bundle", "factcheck"])
+            ok = run_steps(job, ["bundle", "audit", "factcheck"])
         if ok and args.videos:
             print_job(job, brief=args.brief)
             result, step, reason = operator_videos.local(job)  # on the job's brain, as `make` is
@@ -226,7 +255,9 @@ def run_steps(job: Path, names: list[str]) -> bool:
         took = time.monotonic() - started
         if isinstance(result, str):
             print(f"{name}: {result}", file=sys.stderr)
-        if isinstance(result, FactCheckReport) and result.status == "failed":
+        if isinstance(result, AuditReport) and result.status == "passed":
+            print(f"{name}: {audit_step.describe(result)}", file=sys.stderr)
+        if isinstance(result, (AuditReport, FactCheckReport)) and result.status == "failed":
             print(f"{name}: failed after {took:.0f}s: {result.reason}", file=sys.stderr)
             return False
         print(f"{name}: done in {took:.0f}s", file=sys.stderr)
@@ -264,6 +295,19 @@ def print_job(job: Path, brief: bool = False) -> None:
               f"{len(left)} for the prompt\n")
         for p in sorted(problems, key=lambda p: p.repaired):
             print(_wrap(f"{'  ' if p.repaired else '! '}{p.line_id:<6} {p.rule:<13} {p.detail}", indent=23))
+    if (job / "audit.json").exists():
+        audit = jobs.read(job / "audit.json", AuditReport)
+        print(f"\n## Fact audit: {audit.status} in {audit.calls} call(s), at the {audit.audience} level\n")
+        if audit.reason:
+            print(_wrap(f"Reason: {audit.reason}") + "\n")
+        for fact in audit.facts:
+            print(_wrap(f"  {fact.id:<4} {fact.verdict or '-':<8} {fact.basis or '-':<17} {fact.problem}", indent=32))
+        if audit.corrections:
+            print()
+            for c in audit.corrections:
+                print(_wrap(f"{c.id}, cited by {', '.join(c.cited_by) or 'no line'}: {c.problem}", indent=2, first=2))
+                print(_wrap(f"- {c.before}", indent=4, first=4))
+                print(_wrap(f"+ {c.after}", indent=4, first=4) + "\n")
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
         said = [line for line in report.lines if line.kind not in factcheck_step.KEPT_OR_DROPPED]
@@ -284,15 +328,17 @@ def print_job(job: Path, brief: bool = False) -> None:
             print(f"  {'line':<15} {'verdict':<11} {'source':<9} {'rnd':<3} text")
             for line in report.lines:
                 key = f"{line.kind}:{line.id}"
-                text = textwrap.shorten(line.text, 80, placeholder="...")
+                text = textwrap.shorten(factcheck_step.shown(line.text), 80, placeholder="...")
                 print(f"  {key:<15} {line.verdict or '-':<11} {textwrap.shorten(line.source, 9, placeholder='~'):<9} "
                       f"{line.round:<3} {text}")
         if report.corrections:
             print("\n## Corrections\n")
+            sung = factcheck_step.songwriter_wrote(job)
             for c in report.corrections:
-                print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}: {c.problem}", indent=2))
-                print(_wrap(f"- {c.before}", indent=4, first=4))
-                print(_wrap(f"+ {c.after}", indent=4, first=4) + "\n")
+                by = " (the songwriter's)" if (c.round, c.before) in sung else ""
+                print(_wrap(f"round {c.round}, {c.kind} {', '.join(c.ids)}{by}: {c.problem}", indent=2))
+                print(_wrap(f"- {factcheck_step.shown(c.before)}", indent=4, first=4))
+                print(_wrap(f"+ {factcheck_step.shown(c.after)}", indent=4, first=4) + "\n")
     timed = [kind for kind in media.TIMED if (job / media.timing_path(kind)).exists()]
     if timed:
         print("\n## Timing\n")

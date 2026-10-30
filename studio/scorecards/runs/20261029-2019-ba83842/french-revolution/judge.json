@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"The king went broke, the people rose\" is concrete, singable and close to the core idea, and it opens and closes the chorus. But it is two clauses of near-summary rather than a vivid action on real things, and it names the result more than the big move (asking for money and getting a vote). The lesson opens on a real question, \"How does a king's money problem end with a crowd storming a fortress?\", and the narration opens on bread (\"a poor French family could spend more than half its wages on bread\"), which is from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The pressure cooker (pot = Third Estate, lid = king's power, flame = debt) fits the whole crisis and is set up in v1-1 and v1-2, then returns in the chorus (\"the pressure grows\", \"Turn up the heat\") and the outro (\"The lid blew off\"). The lesson and narration use it too. The frame is somewhat stock, and it is dropped in the second verse and bridge. The bridge's harvest and bread are never tied to the pot, and the pyramid in the narration adds a second picture.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson walks the links in order with causes: debt, then \"The nobles refused to pay\" so the Estates-General was called, then \"wanted a real say\", then the stacked vote, then the Assembly, then the Bastille. The \"Predict\" box explains why 600 deputies still lose. Some links are thin: the lesson doesn't say why the debt pushed the king to tax the privileged, and \"why the Assembly's seizure of power led to troops\" is only implied. The narration spends time on the pyramid and the Marie Antoinette aside, which break the flow.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most lines are real steps with arrows, such as \"Voting by order → clergy and nobles outvote 2 to 1\" and \"Nobles refuse new taxes → king calls Estates-General\". The first, \"Why did France explode into revolution in 1789?\", is a question, not a step. The order is also off: the Enlightenment line comes before the nobles refusing, which breaks the chain's order, and the harvest line comes after the National Assembly but is a Third-Estate cause. The harvest line has no narration anchor, and the opening line is anchored to bread, not the king going broke. The last line lacks the core-idea payoff.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson step 3 and narration n13-n14 / key line: \"Enlightenment ideas → Third Estate wants a real say\" with Rousseau as the main thinker, while the song (v1-5) has the Third Estate reading Rousseau before the nobles refuse",
+      "problem": "Placing the Enlightenment link before the nobles' refusal in the song and key lines mixes the chain's order, though this is minor and not factually false.",
+      "correction": "Keep the order of the why chain: nobles refuse, then the Estates-General is called, then the Third Estate presses for a real say."
+    },
+    {
+      "claim": "Song c3-2: \"Outvoted, they broke away, and the king's control was lost\"",
+      "problem": "This compresses two steps, implying the break-away itself cost the king control, when control of Paris was lost only after the Bastille on 14 July.",
+      "correction": "Say the Third Estate broke away and later the king lost control of Paris when the Bastille fell."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts match the study guide: debt from wars, about half of spending on interest, the 1614 Estates-General, voting by order, 17 June, the Tennis Court Oath and 14 July with seven prisoners. The song does, however, say \"Outvoted, they broke away, and the king's control was lost\", which merges the Assembly's step with the later loss of Paris. The song's ordering also puts the Enlightenment before the nobles' refusal. Nothing is wrong enough for a learner to carry away a false claim.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a clean, chantable block (\"Taxed and hungry, the pressure grows / Turn up the heat and the whole thing blows\"), and the rhymes are mostly clean. Many verse lines run long even for rap and read like textbook captions: \"The Third Estate's six hundred, as many as the other two\" and \"Forget the queen's cake, the royal court barely made a dent\". Some rhymes are bent to land, such as \"nobody's seen\" with \"sixteen-fourteen\" and \"on its back\" with \"main tax\". The third chorus adds two long lines that break the chant.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture with the pressure cooker, and builds on causes. A Predict question (\"why couldn't it win a vote?\") is answered right after, and the misconception section names Marie Antoinette and explains why it is wrong. The closing check, \"If the crown had not been nearly bankrupt, why might the Third Estate never have gotten its chance in 1789?\", needs the core idea. The lesson carries many terms (Old Regime, Tennis Court Oath, Rousseau, bourgeoisie-like groups) and a \"What comes next\" section that could be cut.",
+    "score": 4
+  }
+}

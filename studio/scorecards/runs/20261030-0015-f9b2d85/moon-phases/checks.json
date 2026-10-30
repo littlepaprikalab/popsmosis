@@ -1,0 +1,130 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-7",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "c1-2",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "c1-3",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "v2-4",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "v2-8",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "p2-2",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "c2-2",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "c2-3",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "b-3",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "b-5",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "c3-4",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "c3-5",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "n15",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "n17",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "n20",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "n26",
+      "rule": "unlisted-name",
+      "detail": "says \"moon\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "v1-2",
+      "rule": "lyric-style",
+      "detail": "\"See how only half the ball can catch the light\" narrates the picture instead of being sung",
+      "repaired": false
+    },
+    {
+      "line_id": "v1-7",
+      "rule": "lyric-style",
+      "detail": "\"At new moon it's still half lit, but the lit half's turned away\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "b-2",
+      "rule": "lyric-style",
+      "detail": "\"The Earth is half lit too, so it has phases of its own\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "b-4",
+      "rule": "lyric-style",
+      "detail": "\"So from up there the Earth looks full, a round and shining blue\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "b-5",
+      "rule": "lyric-style",
+      "detail": "\"At full moon, the night side of the Earth is turned to you\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Buyers and sellers together set a market price: if there's a shortage the price goes up, and if there's a surplus it goes down, until the amount buyers want equals the amount sellers offer (the equilibrium price).",
+      "why": "Demand slopes down because when the price rises, fewer buyers think it's worth it, and supply slopes up because higher prices make selling more profitable. Where the two curves cross is the equilibrium price. If the price is below that, buyers want more than sellers offer, so there's a shortage; buyers compete and sellers see they can charge more, so the price rises. As it rises, quantity demanded falls and quantity supplied rises, which shrinks the gap. If the price is above equilibrium, sellers have unsold goods (a surplus), so they cut the price, which makes demand rise and supply fall, again shrinking the gap. The price stops moving when quantity demanded equals quantity supplied, because there's no shortage or surplus left to push it.",
+      "what_if": "The lesson says a price ceiling, like rent control, stops the price from rising. If the price can't go up past the cap and the cap is below equilibrium, the shortage can't close. Quantity demanded stays bigger than quantity supplied, so buyers face empty shelves and waiting lines. This happens because the price's job of fixing the shortage has been blocked. The lesson doesn't say anything more about other effects, so I can't say what else would happen."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

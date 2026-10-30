@@ -15,8 +15,9 @@
  */
 import { knob } from './knobs.js';
 
-// The studio writes and fact-checks a lesson in about 5 minutes and renews the claim
-// before each step (POST /api/questions/:id/claim), so 20 outlasts a slow step.
+// The studio takes 20 minutes or more to write and fact-check a lesson, and renews the claim
+// before each step (POST /api/questions/:id/claim) and every 5 minutes while one runs, so 20
+// holds a topic for a run that is alive however long its steps, and frees it soon after one dies.
 const DEFAULT_CLAIM_MINUTES = 20;
 
 export function claimMinutes(): number {

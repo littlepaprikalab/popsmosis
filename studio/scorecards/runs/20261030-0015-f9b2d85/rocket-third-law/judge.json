@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Push the gas back, the rocket flies\" is concrete, actions on a real thing, singable after one hearing, and it is the core idea in miniature. The lesson opens on the learner's own question, \"If there's no air in space, what does a rocket push against?\", and the narration opens on \"Out in space, high above Earth, there is no air at all,\" a vivid image but a bit remote from the learner's own world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The skateboarder throwing a medicine ball backward is an apt everyday picture of the whole job (push mass out, get pushed the other way). It is set up early in verse 1 and the lesson and narration use it. But the song drops it in the chorus and bridge, and returns to it only in the outro (\"Like the skater with the ball\"). The mapping \"hands push the ball\" does not cover the fuel and nozzle steps, which sit outside the picture.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order with causes: \"so its fuel can burn in space, where there is no air,\" gas escapes backward, \"equal and opposite force, called thrust,\" \"They act on different objects, so they do not cancel out.\" The last link (it pushes its own exhaust, so it works in space) is made through the misconception section and \"no air is needed.\" The song also carries the chain's gist. Slightly less explicit is why the hot gas is expelled, since high pressure is named but not tied to the escape.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "In order they tell the chain from the question to the zero-thrust ending, and most are steps with arrows, for example \"Action-reaction pair acts on different objects → no cancelling.\" Flaws: the first is a question, not a step. \"Skateboarder = rocket, medicine ball = exhaust gas\" is a label. The third starts at v1-7 (fuel tank) but states the burning result that is sung later at v1-9. The final line, \"Pushes its own exhaust gas, not air → works in space,\" starts on c2-4 and n20, which is the misconception, not where the step lands. The last line stops at zero thrust and does not close on the core idea, and the opening line is the question.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric p1-1: \"It's not pushin' the air, no, the air's in the way\"",
+      "problem": "Air is not 'in the way' for a rocket in the atmosphere in a way that explains anything; it only adds drag and back-pressure. The line is a rhyme-driven claim that is loose and could mislead.",
+      "correction": "Say the rocket doesn't push on the air at all; the air only adds drag and back-pressure."
+    },
+    {
+      "claim": "Lyric p1-2: \"It gets more thrust in a vacuum than it did on launch day\"",
+      "problem": "The sentence is true for a given engine but compared with 'launch day' is loose, and the reason (no outside air pressing on the exhaust) is not given in the song.",
+      "correction": "Add the reason: with no outside air pressure pushing back on the exhaust, the same engine gives somewhat more thrust in a vacuum."
+    }
+  ],
+  "accuracy": {
+    "reason": "The physics is sound: the third law, different objects so no cancelling, oxidizer, thrust, first law coasting, and slowing by firing forward are all correct. Two lyric lines are loose rather than wrong: \"the air's in the way\" and the bare \"more thrust in a vacuum\" without the reason. A teacher would tighten these, but a learner would not carry away anything wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant with clean rhymes (\"inside\"/\"flies\", \"pair\"/\"air\"). But many verse lines run long and read like captions or textbook sentences: \"There's a fuel tank and an oxidizer tank inside,\" \"Through the nozzle it escapes, super fast\" (which also has \"super fast\" as filler), and \"Gas gets momentum backward, rocket gets as much, no less.\" Several rhymes are bent: \"opposed\"/\"route\" (v2-2/v2-6), \"flies\"/\"behind\" (v2-9/v2-10), and \"as the bullet flies\" is odd grammar. Verses are 12 lines each, long for the style, and the pre-chorus names the next topic, which would not land when sung.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the learner's question, gives the big picture, builds on cause with the skateboard and step list, asks a prediction question (\"What do you think the exhaust gas does to the rocket...\") answered right away, names the misconception and why it is wrong, and ends with a check that needs the core idea. The learner meets many terms (oxidizer, combustion chamber, nozzle, thrust, action-reaction, momentum, first law), more than a first-time reader needs. The 'What's next' momentum section and the rifle/balloon examples add length that could be cut.",
+    "score": 4
+  }
+}

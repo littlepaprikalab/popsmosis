@@ -1,0 +1,2328 @@
+{
+  "course": "AP Psychology",
+  "topic": "Classical conditioning",
+  "audience": "high school",
+  "core_idea": "A signal that keeps coming right before something meaningful starts to predict it, so it triggers the response alone.",
+  "why_chain": [
+    "Food triggers drooling automatically, because it is an unconditioned stimulus that needs no learning.",
+    "A tone triggers nothing at first, because as a neutral stimulus it does not yet signal anything.",
+    "When the tone keeps coming just before the food, the dog learns that the tone predicts the food.",
+    "So the tone becomes a conditioned stimulus that triggers drooling on its own, a conditioned response.",
+    "If the tone keeps sounding without food, the drooling fades, because the tone no longer predicts the food."
+  ],
+  "key_terms": [
+    "unconditioned stimulus",
+    "unconditioned response",
+    "neutral stimulus",
+    "conditioned stimulus",
+    "conditioned response",
+    "acquisition",
+    "extinction",
+    "spontaneous recovery"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Classical conditioning is a type of learning in which an organism learns to associate two stimuli, so that a stimulus that once meant nothing comes to trigger a response on its own. Ivan Pavlov, a Russian physiologist who was studying digestion, not learning, noticed that his dogs began to salivate (drool) before food reached their mouths: at the sight of the person who fed them, or the sound of their footsteps. Food in the mouth is an unconditioned stimulus (US): it triggers salivating, the unconditioned response (UR), naturally and automatically, without learning. A sound such as a tone or a bell, before training, is a neutral stimulus (NS): the dog hears it, but it triggers no salivating, because it does not yet signal that anything is coming.",
+      "source_quote": "Ivan Pavlov, a Russian physiologist studying digestion, noticed that his dogs began to salivate before food"
+    },
+    {
+      "id": "f2",
+      "text": "Acquisition is the stage when the neutral stimulus is paired with the unconditioned stimulus again and again and the association forms: the tone (or bell) is sounded and then the food is given, many times over. It works best when the tone comes just before the food, about half a second earlier, so that the tone predicts the food. After acquisition the tone is a conditioned stimulus (CS): the once-neutral stimulus that now triggers salivating (drooling) on its own. That learned salivating at the tone is the conditioned response (CR). The UR and the CR are often the same behavior, salivating; what differs is the trigger: salivating at the food is the UR, salivating at the tone alone is the CR. A common mistake is to think the UR and the CR must be different behaviors; it is the trigger, not the behavior, that tells them apart.",
+      "source_quote": "Acquisition: the stage when the NS is paired with the US again and again, and the association forms."
+    },
+    {
+      "id": "f3",
+      "text": "Classical conditioning depends on prediction. Robert Rescorla showed that conditioning depends on how reliably the conditioned stimulus predicts the unconditioned stimulus, not just on how often they are paired: the organism learns that the CS signals the US is coming. So the CS works like a doorbell: the ring means nothing on its own, but because it comes just before someone arrives, like a pizza delivery, you learn that it announces them and get up at the ring alone, before you see who is there. A doorbell that rang at random, with nobody at the door, would announce nothing. The same learning shows up in people's everyday lives: the lunch bell is only a sound, yet students feel hungry when it rings, before any food is on their lunch tray, and people feel anxious at the sound of a dentist's drill. Biology matters too: John Garcia showed that rats who became sick hours after tasting a flavor avoided that flavor afterward, sometimes after a single pairing, so some associations are learned far more easily than others.",
+      "source_quote": "Cognition matters. Robert Rescorla showed that conditioning depends on how reliably the CS predicts the US"
+    },
+    {
+      "id": "f4",
+      "text": "Extinction: when the conditioned stimulus is presented again and again without the unconditioned stimulus (the tone sounding with nothing to eat after it), the conditioned response weakens, because the tone no longer predicts the food, so the dog drools less and less at the tone until there is little or no drool. Spontaneous recovery: after a rest, the extinguished response reappears, usually weaker, when the tone is presented again; this shows that extinction suppresses the association, holding it down, rather than erasing it. Generalization is responding to stimuli similar to the CS, such as a slightly higher tone; discrimination is the learned ability to tell the CS apart from similar stimuli that do not signal the US. In Watson and Rayner's Little Albert study (1920), a loud noise (US) caused fear (UR); after a white rat (NS) was paired with the noise several times, the rat alone (CS) caused fear (CR), and Albert's fear generalized to other furry objects. Classical conditioning links two stimuli and involves automatic responses; operant conditioning, the other kind of learning studied in the same unit, links a behavior with its consequence (reinforcement or punishment).",
+      "source_quote": "Extinction suppresses the association rather than erasing it."
+    }
+  ],
+  "misconception": "A common mistake is to think the unconditioned response and the conditioned response must be different behaviors. They are often the same behavior (salivating); what tells them apart is the trigger: the UR is triggered by the US (the food), the CR by the CS (the tone).",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a friendly textbook illustration draws it, of a school hallway beside a cafeteria: a red school bell mounted high on the hallway wall on the left, and on the right, below it, a cafeteria table with an empty green lunch tray on it. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Lunch bell",
+          "aliases": [],
+          "sam_phrase": "red bell",
+          "color_hex": "#FF5A5F"
+        },
+        {
+          "name": "Lunch tray",
+          "aliases": [
+            "tray"
+          ],
+          "sam_phrase": "green tray",
+          "color_hex": "#5BD66B"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a friendly textbook illustration draws it, of the front of a house: a wooden front door in the middle, a round yellow doorbell button on the wall to the left of the door, and a flat orange pizza box resting on the doorstep in front of the door. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Doorbell",
+          "aliases": [],
+          "sam_phrase": "yellow button",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Pizza",
+          "aliases": [],
+          "sam_phrase": "orange box",
+          "color_hex": "#FF9F43"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "us-ur",
+      "image_prompt": "Educational diagram, as an AP Psychology textbook draws Pavlov's experiment, of one white dog sitting in profile on the left of the picture, facing right, with a plain floor in front of it. In this stage an orange food bowl full of food sits on the floor just in front of the dog's mouth, and a few light blue drops of saliva hang from the dog's mouth. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Dog",
+          "aliases": [
+            "dogs"
+          ],
+          "sam_phrase": "white dog",
+          "color_hex": "#F2EDE4"
+        },
+        {
+          "name": "Food",
+          "aliases": [],
+          "sam_phrase": "orange bowl",
+          "color_hex": "#FF9F43"
+        },
+        {
+          "name": "Saliva",
+          "aliases": [
+            "drool",
+            "drooled",
+            "drools",
+            "drooling",
+            "salivating",
+            "salivated",
+            "salivates"
+          ],
+          "sam_phrase": "blue drops",
+          "color_hex": "#4FC3F7"
+        }
+      ],
+      "stage_of": "classical conditioning"
+    },
+    {
+      "id": "ns",
+      "image_prompt": "Educational diagram, as an AP Psychology textbook draws Pavlov's experiment, of one white dog sitting in profile on the left of the picture, facing right, with a plain floor in front of it. In this stage a small yellow bell stands on a low stand on the floor to the right of the dog, and the dog's mouth is closed and dry. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Dog",
+          "aliases": [
+            "dogs"
+          ],
+          "sam_phrase": "white dog",
+          "color_hex": "#F2EDE4"
+        },
+        {
+          "name": "Tone",
+          "aliases": [],
+          "sam_phrase": "yellow bell",
+          "color_hex": "#FFD23F"
+        }
+      ],
+      "stage_of": "classical conditioning"
+    },
+    {
+      "id": "during",
+      "image_prompt": "Educational diagram, as an AP Psychology textbook draws Pavlov's experiment, of one white dog sitting in profile on the left of the picture, facing right, with a plain floor in front of it. In this stage a small yellow bell stands on a low stand on the floor to the right of the dog, an orange food bowl full of food sits on the floor just in front of the dog's mouth, and a few light blue drops of saliva hang from the dog's mouth. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Dog",
+          "aliases": [
+            "dogs"
+          ],
+          "sam_phrase": "white dog",
+          "color_hex": "#F2EDE4"
+        },
+        {
+          "name": "Tone",
+          "aliases": [],
+          "sam_phrase": "yellow bell",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Food",
+          "aliases": [],
+          "sam_phrase": "orange bowl",
+          "color_hex": "#FF9F43"
+        },
+        {
+          "name": "Saliva",
+          "aliases": [
+            "drool",
+            "drooled",
+            "drools",
+            "drooling",
+            "salivating",
+            "salivated",
+            "salivates"
+          ],
+          "sam_phrase": "blue drops",
+          "color_hex": "#4FC3F7"
+        }
+      ],
+      "stage_of": "classical conditioning"
+    },
+    {
+      "id": "after",
+      "image_prompt": "Educational diagram, as an AP Psychology textbook draws Pavlov's experiment, of one white dog sitting in profile on the left of the picture, facing right, with a plain floor in front of it. In this stage a small yellow bell stands on a low stand on the floor to the right of the dog, the floor just in front of the dog's mouth is empty, and a few light blue drops of saliva hang from the dog's mouth. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Dog",
+          "aliases": [
+            "dogs"
+          ],
+          "sam_phrase": "white dog",
+          "color_hex": "#F2EDE4"
+        },
+        {
+          "name": "Tone",
+          "aliases": [],
+          "sam_phrase": "yellow bell",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Saliva",
+          "aliases": [
+            "drool",
+            "drooled",
+            "drools",
+            "drooling",
+            "salivating",
+            "salivated",
+            "salivates"
+          ],
+          "sam_phrase": "blue drops",
+          "color_hex": "#4FC3F7"
+        }
+      ],
+      "stage_of": "classical conditioning"
+    }
+  ],
+  "lesson_markdown": "## Why does a bell make you hungry?\n\nWhen the lunch bell rings, you feel hungry, even though the bell is only a sound. That is **classical conditioning**: a type of learning in which you link two stimuli, so a stimulus that once meant nothing comes to trigger a response on its own.\n\n**The big idea:** a signal that keeps coming right before something meaningful starts to predict it, so it triggers the response alone.\n\n### Think of a doorbell\n\nA doorbell's ring means nothing on its own. But it comes just before someone arrives, like a pizza delivery, so you learn that it announces them, and you get up at the ring alone, before you see who is there. In classical conditioning, the signal works like that doorbell.\n\n### Pavlov's dogs, step by step\n\nIvan Pavlov, a Russian physiologist studying digestion, noticed that his dogs salivated before food reached their mouths: at the sight of the person who fed them, or the sound of their footsteps.\n\n1. **Food triggers drooling with no learning.** Food in the mouth is the **unconditioned stimulus (US)**, and salivating at it is the **unconditioned response (UR)**: automatic and unlearned.\n2. **A tone means nothing yet.** Before training, a tone is a **neutral stimulus (NS)**. The dog hears it, but it triggers no salivating, because it does not yet signal that anything is coming.\n3. **Pairing builds a prediction.** In **acquisition**, the tone is sounded and then the food is given, again and again. It works best when the tone comes just before the food, about half a second earlier, so that the tone predicts the food.\n\nWhat do you think the dog does now when it hears the tone by itself? It salivates.\n\n4. **The tone now works alone.** The tone has become a **conditioned stimulus (CS)**, and the learned salivating at it is the **conditioned response (CR)**.\n\n| Stage | Trigger | Response |\n|---|---|---|\n| Before | Food (US) | Salivating (UR) |\n| Before | Tone (NS) | No salivating |\n| After | Tone (CS) | Salivating (CR) |\n\nWhy does pairing work? Robert Rescorla showed that conditioning depends on how reliably the CS predicts the US, not just on how often they are paired. A doorbell that rang at random, with nobody at the door, would announce nothing.\n\n### When the signal stops working\n\n- **Extinction:** if the tone sounds again and again with no food after it, the CR weakens, because the tone no longer predicts the food.\n- **Spontaneous recovery:** after a rest, the tone brings the CR back, usually weaker. Extinction suppresses the association rather than erasing it.\n\n### You've felt this\n\nThe same learning explains feeling anxious at the sound of a dentist's drill. In Watson and Rayner's Little Albert study (1920), a white rat paired with a loud noise came to cause fear on its own, and the fear generalized to other furry objects. Biology matters too: John Garcia showed that rats who became sick hours after tasting a flavor avoided it afterward, sometimes after a single pairing.\n\n### A common mistake\n\nA common mistake is to think the UR and the CR must be different behaviors. They are often the same behavior, salivating. What tells them apart is the trigger: food for the UR, the tone for the CR.\n\nDon't mix it up with **operant conditioning**, the other kind of learning in this unit: classical conditioning links two stimuli and involves automatic responses, while operant links a behavior with its consequence.\n\n### Check yourself\n\nIf the tone kept sounding but food never followed it, why would the dog's drooling at the tone fade?\n\nGot a follow-up question? Ask away.",
+  "music": {
+    "positive_styles": [
+      "Laid-back R&B with smooth, unhurried rapped verses delivered close to the mic; warm electric piano chords, a deep round bass and soft finger snaps over a gently swung hi-hat at 92 bpm; clear, warm male vocal that raps the verses with an easy, conversational flow, then slides into a smooth sung chorus wrapped in stacked falsetto harmonies; a mellow vibraphone answers the hook, and a soft two-note chime like a doorbell marks each turn into the chorus"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Learn the sound that warns you dinner's coming, that's the deal",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "The doorbell's just a ring, on its own it means nothing",
+      "names": [
+        "doorbell"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "But it rings right before the pizza, so you're up and rushing",
+      "names": [
+        "pizza"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Pavlov studied digestion when his dogs went off script",
+      "names": [
+        "dogs"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "They drooled at the feeder's footsteps before the food hit their lips",
+      "names": [
+        "drooled",
+        "food"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Food's the unconditioned stimulus, nobody had to teach it",
+      "names": [
+        "Food"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Drool's the unconditioned response, automatic when they eat it",
+      "names": [
+        "Drool"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Then a tone's a neutral stimulus, it doesn't mean a thing",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "The dog just hears the sound, its mouth stays dry at the ring",
+      "names": [
+        "dog"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "Same old drool, no new move, it's the trigger that's new",
+      "names": [
+        "drool"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Food sparks the U-R, and the tone sparks the C-R too",
+      "names": [
+        "Food",
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Pair them up till the tone says food's for real",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Like a ring at the door saying dinner's near",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Now the dog drools at the tone the moment it hears",
+      "names": [
+        "dog",
+        "drools",
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Sound the tone, then the food, and you run it again",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "About half a second early, that's the timing that wins",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "That's acquisition, with every round the link grows strong",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Now the tone's a conditioned stimulus, it says dinner won't be long",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "So the dog drools at the tone with nothing in the bowl",
+      "names": [
+        "dog",
+        "drools",
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "That's the conditioned response, now the tone's in control",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "It's why the lunch bell rings and you're hungry right away",
+      "names": [
+        "lunch bell"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "And the sound of a dentist's drill makes you anxious the same way",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Here two stimuli get paired, the drool's an automatic thing",
+      "names": [
+        "drool"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Operant's the other kind: what you do, and what it brings",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Pair them up till the tone says food's for real",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Like a ring at the door saying dinner's near",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Now the dog drools at the tone the moment it hears",
+      "names": [
+        "dog",
+        "drools",
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Now sound the tone and leave the bowl bare",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Again and again, not a bite to eat there",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "That's extinction, so the drool runs low",
+      "names": [
+        "drool"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Till the dog hears the tone and hardly a drop will show",
+      "names": [
+        "dog",
+        "tone"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Let the dog rest a while, then sound the tone once more",
+      "names": [
+        "dog",
+        "tone"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "And the drool comes back, though it's usually weaker than before",
+      "names": [
+        "drool"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "That's spontaneous recovery, the link was still in place",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "Extinction just held it down, it never got erased",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Neutral tone plus food, now the tone works alone",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Leave the meal out again and again, and the drool runs low",
+      "names": [
+        "drool"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Pair them up till the tone says food's for real",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Like a ring at the door saying dinner's near",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Now the dog drools at the tone the moment it hears",
+      "names": [
+        "dog",
+        "drools",
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Your brain learns the sound that warns you dinner's near",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Like a doorbell ringing just before the pizza's here",
+      "names": [
+        "doorbell",
+        "pizza"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Ring the bell, then bring the meal",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Why does the lunch bell make you feel hungry, when the bell is only a sound and your lunch tray is still empty?",
+      "names": [
+        "lunch bell",
+        "lunch tray"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "The answer is classical conditioning: learning to link two stimuli, so a stimulus that once meant nothing comes to trigger a response on its own.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "Think of a doorbell.",
+      "names": [
+        "doorbell"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n4",
+      "text": "Its ring means nothing on its own, but it comes just before someone arrives, like a pizza delivery, so you learn that it announces them.",
+      "names": [
+        "pizza"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n5",
+      "text": "Ivan Pavlov, a Russian physiologist studying digestion, noticed that his dogs salivated before food reached their mouths, at the sound of their feeder's footsteps.",
+      "names": [
+        "dogs",
+        "salivated",
+        "food"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "Food in the mouth is an unconditioned stimulus, because it triggers a response with no learning at all.",
+      "names": [
+        "Food"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "The saliva it triggers is the unconditioned response, and the dog never had to learn it.",
+      "names": [
+        "saliva",
+        "dog"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "Before training, a tone is a neutral stimulus.",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "The dog hears it, but its mouth stays dry, because the tone does not yet signal that anything is coming.",
+      "names": [
+        "dog",
+        "tone"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "During acquisition, the tone is sounded and then the food is given, again and again.",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "It works best when the tone comes just before the food, about half a second earlier, because then the tone predicts the food.",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "So what do you think the dog does when it hears the tone by itself?",
+      "names": [
+        "dog",
+        "tone"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n13",
+      "text": "It salivates, because the tone has become a conditioned stimulus that triggers drooling on its own.",
+      "names": [
+        "salivates",
+        "tone",
+        "drooling"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "That learned drooling is the conditioned response.",
+      "names": [
+        "drooling"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "A common mistake is to think the unconditioned and conditioned responses must be different behaviors.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "They are often the same behavior, salivating, and the trigger tells them apart: the food for one, the tone for the other.",
+      "names": [
+        "salivating",
+        "food",
+        "tone"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "Robert Rescorla showed it depends on how reliably the tone predicts the food, not just on how often they are paired.",
+      "names": [
+        "tone",
+        "food"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "A doorbell that rang at random, with nobody at the door, would announce nothing.",
+      "names": [
+        "doorbell"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "Now suppose the tone keeps sounding, but nothing to eat follows it.",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n20",
+      "text": "This is extinction: the conditioned response weakens, because the tone no longer predicts a meal.",
+      "names": [
+        "tone"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n21",
+      "text": "After a rest, the tone brings the drooling back, usually weaker.",
+      "names": [
+        "tone",
+        "drooling"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n22",
+      "text": "This spontaneous recovery shows that extinction suppresses the association rather than erasing it.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "Classical conditioning links two stimuli and involves automatic responses, while operant conditioning, studied in the same unit, links a behavior with its consequence.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n24",
+      "text": "So here is the big idea: a signal that keeps coming right before something meaningful starts to predict it, so it triggers the response alone.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n25",
+      "text": "The cause is pairing a signal with something that matters, the result is a response to the signal alone, and that is why the lunch bell makes you hungry.",
+      "names": [
+        "lunch bell"
+      ],
+      "fact_id": "f3"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Doorbell",
+        "zoom": 1.7
+      },
+      "spotlight": "Doorbell",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Pizza",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "us-ur",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Dog",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "us-ur",
+      "camera": {
+        "target": "Dog",
+        "zoom": 1.6
+      },
+      "spotlight": "Saliva",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "us-ur",
+      "camera": {
+        "target": "Food",
+        "zoom": 1.6
+      },
+      "spotlight": "Food",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "us-ur",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "ns",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "ns",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Dog",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "during",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.6
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Tone",
+            "Dog"
+          ],
+          "carries": "tone"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "during",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "after",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "after",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "Saliva",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "hook",
+      "camera": {
+        "target": "Lunch bell",
+        "zoom": 1.6
+      },
+      "spotlight": "Lunch bell",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "b-1",
+      "scene": "after",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "after",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "ns",
+      "camera": {
+        "target": "Dog",
+        "zoom": 1.6
+      },
+      "spotlight": "Dog",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "ns",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "after",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "Saliva",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "Lunch bell",
+        "zoom": 1.5
+      },
+      "spotlight": "Lunch bell",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Doorbell",
+        "zoom": 1.7
+      },
+      "spotlight": "Doorbell",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Pizza",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "us-ur",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Dog",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "us-ur",
+      "camera": {
+        "target": "Food",
+        "zoom": 1.6
+      },
+      "spotlight": "Food",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "us-ur",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "ns",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "ns",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Dog",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "n11",
+      "scene": "during",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "n12",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "after",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "Saliva",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Saliva",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "during",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.6
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Food",
+        "Dog"
+      ],
+      "carries": "food",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Tone",
+            "Dog"
+          ],
+          "carries": "tone"
+        }
+      ]
+    },
+    {
+      "line_id": "n17",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "n18",
+      "scene": "analogy",
+      "camera": {
+        "target": "Doorbell",
+        "zoom": 1.6
+      },
+      "spotlight": "Doorbell",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "after",
+      "camera": {
+        "target": "Tone",
+        "zoom": 1.6
+      },
+      "spotlight": "Tone",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "ns",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Dog",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "after",
+      "camera": {
+        "target": "Saliva",
+        "zoom": 1.7
+      },
+      "spotlight": "Saliva",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "after",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "n24",
+      "scene": "during",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Tone",
+        "Dog"
+      ],
+      "carries": "tone",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Food",
+            "Dog"
+          ],
+          "carries": "food"
+        }
+      ]
+    },
+    {
+      "line_id": "n25",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lunch bell",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How does a bell end up making you hungry?",
+      "from_narration": "n1"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Doorbell = tone, pizza = food",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Food (unconditioned stimulus) → drool (unconditioned response), unlearned",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Neutral stimulus: tone → no drool, signals nothing yet",
+      "from_narration": "n8"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "Same drool: food → UR, tone → CR",
+      "from_narration": ""
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Tone just before food, again and again → acquisition",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v2-4",
+      "text": "Tone predicts food → conditioned stimulus triggers conditioned response",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Tone without food → drool weakens: extinction",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "b-5",
+      "text": "Rest, tone again → drool returns: suppressed, not erased",
+      "from_narration": "n21"
+    }
+  ],
+  "tags": {
+    "song": [
+      "classicalconditioning",
+      "pavlov",
+      "appsych",
+      "psychology",
+      "conditionedresponse",
+      "extinction",
+      "rnb",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "classicalconditioning",
+      "pavlov",
+      "appsych",
+      "psychology",
+      "conditionedresponse",
+      "extinction",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

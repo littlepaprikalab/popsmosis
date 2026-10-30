@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Classical conditioning is learning in which a signal that keeps coming right before something meaningful starts to predict it, so the signal alone triggers the response.",
+      "why": "First, food (the US) automatically makes a dog salivate (the UR), with no learning needed. A tone starts out as a neutral stimulus, so the dog doesn't react to it. Then, in acquisition, the tone is sounded and food follows about half a second later, over and over. The dog learns the tone predicts food. After that the tone is a conditioned stimulus and salivating at it is the conditioned response. The lesson says it works because of how reliably the CS predicts the US (Rescorla), not just how often they are paired, like a doorbell that rang when nobody was there would announce nothing.",
+      "what_if": "If the prediction part stopped working, meaning the tone kept sounding but food never followed, the lesson calls this extinction. The dog's drooling at the tone would weaken because the tone no longer predicts food. It wouldn't be fully erased, though, since after a rest spontaneous recovery can bring the response back, usually weaker. The lesson doesn't say exactly how many times it takes for the response to fade."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

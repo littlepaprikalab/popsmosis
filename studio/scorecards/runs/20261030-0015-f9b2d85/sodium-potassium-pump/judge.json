@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Three sodium out, two potassium in\" is concrete, singable after one hearing, and opens and closes the chorus. But it names only the pump's count, one part of the cycle, and not the big move of spending energy to pile ions up so they rush back. The lesson opens on a real question (\"Why does a neuron spend energy even when it's resting?\"), and the narration opens on touching something hot, which comes from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The water tower is an apt whole-job picture (a pump spends energy uphill so that any open faucet rushes out), and it is set up early in the lesson, narration (n3-n4) and song (v1-1). It carries through the chorus (\"Fill up the tower so the taps can run\"), the outro, and the bridge (\"the tower's down to a drip\"). It maps cleanly onto the leaking and the stored energy. The mid-song verses on the cycle and the ouabain bridge lean on it less.",
+    "score": 5
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk through leak, then energy cost, then phosphorylation and shape change, then stored energy rushing when channels open, then resting potential and action potential, each with a \"so\". The song carries the gist. Link 5 is thinner: the lesson says K⁺ leaking out sets the resting potential but not why. It also does not say that the channels' selective permeability is what ties the gradient to the voltage. Link 4's statement that potassium leaks out is also only briefly explained.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "They run in order and most are steps with arrows, such as \"Ions leak back down gradients → pump must run nonstop\" and \"Sodium channels open → Na⁺ rushes in → action potential\". Weaknesses: the first line is a question, not a step, and does not match the lyric it starts on. The second, \"Water pump filling a tower = sodium-potassium pump\", is a label. \"ATP → ADP + Pᵢ\" uses notation not in the lesson. The chain never reaches the stored-energy link, \"gradients are stored energy → rush when channels open\", and ends on the poison, not the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric p1-2 \"Potassium channels let it out and set it right\" with p1-1 \"It's not the pump that resets each spike\" (pre-chorus)",
+      "problem": "The line is vague about what is let out and reset, and it can read as potassium channels restoring the gradients, when they only repolarize the membrane.",
+      "correction": "Say that potassium flowing out through its channels repolarizes the membrane, while the pump only restores the gradients slowly over many signals."
+    },
+    {
+      "claim": "Lyric v2-4 \"Three charges went out, only two came back\" and narration n18 \"Each cycle leaves the inside slightly more negative\" (also the lesson's Predict)",
+      "problem": "This is correct, but a learner could carry away that the pump itself mainly makes the resting potential. It is hedged in the lesson, not in the song.",
+      "correction": "In the song, add that the pump's own contribution is only a few millivolts."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts are mostly right: the 3 Na⁺ out for 2 K⁺ in, one ATP per cycle, the 10× and 30× gradients, the resting potential set mainly by K⁺ leak, and the misconception about repolarization. The two items above are imprecisions, not real errors. The song's v1-7 \"Foxglove gave a heart drug that slows this pump down\" is fine. Saying that \"Ouabain... locks the pump from outside\" is also right.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong, repeatable chant, and most lines are whole phrases that rhyme cleanly, such as \"so the neuron's ready\" and \"the sodium floods in / the signal begins\". Weaker points: the rhymes \"inside / inside\" (b-1/b-2) and \"face / shape\" (v1-5/v1-6) are slant or repeated; pre-chorus lines such as \"The sodium gradient hauls glucose inside\" read like facts; and several verse lines run long for the bar, such as v2-3 \"It drops them in the cytoplasm, where potassium's packed\". The verses also read as textbook captions in spots.",
+    "score": 4
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big idea, builds on why with \"so\" links, and has a Predict question answered at once (\"slightly more negative\"). It names the misconception and why it is wrong, and ends on a good check (\"why does stopping it eventually stop a neuron from firing?\") that needs the core idea. Weaknesses: it adds many new terms (phosphorylation, resting membrane potential, secondary active transport, ATP synthase, osmosis) for high school, and side material such as glucose transport, mitochondria, and ouabain could be cut. The table also adds a list-like feel.",
+    "score": 4
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A catalyst speeds up a reaction by giving the reactants a different, lower-energy route (a lower activation energy), so a larger fraction of collisions have enough energy to react, and the catalyst itself isn't used up.",
+      "why": "First, molecules only react if they collide with the right orientation and at least the activation energy, enough to reach the transition state at the top of the energy hump. Second, at a given temperature only a small fraction of collisions have that much energy, so a high barrier means a slow reaction. Third, the catalyst provides a different reaction mechanism that has a lower activation energy. Fourth, because the barrier is lower, many more collisions have enough energy, so the rate constant and the reaction rate go up. In the iodide example, iodide is used up in step 1 but given back in step 2, so it can keep working again and again and doesn't appear in the overall equation. The lesson also says the catalyst doesn't change the reactant and product energies, ΔH, or the equilibrium K; it just gets the system to equilibrium faster.",
+      "what_if": "If the active sites on a catalytic converter's platinum stopped working, for example because lead from leaded gasoline coated the metal, carbon monoxide and oxygen couldn't stick to the surface and have their bonds weakened. The low-barrier path would be gone, leaving only the slow, high-barrier path, so most of the carbon monoxide would leave unconverted even though the reactants are still present. The lesson doesn't explain in more detail why the uncatalyzed path is so slow beyond its high activation energy."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Sun lights half, the Moon goes round\" is concrete and sings back easily, and it is the core idea in miniature. It uses actions on real things, but it names two parts (half lit, orbit) and leaves out the \"we see more or less\" move. The lesson opens on a real question, \"If the Moon is a round ball, why does it look like a thin sliver on some nights and a full circle on others?\" The narration opens on the learner's world: \"Just after sunset, you can often see a thin Moon near where the Sun went down.\"",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The lamp and ball is a strong model that does the whole job, \"the lamp is the Sun, the ball is the Moon, and your head is Earth\". The song sets it up in v1-1 and the lesson and narration use it. But it drops out of the chorus, bridge and outro, and the song never mentions it again after v1. The day/night comparison is a second, side picture, and it does not fit inside the model. The frame is apt but is not carried through the whole song.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "All five links appear in order in the lesson, and the narration covers them: no light of its own (n8), half always lit (n9), orbit (n11), each place shows a different amount (n12-n17), and the same path gives a repeating cycle (n20). Link 4 is taught mostly by describing each phase's position, not by stating the cause each time. Link 5 says \"the same order repeats\" but the narration doesn't say that the same path is why. The song carries the gist in c3-1/c3-2.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The first line, \"Why does the Moon change shape?\", is a question, not a step. The last, \"Earth blocks sunlight → lunar eclipse, only at full moon\", is off the core idea and the core idea is never stated. The \"Lamp = Sun, ball = Moon, your head = Earth\" line is a label. There is no line for link 4, the view changing with each new place, and the on-screen lines never close on the core idea. The middle lines are plain, short steps that start where they are sung and said.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson and narration (n12-n13, \"At new moon... the Moon's far side... is fully lit\"; lesson \"Here's a surprise: at new moon, the Moon's far side... is fully lit\")",
+      "problem": "The lesson's earlier text says the Moon turns once per orbit, and the Sun-facing half at new moon is indeed the far side. This is correct, but \"the Moon's far side\" is stated without the Moon's rotation being explained in the lesson or narration, so the learner could mix it up with the dark side.",
+      "correction": "Add a short note that the Moon spins once each orbit, so the same side always faces Earth, which is why the far side is the lit half at new moon."
+    }
+  ],
+  "accuracy": {
+    "reason": "The science is correct throughout: the phase order, the 29.5 days, the lit-half model, and the eclipse and 5-degree tilt facts. The claim that the lit far side at new moon is the far side is true, and the song's \"new to full is waxing\" is accurate. The only weakness is a gap: the Moon's rotation is not explained when the far side is brought in, and the \"Simplified\" note covers only the week spacing. A teacher would tighten that, but nothing a learner would carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a short, easy chant: \"Sun lights half, the Moon goes round\". Many verse lines fit the bar. Others are long, like v2-8 \"So the cycle repeats in the same order, phase by phase\" and v2-7 \"Back to new in about twenty-nine and a half days\", and the bridge lines b-5, b-7 and b-8 run over. The pre-chorus p2-1/p2-2 reads like a textbook preview. The rhymes are mostly clean, but \"phase by phase\" is a filler tag and \"seen from the ground\" is a bit forced. The bridge covers eclipses, which pulls it off the core idea.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a real question, builds from the lamp-and-ball model, asks a prediction question (\"what do you think we see when the Moon is on the far side of Earth from the Sun?\") and answers it right after. It names the misconception and says why it is wrong, and it ends on a check that needs the idea: \"why can't we see the Moon at all at new moon?\" It carries many terms (waxing, waning, crescent, gibbous, quarter, orbit) and the eclipse and tilt material, which is more than a first-time 11-year-old needs and could be cut.",
+    "score": 4
+  }
+}

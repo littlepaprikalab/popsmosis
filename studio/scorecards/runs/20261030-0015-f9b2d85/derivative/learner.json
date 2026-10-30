@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A derivative is the rate at which something is changing at one exact instant, found by shrinking the gap between two points on a graph until the average slope settles on a single number, the slope of the tangent line.",
+      "why": "First, a rate needs two points, because one point alone has no change to divide. So you take two points, x = a and x = a + h, and compute the difference quotient (f(a + h) − f(a)) / h, which is the slope of the secant line through them. That only gives an average, which can hide speeding up and slowing down. So you make h smaller, which slides the second point toward the first, and the secant line tips toward the tangent line. You can't just plug in h = 0 because that gives 0/0, which has no value. Instead you take the limit as h approaches 0, the number the slopes settle on. For x² at x = 3, the slopes go 7, 6.1, 6.01 and settle on 6, so f′(3) = 6. That limit is the derivative, the slope of the tangent line, like a speedometer reading.",
+      "what_if": "Take the limit step. If we just set h = 0 instead of letting h approach 0, the difference quotient would be 0/0, which has no value, so we would get no answer for the instantaneous rate. The lesson says the limit is what lets us get one number from the slopes settling down. The lesson also shows what happens when the limit fails: for |x| at x = 0, the slopes approach 1 from the right and −1 from the left, so the limit does not exist and there is no derivative there."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

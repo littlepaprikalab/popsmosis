@@ -1,0 +1,2222 @@
+{
+  "course": "AP Statistics",
+  "topic": "What a p-value means",
+  "audience": "high school",
+  "core_idea": "A p-value is how often chance alone would give results this extreme; tiny means we doubt the null hypothesis.",
+  "why_chain": [
+    "A test starts by assuming the null hypothesis is true, the way a jury presumes innocence.",
+    "That assumption fixes the sampling distribution: the results chance alone could produce.",
+    "The p-value is the chance, under that assumption, of a result at least as extreme as yours.",
+    "A tiny p-value means your result would rarely happen if the null were true, so you doubt the null.",
+    "When the p-value is below the significance level, you reject the null hypothesis."
+  ],
+  "key_terms": [
+    "p-value",
+    "null hypothesis",
+    "alternative hypothesis",
+    "sampling distribution",
+    "significance level",
+    "statistically significant",
+    "Type I error"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "A significance test starts from two claims. The null hypothesis says nothing unusual is going on: for a coin, that it is fair, so the chance of heads is 0.5. The alternative hypothesis says something is going on: for example, that the coin favors heads. A test works like a courtroom trial, the picture for the whole idea. The defendant is presumed innocent, just as the test assumes the null hypothesis is true. The jury weighs each exhibit of evidence by asking how unlikely it would be if the defendant were innocent, just as the test asks how unlikely the data would be if the null hypothesis were true. Rejecting the null hypothesis matches a guilty verdict. A not-guilty verdict does not prove the defendant innocent, and in the same way failing to reject the null hypothesis does not prove it true, so statisticians never say they accept the null hypothesis. Everyday example: someone's lucky coin lands heads 16 times in 20 flips, which raises the question of whether the coin is rigged or the result was just luck.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "A p-value is the probability, calculated assuming the null hypothesis is true, of getting a result as extreme as or more extreme than the one actually observed, in the direction of the alternative hypothesis. It is pictured with the sampling distribution: all the results the test could produce by chance alone if the null hypothesis were true, drawn as a curve or histogram. The observed result is marked on it, and the p-value is the area of the tail beyond it. For a fair coin flipped 20 times, the number of heads centres on 10. A result of 16 heads sits far out in the right tail. The chance of 16 or more heads is about 0.006, so a fair coin does that only about 6 times in 1,000 sets of 20 flips. A small p-value means the observed result would rarely happen if the null hypothesis were true, so it is evidence against the null hypothesis and for the alternative. The smaller the p-value, the stronger that evidence. A large p-value means the result is the kind of result chance alone often produces. Finding a p-value is like finding the tail area under a Normal curve from a z-score. It is also like counting how often a simulation earlier in the course gave a result at least as extreme.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "Before collecting data, the tester chooses a significance level, written alpha, most often 0.05. It marks a cutoff in the tail of the sampling distribution: only results beyond that cutoff, which are rare if the null hypothesis is true, have p-values below alpha. If the p-value is less than alpha, the result is called statistically significant and the null hypothesis is rejected; otherwise the tester fails to reject the null hypothesis. A jury convicts only when the evidence meets its standard of proof, and in the same way the test rejects the null hypothesis only when the p-value is below alpha. With alpha at 0.05, 16 heads in 20 flips, with its p-value of about 0.006, is statistically significant. So the null hypothesis that the coin is fair is rejected, and there is convincing evidence the coin favors heads. A common mistake is to think the p-value is the probability that the null hypothesis is true. It is not: the p-value is calculated by assuming the null hypothesis is true, so it gives the chance of data this extreme if the null is true, not the chance that the null is true. A p-value also does not measure how large or important an effect is. Comparing the p-value with alpha leads to the next topic in the unit: Type I errors, Type II errors and power.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "Rejecting a null hypothesis that is actually true is a Type I error, and the significance level is its probability. If the null hypothesis is true and alpha is 0.05, about 1 test in 20 will still give a p-value below 0.05, a statistically significant result, by chance alone. So every decision made from a p-value carries a risk of error. Running many tests multiplies this risk. Suppose 20 independent tests are run on null hypotheses that are all true, with no real effect to find, each at alpha 0.05. Then the chance that at least one comes out statistically significant is about 64%, and any such result is a Type I error. A study that runs many tests and reports only the significant one can present a fluke as a discovery. When the study is repeated, the effect will most likely disappear, because there was never a real effect to find.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "Many students think the p-value is the probability that the null hypothesis is true. It is not: the p-value is calculated by assuming the null is true, so it is the chance of data this extreme if the null were true, not the chance the null is true.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as an AP Statistics textbook opens a chapter, of a single gold coin lying heads up on a wooden table, large in the centre of the picture and seen from slightly above. The coin's face shows a simple embossed profile. A person's relaxed hand rests on the table beside it. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Lucky coin",
+          "aliases": [
+            "lucky coin"
+          ],
+          "sam_phrase": "gold coin",
+          "color_hex": "#F2C230"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a civics textbook draws it, of a simple courtroom seen from the front. The judge's wooden bench stands at the back in the centre. On the left, the defendant sits at a wooden table, wearing a light blue suit. In the centre foreground, a small table holds an orange evidence box. On the right, a jury box tinted green holds seated jurors. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Defendant",
+          "aliases": [
+            "defendant"
+          ],
+          "sam_phrase": "blue suit",
+          "color_hex": "#5DADE2"
+        },
+        {
+          "name": "Exhibit",
+          "aliases": [
+            "exhibit"
+          ],
+          "sam_phrase": "orange box",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "Jury",
+          "aliases": [
+            "jury"
+          ],
+          "sam_phrase": "green box",
+          "color_hex": "#4CD964"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as an AP Statistics textbook draws it, of a sampling distribution. A smooth, light blue bell-shaped curve sits in the centre of the picture on a white horizontal axis that runs across the lower part. A thin vertical orange line stands on the axis far out on the right side of the curve. The small area under the curve to the right of the orange line is filled pink. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Sampling distribution",
+          "aliases": [
+            "sampling distribution"
+          ],
+          "sam_phrase": "blue curve",
+          "color_hex": "#5DADE2"
+        },
+        {
+          "name": "Observed result",
+          "aliases": [
+            "observed result",
+            "your result"
+          ],
+          "sam_phrase": "orange line",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "p-value",
+          "aliases": [],
+          "sam_phrase": "pink sliver",
+          "color_hex": "#FF66A8"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "alpha-detail",
+      "image_prompt": "Educational diagram, as an AP Statistics textbook draws it, of a sampling distribution. A smooth, light blue bell-shaped curve sits in the centre of the picture on a white horizontal axis that runs across the lower part. A thin vertical bright green line stands on the axis on the right side of the curve, partway down its slope. Further right, a thin vertical orange line stands far out in the curve's right tail. The small area under the curve to the right of the orange line is filled pink. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Sampling distribution",
+          "aliases": [
+            "sampling distribution"
+          ],
+          "sam_phrase": "blue curve",
+          "color_hex": "#5DADE2"
+        },
+        {
+          "name": "Significance level",
+          "aliases": [
+            "significance level",
+            "alpha"
+          ],
+          "sam_phrase": "green line",
+          "color_hex": "#4CD964"
+        },
+        {
+          "name": "Observed result",
+          "aliases": [
+            "observed result",
+            "your result"
+          ],
+          "sam_phrase": "orange line",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "p-value",
+          "aliases": [],
+          "sam_phrase": "pink sliver",
+          "color_hex": "#FF66A8"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "many-tests",
+      "image_prompt": "Educational diagram, as an AP Statistics textbook draws it, of twenty small identical bell-shaped curves arranged in four even rows of five across the picture. Each curve is a light purple outline on its own short white axis. One curve in the bottom row has the small area under its far right tail filled red. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Twenty tests",
+          "aliases": [
+            "twenty tests"
+          ],
+          "sam_phrase": "purple curves",
+          "color_hex": "#B39DFF"
+        },
+        {
+          "name": "Type I error",
+          "aliases": [
+            "Type One error"
+          ],
+          "sam_phrase": "red sliver",
+          "color_hex": "#FF5A4E"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "# What a p-value really means\n\n**A coin lands heads 16 times in 20 flips. Is it rigged, or was that just luck?**\n\nA p-value helps answer exactly that. It tells you how often chance alone would give results as extreme as yours, and when it's tiny, you doubt the null hypothesis.\n\n## Think like a courtroom\n\nA significance test works like a trial. A jury presumes the defendant innocent; a test assumes the **null hypothesis** is true. Here the null says the coin is fair, so the chance of heads is 0.5. The **alternative hypothesis** is the claim you're looking for evidence for: the coin favors heads. Then, like a jury weighing each exhibit, you ask how unlikely your data would be if the null were true.\n\n## Why it works, step by step\n\n1. **Assume the null is true.** The p-value is calculated under that assumption.\n2. **Picture the sampling distribution.** It shows all the results the test could produce by chance alone if the null were true. For 20 flips of a fair coin, the number of heads centres on 10.\n3. **Mark your result and shade the tail.** 16 heads sits far out in the right tail. The p-value is the probability, assuming the null is true, of a result as extreme as yours or more extreme: the area of the tail beyond it.\n4. **Judge the surprise.** A small p-value means your result would rarely happen if the null were true, so it is evidence against the null. The smaller the p-value, the stronger that evidence.\n\n**Predict:** if the coin really is fair, how often would 20 flips give 16 or more heads? Only about 6 times in 1,000 sets of 20 flips, which is a p-value of about 0.006.\n\nIf you've found a tail area under a Normal curve from a z-score, or counted how often a simulation gave a result at least as extreme, you've already done something very like this.\n\n## Making the call\n\nBefore collecting data, you choose a **significance level**, α, most often 0.05.\n\n| Result | Decision | Courtroom |\n|---|---|---|\n| p-value < α | Reject the null: the result is **statistically significant** | Guilty |\n| p-value ≥ α | Fail to reject the null | Not guilty |\n\nWith α = 0.05, a p-value of about 0.006 is statistically significant, so there is convincing evidence the coin favors heads. A not-guilty verdict doesn't prove innocence, and failing to reject doesn't prove the null true, so never say you \"accept\" the null.\n\n## The common mistake\n\nA common mistake is to think the p-value is the probability that the null hypothesis is true. It isn't: the p-value is calculated by assuming the null is true, so it gives the chance of data this extreme if the null is true, not the chance that the null is true. It also doesn't tell you how big or important an effect is.\n\n## Why it matters\n\nRejecting a null that is actually true is a **Type I error**, and α is its probability. Even when the null is true, about 1 test in 20 at α = 0.05 comes out significant by chance alone. Run 20 tests where every null is true, and the chance that at least one looks significant is about 64%. Report only that one, and a fluke looks like a discovery that will most likely vanish when the study is repeated. That's where the unit goes next: Type I errors, Type II errors and power.\n\n**Check yourself:** Why can't a p-value of 0.006 mean there's a 0.6% chance the coin is fair?\n\nHave a follow-up question? Ask away!",
+  "music": {
+    "positive_styles": [
+      "Glossy electropop with crisp, rhythmic rapped verses; a pulsing sidechained synth bass and shimmering arpeggios that sparkle like a ticking counter, over tight claps and a clean four-to-the-floor kick; buoyant, driving 108 bpm groove; clear, bright female vocal, cool and precise in the rapped verses, lifting into a euphoric, airy sing-along chorus with stacked harmonies; arpeggiated synths lead, a warm pad swells under the hook, finger snaps accent the pre-chorus"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Sixteen heads in twenty flips, is this lucky coin fair?",
+      "names": [
+        "lucky coin"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "In a courtroom, the defendant starts out clean",
+      "names": [
+        "defendant"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "The jury asks: if they're innocent, how often's this exhibit seen?",
+      "names": [
+        "jury",
+        "exhibit"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "A test plays the same game: assume the null is true",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Nothing going on, a fair coin, heads one time out of two",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "The alternative says something's up: the coin likes heads",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Sixteen in twenty flips, was it luck, or rigged instead?",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "The sampling distribution's every count a fair coin makes",
+      "names": [
+        "sampling distribution"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "For twenty flips it centers on ten, give or take",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-9",
+      "section": "verse",
+      "text": "Mark your result, sixteen heads, way out on the right",
+      "names": [
+        "your result"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-10",
+      "section": "verse",
+      "text": "The tail beyond it is your p-value, skinny and slight",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-11",
+      "section": "verse",
+      "text": "A fair coin does that about six times in a thousand tries",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-12",
+      "section": "verse",
+      "text": "That's so rare, the fair-coin story gets a side-eye",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "pc1-1",
+      "section": "pre-chorus",
+      "text": "You assumed the null to find it, right from the start",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "pc1-2",
+      "section": "pre-chorus",
+      "text": "It's not the chance the null is true, tell the two apart",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "How often luck alone would land out there",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "That's your p-value: tiny means you doubt the null",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Under alpha, you reject it, that's the call",
+      "names": [
+        "alpha"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Pick alpha before the flips, most often point oh five",
+      "names": [
+        "alpha"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "It marks a cutoff in the tail, where only rare results arrive",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Point oh oh six is less than alpha, so we decide",
+      "names": [
+        "alpha"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "It's statistically significant, so the fair-coin null's denied",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "That's convincing evidence the coin is leaning heads",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Like a guilty verdict, that's what the jury said",
+      "names": [
+        "jury"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "But not guilty never proves they're innocent, and so",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Fail to reject won't prove the null, so saying accept's a no",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-9",
+      "section": "verse",
+      "text": "Here's the twist: with a true null and alpha at point oh five",
+      "names": [
+        "alpha"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-10",
+      "section": "verse",
+      "text": "About one test in twenty still says significant, surprise",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-11",
+      "section": "verse",
+      "text": "So your p-value turns the data into a call you make",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-12",
+      "section": "verse",
+      "text": "Reject or fail to reject, with a risk of error at stake",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "pc2-1",
+      "section": "pre-chorus",
+      "text": "Reject a null that's true? That's a Type One error",
+      "names": [
+        "Type One error"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "pc2-2",
+      "section": "pre-chorus",
+      "text": "Next up, Type Two and power, and the picture's getting clearer",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "How often luck alone would land out there",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "That's your p-value: tiny means you doubt the null",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Under alpha, you reject it, that's the call",
+      "names": [
+        "alpha"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Run twenty tests where every null is true",
+      "names": [
+        "twenty tests"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Each at point oh five, so what will luck do?",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "The chance at least one comes up significant",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "About sixty-four percent, with no real effect present",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "That one's a Type One error, just luck that slipped on through",
+      "names": [
+        "Type One error"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "Report it alone and the fluke looks like something new",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Run the study again, and the effect's most likely gone",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "There was never a real effect, the null was true all along",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Small p-value, strong evidence against the null",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Big p-value, chance alone could do it all",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "How often luck alone would land out there",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "That's your p-value: tiny means you doubt the null",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Under alpha, you reject it, that's the call",
+      "names": [
+        "alpha"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Sixteen heads in twenty flips, is this lucky coin fair?",
+      "names": [
+        "lucky coin"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Like a trial, start from innocent, then weigh the proof with care",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Assume it's chance, then ask how rare",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Imagine a lucky coin that lands heads sixteen times in twenty flips.",
+      "names": [
+        "lucky coin"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n2",
+      "text": "Is the coin rigged, or was that just luck?",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "A significance test works like a courtroom trial.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "In a trial, the defendant is presumed innocent.",
+      "names": [
+        "defendant"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "Then the jury weighs each exhibit, asking how unlikely it would be if the defendant were innocent.",
+      "names": [
+        "jury",
+        "exhibit",
+        "defendant"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "A test does the same thing, starting by assuming the null hypothesis is true.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "Here the null says the coin is fair, so heads comes up half the time.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "The alternative hypothesis says the coin favors heads.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "If the coin is fair, the sampling distribution shows all the results chance alone could produce.",
+      "names": [
+        "sampling distribution"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n10",
+      "text": "For twenty flips, it centers on ten heads.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "Now mark the observed result, sixteen heads, far out in the right tail.",
+      "names": [
+        "observed result"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "The p-value is the chance, if the null is true, of a result at least as extreme as ours.",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "On the picture, it is the area of the tail beyond your result.",
+      "names": [
+        "your result"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "So how often would a fair coin give sixteen or more heads?",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "Only about six times in a thousand sets of twenty flips, a p-value of about point zero zero six.",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "That would rarely happen with a fair coin, so it is evidence against the null hypothesis.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "A common mistake is to think the p-value is the probability that the null hypothesis is true.",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "It is not, because we assumed the null was true to calculate it.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "To decide, we choose a significance level before collecting data, most often point zero five.",
+      "names": [
+        "significance level"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "It marks a cutoff in the tail.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "Our p-value of about point zero zero six is below that, so the result is statistically significant.",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "We reject the null hypothesis: there is convincing evidence the coin favors heads.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "That matches a guilty verdict, and just as not guilty never proves innocence, failing to reject never proves the null true.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n24",
+      "text": "There is a catch: even when the null is true, about one test in twenty still comes out significant.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "Rejecting a null hypothesis that is actually true is called a Type One error.",
+      "names": [
+        "Type One error"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Now picture twenty tests where every null is true.",
+      "names": [
+        "twenty tests"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "The chance at least one comes out statistically significant is about sixty-four percent.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Report only that one, and a fluke looks like a discovery, likely to vanish when the study is repeated.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "Weighing these risks comes next in the unit: Type One errors, Type Two errors and power.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n30",
+      "text": "Here's the big idea: a p-value is how often chance alone would give results this extreme; tiny means we doubt the null hypothesis.",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n31",
+      "text": "A result far out in the tail means a small p-value, which is evidence against the null.",
+      "names": [
+        "p-value"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n32",
+      "text": "That's how a test weighs a rigged coin against just luck.",
+      "names": [],
+      "fact_id": "f1"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Lucky coin",
+        "zoom": 1.6
+      },
+      "spotlight": "Lucky coin",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Exhibit",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Exhibit",
+        "zoom": 1.6
+      },
+      "spotlight": "Exhibit",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sampling distribution",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sampling distribution",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-9",
+      "scene": "overview",
+      "camera": {
+        "target": "Observed result",
+        "zoom": 1.6
+      },
+      "spotlight": "Observed result",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-10",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.8
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-11",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.8
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "pc1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "pc1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Observed result",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "α = 0.05",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Observed result",
+        "zoom": 1.6
+      },
+      "spotlight": "Observed result",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Jury",
+        "zoom": 1.6
+      },
+      "spotlight": "Jury",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-9",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-10",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-11",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-12",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "pc2-1",
+      "scene": "many-tests",
+      "camera": {
+        "target": "Type I error",
+        "zoom": 1.8
+      },
+      "spotlight": "Type I error",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "pc2-2",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Observed result",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Twenty tests",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Twenty tests",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "many-tests",
+      "camera": {
+        "target": "Type I error",
+        "zoom": 1.8
+      },
+      "spotlight": "Type I error",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "many-tests",
+      "camera": {
+        "target": "Type I error",
+        "zoom": 1.8
+      },
+      "spotlight": "Type I error",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Twenty tests",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sampling distribution",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Observed result",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "Lucky coin",
+        "zoom": 1.6
+      },
+      "spotlight": "Lucky coin",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "Lucky coin",
+        "zoom": 1.6
+      },
+      "spotlight": "Lucky coin",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Exhibit",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "analogy",
+      "camera": {
+        "target": "Defendant",
+        "zoom": 1.6
+      },
+      "spotlight": "Defendant",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sampling distribution",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sampling distribution",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "Observed result",
+        "zoom": 1.6
+      },
+      "spotlight": "Observed result",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.8
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.8
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "Significance level",
+        "zoom": 1.6
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Significance level",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "many-tests",
+      "camera": {
+        "target": "Type I error",
+        "zoom": 1.8
+      },
+      "spotlight": "Type I error",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Twenty tests",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "many-tests",
+      "camera": {
+        "target": "Type I error",
+        "zoom": 1.8
+      },
+      "spotlight": "Type I error",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "many-tests",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "p-value",
+        "zoom": 1.6
+      },
+      "spotlight": "p-value",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n32",
+      "scene": "alpha-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "If it's only chance, how rare is your result?",
+      "from_narration": "n2"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Presumed innocent = null hypothesis assumed true",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Null true → sampling distribution of chance results",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "v1-10",
+      "text": "p-value = chance of a result at least this extreme",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "v1-12",
+      "text": "Tiny p-value → rare if null true → doubt the null",
+      "from_narration": "n16"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "p-value < significance level → reject the null hypothesis",
+      "from_narration": "n21"
+    },
+    {
+      "from_line": "v2-9",
+      "text": "True null rejected about 1 in 20 → Type I error",
+      "from_narration": "n24"
+    },
+    {
+      "from_line": "b-1",
+      "text": "20 true-null tests → about 64% chance of a fluke",
+      "from_narration": "n26"
+    }
+  ],
+  "tags": {
+    "song": [
+      "pvalue",
+      "significancetest",
+      "nullhypothesis",
+      "statistics",
+      "apstats",
+      "significancelevel",
+      "electropop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "pvalue",
+      "significancetest",
+      "nullhypothesis",
+      "statistics",
+      "apstats",
+      "significancelevel",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}
