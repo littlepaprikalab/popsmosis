@@ -28,7 +28,7 @@ const COMMENT_BODY_LIMIT = 16 * 1024;
  * session is only verified for that, never renewed, so a public response sets no cookie.
  *
  * Liking and commenting need a signed-in person, and act only on a droplet that is on
- * the tab: READY and not hidden. Taking your own back (unliking, deleting your comment)
+ * the tab: READY, not hidden, and not awaiting review. Taking your own back (unliking, deleting your comment)
  * works whatever the droplet's state.
  */
 export default async function dropletRoutes(app: FastifyInstance) {
@@ -90,7 +90,7 @@ export default async function dropletRoutes(app: FastifyInstance) {
              "songVideoUrl", "lessonVideoUrl", "songPosterUrl", "lessonPosterUrl", "hookVideoUrl", "hookPosterUrl",
              "likeCount", "commentCount", "songTags", "lessonTags", ${liked} AS liked
       FROM answers
-      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL ${tagged} ${clipped} ${from}
+      WHERE "videoStatus" = 'READY' AND "hiddenAt" IS NULL AND "awaitingReviewSince" IS NULL ${tagged} ${clipped} ${from}
       ORDER BY "createdAt" DESC, id DESC
       LIMIT ${take}
     `;
@@ -204,7 +204,8 @@ export default async function dropletRoutes(app: FastifyInstance) {
         // counts it (prisma/migrations/20261031120000_droplet_engagement).
         await prisma.$executeRaw`
           INSERT INTO droplet_likes ("answerId", "userId")
-          SELECT id, ${userId} FROM answers WHERE id = ${id} AND "videoStatus" = 'READY' AND "hiddenAt" IS NULL
+          SELECT id, ${userId} FROM answers
+          WHERE id = ${id} AND "videoStatus" = 'READY' AND "hiddenAt" IS NULL AND "awaitingReviewSince" IS NULL
           ON CONFLICT DO NOTHING
         `;
       } catch (err) {

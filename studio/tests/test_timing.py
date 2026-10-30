@@ -422,3 +422,31 @@ def test_jobs_on_one_machine_time_their_songs_in_turn(tmp_path):
     for t in threads:
         t.join()
     assert max(most) == 1
+
+
+def test_a_song_that_does_not_sing_its_lyrics_fails_the_step_and_is_made_again_on_the_retry(made, monkeypatch):
+    """More than half the lines unsure: the singer sang something else. The step fails, the song goes (the narration
+    stays), and the retry's audio step makes only the song again."""
+    monkeypatch.setattr(timing, "separate_vocals", lambda job: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([], score=0.1))
+    monkeypatch.setattr(audio, "duration", lambda path: 30.1)
+    with pytest.raises(media.StepFailed, match=r"the song does not sing its lyrics: the aligner could not hear 7 of its 7"):
+        timing.run(made)
+    assert not (made / media.audio_path("song")).exists() and (made / media.audio_path("narration")).exists()
+    assert not timing.is_done(made) and not audio.is_done(made)
+    assert json.loads((made / timing.REPORT).read_text())["unsure"]  # what was heard is kept for `show`
+    fake = FakeEleven()
+    monkeypatch.setattr(audio, "send", fake)
+    audio.run(made)
+    assert [url for url in fake.urls() if "/v1/music" in url] and not [u for u in fake.urls() if "text-to-speech" in u]
+
+
+def test_a_few_lines_sung_differently_still_pass():
+    rows = [{"line_id": f"l{i}", "score": 0.1 if i < 3 else 0.9} for i in range(7)]
+    assert timing.lyric_mismatch({"lines": rows}) is None  # 3 of 7, as a Lyria chorus can be
+    rows[3]["score"] = 0.2
+    assert "could not hear 4 of its 7 lines" in timing.lyric_mismatch({"lines": rows})
+    assert timing.lyric_mismatch({"lines": [{"line_id": "l1", "score": None}]}) is None  # nothing scored: no verdict
+    # A section left instrumental is never shown, so its lines are not counted against the song.
+    unsung = [{"line_id": f"i{i}", "score": 0.0, "sung": False} for i in range(10)]
+    assert timing.lyric_mismatch({"lines": rows[:3] + rows[4:] + unsung}) is None

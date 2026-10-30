@@ -8,6 +8,7 @@ import { BUCKETS, bucketFileError, dropletFileUrlError, fileError, signUpload, s
 import { breakdownError } from '../lib/breakdown.js';
 import { bundleTags } from '../lib/tags.js';
 import { Prisma } from '../generated/prisma/client.js';
+import { reviewRequired } from '../lib/studio-settings.js';
 
 // The agent's half of a droplet's videos (docs/PLAN.md, section 10), for the agent's
 // own answers only: a key can finish its own droplets, never another agent's. And
@@ -99,8 +100,10 @@ export default async function answerRoutes(app: FastifyInstance) {
       return sendError(reply, 'VALIDATION_ERROR', 'READY needs songVideoUrl or lessonVideoUrl, sent now or before');
     }
 
-    // Read before the write, so a failed read fails the request before anything changed.
+    // Read before the write, so a failed read fails the request before anything changed. With review on
+    // (/admin/studio), the droplet waits off the Droplets tab from the moment it is READY until an admin approves it.
     const tags = status === 'READY' ? await tagsToCopy(id) : null;
+    const awaitingReview = status === 'READY' && (await reviewRequired());
 
     // One conditional write, so the attempt check and the update cannot be split by another run. READY is final: a
     // droplet on the public tab keeps the videos it was listed with, whoever holds the key (a re-render is a new
@@ -121,6 +124,7 @@ export default async function answerRoutes(app: FastifyInstance) {
         // unreadable, or a READY by hand) drops the bill so far the progress reports kept: shown as the total,
         // it would leave out the render and the upload.
         ...(status === 'READY' && { videoBreakdown: breakdown === undefined ? Prisma.DbNull : (breakdown as Prisma.InputJsonObject) }),
+        ...(awaitingReview && { awaitingReviewSince: new Date() }),
         ...tags,
       },
     });
@@ -165,18 +169,29 @@ export default async function answerRoutes(app: FastifyInstance) {
     return signUpload(config, bucket as Bucket, id, file as string);
   });
 
-  // PATCH /api/answers/:id — admin: { hidden }. True takes the droplet off the public
-  // Droplets tab, false puts it back. The lesson stays on /learn either way.
+  // PATCH /api/answers/:id — admin: { hidden?, approved? }. hidden: true takes the droplet off the public Droplets
+  // tab, false puts it back. approved: true is an admin having looked at a droplet that waits for review, which lists
+  // it (unless hidden); false sends it back to wait. The lesson stays on /learn either way.
   app.patch('/api/answers/:id', { preHandler: [requireAdmin] }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { hidden } = (request.body ?? {}) as { hidden?: unknown };
-    if (typeof hidden !== 'boolean') return sendError(reply, 'VALIDATION_ERROR', 'hidden must be true or false');
-    const answer = await prisma.answer.findUnique({ where: { id }, select: { hiddenAt: true } });
+    const { hidden, approved } = (request.body ?? {}) as { hidden?: unknown; approved?: unknown };
+    if (hidden === undefined && approved === undefined) return sendError(reply, 'VALIDATION_ERROR', 'hidden or approved is required');
+    if (hidden !== undefined && typeof hidden !== 'boolean') return sendError(reply, 'VALIDATION_ERROR', 'hidden must be true or false');
+    if (approved !== undefined && typeof approved !== 'boolean') return sendError(reply, 'VALIDATION_ERROR', 'approved must be true or false');
+    const answer = await prisma.answer.findUnique({ where: { id }, select: { hiddenAt: true, awaitingReviewSince: true } });
     if (!answer) return sendError(reply, 'NOT_FOUND', 'Answer not found');
-    // Hiding again keeps the first time it was hidden.
-    const hiddenAt = hidden ? (answer.hiddenAt ?? new Date()) : null;
-    const updated = await prisma.answer.update({ where: { id }, data: { hiddenAt }, select: { id: true, hiddenAt: true } });
-    request.log.info({ answerId: id, hidden, adminId: request.viewer!.id }, 'droplet visibility changed');
-    return { id: updated.id, hidden: updated.hiddenAt !== null, hiddenAt: updated.hiddenAt?.toISOString() ?? null };
+    // Hiding again keeps the first time it was hidden, and sending back to review the first time it waited.
+    const data = {
+      ...(hidden !== undefined && { hiddenAt: hidden ? (answer.hiddenAt ?? new Date()) : null }),
+      ...(approved !== undefined && { awaitingReviewSince: approved ? null : (answer.awaitingReviewSince ?? new Date()) }),
+    };
+    const updated = await prisma.answer.update({
+      where: { id }, data, select: { id: true, hiddenAt: true, awaitingReviewSince: true },
+    });
+    request.log.info({ answerId: id, hidden, approved, adminId: request.viewer!.id }, 'droplet visibility changed');
+    return {
+      id: updated.id, hidden: updated.hiddenAt !== null, hiddenAt: updated.hiddenAt?.toISOString() ?? null,
+      awaitingReview: updated.awaitingReviewSince !== null,
+    };
   });
 }

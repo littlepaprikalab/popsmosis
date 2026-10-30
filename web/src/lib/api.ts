@@ -295,6 +295,7 @@ export interface Answer {
   tags?: DropletTags; // each video's hashtags; absent from an API older than them
   breakdown: Breakdown | null; // null: the studio sent none (a lesson written by hand, or an older one)
   hidden: boolean; // an admin took it off the public Droplets tab
+  awaitingReview?: boolean; // READY, and off the Droplets tab until an admin has looked at it; absent from an older API
   replies: Reply[];
   awaitingAgent: boolean;
   // True while the page holds the lesson text back until its videos are done (at most 20 minutes after the
@@ -331,6 +332,8 @@ export type SongProvider = 'elevenlabs' | 'gemini';
 export type SongSettings = { provider: SongProvider };
 /** The most one topic may cost in model calls, its lesson, videos and retries together, in dollars; 0 for no ceiling. */
 export type SpendSettings = { topicUsd: number };
+/** Whether a person looks at each droplet before it lists on the public Droplets tab. */
+export type ReviewSettings = { required: boolean };
 
 /**
  * An environment variable an admin can set on /admin/studio instead (api/src/lib/knobs.ts): set there, it wins over
@@ -355,8 +358,9 @@ export interface StudioSettings {
   art: ArtSettings;
   knobs: Record<string, Knob>; // by the variable's name
   spend?: SpendSettings; // absent from an API older than the ceiling
+  review?: ReviewSettings; // absent from an API older than the review
   updatedAt: string | null; // null: never changed, the defaults
-  defaults: { brain: BrainSettings; song: SongSettings; art: ArtSettings; spend?: SpendSettings };
+  defaults: { brain: BrainSettings; song: SongSettings; art: ArtSettings; spend?: SpendSettings; review?: ReviewSettings };
   choices: {
     brain: { default: Brain[]; effort: Effort[] }; song: { provider: SongProvider[] };
     art: { claude: Painter[]; meta: Painter[] }; spend?: { topicUsd: { min: number; max: number } };
@@ -529,6 +533,9 @@ export const api = {
   // Admin: take a droplet off the tab, or put it back
   setDropletHidden: (answerId: string, hidden: boolean) =>
     request<{ id: string; hidden: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ hidden }) }),
+  // An admin having looked at a droplet that waits for review: true lists it on the Droplets tab (unless hidden).
+  setDropletApproved: (answerId: string, approved: boolean) =>
+    request<{ id: string; awaitingReview: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ approved }) }),
 
   // Admin: droplets ranked by how many of one video's plays finished (api/src/routes/plays.ts)
   // withTotals: every droplet's totals too, for the drop-off chart; they sum every count, so the page asks once.
@@ -553,7 +560,7 @@ export const api = {
   getStudioSettings: () => request<StudioSettings>('/studio/settings'),
   setStudioSettings: (change: {
     brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>; knobs?: Record<string, KnobValue | null>;
-    spend?: SpendSettings;
+    spend?: SpendSettings; review?: ReviewSettings;
   }) =>
     request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify(change) }),
 };

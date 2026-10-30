@@ -156,6 +156,9 @@ model Answer {
   videoError      String? // FAILED: why, shown on the droplet
   videoUpdatedAt  DateTime? // the last status change; RENDERING for too long reads as FAILED
   hiddenAt        DateTime? // an admin took it off the public Droplets tab; null: listed once READY
+  // Set when the videos became READY while /admin/studio asked for a person to look at each droplet first: not listed
+  // until an admin approves it (null). Null for every droplet made without review, and for those before it.
+  awaitingReviewSince DateTime?
   videoAttempts   Int          @default(0) // renders started (POST /api/answers/:id/video/claim); recovery stops at VIDEO_MAX_ATTEMPTS
 
   // How the droplet was made, step by step: each step's time and tries, its cost and the models that ran it

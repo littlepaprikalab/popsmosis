@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useCallback, type FormEvent } from 'react';
 import {
-  api, ArtSettings, BrainSettings, Effort, Knob, KnobValue, Painter, SongProvider, SongSettings, SpendSettings,
-  StudioSettings,
+  api, ArtSettings, BrainSettings, Effort, Knob, KnobValue, Painter, ReviewSettings, SongProvider, SongSettings,
+  SpendSettings, StudioSettings,
 } from '@/lib/api';
 import { BRAIN_MODELS, type Brain } from '@/lib/brains';
 import { useAuth } from '@/lib/auth';
@@ -135,7 +135,7 @@ export default function AdminStudioPage() {
 
   const save = async (what: string, change: {
     brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>; knobs?: Record<string, KnobValue | null>;
-    spend?: SpendSettings;
+    spend?: SpendSettings; review?: ReviewSettings;
   }, done: string) => {
     if (saving) return;
     setSaving(what);
@@ -174,6 +174,12 @@ export default function AdminStudioPage() {
     if (settings?.spend?.topicUsd === topicUsd) return;
     save('spend', { spend: { topicUsd } },
       topicUsd === 0 ? 'Topics have no spend ceiling from the next step.' : `Each topic stops at ${dollars(topicUsd)} from the next step.`);
+  };
+  const pickReview = (required: boolean) => {
+    if (settings?.review?.required === required) return;
+    save('review', { review: { required } }, required
+      ? 'From the next droplet, each waits for an admin before it lists on the Droplets tab.'
+      : 'From the next droplet, each lists on the Droplets tab as soon as its videos are done.');
   };
   const pickEffort = (effort: Effort) => {
     if (settings?.brain.effort === effort) return;
@@ -272,6 +278,26 @@ export default function AdminStudioPage() {
             ))}
           </div>
         </section>
+
+        {settings.review && (
+          <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+            data-testid="review">
+            <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Review before the Droplets tab</h3>
+            <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
+              Whether a person looks at each droplet before it lists on the public Droplets tab, which people 13 and up
+              watch. With review on, a droplet whose videos are done waits until an admin approves it on the LEARN page;
+              the learner who asked sees it either way. A change applies to droplets finished after it.
+            </p>
+            <div className="space-y-2" role="radiogroup" aria-label="Review before the Droplets tab">
+              <Choice on={settings.review.required} disabled={saving !== null} label="An admin approves each droplet"
+                note="Nothing lists until someone has watched it. Approve on the LEARN page, where each waiting droplet says so."
+                isDefault={settings.defaults.review?.required === true} onClick={() => pickReview(true)} />
+              <Choice on={!settings.review.required} disabled={saving !== null} label="List as soon as the videos are done"
+                note="The fact-check and the classroom check are the only gates. An admin can still hide a droplet afterwards."
+                isDefault={settings.defaults.review?.required === false} onClick={() => pickReview(false)} />
+            </div>
+          </section>
+        )}
 
         {settings.spend && (
           <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}

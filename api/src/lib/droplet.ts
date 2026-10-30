@@ -138,8 +138,8 @@ export const publicDropletSelect = {
   lessonTags: true,
 } as const;
 
-/** What the Droplets tab may list: the videos are READY and no admin hid it. */
-export const publicDropletWhere = { videoStatus: 'READY' as const, hiddenAt: null };
+/** What the Droplets tab may list: the videos are READY, no admin hid it, and none is still to look at it. */
+export const publicDropletWhere = { videoStatus: 'READY' as const, hiddenAt: null, awaitingReviewSince: null };
 
 type PublicDropletRow = {
   id: string;

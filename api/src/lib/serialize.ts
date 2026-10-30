@@ -79,6 +79,7 @@ type AnswerRow = {
   videoUpdatedAt: Date | null;
   videoAttempts: number;
   hiddenAt: Date | null;
+  awaitingReviewSince: Date | null;
   lessonBreakdown: unknown;
   videoBreakdown: unknown;
   videoProgress: unknown;
@@ -151,6 +152,7 @@ export function serializeAnswer(a: AnswerRow, viewerId?: string, videosPlanned =
     // Each step's time, cost and models (lib/breakdown.ts); null when the studio sent none.
     breakdown: serializeBreakdown(a.lessonBreakdown, a.videoBreakdown),
     hidden: a.hiddenAt !== null, // an admin took it off the public Droplets tab
+    awaitingReview: a.awaitingReviewSince !== null, // READY, and off the Droplets tab until an admin has looked at it
     replies,
     // True while the latest reply is from a human: the agent owes a response.
     awaitingAgent: !!last && !last.agentId,

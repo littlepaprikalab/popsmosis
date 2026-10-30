@@ -22,6 +22,14 @@ its lines marked not sung, timed at no length where the chunk ends, so the video
 never show them and the aligner does not take them out of the next section's audio.
 The report and the summary line name them.
 
+The lyrics as sung: the song goes public with the vetted lyrics under it, so the singer
+must have sung them. A line the aligner is unsure of (LOW_SCORE) was probably sung
+differently; a few are normal (a gang-vocal chorus, Lyria's ad-libs: 4 to 9 of about 30
+lines in the test rounds). When more than MISMATCH_SHARE of the lines are, the song is not
+the lyrics, whatever it does sing: the step fails, and the song is deleted so the retry
+makes it again rather than timing the same song. Lines marked not sung are left out of the
+count: the videos never show them.
+
 torch, torchaudio and demucs are imported only when the song is aligned, so the rest
 of the studio (and its tests) load without them. Both models run on this machine, so
 calls.jsonl logs them with their time and no cost (studio/ledger.py).
@@ -59,6 +67,7 @@ SUNG_S = 0.5
 QUIET_DB = 30.0
 LOUD_PERCENTILE = 95
 FRAME_S = 0.05
+MISMATCH_SHARE = 0.5  # more than this share of the lines sung differently: the song is not its lyrics
 SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
 CONTEXT_S = 5  # with this much of the audio either side of each piece
@@ -111,7 +120,12 @@ def run(job: Path, ask=brain.ask) -> str:
     except (ValueError, RuntimeError) as e:  # a timing out of order, or an aligner that could not fit the words
         raise media.StepFailed(f"the song could not be aligned: {e}") from e
     _check(timing, [line.id for line in bundle.lyrics], "song")
-    jobs.write(job / REPORT, report)
+    jobs.write(job / REPORT, report)  # kept either way: `show` and the summary say what was heard
+    mismatch = lyric_mismatch(report)
+    if mismatch:
+        # Made again on the retry (the audio step makes only what is missing), never timed and published as it is.
+        (job / media.audio_path("song")).unlink(missing_ok=True)
+        raise media.StepFailed(f"{mismatch}; the song is deleted, so the retry sings it again")
     jobs.write(job / media.timing_path("song"), timing)
     return f"song {len(timing.lines)} lines in {timing.duration:.1f}s, {song_notes(report)}; " + ", ".join(parts)
 
@@ -414,6 +428,16 @@ def song_report(timing: Timing, texts: dict[str, str], scores: dict[str, float |
         "unsure": [r["line_id"] for r in rows if r["score"] is not None and r["score"] < LOW_SCORE],
         "unsung": [r["line_id"] for r in rows if not r.get("sung", True)],
     }
+
+
+def lyric_mismatch(report: dict) -> str | None:
+    """Why the song is not its lyrics (more than MISMATCH_SHARE of its sung lines sung differently), or None."""
+    scored = [row for row in report.get("lines", []) if row.get("score") is not None and row.get("sung", True)]
+    unsure = [row["line_id"] for row in scored if row["score"] < LOW_SCORE]
+    if not scored or len(unsure) <= MISMATCH_SHARE * len(scored):
+        return None
+    return (f"the song does not sing its lyrics: the aligner could not hear {len(unsure)} of its {len(scored)} lines "
+            f"({', '.join(unsure[:8])}{', ...' if len(unsure) > 8 else ''})")
 
 
 def song_notes(report: dict) -> str:

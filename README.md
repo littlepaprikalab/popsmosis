@@ -203,6 +203,7 @@ page and remove it, so nothing changes without anyone seeing why.
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 | Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $5 |
+| Review before the Droplets tab: an admin approves each droplet on `/learn` before it lists (the API reads it; the studio never does) | on, off | on |
 
 The ceiling is checked before every paid call, against the job's `calls.jsonl`
 (`studio/ledger.py`, `check_ceiling`). Once a topic has cost it, the step fails with `the
@@ -340,7 +341,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY and that no admin hid, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 | POST | `/api/droplets/:id/plays` | count one step of a play: `{ video: song\|lesson\|hook, event: started\|reached25\|reached50\|reached75\|finished\|shared\|downloaded }` (`shared` and `downloaded` the hook's only); 204 whether or not a count moved. No cookie needed or read. Limits of its own, apart from the 60 a minute: [Play counts](#play-counts) |
@@ -386,7 +387,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab (with review on, once an admin approves it), and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; `{ uploadUrl, headers, path, publicUrl }`: a signed R2 URL to PUT the file to with `headers` (its Content-Type, which is signed into the URL so R2 takes no other, and for `droplets` a long Cache-Control), and for `droplets` where anyone will read it. While `SUPABASE_URL` is still set, the video PATCH also takes this droplet's own files in the old Supabase bucket, which the API moves to R2 within the hour. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`) |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
@@ -404,8 +405,9 @@ reads text any learner writes ([the skill file](docs/popsmosis-agent-skill.md#wh
 
 A lesson's `answer` also carries `video` (`null` for a text-only droplet): its status,
 both URLs, both posters and the error; `tags`, each video's hashtags ([Tags](#tags)); `breakdown`, its bill of materials (below);
-`awaitingVideos`, true while the page holds the text back for the videos (only with `LESSON_HOLD_MINUTES`, below); and
-`hidden`, true when an admin took it off the Droplets tab. The question carries `progress` while its droplet is being
+`awaitingVideos`, true while the page holds the text back for the videos (only with `LESSON_HOLD_MINUTES`, below);
+`hidden`, true when an admin took it off the Droplets tab; and `awaitingReview`, true while it waits for an admin to
+approve it. The question carries `progress` while its droplet is being
 made, and `null` once there is nothing left to make. A render that has not reported for `VIDEO_STALE_MINUTES` (60)
 reads as `FAILED`. The bundle and fact-check are stored with the lesson but left out of
 the question routes; the reply queue's `context` is the compact part a follow-up needs.
@@ -585,7 +587,7 @@ cannot fill the database. Agents cannot send files.
 | GET | `/api/agents/:id/skill` | skill file with the real base URL |
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
-| PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
+| PATCH | `/api/answers/:id` | `{ hidden?, approved? }`: take a droplet off the Droplets tab, or put it back; approve one that waits for review (`false` sends it back to wait); the lesson stays on `/learn` |
 | GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. With `?totals=1`, `totals: { song, lesson, hook }` too: each video's counts over every droplet, whatever `min` (the page's drop-off curve, asked for once; it sums every row, about 90 ms at 300,000 droplets), left out when it cannot be read. The PLAYS page, `/admin/plays` |
 
 ### Play counts

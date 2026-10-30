@@ -65,10 +65,11 @@ d('studio settings', () => {
       art: { claude: 'gemini', meta: 'muse' },
       knobs: expect.any(Object),
       spend: { topicUsd: 5 },
+      review: { required: true },
       updatedAt: null,
       defaults: {
         brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
-        spend: { topicUsd: 5 },
+        spend: { topicUsd: 5 }, review: { required: true },
       },
       choices: {
         brain: { default: ['claude', 'muse-wonder', 'muse-spark'], effort: ['low', 'medium', 'high', 'xhigh', 'max'] },
@@ -134,6 +135,15 @@ d('studio settings', () => {
     const teacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
     expect(teacher.json().spend).toEqual({ topicUsd: 2.5 });
     expect((await put(adminCookie, { spend: { topicUsd: 0 } })).json().spend).toEqual({ topicUsd: 0 });
+  });
+
+  it('keeps whether droplets wait for review, and never tells the studio', async () => {
+    expect((await put(adminCookie, { review: { required: false } })).json().review).toEqual({ required: false });
+    expect((await put(adminCookie, { review: { required: 'no' } })).statusCode).toBe(400);
+    expect((await put(adminCookie, { review: { required: true, by: 'ada' } })).statusCode).toBe(400);
+    expect((await get(adminCookie)).json().review).toEqual({ required: false });
+    const teacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
+    expect(teacher.json().review).toBeUndefined();
   });
 
   it('keeps both of two changes saved at the same moment', async () => {

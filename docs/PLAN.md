@@ -349,7 +349,19 @@ are the everyday thing (the analogy's water): unchecked, the brain sent dots whe
 travels. Neither is ever rewritten or fails the job: a tag that fails is dropped, and a
 motion that fails is left out of the video. Motions add about $0.02 a lesson.
 
-There is no teacher approval step: the fact-check is the gate.
+It checks what else goes out with the droplet, for whether it is fit to: the public
+title, every caption shown on a video (as a line, against the facts), the description
+each picture is painted from, the song's style and what it must avoid
+(`studio/prompts/factcheck.md`, "Public text"). A title, caption, description or style
+(often the learner's own words) that fails is corrected; a thing to avoid that fails is
+dropped.
+
+The song is held to its lyrics after it is sung: when the aligner cannot hear more than
+half of its lines (step 6), the timing fails and the song is made again on the retry.
+
+There is no teacher approval step: the fact-check is the gate. A person still looks at
+each droplet before it lists on the public Droplets tab while review is on
+(`/admin/studio`, on by default).
 
 The same call checks the tags, by their own rules (`studio/prompts/factcheck.md`, "Tags"):
 SUPPORTED when a tag names something the facts cover, FILLER when it names only the topic,

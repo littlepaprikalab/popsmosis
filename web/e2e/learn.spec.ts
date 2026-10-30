@@ -172,6 +172,9 @@ test.describe('signed in', () => {
     const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
     expect((await bot.video(answerId, { status: 'RENDERING' })).status()).toBe(200);
     expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4`, lessonVideoUrl: `${BASE}/samples/lesson.mp4` })).status()).toBe(200);
+    // Approved by an admin, as review asks, so it is on the public tab.
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    expect((await request.patch(apiUrl(`/api/answers/${answerId}`), { headers: asAda, data: { approved: true } })).status()).toBe(200);
 
     await signIn(context, S.users.ben);
     await page.goto('/learn');
@@ -582,6 +585,38 @@ test.describe('studio settings', () => {
     await page.reload();
     await expect(page.getByTestId('spend').getByTestId('spend-now')).toContainText('Now: $2.50.');
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { spend: { topicUsd: 5 } } });
+  });
+
+  test('an admin turns review before the Droplets tab off and on, and the learner is told it waits', async ({ page, context, request }) => {
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { review: { required: true } } });
+    await signIn(context, S.users.ada);
+    await page.goto('/admin/studio');
+    const review = page.getByTestId('review');
+    await expect(review.getByRole('radio', { name: /An admin approves each droplet/ })).toHaveAttribute('aria-checked', 'true');
+    await review.getByRole('radio', { name: /List as soon as the videos are done/ }).click();
+    await expect(review.getByRole('radio', { name: /List as soon as the videos are done/ })).toHaveAttribute('aria-checked', 'true');
+    expect((await (await request.get(apiUrl('/api/studio/settings'), { headers: asAda() })).json()).review).toEqual({ required: false });
+    await review.getByRole('radio', { name: /An admin approves each droplet/ }).click();
+    await expect(review.getByRole('radio', { name: /An admin approves each droplet/ })).toHaveAttribute('aria-checked', 'true');
+
+    // Ben's droplet, done while review is on: he sees it, and that it goes public once someone has looked.
+    const text = `E2E ${Date.now()}: osmosis, reviewed`;
+    const benHeaders = { cookie: `popsmosis_session=${sessionToken(S.users.ben)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const asked = await request.post(apiUrl('/api/questions'), { headers: benHeaders, data: { content: text } });
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    const questionId = (await asked.json()).id;
+    await bot.claim(questionId);
+    const answerId = (await (await bot.answer(questionId, 'Water moves toward **more solute**.')).json()).id;
+    const BASE = process.env.E2E_BASE_URL || 'http://localhost:3000';
+    await bot.video(answerId, { status: 'RENDERING' });
+    expect((await bot.video(answerId, { status: 'READY', songVideoUrl: `${BASE}/samples/song.mp4` })).status()).toBe(200);
+    await context.clearCookies();
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByTestId('awaiting-review')).toHaveText('It goes on the public Droplets tab once a person has looked at it.');
+    await expect(card.getByTestId('approve-droplet')).toHaveCount(0);
+    expect((await request.delete(apiUrl(`/api/questions/${questionId}`), { headers: benHeaders })).status()).toBe(204);
   });
 
   test('is for admins only', async ({ page, context }) => {
