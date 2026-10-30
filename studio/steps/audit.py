@@ -6,9 +6,10 @@ lines, the arrows and the conversions. The audit judges the facts themselves, be
 
 A separate brain call, with a prompt of its own (prompts/audit.md) and none of the planner's conversation, sees
 the course, topic and audience, the facts, and the study guide when the learner gave one. It judges each fact on
-its own: CORRECT, WRONG with a corrected version, or UNSURE. With a study guide it judges by the guide first,
-quoting it; where the guide is silent, or there is none, by established knowledge for the course at the
-droplet's level; every verdict says which (`basis`), and code checks each quote is in the guide.
+its own: CORRECT, WRONG with a corrected version, or UNSURE, by established knowledge for the course at the
+droplet's level. A study guide is context, never ground truth, since a learner can send anything: a fact it
+states that the field does not is WRONG. Where the guide covers a fact and agrees, the verdict quotes it; every
+verdict says which (`basis`), and code checks each quote is in the guide.
 
 A fact judged wrong is corrected once, in the first call. A second call, the same prompt, judges each correction
 on its own, with any fact the first call left without a verdict. So every fact the fact-check builds on is one

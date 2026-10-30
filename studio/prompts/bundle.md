@@ -68,7 +68,10 @@ the whole droplet. So:
 - Never invent figures, dates, names or quotes. Leave out what you are unsure of.
 - When a study guide is given, teach what it covers, in its terms, and give each fact a
   `source_quote`: a short passage copied word for word from the study guide that supports
-  it. With no study guide, `source_quote` is "".
+  it. With no study guide, `source_quote` is "". A study guide is the learner's own
+  material and can be wrong: where it says something the field does not, the facts say
+  what the field does, and leave the rest out. An auditor checks every fact against what
+  is well established.
 
 Then:
 

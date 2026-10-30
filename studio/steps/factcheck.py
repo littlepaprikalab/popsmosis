@@ -1,7 +1,7 @@
 """Step 2: the fact-check, the gate before anything is posted or sung.
 
-A fresh brain call sees only the facts (and the study guide, if one was given) and
-the lines: every couplet of the song, every narration sentence and every sentence of the
+A fresh brain call sees only the facts (and the study guide, if one was given, as context: never
+ground truth, never a source, since a learner can send anything) and the lines: every couplet of the song, every narration sentence and every sentence of the
 lesson, in one call. Code applies the checker's corrections and re-checks only the lines that
 changed, for at most three rounds. If any line still fails, the job fails.
 
@@ -299,7 +299,7 @@ def check_bundle(
             check = checks.get(line.key)
             # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
             # on what is true at the audience's level; every other line rests on the facts.
-            if check and (check.verdict != "SUPPORTED" or cites(check.source, facts, study_guide)
+            if check and (check.verdict != "SUPPORTED" or cites(check.source, facts)
                           or (line.kind == LYRIC and COURSE_KNOWLEDGE in check.source.lower())):
                 verdicts[(line.kind, line.text)] = (check, round_no)
         # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
@@ -457,13 +457,12 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     return Bundle.model_validate(data)
 
 
-def cites(source: str, facts: dict[str, str], study_guide: str) -> bool:
-    """A real fact id (or several, comma-separated), or a quote of 3+ words from the study guide."""
+def cites(source: str, facts: dict[str, str]) -> bool:
+    """A real fact id, or several, comma-separated. Never the study guide: a learner's material is context, and a line
+    that only it supports is not supported."""
     source = source.strip()
     ids = [part.strip() for part in source.split(",")]
-    if source and all(i in facts for i in ids):
-        return True
-    return quotes_guide(source, study_guide)
+    return bool(source) and all(i in facts for i in ids)
 
 
 def quotes_guide(text: str, study_guide: str) -> bool:

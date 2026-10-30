@@ -192,14 +192,20 @@ def test_lines_that_never_get_a_verdict_fail_the_check():
     assert f'lyric v1-1, v1-2 "{FIRST} / {SEEDED}": no verdict' in report.reason
 
 
-def test_cites_needs_a_real_fact_id_or_a_study_guide_quote():
+def test_cites_needs_a_real_fact_id_and_never_takes_the_study_guide():
     facts = {"f1": "a", "f2": "b"}
-    guide = "The hippocampus  forms new explicit memories."
-    assert cites("f1", facts, "") and cites("f1, f2", facts, "")
-    assert not cites("f3", facts, "") and not cites("", facts, "") and not cites("f1, f9", facts, "")
-    assert cites('"the hippocampus forms new"', facts, guide)
-    assert not cites("the amygdala forms new memories", facts, guide)
-    assert not cites("memories", facts, guide)  # too short to count as a quote
+    assert cites("f1", facts) and cites("f1, f2", facts)
+    assert not cites("f3", facts) and not cites("", facts) and not cites("f1, f9", facts)
+    # A learner can put anything in a study guide: a quote from it never makes a line supported.
+    assert not cites('"the hippocampus forms new"', facts)
+
+
+def test_lines_only_the_study_guide_supports_are_asked_again_and_fail():
+    guide = "Every carrier pumps H⁺ into the lumen."  # wrong, as a learner's notes can be
+    fake = FakeChecker(lambda text: ("SUPPORTED", '"Every carrier pumps H⁺ into the lumen"', ""))
+    report, _ = check_bundle(bundle(), guide, fake)
+    assert report.status == "failed" and report.rounds == 3 and "no verdict" in report.reason
+    assert fake.payloads[0]["study_guide"] == guide
 
 
 def test_run_saves_the_fixed_bundle_and_keeps_the_draft(tmp_path):

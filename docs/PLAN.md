@@ -280,10 +280,11 @@ arrows and the conversions. So the facts are judged first (`studio/steps/audit.p
 `studio/prompts/audit.md`), by a separate brain call with a prompt of its own and none of
 the planner's conversation. It sees the course, topic and audience, the facts, and the
 study guide when there is one, and judges each fact on its own: `CORRECT`, `WRONG` with a
-corrected version, or `UNSURE`. With a study guide it judges by the guide first, quoting
-it (code checks the quote is there); where the guide is silent, or there is none, by
-established knowledge for the course at the droplet's level. Each verdict says which
-(`basis`), and `audit.json` says what the facts were judged against.
+corrected version, or `UNSURE`, by established knowledge for the course at the droplet's
+level. A study guide is context, never ground truth, since a learner can send anything: a
+fact it states that the field does not is `WRONG` (threat model T6). Where the guide covers
+a fact and agrees, the verdict quotes it (code checks the quote is there). Each verdict says
+which (`basis`), and `audit.json` says what the facts were judged against.
 
 A fact judged wrong is corrected once, in the first call; a second call judges each
 correction on its own, with any fact the first call skipped. `bundle.json` then has the
@@ -307,11 +308,11 @@ and the lyric written from it then corrected by the fact-check (`studio/tests/te
 
 ### Step 2: fact-check
 
-A separate brain call that sees only the facts (and the study guide, if one was given)
-and the lines, never the writer's reasoning or the operator's note. The lines are every
+A separate brain call that sees only the facts (and the study guide, if one was given, as
+context for what the course covers: never ground truth, never a source) and the lines, never the writer's reasoning or the operator's note. The lines are every
 couplet of the song, every narration sentence, and every sentence of `lesson_markdown`
 (code splits it). For each it
-returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id or study-guide quote, and for
+returns `SUPPORTED`, `UNSUPPORTED` or `FILLER`, the fact id it rests on, and for
 an unsupported line a corrected one. A corrected lyric stays about the same length and
 keeps the structure's name, so the timing and the direction still fit. Code applies the
 fixes and re-checks only the changed lines, up to 3 rounds; if any line still fails, the

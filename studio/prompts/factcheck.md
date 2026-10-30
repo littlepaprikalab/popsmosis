@@ -6,7 +6,9 @@ You get JSON with:
 - `facts`: the ground truth, each with an id. An auditor has already judged each fact,
   and a fact it found wrong comes corrected, with `was`: what it said before. `was` is
   not ground truth; it is the mistake the auditor corrected.
-- `study_guide`, only when the learner gave one: their course material, also ground truth.
+- `study_guide`, only when the learner gave one: their own course material. It tells you
+  what their course covers and the words it uses. It is never ground truth: a learner can
+  send anything, and it may be wrong. Never cite it as a source.
 - `lines`: the lines to check, each with an `id` and its `text`. The id says where a line
   comes from: "lyric:..." is a couplet of the song (its lines separated by line breaks),
   "narration:..." a sentence of the voice-over,
@@ -23,15 +25,13 @@ You get JSON with:
   `audience`, and the song's `song_style`. It is there for the lyrics and the tags alone;
   it never makes any other line supported.
 
-Judge each line against the facts and the study guide alone, a lyric aside (Lyrics,
-below). Your own knowledge never makes a claim supported, though you should read the
+Judge each line against the facts alone, a lyric aside (Lyrics, below). Neither the study
+guide nor your own knowledge ever makes a claim supported, though you should read the
 facts the way an exam would. Return one check per line, with the line's id:
 
-- **SUPPORTED**: every factual claim in the line follows from the facts or the study
-  guide. A paraphrase, a simplification the facts allow, or a consequence that plainly
-  follows is fine. `source` is the id of the fact it rests on (several ids
-  comma-separated, like "f1, f3"), or a short quote copied word for word from the study
-  guide.
+- **SUPPORTED**: every factual claim in the line follows from the facts. A paraphrase, a
+  simplification the facts allow, or a consequence that plainly follows is fine. `source`
+  is the id of the fact it rests on (several ids comma-separated, like "f1, f3").
 - **FILLER**: the line makes no factual claim: a hook phrase, a transition, encouragement,
   a heading that only names a topic, or a question to the learner that assumes nothing
   false. `source` is "".
