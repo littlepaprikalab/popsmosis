@@ -6,6 +6,7 @@ const FONT_SIZES = { sm: '0.75rem', md: '1.0625rem', lg: 'min(1.625rem, 9vw)' } 
 /**
  * The POPsmosis wordmark: "POP" heavy and "smosis" lighter, white on the aqua chip.
  * The chip keeps its color in both themes, like the tab icon (src/app/icon.svg).
+ * The videos draw the same chip on every frame (studio/render/primitives.py, draw_brand): change both together.
  */
 export function Wordmark({ size = 'md' }: { size?: keyof typeof FONT_SIZES }) {
   return (

@@ -565,7 +565,7 @@ studio/
   prompts/         bundle, fact audit, fact-check, songwriter, helper and scorecard rubric prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
   steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, render, upload
-  render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Bold/SemiBold/ExtraBold)
+  render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Regular/SemiBold/Bold/ExtraBold)
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/
   requirements.txt
@@ -710,6 +710,12 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
     spotlight still move when it is sung).
   - **Caption pill:** optional, top area, held at least 4 s.
+  - **Brand:** the site's wordmark chip ("**POP**smosis", white on aqua `#0B7499`, as
+    `web/src/components/Wordmark.tsx` draws it) on every frame, so a clip saved and posted
+    elsewhere still says where it came from. In 16:9 it sits in the picture's bottom right
+    corner, across from the "AI-generated picture" tag and about its size, and labels keep
+    clear of it; beside a notice card it is under the card. In the upright hook cut it sits in
+    the title band, under the topic, or beside the small topic over a key line.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
   - **Ending:** the last picture stays on screen 1.5 s after the voice ends.
 - **Encoding:** pipe raw BGRA frames to ffmpeg (H.264 + AAC, 30 fps, 1920x1080). Render
@@ -738,7 +744,7 @@ video in under 5 minutes per layout.
 - A fixed colour per structure across all scenes and both videos.
 - Labels sit on the right structure, never clipped, never overlapping.
 - Build the diagram piece by piece; each structure appears when it is first named.
-- Minimal text: the lyric band, plus at most ~1 caption per section.
+- Minimal text: the lyric band, plus at most ~1 caption per section, and the small brand chip.
 - Motion that teaches, slowly; hold each station.
 - A 2-second hook.
 - Predict pauses only after the song or in instrumental gaps; never stop the music.

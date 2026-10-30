@@ -20,6 +20,7 @@ class Layout:
     label_font: float
     caption_font: float
     margin: float  # labels and pills keep this far from the frame's edges
+    brand_font: float  # the brand's text: in the picture's bottom right corner, or in the title band when there is one
     title_h: int = 0  # a title band along the top, with the topic in it; 0 for none
     title_font: float = 0.0
     band_lines: int = 1  # lines the lyric band wraps a sung line onto
@@ -33,11 +34,11 @@ class Layout:
 
 
 H = Layout(name="h", width=media.VIDEO_WIDTH, height=media.VIDEO_HEIGHT, band_h=110, band_font=46,
-           label_font=30, caption_font=34, margin=20, key_h=96, key_font=40)
+           label_font=30, caption_font=34, margin=20, brand_font=20, key_h=96, key_font=40)
 
-# A phone held upright: the topic on top (with the scene's key line under it, in a video that has them), the diagram across the middle, the line sung below it, on two lines.
+# A phone held upright: the topic on top with the brand (and the scene's key line under them, in a video that has them), the diagram across the middle, the line sung below it, on two lines.
 V = Layout(name="v", width=media.VIDEO_HEIGHT, height=media.VIDEO_WIDTH, band_h=300, band_font=58,
-           label_font=30, caption_font=34, margin=24, title_h=260, title_font=62, band_lines=2,
+           label_font=30, caption_font=34, margin=24, brand_font=30, title_h=260, title_font=62, band_lines=2,
            key_font=50)
 
 LAYOUTS = {"h": H, "v": V}

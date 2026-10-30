@@ -49,13 +49,13 @@ export function DropletPlayers({ dropletId, video, tags, title }: { dropletId: s
 /**
  * The hook cut: the song's pre-chorus and first chorus as a short upright clip, the part students post. A small
  * tile beside its two buttons, so it never competes with the full videos: Share hands the clip's link to the
- * phone's share sheet (or copies it where there is none), Download saves the file. A share is counted once it went
- * through (a share sheet closed without sharing is not), a download when it is pressed.
+ * phone's share sheet with #popsmosis (or copies the link where there is none), Download saves the file. A share is
+ * counted once it went through (a share sheet closed without sharing is not), a download when it is pressed.
  */
 export function HookClip({ dropletId, src, poster, title }: { dropletId: string; src: string; poster: string | null; title?: string }) {
   const [copied, setCopied] = useState(false);
   async function share() {
-    const data = { title: title ? `${title}: the hook` : 'The hook', url: src };
+    const data = { title: title ? `${title}: the hook` : 'The hook', text: '#popsmosis', url: src };
     if (typeof navigator.share === 'function') {
       try {
         await navigator.share(data);

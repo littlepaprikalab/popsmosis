@@ -122,8 +122,12 @@ test.describe('play counts', () => {
     await settle(page);
     expect(counts.sent).toEqual([]);
 
-    await page.evaluate(() => Object.defineProperty(navigator, 'share', { configurable: true, value: () => Promise.resolve() }));
+    await page.evaluate(() => Object.defineProperty(navigator, 'share', {
+      configurable: true,
+      value: (data: ShareData) => { (window as unknown as { shared: ShareData }).shared = data; return Promise.resolve(); },
+    }));
     await tile.getByTestId('hook-share').click();
+    expect(await page.evaluate(() => (window as unknown as { shared: ShareData }).shared.text)).toBe('#popsmosis');
     await tile.getByTestId('hook-share').click();
     for (let i = 0; i < 2; i++) {
       const download = page.waitForEvent('download');

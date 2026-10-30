@@ -688,6 +688,7 @@ class Renderer:
                     labels.append(flow.label)
                 self._lanes.setdefault((beat.scene, tuple(flow.path), flow.label), labels.index(flow.label))
         self.keyed = any(beat.key_line for beat in timeline.beats)  # a key band only in a video with key lines
+        self.brand = p.brand_size(self.layout.brand_font)
         self.plans = self._plan()
         width, height = self.layout.width, self.layout.height
         self.pixels = np.zeros((height, width, 4), np.uint8)
@@ -966,7 +967,11 @@ class Renderer:
         top = layout.margin + (layout.caption_font * 1.75 + 24 if caption_alpha > 0 else 0)
         notes = self.timeline.notices.get(beat.scene, [])
         tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
-        bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
+        # The brand is in the picture's bottom right corner, unless the picture has moved over for a notice card
+        # (it is then under the card) or the frame is upright (it is in the title band).
+        branded = not self.portrait and beat.scene not in self._beside
+        strip = max(AI_TAG_FONT * 1.7 if tagged else 0.0, self.brand[1] if branded else 0.0)
+        bottom = layout.margin + (strip + 10 if strip else 0)  # labels keep clear of the tag and the brand
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
         arrows = self._arrow_points(beat.scene, cam, view)
         places = self._pill_places(beat.scene, cam, view, bounds, arrows)
@@ -995,15 +1000,19 @@ class Renderer:
             card, x, y = self._card(beat.scene, view)
             alpha = 1.0 if plan.fade_from in self.timeline.notices else fade
             canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
+        if not self.portrait:  # in the same place on every frame, across from the tag
+            p.draw_brand(canvas, layout.width - layout.margin - self.brand[0],
+                         layout.height - layout.band_h - layout.margin - self.brand[1], layout.brand_font)
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font, lines=layout.band_lines)
         # The key line fades in and out with its run, and stays put through it while the lyrics go by below.
         key_alpha = p.ease((t - plan.key_in) / KEY_FADE_S) * p.ease((plan.key_out - t) / KEY_FADE_S)
         if layout.title_h and self.keyed:
             p.draw_title_key(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, beat.key_line,
-                             self.timeline.key_terms, layout.title_font, layout.key_font, key_alpha)
+                             self.timeline.key_terms, layout.title_font, layout.key_font, key_alpha, layout.brand_font)
         elif layout.title_h:
-            p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font)
+            p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font,
+                         layout.brand_font)
         if self.keyed and layout.key_h:
             p.draw_key_band(canvas, (0, layout.title_h, layout.width, layout.title_h + layout.key_h), beat.key_line,
                             self.timeline.key_terms, layout.key_font, key_alpha)
