@@ -4,7 +4,7 @@ import pytest
 
 from studio import jobs, media
 from studio.media import StepFailed
-from studio.schemas import AudioClip, Bundle, Locations, Timeline, Timing, timeline_problems
+from studio.schemas import AudioClip, Bundle, Locations, TimedLine, Timeline, Timing, timeline_problems
 from studio.steps import timeline as step
 from studio.tests import sample_media
 from studio.tests.sample import bundle_data
@@ -565,3 +565,17 @@ def test_a_graphs_axis_names_go_to_the_videos_that_show_it(job):
     assert {scene: (a.x, a.y) for scene, a in timelines["lesson"].axes.items()} == {"synthase": ("Time", "")}
     hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
     assert hook.axes == timelines["song"].axes  # the hook cut is the song's, and shows the overview
+
+
+def test_a_picture_shown_for_one_short_line_gives_way_to_the_one_before():
+    # Round 18's kidney song cut to a scene for one two-second line six times.
+    def line(line_id, start):
+        return TimedLine(line_id=line_id, start=start, end=start + 1.8, words=[])
+
+    sung = [line("a", 0), line("b", 2), line("c", 4), line("d", 6), line("e", 8), line("f", 10), line("g", 15)]
+    scenes = {"a": "hook", "b": "overview", "c": "overview", "d": "detail", "e": "overview", "f": "detail",
+              "g": "nowhere"}
+    directions = {k: type("D", (), {"scene": v})() for k, v in scenes.items()}
+    got = step._scenes(sung, directions, {"hook", "overview", "detail"}, "hook", 20.0)
+    # d alone (2 s) holds the overview; f's run (10 to 15 s, then g, not drawn, stays on it) is long enough.
+    assert got == ["hook", "overview", "overview", "overview", "overview", "detail", "detail"]

@@ -101,6 +101,7 @@ CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
 RUN_MAX = 2  # flows moving at once on a beat that sums up: round 17's rock cycle moved 4 at once, and it read as a swarm
+SCENE_MIN_S = 3.5  # a picture on screen for less than this (one sung line) gives way to the one before it
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
@@ -336,6 +337,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
                       "line": "", "words": []})
         captions.append(None)
 
+    scenes = _scenes(sung, directions, set(located), hook, voice.duration)
     first = sung[0].start if sung else voice.duration
     cursor = 0.0
     if first >= GAP_S:
@@ -348,11 +350,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         t1 = max(t1, cursor + 1 / media.FPS)
 
         direction = directions.get(timed_line.line_id)
-        scene = direction.scene if direction else (beats[-1]["scene"] if beats else hook)
-        if not any(b["line_id"] for b in beats):
-            scene = hook  # both videos open on the hook
-        if scene not in located:
-            scene = beats[-1]["scene"] if beats else hook
+        scene = scenes[i]
         scene_names = names.get(scene) or Names([])
         labels = revealed.setdefault(scene, [])
 
@@ -419,6 +417,32 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
                     key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
+
+
+def _scenes(sung: list, directions: dict, located: set[str], hook: str, end: float) -> list[str]:
+    """Each line's scene: its direction's, or the one before where that is not drawn, the first line's the hook (both
+    videos open on it). A run of lines on one scene shorter than SCENE_MIN_S keeps the scene before it: round 18's
+    kidney song cut to a picture for a single two-second line six times, and each was gone before the eye found
+    anything in it."""
+    scenes: list[str] = []
+    for line in sung:
+        direction = directions.get(line.line_id)
+        scene = direction.scene if direction else (scenes[-1] if scenes else hook)
+        if not scenes:
+            scene = hook
+        elif scene not in located:
+            scene = scenes[-1]
+        scenes.append(scene)
+    starts = [line.start for line in sung] + [end]
+    k = 0
+    while k < len(scenes):
+        j = k
+        while j + 1 < len(scenes) and scenes[j + 1] == scenes[k]:
+            j += 1
+        if k > 0 and starts[j + 1] - starts[k] < SCENE_MIN_S:
+            scenes[k:j + 1] = [scenes[k - 1]] * (j + 1 - k)
+        k = j + 1
+    return scenes
 
 
 CORE_SAID = 0.6  # the share of the core idea's words a narration sentence says to be the one that says it

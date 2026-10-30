@@ -883,6 +883,74 @@ each bridge walks a case the facts give: diabetes filling the filtrate with more
 the carriers can take back; limestone to marble to sediment without ever being igneous; Sulla
 marching on Rome.
 
+## Round 18: the same three topics, sung, and watched as a student would
+
+Oct 30. Round 17's three topics again, after the changes its videos asked for: the songs'
+lines short and sung (6 to 9 syllables, verses of 8 lines, devices from songwriting rather
+than sentences), each section given the time its lines take to sing and the song as long as
+that makes it (90 to 240 s), Lyria's own account of what it sang used to find a line it left
+out; labels that stay where their part is, while what moves is a particle (a glucose
+hexagon, a water drop, a short symbol such as H⁺ printed on its dot) named once in a legend;
+the pictures asked for no label lines; the particles taking each leg of a flow through the
+parts themselves where their outlines join (`studio/render/routing.py`), with no arrows
+drawn; and a narration editor (`studio/steps/narration.py`). Same set-up as round 17: `plan`
+on Claude Opus 5.5 at high effort, Gemini painting, Eleven Music singing, then a copy sung by
+Lyria. Nothing was posted.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Lesson (bundle, audit, fact-check) | $2.12 | $1.68 | $1.89 |
+| Pictures and SAM | $0.55 | $0.96, one painted again twice | $0.68, one painted again |
+| Song, Eleven Music / Lyria | 158 s / 182 s | 154 s / 154 s | 158 s / 173 s |
+| Narration | 180 s | 178 s | 191 s |
+
+The kidneys' Lyria song was blocked once (PROHIBITED_CONTENT) and the studio sang it with
+Eleven Music instead, silently: a round has to read `provider` in `song.plan.json` before
+calling a song Lyria's. Asked again, Lyria sang it. Two pictures came back with painted
+pointer lines where labels would hang (the "sticks"): `NO_TEXT` now rules them out and the
+picture check lists them, and the repainted pictures were clean.
+
+### The songs
+
+Measured on the vocals Demucs separated, round 17's songs were sung at 4 to 6 words a second,
+a rap's pace, and round 18's at 2.5 to 3.3. Eleven Music's sections are all about as loud as
+each other (the kidneys': verse -20 dB, chorus -19, bridge -17), where Lyria's chorus stands
+out (-19 against -21 to -23), which may be why Eleven Music still sounds like shouting. Rome's
+song sang its story out of order: Augustus, then "Eighty-eight BCE, rewind" for Sulla in the
+bridge. The kidneys' song video cut to a picture for a single two-second line six times.
+
+### Watched as a student
+
+Each lesson video was watched a frame a line, asking at each whether a student who has not
+met the topic would know what they are looking at and why it comes next:
+
+- **No question to answer.** The kidneys' hook gave five facts (where the kidneys sit, 180
+  liters, the bladder, 99 % taken back, a million nephrons) and never asked anything; Rome's
+  showed the US Capitol. The question was on screen, in the key line, but the voice did not
+  ask it.
+- **Talking about what is not there.** "Rome elected two consuls each year" over four
+  generals; "lava that cools fast at the surface makes rock with tiny crystals" over a
+  volcano with no lava and no igneous rock drawn at all; "each kidney holds about a million
+  nephrons" over a body with no nephron in it, then a cut to a nephron from nowhere.
+- **The correction before what it corrects.** Rome's "a common mistake is to think Julius
+  Caesar was Rome's first emperor" came 32 seconds in, a minute before Caesar did, as the
+  prompt asked ("right after the overview").
+- **Side roads.** Pumice that floats, granite countertops, "the same osmosis your own cells
+  know", Kaiser and Czar: each true, each a turn off the path.
+- **The ending three times.** The kidneys' lesson told diabetes, then the core idea, then
+  went back to the body for "blood flows in, and urine flows out".
+- **Dots for people.** Rome's armies marched as purple dots marked "troops", which read as
+  sparks next to the drawn soldiers.
+- **A crossing named but not shown.** The kidneys' close-up named secretion with nothing
+  moving: the fact-check had cut its motion, since no fact put secretion in the proximal
+  tubule the close-up was of.
+
+The narration editor, tried on the kidneys' narration by itself ($0.15), fixed the order: it
+opened on "So how does your body keep what it needs and get rid of its waste?", told the
+diabetes case after the path, and ended once. It cannot fix a sentence about something no
+picture draws, since the pictures are planned before it reads anything. Round 19 writes the
+lesson first.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
