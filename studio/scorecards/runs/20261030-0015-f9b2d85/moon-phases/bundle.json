@@ -1,0 +1,2311 @@
+{
+  "course": "6th grade science",
+  "topic": "Why the Moon has phases",
+  "audience": "6th grade",
+  "core_idea": "The Sun always lights half the Moon; as the Moon orbits Earth, we see different amounts of that lit half.",
+  "why_chain": [
+    "The Moon makes no light, so it shines only where sunlight hits it and reflects.",
+    "The Sun lights the Moon from one side, so one half is always lit and the other half is dark.",
+    "The Moon orbits Earth, so its place around Earth keeps changing.",
+    "From each place in the orbit, a different amount of the lit half faces us.",
+    "So we see the lit part grow from new moon to full moon, then shrink back again."
+  ],
+  "key_terms": [
+    "phases",
+    "orbit",
+    "new moon",
+    "first quarter",
+    "full moon",
+    "third quarter",
+    "waxing",
+    "waning"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "The Moon makes no light of its own: it shines because sunlight hits it and reflects off its surface. The Sun lights the Moon from one side, so the half of the Moon facing the Sun is always lit and the half facing away is dark. Earth is lit the same way: the half facing the Sun has day, and the other half has night. Even at new moon, the Moon is still half lit; that lit half just faces away from Earth.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "The Moon travels around Earth in a path called its orbit, so its position around Earth keeps changing. One full cycle of phases, from new moon back to new moon, takes about 29.5 days, roughly a month. The phases work like a classroom model: hold a ball at arm's length in a dark room lit by one lamp and turn slowly in a circle. The lamp always lights the half of the ball facing it, but as you turn you see more of that lit half, then less. The lamp stands for the Sun, the ball for the Moon, and your head for Earth, so the model shows every phase. Diagrams of the phases are not drawn to scale: the Sun is far bigger and much farther away than they show.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "As the Moon moves along its orbit, we see different amounts of its lit half from Earth; these changing shapes are called phases, and the phase on any night shows where the Moon is in its orbit. The Moon itself does not change shape; only the part of its lit half that we see changes. At new moon the Moon is between Earth and the Sun, so its lit half faces away and we see only its dark half: the Moon cannot be seen. About a week later, a quarter of the way around its orbit, comes first quarter, when half of the Moon's face looks lit and half looks dark. About two weeks after new moon, the Moon is on the far side of Earth from the Sun, with Earth between it and the Sun, so its whole lit half faces us: a full moon, a round disc. Then comes third quarter, three quarters of the way around, when half the face looks lit again, but on the opposite side from first quarter. While the lit part we see grows, from new moon to full moon, the Moon is waxing; while it shrinks, from full moon back to new moon, it is waning. Between new moon and the quarters the Moon looks like a thin crescent, and a few days after new moon a thin crescent can be seen low in the western sky just after sunset.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "A common mistake is to think that Earth's shadow causes the Moon's phases. In fact, Earth's shadow falls on the Moon only during a lunar eclipse, which can happen only at full moon, when the Sun, Earth and Moon line up exactly; most full moons have no eclipse, because the three usually do not line up exactly. Eclipses are usually the next topic after the phases. The same half-lit idea works the other way round: Earth is also half lit by the Sun, so someone standing on the Moon would see Earth go through phases, opposite to the Moon's phases. At new moon, the sunlit side of Earth faces the Moon and reflects sunlight toward it, so from the Moon Earth looks full: a round, shining, blue disc. At full moon, Earth's dark night side faces the Moon, so from the Moon Earth looks dark. As the Moon grows fuller in our sky, Earth seen from the Moon grows thinner.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is thinking Earth's shadow causes the phases. Earth's shadow reaches the Moon only during a lunar eclipse at some full moons; the phases come from seeing different amounts of the Moon's sunlit half.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a children's Earth science book draws it, of an evening sky just after sunset: a row of house rooftops along the bottom of the picture, the last faint glow of sunset low on the right, and a thin light grey crescent Moon low in the sky above that glow, its bright curved edge facing down toward where the Sun has set. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Moon",
+          "aliases": [],
+          "sam_phrase": "grey moon",
+          "color_hex": "#D9D9D9"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a science textbook draws the classroom Moon-phase model, of a child standing in a dark room, seen from the side: a lamp with a glowing yellow shade on a small table on the left, the child in a green shirt in the centre, holding a light grey ball at arm's length in front of their face, the half of the ball facing the lamp bright and the other half in shadow. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Lamp",
+          "aliases": [
+            "lamp"
+          ],
+          "sam_phrase": "yellow lamp",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Ball",
+          "aliases": [
+            "ball"
+          ],
+          "sam_phrase": "grey ball",
+          "color_hex": "#D9D9D9"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "new-moon",
+      "image_prompt": "Educational diagram, as an Earth science textbook draws it, of the Sun, Earth and Moon seen from high above Earth's North Pole: a yellow Sun on the left side of the picture, a bright blue Earth with its continents in the centre, and a thin, faint white dashed circle around Earth for the Moon's path. Earth's left half, facing the Sun, is bright and its right half is in shadow. A light grey Moon sits on the dashed circle to the left of Earth, between Earth and the Sun; the Moon's left half, facing the Sun, is bright and its right half is in shadow. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Sun",
+          "aliases": [],
+          "sam_phrase": "yellow sun",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Earth",
+          "aliases": [],
+          "sam_phrase": "blue globe",
+          "color_hex": "#4DA6FF"
+        },
+        {
+          "name": "Moon",
+          "aliases": [],
+          "sam_phrase": "grey moon",
+          "color_hex": "#D9D9D9"
+        }
+      ],
+      "stage_of": "Moon phases"
+    },
+    {
+      "id": "first-quarter",
+      "image_prompt": "Educational diagram, as an Earth science textbook draws it, of the Sun, Earth and Moon seen from high above Earth's North Pole: a yellow Sun on the left side of the picture, a bright blue Earth with its continents in the centre, and a thin, faint white dashed circle around Earth for the Moon's path. Earth's left half, facing the Sun, is bright and its right half is in shadow. A light grey Moon sits on the dashed circle directly below Earth; the Moon's left half, facing the Sun, is bright and its right half is in shadow. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Sun",
+          "aliases": [],
+          "sam_phrase": "yellow sun",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Earth",
+          "aliases": [],
+          "sam_phrase": "blue globe",
+          "color_hex": "#4DA6FF"
+        },
+        {
+          "name": "Moon",
+          "aliases": [],
+          "sam_phrase": "grey moon",
+          "color_hex": "#D9D9D9"
+        }
+      ],
+      "stage_of": "Moon phases"
+    },
+    {
+      "id": "full-moon",
+      "image_prompt": "Educational diagram, as an Earth science textbook draws it, of the Sun, Earth and Moon seen from high above Earth's North Pole: a yellow Sun on the left side of the picture, a bright blue Earth with its continents in the centre, and a thin, faint white dashed circle around Earth for the Moon's path. Earth's left half, facing the Sun, is bright and its right half is in shadow. A light grey Moon sits on the dashed circle to the right of Earth, on the far side of Earth from the Sun; the Moon's left half, facing the Sun and Earth, is bright and its right half is in shadow. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Sun",
+          "aliases": [],
+          "sam_phrase": "yellow sun",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Earth",
+          "aliases": [],
+          "sam_phrase": "blue globe",
+          "color_hex": "#4DA6FF"
+        },
+        {
+          "name": "Moon",
+          "aliases": [],
+          "sam_phrase": "grey moon",
+          "color_hex": "#D9D9D9"
+        }
+      ],
+      "stage_of": "Moon phases"
+    },
+    {
+      "id": "third-quarter",
+      "image_prompt": "Educational diagram, as an Earth science textbook draws it, of the Sun, Earth and Moon seen from high above Earth's North Pole: a yellow Sun on the left side of the picture, a bright blue Earth with its continents in the centre, and a thin, faint white dashed circle around Earth for the Moon's path. Earth's left half, facing the Sun, is bright and its right half is in shadow. A light grey Moon sits on the dashed circle directly above Earth; the Moon's left half, facing the Sun, is bright and its right half is in shadow. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Sun",
+          "aliases": [],
+          "sam_phrase": "yellow sun",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Earth",
+          "aliases": [],
+          "sam_phrase": "blue globe",
+          "color_hex": "#4DA6FF"
+        },
+        {
+          "name": "Moon",
+          "aliases": [],
+          "sam_phrase": "grey moon",
+          "color_hex": "#D9D9D9"
+        }
+      ],
+      "stage_of": "Moon phases"
+    }
+  ],
+  "lesson_markdown": "**Why does the Moon look like a thin sliver on some nights and a full, round circle on others?**\n\nThe Moon itself doesn't change shape. The Sun always lights half the Moon; as the Moon orbits Earth, we see different amounts of that lit half. These changing shapes are called **phases**.\n\n## Try it with a lamp and a ball\n\nHold a ball at arm's length in a dark room lit by one lamp, then turn slowly in a circle. The lamp always lights the half of the ball facing it, but as you turn, you see more of that lit half, then less. The lamp stands for the Sun, the ball for the Moon, and your head for Earth.\n\n## Why it happens\n\n1. **The Moon makes no light of its own.** It shines because sunlight hits it and reflects off its surface.\n2. **Half is always lit.** The Sun lights the Moon from one side, so the half facing the Sun is lit and the half facing away is dark.\n3. **The Moon keeps moving.** It travels around Earth in a path called its **orbit**, so its position around Earth keeps changing.\n4. **Our view changes.** As the Moon moves along its orbit, we see different amounts of its lit half from Earth.\n\nYou already know this idea from Earth itself: the half of Earth facing the Sun has day, and the other half has night.\n\n## Four phases to know\n\nBefore the table, a question: where do you think the Moon has to be for us to see its whole lit half? It has to be on the far side of Earth from the Sun, so its whole lit half faces us.\n\n| Phase | Where the Moon is | What we see |\n|---|---|---|\n| **New moon** | Between Earth and the Sun | Only the dark half, so the Moon can't be seen |\n| **First quarter** | A quarter of the way around its orbit, about a week later | Half of the face lit, half dark |\n| **Full moon** | On the far side of Earth from the Sun, about two weeks after new moon | The whole lit half: a round disc |\n| **Third quarter** | Three quarters of the way around | Half of the face lit, on the opposite side from first quarter |\n\nWhile the lit part we see grows, from new moon to full moon, the Moon is **waxing**. While it shrinks, from full moon back to new moon, it is **waning**. Between new moon and the quarters, it looks like a thin crescent. One full cycle takes about 29.5 days, roughly a month.\n\nHere's a surprise: even at new moon, the Moon is still half lit. That lit half just faces away from us.\n\n## A common mistake\n\nA common mistake is to think that Earth's shadow causes the phases. Earth's shadow falls on the Moon only during a lunar eclipse, which can happen only at full moon, when the Sun, Earth and Moon line up exactly. Most full moons have no eclipse, so the phases come from how much of the sunlit half we see, not from a shadow.\n\n*This is simplified:* diagrams of the phases are not drawn to scale. The Sun is far bigger and much farther away than they show.\n\n## Check yourself\n\nAt first quarter, the Sun still lights a full half of the Moon. So why do we see only half of the Moon's face lit?\n\nCurious how eclipses work, or what Earth looks like from the Moon? Ask a follow-up!",
+  "music": {
+    "positive_styles": [
+      "Bright, playful teen pop made for singing along; a clear, warm female lead delivers the verses in a light, unhurried rap with plenty of melody, then opens up into stacked harmonies on a big, bouncy sing-along chorus; finger snaps and handclaps on a relaxed 96 bpm beat with punchy but light drums; glossy synths and a twinkling glockenspiel lead, a soft round bass underneath, a starry, wide-eyed night-sky mood"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "fast dense rap",
+      "heavy distortion"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "So the shape we see keeps changing from the ground",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Hold a ball out in a room with one lamp bright",
+      "names": [
+        "ball",
+        "lamp"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "See how only half the ball can catch the light",
+      "names": [
+        "ball"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Spin around slowly, watch the bright side shrink and grow",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "The Moon does that too, it's the very same show",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "It makes no light, it bounces back the light from the Sun",
+      "names": [
+        "Sun"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "So half is always shining and the other half has none",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "At new moon it's still half lit, but the lit half's turned away",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "We only see the dark half, so it's hidden on that day",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "It's not a shadow from the Earth that makes those shapes",
+      "names": [
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "It's how much lit half faces us from different places",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "New moon, first quarter, waxing bright",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Full moon, third quarter, waning out of sight",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Same lit half, a different view from the ground",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Now it's waxing, so the bright part grows each night",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "At first quarter, half its face is dark and half is bright",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Two weeks in, the Earth sits in between the Moon and Sun",
+      "names": [
+        "Earth",
+        "Moon",
+        "Sun"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Full moon shows the whole lit half, and now the growing's done",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Then it's waning, so the bright part shrinks each day",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Third quarter's half again, but lit the other way",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "The whole loop takes about a month from start to end",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Then it's dark at new moon, and it starts the loop again",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "When Sun and Earth and Moon line up exactly right",
+      "names": [
+        "Sun",
+        "Earth",
+        "Moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "The shadow of the Earth eclipses a full moon that night",
+      "names": [
+        "Earth",
+        "moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "New moon, first quarter, waxing bright",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Full moon, third quarter, waning out of sight",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Same lit half, a different view from the ground",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Now picture standing on the Moon and looking back at home",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "The Earth is half lit too, so it has phases of its own",
+      "names": [
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "At new moon, the sunny side of Earth is facing you",
+      "names": [
+        "Earth",
+        "moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "So from up there the Earth looks full, a round and shining blue",
+      "names": [
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "At full moon, the night side of the Earth is turned to you",
+      "names": [
+        "Earth",
+        "moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "So the Earth looks dark from there, the opposite view",
+      "names": [
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "As the Moon grows fuller in our sky, night by night",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "From up there, the Earth gets thinner, losing light",
+      "names": [
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "The Sun lights half, the Moon just changes place",
+      "names": [
+        "Sun",
+        "Moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "And that's what makes the shapes we see across its face",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "New moon, first quarter, waxing bright",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Full moon, third quarter, waning out of sight",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Same lit half, a different view from the ground",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Just a ball beside a lamp, and you turning in the room",
+      "names": [
+        "ball",
+        "lamp"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "That's every phase you'll ever see of the Moon",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Half lit by sunlight, the Moon goes round",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Some evenings after sunset, a thin, curved sliver of Moon hangs low in the western sky.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "Over the next few days it grows into half a circle, and later into a full, round disc.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "Picture a dark room lit by a single lamp.",
+      "names": [
+        "lamp"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n4",
+      "text": "Hold out a ball, and the lamp lights only the half facing it.",
+      "names": [
+        "ball",
+        "lamp"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n5",
+      "text": "Now turn slowly in a circle, and you see more of that lit half, then less.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n6",
+      "text": "The real Moon works the same way.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n7",
+      "text": "It makes no light of its own; it shines because light from the Sun reflects off it.",
+      "names": [
+        "Sun"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "So the half facing the Sun is always lit, and the half facing away is dark.",
+      "names": [
+        "Sun"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "At new moon, the Moon sits between Earth and the Sun.",
+      "names": [
+        "Moon",
+        "Earth",
+        "Sun"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n10",
+      "text": "Its lit half faces the Sun, so we face only its dark half and cannot see it.",
+      "names": [
+        "Sun"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n11",
+      "text": "Surprisingly, even at new moon the Moon is still half lit; that half just faces away from us.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n12",
+      "text": "The Moon travels around Earth along a path called its orbit, so its place around Earth keeps changing.",
+      "names": [
+        "Moon",
+        "Earth"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "As it moves, more of the lit half turns toward us, and these changing shapes are called phases.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n14",
+      "text": "While the lit part we see is growing, we say the Moon is waxing.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n15",
+      "text": "About a week after new moon, it reaches first quarter, when half of its face looks lit.",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n16",
+      "text": "So where must the Moon be for us to see its whole lit half?",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n17",
+      "text": "It must be on the far side of Earth from the Sun, which gives us the full moon.",
+      "names": [
+        "Earth",
+        "Sun",
+        "moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "After that, the lit part we see shrinks, and we say the Moon is waning.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "At third quarter, half of the face looks lit again, but on the opposite side from first quarter.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "Then it slides back to new moon; one full cycle takes about twenty-nine and a half days.",
+      "names": [
+        "moon"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n21",
+      "text": "A common mistake is to think that the shadow of Earth causes the phases.",
+      "names": [
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n22",
+      "text": "That shadow only reaches the Moon during a lunar eclipse, at a full moon when all three line up exactly.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "Most full moons have no eclipse, so phases come from how much sunlit half we see.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n24",
+      "text": "The same idea works in reverse from the Moon.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "At new moon, someone standing on the Moon would see a full, blue Earth, because the sunny side of Earth faces them.",
+      "names": [
+        "Moon",
+        "Earth"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "At full moon, they would see the dark night side of Earth instead.",
+      "names": [
+        "Earth",
+        "moon"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "So remember this: the Sun always lights half the Moon; as the Moon orbits Earth, we see different amounts of that lit half.",
+      "names": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n28",
+      "text": "The cause is the Moon moving around Earth; the result is a cycle of shapes about once a month.",
+      "names": [
+        "Moon",
+        "Earth"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n29",
+      "text": "Now the shape of the Moon on any night tells you where it is in its orbit.",
+      "names": [
+        "Moon"
+      ],
+      "fact_id": "f3"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.6
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lamp",
+      "particles": [
+        "Lamp",
+        "Ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Ball",
+        "zoom": 1.7
+      },
+      "spotlight": "Ball",
+      "particles": [
+        "Lamp",
+        "Ball"
+      ],
+      "carries": "",
+      "glow": "Ball",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Ball",
+      "particles": [
+        "Lamp",
+        "Ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sun",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.6
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.7
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "full-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "Moon",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "full-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.6
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.6
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.6
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.8
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "Earth",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "full-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.7
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.6
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Lamp",
+        "Ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.4
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.6
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lamp",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Ball",
+        "zoom": 1.6
+      },
+      "spotlight": "Ball",
+      "particles": [
+        "Lamp",
+        "Ball"
+      ],
+      "carries": "",
+      "glow": "Ball",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Ball",
+      "particles": [
+        "Lamp",
+        "Ball"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sun",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.7
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "first-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "Moon",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.8
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "full-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.6
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "full-moon",
+      "camera": {
+        "target": "Moon",
+        "zoom": 1.7
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "new-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "new-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.7
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth",
+        "Moon"
+      ],
+      "carries": "",
+      "glow": "Earth",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "full-moon",
+      "camera": {
+        "target": "Earth",
+        "zoom": 1.7
+      },
+      "spotlight": "Earth",
+      "particles": [
+        "Sun",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "full-moon",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "third-quarter",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Moon",
+      "particles": [
+        "Sun",
+        "Moon",
+        "Earth"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "Why does the Moon seem to change shape?",
+      "from_narration": "n1"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Lamp = Sun, ball = Moon, your head = Earth",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Moon makes no light → it reflects sunlight",
+      "from_narration": "n7"
+    },
+    {
+      "from_line": "v1-6",
+      "text": "Sun lights one side → half lit, half dark",
+      "from_narration": "n8"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "New moon: lit half faces away → Moon unseen",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "c1-1",
+      "text": "Moon orbits Earth → its position keeps changing",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "More lit half turns toward us → waxing to full moon",
+      "from_narration": "n14"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Past full moon, less lit half faces us → waning",
+      "from_narration": "n18"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "Exact line-up at full moon → Earth's shadow → eclipse",
+      "from_narration": "n22"
+    },
+    {
+      "from_line": "b-1",
+      "text": "From the Moon, Earth has phases too, opposite ours",
+      "from_narration": "n24"
+    }
+  ],
+  "tags": {
+    "song": [
+      "moonphases",
+      "phasesofthemoon",
+      "newmoon",
+      "fullmoon",
+      "waxingandwaning",
+      "earthscience",
+      "6thgradescience",
+      "studysong",
+      "pop",
+      "studytok"
+    ],
+    "lesson": [
+      "moonphases",
+      "phasesofthemoon",
+      "newmoon",
+      "fullmoon",
+      "waxingandwaning",
+      "earthscience",
+      "6thgradescience",
+      "explained",
+      "studytok"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Turn the price until it's just right\" is concrete and singable, but it names the dial rather than the big move: a shortage pushes the price up and a surplus pulls it down. The lesson opens on a real question, \"Why do sold-out concert tickets resell for more than their face price?\", and the narration opens on a concert booth, \"A booth sells out of concert tickets in minutes, with fans still in line.\" Those openings are strong, but the title leans on \"just right\" and \"price\" and does not show actions on real things.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The shower dial (\"Price works like the temperature dial in your shower\") is an everyday picture of the whole self-correcting job, and it is set up early and carried through verses, chorus (\"Too cold, turn it up; too hot, turn it down\") and narration. It fits the whole idea, since it turns up, turns down and leaves alone at the just-right setting. It is a little stretched because the dial implies a single hand turning it, which sits oddly against the misconception that nobody sets the price alone, and the bridge and heat-wave sections drop it.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order with causes: buyers want less and sellers offer more as the price rises, \"Buyers compete for too few goods and sellers see they can charge more, so the price rises,\" \"Sellers are left with unsold goods, so they cut the price,\" the gap shrinking, and the stop at equilibrium. The song carries the gist too (v2-5 through v2-10). The only thin spot is that link 4 is stated but not fully explained in the lesson (\"Each move shrinks the gap\"), though the quantity responses are given.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Read in order they mostly tell the chain: \"Below equilibrium → shortage → price rises,\" \"Above equilibrium → surplus → price falls,\" \"No shortage or surplus left → price stays at equilibrium.\" The first, \"How do buyers and sellers set a price?\", is a question and not a step, and \"Cold side = price too low, hot side = too high\" is a label for the metaphor. \"Each price move shrinks the gap between quantities\" starts at v2-5 and n19, where the cause is named, which is fine. The last two lines (heat wave, price ceiling) go beyond the core idea and do not lead to it, and the chain never closes on the core idea.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric v1-12: \"So the price climbs up, and sellers raise it too\"",
+      "problem": "The line says sellers raise the price as a separate step from the price climbing, which blurs the cause (buyers bidding it up, sellers seeing they can charge more).",
+      "correction": "\"Buyers bid it up, and sellers see they can charge more.\""
+    },
+    {
+      "claim": "Lyric b-2: \"Price can't climb above it, so the upward push is lost\"",
+      "problem": "The upward push (the shortage) is not lost; it persists, and the price ceiling just blocks the price from responding to it.",
+      "correction": "\"Price can't climb above it, so the upward push gets blocked.\""
+    }
+  ],
+  "accuracy": {
+    "reason": "The model, the laws of demand and supply, the surplus and shortage logic, and the ceiling example are all correct, and the droplet flags itself as a simplified model. There are two small imprecisions: v1-12 (\"So the price climbs up, and sellers raise it too\") muddles the cause, and b-2 (\"the upward push is lost\") suggests the shortage pressure disappears when it is in fact blocked. A learner would not carry away anything seriously wrong from these.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The verses are conversational, rap-ready and mostly clean, with rhymes such as \"sign/line\" and \"falls/small,\" and many lines are around 10 to 14 syllables, which suits rapping. The chorus is a chant that can be sung back after two hearings. Some lines read like textbook sentences (\"When the price climbs, the quantity demanded falls\", \"Curves cross at the equilibrium price, there it stays\") and the rhymes sometimes bend meaning (\"sellers raise it too,\" \"let it lie\"). The bridge is long and expository, with lines like \"A cap on rent's a ceiling, a common case to know\" and \"Hold the price below the cross, and the shortage won't go.\"",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the whole idea in bold, and builds on why, with the dial, a table and the real-world examples. The Predict section asks what happens when a law caps a price below equilibrium and answers it immediately. The misconception is named and refuted. The closing check, \"Which way will the price move, and why does it stop where it does?\", needs the core idea to answer. The weaknesses are the \"Next up\" heat-wave paragraph and the wages and price ceiling content, which add terms beyond the core idea for a first-time learner, and the misconception section is brief.",
+    "score": 4
+  }
+}

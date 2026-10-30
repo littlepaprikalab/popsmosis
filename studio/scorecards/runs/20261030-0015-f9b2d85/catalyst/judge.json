@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Take the low pass, let molecules cross\" is concrete, singable and names the big move, though it is nearly the core idea in miniature rather than fully so (it leaves out the barrier and the collisions). The lesson opens on a real question (\"Why does hydrogen peroxide sit almost unchanged in its bottle, yet fizz into foam the moment it touches a cut?\") and the narration opens on peroxide on a cut, which is from the learner's world. The one weakness is that \"low pass\" needs the hiking picture to land.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The hike from one valley over a mountain to a lower valley, with a lower pass trail, is apt for the whole idea and not a stock picture. The song sets it up in v1-1 to v1-4 and carries it through the chorus, bridge (\"the low pass is closed\") and outro. The lesson and narration (n5-n8) use it too. It loosens in the middle verses and in the converter section, where the pass trail is not tied to the surface mechanism, and the chorus's \"catalyst comes back around\" sits outside the picture.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach all five links in order, each with its cause: collisions need Ea, few have it so the reaction is slow, the new mechanism lowers Ea, a larger fraction succeed so k rises, and the energies stay put so equilibrium does not shift. The two-step iodide example shows how the catalyst is regenerated. The narration even asks \"So what happens to the rate when the barrier is lower?\". The song carries the gist. The order is slightly scrambled in the narration, where the equilibrium link (n19-n21) comes before the rate result (n23).",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read in order they cover the chain well: \"High barrier → few collisions have enough energy → slow\", \"Lower activation energy → more successful collisions → larger rate constant\". But the first, \"How does a catalyst make a reaction faster?\", is a question, not a step. \"Summit trail = no catalyst; Pass trail = catalyst's lower path\" is a label. \"Same ΔH, both directions sped → equilibrium unchanged\" starts at p1-1 \"cuts the climb both ways the same\" and so overstates what is sung. \"I⁻ used in Step 1, given back in Step 2\" starts at v1-7 and n15, which only covers step 1. Several lines also carry terms like \"Platinum surface: CO + O₂ → CO₂\" and are not in chain order (the rate-constant line comes after the equilibrium line).",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "lyric c1-3/c1-4 \"Same reactants in, same products out / Faster to the finish, catalyst comes back around\"; narration n31 \"The same reactants go in, the same products come out\"",
+      "problem": "Slightly loose: it hides that the catalyst is consumed in one step and only regenerated in another, and \"same reactants in\" could be read as the reactants being unchanged rather than the energies being the same.",
+      "correction": "Say the catalyst is regenerated, and that the reactants and products keep the same energies."
+    },
+    {
+      "claim": "lyric v2-8 \"So the exhaust leaves with less CO than before\" together with v2-4 \"Carbon monoxide lands on the metal and it sticks / Its bonds get weaker, and oxygen joins in\"",
+      "problem": "The song leaves out that oxygen also adsorbs and has its bonds weakened on the surface, so oxygen only \"joins in\" without sticking, which is imprecise.",
+      "correction": "Say that both CO and O₂ stick to the metal surface and their bonds weaken before they react."
+    }
+  ],
+  "accuracy": {
+    "reason": "The content is sound: activation energy, transition state, Arrhenius, the iodide mechanism with intermediate and catalyst identified correctly, ΔH and K unchanged, and lead poisoning of the converter. There is one small imprecision in the song (v2-4/v2-5), which says oxygen \"joins in\" without saying it also adsorbs, and the chorus wording \"same reactants in, same products out\" is a loose way to say the energies stay the same. Nothing a learner would carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant (\"Take the low pass, let molecules cross\") and most lines fit the bar. Several rapped lines read like captions or run long (\"Carbon monoxide lands on the metal and it sticks\", \"Keep the platinum clean, and the low pass lets them pass\"). The rhymes are sometimes weak or bent: \"in the way / stay\" is fine, but \"ready for some more / less CO than before\" and \"cleanup's lost\" with \"cross\" reach for the rhyme. The chorus has five lines plus a different extended third chorus, which makes it harder to sing back. \"CO2\" and \"Step 1\" are written as notation rather than as a singer says them.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big idea and the hiking picture, and builds on the why in numbered steps. It includes a prediction (\"Predict: if iodide is used up in Step 1, how can a small amount keep working?\") answered right after, names the misconception and why it is wrong, and ends with a check that needs the core idea (\"why does the reaction slow down even though carbon monoxide and oxygen are still there?\"). It carries a lot of terms for a first read (transition state, mechanism, intermediate, rate constant, Arrhenius, adsorption, equilibrium) and the converter section could be trimmed.",
+    "score": 4
+  }
+}

@@ -1,0 +1,2334 @@
+{
+  "course": "General Chemistry",
+  "topic": "How a catalyst speeds up a reaction",
+  "audience": "college",
+  "core_idea": "A catalyst opens a lower-energy path, so more collisions clear the barrier and the reaction runs faster.",
+  "why_chain": [
+    "Molecules react only when they collide with at least the activation energy, enough to reach the transition state.",
+    "At a given temperature only a small fraction of collisions have that much energy, so a high barrier means a slow reaction.",
+    "A catalyst provides a new reaction mechanism with a lower activation energy, taking part in one step and being regenerated in a later one.",
+    "With a lower barrier, a much larger fraction of collisions succeed, so the rate constant and the rate rise.",
+    "The reactants and products keep the same energies, so ΔH and the equilibrium position stay the same; only the speed changes."
+  ],
+  "key_terms": [
+    "catalyst",
+    "activation energy",
+    "transition state",
+    "reaction mechanism",
+    "intermediate",
+    "rate constant",
+    "energy diagram",
+    "equilibrium"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "For molecules to react, they must collide with the correct orientation and with at least the activation energy (Ea), the energy needed to reach the transition state, the highest-energy point along the reaction pathway; collisions without enough energy just bounce apart. An energy diagram plots energy against reaction progress: the reactants' energy on the left, the products' energy on the right, and a hump between them whose top is the transition state; the height from the reactants to the top is Ea. At a given temperature only a small fraction of collisions have at least Ea, so a reaction with a high barrier is slow. Raising the temperature speeds a reaction by giving more molecules enough energy to clear the same barrier; in the Arrhenius equation, k = Ae^(−Ea/RT), the rate constant k grows when T rises or when Ea falls. The decomposition of hydrogen peroxide, 2H₂O₂ → 2H₂O + O₂, releases heat (it is exothermic), so its products sit lower than its reactants on the energy diagram. The droplet's picture for the whole idea: a reaction is a hike from one valley down to a lower valley over a mountain, the heights standing for energy; the starting valley matches the reactants, the lower valley the products, and the high summit trail the uncatalyzed path; molecules are the hikers, and only the few with plenty of energy make it over the summit.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "A catalyst is a substance that increases the rate of a reaction without being consumed overall. It lowers the activation energy by providing a different reaction mechanism, a catalyzed path whose highest point is lower than the uncatalyzed path's; in the droplet's picture it is a lower pass trail through the same mountains, which many more hikers can cross. With a lower Ea, a much larger fraction of collisions have enough energy, so the rate constant and the rate increase. A catalyst takes part in the reaction: it is used up in an early step and regenerated in a later one, so it does not appear in the overall equation, and a small amount can be used again and again. For example, hydrogen peroxide breaks down only slowly in its bottle, but iodide ion catalyzes the breakdown in two steps: Step 1, H₂O₂ + I⁻ → H₂O + IO⁻; Step 2, H₂O₂ + IO⁻ → H₂O + O₂ + I⁻. Hypoiodite (IO⁻) is an intermediate, made in one step and used up in the next, while iodide is the catalyst, used up in Step 1 and given back in Step 2; for this two-step mechanism the catalyzed path on the energy diagram has two humps, one per step. Enzymes are biological catalysts, central to biochemistry, and work the same way: hydrogen peroxide poured on a cut fizzes into foam because catalase, an enzyme in the body's cells, rapidly splits it into water and oxygen gas, and the oxygen forms the bubbles.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "A catalyst does not change the energies of the reactants or products, so the enthalpy change (ΔH) of the reaction is the same with or without it; in the droplet's picture, both valleys stay at the same heights whichever trail is taken. A catalyst lowers the activation energy of the forward and reverse reactions by the same amount, so it speeds both equally. A common mistake is to think a catalyst shifts an equilibrium toward products or raises the yield; in fact it only lets the system reach equilibrium faster, and the equilibrium constant K and the equilibrium composition are unchanged. Chemical equilibrium, where this idea returns, usually follows kinetics in a general chemistry course.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "A heterogeneous catalyst is in a different phase from the reactants, usually a solid surface, while a homogeneous catalyst, such as iodide dissolved with hydrogen peroxide, is in the same phase. On a solid catalyst, the surface provides a pathway with a lower activation energy: reactant molecules stick (adsorb) to active sites on the surface, their bonds weaken, they react, and the products leave (desorb), freeing the sites for more molecules. A car's catalytic converter uses surfaces of platinum, palladium and rhodium: carbon monoxide and oxygen in the engine's exhaust gas react there to form carbon dioxide (2CO + O₂ → 2CO₂), so the exhaust that leaves the converter carries less carbon monoxide than the exhaust that enters it, and the metal is not used up. A catalyst can be poisoned: lead from leaded gasoline coats the metal and blocks its active sites, so carbon monoxide can no longer stick, the reaction is left with only the slow, high-barrier uncatalyzed path, and much of the toxic carbon monoxide leaves unconverted. That is why cars with catalytic converters must run on unleaded fuel.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think a catalyst shifts an equilibrium toward products or raises the yield. It actually lowers the activation energy of the forward and reverse reactions equally, so equilibrium is reached faster while K and the equilibrium composition stay the same.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a friendly first-aid textbook illustration draws it, of a scraped knee seen from the side: the bent knee across the middle of the picture, a plain brown bottle of hydrogen peroxide with no label standing upright on the left beside it, and a small mound of white foam sitting on the scrape on the knee. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Hydrogen peroxide",
+          "aliases": [
+            "hydrogen peroxide",
+            "peroxide"
+          ],
+          "sam_phrase": "brown bottle",
+          "color_hex": "#C8783A"
+        },
+        {
+          "name": "Foam",
+          "aliases": [
+            "foam",
+            "bubbles"
+          ],
+          "sam_phrase": "white foam",
+          "color_hex": "#F2F2F2"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a friendly textbook illustration draws a mountain landscape, of two valleys separated by a mountain ridge, seen from the side: on the left a high valley holding a blue lake, on the right a lower valley with a green meadow, sitting lower than the left valley; the ridge between them has one tall snowy summit and, beside it, a much lower pass. A red hiking trail runs from the left valley up over the tall summit and down into the right valley; a yellow hiking trail runs from the left valley through the lower pass and down into the right valley. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Starting valley",
+          "aliases": [],
+          "sam_phrase": "blue lake",
+          "color_hex": "#4DA6FF"
+        },
+        {
+          "name": "Lower valley",
+          "aliases": [],
+          "sam_phrase": "green meadow",
+          "color_hex": "#4CD964"
+        },
+        {
+          "name": "Summit trail",
+          "aliases": [],
+          "sam_phrase": "red trail",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "Pass trail",
+          "aliases": [],
+          "sam_phrase": "yellow trail",
+          "color_hex": "#FFD23F"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws an energy diagram, of one reaction with and without a catalyst: a plain white vertical axis on the left and a plain white horizontal axis along the bottom; a short blue horizontal line on the left at middle height for the reactants; a short green horizontal line on the right, lower than the blue one, for the products; a red curve rising from the end of the blue line to one tall hump in the middle and falling to the green line; a yellow curve below the red one, running from the blue line to the green line with two smaller, lower humps; a small pink dot on the very top of the red hump. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Reactants",
+          "aliases": [
+            "reactants"
+          ],
+          "sam_phrase": "blue line",
+          "color_hex": "#4DA6FF"
+        },
+        {
+          "name": "Products",
+          "aliases": [
+            "products"
+          ],
+          "sam_phrase": "green line",
+          "color_hex": "#4CD964"
+        },
+        {
+          "name": "Uncatalyzed path",
+          "aliases": [
+            "uncatalyzed path",
+            "high barrier"
+          ],
+          "sam_phrase": "red curve",
+          "color_hex": "#FF5A5A"
+        },
+        {
+          "name": "Catalyst path",
+          "aliases": [
+            "catalyst path",
+            "lower path",
+            "lower barrier",
+            "new mechanism"
+          ],
+          "sam_phrase": "yellow curve",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Transition state",
+          "aliases": [
+            "transition state"
+          ],
+          "sam_phrase": "pink dot",
+          "color_hex": "#FF7AC8"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "cycle-detail",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws a catalytic cycle, of the iodide-catalyzed breakdown of hydrogen peroxide: a large ring in the centre made of two curved arrows, its right half cyan and its left half lime green; an iodide ion as a purple sphere at the top of the ring; a hypoiodite ion as a magenta sphere at the bottom of the ring; one hydrogen peroxide molecule as a brown ball-and-stick model in the middle of the ring. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Step 1",
+          "aliases": [],
+          "sam_phrase": "cyan arrow",
+          "color_hex": "#3DD6D0"
+        },
+        {
+          "name": "Step 2",
+          "aliases": [],
+          "sam_phrase": "lime arrow",
+          "color_hex": "#A8E63D"
+        },
+        {
+          "name": "Iodide",
+          "aliases": [
+            "iodide"
+          ],
+          "sam_phrase": "purple sphere",
+          "color_hex": "#A97CFF"
+        },
+        {
+          "name": "Intermediate",
+          "aliases": [
+            "intermediate",
+            "hypoiodite"
+          ],
+          "sam_phrase": "magenta sphere",
+          "color_hex": "#E040FB"
+        },
+        {
+          "name": "Hydrogen peroxide",
+          "aliases": [
+            "hydrogen peroxide",
+            "peroxide"
+          ],
+          "sam_phrase": "brown molecule",
+          "color_hex": "#C8783A"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "surface-detail",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws catalysis on a metal surface, of a solid platinum catalyst in cross-section: a flat slab of closely packed silver platinum atoms across the bottom third of the picture, and above it the exhaust gas as an even orange-tinted space filling the upper part of the picture, with nothing in it. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Platinum surface",
+          "aliases": [
+            "platinum surface",
+            "platinum"
+          ],
+          "sam_phrase": "silver slab",
+          "color_hex": "#D5DBE3"
+        },
+        {
+          "name": "Exhaust gas",
+          "aliases": [
+            "exhaust gas",
+            "exhaust"
+          ],
+          "sam_phrase": "orange haze",
+          "color_hex": "#FFA040"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "poison-detail",
+      "image_prompt": "Educational diagram, as a general chemistry textbook draws a poisoned metal catalyst, of a solid platinum catalyst in cross-section: a flat slab of closely packed silver platinum atoms across the bottom third of the picture; a single layer of small teal spheres, lead atoms, lying on top of the silver slab and covering its surface; above them the exhaust gas as an even orange-tinted space filling the upper part of the picture, with nothing in it. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Platinum surface",
+          "aliases": [
+            "platinum surface",
+            "platinum"
+          ],
+          "sam_phrase": "silver slab",
+          "color_hex": "#D5DBE3"
+        },
+        {
+          "name": "Exhaust gas",
+          "aliases": [
+            "exhaust gas",
+            "exhaust"
+          ],
+          "sam_phrase": "orange haze",
+          "color_hex": "#FFA040"
+        },
+        {
+          "name": "Lead",
+          "aliases": [
+            "lead"
+          ],
+          "sam_phrase": "teal beads",
+          "color_hex": "#2FC9A8"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "## How a catalyst speeds up a reaction\n\n**Why does hydrogen peroxide sit almost unchanged in its bottle, yet fizz into foam the moment it touches a cut?**\n\nThe difference is a catalyst: a substance that speeds up a reaction without being used up. The big idea: **a catalyst opens a lower-energy path, so more collisions clear the barrier and the reaction runs faster.**\n\n### The picture: a hike over a mountain\n\nThink of a reaction as a hike from one valley down to a lower valley, with a mountain in between. The high summit trail is the reaction without a catalyst: only the few hikers with plenty of energy make it over. A catalyst opens a lower pass through the same mountains, so many more hikers get across. The mountain is only a picture: its heights stand for energy.\n\n### Why it works, step by step\n\n1. **Molecules must collide hard enough.** They react only when they collide with the right orientation and at least the **activation energy**, enough to reach the **transition state**, the top of the hump on an **energy diagram**.\n2. **Most collisions fall short.** At a given temperature only a small fraction of collisions have that much energy, so a high barrier means a slow reaction.\n3. **A catalyst offers a new route.** It provides a different **reaction mechanism** with a lower activation energy.\n4. **More collisions succeed.** With a lower barrier, a much larger fraction of collisions have enough energy, so the **rate constant** and the rate increase.\n\nYou already know another way to speed a reaction: heating gives more molecules enough energy to clear the *same* barrier. In the Arrhenius equation, k = Ae^(−Ea/RT), the rate constant grows when T rises or when Ea falls.\n\n### Watch one at work\n\nIodide ion (I⁻) catalyzes the breakdown of hydrogen peroxide, 2H₂O₂ → 2H₂O + O₂, in two steps:\n\n| Step | Reaction | Iodide |\n|---|---|---|\n| 1 | H₂O₂ + I⁻ → H₂O + IO⁻ | used up |\n| 2 | H₂O₂ + IO⁻ → H₂O + O₂ + I⁻ | given back |\n\nPredict: if iodide is used up in Step 1, how can a small amount keep working? Step 2 gives it back, so the catalyst never appears in the overall equation and can be used again and again. Hypoiodite (IO⁻) is the **intermediate**: made in one step, used up in the next.\n\nOn a cut, an enzyme called catalase does the same job, splitting peroxide into water and oxygen gas, which forms the bubbles.\n\n### Catalysts on a surface\n\nA car's catalytic converter uses metals such as platinum. Carbon monoxide and oxygen stick to active sites on the surface, their bonds weaken, they react to form carbon dioxide, and the product leaves, freeing the site. The metal is not used up.\n\nNow the stakes: lead from leaded gasoline coats the metal and blocks those sites. Carbon monoxide can no longer stick, the reaction is left with only the slow, high-barrier path, and much of the carbon monoxide leaves unconverted. That is why these cars must run on unleaded fuel.\n\n### What a catalyst does *not* change\n\n- The reactants and products keep the same energies, so ΔH is the same with or without the catalyst.\n- It lowers the activation energy of the forward and reverse reactions by the same amount.\n\nA common mistake is to think a catalyst shifts an equilibrium toward products or raises the yield. It only lets the system reach **equilibrium** faster, and K and the equilibrium composition stay the same. You will use this again when you study chemical equilibrium.\n\n### Check yourself\n\nIf lead blocks the active sites on a converter's platinum, why does the reaction slow down even though carbon monoxide and oxygen are still there?\n\nWant to go further? Ask a follow-up question.",
+  "music": {
+    "positive_styles": [
+      "Latin pop with a light dembow groove and crisp, unhurried rapped verses; a warm, clear male vocal riding the beat in the verses, then opening into a bright, catchy sung chorus with soft doubled harmonies; nylon-string guitar plucks lead the melody, handclaps and a dry rimshot accent the dembow pattern over a round, gentle sub bass; sunny, polished mix with the vocal up front; 96 bpm"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "heavy autotune"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Same start, same end, and the catalyst's not lost",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Picture a reaction with a mountain in the way",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "Down in the Starting valley, the molecules stay",
+      "names": [
+        "Starting valley"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Up the Summit trail, most hikers stall up high",
+      "names": [
+        "Summit trail"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "But the Pass trail's lower, so way more get by",
+      "names": [
+        "Pass trail"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Molecules collide, but the high barrier's steep",
+      "names": [
+        "high barrier"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Need activation energy, so just a few make the leap",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Here's the twist: the catalyst gets used in Step 1",
+      "names": [
+        "Step 1"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Then Step 2 hands it back, ready for another run",
+      "names": [
+        "Step 2"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "The lower path cuts the climb both ways the same",
+      "names": [
+        "lower path"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Equilibrium comes faster, but the yield won't change",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "A lower barrier, so more collisions get across",
+      "names": [
+        "lower barrier"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Same reactants in, same products out",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Faster to the finish, catalyst comes back around",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "On the lower path, way more collisions have enough",
+      "names": [
+        "lower path"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "So the rate constant climbs and the reaction speeds up",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Same trick in your car, where the platinum sits",
+      "names": [
+        "platinum"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Carbon monoxide lands on the metal and it sticks",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Its bonds get weaker, and oxygen joins in",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Out comes CO2, and the site is free again",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "The platinum stays the same, it's ready for some more",
+      "names": [
+        "platinum"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "So the exhaust leaves with less CO than before",
+      "names": [
+        "exhaust"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Then in biochem, enzymes do this in your cells",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "On a cut they split peroxide, and the bubbles swell",
+      "names": [
+        "peroxide",
+        "bubbles"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "A lower barrier, so more collisions get across",
+      "names": [
+        "lower barrier"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Same reactants in, same products out",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Faster to the finish, catalyst comes back around",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Put lead in the fuel, and it rides along",
+      "names": [
+        "lead"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "It coats the platinum where the sites belong",
+      "names": [
+        "platinum"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Carbon monoxide comes, but there's no place to grip",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "So the low pass is closed, it's the slow, steep trip",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Back to the high climb, just a few collisions cross",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "So the carbon monoxide leaves, and the cleanup's lost",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "That's why cars with converters run on unleaded gas",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "Keep the platinum clean, and the low pass lets them pass",
+      "names": [
+        "platinum"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "One lower path, the same start and end",
+      "names": [
+        "lower path"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Faster both ways, and the catalyst comes back again",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "A lower barrier, so more collisions get across",
+      "names": [
+        "lower barrier"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Same reactants in, same products out",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Faster to the finish, catalyst comes back around",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Same start, same end, and the catalyst's not lost",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "A lower barrier, so more collisions get across",
+      "names": [
+        "lower barrier"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Take the low pass, let molecules cross",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Pour hydrogen peroxide on a cut, and it fizzes into foam.",
+      "names": [
+        "hydrogen peroxide",
+        "foam"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n2",
+      "text": "In its bottle, the same peroxide breaks down only slowly.",
+      "names": [
+        "peroxide"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n3",
+      "text": "The difference is a catalyst, which speeds up a reaction without being used up.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n4",
+      "text": "On the cut, an enzyme splits peroxide into water and oxygen, which makes the bubbles.",
+      "names": [
+        "peroxide",
+        "bubbles"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n5",
+      "text": "Picture a reaction as a hike between two valleys, over a mountain.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "Molecules start in the Starting valley and end in the Lower valley.",
+      "names": [
+        "Starting valley",
+        "Lower valley"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "The Summit trail is so high that only a few hikers make it over.",
+      "names": [
+        "Summit trail"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "A catalyst opens the Pass trail, a lower route, so many more get across.",
+      "names": [
+        "Pass trail"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n9",
+      "text": "On an energy diagram, the reactants sit on the left and the products lower on the right.",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "To react, molecules must collide with at least the activation energy, enough to reach the transition state.",
+      "names": [
+        "transition state"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "Without a catalyst, the reaction follows the uncatalyzed path, over a high barrier.",
+      "names": [
+        "uncatalyzed path",
+        "high barrier"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n12",
+      "text": "Only a small fraction of collisions carry that much energy, so the reaction is slow.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n13",
+      "text": "A catalyst gives the reaction a new mechanism, the catalyst path, whose highest point is lower.",
+      "names": [
+        "new mechanism",
+        "catalyst path"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "For peroxide, iodide can be the catalyst, working in two steps.",
+      "names": [
+        "peroxide",
+        "iodide"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "In Step 1, peroxide reacts with iodide to form water and the intermediate.",
+      "names": [
+        "Step 1",
+        "peroxide",
+        "iodide",
+        "intermediate"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "The intermediate is hypoiodite, made in one step and used up in the next.",
+      "names": [
+        "intermediate",
+        "hypoiodite"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "In Step 2, more peroxide reacts with it to form water, oxygen, and iodide again.",
+      "names": [
+        "Step 2",
+        "peroxide",
+        "iodide"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "So the catalyst takes part but is given back, and never appears in the overall equation.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "The reactants and products keep the same energies, so the enthalpy change stays the same.",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "A common mistake is to think a catalyst pushes an equilibrium toward products or raises the yield.",
+      "names": [
+        "products"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "In fact, the catalyst path cuts the barrier both ways equally, so equilibrium arrives sooner but does not shift.",
+      "names": [
+        "catalyst path"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "So what happens to the rate when the barrier is lower?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n23",
+      "text": "A much larger fraction of collisions now has enough energy, so the rate constant rises.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n24",
+      "text": "Solid catalysts work too, like the platinum in a car's catalytic converter.",
+      "names": [
+        "platinum"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "Carbon monoxide and oxygen from the exhaust gas stick to the platinum surface, and their bonds weaken.",
+      "names": [
+        "exhaust gas",
+        "platinum surface"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "They react to form carbon dioxide, which leaves, and the metal stays unchanged.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "But lead from leaded gasoline coats the platinum and blocks its active sites.",
+      "names": [
+        "lead",
+        "platinum"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Carbon monoxide can no longer stick, so much of it escapes unconverted.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "You will meet this idea again in chemical equilibrium and in the enzymes of biochemistry.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n30",
+      "text": "A catalyst opens a lower-energy path, so more collisions clear the barrier and the reaction runs faster.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n31",
+      "text": "The same reactants go in, the same products come out, and the catalyst is given back, which is why a little of it can work again and again.",
+      "names": [
+        "reactants",
+        "products"
+      ],
+      "fact_id": "f2"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Starting valley",
+        "Summit trail",
+        "Lower valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Starting valley",
+        "zoom": 1.6
+      },
+      "spotlight": "Starting valley",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Summit trail",
+        "zoom": 1.6
+      },
+      "spotlight": "Summit trail",
+      "particles": [
+        "Starting valley",
+        "Summit trail"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Pass trail",
+        "zoom": 1.6
+      },
+      "spotlight": "Pass trail",
+      "particles": [
+        "Starting valley",
+        "Pass trail",
+        "Lower valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Uncatalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Uncatalyzed path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Uncatalyzed path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "Activation energy, Eₐ",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "Step 1",
+        "zoom": 1.6
+      },
+      "spotlight": "Step 1",
+      "particles": [
+        "Iodide",
+        "Step 1"
+      ],
+      "carries": "I⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "Step 2",
+        "zoom": 1.6
+      },
+      "spotlight": "Step 2",
+      "particles": [
+        "Step 2",
+        "Iodide"
+      ],
+      "carries": "I⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyst path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyst path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Platinum surface",
+        "zoom": 1.6
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Platinum surface"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Platinum surface",
+        "zoom": 1.6
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Platinum surface"
+      ],
+      "carries": "O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Platinum surface",
+        "zoom": 1.6
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Platinum surface",
+        "Exhaust gas"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Platinum surface"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [
+        "Platinum surface",
+        "Exhaust gas"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Foam",
+        "zoom": 1.6
+      },
+      "spotlight": "Foam",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "Lead",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "Platinum surface",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "Lead",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lead",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Exhaust gas",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "Platinum surface",
+        "zoom": 1.6
+      },
+      "spotlight": "Platinum surface",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Hydrogen peroxide",
+        "zoom": 1.6
+      },
+      "spotlight": "Hydrogen peroxide",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "hook",
+      "camera": {
+        "target": "Foam",
+        "zoom": 1.6
+      },
+      "spotlight": "Foam",
+      "particles": [
+        "Hydrogen peroxide",
+        "Foam"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Starting valley",
+        "Summit trail",
+        "Lower valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "analogy",
+      "camera": {
+        "target": "Summit trail",
+        "zoom": 1.6
+      },
+      "spotlight": "Summit trail",
+      "particles": [
+        "Starting valley",
+        "Summit trail"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "analogy",
+      "camera": {
+        "target": "Pass trail",
+        "zoom": 1.6
+      },
+      "spotlight": "Pass trail",
+      "particles": [
+        "Starting valley",
+        "Pass trail",
+        "Lower valley"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Transition state",
+        "zoom": 1.8
+      },
+      "spotlight": "Transition state",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "Uncatalyzed path",
+        "zoom": 1.6
+      },
+      "spotlight": "Uncatalyzed path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Uncatalyzed path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyst path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "Iodide",
+        "zoom": 1.6
+      },
+      "spotlight": "Iodide",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "Step 1",
+        "zoom": 1.6
+      },
+      "spotlight": "Step 1",
+      "particles": [
+        "Hydrogen peroxide",
+        "Step 1"
+      ],
+      "carries": "H₂O₂",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Iodide",
+            "Step 1"
+          ],
+          "carries": "I⁻"
+        }
+      ]
+    },
+    {
+      "line_id": "n16",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "Intermediate",
+        "zoom": 1.6
+      },
+      "spotlight": "Intermediate",
+      "particles": [
+        "Step 1",
+        "Intermediate"
+      ],
+      "carries": "IO⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "Step 2",
+        "zoom": 1.6
+      },
+      "spotlight": "Step 2",
+      "particles": [
+        "Intermediate",
+        "Step 2"
+      ],
+      "carries": "IO⁻",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Step 2",
+            "Iodide"
+          ],
+          "carries": "I⁻"
+        }
+      ]
+    },
+    {
+      "line_id": "n18",
+      "scene": "cycle-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Iodide",
+      "particles": [
+        "Step 2",
+        "Iodide"
+      ],
+      "carries": "I⁻",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyst path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyst path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "overview",
+      "camera": {
+        "target": "Catalyst path",
+        "zoom": 1.6
+      },
+      "spotlight": "Catalyst path",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "Platinum surface",
+        "zoom": 1.6
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Exhaust gas",
+        "Platinum surface"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Exhaust gas",
+            "Platinum surface"
+          ],
+          "carries": "O₂"
+        }
+      ]
+    },
+    {
+      "line_id": "n26",
+      "scene": "surface-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Platinum surface",
+      "particles": [
+        "Platinum surface",
+        "Exhaust gas"
+      ],
+      "carries": "CO₂",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "Lead",
+        "zoom": 1.6
+      },
+      "spotlight": "Lead",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "poison-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Lead",
+      "particles": [
+        "Exhaust gas",
+        "Lead"
+      ],
+      "carries": "CO",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [
+    {
+      "structure": "Lead"
+    }
+  ],
+  "conversions": [
+    {
+      "structure": "Foam",
+      "inputs": [
+        "H₂O₂"
+      ],
+      "outputs": [
+        "H₂O",
+        "O₂"
+      ]
+    },
+    {
+      "structure": "Uncatalyzed path",
+      "inputs": [
+        "H₂O₂"
+      ],
+      "outputs": [
+        "H₂O",
+        "O₂"
+      ]
+    },
+    {
+      "structure": "Catalyst path",
+      "inputs": [
+        "H₂O₂"
+      ],
+      "outputs": [
+        "H₂O",
+        "O₂"
+      ]
+    },
+    {
+      "structure": "Step 1",
+      "inputs": [
+        "H₂O₂",
+        "I⁻"
+      ],
+      "outputs": [
+        "H₂O",
+        "IO⁻"
+      ]
+    },
+    {
+      "structure": "Step 2",
+      "inputs": [
+        "H₂O₂",
+        "IO⁻"
+      ],
+      "outputs": [
+        "H₂O",
+        "O₂",
+        "I⁻"
+      ]
+    },
+    {
+      "structure": "Platinum surface",
+      "inputs": [
+        "CO",
+        "O₂"
+      ],
+      "outputs": [
+        "CO₂"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How does a catalyst make a reaction faster?",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Summit trail = no catalyst; Pass trail = catalyst's lower path",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-4",
+      "text": "Catalyst → new mechanism with lower activation energy",
+      "from_narration": "n8"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Collisions need ≥ activation energy to reach the transition state",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v1-6",
+      "text": "High barrier → few collisions have enough energy → slow",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "I⁻ used in Step 1, given back in Step 2",
+      "from_narration": "n15"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "Same ΔH, both directions sped → equilibrium unchanged",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Lower activation energy → more successful collisions → larger rate constant",
+      "from_narration": "n23"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "Platinum surface: CO + O₂ → CO₂, metal unchanged",
+      "from_narration": "n24"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Lead blocks active sites → high barrier only → CO escapes",
+      "from_narration": "n27"
+    }
+  ],
+  "tags": {
+    "song": [
+      "catalyst",
+      "activationenergy",
+      "kinetics",
+      "generalchemistry",
+      "chemistry",
+      "genchem",
+      "latinpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "catalyst",
+      "activationenergy",
+      "kinetics",
+      "generalchemistry",
+      "chemistry",
+      "genchem",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

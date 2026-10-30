@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Ring the bell, then bring the meal\" is concrete, rhymes and is easy to sing back, and it names the pairing order, so it works as the idea in miniature. It is a little loose, since the bell and the meal are the experimenter's actions and not the learning itself. The lesson opens on a real question, \"Why does a bell make you hungry?\", and the narration opens on the lunch bell, \"when the bell is only a sound and your lunch tray is still empty\", from the learner's world.",
+    "score": 5
+  },
+  "frame": {
+    "reason": "The doorbell and pizza delivery is an apt picture of what the whole thing does: a signal that announces something meaningful. It is set up at v1-1, returns in the chorus (\"Like a ring at the door saying dinner's near\") and the outro, and appears in both the lesson and the narration. The random-ring doorbell even carries the Rescorla point. It is slightly weakened because the lesson and narration use it up front and then drop it during acquisition and extinction, and the verse mixes it with Pavlov's dogs without mapping the parts clearly.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach each link in order with its cause: food triggers drooling \"with no learning\", the tone is neutral \"because it does not yet signal that anything is coming\", pairing works \"because then the tone predicts the food\", and extinction happens \"because the tone no longer predicts a meal\". The Rescorla point explains why pairing works. The song carries the gist through acquisition and extinction. Spontaneous recovery and the UR/CR point sit beside the chain without disturbing it.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "Read in order, the lines follow the chain from the question through US, NS, acquisition and CS/CR to extinction and recovery. Most are steps with arrows, such as \"Tone without food → drool weakens: extinction\". \"Doorbell = tone, pizza = food\" is a label, not a causal step. \"Same drool: food → UR, tone → CR\" has no narration anchor, and the end of the chain, \"suppressed, not erased\", is not tied to the core idea. They also carry many terms.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Song v1-3 to v1-4: \"Pavlov studied digestion when his dogs went off script / They drooled at the feeder's footsteps before the food hit their lips\"",
+      "problem": "Mostly fine, but the chorus c3-1 \"Neutral tone plus food, now the tone works alone\" compresses the sequence and drops the order (tone before food) that matters.",
+      "correction": "Say \"Neutral tone, then food\" so the order is kept."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts, terms and examples match the study guide. The one imprecision is the chorus c3-1 \"Neutral tone plus food\", which loses the \"just before\" timing the guide stresses. Nothing else would leave a learner with a wrong idea. The song's \"Operant's the other kind: what you do, and what it brings\" is fair for the level.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a chant that is easy to sing back, and \"Ring the bell, then bring the meal\" is clean. The rapped verses mostly stay close to the bar. Several lines read like textbook captions: \"Food's the unconditioned stimulus, nobody had to teach it\" and \"Drool's the unconditioned response, automatic when they eat it\" are long, and \"it eat it\" rhymes bend the grammar. Terms like \"U-R\" and \"C-R\" are spelled as sung. c3-1 and c3-2 are a clunky addition to the chorus and are not a clean chant. The pre-chorus \"Here two stimuli get paired, the drool's an automatic thing\" is stiff.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the question \"Why does a bell make you hungry?\", gives the big idea, then builds the why step by step. It asks a prediction question (\"What do you think the dog does now when it hears the tone by itself?\"), answers it directly, names the misconception and says why it is wrong, and closes with a check that requires the \"no longer predicts\" idea. It carries a lot of terms (US, UR, NS, CS, CR, acquisition, extinction, spontaneous recovery, operant) plus Little Albert and Garcia, which is heavy for a first read, and the \"You've felt this\" section is somewhat of a list.",
+    "score": 4
+  }
+}

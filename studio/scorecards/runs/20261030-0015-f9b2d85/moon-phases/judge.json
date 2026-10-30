@@ -1,0 +1,37 @@
+{
+  "hook": {
+    "reason": "The title line \"Half lit by sunlight, the Moon goes round\" is the core idea in miniature and easy to sing back, but it is a state plus a motion, not concrete actions on real things, and it leans on the abstract \"half lit.\" The lesson opens on a real question (\"Why does the Moon look like a thin sliver on some nights and a full, round circle on others?\"). The narration opens on something the learner has seen (\"a thin, curved sliver of Moon hangs low in the western sky\"). Strong openings, a good but not vivid title line.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The lamp, ball and head model is apt for the whole idea and appears in the lesson (\"Try it with a lamp and a ball\"), narration (n3-n5), verse 1 and outro (\"Just a ball beside a lamp, and you turning in the room\"). But it is a classroom model, not an everyday thing doing the same job, and it vanishes from the chorus and bridge, which just restate the facts. Sung sections after verse 1 carry little of it. The Earth-day-and-night comparison is a second picture but fits inside the idea.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk through the links in order: \"The Moon makes no light\", \"Half is always lit\", \"The Moon keeps moving... so its position... keeps changing\", \"we see different amounts of its lit half\". Each has its \"so\". The phase-by-phase table gives positions and views, and the narration says why new moon is invisible and why full moon needs the far side. The final link (grow then shrink) is partly stated rather than caused, and the lesson's link 4 never says why different amounts face us beyond the position change. Mostly complete and causal.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most lines are real steps with arrows, such as \"Moon makes no light → it reflects sunlight\" and \"Sun lights one side → half lit, half dark\", and they start on matching lyric and narration lines. But the first is a bare question, not a step, and \"Lamp = Sun, ball = Moon, your head = Earth\" is a label. \"Moon orbits Earth\" starts on c1-1, \"Half lit by sunlight, the Moon goes round\", which is a repeat chorus line, a loose fit. Three lines (eclipse, Earth phases) are off the core chain, so the list reads as a tour of the content, not the core idea's chain.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Key line \"Exact line-up at full moon → Earth's shadow → eclipse\" and lyric p2-1/p2-2 \"When Sun and Earth and Moon line up exactly right / The shadow of the Earth eclipses a full moon that night\"",
+      "problem": "This reads as if an exact line-up always produces an eclipse and implies that Earth's shadow is part of the phases story, which muddies the misconception just corrected; the line-up is also only part of the condition, and it is said inside a pre-chorus that starts right after saying shadows don't cause phases.",
+      "correction": "Say that only at a few full moons, when all three line up exactly, Earth's shadow falls on the Moon in a lunar eclipse, and that this is separate from the phases."
+    }
+  ],
+  "accuracy": {
+    "reason": "The content is right overall: half-lit Moon, ~29.5-day cycle, waxing and waning, the lunar eclipse only at full moon, Earth's phases seen from the Moon reversed, and diagram scale noted. The lyric \"Then it's dark at new moon\" is mildly loose, since the lit half is still there, but earlier lines say so. The one imprecision is the p2 pair, which frames the eclipse as the shadow always appearing when the line-up happens and sits oddly beside the correction in p1. A teacher would tighten this, but nothing a learner would carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Most lines are whole spoken phrases at a sensible length with clean rhymes (\"Earth sits in between the Moon and Sun / ...the growing's done\"). But many rapped lines overrun the bar, such as \"Two weeks in, the Earth sits in between the Moon and Sun\", and \"At new moon it's still half lit, but the lit half's turned away\" is a stretch at 96 bpm. Several lines read as captions or textbook sentences (\"It makes no light, it bounces back the light from the Sun\"). Chorus lines 2-3 are a term list and the chorus is long and busy, though the title line anchors it and is easy to sing back. The bridge lines run long (\"At new moon, the sunny side of Earth is facing you\").",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the core idea, offers a hands-on lamp-and-ball activity, builds on the why, asks a prediction (\"where do you think the Moon has to be for us to see its whole lit half?\") answered right after, names the misconception and says why it's wrong, and ends with a check (\"At first quarter, the Sun still lights a full half... why do we see only half...\") that needs the core idea. It is simplified honestly. The table pairs phase terms with positions well. Weaknesses: the question is placed before a table rather than being a fully open prediction, new terms stack up (phases, orbit, new moon, quarters, waxing, waning, crescent), and the Earth day/night aside is a small extra.",
+    "score": 4
+  }
+}

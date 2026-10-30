@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "A p-value tells you how likely it is to get results as extreme as yours if the null hypothesis (like 'the coin is fair') were true, so a really small p-value means chance alone is a poor explanation and you doubt the null.",
+      "why": "First you assume the null is true, like assuming the coin is fair. Then you picture all the results chance could give, the sampling distribution, which for 20 flips centers on 10 heads. Next you mark your result (16 heads) and find the tail area at or beyond it, which is the p-value, about 0.006. That means a fair coin would rarely do this. Since the data would be so surprising if the null were true, it counts as evidence against the null, and the smaller the p-value the stronger the evidence. Before the test you pick a significance level α like 0.05, and if the p-value is below α you reject the null, otherwise you fail to reject it.",
+      "what_if": "Suppose people stopped choosing α before collecting data, or ran 20 tests and only reported the one that looked significant. The lesson says that even when every null is true, about 1 test in 20 comes out significant by chance, and across 20 tests there's about a 64% chance at least one looks significant. So a fluke would look like a real discovery, and it would probably disappear when someone repeated the study. The lesson doesn't say exactly how researchers prevent this, only that it is a problem."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

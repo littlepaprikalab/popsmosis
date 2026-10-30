@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "The Moon doesn't change shape or make its own light; the Sun always lights half of it, and as the Moon orbits Earth we see different amounts of that lit half, which are the phases.",
+      "why": "First, the Moon makes no light, so it only shines because sunlight reflects off it. Second, the Sun always lights the half of the Moon facing it, and the other half is dark. Third, the Moon moves around Earth in its orbit, so its position keeps changing. Fourth, because the position changes, we look at the Moon from Earth at different angles and see more or less of the lit half. At new moon it is between Earth and the Sun, so the lit half faces away and we see only the dark half. At full moon it is on the far side of Earth from the Sun, so we see the whole lit half as a round disc. In between we see crescents and quarters. The whole cycle takes about 29.5 days.",
+      "what_if": "If the Moon stopped moving in its orbit around Earth, its position wouldn't change, so we would keep seeing the same amount of the lit half all the time. The phase would stop changing, and it would look like the same shape every night, like always a full moon or always a new moon, depending on where it stopped. The lesson doesn't say exactly what would happen to other things, like tides, so I can't say more than that."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

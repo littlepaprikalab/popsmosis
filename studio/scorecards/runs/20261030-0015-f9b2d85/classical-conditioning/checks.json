@@ -1,0 +1,28 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-8",
+      "rule": "lyric-style",
+      "detail": "\"The dog just hears the sound, its mouth stays dry at the ring\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-8",
+      "rule": "lyric-style",
+      "detail": "\"And the sound of a dentist's drill makes you anxious the same way\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "c1-1",
+      "rule": "lyric-style",
+      "detail": "the title line \"Ring the bell, then bring the meal\" names nothing from the core idea, why chain or key terms, or leans on pronouns",
+      "repaired": false
+    },
+    {
+      "line_id": "c1-1",
+      "rule": "lyric-style",
+      "detail": "the chorus says too little of the core idea: at most one of its words",
+      "repaired": false
+    }
+  ]
+}

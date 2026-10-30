@@ -1,0 +1,10 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-2",
+      "rule": "lyric-style",
+      "detail": "\"So you swap it at the booth for two kinds of cash today\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

@@ -1,0 +1,2570 @@
+{
+  "course": "Anatomy and Physiology",
+  "topic": "The sodium-potassium pump",
+  "audience": "high school",
+  "core_idea": "The pump spends ATP to keep sodium piled outside and potassium inside, so ions rush back whenever channels open.",
+  "why_chain": [
+    "Ions slowly leak back through ion channels, so without a pump the sodium and potassium gradients would run down.",
+    "Pushing ions against their concentration gradients takes energy, so the pump does active transport and spends one ATP per cycle.",
+    "ATP's phosphate attaches to the pump and changes its shape, so it carries three sodium out and then two potassium in.",
+    "The piled-up ions are stored energy, so when ion channels open, sodium rushes in and potassium leaks out.",
+    "Potassium leaking out sets the resting membrane potential, and sodium rushing in fires an action potential."
+  ],
+  "key_terms": [
+    "sodium-potassium pump",
+    "active transport",
+    "ATP",
+    "concentration gradient",
+    "ion channel",
+    "phosphorylation",
+    "resting membrane potential",
+    "action potential"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "The sodium-potassium pump, also called the Na⁺/K⁺ ATPase, is a protein that passes through the plasma membrane of nearly all animal cells, including neurons and muscle cells. It keeps sodium ions (Na⁺) about ten times more concentrated in the extracellular fluid outside the cell than in the cytoplasm, and potassium ions (K⁺) about thirty times more concentrated in the cytoplasm than outside; these differences are concentration gradients. Ions slowly leak back across the membrane through ion channels, down their gradients, so the pump works nonstop: without it the gradients would run down. The pump works like the electric pump that fills a town's water tower: it spends energy pushing water uphill into the tower, so that whenever a faucet opens anywhere in town, water rushes out. In the same way, the sodium-potassium pump spends ATP to pile sodium up outside the cell and potassium inside, so that whenever an ion channel opens, the ions rush back down their gradients: sodium in, potassium out.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Moving ions uphill, against their concentration gradients, takes energy, so the pump does active transport, unlike diffusion through ion channels, which is passive. Each cycle uses one ATP and runs in order: while the pump is open toward the inside, three Na⁺ from the cytoplasm bind to it; ATP is split into ADP and phosphate, and the phosphate attaches to the pump, a step called phosphorylation; phosphorylation changes the pump's shape so it opens toward the outside and releases the three Na⁺ into the extracellular fluid; two K⁺ from the extracellular fluid then bind; the phosphate comes off, and the pump returns to its inward-facing shape and releases the two K⁺ into the cytoplasm. Because it moves three positive charges out for every two it brings in, each cycle leaves the inside of the cell slightly more negative.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "The gradients the pump builds are stored energy that the cell spends later. Potassium leaking slowly out through potassium channels is the main cause of the resting membrane potential, about −70 millivolts inside a neuron; the pump's three-for-two exchange adds only a few millivolts directly. When sodium channels open, Na⁺ rushes into the cell, and that rush fires an action potential, the signal that neurons and muscle cells use: when you touch something hot, for example, action potentials carry the signal along nerves from your fingertip to your spinal cord and brain. Action potentials are the next topic in the unit. A common mistake is to think the pump resets the membrane after each action potential; in fact repolarization happens when K⁺ flows out through potassium channels, and the pump works slowly in the background, keeping the gradients up over many signals. The sodium gradient also powers secondary active transport: transporters in intestine and kidney cells bring glucose into the cell along with sodium. The same trick, spending energy to build an ion gradient and then using the flow back, appears in mitochondria, where pumped hydrogen ions flow back through ATP synthase to make ATP.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "Ouabain, a plant poison, binds the pump on the outside of the cell and stops it. Step by step: with the pump stopped, sodium that leaks into the cell is no longer pushed out, so Na⁺ builds up in the cytoplasm; water follows the sodium into the cell by osmosis, so the cell swells and can burst; and as the sodium and potassium gradients run down, little sodium rushes in when sodium channels open, so neurons and muscle cells can no longer fire action potentials. A heart medicine, digoxin, first drawn from the foxglove plant, works by partly slowing the pump in heart muscle cells, which leaves more calcium inside them and makes the heart beat more strongly.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think the sodium-potassium pump resets the membrane after each action potential. In fact, repolarization comes from potassium flowing out through potassium channels; the pump works slowly in the background, keeping the gradients up over many signals.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a human anatomy textbook draws it, of the human nervous system: a person seen from the front, from the head to the waist, one arm held out to the right with the hand open. The pink brain sits inside the head; the yellow spinal cord runs down the middle of the back, and yellow nerves branch from it along the arm to the fingertips. A softly shaded medical textbook illustration.",
+      "structures": [
+        {
+          "name": "Brain",
+          "aliases": [],
+          "sam_phrase": "pink brain",
+          "color_hex": "#F48FB1"
+        },
+        {
+          "name": "Nerves",
+          "aliases": [],
+          "sam_phrase": "yellow branches",
+          "color_hex": "#FFEE58"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a friendly illustrated science book draws it, of a town's water supply. On the left stands a tall water tower, its round tank at the top painted light blue. On the ground at the foot of the tower sits an electric water pump painted magenta, with a pipe running from it up the tower into the tank. On the right, a pipe runs down from the tank along the ground to a small house with an orange faucet on its outside wall. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Water pump",
+          "aliases": [],
+          "sam_phrase": "magenta pump",
+          "color_hex": "#EC407A"
+        },
+        {
+          "name": "Water tower",
+          "aliases": [],
+          "sam_phrase": "blue tank",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Faucet",
+          "aliases": [],
+          "sam_phrase": "orange faucet",
+          "color_hex": "#FFA726"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a human anatomy and physiology textbook draws it, of a short section of a cell's plasma membrane in cross-section. The plasma membrane runs across the middle of the picture as a tan phospholipid bilayer; the extracellular fluid above it is tinted light blue, and the cytoplasm below it is tinted green. Three proteins pass through the membrane, spaced apart along it: on the left an orange sodium channel, a tube with a narrow pore down its centre; in the middle the sodium-potassium pump, a larger magenta protein; on the right a purple potassium channel, a tube with a narrow pore down its centre. One red ATP molecule sits in the cytoplasm just below the pump. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere.",
+      "structures": [
+        {
+          "name": "Extracellular fluid",
+          "aliases": [],
+          "sam_phrase": "blue band",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Cytoplasm",
+          "aliases": [],
+          "sam_phrase": "green band",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "Plasma membrane",
+          "aliases": [
+            "membrane"
+          ],
+          "sam_phrase": "tan stripe",
+          "color_hex": "#D4A373"
+        },
+        {
+          "name": "Sodium-potassium pump",
+          "aliases": [
+            "pump"
+          ],
+          "sam_phrase": "magenta blob",
+          "color_hex": "#EC407A"
+        },
+        {
+          "name": "Sodium channel",
+          "aliases": [
+            "sodium channels"
+          ],
+          "sam_phrase": "orange tube",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "Potassium channel",
+          "aliases": [
+            "potassium channels"
+          ],
+          "sam_phrase": "purple tube",
+          "color_hex": "#9575CD"
+        },
+        {
+          "name": "ATP",
+          "aliases": [],
+          "sam_phrase": "red ball",
+          "color_hex": "#EF5350"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "stage-in",
+      "image_prompt": "Educational diagram, as a human anatomy and physiology textbook draws it, of one sodium-potassium pump protein passing through a cell's plasma membrane, large in the centre of the picture. The membrane runs across the middle as a tan phospholipid bilayer, the extracellular fluid above it tinted light blue, the cytoplasm below it tinted green. The pump is a large, rounded magenta protein with a deep pocket that opens downward toward the cytoplasm; its top is closed. One red ATP molecule sits against the pump's lower side in the cytoplasm. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere.",
+      "structures": [
+        {
+          "name": "Extracellular fluid",
+          "aliases": [],
+          "sam_phrase": "blue band",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Cytoplasm",
+          "aliases": [],
+          "sam_phrase": "green band",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "Plasma membrane",
+          "aliases": [
+            "membrane"
+          ],
+          "sam_phrase": "tan stripe",
+          "color_hex": "#D4A373"
+        },
+        {
+          "name": "Sodium-potassium pump",
+          "aliases": [
+            "pump"
+          ],
+          "sam_phrase": "magenta blob",
+          "color_hex": "#EC407A"
+        },
+        {
+          "name": "ATP",
+          "aliases": [],
+          "sam_phrase": "red ball",
+          "color_hex": "#EF5350"
+        }
+      ],
+      "stage_of": "sodium-potassium pump cycle"
+    },
+    {
+      "id": "stage-out",
+      "image_prompt": "Educational diagram, as a human anatomy and physiology textbook draws it, of one sodium-potassium pump protein passing through a cell's plasma membrane, large in the centre of the picture. The membrane runs across the middle as a tan phospholipid bilayer, the extracellular fluid above it tinted light blue, the cytoplasm below it tinted green. The pump is a large, rounded magenta protein with a deep pocket that opens upward toward the extracellular fluid; its bottom is closed. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer.",
+      "structures": [
+        {
+          "name": "Extracellular fluid",
+          "aliases": [],
+          "sam_phrase": "blue band",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Cytoplasm",
+          "aliases": [],
+          "sam_phrase": "green band",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "Plasma membrane",
+          "aliases": [
+            "membrane"
+          ],
+          "sam_phrase": "tan stripe",
+          "color_hex": "#D4A373"
+        },
+        {
+          "name": "Sodium-potassium pump",
+          "aliases": [
+            "pump"
+          ],
+          "sam_phrase": "magenta blob",
+          "color_hex": "#EC407A"
+        }
+      ],
+      "stage_of": "sodium-potassium pump cycle"
+    },
+    {
+      "id": "blocked",
+      "image_prompt": "Educational diagram, as a human anatomy and physiology textbook draws it, of a short section of a cell's plasma membrane in cross-section. The plasma membrane runs across the middle of the picture as a tan phospholipid bilayer; the extracellular fluid above it is tinted light blue, and the cytoplasm below it is tinted green. Three proteins pass through the membrane, spaced apart along it: on the left an orange sodium channel, a tube with a narrow pore down its centre; in the middle the sodium-potassium pump, a larger magenta protein; on the right a purple potassium channel, a tube with a narrow pore down its centre. One red ATP molecule sits in the cytoplasm just below the pump. One small white ouabain molecule sits against the top of the pump, in the extracellular fluid. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer; a molecule the scene names as a small glossy sphere.",
+      "structures": [
+        {
+          "name": "Extracellular fluid",
+          "aliases": [],
+          "sam_phrase": "blue band",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Cytoplasm",
+          "aliases": [],
+          "sam_phrase": "green band",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "Plasma membrane",
+          "aliases": [
+            "membrane"
+          ],
+          "sam_phrase": "tan stripe",
+          "color_hex": "#D4A373"
+        },
+        {
+          "name": "Sodium-potassium pump",
+          "aliases": [
+            "pump"
+          ],
+          "sam_phrase": "magenta blob",
+          "color_hex": "#EC407A"
+        },
+        {
+          "name": "Sodium channel",
+          "aliases": [
+            "sodium channels"
+          ],
+          "sam_phrase": "orange tube",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "Potassium channel",
+          "aliases": [
+            "potassium channels"
+          ],
+          "sam_phrase": "purple tube",
+          "color_hex": "#9575CD"
+        },
+        {
+          "name": "ATP",
+          "aliases": [],
+          "sam_phrase": "red ball",
+          "color_hex": "#EF5350"
+        },
+        {
+          "name": "Ouabain",
+          "aliases": [
+            "plant poison"
+          ],
+          "sam_phrase": "white ball",
+          "color_hex": "#EEEEEE"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "**Why does a neuron spend energy even when it's resting?**\n\nNearly every animal cell, including your neurons and muscle cells, runs a protein called the **sodium-potassium pump**. Here's the big idea: the pump spends **ATP** to keep sodium piled outside and potassium inside, so ions rush back whenever channels open.\n\n## The water tower picture\n\nA town fills its water tower with a pump that spends energy pushing water uphill. Then, whenever a faucet opens anywhere in town, water rushes out. The sodium-potassium pump does the same job: it piles sodium up outside the cell and potassium inside, so that when an **ion channel** opens, the ions rush back down their gradients.\n\n| Ion | Where it's concentrated | About how much more |\n|---|---|---|\n| Sodium (Na⁺) | Extracellular fluid, outside the cell | 10× |\n| Potassium (K⁺) | Cytoplasm, inside the cell | 30× |\n\nThese differences are **concentration gradients**.\n\n## Why the pump works the way it does\n\n1. **Ions leak.** Sodium and potassium slowly leak back through ion channels, so without the pump working nonstop, the gradients would run down.\n2. **Uphill costs energy.** Moving ions against their gradients is **active transport**, so each cycle of the pump uses one ATP.\n3. **Phosphate changes the shape.** With the pump open toward the inside, three Na⁺ bind. ATP is split into ADP and phosphate, and the phosphate attaches to the pump, a step called **phosphorylation**. That changes the pump's shape, so it opens to the outside and releases the three Na⁺.\n4. **Potassium rides back in.** Two K⁺ bind from outside, the phosphate comes off, and the pump returns to its inward-facing shape, releasing the two K⁺ into the cytoplasm.\n\n**Predict:** three positive charges go out but only two come in. What happens to the inside of the cell? Each cycle leaves it slightly more negative, though the pump adds only a few millivolts this way.\n\n## Spending the stored energy\n\nThe gradients are stored energy, like water held up in the tower.\n\n- Potassium leaking out through potassium channels is the main cause of the **resting membrane potential**, about −70 mV inside a neuron.\n- When sodium channels open, Na⁺ rushes in and fires an **action potential**.\n- When you touch something hot, action potentials carry the signal along nerves from your fingertip to your spinal cord and brain.\n- The sodium gradient also powers secondary active transport, bringing glucose into intestine and kidney cells along with sodium.\n\nIf you've studied mitochondria, this is the same trick: there, pumped hydrogen ions flow back through ATP synthase to make ATP.\n\n## A common mistake\n\nMany students think the pump resets the membrane after each action potential. It doesn't: repolarization happens when K⁺ flows out through potassium channels. The pump works slowly in the background, keeping the gradients up over many signals.\n\n## When the pump stops\n\nOuabain, a plant poison, binds the pump from outside and stops it. Sodium that leaks in is no longer pushed out, so it builds up in the cytoplasm. Water follows by osmosis, so the cell swells and can burst. As the gradients run down, neurons and muscle cells can no longer fire action potentials.\n\nThe steps above are a simplified version of the pump's cycle.\n\n**Check yourself:** The pump doesn't fire action potentials itself, so why does stopping it eventually stop a neuron from firing?\n\nGot a follow-up question? Ask away, for example about action potentials, which come next in the unit.",
+  "music": {
+    "positive_styles": [
+      "Upbeat pop-rap with crisp, clearly enunciated hip-hop verses; a bouncy, rubbery synth bass and tight claps on the backbeat over a 98 bpm head-nodding groove; bright female vocal with a warm, slightly smoky tone, rapping the verses with easy confidence and lifting into a big, catchy sung hook with stacked harmonies; playful plucked synths lead, with a little water-drop pluck and airy pads opening up the chorus"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Fill up the tower, let the rush begin",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Think of a water pump that fills a tower up high",
+      "names": [
+        "water pump"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "So the second a tap opens, the water comes flying",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Your cells run a pump that works the same way",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Pushing ions uphill, and it's ATP that pays",
+      "names": [
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Three sodium bind on the inside face",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Then ATP splits and the pump changes shape",
+      "names": [
+        "ATP",
+        "pump"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Foxglove gave a heart drug that slows this pump down",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "So calcium stays in and the heartbeat pounds",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "It's not the pump that resets each spike",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Potassium channels let it out and set it right",
+      "names": [
+        "Potassium channels"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Spend one ATP, then pile them up again",
+      "names": [
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Fill up the tower so the taps can run",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Open a sodium channel and the signal's begun",
+      "names": [
+        "sodium channel"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Then it faces the outside and the sodium's let out",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Two potassium bind, and it flips back around",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "It drops them in the cytoplasm, where potassium's packed",
+      "names": [
+        "cytoplasm"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Three charges went out, only two came back",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Potassium channels leak it out, slow and steady",
+      "names": [
+        "Potassium channels"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "That sets the resting potential, so the neuron's ready",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Then a sodium channel opens and the sodium floods in",
+      "names": [
+        "sodium channel"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "That rush fires an action potential, and the signal begins",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "The sodium gradient hauls glucose inside",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Next come action potentials, carried down the line",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Spend one ATP, then pile them up again",
+      "names": [
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Fill up the tower so the taps can run",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Open a sodium channel and the signal's begun",
+      "names": [
+        "sodium channel"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Now a plant poison locks the pump from outside",
+      "names": [
+        "plant poison",
+        "pump"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "So sodium leaking in now has to stay inside",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "It piles up in the cytoplasm, crowding the cell",
+      "names": [
+        "cytoplasm"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "And water follows it in, so the cell starts to swell",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Keep on swelling and the cell could split",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "And the gradients drain, the tower's down to a drip",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Open a sodium channel and the rush is small",
+      "names": [
+        "sodium channel"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "So the neurons can't fire, and the signals stall",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "So the pump spends ATP to keep the tower high",
+      "names": [
+        "pump",
+        "ATP"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "And the ions rush back when the channels open wide",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Spend one ATP, then pile them up again",
+      "names": [
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Fill up the tower so the taps can run",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Open a sodium channel and the signal's begun",
+      "names": [
+        "sodium channel"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Fill up the tower, let the rush begin",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "The pump never stops, so it does it again",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Three sodium out, two potassium in",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Touch something hot, and a signal travels along your nerves from fingertip to spinal cord and brain.",
+      "names": [
+        "nerves",
+        "brain"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "That signal runs on sodium rushing into cells, and something has to set that rush up first.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "Think of a town's water tower.",
+      "names": [
+        "water tower"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "A water pump spends energy pushing water up into the tower, so whenever a faucet opens, water rushes out.",
+      "names": [
+        "water pump",
+        "faucet"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "Your cells do the same with the sodium-potassium pump, a protein that passes through the plasma membrane of nearly all animal cells.",
+      "names": [
+        "sodium-potassium pump",
+        "plasma membrane"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "It keeps sodium about ten times more concentrated in the extracellular fluid than in the cytoplasm.",
+      "names": [
+        "extracellular fluid",
+        "cytoplasm"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "It keeps potassium about thirty times more concentrated in the cytoplasm than outside.",
+      "names": [
+        "cytoplasm"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "These differences are called concentration gradients.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "Ions slowly leak back through ion channels, so without the pump working nonstop, the gradients would run down.",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Pushing ions against their gradients takes energy, so the pump does active transport, spending one ATP each cycle.",
+      "names": [
+        "pump",
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "First, with the pump open toward the inside, three sodium ions from the cytoplasm bind to it.",
+      "names": [
+        "pump",
+        "cytoplasm"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "Next, ATP is split into ADP and phosphate.",
+      "names": [
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "The phosphate attaches to the pump, a step called phosphorylation.",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "That changes the pump's shape, so it opens to the outside and releases the three sodium ions into the extracellular fluid.",
+      "names": [
+        "pump",
+        "extracellular fluid"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "Then two potassium ions from outside bind to it.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "Then the phosphate comes off, the pump flips back, and it releases the two potassium ions into the cytoplasm.",
+      "names": [
+        "pump",
+        "cytoplasm"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "Three charges go out but only two come in, so what does that do to the inside of the cell?",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "Each cycle leaves the inside slightly more negative.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "Potassium leaking out through potassium channels is the main cause of the resting membrane potential, about minus seventy millivolts in a neuron.",
+      "names": [
+        "potassium channels",
+        "membrane"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "When sodium channels open, sodium rushes in, and that rush fires an action potential.",
+      "names": [
+        "sodium channels"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "A common mistake is to think the pump resets the membrane after each action potential.",
+      "names": [
+        "pump",
+        "membrane"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "In fact, potassium flowing out through potassium channels does that, while the pump works slowly in the background to keep the gradients up.",
+      "names": [
+        "potassium channels",
+        "pump"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "The sodium gradient also pulls glucose into intestine and kidney cells.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "Now watch what happens when the pump stops.",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n25",
+      "text": "Ouabain, a plant poison, binds the pump from outside and stops it.",
+      "names": [
+        "Ouabain",
+        "plant poison",
+        "pump"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Sodium that leaks in is no longer pushed out, so it builds up in the cytoplasm.",
+      "names": [
+        "cytoplasm"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "Water follows the sodium into the cell by osmosis, so the cell swells and can burst.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "As the gradients run down, neurons and muscle cells can no longer fire action potentials.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "So here is the core idea: the pump spends ATP to keep sodium piled outside and potassium inside, so ions rush back whenever channels open.",
+      "names": [
+        "pump",
+        "ATP"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n30",
+      "text": "Each cycle spends one ATP, giving out ADP and phosphate, to move three sodium out and two potassium in.",
+      "names": [
+        "ATP"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n31",
+      "text": "That's why neurons and muscle cells need this pump to fire at all.",
+      "names": [
+        "pump"
+      ],
+      "fact_id": "f3"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Nerves",
+        "Brain"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Water pump",
+        "zoom": 1.6
+      },
+      "spotlight": "Water pump",
+      "particles": [
+        "Water pump",
+        "Water tower"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Water tower",
+        "Faucet"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "ATP",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "stage-in",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.8
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "stage-in",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.8
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "Phosphorylation",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "stage-in",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "stage-in",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Potassium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Potassium channel",
+      "particles": [
+        "Cytoplasm",
+        "Potassium channel",
+        "Extracellular fluid"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "stage-out",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "stage-out",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium-potassium pump"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "stage-in",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytoplasm",
+      "particles": [
+        "Sodium-potassium pump",
+        "Cytoplasm"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Potassium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Potassium channel",
+      "particles": [
+        "Cytoplasm",
+        "Potassium channel",
+        "Extracellular fluid"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Potassium channel",
+        "Extracellular fluid"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "overview",
+      "camera": {
+        "target": "Sodium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium channel",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "Sodium channel",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytoplasm",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "b-1",
+      "scene": "blocked",
+      "camera": {
+        "target": "Ouabain",
+        "zoom": 1.6
+      },
+      "spotlight": "Ouabain",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Ouabain"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "Ouabain",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytoplasm",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Cytoplasm"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Cytoplasm"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Potassium channel",
+        "Extracellular fluid"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "blocked",
+      "camera": {
+        "target": "Sodium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium channel",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Cytoplasm",
+            "Potassium channel",
+            "Extracellular fluid"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "o-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Water pump",
+        "Water tower",
+        "Faucet"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Nerves",
+      "particles": [
+        "Nerves",
+        "Brain"
+      ],
+      "carries": "",
+      "glow": "Nerves",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Nerves",
+        "Brain"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Water tower",
+        "zoom": 1.6
+      },
+      "spotlight": "Water tower",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Water pump",
+      "particles": [
+        "Water pump",
+        "Water tower",
+        "Faucet"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "overview",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Extracellular fluid",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytoplasm",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium-potassium pump",
+        "Cytoplasm"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Cytoplasm",
+            "Potassium channel",
+            "Extracellular fluid"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "ATP",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "stage-in",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.8
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "stage-in",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.8
+      },
+      "spotlight": "ATP",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "stage-in",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "stage-out",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "stage-out",
+      "camera": {
+        "target": "Sodium-potassium pump",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium-potassium pump"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "stage-in",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Sodium-potassium pump",
+        "Cytoplasm"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytoplasm",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "Potassium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Potassium channel",
+      "particles": [
+        "Cytoplasm",
+        "Potassium channel",
+        "Extracellular fluid"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "Sodium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Sodium channel",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "Sodium channel",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sodium-potassium pump",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "overview",
+      "camera": {
+        "target": "Potassium channel",
+        "zoom": 1.6
+      },
+      "spotlight": "Potassium channel",
+      "particles": [
+        "Cytoplasm",
+        "Potassium channel",
+        "Extracellular fluid"
+      ],
+      "carries": "K⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "blocked",
+      "camera": {
+        "target": "Ouabain",
+        "zoom": 1.6
+      },
+      "spotlight": "Ouabain",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Ouabain"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cytoplasm",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Cytoplasm"
+      ],
+      "carries": "H₂O",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "blocked",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Cytoplasm",
+        "Sodium-potassium pump",
+        "Extracellular fluid"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Extracellular fluid",
+            "Sodium-potassium pump",
+            "Cytoplasm"
+          ],
+          "carries": "K⁺"
+        }
+      ]
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "ATP",
+        "Sodium-potassium pump"
+      ],
+      "carries": "ATP",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Extracellular fluid",
+        "Sodium channel",
+        "Cytoplasm"
+      ],
+      "carries": "Na⁺",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [
+    {
+      "carries": "Na⁺",
+      "region": "Extracellular fluid"
+    },
+    {
+      "carries": "K⁺",
+      "region": "Cytoplasm"
+    },
+    {
+      "carries": "Na⁺",
+      "region": "Cytoplasm"
+    }
+  ],
+  "spins": [],
+  "blocks": [
+    {
+      "structure": "Ouabain"
+    }
+  ],
+  "conversions": [
+    {
+      "structure": "Sodium-potassium pump",
+      "inputs": [
+        "ATP"
+      ],
+      "outputs": [
+        "ADP",
+        "Pᵢ"
+      ]
+    }
+  ],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How does a cell keep sodium out and potassium in?",
+      "from_narration": "n2"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Water pump filling a tower = sodium-potassium pump",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "Ions leak back down gradients → pump must run nonstop",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "v1-4",
+      "text": "Pushing ions uphill = active transport → costs one ATP",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v1-6",
+      "text": "ATP → ADP + Pᵢ; phosphorylation changes the pump's shape",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Shape flips → 3 Na⁺ out, then 2 K⁺ in",
+      "from_narration": "n14"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "K⁺ leaking out → resting membrane potential",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Sodium channels open → Na⁺ rushes in → action potential",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Poison stops pump → Na⁺ builds up, cell swells",
+      "from_narration": "n25"
+    }
+  ],
+  "tags": {
+    "song": [
+      "sodiumpotassiumpump",
+      "activetransport",
+      "anatomyandphysiology",
+      "restingmembranepotential",
+      "actionpotential",
+      "biology",
+      "studysong",
+      "poprap",
+      "studytok"
+    ],
+    "lesson": [
+      "sodiumpotassiumpump",
+      "activetransport",
+      "anatomyandphysiology",
+      "restingmembranepotential",
+      "actionpotential",
+      "biology",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

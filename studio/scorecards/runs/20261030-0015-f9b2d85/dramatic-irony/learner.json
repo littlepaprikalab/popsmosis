@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Dramatic irony is when the audience knows something a character doesn't, and in Romeo and Juliet Shakespeare uses it to build suspense and dread as we watch the characters head toward tragedy.",
+      "why": "First, the Prologue tells us the lovers will die, so we know the ending from the start. Then secrets pile up, like Romeo and Juliet marrying in secret, so we know things other characters don't. Because we know more, the characters' hopeful words and plans take on a darker second meaning for us. Since we can't warn them, the suspense and dread grow with every step toward the tragedy. At the tomb it peaks: we know Juliet is only asleep from the potion while Romeo, who got the news that she's dead because the friar's letter never arrived, drinks poison.",
+      "what_if": "If the Prologue stopped working, meaning it didn't reveal the ending, the audience wouldn't know the lovers will die, so early scenes like the secret marriage wouldn't carry that darker meaning. The lesson says dramatic irony only works because we know more than the characters, so without that knowledge the play would be more about surprise than dread. The lesson doesn't say exactly how the play would feel otherwise, so that part is my guess."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,2149 @@
+{
+  "course": "AP Calculus AB",
+  "topic": "What a derivative means",
+  "audience": "high school",
+  "core_idea": "Shrink the gap between two points, and their average slope settles on the derivative: the rate of change right now.",
+  "why_chain": [
+    "One point alone has no change to divide, so a rate needs two points: the average rate of change, the secant line's slope.",
+    "An average over a long gap hides the speeding up and slowing down inside it, so we want a smaller gap.",
+    "Shrinking the gap slides the second point toward the first, so the secant line tips toward the tangent line.",
+    "Setting the gap to zero gives 0/0, so the derivative is the limit: the number the average slopes settle on.",
+    "That limit is the tangent line's slope, the instantaneous rate of change, just as a speedometer reads the odometer's rate right now."
+  ],
+  "key_terms": [
+    "derivative",
+    "slope",
+    "average rate of change",
+    "secant line",
+    "tangent line",
+    "limit",
+    "instantaneous rate of change",
+    "difference quotient"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "A derivative measures how fast one quantity changes compared with another. The droplet's everyday picture is a car's dashboard. The odometer counts the total miles the car has driven. The speedometer shows how fast that count is climbing at this instant. So the speedometer's reading is the derivative of the odometer's reading. A rate always needs two points, because one point alone has no change to divide. The average rate of change of a function f from x = a to x = a + h is the difference quotient (f(a + h) − f(a)) / h. That is the change in output divided by the change in input, the same rise over run used for the slope of a line in algebra. It is the slope of the secant line, the line through the two points (a, f(a)) and (a + h, f(a + h)) on the curve. Example: a car whose odometer climbs 120 miles in 2 hours has an average speed of 60 miles per hour, even if it sped up and slowed down (hit the gas and the brakes) along the way. So an average over a long gap hides the changes inside it.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "To find the rate at a single instant, make the gap h smaller and smaller. The second point slides along the curve toward the first point; on a graph against time, the two points are two moments squeezed closer together. The secant line tips toward the tangent line, the line that just touches the curve at the first point and has the same steepness as the curve there. You cannot simply set h = 0, because the difference quotient becomes 0/0, which has no value. Instead, the derivative of f at a, written f′(a), is the limit of the difference quotient as h approaches 0. That limit is the single number the average slopes approach, or settle on, as the gap shrinks, and it is the slope of the tangent line. So f′(a) is the slope of the tangent line and the instantaneous rate of change of f at a, the rate of change right now. If the curve is a graph of the distance a car has driven over time, the tangent line's slope is the car's speed at that instant, what the speedometer reads. Worked example: for f(x) = x² at x = 3, the difference quotient is ((3 + h)² − 9) / h = 6 + h. So the secant slopes are 7 for h = 1, 6.1 for h = 0.1 and 6.01 for h = 0.01, and they approach 6 as h approaches 0, so f′(3) = 6. The derivative's units are output units per input unit, such as miles per hour.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "Finding the derivative at every x gives a new function, f′(x), the derivative function. For f(x) = x², f′(x) = 2x, so the slope is 6 at x = 3 and −4 at x = −2. The power rule says the derivative of xⁿ is n·xⁿ⁻¹. It is a shortcut that gives the same answer as the limit, so the power rule's 2x is the slope of the tangent line to x² at every x. A surprising detail: zoom in far enough on a smooth curve at a point and it looks almost straight, just like its tangent line there. That is why the tangent line's slope can stand for the curve's steepness, its rate of change, at that point; this idea, local linearity, is used later in the course to approximate values. The sign of the derivative has meaning. Where f′(x) is positive, f is increasing (the curve climbs). Where it is negative, f is decreasing (the curve heads down). Where it is 0, the tangent line is horizontal. Next in the course, the derivative's sign is used to find where a function increases and decreases and where its highest and lowest points, its maximums and minimums, are. If s(t) is position, its derivative s′(t) is velocity. A common mistake is to think the derivative tells you how big the function is, the height of its graph. In fact it tells you how fast the function is changing, how fast and not how far. A parked car can have many miles on its odometer while its speedometer reads 0, and at the top of a smooth hill on a graph, f can be large while f′ is 0.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "A function has a derivative at a point only where that limit exists, so its graph must be smooth there. At a sharp corner, a break in the graph or a vertical tangent line, the derivative does not exist. Example: f(x) = |x|, the absolute value of x, has a graph shaped like a V with a sharp corner at x = 0. As the second point slides toward the corner from the right side, every secant slope is 1. As it slides toward the corner from the left side, every secant slope is −1. The slopes approach two different numbers that do not agree, so the limit does not exist and f has no derivative at x = 0. The slope flips from −1 to 1 at the corner, and no single tangent line fits there. Everywhere else the derivative exists: it is 1 for x > 0 and −1 for x < 0.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think the derivative tells you how big the function is, the height of its graph. It tells you how fast the function is changing: a parked car can have many miles on its odometer while its speedometer reads 0.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Friendly textbook illustration, as a physics textbook opens a chapter on motion, of a red car on a straight highway. The road runs from the lower left toward the horizon on the right, with green fields on both sides and a pale blue sky above. The red car sits on the road in the middle of the picture. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Car",
+          "aliases": [
+            "car"
+          ],
+          "sam_phrase": "red car",
+          "color_hex": "#EF5350"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Friendly textbook illustration, as a physics textbook draws it, of a car's dashboard seen from the driver's seat. A large round speedometer dial sits on the left, its face lit green, with plain tick marks around its edge and a single needle. A small rectangular odometer display sits on the right, lit light blue and blank. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Speedometer",
+          "aliases": [
+            "speedometer"
+          ],
+          "sam_phrase": "green dial",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "Odometer",
+          "aliases": [
+            "odometer"
+          ],
+          "sam_phrase": "light blue display",
+          "color_hex": "#4FC3F7"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as an AP Calculus textbook draws it, of a smooth curve with a secant line and a tangent line on a pair of coordinate axes. Thin white axes run along the bottom and up the left side. A light blue curve rises from the lower left to the upper right, bending upward and getting steeper as it goes. A yellow dot sits on the curve left of centre, and a magenta dot sits on the curve farther up and to the right. An orange straight line passes through both dots and runs a little past them. A green straight line touches the curve only at the yellow dot and is less steep than the orange line. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Curve",
+          "aliases": [
+            "curve"
+          ],
+          "sam_phrase": "light blue curve",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Secant line",
+          "aliases": [
+            "secant line",
+            "secant"
+          ],
+          "sam_phrase": "orange line",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "Tangent line",
+          "aliases": [
+            "tangent line",
+            "tangent"
+          ],
+          "sam_phrase": "green line",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "First point",
+          "aliases": [
+            "first point"
+          ],
+          "sam_phrase": "yellow dot",
+          "color_hex": "#FFEE58"
+        },
+        {
+          "name": "Second point",
+          "aliases": [
+            "second point"
+          ],
+          "sam_phrase": "magenta dot",
+          "color_hex": "#E040FB"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "tangent-detail",
+      "image_prompt": "Educational diagram, as an AP Calculus textbook draws it, of a close-up of a smooth curve around one point, magnified so that the curve looks almost straight. A light blue curve crosses the picture from the lower left to the upper right. A yellow dot sits on the curve in the centre. A green straight line touches the curve at the yellow dot and runs right alongside it near the dot, with the curve bending only slightly away from the line toward the left and right edges. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Curve",
+          "aliases": [
+            "curve"
+          ],
+          "sam_phrase": "light blue curve",
+          "color_hex": "#4FC3F7"
+        },
+        {
+          "name": "Tangent line",
+          "aliases": [
+            "tangent line",
+            "tangent"
+          ],
+          "sam_phrase": "green line",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "First point",
+          "aliases": [
+            "first point"
+          ],
+          "sam_phrase": "yellow dot",
+          "color_hex": "#FFEE58"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "corner",
+      "image_prompt": "Educational diagram, as an AP Calculus textbook draws it, of the graph of the absolute value function on a pair of thin white coordinate axes that cross in the centre of the picture. The graph is a V shape with its point at the origin. The left half of the V is a purple straight line rising to the upper left, and the right half is a lime straight line rising to the upper right. A pink dot sits at the sharp corner where the two halves meet. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Corner",
+          "aliases": [
+            "corner",
+            "sharp corner"
+          ],
+          "sam_phrase": "pink dot",
+          "color_hex": "#F06292"
+        },
+        {
+          "name": "Left side",
+          "aliases": [
+            "left side"
+          ],
+          "sam_phrase": "purple line",
+          "color_hex": "#AB47BC"
+        },
+        {
+          "name": "Right side",
+          "aliases": [
+            "right side"
+          ],
+          "sam_phrase": "lime line",
+          "color_hex": "#D4E157"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "## What a derivative actually means\n\n**How can a car have a speed at one single instant, when one point alone has no change to measure?**\n\nA derivative measures how fast one quantity changes compared with another. Here is the whole idea in one line: shrink the gap between two points, and their average slope settles on the derivative, the rate of change right now.\n\n### The picture: a car's dashboard\n\nThe odometer counts the total miles driven. The speedometer shows how fast that count is climbing at this instant. So the speedometer's reading is the derivative of the odometer's reading.\n\n### Why it works, step by step\n\n1. **A rate needs two points.** One point alone has no change to divide. From x = a to x = a + h, the average rate of change is the **difference quotient** (f(a + h) − f(a)) / h: change in output over change in input. It is the slope of the **secant line** through the two points, the same rise over run you used for lines in algebra.\n2. **An average hides the details.** A car whose odometer climbs 120 miles in 2 hours averages 60 miles per hour, even if it sped up and slowed down along the way.\n3. **So shrink the gap.** As h gets smaller, the second point slides along the curve toward the first.\n\nWhat do you think happens to the secant line as the points close in? It tips toward the **tangent line**, the line that just touches the curve at the first point with the same steepness as the curve there.\n\n4. **You can't just set h = 0.** That makes the difference quotient 0/0, which has no value. Instead, take the **limit** as h approaches 0: the single number the average slopes settle on.\n5. **That limit is the derivative.** Written f′(a), it is the slope of the tangent line, the **instantaneous rate of change**. On a graph of distance driven over time, it is what the speedometer reads.\n\n### Watch the slopes settle\n\nFor f(x) = x² at x = 3, the difference quotient works out to 6 + h.\n\n| Gap h | Secant slope |\n|---|---|\n| 1 | 7 |\n| 0.1 | 6.1 |\n| 0.01 | 6.01 |\n| approaching 0 | approaching 6 |\n\nSo f′(3) = 6. Zoom in far enough on a smooth curve and it looks almost straight, just like its tangent line. That is why the tangent line's slope can stand for the curve's steepness at that point.\n\n### Where the power rule fits\n\nDoing this at every x gives a new function, f′(x). For x², f′(x) = 2x. The power rule is a shortcut that gives the same answer as the limit: when you write 2x, you are writing the slope of the tangent line at every x.\n\nThe sign matters too. A positive derivative means f is increasing, a negative one means f is decreasing, and 0 means a horizontal tangent line. Next in the course, you'll use that sign to find where a function rises and falls and where its highest and lowest points are.\n\n### A common mistake\n\nA common mistake is to think the derivative tells you how big the function is, the height of its graph. It tells you how fast the function is changing. A parked car can have many miles on its odometer while its speedometer reads 0. At the top of a smooth hill on a graph, f can be large while f′ is 0.\n\n### When there is no derivative\n\nThis lesson has used smooth graphs, which is a simplification: at a sharp corner, a break or a vertical tangent line, the derivative does not exist. The absolute value of x has a graph shaped like a V, with a sharp corner at x = 0. Coming in from the right, every secant slope is 1. Coming in from the left, every secant slope is −1. The slopes approach two different numbers, so the limit does not exist and there is no derivative at x = 0.\n\n### Check yourself\n\nThe absolute value of x has a derivative at x = 2. Why does it have none at x = 0?\n\nGot a follow-up question? Ask away.\n",
+  "music": {
+    "positive_styles": [
+      "Latin pop with a light dembow groove and smooth, clear rapped verses; warm nylon-string guitar plucks lead over crisp handclaps, a soft shaker on the off-beats and a round sub bass, all in a sunny, polished mix; relaxed, bouncy 96 bpm; bright, clear male vocal, rhythmic and easygoing in the verses, opening up into a catchy sung chorus with light backing harmonies on the hook"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Shrink the gap and read the speed,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Squeeze two moments closer till the slopes agree,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "The odometer counts every mile that you drive,",
+      "names": [
+        "odometer"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "The speedometer shows how fast that count climbs,",
+      "names": [
+        "speedometer"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Go a hundred twenty miles in two hours flat,",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Sixty's the average, but it hides the brakes and the gas,",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Put two points on the curve, draw a secant through,",
+      "names": [
+        "curve",
+        "secant"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Its slope's the average rate of change, rise over run too,",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Now slide the second point in, let the gap get thin,",
+      "names": [
+        "second point"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "The secant tips toward the tangent as the slopes close in,",
+      "names": [
+        "secant",
+        "tangent"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "It's how fast, not how far, that the derivative shows,",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Parked with miles, the speedometer still reads zero,",
+      "names": [
+        "speedometer"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Shrink the gap and read the speed,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "The secant tips toward the tangent, where the slopes agree,",
+      "names": [
+        "secant",
+        "tangent"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "The average slopes all settle down,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "That's the derivative, the rate right now,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Shrink the gap and read the speed.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "You can't plug in zero, zero over zero's no hope,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "So the limit's the number that the slopes approach,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "For x squared at three, the slopes go seven, six point one,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Then six point oh one, so six is where they run,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Zoom way in on a smooth curve, it starts to look straight,",
+      "names": [
+        "curve"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Like its tangent line, and that line's slope is the rate,",
+      "names": [
+        "tangent line"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Do it at every x, and you get a new function, f prime,",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "The power rule's the shortcut, two x for x squared every time,",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Positive, the curve climbs; negative, it's heading down,",
+      "names": [
+        "curve"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Next, that sign is how the highs and lows get found,",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Shrink the gap and read the speed,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "The secant tips toward the tangent, where the slopes agree,",
+      "names": [
+        "secant",
+        "tangent"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "The average slopes all settle down,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "That's the derivative, the rate right now,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Shrink the gap and read the speed.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Absolute value of x has a sharp corner at zero,",
+      "names": [
+        "sharp corner"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "From the right side, every slope is one as you go,",
+      "names": [
+        "right side"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "From the left side, every slope is minus one,",
+      "names": [
+        "left side"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Two numbers that won't agree, so the limit? There isn't one,",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "No limit means no derivative where the corner sits,",
+      "names": [
+        "corner"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "No single line can touch it, 'cause the slope just flips,",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "A corner or a break in the graph won't pass the test,",
+      "names": [
+        "corner"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "A derivative needs smooth ground, where the slopes can rest,",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Average slopes from two points as the gap gets small,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Settle on the derivative, the rate right now, that's all,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Shrink the gap and read the speed,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "The secant tips toward the tangent, where the slopes agree,",
+      "names": [
+        "secant",
+        "tangent"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "The average slopes all settle down,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "That's the derivative, the rate right now,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Shrink the gap and read the speed.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Squeeze two moments closer till the slopes agree,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "From the average to the instant is the derivative, see,",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Shrink the gap and read the speed.",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Picture a car on the highway: how fast is it going right now?",
+      "names": [
+        "car"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n2",
+      "text": "The odometer counts the total miles driven.",
+      "names": [
+        "odometer"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "The speedometer shows how fast that count is climbing at this instant.",
+      "names": [
+        "speedometer"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n4",
+      "text": "So the speedometer's reading is the derivative of the odometer's reading.",
+      "names": [
+        "speedometer",
+        "odometer"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "If the odometer climbs 120 miles in 2 hours, the average speed is 60 miles per hour.",
+      "names": [
+        "odometer"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "But that average hides all the speeding up and slowing down along the way.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "A rate needs two points, because one point alone has no change to divide.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "So put a first point and a second point on the curve, and draw the secant line through them.",
+      "names": [
+        "first point",
+        "second point",
+        "curve",
+        "secant line"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "Its slope, rise over run like the slopes you met in algebra, is the average rate of change.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Its formula, the change in f divided by the gap h, is called the difference quotient.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "What do you think happens as you shrink that gap?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n12",
+      "text": "The second point slides toward the first, so the secant line tips toward the tangent line, which just touches the curve there.",
+      "names": [
+        "second point",
+        "secant line",
+        "tangent line",
+        "curve"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "You can't just set h to zero, because that gives zero over zero, which has no value.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "Instead, take the limit: the number the average slopes settle on as h approaches zero.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "That limit is the derivative, written f prime of a.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "For x squared at 3, the slopes go 7, then 6.1, then 6.01, settling on 6.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "Zoom in on a smooth curve, and it looks almost straight, just like its tangent line.",
+      "names": [
+        "curve",
+        "tangent line"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "So the tangent line's slope is the curve's steepness there, its instantaneous rate of change.",
+      "names": [
+        "tangent line",
+        "curve"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "On a graph of distance over time, that slope is the speed at that instant.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n20",
+      "text": "Do this at every x, and you get a new function, f prime of x.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "For x squared it is 2x, and the power rule is a shortcut to the same answer as the limit.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "A common mistake is to think the derivative tells you how big the function is.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "It tells you how fast it changes: when parked, the odometer can show many miles while the speedometer reads zero.",
+      "names": [
+        "odometer",
+        "speedometer"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "Next in the course, the derivative's sign shows where a function rises or falls and where its highest and lowest points are.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n25",
+      "text": "The absolute value of x makes a V with a sharp corner at zero.",
+      "names": [
+        "sharp corner"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Come in toward the corner from the right side, and every slope is 1.",
+      "names": [
+        "corner",
+        "right side"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "From the left side, every slope is negative 1.",
+      "names": [
+        "left side"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Two different numbers mean no limit, so there is no derivative at the corner.",
+      "names": [
+        "corner"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "Shrink the gap between two points, and their average slope settles on the derivative: the rate of change right now.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n30",
+      "text": "The cause is the shrinking gap, and the result is one number, the slope of the tangent line.",
+      "names": [
+        "tangent line"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n31",
+      "text": "That matters because every power rule answer you write is that slope, so now you know what it means.",
+      "names": [],
+      "fact_id": "f3"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Odometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Odometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Speedometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Odometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Speedometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Secant line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Secant line",
+        "zoom": 1.6
+      },
+      "spotlight": "Secant line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Second point",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "Tangent line",
+        "zoom": 1.6
+      },
+      "spotlight": "Tangent line",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Speedometer",
+        "zoom": 1.8
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Secant line",
+        "zoom": 1.6
+      },
+      "spotlight": "Secant line",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "lim h→0",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Secant line",
+        "zoom": 1.6
+      },
+      "spotlight": "Secant line",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "Curve",
+        "zoom": 1.8
+      },
+      "spotlight": "Curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "Tangent line",
+        "zoom": 1.8
+      },
+      "spotlight": "Tangent line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "corner",
+      "camera": {
+        "target": "Corner",
+        "zoom": 1.6
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Right side",
+      "particles": [
+        "Right side",
+        "Corner"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Left side",
+      "particles": [
+        "Left side",
+        "Corner"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "corner",
+      "camera": {
+        "target": "Corner",
+        "zoom": 1.8
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "corner",
+      "camera": {
+        "target": "Corner",
+        "zoom": 1.8
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Speedometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Odometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Odometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Speedometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "Odometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Odometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Secant line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Secant line",
+        "zoom": 1.6
+      },
+      "spotlight": "Secant line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Secant line",
+        "zoom": 1.6
+      },
+      "spotlight": "Secant line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Second point",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Tangent line",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "First point",
+        "zoom": 1.8
+      },
+      "spotlight": "First point",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Tangent line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Secant line",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "Curve",
+        "zoom": 1.8
+      },
+      "spotlight": "Curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "Tangent line",
+        "zoom": 1.8
+      },
+      "spotlight": "Tangent line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "tangent-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Odometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "analogy",
+      "camera": {
+        "target": "Speedometer",
+        "zoom": 1.6
+      },
+      "spotlight": "Speedometer",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "corner",
+      "camera": {
+        "target": "Corner",
+        "zoom": 1.6
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Right side",
+      "particles": [
+        "Right side",
+        "Corner"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "corner",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Left side",
+      "particles": [
+        "Left side",
+        "Corner"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "corner",
+      "camera": {
+        "target": "Corner",
+        "zoom": 1.8
+      },
+      "spotlight": "Corner",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Second point",
+        "First point"
+      ],
+      "carries": "point",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Tangent line",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How do you find a rate at one instant?",
+      "from_narration": "n1"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Speedometer = how fast the odometer's count climbs",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "An average over a long gap hides the changes",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Two points → secant line slope = average rate of change",
+      "from_narration": "n7"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Shrink the gap → secant line tips toward tangent line",
+      "from_narration": "n11"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "h = 0 gives 0/0, so derivative = limit of slopes",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Tangent line slope = instantaneous rate of change",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Every x → new function f′(x); power rule = shortcut",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Corner: slopes 1 and −1 disagree → no limit, no derivative",
+      "from_narration": "n25"
+    }
+  ],
+  "tags": {
+    "song": [
+      "derivatives",
+      "derivative",
+      "calculus",
+      "apcalculus",
+      "apcalc",
+      "tangentline",
+      "limits",
+      "latinpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "derivatives",
+      "derivative",
+      "calculus",
+      "apcalculus",
+      "apcalc",
+      "tangentline",
+      "limits",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

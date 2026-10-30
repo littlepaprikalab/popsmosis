@@ -1,0 +1,22 @@
+{
+  "problems": [
+    {
+      "line_id": "v2-5",
+      "rule": "lyric-style",
+      "detail": "\"Zoom way in on a smooth curve, it starts to look straight,\" narrates the picture instead of being sung",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-7",
+      "rule": "lyric-style",
+      "detail": "\"Do it at every x, and you get a new function, f prime,\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "b-4",
+      "rule": "motion",
+      "detail": "5 lines in a row from b-4 with nothing moving, on a scene where things travel",
+      "repaired": false
+    }
+  ]
+}
