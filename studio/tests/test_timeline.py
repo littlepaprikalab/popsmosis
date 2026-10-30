@@ -436,6 +436,24 @@ def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(
 
 
 
+def test_the_hook_cut_never_reaches_into_a_verse_the_song_never_sings(job):
+    """A first chorus shorter than HOOK_MIN_S takes in the verse before it, but not one Eleven Music left
+    instrumental: its lines have no beat (step 6)."""
+    bundle = sample_media.bundle()
+    timed = sample_media.timings(bundle)
+    song = timed["song"].model_dump()
+    at = song["lines"][2]["start"]  # verse 1 (v1-1, v1-2) not sung: timed where the chorus starts
+    for line in song["lines"][:2]:
+        line.update(start=at, end=at, sung=False, words=[{**w, "start": at, "end": at} for w in line["words"]])
+    timed["song"] = Timing.model_validate(song)
+    write_bundle(job, bundle.model_dump(), timed)
+    make(job)
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    sung = [b.line_id for b in hook.beats if b.line_id]
+    assert sung[0] == "c1-1" and not {"v1-1", "v1-2"} & set(sung)  # it opens on the chorus
+    assert hook.beats[0].t0 == 0 and hook.beats[-1].t1 == hook.duration
+
+
 def keyed(data):
     data["key_lines"] = [{"from_line": "v1-1", "text": "How does a leaf make fuel from light?", "from_narration": "n1"},
                          {"from_line": "v2-1", "text": "Light pumps H⁺ into the lumen", "from_narration": "n2"}]

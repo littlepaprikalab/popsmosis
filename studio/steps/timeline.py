@@ -166,11 +166,16 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
     while start > 0 and sections[start - 1] == "pre-chorus":
         start -= 1
     by_line = {beat.line_id: beat for beat in song.beats if beat.line_id}
+    # A line the song never sings has no beat (step 6): the cut runs from the first line sung to the last.
+    while start < last and bundle.lyrics[start].id not in by_line:
+        start += 1
+    while last > start and bundle.lyrics[last].id not in by_line:
+        last -= 1
     # A short cut starts a few lines earlier, at the end of the verse that builds into the pre-chorus.
     for _ in range(HOOK_VERSE_LINES_MAX):
         head, tail = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
         if (start == 0 or sections[start - 1] != "verse" or head is None or tail is None
-                or tail.t1 - head.t0 >= HOOK_MIN_S):
+                or tail.t1 - head.t0 >= HOOK_MIN_S or bundle.lyrics[start - 1].id not in by_line):
             break
         start -= 1
     opening, closing = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
