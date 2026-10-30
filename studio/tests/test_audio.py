@@ -589,3 +589,18 @@ def test_a_topic_past_its_spend_ceiling_asks_for_no_song_or_voice(job, monkeypat
     with pytest.raises(ledger.OverCeiling):
         audio.run(job)
     assert fake.requests == []
+
+
+def test_the_lesson_alone_makes_only_the_narration(job, monkeypatch):
+    """STUDIO_VIDEOS=lesson on /admin/studio: no song is asked for, so Lyria's key is not needed either."""
+    sing(job, "gemini")
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    monkeypatch.delenv("GEMINI_API_KEY")
+    fake = FakeGemini()
+    monkeypatch.setattr(audio, "send", fake)
+    assert audio.run(job) == "made narration; narration 30.0s"
+    assert not fake.gemini() and not any("/v1/music" in url for url in fake.urls())
+    assert (job / media.audio_path("narration")).exists() and not (job / media.audio_path("song")).exists()
+    assert audio.is_done(job)
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "on"}})
+    assert not audio.is_done(job)  # both videos again: the song is still to make

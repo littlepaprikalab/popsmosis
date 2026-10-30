@@ -230,12 +230,15 @@ export function serializeDropletCard(a: PublicDropletRow, liked = false) {
   };
 }
 
-/** One droplet: the card, the whole lesson and the song's lyrics. */
+/**
+ * One droplet: the card, the whole lesson and the song's lyrics. A droplet made with the lesson video alone
+ * (STUDIO_VIDEOS=lesson on /admin/studio) has no song, so it shows no lyrics, though its bundle has them.
+ */
 export function serializeDroplet(
   { lessonBreakdown, videoBreakdown, ...a }: Omit<PublicDropletRow, 'lessonModels' | 'videoModels'> & { lessonBreakdown: unknown; videoBreakdown: unknown },
   liked = false,
 ) {
-  const lyrics = isObject(a.bundle) && Array.isArray(a.bundle.lyrics) ? a.bundle.lyrics.filter(isObject) : [];
+  const lyrics = a.songVideoUrl && isObject(a.bundle) && Array.isArray(a.bundle.lyrics) ? a.bundle.lyrics.filter(isObject) : [];
   return {
     ...serializeDropletCard({ ...a, lessonModels: billModels(lessonBreakdown), videoModels: billModels(videoBreakdown) }, liked),
     content: a.content,

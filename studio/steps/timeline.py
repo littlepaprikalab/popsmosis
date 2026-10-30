@@ -51,6 +51,9 @@ No model calls, so it is free to run again:
   and an amount no line on the scene says, from the scene's first beat.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
 - Beats meet exactly: each starts where the one before it ends, from 0 to the end.
+
+The lesson alone (STUDIO_VIDEOS=lesson, studio/media.py's lesson_only()): only timeline_lesson.json, from the
+narration, and no hook cut, which is the song's.
 """
 
 from __future__ import annotations
@@ -114,22 +117,22 @@ INTRO_FADE_S = 0.5
 
 
 def run(job: Path, ask=None) -> str:
-    """Write both timelines; `ask` is unused (no model calls)."""
-    media.restart(job, *(media.timeline_path(video) for video in media.VIDEOS))
+    """Write each video's timeline; `ask` is unused (no model calls)."""
+    media.restart(job, *(media.timeline_path(video) for video in media.videos()))
     bundle = checks.load(job / "bundle.json")
     locations = read(job / media.LOCATIONS, Locations)
-    timed = {kind: read(job / media.timing_path(kind), Timing) for kind in media.TIMED}
+    timed = {kind: read(job / media.timing_path(kind), Timing) for kind in media.timed()}
     expected = {
         "song": [line.id for line in bundle.lyrics],
         "narration": [n.id for n in bundle.narration],
     }
-    problems = [f"{kind}: {p}" for kind, ids in expected.items() for p in timing_problems(timed[kind], ids)]
+    problems = [f"{kind}: {p}" for kind in timed for p in timing_problems(timed[kind], expected[kind])]
     if problems:
         raise StepFailed("the timings do not match the bundle: " + "; ".join(problems))
 
     timelines = {}
     notices = art.notices(job, bundle)
-    for video in media.VIDEOS:
+    for video in media.videos():
         try:
             timeline = build(video, bundle, timed, locations)
             shown = {beat.scene for beat in timeline.beats}
@@ -144,7 +147,7 @@ def run(job: Path, ask=None) -> str:
         timelines[video] = timeline
     for video, timeline in timelines.items():
         write(job / media.timeline_path(video), timeline)
-    hook = hook_cut(bundle, timelines["song"])
+    hook = hook_cut(bundle, timelines["song"]) if "song" in timelines else None
     if hook is not None:
         write(job / media.timeline_path(media.HOOK), hook)
     else:
@@ -224,12 +227,12 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
 
 
 def is_done(job: Path) -> bool:
-    """Both timelines read, and are newer than everything they were made from."""
-    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.TIMED),
+    """Each video's timeline reads, and is newer than everything it was made from."""
+    inputs = [job / "bundle.json", job / media.LOCATIONS, *(job / media.timing_path(kind) for kind in media.timed()),
               *(job / "art").glob("*.json")]  # what each picture's check found, for its notices
     try:
         newest_input = max(path.stat().st_mtime for path in inputs)
-        for video in media.VIDEOS:
+        for video in media.videos():
             path = job / media.timeline_path(video)
             read(path, Timeline)
             if path.stat().st_mtime < newest_input:

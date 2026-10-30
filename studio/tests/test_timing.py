@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pytest
 
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio.schemas import Timing, timing_problems
 from studio.steps import audio, timing
 from studio.steps.timing import spoken, timing_from_chars, words_of
@@ -494,3 +494,26 @@ def test_a_few_lines_sung_differently_still_pass():
     # A section left instrumental is never shown, so its lines are not counted against the song.
     unsung = [{"line_id": f"i{i}", "score": 0.0, "sung": False} for i in range(10)]
     assert timing.lyric_mismatch({"lines": rows[:3] + rows[4:] + unsung}) is None
+
+
+def test_the_lesson_alone_times_only_the_narration(tmp_path, monkeypatch):
+    """STUDIO_VIDEOS=lesson: there is no song, so neither Demucs nor the aligner runs."""
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    monkeypatch.setattr(audio, "send", FakeEleven())
+    monkeypatch.setattr(audio, "duration", lambda path: 30.1)
+    job = tmp_path / "sample"
+    job.mkdir()
+    jobs.write(job / "bundle.json", sample_media.bundle())
+    audio.run(job)
+
+    def no_song(*args):
+        raise AssertionError("the song is timed")
+
+    monkeypatch.setattr(timing, "separate_vocals", no_song)
+    monkeypatch.setattr(timing, "mms_aligner", no_song)
+    assert timing.run(job).startswith("no song (the lesson video alone); narration ")
+    assert timing.is_done(job)
+    assert not (job / media.timing_path("song")).exists() and not (job / timing.REPORT).exists()
+    knobs.use({"knobs": {}})
+    assert not timing.is_done(job)

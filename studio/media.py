@@ -27,6 +27,11 @@ locations.json itself, so locate has nothing left to do. Painted art, Gemini 3.1
 Image's or Muse Image's, is pictures only: locate writes the masks and locations.json
 from SAM 3.1.
 
+The lesson alone. While STUDIO_VIDEOS is `lesson` (an admin's knob on /admin/studio,
+studio/knobs.py) no song is made: audio, timing, timeline, render and upload make and
+send only the narration and the lesson video, and no hook cut, which is the song's.
+videos() and timed() say which this run makes; VIDEOS and TIMED name them all.
+
 A step is a module studio/steps/<name>.py, for each name in MEDIA_STEPS, with
 
     run(job: Path, ask=brain.ask) -> str    do the step; return one line saying what it did;
@@ -51,6 +56,7 @@ from types import ModuleType
 
 import numpy as np
 
+from studio import knobs
 from studio.schemas import SAFE_PATH  # every path built here passes SAFE_PATH
 
 MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
@@ -62,6 +68,22 @@ ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
 
 LOCATIONS = "locations.json"
+LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
+
+
+def lesson_only() -> bool:
+    """Whether the videos are the lesson's alone: STUDIO_VIDEOS is `lesson`, on /admin/studio or in the environment."""
+    return knobs.env("STUDIO_VIDEOS").strip().lower() == LESSON_ONLY
+
+
+def videos() -> tuple[str, ...]:
+    """The videos this run makes: the song and the lesson, or the lesson alone (lesson_only())."""
+    return ("lesson",) if lesson_only() else VIDEOS
+
+
+def timed() -> tuple[str, ...]:
+    """The audio files this run makes and times: the song and the narration, or the narration alone."""
+    return ("narration",) if lesson_only() else TIMED
 
 
 class StepFailed(Exception):

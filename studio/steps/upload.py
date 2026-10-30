@@ -2,7 +2,7 @@
 
 Copies what outlives the job folder to Cloudflare R2, then marks the videos READY:
 
-    droplets/<answerId>/a<n>/out/song_h.mp4 ...   public: the two videos and their posters, for anyone to watch
+    droplets/<answerId>/a<n>/out/song_h.mp4 ...   public: the videos and their posters, for anyone to watch
     studio/<answerId>/a<n>/art/hook.png ...       private: art, masks, locations.json, audio, timings and
                                                   timelines, so a renderer fix can re-render without paying
                                                   again for the song and the art
@@ -37,6 +37,9 @@ its step finishes (the job folder dies with the routine's machine).
 A request that fails for a reason a moment may fix (no answer, 429, a 5xx) is tried
 again twice, a few seconds apart, before the step fails: the runner gives the videos up
 after a second failed step, and one storage blip should not count as one.
+
+The lesson alone (STUDIO_VIDEOS=lesson, studio/media.py's lesson_only()): the lesson video,
+its poster and what made them, and READY with no song or hook cut.
 
 RENDERING and FAILED are not this step's to send: whatever runs steps 3-9 owns them.
 """
@@ -83,7 +86,7 @@ class Progress(BaseModel):
 
 
 class Uploaded(Progress):
-    song_video_url: str
+    song_video_url: str | None = None  # None: the lesson video alone was made
     lesson_video_url: str
     song_poster_url: str | None = None
     lesson_poster_url: str | None = None
@@ -142,14 +145,16 @@ def _retrying(what: str, call: Callable[[], T]) -> T:
 
 
 def public_files(job: Path) -> list[str]:
-    """The videos, which must both be there, and the posters that are; the hook cut and its poster when it was made."""
-    missing = [media.video_path(v) for v in media.VIDEOS if not (job / media.video_path(v)).is_file()]
+    """The videos, which must all be there, and the posters that are; the hook cut and its poster when it was made.
+    The lesson alone: its video and poster, and no song's, even one left from a run that made it."""
+    videos = media.videos()
+    missing = [media.video_path(v) for v in videos if not (job / media.video_path(v)).is_file()]
     if missing:
         raise media.StepFailed(f"nothing to upload yet: {', '.join(missing)} not rendered")
-    posters = [media.poster_path(v) for v in media.VIDEOS if (job / media.poster_path(v)).is_file()]
+    posters = [media.poster_path(v) for v in videos if (job / media.poster_path(v)).is_file()]
     hook = [path(media.HOOK, media.HOOK_LAYOUT) for path in (media.video_path, media.poster_path)
-            if (job / path(media.HOOK, media.HOOK_LAYOUT)).is_file()]
-    return [media.video_path(v) for v in media.VIDEOS] + posters + hook
+            if "song" in videos and (job / path(media.HOOK, media.HOOK_LAYOUT)).is_file()]
+    return [media.video_path(v) for v in videos] + posters + hook
 
 
 def private_files(job: Path) -> tuple[list[str], list[str]]:
@@ -165,11 +170,12 @@ def private_files(job: Path) -> tuple[list[str], list[str]]:
         named += [s.art for s in locations.scenes] + [m.mask for s in locations.scenes for m in s.structures]
     except (OSError, ValueError, ValidationError):
         pass  # locations.json itself is reported missing
-    named += ([media.audio_path(k) for k in media.TIMED]
-              + [media.timing_path(k) for k in media.TIMED]
-              + [media.timeline_path(v) for v in media.VIDEOS]
+    named += ([media.audio_path(k) for k in media.timed()]
+              + [media.timing_path(k) for k in media.timed()]
+              + [media.timeline_path(v) for v in media.videos()]
               # The hook cut's, when the song has one, so a render picked up on another machine makes it too.
-              + ([media.timeline_path(media.HOOK)] if (job / media.timeline_path(media.HOOK)).is_file() else []))
+              + ([media.timeline_path(media.HOOK)]
+                 if "song" in media.videos() and (job / media.timeline_path(media.HOOK)).is_file() else []))
     named = list(dict.fromkeys(named))  # the art is named by both
     there = [p for p in named if (job / p).is_file()]
     # What each Muse Image picture's check found, which the timeline discloses beside it: a timeline made
@@ -213,7 +219,7 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
     progress = _progress(job, answer, attempt)
 
     def url(path: str) -> str | None:
-        entry = progress.files.get(path)
+        entry = progress.files.get(path) if path in public else None  # never a song left from an earlier run
         return entry.public_url if entry else None
 
     uploaded = Uploaded(
@@ -235,7 +241,7 @@ def run(job: Path, ask=brain.ask, api: Api | None = None) -> str:
 
     kept = len(public) + len(private) - sent
     line = f"uploaded {sent} file(s) for answer {answer}" + (f" ({kept} unchanged)" if kept else "")
-    line += f"; videos READY: {uploaded.song_video_url}, {uploaded.lesson_video_url}"
+    line += f"; videos READY: {', '.join(u for u in (uploaded.song_video_url, uploaded.lesson_video_url) if u)}"
     return line + (f"; not in the job: {', '.join(missing)}" if missing else "")
 
 

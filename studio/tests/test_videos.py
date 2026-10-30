@@ -511,6 +511,15 @@ def test_the_studio_page_turns_the_videos_off_or_on_whatever_this_machine_says(m
     assert REAL_UNAVAILABLE(studio={}) == "the videos are turned off here (STUDIO_VIDEOS, set on /admin/studio)"
 
 
+def test_the_lesson_alone_needs_no_key_for_a_song_it_does_not_make(monkeypatch):
+    monkeypatch.setenv("POPSMOSIS_ANTHROPIC_API_KEY", "test-key")
+    monkeypatch.delenv("STUDIO_VIDEOS", raising=False)
+    studio = {"art": {"claude": "svg"}, "song": {"provider": "gemini"}}
+    assert "GEMINI_API_KEY" in REAL_UNAVAILABLE(studio=studio)
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    assert REAL_UNAVAILABLE(studio=studio) is None
+
+
 def test_a_run_whose_settings_cannot_be_read_keeps_the_knobs_its_last_claim_carried(setup, monkeypatch):
     """A detached `videos` starts with no knobs in force; the API not answering must not leave this machine's
     STUDIO_VIDEOS=off to stop videos the page turned on."""

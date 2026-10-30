@@ -269,6 +269,12 @@ d('the Droplets tab', () => {
       lyrics: [{ section: 'chorus', text: 'Spin the rotor, make the ATP' }],
     });
 
+    // Made with the lesson video alone (STUDIO_VIDEOS=lesson): no song, so no lyrics.
+    const lessonOnly = await droplet(7, { videoStatus: 'READY', lessonVideoUrl: LESSON });
+    expect((await get(`/api/droplets/${lessonOnly}`)).json()).toMatchObject({
+      video: { songVideoUrl: null, lessonVideoUrl: LESSON }, lyrics: [],
+    });
+
     const rendering = await droplet(5, { videoStatus: 'RENDERING', songVideoUrl: SONG });
     expect((await get(`/api/droplets/${rendering}`)).statusCode).toBe(404);
     await prisma.answer.update({ where: { id }, data: { hiddenAt: new Date() } });
