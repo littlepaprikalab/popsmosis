@@ -11,9 +11,10 @@ export const metadata: Metadata = {
 /**
  * The Privacy Policy. What it promises is what the code does: lib/privacy.ts in the API (who reads what, and taking
  * a request back), DELETE /api/auth/me (deleting an account), lib/droplet.ts and lib/engagement.ts (what the Droplets
- * tab and its comments show), lib/terms.ts (the record of agreeing). Keep them in step: a promise the code does not
- * keep is the thing a privacy claim is made of. Move LAST_UPDATED in lib/legal.ts when this page changes, and
- * TERMS_VERSION in api/src/lib/terms.ts when people must agree again.
+ * tab and its comments show), routes/plays.ts and web/src/lib/plays.ts (the play totals), lib/terms.ts (the record of
+ * agreeing). Keep them in step: a promise the code does not keep is the thing a privacy claim is made of. Move
+ * LAST_UPDATED in lib/legal.ts when this page changes, and TERMS_VERSION in api/src/lib/terms.ts when people must
+ * agree again.
  */
 export default function PrivacyPage() {
   return (
@@ -28,8 +29,9 @@ export default function PrivacyPage() {
             your first name and last initial.</li>
           <li><strong>You are in control.</strong> You can delete a request, a comment, or your whole account at any
             time. A lesson made from your request stays public, with nothing linking it to you.</li>
-          <li><strong>No ads, no tracking, no selling.</strong> We don&rsquo;t sell your data, show ads, use analytics or
-            tracking cookies, or train AI models on what you send.</li>
+          <li><strong>No ads, no tracking, no selling.</strong> We don&rsquo;t sell your data, show ads, use tracking
+            cookies or analytics that identify you, or train AI models on what you send. We count how far each video is
+            watched, in totals that say nothing about who watched.</li>
         </ul>
       }
     >
@@ -100,6 +102,13 @@ export default function PrivacyPage() {
             and the droplets you like.</dd>
           <dt>What the teacher makes for you</dt>
           <dd>The lessons, videos and replies to your follow-ups.</dd>
+          <dt>How the videos are watched</dt>
+          <dd>How many times each droplet&rsquo;s videos are started and how far they play (a quarter, half, three
+            quarters, the end), and how often a hook clip is shared or downloaded. These are totals for each video and
+            nothing else. They are counted without your cookie, your account, your IP address or any identifier of your
+            device or browser, and with no time, so they can&rsquo;t say who watched or when. To stop anyone inflating
+            them, your IP address is held in memory for up to an hour, only in a scrambled form, and is never stored
+            with them.</dd>
           <dt>Technical information</dt>
           <dd>A cookie that keeps you signed in (<a href="#cookies">section 10</a>). Our hosting provider&rsquo;s server
             logs, which record IP addresses, the addresses requested, times and errors. IP addresses are also held
@@ -119,6 +128,8 @@ export default function PrivacyPage() {
             and likes.</li>
           <li><strong>To publish.</strong> Each finished lesson goes on the Droplets tab without anything about you, and
             your comments appear under the droplet you posted them on.</li>
+          <li><strong>To make better lessons.</strong> The play totals show which droplets students watch to the end, so
+            we can learn what works.</li>
           <li><strong>To keep Popsmosis safe and working.</strong> Limits on how much one person can ask or post,
             preventing abuse, fixing bugs, and removing lessons and comments that break our{' '}
             <Link href="/terms">Terms</Link>.</li>
@@ -183,6 +194,7 @@ export default function PrivacyPage() {
             for two days, so the daily and hourly limits hold. Deleting a request or a follow-up leaves it until then;
             deleting your account removes it at once.</li>
           <li><strong>Lessons and videos:</strong> published for as long as Popsmosis runs, unless they are taken down.</li>
+          <li><strong>Play totals:</strong> for as long as their droplet is kept; they go with it.</li>
           <li><strong>Server logs and backups:</strong> kept by our providers for a limited time, after which they
             expire.</li>
           <li><strong>The AI teacher&rsquo;s working files:</strong> kept on the computer that runs the teacher until
@@ -244,7 +256,8 @@ export default function PrivacyPage() {
           You must be {MIN_AGE} or older to have an account, or older where your country requires it (see the{' '}
           <Link href="/terms#who-can-use">Terms</Link>). We don&rsquo;t knowingly collect personal information from
           children under {MIN_AGE}. Anyone can watch the Droplets tab without an account, and doing so collects nothing
-          about them beyond the technical logs in <a href="#collect">section 3</a>. If you think a child under{' '}
+          about them beyond the technical logs in <a href="#collect">section 3</a>; the play totals there are not about
+          anyone. If you think a child under{' '}
           {MIN_AGE} has an account, tell us and we will delete it.
         </p>
       </Section>

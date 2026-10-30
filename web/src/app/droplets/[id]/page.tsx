@@ -127,7 +127,7 @@ export default function DropletPage() {
         <p className="text-xs mb-4" style={{ color: 'var(--accent-orange)' }}>Hidden: no longer listed on the Droplets tab.</p>
       )}
 
-      <DropletPlayers video={droplet.video} tags={droplet.tags} title={droplet.title} />
+      <DropletPlayers dropletId={droplet.id} video={droplet.video} tags={droplet.tags} title={droplet.title} />
 
       {/* An API older than likes and comments sends neither count: leave both out rather than show zeros. */}
       {droplet.likeCount !== undefined && (

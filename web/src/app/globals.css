@@ -31,6 +31,11 @@
   --overlay-bg: rgba(0, 0, 0, 0.85);
   --question-box-glow: 0 0 12px rgba(255, 214, 10, 0.15);
   --code-block-bg: rgba(0, 0, 0, 0.3);
+  /* A chart's three videos (components/DropOffChart.tsx): checked together for colour-blind readers and against the
+     card's surface, a step darker than the accents, which are too light for a 2px line. */
+  --chart-song: #d95926;
+  --chart-lesson: #3987e5;
+  --chart-hook: #199e70;
 }
 
 /* ===== Light theme (system preference) ===== */
@@ -61,6 +66,9 @@
     --overlay-bg: rgba(0, 0, 0, 0.5);
     --question-box-glow: 0 0 12px rgba(201, 168, 0, 0.2);
     --code-block-bg: rgba(0, 0, 0, 0.06);
+    --chart-song: #eb6834;
+    --chart-lesson: #2a78d6;
+    --chart-hook: #1baf7a;
     --text-muted: #6e6e73;
   }
 }
