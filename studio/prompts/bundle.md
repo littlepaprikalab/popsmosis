@@ -223,6 +223,16 @@ together they go from what the learner already knows to the parts they are learn
   names, and each extra adjective makes it likelier to miss: "yellow flashlight", not
   "golden yellow small flashlight". No positions, commands or negations: the model goes
   by what the thing looks like. `color_hex` is its colour as #RRGGBB.
+- `axes`: on a graph, what each axis measures, as a textbook prints it, in a word or two:
+  "Quantity" across and "Price" up; "Reaction progress" and "Potential energy". "" for
+  both on any other scene, and for an axis the graph does not have. The video writes them
+  at the ends of the axes from the scene's first frame, in both videos, since the picture
+  has no writing: the learner reads the graph before anything on it is named. An axis is
+  never a structure: a structure's label shows only once its name is sung, and a common
+  word like "price" would reveal it on every line that says it. The `image_prompt` asks
+  for the axes as two plain lines, says where they meet (at the bottom left; at the
+  middle, crossing, for a graph with negative values), and asks for nothing written on
+  them.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct,
   bright mid-tone colours that stand out on the art's dark slate blue background; never
   navy, slate, dark grey or near black, which disappear into it. Only an analogy part

@@ -41,6 +41,7 @@ No model calls, so it is free to run again:
   the scene and named by then.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
+- A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
 - Beats meet exactly: each starts where the one before it ends, from 0 to the end.
 """
@@ -403,9 +404,10 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
+    shown = {b["scene"] for b in beats}
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
-                    key_terms=bundle.key_terms)
+                    key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
 
 
 CORE_SAID = 0.6  # the share of the core idea's words a narration sentence says to be the one that says it

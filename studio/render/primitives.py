@@ -313,6 +313,26 @@ def draw_label(canvas: skia.Canvas, lb: Label, font_size: float) -> None:
     draw_text(canvas, lb.name, lb.x - tw / 2, lb.y + cap_height(f) / 2, f, argb(darken(lb.color), lb.alpha))
 
 
+# --- axis names -----------------------------------------------------------------------------
+
+AXIS_HALO = 6.0  # the stroke of background colour round an axis name, so it reads where it crosses a line
+AXIS_INK_LIGHT, AXIS_INK_DARK = 0xFFF1F5F9, 0xFF334155  # on a dark background, and on a light one
+
+
+def draw_axis_name(canvas: skia.Canvas, text: str, rect: Rect, font_size: float, paper: int, alpha: float) -> None:
+    """A graph's axis name, as a textbook prints it: plain writing in the picture's own ink, with no pill, since the
+    pills are the parts the lesson teaches; ringed with the background's colour so it reads over a line."""
+    if alpha <= 0.01:
+        return
+    f = font("Bold", font_size)
+    x = (rect[0] + rect[2]) / 2 - text_width(f, text) / 2
+    y = (rect[1] + rect[3]) / 2 + cap_height(f) / 2
+    light = _luminance(skia.ColorGetR(paper), skia.ColorGetG(paper), skia.ColorGetB(paper)) > 0.4
+    canvas.drawString(text, x, y, f, skia.Paint(AntiAlias=True, Color=with_alpha(paper, alpha), StrokeWidth=AXIS_HALO,
+                                                Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
+    draw_text(canvas, text, x, y, f, with_alpha(AXIS_INK_DARK if light else AXIS_INK_LIGHT, alpha))
+
+
 # --- particles ------------------------------------------------------------------------------
 
 PARTICLE_R = 13.0  # the lead particle, in frame pixels

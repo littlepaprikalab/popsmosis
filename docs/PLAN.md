@@ -212,8 +212,9 @@ parts build on the facts it has already written.
    one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
-   `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`) and
-   `stage_of`. One fixed colour per structure for the whole job. A process whose parts move
+   `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
+   `stage_of` and `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
+   axes' ends; "" elsewhere). One fixed colour per structure for the whole job. A process whose parts move
    or change shape from stage to stage (mitosis, the phases of the Moon) takes a scene per
    stage, 2 to 5 of them, each with `stage_of` naming the process, all opening with the same
    framing sentence; then up to 8 scenes in all.
@@ -575,6 +576,16 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     poison, a drug, a herbicide) go once and hold there; the stream queues up behind them,
     and a red cross shows at the blocker once the first arrives. The fact-check reads such
     a motion as "e⁻ flow from Photosystem II is stopped at Herbicide".
+  - **Axis names:** a graph scene's `axes` ("Quantity", "Price") are written at its axes'
+    ends from its first frame, in both videos: plain writing in the picture's own ink, no
+    pill, since an axis is read, not taught, and is never revealed by name. The renderer
+    finds the axes in the picture (`studio/render/axes.py`): each is the longest thin,
+    straight line across or up that is no structure's (a curve's mask is left out, so a
+    price ceiling is not taken for one); an axis not found runs along the bottom or the
+    left of what is drawn. Each name takes the spot beside its end (below, past or above
+    the x axis's; left of, above or right of the y axis's top) that, framed whole, stays
+    in the frame over the least of the picture. Where the camera leaves an end out (a
+    close-up, the upright frame's sides), its name stays at the frame's edge on that side.
   - **Glow:** a line's `glow` lights its part with a warm light past its edge, pulsing,
     for the line: light exciting photosystem II, a neuron firing. Rare, and like the
     spotlight, never on a part not yet named.
