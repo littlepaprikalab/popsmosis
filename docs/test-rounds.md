@@ -1025,6 +1025,98 @@ timings the ElevenLabs call returns (a scratch script, not a studio feature). Ge
 any instruction aloud ("Say warmly:" made a 5.5 s sentence 9.7 s), so it is given the
 sentences alone; one call for the whole narration never came back.
 
+## Round 20: the same three topics, with round 19's fixes
+
+Oct 30. The script asked to draw the key terms and to line a story in time up as a timeline
+of its people; the locate step checking where each label is pinned and finding an untraceable
+part by its colour; a young audience's song asked for the pop they play. ElevenLabs had no
+credits left, so every song is Lyria's and the narration the stand-in voice (round 19), one job
+a topic.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Lesson and pictures | $2.67 | $2.74 | $3.19 |
+| Script kept | all, 32 sentences | all, 31 | all, 31 |
+| Fact-check | passed in 2 rounds, 1 fix | passed in 1 | passed in 1 |
+| Located | 26 of 26, 14 in the helper's box | 21 of 23 | 27 of 27 |
+
+- **Rome** opens on July and August, named for Caesar and Augustus ("So how did a republic
+  that hated kings end up with an emperor?"), lays the club analogy out as signposts (the
+  committee is the Senate, the captains the consuls, the bouncers the legions: "once a captain
+  pays them, they obey him"), and walks a timeline line-up of the Senate, Marius, Sulla, Caesar
+  and Augustus, each with his legions, the camera moving along it as each is named. The one
+  thing that moved, the pay, travels from Marius to his legions. Caesar is corrected right
+  after the Ides of March, and the song's second pre-chorus corrects him after the verse that
+  sings him.
+- **The rock cycle** labels igneous, sedimentary and metamorphic rock where each forms (the
+  igneous rock was painted too faintly for SAM, the helper's box or its colour to find, and
+  went unlabelled), maps each kind to a crayon (shavings, pressed block, bent block, melted
+  into a mold), and works Hawaii's black sand as its case.
+- **The kidneys** show the nephron as "one of about a million tiny tubes like this", go into
+  each close-up from the step that needs it and back ("Back on the main path"), and every part
+  was located, the glomerulus included.
+
+Still in the way: the art check's notice card, which lists what a picture still gets wrong
+beside it, stood beside the Rome analogy for the whole scene, for four committee members where
+the analogy had five. An analogy's picture now discloses nothing: it cannot teach the topic
+wrong. Elsewhere the card is a choice the product made, and it is on screen whenever a picture
+keeps a mistake (the rock cycle's metamorphic rock "far above the magma").
+
+## Round 21: three topics the studio had never seen
+
+Oct 30. Three topics drawn from the pool round 17 drew from, none tuned on: **AP World
+History: how the Silk Road connected the world**, **7th grade life science: how the stomach
+and intestines digest food** and **Anatomy and Physiology: how the lungs exchange gases**. The
+draw first gave a second history topic (the causes of World War I); it was drawn again from
+outside history, for a third subject. Lyria and the stand-in voice, as round 20.
+
+| | Silk Road | Digestion | Lungs |
+|---|---|---|---|
+| Lesson and pictures | $2.96 | $2.89 | $2.90 |
+| Audience | high school | 7th grade | high school |
+| Script kept | all, 31 sentences | all, 29 | all, 32 |
+| Fact-check | passed in 1 round | passed in 2, 2 fixes | passed in 1 |
+
+Each is one explanation, in the shape the script asks for: a hook that ends on the question
+(paper and silk from China; a sandwich gone in a second that your cells cannot use; the lungs'
+70 square meters), an analogy whose parts become signposts (a relay race whose handoff zones
+are oasis cities; a LEGO model taken apart into bricks small enough for the "mail slot" of the
+intestine's wall; a train at a crowded platform, its open doors the respiratory membrane), the
+steps in order with "First", "Next", "Back on the map", a predict question (what happens to the
+price of silk at each stop?), the misconception where it forms (one road travelled end to end;
+the stomach doing most of the digestion; the lungs pumping oxygen), a worked case after the
+path (the Black Death riding the relay; lactose intolerance; pneumonia) and one ending.
+
+### The songs, heard by Gemini
+
+None of these songs could be heard here, so Gemini (gemini-3.8-flash) listened to each, as a
+producer and as a 16-year-old (a scratch script, under a cent a song). It is one model's ears,
+so its numbers are for comparing versions of a song, not alone, but it tells a bad song from a
+good one: round 17's kidney song, sung at 4 to 5 words a second, it heard as "spoken or
+rapped", melody 4 of 10, overall 6.5, and it caught round 17's Rome song stepping back in time.
+
+| | Vocals | Melody | Chorus sticks | Would play it | Overall |
+|---|---|---|---|---|---|
+| Round 17, kidneys, Eleven Music | spoken or rapped | 4 | 8 | 5 | 6.5 |
+| Round 18, kidneys, Eleven Music | sung | 8 | 8 | 7 | 7.5 |
+| Round 18, kidneys, Lyria | sung | 8 | 8 | 7 | 8 |
+| Round 18, kidneys, Eleven Music with section cues | sung | 8 | 9 | 7 | 8 |
+| Round 19, rock cycle, Eleven Music / Lyria | sung | 7 / 8 | 8 / 8 | 4 / 5 | 7 / 7 |
+| Round 19, Rome, Eleven Music / Lyria | mostly sung / sung | 7 / 8 | 8 / 9 | 6 / 7 | 7 / 8 |
+| Round 20, Rome / rock cycle, Lyria | sung | 8 / 8 | 9 / 9 | 7 / 6 | 8 / 8 |
+| Round 21, Silk Road / digestion, Lyria | sung | 8 / 8 | 8 / 8 | 7 / 6 | 8 / 7.5 |
+
+Lyria's songs heard a little better than Eleven Music's on the same lyrics, as the owner heard
+them. The rock cycle's round 19 song, asked for "playful pop", it heard as "an elementary school
+curriculum jingle" (would play it: 4); round 20's, written before the young style changed, 6.
+What it still marks down: bridges crammed with facts, and a corny shouted line in the 7th grade
+song ("Bloated belly!").
+
+The section cues are a scratch test on Eleven Music (each section's chunk given its own
+delivery: soft and close in the verses, full in the chorus, stripped back in the bridge, and
+shouting, rap and rushing avoided), made from round 18's kidney lyrics, with a second version
+given more time a line; neither is in the studio, and they wait for the owner's ears.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
