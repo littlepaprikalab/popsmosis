@@ -419,6 +419,34 @@ export interface Droplet extends DropletCard {
   lyrics: { section: string; text: string }[];
 }
 
+/**
+ * One video's play counts on a droplet (api/src/lib/plays.ts): totals, nothing about who watched. Each step counts
+ * the plays that got that far, so none is above the one before it. shared and downloaded: the hook tile's buttons.
+ */
+export interface PlayCounts {
+  started: number;
+  reached25: number;
+  reached50: number;
+  reached75: number;
+  finished: number; // 95% of it played
+  shared: number;
+  downloaded: number;
+  finishRate: number | null; // finished / started; null before any start
+}
+
+export type PlayVideo = 'song' | 'lesson' | 'hook';
+
+/** The owner's ranking of droplets by one video's finish rate, best first (GET /api/plays). */
+export interface PlayRanking {
+  video: PlayVideo;
+  min: number; // the fewest starts a droplet needs to be ranked
+  data: { id: string; title: string; course: string; topic: string; hidden: boolean; createdAt: string; plays: PlayCounts }[];
+  fewer: number; // droplets with plays of this video, but fewer than min
+  // Each video's counts over every droplet, whatever min: the drop-off curve. Only when asked (?totals=1), and absent
+  // when they could not be read or from an API older than them.
+  totals?: Record<PlayVideo, PlayCounts>;
+}
+
 export interface Agent {
   id: string;
   name: string;
@@ -498,6 +526,11 @@ export const api = {
   // Admin: take a droplet off the tab, or put it back
   setDropletHidden: (answerId: string, hidden: boolean) =>
     request<{ id: string; hidden: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ hidden }) }),
+
+  // Admin: droplets ranked by how many of one video's plays finished (api/src/routes/plays.ts)
+  // withTotals: every droplet's totals too, for the drop-off chart; they sum every count, so the page asks once.
+  listPlays: (video: PlayVideo, min: number, withTotals = false) =>
+    request<PlayRanking>(`/plays?${new URLSearchParams({ video, min: String(min), limit: '200', ...(withTotals && { totals: '1' }) })}`),
 
   // Admin: agents
   listAgents: () => request<{ data: Agent[] }>('/agents'),

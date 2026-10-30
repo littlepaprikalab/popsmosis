@@ -4,13 +4,16 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { DropletCard } from '@/lib/api';
 import { LikeButton } from '@/components/LikeButton';
+import { countPlays } from '@/lib/plays';
 import { SpeakerWaveIcon, SpeakerXMarkIcon } from '@heroicons/react/24/solid';
 
 /**
  * The Droplets tab's Clips feed: each droplet's hook cut (the song's pre-chorus and first chorus, upright), one
  * at a time, full height, the next a swipe or a scroll away. The clip on screen plays, muted until the viewer
  * turns the sound on, which then stays on as they scroll; the others are paused. Under each, its topic, a like
- * and a link to the whole droplet. With reduced motion asked for, nothing plays until it is pressed.
+ * and a link to the whole droplet. With reduced motion asked for, nothing plays until it is pressed. A clip's play
+ * is counted, with nothing about who watched (lib/plays.ts), only once it really plays: one scrolled past before it
+ * started, or one that waits to be pressed, is not a play.
  */
 export function ClipFeed({ droplets, onEnd }: { droplets: DropletCard[]; onEnd: () => void }) {
   const [muted, setMuted] = useState(true);
@@ -59,6 +62,7 @@ function Clip({ droplet: d, muted, setMuted, last, onEnd }: {
         playsInline
         controls={false}
         preload="none"
+        {...countPlays(d.id, 'hook')}
         onClick={(e) => { const v = e.currentTarget; if (v.paused) v.play().catch(() => undefined); else v.pause(); }}
         aria-label={`Clip: ${heading}`}
         className="h-full w-full object-contain"

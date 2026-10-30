@@ -167,11 +167,16 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
     while start > 0 and sections[start - 1] == "pre-chorus":
         start -= 1
     by_line = {beat.line_id: beat for beat in song.beats if beat.line_id}
+    # A line the song never sings has no beat (step 6): the cut runs from the first line sung to the last.
+    while start < last and bundle.lyrics[start].id not in by_line:
+        start += 1
+    while last > start and bundle.lyrics[last].id not in by_line:
+        last -= 1
     # A short cut starts a few lines earlier, at the end of the verse that builds into the pre-chorus.
     for _ in range(HOOK_VERSE_LINES_MAX):
         head, tail = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
         if (start == 0 or sections[start - 1] != "verse" or head is None or tail is None
-                or tail.t1 - head.t0 >= HOOK_MIN_S):
+                or tail.t1 - head.t0 >= HOOK_MIN_S or bundle.lyrics[start - 1].id not in by_line):
             break
         start -= 1
     opening, closing = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
@@ -303,6 +308,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     voice = timed["song" if video == "song" else "narration"]
     skip = intro_skip(voice) if video == "song" else 0.0
     voice = shifted(voice, skip)
+    sung = [line for line in voice.lines if line.sung]  # a line its song never sings has no beat (step 6)
     texts = {line.id: line.text for line in lines}
     sections = _section_runs(bundle) if video == "song" else {}
     directions = {d.line_id: d for d in bundle.direction}
@@ -326,13 +332,13 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
                       "line": "", "words": []})
         captions.append(None)
 
-    first = voice.lines[0].start if voice.lines else voice.duration
+    first = sung[0].start if sung else voice.duration
     cursor = 0.0
     if first >= GAP_S:
         gap(0.0, first, None)
         cursor = first
-    for i, timed_line in enumerate(voice.lines):
-        following = voice.lines[i + 1].start if i + 1 < len(voice.lines) else voice.duration
+    for i, timed_line in enumerate(sung):
+        following = sung[i + 1].start if i + 1 < len(sung) else voice.duration
         silent = following - timed_line.end >= GAP_S
         t1 = round(timed_line.end + LINGER_S, 3) if silent else following
         t1 = max(t1, cursor + 1 / media.FPS)
@@ -522,8 +528,8 @@ def _turn(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> No
 
 def intro_skip(timing: Timing) -> float:
     """How much of the start of the audio to leave out: its intro, when the first word is heard
-    later than INTRO_MAX_S, all but INTRO_KEEP_S of it; else nothing."""
-    first = timing.lines[0].start if timing.lines else 0.0
+    later than INTRO_MAX_S, all but INTRO_KEEP_S of it; else nothing. A line not sung is not heard."""
+    first = next((line.start for line in timing.lines if line.sung), 0.0)
     return round(first - INTRO_KEEP_S, 3) if first > INTRO_MAX_S else 0.0
 
 
@@ -536,7 +542,7 @@ def shifted(timing: Timing, skip: float) -> Timing:
         return round(max(0.0, t - skip), 3)
 
     return Timing(audio=timing.audio, duration=at(timing.duration), lines=[
-        TimedLine(line_id=line.line_id, start=at(line.start), end=at(line.end),
+        TimedLine(line_id=line.line_id, start=at(line.start), end=at(line.end), sung=line.sung,
                   words=[Word(word=w.word, start=at(w.start), end=at(w.end)) for w in line.words])
         for line in timing.lines])
 

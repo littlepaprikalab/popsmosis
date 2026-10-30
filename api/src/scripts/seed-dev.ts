@@ -13,7 +13,8 @@ import { bundleTags } from '../lib/tags.js';
 // recreated, the agent's key is rotated and printed.
 //
 // The videos are web/public/samples/: two 8-second clips made with ffmpeg for this
-// repo (H.264, +faststart, like the studio's), served by the web app itself.
+// repo (H.264, +faststart, like the studio's), served by the web app itself, and the
+// ATP droplet's hook clip, the song's cut upright (hook.mp4), for its tile and the Clips feed.
 // Usage: npm --workspace api run seed:dev
 
 const hoursAgo = (h: number) => new Date(Date.now() - h * 3600e3);
@@ -57,6 +58,7 @@ const SAMPLE_VIDEO = {
   lessonPosterUrl: '/samples/lesson.jpg',
   videoUpdatedAt: hoursAgo(2.4),
 };
+const SAMPLE_HOOK = { hookVideoUrl: '/samples/hook.mp4', hookPosterUrl: '/samples/hook.jpg' };
 
 // The bill of materials under the lesson (lib/breakdown.ts), in the numbers of the first live runs (docs/PLAN.md, section 12).
 const SAMPLE_BREAKDOWN = {
@@ -106,7 +108,7 @@ const agent = await prisma.agent.upsert({ where: { name: 'popsmosis-teacher' }, 
 await prisma.question.deleteMany({ where: { userId: { in: [ada.id, ben.id, cal.id] } } });
 
 const q1 = await prisma.question.create({ data: { userId: ben.id, status: 'ANSWERED', createdAt: hoursAgo(3), content: 'ATP synthesis: how do cells actually make ATP?' } });
-const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, ...bundleTags(ATP_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
+const a1 = await prisma.answer.create({ data: { questionId: q1.id, agentId: agent.id, model: 'claude', createdAt: hoursAgo(2.5), bundle: ATP_BUNDLE, ...bundleTags(ATP_BUNDLE), factcheck: PASSED, ...SAMPLE_VIDEO, ...SAMPLE_HOOK, ...SAMPLE_BREAKDOWN, content: `**ATP synthase** is a tiny rotary motor in the inner membrane of the mitochondrion.
 
 1. The electron transport chain pumps protons (H+) out of the matrix, building up a **gradient** across the membrane.
 2. The protons can only flow back in through ATP synthase, and that flow spins its rotor.

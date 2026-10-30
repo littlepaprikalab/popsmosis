@@ -303,6 +303,31 @@ def test_a_long_intro_is_cut_so_the_hook_is_sung_within_two_seconds(job):
     assert timeline_problems(timeline, jobs.read(job / media.LOCATIONS, Locations)) == []
 
 
+def test_a_line_the_song_never_sings_has_no_beat_and_the_intro_is_cut_to_the_first_sung_one(job):
+    """Eleven Music left the first chunk instrumental: step 6 timed its line at no length where the chunk ends."""
+    bundle = sample_media.bundle()
+    timed = sample_media.timings(bundle)
+    song = timed["song"].model_dump()
+    for line in song["lines"]:
+        line["start"] += 5.0
+        line["end"] += 5.0
+        for w in line["words"]:
+            w["start"] += 5.0
+            w["end"] += 5.0
+    song["duration"] += 5.0
+    first, at = song["lines"][0], song["lines"][1]["start"]
+    first.update(start=at, end=at, sung=False, words=[{**w, "start": at, "end": at} for w in first["words"]])
+    timed["song"] = Timing.model_validate(song)
+    write_bundle(job, bundle.model_dump(), timed)
+    timeline = make(job)["song"]
+    assert "v1-1" not in [beat.line_id for beat in timeline.beats]
+    skip = round(at - step.INTRO_KEEP_S, 3)
+    assert timeline.audio[0] == AudioClip(path="audio/song.mp3", at=0, start=skip, fade_in=step.INTRO_FADE_S)
+    assert timeline.beats[0].line_id == "v1-2" and timeline.beats[0].scene == step.hook_scene(bundle)
+    assert timeline.beats[0].words[0].start == pytest.approx(step.INTRO_KEEP_S)
+    assert timeline_problems(timeline, jobs.read(job / media.LOCATIONS, Locations)) == []
+
+
 def test_each_video_ends_a_moment_after_its_voice_on_its_last_picture(job):
     timelines = make(job)
     timed = sample_media.timings(sample_media.bundle())
@@ -409,6 +434,24 @@ def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(
     clip = hook.audio[0]
     assert clip.end - clip.start == pytest.approx(hook.duration, abs=0.01) and clip.fade_out > 0
 
+
+
+def test_the_hook_cut_never_reaches_into_a_verse_the_song_never_sings(job):
+    """A first chorus shorter than HOOK_MIN_S takes in the verse before it, but not one Eleven Music left
+    instrumental: its lines have no beat (step 6)."""
+    bundle = sample_media.bundle()
+    timed = sample_media.timings(bundle)
+    song = timed["song"].model_dump()
+    at = song["lines"][2]["start"]  # verse 1 (v1-1, v1-2) not sung: timed where the chorus starts
+    for line in song["lines"][:2]:
+        line.update(start=at, end=at, sung=False, words=[{**w, "start": at, "end": at} for w in line["words"]])
+    timed["song"] = Timing.model_validate(song)
+    write_bundle(job, bundle.model_dump(), timed)
+    make(job)
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    sung = [b.line_id for b in hook.beats if b.line_id]
+    assert sung[0] == "c1-1" and not {"v1-1", "v1-2"} & set(sung)  # it opens on the chorus
+    assert hook.beats[0].t0 == 0 and hook.beats[-1].t1 == hook.duration
 
 
 def keyed(data):

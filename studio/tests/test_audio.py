@@ -340,7 +340,6 @@ def test_the_lyria_model_and_the_credits_price_set_on_the_studio_page_win_over_t
 
 @pytest.mark.parametrize("fake, reason", [
     (FakeGemini(status=400), "400 INVALID_ARGUMENT Lyria could not make it"),
-    (FakeGemini(answer={"promptFeedback": {"blockReason": "PROHIBITED_CONTENT"}}), "blocked the song's prompt: PROHIBITED"),
     (FakeGemini(answer={"candidates": [{"content": {"parts": [{"text": "I can't sing that."}]},
                                         "finishReason": "RECITATION"}]}), "no song .finish reason: RECITATION"),
     (FakeGemini(answer={"candidates": [{"content": {"parts": [{"inlineData": {"mimeType": "audio/mpeg", "data": "%%"}}]}}]}),
@@ -354,6 +353,65 @@ def test_a_gemini_refusal_or_block_fails_the_step_and_keeps_nothing(job, monkeyp
     assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
     # The voice was made at the same time and is kept, so a retry asks for the song alone.
     assert len(fake.gemini()) == 1 and (job / "audio/narration.mp3").exists()
+    assert not any("/v1/music" in u for u in fake.urls())  # only what Lyria will not sing goes to Eleven Music
+
+
+@pytest.mark.parametrize("answer, reason", [
+    ({"promptFeedback": {"blockReason": "OTHER"}}, "Gemini blocked the song's prompt: OTHER"),
+    ({"promptFeedback": {"blockReason": "PROHIBITED_CONTENT"}}, "Gemini blocked the song's prompt: PROHIBITED_CONTENT"),
+    ({"candidates": [{"content": {"parts": []}, "finishReason": "SAFETY"}]},
+     "Gemini sent back no song (finish reason: SAFETY)"),
+])
+def test_a_song_lyria_will_not_sing_is_made_by_eleven_music(job, monkeypatch, answer, reason):
+    fake = FakeGemini(answer=answer)
+    monkeypatch.setattr(audio, "send", fake)
+    sing(job, "gemini")
+    assert f"song (elevenlabs, as {reason})" in audio.run(job)
+    assert len(fake.gemini()) == 1 and sum("/v1/music" in u for u in fake.urls()) == 1
+    plan = json.loads((job / audio.plan_path("song")).read_text())
+    assert plan["provider"] == "elevenlabs" and plan["sections_pinned"] is True  # step 6 finds its lines where planned
+    assert plan["instead_of"] == {"provider": "gemini", "model_id": "lyria-3.5", "reason": reason}
+    assert (job / "audio/song.mp3").read_bytes() == b"ID3 song"
+    # Lyria's refusal cost nothing; the song is billed as Eleven Music's.
+    assert [r["model"] for r in _logged(job) if r["label"] == "song"] == ["music_v2_5"]
+
+    # Made, it is not asked for again, of either: Lyria would refuse it again.
+    assert audio.is_done(job) and "nothing" in audio.run(job)
+    sing(job, "elevenlabs")
+    assert audio.is_done(job)
+    assert len(fake.requests) == 3
+
+
+def test_new_lyrics_go_to_lyria_first_again(job, monkeypatch):
+    fake = FakeGemini(answer={"promptFeedback": {"blockReason": "OTHER"}})
+    monkeypatch.setattr(audio, "send", fake)
+    sing(job, "gemini")
+    audio.run(job)
+    data = sample_media.bundle().model_dump()
+    data["lyrics"][0]["text"] = "Light lands on the thylakoid membrane"
+    jobs.write(job / "bundle.json", sample_media.bundle().model_validate(data))
+    fake.answer = None  # Lyria sings these
+    assert "song (gemini)" in audio.run(job)
+    assert len(fake.gemini()) == 2 and sum("/v1/music" in u for u in fake.urls()) == 1
+    assert "instead_of" not in json.loads((job / audio.plan_path("song")).read_text())
+
+
+def test_a_song_neither_will_make_fails_the_step_naming_both(job, monkeypatch):
+    fake = FakeGemini(answer={"promptFeedback": {"blockReason": "OTHER"}})
+
+    def send(method, url, headers, body):
+        if "/v1/music" in url:
+            fake.requests.append((url, headers, json.loads(body)))
+            return 422, {}, json.dumps({"detail": {"status": "bad_composition_plan"}}).encode()
+        return fake(method, url, headers, body)
+
+    monkeypatch.setattr(audio, "send", send)
+    sing(job, "gemini")
+    with pytest.raises(media.StepFailed, match="^Gemini blocked the song's prompt: OTHER, and Eleven Music could not "
+                                               "make it instead: Eleven Music refused the song: 422 .*bad_composition"):
+        audio.run(job)
+    assert not (job / "audio/song.mp3").exists() and not (job / audio.plan_path("song")).exists()
+    assert (job / "audio/narration.mp3").exists()
 
 
 def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monkeypatch):
@@ -513,8 +571,8 @@ def test_a_credit_count_that_is_not_one_is_not_kept(header):
 
 
 def test_a_lyria_answer_with_no_song_is_not_logged_as_one(job, monkeypatch):
-    monkeypatch.setattr(audio, "send", FakeGemini(answer={"promptFeedback": {"blockReason": "OTHER"}}))
+    monkeypatch.setattr(audio, "send", FakeGemini(answer={"candidates": [{"finishReason": "RECITATION"}]}))
     sing(job, "gemini")
-    with pytest.raises(media.StepFailed, match="blocked"):
+    with pytest.raises(media.StepFailed, match="no song"):
         audio.run(job)
     assert "song" not in [r["label"] for r in _logged(job)]  # only the voice, made at the same time

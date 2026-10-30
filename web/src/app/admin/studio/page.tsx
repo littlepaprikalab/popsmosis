@@ -38,7 +38,7 @@ const BRAIN_NOTES: Record<Brain, string> = {
 // Who sings the song (studio/steps/audio.py). The narration and the exam question are ElevenLabs' either way.
 const SINGERS: Record<SongProvider, { label: string; note: string }> = {
   elevenlabs: { label: 'ElevenLabs Eleven Music', note: 'Sings each section to its planned length, so the words line up with the video closely. In ElevenLabs credits, on the ElevenLabs key (ELEVENLABS_API_KEY) the narration uses anyway.' },
-  gemini: { label: 'Gemini Lyria 3.5', note: '$0.08 a song, on the Gemini key (GEMINI_API_KEY). Sings the whole song from one prompt and keeps to the planned timing only roughly; the studio finds each line in it.' },
+  gemini: { label: 'Gemini Lyria 3.5', note: '$0.08 a song, on the Gemini key (GEMINI_API_KEY). Sings the whole song from one prompt and keeps to the planned timing only roughly; the studio finds each line in it. A song Lyria will not sing (it blocks some grave topics, the Holocaust among them) is made by Eleven Music instead.' },
 };
 const singerOf = (provider: string) => SINGERS[provider as SongProvider] ?? { label: provider, note: '' };
 
