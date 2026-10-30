@@ -23,6 +23,7 @@ from studio.schemas import (
     AudioClip,
     Beat,
     Box,
+    Bundle,
     Converting,
     Crowd,
     Locations,
@@ -442,6 +443,79 @@ def test_the_camera_drifts_on_while_a_line_holds_and_lines_on_one_shot_run_on(jo
     assert Renderer._drift(renderer_module.Cam(0, 0, 1.06), renderer_module.Cam(0, 0, 1.0)) == 1.0
     assert Renderer._drift(renderer_module.Cam(0, 0, 1.6), renderer_module.Cam(0, 0, 1.3)) == -1.0
 
+
+def test_a_zoom_counts_from_the_whole_scene_and_keeps_the_part_in_view(job, monkeypatch):
+    # The whole scene frames what is drawn, here closer than the whole art (the sample's overview is a strip across the
+    # canvas). Counted from the art, the brief's 1.8 close-up came out 1.25 times closer than the whole scene, and the
+    # song's 1.4 follow (timeline._follow) only slid across.
+    renderer = Renderer(job, flowing([flow_beat(0, 8, path=[], labels=FLOW)]))
+    view = renderer.layout.view
+    whole = renderer._whole("overview", view).zoom
+    assert whole > timeline_step.FOLLOW_ZOOM
+    followed = renderer._aim("overview", "Cytochrome b6f", timeline_step.FOLLOW_ZOOM, from_whole=True)
+    assert followed.zoom == pytest.approx(whole * timeline_step.FOLLOW_ZOOM)
+    # A close-up goes as close as its part fits with room around it, here a little short of 1.8 times.
+    close = renderer._aim("overview", "Cytochrome b6f", 1.8, from_whole=True).zoom
+    assert 1.7 * whole < close <= 1.8 * whole
+    # A part too big to be closer is framed as close as it fits, never wider than the whole scene.
+    assert renderer._aim("overview", "Thylakoid", 1.8, from_whole=True).zoom == whole
+    # No shot goes past CLOSE_MAX_ZOOM of the whole art, where a picture blurs.
+    monkeypatch.setattr(renderer_module, "CLOSE_MAX_ZOOM", 2.0)
+    assert renderer._aim("overview", "Cytochrome b6f", 1.8, from_whole=True).zoom == 2.0
+    # A timeline made before from_whole counts from the whole art.
+    assert renderer._aim("overview", "Cytochrome b6f", 1.4).zoom == 1.4
+
+
+# A membrane across the overview with four complexes on it, as the light reactions draw it.
+MEMBRANE = {**sample_media.SHAPES, "overview": {
+    "Thylakoid": (896, 520, 840, 60), "PSII": (330, 520, 80, 105), "Cytochrome b6f": (700, 520, 70, 95),
+    "PSI": (1080, 520, 80, 105), "ATP synthase": (1450, 520, 80, 125)}}
+MEMBRANE_PALETTE = {**PALETTE, "PSII": "#7FB069", "PSI": "#AA44AA"}
+
+
+@pytest.fixture(scope="module")
+def membrane(tmp_path_factory):
+    job = tmp_path_factory.mktemp("jobs") / "membrane"
+    data = sample_media.bundle().model_dump()
+    for scene in data["scenes"]:
+        if scene["id"] == "overview":
+            scene["structures"] = [{"name": n, "aliases": [], "sam_phrase": n, "color_hex": c}
+                                   for n, c in MEMBRANE_PALETTE.items()]
+    bundle = Bundle.model_validate(data)
+    job.mkdir(parents=True)
+    jobs.write(job / "bundle.json", bundle)
+    sample_media.write_art(job, bundle, MEMBRANE)
+    jobs.write(job / media.LOCATIONS, sample_media.locations(MEMBRANE))
+    return job
+
+
+@pytest.mark.parametrize("layout", ["h", media.HOOK_LAYOUT])
+def test_a_close_up_with_a_flow_keeps_the_part_and_its_stops_in_the_frame(membrane, layout):
+    # Counted from the whole scene, close-ups came closer, and a flow's far stop fell out of the frame: in the upright
+    # hook cut, every two-stop flow. A close-up with a flow now frames the part and every stop it can.
+    cases = [("Cytochrome b6f", 1.6, ["PSII", "Cytochrome b6f"]), ("ATP synthase", 1.8, ["PSI", "ATP synthase"]),
+             ("PSII", 1.8, ["PSII", "Cytochrome b6f"]), ("Cytochrome b6f", 1.6, ["PSII", "Cytochrome b6f", "PSI"])]
+    beats = [flow_beat(6 * k, 6 * k + 6, path=path, labels=MEMBRANE_PALETTE).model_copy(
+        update={"camera": TimelineCamera(target=target, zoom=zoom, from_whole=True)})
+        for k, (target, zoom, path) in enumerate(cases)]
+    timeline = Timeline(video="song", duration=beats[-1].t1, fps=30, audio=[], beats=beats, palette=MEMBRANE_PALETTE)
+    renderer = Renderer(membrane, timeline, layout)
+    view, art = renderer.view("overview"), renderer.scene("overview")
+    whole = renderer._whole("overview", view).zoom
+    located = jobs.read(membrane / media.LOCATIONS, Locations).scene("overview")
+
+    def in_view(x, y, cam):
+        scale, ox, oy = renderer_module.to_frame(cam, view, art)
+        return view[0] <= x * scale + ox <= view[2] and view[1] <= y * scale + oy <= view[3]
+
+    for k, (target, _, path) in enumerate(cases):
+        cam = renderer.plans[k].target
+        assert cam.zoom >= whole  # never wider than the whole scene
+        box = located.get(target).box
+        assert in_view(box.x0, box.y0, cam) and in_view(box.x1, box.y1, cam)  # the part, whole
+        assert all(in_view(x, y, cam) for x, y in renderer._path_points("overview", path))
+    if layout == "h":  # wide enough for the flow and still a close-up
+        assert all(renderer.plans[k].target.zoom > 1.5 * whole for k in range(3))
 
 def test_a_flow_runs_on_when_another_joins_it(job):
     back = ["Cytochrome b6f", "Thylakoid"]

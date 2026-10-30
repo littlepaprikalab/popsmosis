@@ -242,7 +242,8 @@ def timeline(video: str, the_bundle: Bundle | None = None) -> Timeline:
         caption = the_bundle.core_idea if line.line_id == "c1-1" else None
         particles = [Particles(path=["Thylakoid", "Cytochrome b6f"], color="#F2C230", trail=True)] \
             if line.line_id == "c2-1" else []
-        beats.append(Beat(t0=line.start, t1=t1, scene=scene, camera=TimelineCamera(target=target, zoom=zoom),
+        camera = TimelineCamera(target=target, zoom=zoom, from_whole=True)
+        beats.append(Beat(t0=line.start, t1=t1, scene=scene, camera=camera,
                           reveal=revealed, spotlight=spotlight, labels=list(labels), particles=particles,
                           caption=caption, line_id=line.line_id, line=texts[line.line_id], words=line.words))
 

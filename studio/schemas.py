@@ -761,8 +761,12 @@ class AudioClip(Strict):
 
 class TimelineCamera(Strict):
     target: str | None  # a structure on the beat's scene; None: the whole scene
-    zoom: float  # 1.0 shows the whole art
+    zoom: float  # 1.0 shows the whole scene (from_whole), or the whole art
     ease: Literal["inOut", "linear"] = "inOut"
+    # True: `zoom` counts from the whole scene's framing, which frames what is drawn and so is often closer than the
+    # whole art: 1.8 is that much closer than the whole scene. The timeline step writes every camera so; False, a
+    # timeline made before it, whose zoom counts from the whole art.
+    from_whole: bool = False
 
 
 class Reveal(Strict):

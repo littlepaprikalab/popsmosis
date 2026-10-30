@@ -33,7 +33,19 @@ No model calls, so it is free to run again:
   the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
 - The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
-  line, so the learner sees where a close-up sits before it is shown.
+  line, so the learner sees where a close-up sits before it is shown. A zoom counts from the whole scene's
+  framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.6 to 2.0 a close-up. The
+  whole scene frames what is drawn, often already closer than the whole art, so a close-up counted from the art
+  came out barely closer (1.8 on the sample's overview, whose whole scene is at 1.44: 1.25 times).
+- The song's camera follows the words on a long hold (_follow). A shot of the whole picture only drifts, and the
+  songs sit on one picture for long runs: the 12 songs of scorecard run 20261030-0015, at 3 s a line, held a
+  whole, still picture for up to 32 s, 9 times for 15 s or more. Once the song has held a whole, still picture for
+  HOLD_S, a line that names a part (or spotlights one) brings the camera in on it, FOLLOW_ZOOM times closer than
+  the whole scene: near enough to see the part, wide enough to keep where it sits. The shot stays at least
+  SHOT_MIN_S, so the camera moves with the phrases rather than every word; then it goes on to the next part named,
+  and back to the whole picture when a line names none, or once it has followed for FOLLOW_MAX_S. Not on the
+  hook, nor on a line the direction framed itself or where something moves: a flow is watched whole. The same
+  pictures, with movement: the song needs no art of its own.
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
   through it, and eases to a stop when they stop; how far round it is runs on from beat
   to beat, so it never jumps.
@@ -110,6 +122,12 @@ CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
 RUN_MAX = 2  # flows moving at once on a beat that sums up: round 17's rock cycle moved 4 at once, and it read as a swarm
 SCENE_MIN_S = 3.5  # a picture on screen for less than this (one sung line) gives way to the one before it
+HOLD_S = 6.0  # the song holds a whole, still picture this long (about two sung lines) before the camera follows
+# How close it follows, from the whole scene's framing (TimelineCamera.from_whole): the part and its neighbours, not
+# a close-up.
+FOLLOW_ZOOM = 1.4
+SHOT_MIN_S = 4.0  # a part the camera follows stays framed at least this long: a bar or two of the song
+FOLLOW_MAX_S = 12.0  # following goes on at most this long before the whole picture again
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
@@ -346,7 +364,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
         scene = after["scene"] if after else hook
-        camera = after["camera"] if after else TimelineCamera(target=None, zoom=1.0)
+        camera = after["camera"] if after else TimelineCamera(target=None, zoom=1.0, from_whole=True)
         beats.append({"t0": t0, "t1": t1, "scene": scene, "camera": camera, "reveal": [], "spotlight": None,
                       "labels": list(revealed.get(scene, [])), "particles": [], "caption": None, "line_id": None,
                       "line": "", "words": []})
@@ -405,7 +423,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             target, zoom = None, 1.0
         opened.add(scene)
 
-        beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
+        camera = TimelineCamera(target=target, zoom=zoom, from_whole=True)
+        beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": camera,
                       "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels),
                       "named": sorted(said, key=said.get), "particles": particles,
                       "caption": None, "line_id": timed_line.line_id, "line": texts.get(timed_line.line_id, ""),
@@ -430,6 +449,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _turn(beats, bundle, located)
     _route(beats)
     _key_lines(beats, bundle, video)
+    if video == "song":
+        _follow(beats, hook)  # last: the passes above read the direction's camera, not the one it adds
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
@@ -610,6 +631,41 @@ def _run_all(beats: list[dict], hook: str) -> None:
         for flow in own:
             if not flow.blocked and not any(g.path == flow.path and g.label == flow.label for g in shown):
                 shown.append(flow)
+
+
+def _follow(beats: list[dict], hook: str) -> None:
+    """The song's camera on a long hold of the whole picture: it follows the part each line names (the module's
+    docstring). A cut, the hook, a line the direction frames and a line with particles keep the camera the build
+    gave them; an instrumental gap holds the framing before it."""
+    framed: str | None = None  # the part the camera follows, or None
+    since = 0.0  # when the framing on screen began
+    following_since = 0.0  # when the camera began following, through the parts it went on to
+    for i, beat in enumerate(beats):
+        before = beats[i - 1] if i else None
+        if before is None or before["scene"] != beat["scene"]:
+            framed, since = None, beat["t0"]
+            continue
+        if beat["line_id"] is None:
+            beat["camera"] = before["camera"]
+            continue
+        camera = beat["camera"]
+        if beat["scene"] != hook and camera.target is None and not beat["particles"]:
+            named = beat["spotlight"] or next((n for n in beat.get("named", []) if n in beat["labels"]), None)
+            held = beat["t0"] - since
+            if framed is None:
+                if named and held >= HOLD_S:
+                    framed, following_since = named, beat["t0"]
+            elif held >= SHOT_MIN_S:
+                if named is None or beat["t0"] - following_since >= FOLLOW_MAX_S:
+                    framed = None
+                elif named != framed:
+                    framed = named
+            if framed:
+                beat["camera"] = TimelineCamera(target=framed, zoom=FOLLOW_ZOOM, from_whole=True)
+        else:
+            framed = None
+        if beat["camera"] != before["camera"]:
+            since = beat["t0"]
 
 
 def _route(beats: list[dict]) -> None:
