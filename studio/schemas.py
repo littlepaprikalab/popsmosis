@@ -480,6 +480,9 @@ class SceneLocations(Strict):
     # A structure that could not be found is left out: the timeline then gives it no
     # spotlight and no camera move, and the renderer never draws its label.
     structures: list[Location]
+    # The house look the SVG art was styled in (svg.LOOK): when it changes, the art step styles the kept drawing
+    # again, with no call to the brain. "" for painted art, and for SVG art made before the look was code's.
+    look: str = ""
 
     @model_validator(mode="after")
     def _consistent(self) -> SceneLocations:

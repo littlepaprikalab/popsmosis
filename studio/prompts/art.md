@@ -17,7 +17,8 @@ structure drawn in several scenes looks the same in each.
 ## The canvas
 
 - `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1024">`, a wide 16:9-ish frame.
-- The background is white. Draw no background rectangle, border or frame.
+- Code paints the page behind your drawing dark slate blue (#28374B). Draw no background
+  rectangle, border or frame.
 - Keep every structure well inside the frame: at least 120 px from the left and right
   edges and 80 px from the top and bottom. The video also crops a tall vertical version
   from the middle, so put the important structures near the centre, and fill roughly the
@@ -26,17 +27,16 @@ structure drawn in several scenes looks the same in each.
 ## Style
 
 A textbook illustration in the style of OpenStax or Campbell Biology: shaded vector
-art, soft gradients, clean darker outlines, on white.
+art, soft gradients, clean darker outlines, on the dark slate page. A graph is drawn
+plainer, and code styles it (below, "Graphs").
 
 - Shade each structure with a linear or radial gradient from a lighter tint of its
   colour to a darker shade, with its exact colour as the middle stop. Outline it with a
   darker shade of the same hue (stroke-width 2 to 5).
 - Context that is not one of the listed structures (cytoplasm, a membrane's other
-  layers, water, surrounding tissue) is drawn in pale neutral or muted tones, so the
-  listed structures stand out.
-- A soft shadow under a structure is fine: a dark shape with opacity 0.15 to 0.3 and an
-  feGaussianBlur filter, drawn before the structure and outside its group, since the
-  group is the structure itself.
+  layers, water, surrounding tissue) is drawn in muted slate greys and blues a little
+  lighter than the page, never white or black, so the listed structures stand out.
+- No drop shadows: they do not show on the dark page.
 - Get the anatomy right: shapes, proportions, positions and counts as a textbook shows
   them. Simplify detail, never correctness.
 - An analogy scene (id "analogy") draws an everyday object in place of the real thing,
@@ -77,6 +77,27 @@ them.
   60 x 60 px of it showing. Something drawn later covers what is under it, so do not
   bury a structure under context or under another structure. A structure inside
   another (an organelle in a cell) is drawn after it, so it sits on top.
+
+## Graphs
+
+When the request names the scene's axes, the scene is a graph, and code gives it the
+house look: every line at one weight with a soft glow of its colour, the axes pale with
+arrowheads over a faint grid, every marked point a ring. So draw only what is there and
+where it is:
+
+- The axes: two plain `<line>` elements in one `<g data-role="axes">`, outside every
+  structure's group, meeting where the request says. No ticks, arrowheads, grid, numbers
+  or words.
+- Each line (a curve, a secant, a tangent) is a plain stroke in its structure's colour,
+  with `fill="none"`: no gradient, outline, highlight, shadow or glow.
+- A point marked on a line is `<circle data-role="point" r="12">`, in the group of the
+  structure it belongs to.
+- The geometry is exact: work each coordinate out from the function, so a point said to
+  be on a curve is on it and a tangent has the curve's slope at its point. A tangent
+  touches where the curve bends visibly away from it on both sides and runs well past
+  its point each way; two points a secant joins are far enough apart that the secant
+  stands clear of the curve between them.
+- Every line is at least 250 px long, so a label can point at it.
 
 ## SVG rules
 

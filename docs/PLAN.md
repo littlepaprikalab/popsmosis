@@ -364,6 +364,23 @@ time gives each structure's mask, so step 4 is not needed. It looks plainer than
 Image, but it writes the same files, so everything downstream is built and tested against
 it unchanged. Switching the painter makes a job's art again on its next run.
 
+The brain decides what a scene draws and where; code decides how it looks (`svg.style()`),
+the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
+drifted (one plan's graphs came back with axes in three greys and lines 16 to 22 px wide),
+and its gradients, shadows and highlights were over half of each drawing's tokens. Every
+drawing goes on the house page, the dark slate blue the painted art is asked for and the
+bundle's colours are picked for. A graph (a scene with `axes`) also has its lines drawn flat
+at one weight with a soft glow of their own colour, its axes (which the brain marks
+`<g data-role="axes">`) pale with arrowheads over a faint grid, and its points (marked
+`data-role="point"`) as rings, a line's label anchored on the line rather than on a point
+(wider, so it took the anchor, and the pill beside it hid the point the song is about). A
+line keeps its dash and its fading, a band its width, and a shape its mask. The glow is one layer under every structure, one blur however many there
+are, and each structure's copy in it is part of that structure's mask, so a line's ghost and
+its spotlight take its glow with it. The drawing is kept as the brain made it and styled
+before it is rasterised, so a new look (`svg.LOOK`, kept with each scene's locations) is no
+new drawing: the art step styles the kept drawings again, with no call to the brain. Styling
+takes under a millisecond, and the glow about a fifth of a second to rasterise, once a scene.
+
 ### Step 4: locate
 
 SAM 3.1 via `/v1/responses`, one noun phrase per request (the structure's `sam_phrase`:
@@ -553,7 +570,7 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     the light-reactions demo); they are placed afresh every frame, as in a move.
   - **Ghost:** unrevealed structures faded into the art's background through their mask (a
     wash in the background's colour, read off the art's edge, at ~85% alpha, blurred edge:
-    pale on the SVG art's white, dark on Muse Image's slate); fade to full over 0.4 s when
+    dark on the SVG art's house page and on the painted slate); fade to full over 0.4 s when
     revealed. A structure the video
     never names on a scene is drawn as it is, unlabelled: as a ghost it washed its part of
     the picture out for as long as the scene was on screen.
@@ -655,7 +672,7 @@ video in under 5 minutes per layout.
 ## 8. Quality rules (also the QA checklist)
 
 - One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
-  coding) on a plain dark slate blue background; the SVG art's on white. Never anime, personified characters,
+  coding) on a plain dark slate blue background, the SVG art's graphs in the house look. Never anime, personified characters,
   clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
 - No text baked into the art; the renderer draws all text.
 - A fixed colour per structure across all scenes and both videos.
