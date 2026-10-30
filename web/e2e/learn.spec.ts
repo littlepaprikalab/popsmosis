@@ -309,6 +309,32 @@ test.describe('signed in', () => {
     expect((await request.delete(apiUrl(`/api/questions/${sent.id}`), { headers: asAda })).status()).toBe(204);
   });
 
+  test('a lesson shows pictures from this site only, and its links say nobody vouched for them', async ({ page, context, request }) => {
+    const asAda = { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' };
+    const text = `E2E ${Date.now()}: a lesson with links and pictures`;
+    const asked = await request.post(apiUrl('/api/questions'), { headers: asAda, data: { content: text } });
+    const id = (await asked.json()).id;
+    const teacher = agent(request, S.POPSMOSIS_API_KEY);
+    await teacher.claim(id);
+    const lesson = 'See [the textbook](https://example.com/osmosis).\n\n![a tracking pixel](https://evil.example/p.png)\n\n'
+      + '![the song still](/samples/song.jpg)';
+    expect((await teacher.answer(id, lesson)).status()).toBe(201);
+
+    await signIn(context, S.users.ada);
+    const response = await page.goto('/learn');
+    // The policy names this site, Google's profile pictures and the storage host, never every https: host.
+    const csp = response!.headers()['content-security-policy'];
+    expect(csp).toMatch(/img-src 'self' data: https:\/\/\*\.googleusercontent\.com/);
+    expect(csp).not.toMatch(/img-src[^;]* https:(;| )/);
+    expect(csp).not.toMatch(/media-src[^;]* https:(;| )/);
+    const card = page.getByTestId('question-card').filter({ hasText: text }).first();
+    await expect(card.getByRole('link', { name: 'the textbook' })).toHaveAttribute('rel', 'nofollow ugc noopener noreferrer');
+    await expect(card.getByTestId('md-image-left-out')).toHaveText('[picture: a tracking pixel]');
+    await expect(card.locator('img[src*="evil.example"]')).toHaveCount(0);
+    await expect(card.locator('.md img[src="/samples/song.jpg"]')).toBeVisible();
+    expect((await request.delete(apiUrl(`/api/questions/${id}`), { headers: asAda })).status()).toBe(204);
+  });
+
   test('a learner gets no brain picker: their topics are made by the teacher\'s own', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');

@@ -39,6 +39,8 @@ root describes the two Render services as a Blueprint. Browsers only talk to
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | same client ID as the API | Google Cloud |
 | `NEXT_PUBLIC_GOOGLE_REDIRECT_URI` | `https://popsmosis-web.onrender.com/auth/callback` | must equal `GOOGLE_REDIRECT_URI` |
 | `NEXT_PUBLIC_INKMORY_URL` | `https://inkmory.com` | optional: each lesson card links to the teacher's notes on Inkmory, the records it tagged with the topic ([PLAN.md](PLAN.md), section 11). Built into the page, so a change needs a rebuild. Unset: no link |
+| `NEXT_PUBLIC_MEDIA_URL` | copied from popsmosis-api's `R2_PUBLIC_URL` | the blueprint wires it with `fromService`. The only host besides the site that pages load pictures and video from (the Content-Security-Policy in `web/next.config.ts`), so without it the droplet videos and posters do not play. Built into the page: after changing `R2_PUBLIC_URL`, rebuild the web app |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<project-ref>.supabase.co` | only while the API's boot log says a droplet still plays from the old Supabase bucket (section 6): lets pages load those files too. Remove it, and rebuild, once the move is done |
 | `PROXY_SECRET` | copied from popsmosis-api | the blueprint wires it with `fromService` |
 | `NODE_ENV` | `production` | set by the blueprint |
 

@@ -96,6 +96,11 @@ services:
         sync: false
       - key: NEXT_PUBLIC_INKMORY_URL  # optional: https://inkmory.com, for each lesson's link to the teacher's notes there
         sync: false
+      - key: NEXT_PUBLIC_MEDIA_URL    # the API's R2_PUBLIC_URL: the one other host pages may load the droplet videos and posters from (Content-Security-Policy)
+        fromService:
+          name: popsmosis-api
+          type: web
+          envVarKey: R2_PUBLIC_URL
       - key: PROXY_SECRET
         fromService:
           name: popsmosis-api
