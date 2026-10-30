@@ -17,6 +17,7 @@ import zlib
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 import numpy as np
 import skia
@@ -755,11 +756,13 @@ class Renderer:
         return self._scenes[scene_id]
 
     def _aim(self, scene_id: str, target: str | None, zoom: float, focus: Point | None = None,
-             from_whole: bool = False) -> Cam:
+             from_whole: bool = False, keep: Sequence[Point] = ()) -> Cam:
         """The camera for a beat: on its target, or on the whole scene. An upright frame cannot hold a wide picture
         whole, so there "the whole scene" fills the frame's height and looks at `focus`, where the beat's flow is.
         With `from_whole` (TimelineCamera.from_whole), `zoom` counts from the whole scene's framing, and the shot is
-        never wider than it."""
+        never wider than it; and a close-up with a flow on it (`keep`, the flow's stops) frames the part and every
+        stop, looking between them as far as the part stays in view: counted from the whole scene, close-ups came
+        closer, and a flow's far stop fell out of the frame (in the upright hook cut, half of them)."""
         art = self.scene(scene_id)
         loc = self.locations.scene(scene_id).get(target) if target else None
         view = self.view(scene_id)
@@ -770,6 +773,13 @@ class Renderer:
             return whole
         box_w, box_h = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         fits = min((view[2] - view[0]) / (box_w * FIT_PAD), (view[3] - view[1]) / (box_h * FIT_PAD)) / _fit(view, art)
+        cx, cy = loc.centroid.x, loc.centroid.y
+        if from_whole and keep:
+            x0, x1 = min(loc.box.x0, *(x for x, _ in keep)), max(loc.box.x1, *(x for x, _ in keep))
+            y0, y1 = min(loc.box.y0, *(y for _, y in keep)), max(loc.box.y1, *(y for _, y in keep))
+            fits = min(fits, min((view[2] - view[0]) / ((x1 - x0) * FIT_PAD),
+                                 (view[3] - view[1]) / ((y1 - y0) * FIT_PAD)) / _fit(view, art))
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
         if from_whole:
             whole = self._whole(scene_id, view).zoom
             zoom = max(whole, min(whole * zoom, fits, CLOSE_MAX_ZOOM))
@@ -777,7 +787,14 @@ class Renderer:
             zoom = max(1.0, min(zoom, fits))
         if self.portrait:  # a close-up is never wider than the upright frame's whole scene
             zoom = max(zoom, self._whole(scene_id, view).zoom)
-        return clamp_cam(Cam(loc.centroid.x, loc.centroid.y, zoom), view, art)
+        if (cx, cy) != (loc.centroid.x, loc.centroid.y):  # looking between the stops, the part stays in view
+            scale = _fit(view, art) * zoom
+            half_w, half_h = (view[2] - view[0]) / scale / 2, (view[3] - view[1]) / scale / 2
+            cx = min(max(cx, loc.box.x1 - half_w), loc.box.x0 + half_w) if loc.box.x1 - loc.box.x0 < 2 * half_w \
+                else loc.centroid.x
+            cy = min(max(cy, loc.box.y1 - half_h), loc.box.y0 + half_h) if loc.box.y1 - loc.box.y0 < 2 * half_h \
+                else loc.centroid.y
+        return clamp_cam(Cam(cx, cy, zoom), view, art)
 
     def _whole(self, scene_id: str, view: Rect) -> Cam:
         """The whole scene: everything drawn on it, fitted to the view with room for labels.
@@ -808,7 +825,9 @@ class Renderer:
                 if self.portrait and beat.particles:
                     stops = self._path_points(beat.scene, beat.particles[0].path)
                     focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
-            target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus, beat.camera.from_whole)
+            keep = [point for flow in beat.particles for point in self._path_points(beat.scene, flow.path)] \
+                if beat.camera.from_whole and beat.camera.target else []
+            target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus, beat.camera.from_whole, keep)
             same = i > 0 and beats[i - 1].scene == beat.scene
             staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
             drift_from = beat.t0
