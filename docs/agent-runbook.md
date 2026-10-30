@@ -186,7 +186,8 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
      is cached once the hook has finished, so that is paid once (about 2 minutes), and a
      warm run's hook takes seconds.
    - **Network policy:** allow
-     - your API host, `api.anthropic.com`, `api.elevenlabs.io`, the Supabase host and
+     - your API host, `api.anthropic.com`, `api.elevenlabs.io`, R2's upload host
+       (`<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, where the studio puts the videos) and
        the Inkmory host, `api.meta.ai` (a Muse brain, Muse Image, SAM 3.1) and
        `generativelanguage.googleapis.com` (Gemini 3.1 Flash Image, Lyria): what a run calls;
      - `pypi.org`, `files.pythonhosted.org`, `download.pytorch.org` (PyTorch's CPU

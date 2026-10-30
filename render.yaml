@@ -62,9 +62,13 @@ services:
         sync: false
       - key: POPSMOSIS_ROUTINE_FIRE_TOKEN # optional: that trigger's bearer token, shown once when you generate it
         sync: false
-      - key: SUPABASE_URL            # https://<project-ref>.supabase.co: where the studio uploads the droplet videos
+      - key: R2_ACCOUNT_ID           # Cloudflare R2, where the studio uploads the droplet videos: the 32-character account ID
         sync: false
-      - key: SUPABASE_SERVICE_ROLE_KEY # the secret key (sb_secret_…), never the publishable one: signs those uploads; stays on the API
+      - key: R2_ACCESS_KEY_ID        # the R2 API token's Access Key ID (Object Read & Write on droplets and studio)
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY    # that token's Secret Access Key: signs the uploads; stays on the API
+        sync: false
+      - key: R2_PUBLIC_URL           # the droplets bucket's custom domain, e.g. https://media.popsmosis.com
         sync: false
       - key: VIDEO_MAX_ATTEMPTS      # optional: how many times a droplet's videos are started, recoveries included (default 2); also a knob on /admin/studio
         sync: false

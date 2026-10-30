@@ -4,7 +4,7 @@ import { sendError } from '../lib/errors.js';
 import { requireAdmin, requireAgent } from '../middleware/auth.js';
 import { VIDEO_FIELDS, VIDEO_STATUSES, VIDEO_ERROR_MAX_LENGTH, serializeVideo, videoUrlError, type VideoField, type VideoStatus } from '../lib/droplet.js';
 import { secretError } from '../lib/validation.js';
-import { BUCKETS, bucketFileError, dropletFileUrlError, fileError, signUpload, storageConfig, StorageError, type Bucket } from '../lib/storage.js';
+import { BUCKETS, bucketFileError, dropletFileUrlError, fileError, signUpload, storageConfig, STORAGE_SETTINGS, type Bucket } from '../lib/storage.js';
 import { breakdownError } from '../lib/breakdown.js';
 import { bundleTags } from '../lib/tags.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -142,8 +142,10 @@ export default async function answerRoutes(app: FastifyInstance) {
   });
 
   // POST /api/answers/:id/upload-url — { bucket, file }: a signed URL the studio
-  // PUTs one file to, at <bucket>/<answerId>/<file> (lib/storage.ts). The public
-  // bucket's answer also says where the file can be read, for the video PATCH.
+  // PUTs one file to, at <bucket>/<answerId>/<file>, with the headers it names
+  // (lib/storage.ts). The public bucket's answer also says where the file can be
+  // read, for the video PATCH. Signing asks nothing of R2, so once the settings are
+  // whole this answers at once; a key R2 refuses shows on the PUT itself.
   app.post('/api/answers/:id/upload-url', { preHandler: [requireAgent] }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const { bucket, file } = (request.body ?? {}) as { bucket?: unknown; file?: unknown };
@@ -158,19 +160,9 @@ export default async function answerRoutes(app: FastifyInstance) {
       return sendError(reply, 'CONFLICT', 'These videos are READY and listed on the Droplets tab; their files can no longer change');
     }
     const config = storageConfig();
-    if (!config) return sendError(reply, 'UNAVAILABLE', 'File storage is not configured on this API (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)');
+    if (!config) return sendError(reply, 'UNAVAILABLE', `File storage is not configured on this API (${STORAGE_SETTINGS.join(', ')})`);
     if ('problem' in config) return sendError(reply, 'UNAVAILABLE', `File storage is misconfigured on this API: ${config.problem}`);
-    try {
-      return await signUpload(config, bucket as Bucket, id, file as string);
-    } catch (err) {
-      if (!(err instanceof StorageError)) throw err;
-      request.log.warn({ err, bucket, answerId: id }, 'signed upload URL failed');
-      // Only a failure a moment may fix is retryable; a refusal (a missing bucket, a key
-      // Supabase does not take) says what to fix on the API instead.
-      return err.retryable
-        ? sendError(reply, 'UNAVAILABLE', `File storage did not give an upload URL (${err.message}); try again`, { retryable: true })
-        : sendError(reply, 'UNAVAILABLE', `File storage refused to give an upload URL (${err.message}); check the bucket, SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY on the API`);
-    }
+    return signUpload(config, bucket as Bucket, id, file as string);
   });
 
   // PATCH /api/answers/:id — admin: { hidden }. True takes the droplet off the public

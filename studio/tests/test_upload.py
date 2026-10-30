@@ -12,16 +12,34 @@ from studio.steps import upload
 from studio.tests import sample_media
 
 API = "https://api.example"
-STORAGE = "https://x.supabase.co/storage/v1"
+STORAGE = "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com"  # R2's S3 API, where the bytes go
+MEDIA = "https://media.example"  # the droplets bucket's public address
+SUPABASE = "https://x.supabase.co/storage/v1"  # where an API from before the move to R2 signed uploads
 KEY = "sk_pop_" + "0" * 64
+TYPES = {".mp4": "video/mp4", ".jpg": "image/jpeg", ".png": "image/png", ".mp3": "audio/mpeg", ".json": "application/json"}
+PUBLIC_CACHE = "public, max-age=31536000, immutable"
+
+
+def r2_error(code, message):
+    return f'<?xml version="1.0" encoding="UTF-8"?><Error><Code>{code}</Code><Message>{message}</Message></Error>'.encode()
+
+
+def put_path(url):
+    """bucket/answer/file of a signed PUT URL."""
+    return url.removeprefix(STORAGE + "/").split("?")[0]
 
 
 class FakeServer:
-    """The popsmosis API and Supabase Storage behind one `send`, as studio/api.py calls them."""
+    """The popsmosis API and R2 behind one `send`, as studio/api.py calls them. Like R2 on a signed URL, a PUT
+    whose Content-Type is not the one the API signed into it is refused. With legacy_api, the API is one from
+    before the move to R2: it signs Supabase uploads and names no headers."""
 
     def __init__(self, job):
         self.job = job
         self.calls = []  # (method, url, headers, body)
+        self.returned = {}  # upload URL -> the headers the API said to send
+        self.signed = {}  # upload URL -> the Content-Type signed into it
+        self.legacy_api = False
         self.stored = {}  # "bucket/answer/file" -> (bytes, content type)
         self.fail_put = set()  # files whose PUT storage refuses
         self.flaky_puts = 0  # this many PUTs answer 503 first, then storage recovers
@@ -39,17 +57,33 @@ class FakeServer:
             answer = url.split("/")[-2]
             req = json.loads(body)
             path = f"{req['bucket']}/{answer}/{req['file']}"
-            public = f"{STORAGE}/object/public/{path}" if req["bucket"] == "droplets" else None
-            return 200, json.dumps({"uploadUrl": f"{STORAGE}/object/upload/sign/{path}?token=t0k", "path": path, "publicUrl": public}).encode()
-        if url.startswith(STORAGE + "/object/upload/sign/"):
+            public = req["bucket"] == "droplets"
+            if self.legacy_api:
+                return 200, json.dumps({"uploadUrl": f"{SUPABASE}/object/upload/sign/{path}?token=t0k", "path": path,
+                                        "publicUrl": f"{SUPABASE}/object/public/{path}" if public else None}).encode()
+            content_type = TYPES.get("." + req["file"].rsplit(".", 1)[-1], "application/octet-stream")
+            send = {"Content-Type": content_type, **({"Cache-Control": PUBLIC_CACHE} if public else {})}
+            upload_url = f"{STORAGE}/{path}?X-Amz-SignedHeaders=content-type%3Bhost&X-Amz-Signature=sig"
+            self.signed[upload_url], self.returned[upload_url] = content_type, send
+            return 200, json.dumps({"uploadUrl": upload_url, "headers": send, "path": path,
+                                    "publicUrl": f"{MEDIA}/{answer}/{req['file']}" if public else None}).encode()
+        if url.startswith(SUPABASE + "/object/upload/sign/"):
             path = url.split("/object/upload/sign/")[1].split("?")[0]
-            if path.split("/", 2)[2] in self.fail_put:
-                return 500, b'{"statusCode":"500","error":"Internal","message":"try later"}'
-            if self.flaky_puts:
-                self.flaky_puts -= 1
-                return 503, b'{"message":"overloaded"}'
+            if not headers.get("Content-Type") or headers.get("x-upsert") != "true":
+                return 400, b'{"statusCode":"400","error":"Bad Request","message":"x-upsert and a type are needed"}'
             self.stored[path] = (body, headers["Content-Type"])
             return 200, json.dumps({"Key": path}).encode()
+        if url.startswith(STORAGE + "/"):
+            path = put_path(url)
+            if headers.get("Content-Type") != self.signed.get(url):
+                return 403, r2_error("SignatureDoesNotMatch", "The request signature we calculated does not match")
+            if path.split("/", 2)[2] in self.fail_put:
+                return 500, r2_error("InternalError", "try later")
+            if self.flaky_puts:
+                self.flaky_puts -= 1
+                return 503, r2_error("ServiceUnavailable", "overloaded")
+            self.stored[path] = (body, headers["Content-Type"])
+            return 200, b""
         if method == "PATCH" and url.endswith("/video"):
             self.uploaded_at_patch = (self.job / upload.UPLOADED).exists()
             if self.patch_status == 409:
@@ -112,11 +146,13 @@ def test_uploads_the_videos_public_and_the_rest_private_then_marks_them_ready(jo
     assert server.stored["droplets/ans1/out/lesson_h.jpg"][1] == "image/jpeg"
     assert server.stored["studio/ans1/audio/narration.mp3"][1] == "audio/mpeg"
 
-    # The bytes go to Supabase on the signed URL alone: never the agent key.
+    # The bytes go to R2 on the signed URL alone, never with the agent key, and with exactly the headers the API
+    # named (FakeServer refuses another type, as R2 does): the public files' long cache comes from the API.
     for _, url, headers, _ in server.puts():
-        assert "token=t0k" in url and "Authorization" not in headers
-        assert headers["x-upsert"] == "true"
-    assert {h["Cache-Control"] for _, u, h, _ in server.puts() if "/droplets/" in u} == {"max-age=300"}
+        assert "X-Amz-Signature=" in url and "Authorization" not in headers
+        assert headers == server.returned[url]
+    assert {h["Cache-Control"] for _, u, h, _ in server.puts() if "/droplets/" in u} == {PUBLIC_CACHE}
+    assert not any("Cache-Control" in h for _, u, h, _ in server.puts() if "/studio/" in u)
 
     # The report goes before uploaded.json, so done means READY was sent; it carries every public URL.
     assert server.uploaded_at_patch is False
@@ -124,10 +160,10 @@ def test_uploads_the_videos_public_and_the_rest_private_then_marks_them_ready(jo
     breakdown = patch.pop("breakdown")
     assert patch == {
         "status": "READY",
-        "songVideoUrl": f"{STORAGE}/object/public/droplets/ans1/out/song_h.mp4",
-        "lessonVideoUrl": f"{STORAGE}/object/public/droplets/ans1/out/lesson_h.mp4",
-        "songPosterUrl": f"{STORAGE}/object/public/droplets/ans1/out/song_h.jpg",
-        "lessonPosterUrl": f"{STORAGE}/object/public/droplets/ans1/out/lesson_h.jpg",
+        "songVideoUrl": f"{MEDIA}/ans1/out/song_h.mp4",
+        "lessonVideoUrl": f"{MEDIA}/ans1/out/lesson_h.mp4",
+        "songPosterUrl": f"{MEDIA}/ans1/out/song_h.jpg",
+        "lessonPosterUrl": f"{MEDIA}/ans1/out/lesson_h.jpg",
     }
     # With it, the media steps' breakdown: here only this step, timed up to the report.
     assert [(s["step"], s["tries"], s["models"]) for s in breakdown["steps"]] == [("upload", 1, [])]
@@ -142,14 +178,14 @@ def test_running_again_sends_only_what_changed(job, server):
     server.calls.clear()
     (job / media.video_path("song")).write_bytes(b"mp4 song, re-rendered")
     line = upload.run(job, api=api_for(server))
-    assert [c[1].split("/sign/")[1].split("?")[0] for c in server.puts()] == ["droplets/ans1/out/song_h.mp4"]
+    assert [put_path(c[1]) for c in server.puts()] == ["droplets/ans1/out/song_h.mp4"]
     assert "(" in line and "unchanged)" in line
     assert len(server.patches()) == 1
 
 
 def test_a_storage_failure_fails_the_step_and_a_retry_picks_up_where_it_stopped(job, server):
     server.fail_put = {"out/song_h.mp4"}
-    with pytest.raises(media.StepFailed, match=r"droplets/out/song_h.mp4: .*storage answered 500: try later"):
+    with pytest.raises(media.StepFailed, match=r"droplets/out/song_h.mp4: .*storage answered 500: InternalError: try later"):
         upload.run(job, api=api_for(server))
     assert not upload.is_done(job) and server.patches() == []
     stored_before = set(server.stored)
@@ -160,7 +196,7 @@ def test_a_storage_failure_fails_the_step_and_a_retry_picks_up_where_it_stopped(
     # Uploads run side by side, so which others went before the failure varies; the retry sends the song and only
     # what was not stored the first time.
     again = [put[1] for put in server.puts()]
-    assert any(url.endswith("out/song_h.mp4?token=t0k") for url in again)
+    assert "droplets/ans1/out/song_h.mp4" in [put_path(url) for url in again]
     assert len(again) == len({path for path in server.stored} - stored_before)
     assert upload.is_done(job)
 
@@ -251,14 +287,16 @@ def test_put_file_streams_a_big_body_with_its_length_and_the_studio_agent(monkey
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
     api = Api(API, KEY)
     big = b"x" * (api_module.STREAM_OVER_BYTES + 1)
-    api.put_file(f"{STORAGE}/object/upload/sign/droplets/a/out/song_h.mp4?token=t", big, "video/mp4")
+    api.put_file(f"{STORAGE}/droplets/a/out/song_h.mp4?X-Amz-Signature=s", big,
+                 {"Content-Type": "video/mp4", "Cache-Control": PUBLIC_CACHE})
     assert seen["method"] == "PUT"
     assert seen["headers"]["User-agent"] == api_module.USER_AGENT
     assert seen["headers"]["Content-type"] == "video/mp4" and seen["headers"]["Content-length"] == str(len(big))
-    assert "Authorization" not in seen["headers"]
+    assert seen["headers"]["Cache-control"] == PUBLIC_CACHE
+    assert "Authorization" not in seen["headers"] and "X-upsert" not in seen["headers"]
     assert isinstance(seen["data"], io.BytesIO)
 
-    api.put_file(f"{STORAGE}/object/upload/sign/studio/a/locations.json?token=t", b"{}", "application/json")
+    api.put_file(f"{STORAGE}/studio/a/locations.json?X-Amz-Signature=s", b"{}", {"Content-Type": "application/json"})
     assert seen["data"] == b"{}"  # a small file goes as it is
 
 
@@ -291,7 +329,7 @@ def test_upload_file_uploads_one_file_on_its_own_and_skips_it_when_unchanged(job
     # The step later finds it already there.
     server.calls.clear()
     upload.run(job, api=api)
-    assert "studio/ans1/audio/song.mp3" not in [c[1].split("/sign/")[1].split("?")[0] for c in server.puts()]
+    assert "studio/ans1/audio/song.mp3" not in [put_path(c[1]) for c in server.puts()]
 
 
 def test_a_storage_blip_is_retried_inside_the_step(job, server):
@@ -311,10 +349,10 @@ def test_the_apis_retryable_flag_decides_whether_a_storage_failure_is_retried(jo
     # The two 503s the API's upload-url sends once storage is set up (api/src/routes/answers.ts).
     signs = lambda: len([c for c in server.calls if c[1].endswith("/upload-url")])
     server.upload_url_status = 503
-    server.upload_url_error = {"code": "UNAVAILABLE", "message": "File storage refused to give an upload URL "
-                               "(storage answered 400: Bucket not found); check the bucket, SUPABASE_URL and "
-                               "SUPABASE_SERVICE_ROLE_KEY on the API"}
-    with pytest.raises(media.StepFailed, match="storage answered 400: Bucket not found"):
+    server.upload_url_error = {"code": "UNAVAILABLE", "message": "File storage is misconfigured on this API: "
+                               "R2_PUBLIC_URL is not set; uploads need all of R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, "
+                               "R2_SECRET_ACCESS_KEY, R2_PUBLIC_URL"}
+    with pytest.raises(media.StepFailed, match="R2_PUBLIC_URL is not set"):
         upload.run(job, api=api_for(server))
     assert signs() == 1  # waiting will not fix a refusal
 
@@ -332,7 +370,7 @@ def test_each_attempt_uploads_to_its_own_folder_and_reports_with_its_attempt(job
     assert server.stored and all(p.startswith(("droplets/ans1/a2/", "studio/ans1/a2/")) for p in server.stored)
     [report] = server.patches()
     assert report["attempt"] == 2
-    assert report["songVideoUrl"] == f"{STORAGE}/object/public/droplets/ans1/a2/out/song_h.mp4"
+    assert report["songVideoUrl"] == f"{MEDIA}/ans1/a2/out/song_h.mp4"
 
     # A later attempt on this machine does not trust the earlier one's progress: it sends everything again.
     server.calls.clear()
@@ -364,6 +402,66 @@ def test_a_muse_pictures_check_goes_with_the_rerender_kit_and_a_drawing_misses_n
     (job / media.check_path("overview")).write_text("{}")
     there, missing = upload.private_files(job)
     assert media.check_path("overview") in there and media.check_path("hook") not in missing
+
+
+def test_a_refused_put_says_what_r2_said_and_what_to_check():
+    def r2(code, message, status=403):
+        return lambda m, u, h, b: (status, r2_error(code, message))
+
+    with pytest.raises(api_module.ApiError, match=r"storage answered 403: SignatureDoesNotMatch: .*check R2_ACCESS_KEY_ID"):
+        Api(API, KEY, send=r2("SignatureDoesNotMatch", "The request signature we calculated does not match")).put_file(
+            f"{STORAGE}/droplets/a/x.mp4?X-Amz-Signature=s", b"x", {"Content-Type": "video/mp4"})
+    with pytest.raises(api_module.ApiError, match=r"storage answered 404: NoSuchBucket: .*R2_ACCOUNT_ID"):
+        Api(API, KEY, send=r2("NoSuchBucket", "The specified bucket does not exist.", 404)).put_file(
+            f"{STORAGE}/studio/a/x.json?X-Amz-Signature=s", b"x", {"Content-Type": "application/json"})
+    with pytest.raises(api_module.ApiError, match=r"^502 UPLOAD_FAILED: storage answered 502$"):
+        Api(API, KEY, send=lambda m, u, h, b: (502, b"<html>Bad gateway</html>")).put_file(
+            f"{STORAGE}/studio/a/x.json?X-Amz-Signature=s", b"x", {"Content-Type": "application/json"})
+
+
+def test_storage_out_of_reach_names_the_host_the_network_policy_must_allow():
+    def unreachable(method, url, headers, body):
+        raise api_module.ApiError(0, "UNREACHABLE", "the API did not answer: Tunnel connection failed: 403 Forbidden")
+
+    with pytest.raises(api_module.ApiError) as e:
+        Api(API, KEY, send=unreachable).put_file(f"{STORAGE}/droplets/a/x.mp4?X-Amz-Signature=s", b"x", {"Content-Type": "video/mp4"})
+    assert e.value.status == 0
+    assert str(e.value) == ("storage did not answer (0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com): "
+                            "Tunnel connection failed: 403 Forbidden; the network policy where the studio runs must "
+                            "allow this host")
+
+
+def test_an_api_from_before_r2_still_gets_the_videos_uploaded_to_supabase(job, server):
+    # The studio is newer than the API (its redeploy is still running, or failed): it uploads as Supabase took it,
+    # and the API moves the files to R2 once it is redeployed.
+    server.legacy_api = True
+    upload.run(job, api=api_for(server))
+    assert upload.is_done(job)
+    assert server.stored["droplets/ans1/out/song_h.mp4"] == (b"mp4 song", "video/mp4")
+    assert server.stored["studio/ans1/audio/song.mp3"][1] == "audio/mpeg"
+    assert server.patches()[0]["songVideoUrl"] == f"{SUPABASE}/object/public/droplets/ans1/out/song_h.mp4"
+
+
+def test_upload_headers_the_studio_cannot_use_fail_the_step_before_any_put(job, server):
+    real = server.__call__
+
+    def bad_headers(method, url, headers, body):
+        status, raw = real(method, url, headers, body)
+        if url.endswith("/upload-url") and status == 200:
+            answer = json.loads(raw)
+            answer["headers"] = {"Content-Type": 7}
+            raw = json.dumps(answer).encode()
+        return status, raw
+
+    with pytest.raises(media.StepFailed, match="upload headers the studio cannot use"):
+        upload.run(job, api=Api(API, KEY, send=bad_headers))
+    assert server.puts() == []
+
+
+def test_a_supabase_refusal_is_read_too():
+    refuse = lambda m, u, h, b: (400, b'{"statusCode":"413","error":"Payload too large","message":"The object exceeded the maximum allowed size"}')
+    with pytest.raises(api_module.ApiError, match=r"storage answered 400: The object exceeded the maximum allowed size$"):
+        Api(API, KEY, send=refuse).put_file(f"{SUPABASE}/object/upload/sign/droplets/a/x.mp4?token=t", b"x", {"Content-Type": "video/mp4"})
 
 
 def test_the_hook_cut_goes_up_with_the_videos_when_it_was_made(job, server):

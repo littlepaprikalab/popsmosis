@@ -154,8 +154,10 @@ export default function PrivacyPage() {
           <dd>Hosts the website and its server, in the United States. Everything passes through it, and it keeps the
             server logs.</dd>
           <dt>Supabase</dt>
-          <dd>Our database and video storage: your account, requests, files, follow-ups, comments and likes, and the
-            public videos.</dd>
+          <dd>Our database: your account, requests, files, follow-ups, comments and likes.</dd>
+          <dt>Cloudflare</dt>
+          <dd>Stores and serves the public lesson videos. Like any web host, it sees the address of whoever plays
+            one.</dd>
           <dt>Anthropic (Claude)</dt>
           <dd>The AI teacher. It reads your requests, files and follow-ups to write, check and explain the lessons. It
             does not receive your comments.</dd>

@@ -16,7 +16,7 @@ const d = RUN ? describe : describe.skip;
 
 const BUNDLE = { course: 'AP Biology', topic: 'ATP synthase', lyrics: [{ section: 'chorus', text: 'Spin the rotor' }] };
 const FACTCHECK = { status: 'passed' };
-const SONG = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.mp4';
+const SONG = 'https://media.popsmosis.com/a/out/song_h.mp4';
 const TRUNCATE = 'TRUNCATE droplet_likes, droplet_comments, replies, answers, questions, agents, users RESTART IDENTITY CASCADE';
 
 d('likes and comments on the Droplets tab', () => {

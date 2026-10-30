@@ -8,6 +8,7 @@
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { STORAGE_SETTINGS } from '../lib/storage.js';
 
 const RUN = process.env.INTEGRATION === '1';
 const d = RUN ? describe : describe.skip;
@@ -21,6 +22,13 @@ const BUNDLE = {
   narration: [], direction: [],
 };
 const FACTCHECK = { status: 'passed', reason: '', rounds: 1, lines: [], corrections: [] };
+// The four R2 settings, as the API reads them; the key is a stand-in and never reaches R2.
+const R2 = {
+  R2_ACCOUNT_ID: '0123456789abcdef0123456789abcdef',
+  R2_ACCESS_KEY_ID: '9f2c4e1a7b3d5f6e8a0c2e4b6d8f0a1c',
+  R2_SECRET_ACCESS_KEY: 'a'.repeat(64),
+  R2_PUBLIC_URL: 'https://media.popsmosis.com',
+};
 
 d('droplet endpoints', () => {
   let app: FastifyInstance;
@@ -78,8 +86,7 @@ d('droplet endpoints', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    for (const name of [...STORAGE_SETTINGS, 'SUPABASE_URL']) delete process.env[name];
   });
 
   it('claims one question for its agent, renews it, and refuses a second agent until the lease lapses', async () => {
@@ -174,8 +181,8 @@ d('droplet endpoints', () => {
     expect((await video(keyA, answerId, { status: 'RENDERING', error: 'x' })).statusCode).toBe(400);
     expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: 'javascript:alert(1)' })).statusCode).toBe(400);
 
-    const song = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.mp4';
-    const lesson = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/lesson_h.mp4';
+    const song = 'https://media.popsmosis.com/a/out/song_h.mp4';
+    const lesson = 'https://media.popsmosis.com/a/out/lesson_h.mp4';
     expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: song })).json())
       .toMatchObject({ status: 'RENDERING', songVideoUrl: song, lessonVideoUrl: null, error: null });
 
@@ -221,7 +228,7 @@ d('droplet endpoints', () => {
       steps: [{ step: 'bundle', part: 'lesson', seconds: 180, costUsd: 0.5 }], seconds: 180, costUsd: 0.5, complete: true,
     });
 
-    const song = 'https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.mp4';
+    const song = 'https://media.popsmosis.com/a/out/song_h.mp4';
     expect((await video(keyA, answerId, { status: 'RENDERING', breakdown: videoSteps })).json().error.message).toMatch(/only for status READY/);
     expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: { steps: 'audio' } })).statusCode).toBe(400);
     expect((await video(keyA, answerId, { status: 'READY', songVideoUrl: song, breakdown: videoSteps })).statusCode).toBe(200);
@@ -241,68 +248,69 @@ d('droplet endpoints', () => {
   it('signs upload URLs for its own answers once storage is configured', async () => {
     const answerId = (await answer()).json().id;
     const upload = (key: string, payload: object) => post(key, `/api/answers/${answerId}/upload-url`, payload);
-    expect((await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' })).statusCode).toBe(503);
+    const off = await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' });
+    expect(off.statusCode).toBe(503);
+    expect(off.json().error.message).toMatch(/not configured.*R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_PUBLIC_URL/);
 
-    process.env.SUPABASE_URL = 'https://x.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_publishable_k';
-    const asked: string[] = [];
-    vi.stubGlobal('fetch', async (url: string) => {
-      asked.push(url);
-      const path = url.split('/object/upload/sign/')[1];
-      return new Response(JSON.stringify({ url: `/object/upload/sign/${path}?token=t0k` }));
-    });
-    // A key that cannot upload is named before storage is asked, and is not worth a retry.
+    // A setting that cannot be right is named, and is not worth a retry.
+    Object.assign(process.env, R2, { R2_PUBLIC_URL: `https://${R2.R2_ACCOUNT_ID}.r2.cloudflarestorage.com` });
     const misconfigured = await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' });
     expect(misconfigured.statusCode).toBe(503);
-    expect(misconfigured.json().error.message).toMatch(/misconfigured.*publishable key.*sb_secret_/);
+    expect(misconfigured.json().error.message).toMatch(/misconfigured.*R2_PUBLIC_URL is the S3 API endpoint/);
     expect(misconfigured.json().error.retryable).toBeUndefined();
 
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'sb_secret_k';
+    Object.assign(process.env, R2);
+    // Signing asks nothing of R2: no request leaves the API.
+    vi.stubGlobal('fetch', async () => { throw new Error('the API called out while signing'); });
     expect((await upload(keyA, { bucket: 'public', file: 'out/song_h.mp4' })).statusCode).toBe(400);
     expect((await upload(keyA, { bucket: 'droplets', file: '../x.mp4' })).statusCode).toBe(400);
     expect((await upload(keyB, { bucket: 'droplets', file: 'out/song_h.mp4' })).statusCode).toBe(403);
 
-    const signed = await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' });
+    const signed = await upload(keyA, { bucket: 'droplets', file: 'a1/out/song_h.mp4' });
     expect(signed.statusCode).toBe(200);
-    expect(signed.json()).toEqual({
-      uploadUrl: `https://x.supabase.co/storage/v1/object/upload/sign/droplets/${answerId}/out/song_h.mp4?token=t0k`,
-      path: `droplets/${answerId}/out/song_h.mp4`,
-      publicUrl: `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/out/song_h.mp4`,
+    const body = signed.json();
+    expect(body).toEqual({
+      uploadUrl: expect.stringMatching(new RegExp(`^https://${R2.R2_ACCOUNT_ID}\\.r2\\.cloudflarestorage\\.com/droplets/${answerId}/a1/out/song_h\\.mp4\\?`)),
+      headers: { 'Content-Type': 'video/mp4', 'Cache-Control': 'public, max-age=31536000, immutable' },
+      path: `droplets/${answerId}/a1/out/song_h.mp4`,
+      publicUrl: `https://media.popsmosis.com/${answerId}/a1/out/song_h.mp4`,
     });
-    expect((await upload(keyA, { bucket: 'studio', file: 'art/hook.png' })).json().publicUrl).toBeNull();
-    expect(asked).toHaveLength(2); // the refused requests never reached storage
-
-    vi.stubGlobal('fetch', async () => new Response('{}', { status: 500 }));
-    const down = await upload(keyA, { bucket: 'droplets', file: 'out/song_h.mp4' });
-    expect(down.statusCode).toBe(503);
-    expect(down.json().error.retryable).toBe(true);
-
-    // A refusal carries storage's reason, and waiting will not fix it.
-    vi.stubGlobal('fetch', async () => new Response('{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}', { status: 400 }));
-    const refused = await upload(keyA, { bucket: 'studio', file: 'locations.json' });
-    expect(refused.statusCode).toBe(503);
-    expect(refused.json().error.message).toMatch(/refused.*storage answered 400: Bucket not found/);
-    expect(refused.json().error.retryable).toBeUndefined();
+    const query = new URL(body.uploadUrl).searchParams;
+    expect(query.get('X-Amz-SignedHeaders')).toBe('content-type;host'); // the type: R2 refuses any other
+    expect(query.get('X-Amz-Credential')).toMatch(new RegExp(`^${R2.R2_ACCESS_KEY_ID}/\\d{8}/auto/s3/aws4_request$`));
+    expect(body.uploadUrl).not.toContain(R2.R2_SECRET_ACCESS_KEY);
+    const studio = (await upload(keyA, { bucket: 'studio', file: 'art/hook.png' })).json();
+    expect(studio).toMatchObject({ headers: { 'Content-Type': 'image/png' }, publicUrl: null });
+    expect(studio.uploadUrl).toContain(`/studio/${answerId}/art/hook.png?`);
 
     // The public bucket holds videos and posters only, never a page or anything else anyone could be sent to.
     for (const file of ['out/page.html', 'out/x.svg', 'out/song_h.mp4.html', 'out/notes']) {
       expect((await upload(keyA, { bucket: 'droplets', file })).statusCode).toBe(400);
     }
 
-    // With storage set up, a droplet plays only its own files from the public bucket: never another host, another
-    // bucket or another droplet's folder.
-    const own = `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/a1/out/song_h.mp4`;
+    // With storage set up, a droplet plays only its own files from the public bucket: never another host, the S3
+    // endpoint or another droplet's folder.
+    const own = body.publicUrl as string;
     for (const url of [
       'https://evil.example/song.mp4',
-      `https://x.supabase.co/storage/v1/object/public/droplets/someone-else/a1/out/song_h.mp4`,
-      `https://x.supabase.co/storage/v1/object/public/studio/${answerId}/a1/out/song_h.mp4`,
-      `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/../other/song_h.mp4`,
-      `https://x.supabase.co/storage/v1/object/public/droplets/${answerId}/a1/out/page.html`,
+      `https://media.popsmosis.com/someone-else/a1/out/song_h.mp4`,
+      `https://${R2.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/droplets/${answerId}/a1/out/song_h.mp4`,
+      `https://media.popsmosis.com/${answerId}/../other/song_h.mp4`,
+      `https://media.popsmosis.com/${answerId}/a1/out/page.html`,
       `${own}?download=page.html`,
     ]) {
       const bad = await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: url });
       expect(bad.statusCode, url).toBe(400);
     }
+    // A render across the switch may report its files in the old Supabase bucket while SUPABASE_URL is still set; the
+    // API moves them to R2 later (lib/storage-move.ts). Only this droplet's own folder there, and only until it is unset.
+    const old = `https://qujzawtumaxedwuzqwkv.supabase.co/storage/v1/object/public/droplets/${answerId}/a1/out/lesson_h.mp4`;
+    expect((await video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: old })).statusCode).toBe(400);
+    process.env.SUPABASE_URL = 'https://qujzawtumaxedwuzqwkv.supabase.co';
+    expect((await video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: old.replace(answerId, 'someone-else') })).statusCode).toBe(400);
+    expect((await video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: old })).statusCode).toBe(200);
+    delete process.env.SUPABASE_URL;
+
     expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: own, songPosterUrl: own.replace('.mp4', '.jpg') })).statusCode).toBe(200);
     expect((await video(keyA, answerId, { status: 'READY' })).statusCode).toBe(200);
 

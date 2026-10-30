@@ -27,7 +27,7 @@ describe('dropletJsonError', () => {
 
 describe('videoUrlError', () => {
   it('takes http(s) URLs only', () => {
-    expect(videoUrlError('https://x.supabase.co/storage/v1/object/public/droplets/a/out/song_h.mp4', 'songVideoUrl')).toBeNull();
+    expect(videoUrlError('https://media.popsmosis.com/a/out/song_h.mp4', 'songVideoUrl')).toBeNull();
     expect(videoUrlError('javascript:alert(1)', 'songVideoUrl')).toMatch(/http/);
     expect(videoUrlError('/relative.mp4', 'songVideoUrl')).toMatch(/http/);
     expect(videoUrlError(42, 'songVideoUrl')).toMatch(/URL/);

@@ -59,7 +59,7 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
               "style-src 'self' 'unsafe-inline'",
               'img-src \'self\' https: data:',
-              // The droplet videos live in Supabase Storage's public bucket (docs/PLAN.md, section 10).
+              // The droplet videos and posters come from the R2 bucket's own domain, R2_PUBLIC_URL on the API (docs/PLAN.md, section 10).
               "media-src 'self' https:",
               `connect-src 'self' ${apiUrl} https://accounts.google.com`,
               "font-src 'self'",

@@ -10,7 +10,8 @@ import { hashApiKey, isAgentToken, isWellFormedAgentToken, bearerToken } from '.
 import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } from './lib/session.js';
 import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
-import { storageConfig } from './lib/storage.js';
+import { legacyPublicPrefix, storageConfig, storageReachable } from './lib/storage.js';
+import { MOVE_EVERY_MS, sweepSupabaseVideos } from './lib/storage-move.js';
 import { keepKnobsFresh } from './lib/knobs.js';
 import { loadKnobs, reloadKnobs } from './lib/studio-settings.js';
 import authRoutes from './routes/auth.js';
@@ -220,11 +221,11 @@ export async function buildApp() {
   await app.register(playRoutes);
 
   // A storage setting that cannot upload is said once at boot, where whoever set it looks;
-  // the rest of the API works without storage, so it still starts. So is a key on borrowed time.
+  // the rest of the API works without storage, so it still starts.
   const storage = storageConfig();
   if (storage && 'problem' in storage) app.log.error(`File storage is misconfigured: ${storage.problem}`);
-  else if (storage?.legacy) {
-    app.log.warn('File storage uses the legacy service_role key, which Supabase retires at the end of 2026; set SUPABASE_SERVICE_ROLE_KEY to the secret key (sb_secret_…)');
+  else if (storage && new URL(storage.publicUrl).hostname.endsWith('.r2.dev')) {
+    app.log.warn('R2_PUBLIC_URL is an r2.dev address, which Cloudflare rate-limits and does not cache; set it to the droplets bucket\'s custom domain');
   }
 
   app.get('/api/health', async (_request, reply) => {
@@ -266,5 +267,35 @@ if (isMain) {
   } catch (err) {
     app.log.error(err);
     process.exit(1);
+  }
+
+  // Whether R2 takes the key and has both buckets, said once in the log; then the videos still on Supabase Storage
+  // are moved to R2 (lib/storage-move.ts), at once and every hour after. None of it holds the API up.
+  const storage = storageConfig();
+  if (storage && !('problem' in storage)) {
+    let sweeps: NodeJS.Timeout | undefined;
+    const sweep = () => sweepSupabaseVideos(storage, prisma)
+      .then((report) => {
+        if (!report) return;
+        if (report.moved.length) {
+          app.log.info({ answerIds: report.moved }, `File storage: moved ${report.moved.length} droplet(s)' videos from Supabase Storage to R2`);
+        }
+        for (const { answerId, reason } of report.failed) {
+          app.log.error({ answerId }, `File storage: a droplet's videos stay on Supabase Storage for now: ${reason}`);
+        }
+        // Done for good: nothing left, and with SUPABASE_URL gone this API takes no Supabase URL that could add one.
+        if (!report.moved.length && !report.failed.length && !legacyPublicPrefix()) clearInterval(sweeps);
+      })
+      .catch((err) => app.log.error({ err }, 'File storage: moving the videos from Supabase Storage failed'));
+    storageReachable(storage)
+      .then((problem) => {
+        if (problem) return app.log.error(`File storage: ${problem}`);
+        app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key');
+        return sweep();
+      })
+      .catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
+    // Every hour whatever the check said, so a droplet left on Supabase (a READY from an old instance during the
+    // redeploy, an R2 that was down at boot) still moves without a restart.
+    sweeps = setInterval(sweep, MOVE_EVERY_MS).unref();
   }
 }
