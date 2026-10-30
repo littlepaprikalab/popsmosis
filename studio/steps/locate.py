@@ -84,6 +84,7 @@ JUDGED = 0.2  # a match needs this share of its pixels in some structure's colou
 # almost none is not it. Round 8's "green turbine" came back as a band of brown earth across the picture,
 # with the green turbine below it, and was labelled.
 PAINTED = 0.001
+OWN_PIXELS_MIN = 2000  # pixels of its own colour in the helper's box that make a structure SAM could not trace
 
 BOX_PROMPT = """You find one part in an illustration, for a segmentation model that will then trace it. \
 Say whether the part is in the picture (`seen`) and give the box around all of it as fractions of the \
@@ -145,7 +146,7 @@ def run(job: Path, ask=brain.ask) -> str:
                                    f"structures; not {', '.join(missing)}")
         scenes.append(save(job, scene, located, how))
         left_out += [f"{s.name} on {scene.id}" for s in scene.structures if s.name not in located]
-        boxed += [name for name, by in how.items() if by == "sam-box"]
+        boxed += [name for name, by in how.items() if by in ("sam-box", "helper")]
     locations = Locations(scenes=scenes)
     problems = locations_problems(locations, bundle)
     if problems:  # a bug here, not in the art
@@ -268,7 +269,11 @@ def in_helper_box(job: Path, scene: Scene, structure: Structure, picture: Path, 
     label = f"locate {scene.id} {structure.name} box"
     matched = [m for m in muse.segment(job, label, picture, box=box) if colours.fits(m.mask, structure)]
     if not matched:
-        return None
+        # SAM traces shapes: a loose tangle (round 19's glomerulus, a knot of thin pink tubes) is no one shape to
+        # it, even boxed. Painted in its own colour, it is the pixels in the box of that colour.
+        mask = colours.own(structure, box)
+        found = svg.locate(mask) if mask.sum() >= OWN_PIXELS_MIN else None
+        return (mask, found, "helper") if found is not None else None
     best = max(matched, key=lambda m: -1.0 if m.confidence is None else m.confidence)
     found = svg.locate(best.mask)
     return (best.mask, found, "sam-box") if found is not None else None
@@ -358,6 +363,17 @@ class Colours:
         if own + other < JUDGED * len(pixels):
             return background, (0.0 if (self.painted & own_colour).any() else None)
         return background, float(own / (own + other))
+
+    def own(self, structure: Structure, box: Box) -> np.ndarray:
+        """The pixels in the box painted in the structure's colour: nearer its colour than any other structure's or
+        the background's, and near enough to count as it."""
+        mine = self.names.index(structure.name)
+        mask = np.zeros(self.pixels.shape[:2], bool)
+        x0, y0, x1, y1 = (int(v) for v in (box.x0, box.y0, box.x1, box.y1))
+        window = self.pixels[y0:y1, x0:x1]
+        far = distance(window.reshape(-1, 3), self.refs).reshape(*window.shape[:2], -1)
+        mask[y0:y1, x0:x1] = (far.argmin(-1) == mine) & (far.min(-1) <= CLOSE)
+        return mask
 
     def fits(self, mask: np.ndarray, structure: Structure) -> bool:
         """Whether a match can be the structure: not mostly the background, nor another structure's colour."""

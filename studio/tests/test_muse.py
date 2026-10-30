@@ -524,9 +524,19 @@ def test_an_unsure_match_asks_the_helper_for_a_box_and_sam_for_what_is_in_it(job
     assert located.found_by == "sam-box"
 
 
-def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monkeypatch):
+def test_a_structure_sam_cannot_trace_even_in_the_helpers_box_is_its_colour_there(job, monkeypatch):
+    # Round 19's glomerulus, a knot of thin pink tubes, was no one shape to SAM, even boxed.
     painted(job, monkeypatch, spots={k: v for k, v in SPOTS.items() if k != "Cytochrome b6f"})
     helper = FakeHelper(boxes={"Cytochrome b6f": {"seen": True, "left": 0.7, "top": 0.4, "right": 0.8, "bottom": 0.6}})
+    assert locate.run(job, helper) == "located 4 of 4 structures with SAM 3.1, 1 in the helper's box"
+    found = jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f")
+    assert found.found_by == "helper" and 1200 <= found.label_anchor.x <= 1400  # where it is painted
+
+
+def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monkeypatch):
+    painted(job, monkeypatch, spots={k: v for k, v in SPOTS.items() if k != "Cytochrome b6f"})
+    # The helper's box holds none of its colour either.
+    helper = FakeHelper(boxes={"Cytochrome b6f": {"seen": True, "left": 0.02, "top": 0.4, "right": 0.1, "bottom": 0.6}})
     result = locate.run(job, helper)
     assert result == "located 3 of 4 structures with SAM 3.1; left out Cytochrome b6f on overview"
     assert jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f") is None
