@@ -606,9 +606,10 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
 NOTES_PROMPT = """A checker looked at a picture painted for a lesson video and wrote notes for the student \
 watching, each saying the picture shows something false and what is true. The video shows the notes beside the \
 picture, so a wrong note teaches the student something false twice. Check each note against the picture, the \
-lesson's facts and what the course's textbooks teach. Keep a note only when the picture really shows what the note \
-says and the note's correction is right; leave out one that is wrong, that you are unsure of, or that is about \
-style or looks. Return the notes you keep, word for word."""
+lesson's facts and what the course's textbooks teach. Leave out a note whose correction is false, one about \
+something the picture does not show, and one about style or looks; keep every other, including one you cannot \
+settle, since the video would rather disclose a doubt than hide a mistake. Return the notes you keep, word for \
+word."""
 
 
 class ConfirmedNotes(Strict):
