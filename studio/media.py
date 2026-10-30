@@ -55,6 +55,7 @@ from studio.schemas import SAFE_PATH  # every path built here passes SAFE_PATH
 
 MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
 VIDEOS = ("song", "lesson")
+HOOK, HOOK_LAYOUT = "hook", "v"  # the hook cut: the song's pre-chorus and first chorus, upright, to share
 TIMED = ("song", "narration")  # the audio files, each with its Timing
 
 ART_WIDTH, ART_HEIGHT = 1792, 1024

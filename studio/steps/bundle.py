@@ -1,7 +1,8 @@
 """Step 1: the bundle. One brain call writes everything the topic alone can give.
 
-Writes bundle.json, after the code checks (studio/checks.py) have repaired what they
-can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
+Writes bundle.json, after a learner has read its lesson (studio/steps/learner.py: the
+lesson is rewritten once if the learner missed its essence) and the code checks
+(studio/checks.py) have repaired what they can, and checks.json. A new bundle makes any earlier fact-check stale, so this step
 removes it.
 """
 
@@ -10,8 +11,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from studio import brain, checks
+from studio.steps import learner
 from studio.jobs import read, write
 from studio.schemas import Bundle, Request
+from studio.styles import style_for
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
 # The operator's note (python -m studio run <id> --note): what it has seen go wrong in recent droplets.
@@ -37,19 +40,25 @@ def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
     request = read(job / "request.json", Request)
     system = PROMPT + persona + (NOTE.format(note=note) if note.strip() else "")
     try:
-        answer = ask("brain", user_prompt(request), Bundle, request.images, system=system, label="bundle")
+        answer = ask("brain", user_prompt(request, style_for(job.name)), Bundle, request.images, system=system, label="bundle")
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
     bundle, report = checks.review(Bundle.model_validate(answer))
-    for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json"):
+    for stale in ("factcheck.json", "bundle.draft.json", "bundle.invalid.json", "learner.json"):
         (job / stale).unlink(missing_ok=True)
+    rewritten = learner.run(job, bundle, ask, system)
+    if rewritten is not bundle:  # a new lesson: the code checks read it again
+        bundle, report = checks.review(rewritten)
+    report.problems += (checks.song_length_problems(bundle) + checks.motion_problems(bundle)
+                        + checks.essence_problems(bundle) + checks.key_line_problems(bundle)
+                        + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
     return bundle
 
 
-def user_prompt(request: Request) -> str:
+def user_prompt(request: Request, rotation: str = "") -> str:
     parts = [f"Topic: {request.topic}"]
     if request.course:
         parts.append(f"Course: {request.course}")
@@ -57,6 +66,11 @@ def user_prompt(request: Request) -> str:
         parts.append(f"The learner's request, in their words: {request.request}")
     if request.song_style:
         parts.append(f"The song style the learner asked for: {request.song_style}")
+    elif rotation:
+        parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. For a high school "
+                     "or older audience, it is the seed of the song's style: keep its genre and roughly its tempo, "
+                     "and write your own description from it. A younger audience gets the younger style below, and "
+                     "a grave topic (a genocide, slavery) the grave topic's own slow style.")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")
     if request.study_guide:

@@ -53,7 +53,8 @@ export function contentType(file: string): string {
 }
 
 // A public file never changes once a viewer can see it: each render attempt writes its own a<n>/ folder, and a
-// droplet's files are frozen once READY (no upload URL after it). So browsers and Cloudflare's cache keep them.
+// droplet's files are frozen once READY (no upload URL after it). So browsers and Cloudflare's cache keep them. Sent
+// with the upload but not signed into it (signUpload).
 export const PUBLIC_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 /** Why a file may not go in this bucket, or null. */
@@ -66,10 +67,27 @@ export function bucketFileError(bucket: Bucket, file: string): string | null {
 }
 
 /**
+ * The droplets bucket of the Supabase project in SUPABASE_URL, where the videos were stored before R2, while that
+ * setting is still there; else null. A render that spans the switch (it started on the old API, or the new studio
+ * met an API not yet redeployed) can report files from there, and lib/storage-move.ts moves them to R2.
+ */
+export function legacyPublicPrefix(env: NodeJS.ProcessEnv = process.env): string | null {
+  const raw = env.SUPABASE_URL?.trim().replace(/\/+$/, '');
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return url.protocol === 'https:' && url.pathname === '/' && !url.search ? `${url.origin}/storage/v1/object/public/${PUBLIC_BUCKET}/` : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Why a video or poster URL is not one of this droplet's own files in the public bucket, or null. A droplet on the
- * Droplets tab plays and shows only what this API signed an upload for, under <R2_PUBLIC_URL>/<answerId>/, so the
- * agent key cannot point a public page at another host. Without storage set up there is nothing to check against: a
- * local API takes any http(s) URL (the seeded sample clips), and a production one takes none.
+ * Droplets tab plays and shows only what this API signed an upload for, under <R2_PUBLIC_URL>/<answerId>/ (or, while
+ * SUPABASE_URL is set, the same folder of the old Supabase bucket), so the agent key cannot point a public page at
+ * another host. Without storage set up there is nothing to check against: a local API takes any http(s) URL (the
+ * seeded sample clips), and a production one takes none.
  */
 export function dropletFileUrlError(
   value: string,
@@ -81,10 +99,13 @@ export function dropletFileUrlError(
   if (!config || 'problem' in config) {
     return env.NODE_ENV === 'production' ? `${field}: file storage is not set up on this API, so it takes no video URLs` : null;
   }
-  const prefix = `${config.publicUrl}/${answerId}/`;
-  if (!value.startsWith(prefix)) return `${field} must be a file uploaded for this droplet, under ${prefix}`;
-  const file = value.slice(prefix.length);
-  return fileError(file) || bucketFileError(PUBLIC_BUCKET, file) ? `${field} must be a file uploaded for this droplet, under ${prefix}` : null;
+  const own = `${config.publicUrl}/${answerId}/`;
+  const legacy = legacyPublicPrefix(env);
+  const prefix = [own, ...(legacy ? [`${legacy}${answerId}/`] : [])].find((p) => value.startsWith(p));
+  const file = prefix ? value.slice(prefix.length) : null;
+  return file === null || fileError(file) || bucketFileError(PUBLIC_BUCKET, file)
+    ? `${field} must be a file uploaded for this droplet, under ${own}`
+    : null;
 }
 
 /**
@@ -218,17 +239,19 @@ export const UPLOAD_URL_SECONDS = 2 * 60 * 60;
 
 export type SignedUpload = {
   uploadUrl: string; // PUT the file's bytes here,
-  headers: Record<string, string>; // with exactly these headers: they are signed into uploadUrl
+  headers: Record<string, string>; // with these headers; Content-Type is signed into uploadUrl
   path: string; // bucket/answerId/file
   publicUrl: string | null; // where anyone can read it, for the public bucket only
 };
 
 export function signUpload(config: StorageConfig, bucket: Bucket, answerId: string, file: string, now: Date = new Date()): SignedUpload {
   const key = `${answerId}/${file}`;
-  const headers: Record<string, string> = { 'Content-Type': contentType(file) };
-  if (bucket === PUBLIC_BUCKET) headers['Cache-Control'] = PUBLIC_CACHE_CONTROL;
+  // The type is signed, so R2 refuses the bytes under any other (a page under a video's name). The cache header is
+  // not: it is the studio's to send, so a studio from before the move to R2, which sends its own, still uploads.
+  const signed = { 'Content-Type': contentType(file) };
+  const headers: Record<string, string> = bucket === PUBLIC_BUCKET ? { ...signed, 'Cache-Control': PUBLIC_CACHE_CONTROL } : signed;
   return {
-    uploadUrl: presign(config, 'PUT', `/${bucket}/${key}`, headers, {}, UPLOAD_URL_SECONDS, now),
+    uploadUrl: presign(config, 'PUT', `/${bucket}/${key}`, signed, {}, UPLOAD_URL_SECONDS, now),
     headers,
     path: `${bucket}/${key}`,
     publicUrl: bucket === PUBLIC_BUCKET ? `${config.publicUrl}/${key}` : null,

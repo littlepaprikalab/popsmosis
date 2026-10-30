@@ -1,13 +1,13 @@
 /**
  * Moves the droplet videos and posters still in Supabase Storage to R2, so the old bucket can go (docs/DEPLOY.md,
- * section 6, "Videos made before the move"). The API runs it in the background once it is listening; once nothing
- * points at Supabase, a boot costs it one query.
+ * section 6, "Videos made before the move"). The API runs it in the background once it is listening, and again every
+ * hour (sweepSupabaseVideos); once nothing points at Supabase, a sweep costs one query.
  *
  * For each answer whose URLs still point at Supabase's public droplets bucket, each of those files is read from its
  * public URL, put on R2 at the same place (<answerId>/a<n>/out/…), and read back from R2_PUBLIC_URL. Only when every
  * one of an answer's files answers there are its URLs switched, and only if nothing changed them meanwhile. The files
  * stay in Supabase, so going back is the same switch the other way. A droplet whose move fails keeps playing from
- * Supabase, and the next boot tries it again.
+ * Supabase, and the next sweep tries it again.
  *
  * Only the public files move: the private studio bucket's re-render kits are read by nothing yet, and cost nothing
  * to download while they sit in Supabase.
@@ -64,10 +64,14 @@ async function copyOne(config: StorageConfig, answerId: string, from: string, fi
   return publicUrl;
 }
 
+// Every video field, as a select and as the condition that none of them changed.
+const SELECT = Object.fromEntries([['id', true], ...VIDEO_FIELDS.map((field) => [field, true])]) as { id: true } & Record<VideoField, true>;
+const unchanged = (row: Row) => Object.fromEntries(VIDEO_FIELDS.map((field) => [field, row[field]])) as Record<VideoField, string | null>;
+
 export async function moveSupabaseVideos(config: StorageConfig, db: typeof prisma, fetchImpl: typeof fetch = fetch): Promise<MoveReport> {
   const rows: Row[] = await db.answer.findMany({
     where: { OR: VIDEO_FIELDS.map((field) => ({ [field]: { contains: MARKER } })) },
-    select: { id: true, songVideoUrl: true, lessonVideoUrl: true, songPosterUrl: true, lessonPosterUrl: true },
+    select: SELECT,
     orderBy: { createdAt: 'asc' },
   });
   const report: MoveReport = { moved: [], failed: [] };
@@ -84,15 +88,35 @@ export async function moveSupabaseVideos(config: StorageConfig, db: typeof prism
       }
       if (!Object.keys(switched).length) continue;
       // Only if the URLs are still the ones this run copied: a change made meanwhile wins.
-      const { count } = await db.answer.updateMany({
-        where: { id: row.id, songVideoUrl: row.songVideoUrl, lessonVideoUrl: row.lessonVideoUrl, songPosterUrl: row.songPosterUrl, lessonPosterUrl: row.lessonPosterUrl },
-        data: switched,
-      });
-      if (count === 1) report.moved.push(row.id);
-      else report.failed.push({ answerId: row.id, reason: 'its URLs changed while the files were copied; the next boot tries again' });
+      const { count } = await db.answer.updateMany({ where: { id: row.id, ...unchanged(row) }, data: switched });
+      if (count === 1) {
+        report.moved.push(row.id);
+        continue;
+      }
+      // Another API instance moving the same droplet got there first, to the same place: nothing is wrong.
+      const now: Row | null = await db.answer.findUnique({ where: { id: row.id }, select: SELECT });
+      const same = now && (Object.entries(switched) as [VideoField, string][]).every(([field, url]) => now[field] === url);
+      if (!same) report.failed.push({ answerId: row.id, reason: 'its URLs changed while the files were copied; the next sweep tries again' });
     } catch (err) {
       report.failed.push({ answerId: row.id, reason: (err as Error).message });
     }
   }
   return report;
+}
+
+// How often the API looks again for videos still on Supabase: a droplet reported READY by an old API instance during
+// a redeploy, or one whose move failed, is moved within the hour. Nothing left to move costs one query.
+export const MOVE_EVERY_MS = 60 * 60 * 1000;
+
+let sweeping = false;
+
+/** moveSupabaseVideos, unless a sweep is still running in this process (then nothing: the running one covers it). */
+export async function sweepSupabaseVideos(config: StorageConfig, db: typeof prisma, fetchImpl: typeof fetch = fetch): Promise<MoveReport | null> {
+  if (sweeping) return null;
+  sweeping = true;
+  try {
+    return await moveSupabaseVideos(config, db, fetchImpl);
+  } finally {
+    sweeping = false;
+  }
 }

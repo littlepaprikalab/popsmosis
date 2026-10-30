@@ -38,7 +38,7 @@ advice column), whose architecture and look-and-feel come from
 
 ```
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
-web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, sign-in, and the admin pages.
+web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, /about, sign-in, and the admin pages.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply, DropletLike, DropletComment).
 studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
@@ -248,6 +248,31 @@ with `the studio cannot run this topic's brain here: ...`, and the teacher gives
 that reason, so the queue moves on. For a local job, `python -m studio plan ... --brain muse-spark`.
 Follow-ups are answered by the teacher itself, whatever the brain.
 
+### Knobs
+
+The environment variables that tune the API and the studio can also be set by an admin on
+**STUDIO** (`/admin/studio`, under KNOBS), so a change needs no redeploy
+(`api/src/lib/knobs.ts`). A value set there wins over the variable; cleared there, the
+variable is read again, else the default. The page shows what each takes and its default,
+and for the API's own, what its environment has and what is in force; `.env.example` says
+what each does.
+
+| Knobs | What they tune | A change applies |
+|---|---|---|
+| `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR` | the API's limits on what learners may ask for | from the next request |
+| `QUESTION_CLAIM_MINUTES`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
+| `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
+| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS`, `STUDIO_PLANNER_PERSONA`, `INKMORY_PLANNER_ON_CLAUDE` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
+
+Each API instance keeps the knobs in memory, so the code that reads them stays as fast as an
+environment variable: the instance that takes a change has it at once, and another reads it
+within 10 seconds. The studio is sent its own with its other settings, before it claims a
+topic and with every claim after, and keeps them with the job, so `step` and `make` use what
+the job's last claim said. Not knobs: the keys, secrets and URLs; what is read once at start
+(`DATABASE_POOL_SIZE`, `PORT`) or built into the page (`NEXT_PUBLIC_*`); what is the
+machine's (`STUDIO_RENDER_WORKERS`, `STUDIO_JOBS_DIR`); `ATTACHMENT_RETENTION_DAYS`, which the
+Privacy Policy states; and `INKMORY_ENABLED`, which the teacher's own record reads in its shell.
+
 ### The planner's record on Inkmory
 
 The brain is also the planner, an agent with a public record on
@@ -273,8 +298,8 @@ cent or two on Muse Spark.
 | `INKMORY_API_URL` | Inkmory's base URL | none | The same one the operator's record uses |
 | `INKMORY_PLANNER_API_KEY` | Boojum's `sk_inkmory_…` key, from the sponsor dashboard | none | Turns the planner's record on. Only `studio/inkmory.py` reads it |
 | `INKMORY_ENABLED` | `false` | on | `false` turns Inkmory off: both agents' records |
-| `STUDIO_PLANNER_PERSONA` | `record` or `lesson` | `record` | Where Boojum's persona and memory go: into the record call only, or into the bundle prompt as well, so they shape how the lesson and the song sound. The fact-check never sees them |
-| `INKMORY_PLANNER_ON_CLAUDE` | `true` | unset | Lets the planner keep its record on a topic whose brain is Claude. Unset, it keeps one only on a Muse brain (Muse Wonder or Muse Spark, the Studio page's default or a topic's own), so every entry in Boojum's record is Muse's |
+| `STUDIO_PLANNER_PERSONA` | `record` or `lesson` | `record` | Where Boojum's persona and memory go: into the record call only, or into the bundle prompt as well, so they shape how the lesson and the song sound. The fact-check never sees them. A [knob](#knobs) |
+| `INKMORY_PLANNER_ON_CLAUDE` | `true` | unset | Lets the planner keep its record on a topic whose brain is Claude. Unset, it keeps one only on a Muse brain (Muse Wonder or Muse Spark, the Studio page's default or a topic's own), so every entry in Boojum's record is Muse's. A [knob](#knobs) |
 
 ## Tests
 
@@ -353,7 +378,7 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
 | PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab, and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
-| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; `{ uploadUrl, headers, path, publicUrl }`: a signed R2 URL to PUT the file to with exactly `headers` (its Content-Type, and for `droplets` a long Cache-Control), which are signed into it, and for `droplets` where anyone will read it. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`) |
+| POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; `{ uploadUrl, headers, path, publicUrl }`: a signed R2 URL to PUT the file to with `headers` (its Content-Type, which is signed into the URL so R2 takes no other, and for `droplets` a long Cache-Control), and for `droplets` where anyone will read it. While `SUPABASE_URL` is still set, the video PATCH also takes this droplet's own files in the old Supabase bucket, which the API moves to R2 within the hour. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`) |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
 | POST | `/api/answers/:id/video/fail` | own answers: `{ reason, attempt, breakdown? }`; give the videos up (FAILED with the reason), with what the failed tries took and cost; only the current attempt may |

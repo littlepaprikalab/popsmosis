@@ -25,6 +25,14 @@ No model calls, so it is free to run again:
   end there and empties while they start from it: FILL_S seconds of them fill it from
   empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
   on across scenes, so a close-up of the same space shows it as full as the overview left it.
+- A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
+  that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
+  it stays on every later beat of the scene.
+- A path particles travel on a scene is drawn as arrows from stop to stop from when they first set off, and
+  the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
+  A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
+- The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
+  line, so the learner sees where a close-up sits before it is shown.
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
   through it, and eases to a stop when they stop; how far round it is runs on from beat
   to beat, so it never jumps.
@@ -33,6 +41,7 @@ No model calls, so it is free to run again:
   the scene and named by then.
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
+- A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
 - Beats meet exactly: each starts where the one before it ends, from 0 to the end.
 """
@@ -54,10 +63,12 @@ from studio.schemas import (
     AudioClip,
     Beat,
     Bundle,
+    Converting,
     Crowd,
     Locations,
     Particles,
     Reveal,
+    Route,
     TimedLine,
     Timeline,
     TimelineCamera,
@@ -123,9 +134,75 @@ def run(job: Path, ask=None) -> str:
         timelines[video] = timeline
     for video, timeline in timelines.items():
         write(job / media.timeline_path(video), timeline)
+    hook = hook_cut(bundle, timelines["song"])
+    if hook is not None:
+        write(job / media.timeline_path(media.HOOK), hook)
+    else:
+        (job / media.timeline_path(media.HOOK)).unlink(missing_ok=True)
     return "; ".join(
         f"{video} {t.duration:.1f} s, {len(t.beats)} beats, {sum(len(b.reveal) for b in t.beats)} reveals"
-        for video, t in timelines.items())
+        for video, t in timelines.items()) + (f"; hook cut {hook.duration:.1f} s" if hook else "")
+
+
+HOOK_LEAD_S = 0.3  # the hook cut starts this long before its first sung word
+HOOK_TAIL_S = 0.8  # and runs this long past its last
+HOOK_FADE_IN_S, HOOK_FADE_OUT_S = 0.25, 0.6
+HOOK_MIN_S = 25.0  # shorter than this, the cut takes in the end of the verse before it...
+HOOK_VERSE_LINES_MAX = 4  # ...up to this many of its lines
+
+
+def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
+    """The hook cut: the song's first chorus and the pre-chorus right before it, the part that sings the core idea
+    with the line that sets it up (and, when that is shorter than HOOK_MIN_S, the end of the verse before it), as its own timeline for the upright video. Its beats are the song's, moved to
+    start at 0, so it shows what the song shows then; its audio is that stretch of the song, faded in and out.
+    None when the song has no chorus, or its lines were not timed."""
+    sections = [line.section for line in bundle.lyrics]
+    if "chorus" not in sections:
+        return None
+    first = sections.index("chorus")
+    last = first
+    while last + 1 < len(sections) and sections[last + 1] == "chorus":
+        last += 1
+    start = first
+    while start > 0 and sections[start - 1] == "pre-chorus":
+        start -= 1
+    by_line = {beat.line_id: beat for beat in song.beats if beat.line_id}
+    # A short cut starts a few lines earlier, at the end of the verse that builds into the pre-chorus.
+    for _ in range(HOOK_VERSE_LINES_MAX):
+        head, tail = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
+        if (start == 0 or sections[start - 1] != "verse" or head is None or tail is None
+                or tail.t1 - head.t0 >= HOOK_MIN_S):
+            break
+        start -= 1
+    opening, closing = by_line.get(bundle.lyrics[start].id), by_line.get(bundle.lyrics[last].id)
+    if opening is None or closing is None or not song.audio:
+        return None
+    t0 = max((opening.words[0].start if opening.words else opening.t0) - HOOK_LEAD_S, 0.0)
+    t1 = min((closing.words[-1].end if closing.words else closing.t1) + HOOK_TAIL_S, song.duration)
+    beats = []
+    for beat in song.beats:
+        if beat.t1 <= t0 or beat.t0 >= t1:
+            continue
+        b0, b1 = max(beat.t0, t0) - t0, min(beat.t1, t1) - t0
+
+        def moved(t: float) -> float:
+            return round(min(max(t - t0, b0), b1), 3)
+
+        beats.append(beat.model_copy(update={
+            "t0": round(b0, 3), "t1": round(b1, 3),
+            "reveal": [r.model_copy(update={"t": moved(r.t)}) for r in beat.reveal],
+            "words": [w.model_copy(update={"start": moved(w.start), "end": moved(w.end)}) for w in beat.words
+                      if t0 <= w.start < t1],
+            "conversions": [c.model_copy(update={"since": max(c.since - t0, 0.0)}) for c in beat.conversions],
+            "routes": [r.model_copy(update={"since": max(r.since - t0, 0.0)}) for r in beat.routes],
+        }))
+    duration = round(t1 - t0, 3)
+    beats[-1] = beats[-1].model_copy(update={"t1": duration})
+    voice = song.audio[0]
+    audio = [AudioClip(path=voice.path, at=0, start=round(voice.start + t0, 3), end=round(voice.start + t1, 3),
+                       fade_in=HOOK_FADE_IN_S, fade_out=HOOK_FADE_OUT_S)]
+    return song.model_copy(update={"video": media.HOOK, "duration": duration, "audio": audio, "beats": beats,
+                                   "title": bundle.topic})
 
 
 def is_done(job: Path) -> bool:
@@ -239,6 +316,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     revealed: dict[str, list[str]] = {}  # per scene, in order
     heard: list[str] = []  # every structure named in this video so far, in order
     captions: list[str | None] = []
+    opened: set[str] = set()  # scenes whose first line has played
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
         scene = after["scene"] if after else hook
@@ -288,12 +366,18 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         spotlight = _shown(direction.spotlight, scene_names, labels) if direction else None
         target = _shown(direction.camera.target, scene_names, labels) if direction else None
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
-        stops = [s for s in (scene_names.canonical(p) for p in (direction.particles if direction else [])) if s]
-        stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
-        label = notation(direction.carries) if direction else ""
-        particles = [Particles(path=stops, color=marker_colour(label), trail=True, label=label,
-                               blocked=stops[-1] in blockers)] if len(stops) >= 2 else []
+        particles = []
+        for flow in direction.flows() if direction else []:  # the main flow, and one moving with it
+            stops = [s for s in (scene_names.canonical(p) for p in flow.particles) if s]
+            stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
+            label = notation(flow.carries)
+            if len(stops) >= 2:
+                particles.append(Particles(path=stops, color=marker_colour(label), trail=True, label=label,
+                                           blocked=stops[-1] in blockers))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
+        if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
+            target, zoom = None, 1.0
+        opened.add(scene)
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
                       "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels), "particles": particles,
@@ -314,11 +398,56 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     beats[-1]["t1"] = duration
     _fill_crowds(beats, bundle, located)
     _turn(beats, bundle, located)
+    _convert(beats, bundle, located)
+    _route(beats)
+    _key_lines(beats, bundle, video)
     audio = [AudioClip(path=voice.audio, at=0, start=skip, fade_in=INTRO_FADE_S) if skip
              else AudioClip(path=voice.audio, at=0)]
     stages = [[scene.id for scene in group] for group in stage_groups(bundle.scenes).values() if len(group) > 1]
+    shown = {b["scene"] for b in beats}
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
-                    beats=[Beat(**b) for b in beats], stages=stages)
+                    beats=[Beat(**b) for b in beats], stages=stages,
+                    key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
+
+
+CORE_SAID = 0.6  # the share of the core idea's words a narration sentence says to be the one that says it
+
+
+def _says_core_idea(bundle: Bundle) -> int:
+    """The narration sentence that says the core idea, as the prompt has it, in its own words (the last that says
+    most of them); the last sentence when none does."""
+    idea = set(tokens(bundle.core_idea))
+    said = [i for i, n in enumerate(bundle.narration) if idea and len(idea & set(tokens(n.text))) >= CORE_SAID * len(idea)]
+    return said[-1] if said else len(bundle.narration) - 1
+
+
+def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
+    """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
+    sentence in the lesson), held through the gaps after it. From the last chorus, or the narration's last
+    sentence that says it, to the end, the core idea, the whole why chain in one line, unless a key line starts
+    later."""
+    lines = bundle.lyrics if video == "song" else bundle.narration
+    order = {line.id: i for i, line in enumerate(lines)}
+    starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
+                    if (at := k.from_line if video == "song" else k.from_narration) in order and k.text.strip())
+    if not starts:
+        return  # a bundle written before key lines: no band, the picture as it was
+    if video == "song":
+        choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
+        finale = choruses[-1] if choruses else len(lines)
+        while finale > 0 and finale - 1 in choruses:
+            finale -= 1  # where the last chorus starts
+    else:
+        finale = _says_core_idea(bundle)
+    if bundle.core_idea.strip():
+        starts.append((finale, " ".join(bundle.core_idea.split())))
+    starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
+    for i, beat in enumerate(beats):
+        if beat["line_id"] in order:
+            at = order[beat["line_id"]]
+            beat["key_line"] = next((text for start, text in reversed(starts) if start <= at), "")
+        else:
+            beat["key_line"] = beats[i - 1].get("key_line", "") if i else ""
 
 
 def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
@@ -340,6 +469,37 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label),
                                     start=round(start, 4), end=round(end, 4)))
         beat["crowds"] = crowds
+
+
+def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
+    """The conversions each beat writes. One is written from the first beat on its scene that is about its
+    structure (spotlight, glow, camera target, or a stop of its particles, with the structure labelled by then),
+    and stays on every later beat of that scene, as a label does."""
+    shown: dict[str, dict[str, float]] = {}  # per scene: structure -> when it was first written
+    for beat in beats:
+        scene = shown.setdefault(beat["scene"], {})
+        subjects = {beat["spotlight"], beat.get("glow"), beat["camera"].target}
+        subjects |= {stop for f in beat["particles"] for stop in f.path}
+        for c in bundle.conversions:
+            if (c.structure in subjects and c.structure in beat["labels"] and c.structure not in scene
+                    and c.structure in located.get(beat["scene"], set())):
+                scene[c.structure] = beat["t0"]
+        beat["conversions"] = [
+            Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
+                       since=scene[c.structure])
+            for c in bundle.conversions if c.structure in scene]
+
+
+def _route(beats: list[dict]) -> None:
+    """The paths each beat draws as arrows: every unblocked path its scene's particles have travelled so far."""
+    shown: dict[str, dict[tuple, Route]] = {}  # per scene: (path, label) -> its route, as first drawn
+    for beat in beats:
+        routes = shown.setdefault(beat["scene"], {})
+        for f in beat["particles"]:
+            key = (tuple(f.path), f.label)
+            if not f.blocked and key not in routes:
+                routes[key] = Route(path=list(f.path), color=f.color, label=f.label, since=beat["t0"])
+        beat["routes"] = list(routes.values())
 
 
 def _turn(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:

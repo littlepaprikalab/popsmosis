@@ -103,7 +103,7 @@ class FakeGemini:
         self.pictures = pictures or {}  # scene -> a list of picture bytes (or exceptions), one per try
         self.painted: list[tuple[str, str]] = []
 
-    def paint(self, job, label, prompt):
+    def paint(self, job, label, prompt, reference=None):
         scene = label.split()[1]
         self.painted.append((label, prompt))
         tries = sum(1 for lab, _ in self.painted if lab.split()[1] == scene)

@@ -19,7 +19,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validat
 
 FILLER = "filler"
 Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
-SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "bridge", "chorus", "outro"]
+SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "chorus", "bridge", "chorus", "outro"]
 Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
 BPM_RANGE = (80, 160)  # the tempos the song may take; a sung line lasts 1.9 s to 3.7 s (audio.line_ms)
@@ -60,6 +60,18 @@ class Structure(Strict):
         return _hex_color(value)
 
 
+class Axes(Strict):
+    x: str = Field(description='What the horizontal axis measures, as a textbook prints it ("Quantity"); "" for none')
+    y: str = Field(description='What the vertical axis measures ("Price"); "" for none')
+
+    def __bool__(self) -> bool:
+        return bool(self.x or self.y)
+
+
+def _no_axes() -> Axes:
+    return Axes(x="", y="")
+
+
 class Scene(Strict):
     id: str
     image_prompt: str
@@ -68,6 +80,11 @@ class Scene(Strict):
     # later stage redrawn from the first), and the video cross-fades between them. "" in a bundle before.
     stage_of: str = Field(default_factory=str, description='The process this scene is one stage of ("mitosis"), its stages '
                                                             'in scene order; "" for any other scene')
+    # A graph's axes are read, not taught: the renderer writes their names at their ends from the scene's first
+    # frame, since the art has no writing, rather than reveal them as structures when the song happens to sing
+    # "quantity". Both "" in a bundle written before Oct 30.
+    axes: Axes = Field(default_factory=_no_axes, description='On a graph, what each axis measures, written at its end; '
+                                                             '"" for both on any other scene')
 
 
 def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
@@ -113,6 +130,11 @@ class Camera(Strict):
     zoom: float
 
 
+class Flow(Strict):
+    particles: list[str] = Field(description="Structure names they travel between, in order")
+    carries: str = Field(description='What they are, as a textbook prints it ("O₂")')
+
+
 class Direction(Strict):
     line_id: str = Field(description="The id of a lyric line or a narration sentence")
     scene: str
@@ -123,6 +145,15 @@ class Direction(Strict):
                                      '"" for none')
     glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
+    # A second thing moving on the line at the same time, when it names both: what one structure gives off together
+    # (H⁺ and O₂ from Photosystem II), or two ways at once (Na⁺ out, K⁺ in). [] in a bundle written before Oct 29.
+    also: list[Flow] = Field(default_factory=list, description="A second thing moving on this line at the same time, "
+                                                               "when the line names both; [] for none, at most one")
+
+    def flows(self) -> list[Flow]:
+        """Everything moving on the line, the main flow first; a flow with no path is left out."""
+        main = [Flow(particles=self.particles, carries=self.carries)] if self.particles else []
+        return main + [f for f in self.also if f.particles]
 
 
 class BuildUp(Strict):
@@ -138,6 +169,20 @@ class Spin(Strict):
     # How it turns on screen is read off its shape in the picture (renderer: SceneArt.spin_disc), which the
     # writer never sees: Claude called a turbine painted face-on "side".
     structure: str = Field(description="The structure that turns while particles flow into or through it, by its name")
+
+
+class KeyLine(Strict):
+    from_line: str = Field(description="The id of the lyric line it appears on; it stays until the next key line's")
+    text: str = Field(description='The step being sung, in at most 10 words: "Light splits water → O₂ + H⁺ + e⁻"')
+    # Where the lesson video writes the same line. "" in a bundle written before the lesson video showed them.
+    from_narration: str = Field(default_factory=str, description="The id of the narration sentence it appears on in the "
+                                                                 'lesson video; "" for none')
+
+
+class Conversion(Strict):
+    structure: str = Field(description="The structure where it happens (a complex, an enzyme, a stage), by its name")
+    inputs: list[str] = Field(description='What goes in, as a textbook prints it: ["H₂O"], ["NADP⁺", "H⁺", "e⁻"]')
+    outputs: list[str] = Field(description='What comes out, as a textbook prints it: ["O₂", "H⁺", "e⁻"]')
 
 
 def tag_of(value: str) -> str:
@@ -181,6 +226,12 @@ class Bundle(Strict):
     topic: str
     audience: str = Field(description='Who the droplet is written for: "high school" unless the request names someone else')
     core_idea: str
+    # Why the core idea holds, a link a line, and the only terms the learner must come away with. A bundle written
+    # before Oct 29 has neither.
+    why_chain: list[str] = Field(default_factory=list,
+                                 description="3 to 5 cause-and-effect links that explain the core idea, in order")
+    key_terms: list[str] = Field(default_factory=list,
+                                 description="The terms the learner must know, at most 8; every other name is optional")
     facts: list[Fact]
     misconception: str
     scenes: list[Scene]
@@ -196,6 +247,14 @@ class Bundle(Strict):
     spins: list[Spin] = Field(default_factory=list, description="What turns while particles flow through it; [] for none")
     # What stops the particles that reach it. A bundle written before Oct 28 has none.
     blocks: list[Block] = Field(default_factory=list, description="What stops the particles reaching it; [] for none")
+    # What each structure turns into what, drawn beside it as "H₂O → O₂ + H⁺ + e⁻" while it is the subject of a line.
+    # A bundle written before Oct 29 has none.
+    conversions: list[Conversion] = Field(default_factory=list,
+                                          description="What turns into what, and where; [] for none")
+    # What both videos write above their diagram, held while the lines go by, so a learner who cannot keep up
+    # with them reads the step being taught. A bundle written before Oct 29 has none.
+    key_lines: list[KeyLine] = Field(default_factory=list,
+                                     description="The why chain written on screen in both videos, in song order")
     # Last, so they are written knowing the whole lesson and the song's style. A bundle
     # written before there were tags has none.
     tags: Tags = Field(default_factory=Tags)
@@ -289,8 +348,8 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "glow", "stages",
-                  "tempo"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
+                  "tempo", "song-style", "axes"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -319,7 +378,7 @@ class FactCheck(Strict):
 class CheckedLine(Strict):
     # A tag or a motion (what a line's particles show moving) is dropped when it fails, never corrected.
     # "frq" is a line of the exam question, in a fact-check made before it left the videos on Oct 28.
-    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion"]
+    kind: Literal["lyric", "narration", "lesson", "frq", "tag", "motion", "keyline"]
     id: str
     text: str
     verdict: Verdict | None  # None: never got a verdict
@@ -330,7 +389,7 @@ class CheckedLine(Strict):
 
 class Correction(Strict):
     round: int
-    kind: Literal["lyric", "narration", "lesson", "frq"]  # "frq": as for CheckedLine
+    kind: Literal["lyric", "narration", "lesson", "frq", "keyline"]  # "frq": as for CheckedLine
     ids: list[str]
     before: str
     after: str
@@ -560,6 +619,7 @@ class AudioClip(Strict):
     start: float = 0.0  # where in the file to start
     end: float | None = None  # where in the file to stop; None: its end
     fade_in: float = 0.0  # seconds it fades in over, for a clip that starts partway into music
+    fade_out: float = 0.0  # seconds it fades out over at its end, for a clip cut out of a song (the hook cut)
 
 
 class TimelineCamera(Strict):
@@ -622,6 +682,28 @@ class Turning(Strict):
         return self.turns + turned, self.from_speed + (self.speed - self.from_speed) * ease / SPIN_EASE_S
 
 
+class Route(Strict):
+    """A path particles have travelled on this scene, drawn as arrows from stop to stop, staying on."""
+
+    path: list[str]  # the structures, in order, each located on the beat's scene
+    color: str
+    label: str = ""  # what travels it ("e⁻"); "" for unmarked particles
+    since: float = 0.0  # when its particles first set off on this scene: the arrows fade in then
+
+    @field_validator("color")
+    @classmethod
+    def _color(cls, value: str) -> str:
+        return _hex_color(value)
+
+
+class Converting(Strict):
+    """A conversion (Bundle.conversions) as one beat shows it: written beside the structure where it happens."""
+
+    structure: str  # located on the beat's scene
+    text: str  # "H₂O → O₂ + H⁺ + e⁻"
+    since: float = 0.0  # when it was first written on this scene: it fades in then, and stays on every later beat
+
+
 class Beat(Strict):
     t0: float
     t1: float
@@ -635,7 +717,10 @@ class Beat(Strict):
     particles: list[Particles]
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
+    conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
+    routes: list[Route] = []  # the paths drawn as arrows on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
+    key_line: str = ""  # written above the diagram (Bundle.key_lines; the core idea on the last chorus); "" for none
     caption: str | None
     line_id: str | None  # None: an instrumental gap
     line: str  # the line as heard, for the lyric band; "" in a gap
@@ -650,12 +735,14 @@ class Timeline(Strict):
     from 0 to the end of the video.
     """
 
-    video: Literal["song", "lesson"]
+    video: Literal["song", "lesson", "hook"]
     duration: float
     fps: int
     audio: list[AudioClip]  # mixed into one track
     palette: dict[str, str]  # structure name -> #RRGGBB, the same in both videos
     beats: list[Beat]
+    title: str = ""  # written across the top by a layout with a title band (the hook cut's): the topic
+    key_terms: list[str] = []  # Bundle.key_terms: picked out in colour where a key line says one
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.
@@ -663,6 +750,8 @@ class Timeline(Strict):
     # The scenes whose picture a model made, each tagged as AI-generated: every scene, as the studio makes its
     # art (Muse Image paints it, or the brain draws it as SVG); a picture from anywhere else would be left out.
     ai_pictures: list[str] = []
+    # Each graph's axis names, by scene (Scene.axes): written at the ends of the axes found in its picture.
+    axes: dict[str, Axes] = {}
 
     @field_validator("palette")
     @classmethod
@@ -731,7 +820,8 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
             if not beat.t0 - TOLERANCE_S <= word.start <= word.end <= beat.t1 + TOLERANCE_S:
                 problems.append(f"{where}: {word.word!r} is outside the beat")
         named = [beat.spotlight, beat.camera.target] + [n for p in beat.particles for n in p.path] + [
-            c.region for c in beat.crowds] + [s.structure for s in beat.turning] + [beat.glow]
+            c.region for c in beat.crowds] + [s.structure for s in beat.turning] + [beat.glow] + [
+            n for r in beat.routes for n in r.path]
         for crowd in beat.crowds:
             if not (0 <= crowd.start <= 1 and 0 <= crowd.end <= 1):
                 problems.append(f"{where} fills {crowd.region} to {crowd.start}-{crowd.end}, outside 0-1")

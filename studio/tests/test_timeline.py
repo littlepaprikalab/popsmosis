@@ -177,10 +177,13 @@ def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(j
     direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="e-")
     direct(data, "v2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
     direct(data, "b-1", particles=["Thylakoid", "Cytochrome b6f"], carries="")
+    direct(data, "c2-1", particles=["Thylakoid", "Cytochrome b6f"], carries="price")  # outside science, a plain word
     write_bundle(job, data)
     song = lines(make(job)["song"])
-    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1")}
-    assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)]}
+    marked = {line: [(f.label, f.color) for f in song[line].particles] for line in ("v1-2", "v2-1", "b-1", "c2-1")}
+    assert marked == {"v1-2": [("e⁻", "#4CC9F0")], "v2-1": [("H⁺", "#F2C230")], "b-1": [("", step.PARTICLE_COLOR)],
+                      "c2-1": [("price", step.marker_colour("price"))]}
+    assert step.marker_colour("price") in step.OTHER_MARKERS
 
 
 def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
@@ -369,3 +372,107 @@ def test_what_the_check_still_finds_wrong_in_a_muse_picture_is_disclosed_where_i
     assert timelines["song"].ai_pictures == ["hook", "overview"]
     os.utime(job / "art" / "synthase.json")  # a new check makes the timelines out of date
     assert not step.is_done(job)
+
+
+def test_a_path_stays_drawn_on_its_scene_from_when_its_particles_set_off_and_a_blocked_one_never_is():
+    from studio.schemas import Particles, TimelineCamera
+    from studio.steps.timeline import _route
+
+    def beat(scene, t0, *flows):
+        return {"scene": scene, "t0": t0, "particles": list(flows), "camera": TimelineCamera(target=None, zoom=1.0)}
+
+    chain = Particles(path=["PSII", "b6f"], color="#33CCFF", trail=True, label="e⁻")
+    stopped = Particles(path=["PSII", "Herbicide"], color="#33CCFF", trail=True, label="e⁻", blocked=True)
+    beats = [beat("membrane", 0.0), beat("membrane", 2.0, chain), beat("membrane", 4.0),
+             beat("hook", 6.0), beat("membrane", 8.0, stopped)]
+    _route(beats)
+    assert [[(r.path, r.since) for r in b["routes"]] for b in beats] == [
+        [], [(["PSII", "b6f"], 2.0)], [(["PSII", "b6f"], 2.0)], [], [(["PSII", "b6f"], 2.0)]]
+
+
+def test_the_hook_cut_is_the_pre_chorus_and_first_chorus_moved_to_start_at_zero(job):
+    from studio import checks
+
+    step.run(job)
+    bundle = checks.load(job / "bundle.json")
+    song = jobs.read(job / media.timeline_path("song"), Timeline)
+    hook = step.hook_cut(bundle, song)
+    if "chorus" not in [line.section for line in bundle.lyrics]:
+        assert hook is None
+        return
+    assert hook.video == "hook" and hook.title == bundle.topic
+    assert hook.beats[0].t0 == 0 and hook.beats[-1].t1 == hook.duration
+    sung = [b.line_id for b in hook.beats if b.line_id]
+    chorus = [line.id for line in bundle.lyrics if line.section == "chorus"]
+    assert chorus[0] in sung  # the first chorus is in it...
+    assert all(w.start >= 0 for b in hook.beats for w in b.words)  # ...moved to start at 0
+    clip = hook.audio[0]
+    assert clip.end - clip.start == pytest.approx(hook.duration, abs=0.01) and clip.fade_out > 0
+
+
+
+def keyed(data):
+    data["key_lines"] = [{"from_line": "v1-1", "text": "How does a leaf make fuel from light?", "from_narration": "n1"},
+                         {"from_line": "v2-1", "text": "Light pumps H⁺ into the lumen", "from_narration": "n2"}]
+    data["key_terms"] = ["ATP synthase", "lumen"]
+
+
+def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_the_last_chorus(job):
+    data = bundle_data()
+    keyed(data)
+    bundle = write_bundle(job, data)
+    timelines = make(job)
+    song = timelines["song"]
+    shown = {b.line_id: b.key_line for b in song.beats if b.line_id}
+    assert shown == {"v1-1": "How does a leaf make fuel from light?", "v1-2": "How does a leaf make fuel from light?",
+                     "c1-1": "How does a leaf make fuel from light?", "v2-1": "Light pumps H⁺ into the lumen",
+                     "c2-1": "Light pumps H⁺ into the lumen", "b-1": "Light pumps H⁺ into the lumen",
+                     "c3-1": bundle.core_idea}
+    for i, beat in enumerate(song.beats):  # a gap holds the line before it
+        if not beat.line_id and i:
+            assert beat.key_line == song.beats[i - 1].key_line
+    assert song.key_terms == ["ATP synthase", "lumen"]
+    lesson = {b.line_id: b.key_line for b in timelines["lesson"].beats if b.line_id}
+    narration = [n.id for n in bundle.narration]
+    assert lesson[narration[0]] == "How does a leaf make fuel from light?"
+    assert lesson[narration[-1]] == bundle.core_idea  # the narration ends on the core idea
+    assert all(lesson[n] == "Light pumps H⁺ into the lumen" for n in narration[1:-1])
+    assert timelines["lesson"].key_terms == ["ATP synthase", "lumen"]
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    assert any(b.key_line for b in hook.beats) and hook.key_terms == song.key_terms
+
+
+def test_a_song_from_a_bundle_without_key_lines_has_none(job):
+    for timeline in make(job).values():
+        assert all(b.key_line == "" for b in timeline.beats)  # not even the core idea: no band at all
+
+
+def test_the_lesson_shows_the_core_idea_from_the_sentence_that_says_it():
+    data = bundle_data()
+    assert step._says_core_idea(Bundle.model_validate(data)) == len(data["narration"]) - 1  # none says it: the last
+    data["narration"][0]["text"] = "So remember: " + data["core_idea"]
+    assert step._says_core_idea(Bundle.model_validate(data)) == 0
+
+
+def test_a_second_flow_moves_on_the_same_beat_in_its_own_colour(job):
+    data = bundle_data()
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺",
+           also=[{"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "O₂"}])
+    write_bundle(job, data)
+    beat = lines(make(job)["song"])["v2-1"]
+    assert [(f.path, f.label) for f in beat.particles] == [(["Cytochrome b6f", "Thylakoid"], "H⁺"),
+                                                           (["Cytochrome b6f", "Thylakoid"], "O₂")]
+    assert beat.particles[0].color != beat.particles[1].color
+    assert {r.label for r in beat.routes} >= {"H⁺", "O₂"}
+
+
+def test_a_graphs_axis_names_go_to_the_videos_that_show_it(job):
+    data = bundle_data()
+    data["scenes"][2]["axes"] = {"x": "Time", "y": ""}  # only the lesson shows the synthase, and not the overview
+    data["scenes"][1]["axes"] = {"x": "Quantity", "y": "Price"}
+    write_bundle(job, data)
+    timelines = make(job)
+    assert {scene: (a.x, a.y) for scene, a in timelines["song"].axes.items()} == {"overview": ("Quantity", "Price")}
+    assert {scene: (a.x, a.y) for scene, a in timelines["lesson"].axes.items()} == {"synthase": ("Time", "")}
+    hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
+    assert hook.axes == timelines["song"].axes  # the hook cut is the song's, and shows the overview

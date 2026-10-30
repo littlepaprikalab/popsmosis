@@ -199,6 +199,8 @@ export interface Video {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl?: string | null; // the hook cut: the song's pre-chorus and first chorus, upright, to share
+  hookPosterUrl?: string | null;
   error: string | null;
   updatedAt: string | null;
 }
@@ -328,10 +330,28 @@ export type BrainSettings = { default: Brain; effort: Effort };
 export type SongProvider = 'elevenlabs' | 'gemini';
 export type SongSettings = { provider: SongProvider };
 
+/**
+ * An environment variable an admin can set on /admin/studio instead (api/src/lib/knobs.ts): set there, it wins over
+ * the variable; null, the variable is read again, else the default.
+ */
+export type KnobValue = number | string;
+export interface Knob {
+  where: 'api' | 'studio'; // the API's own apply at once; the studio's from the teacher's next run
+  kind: 'int' | 'number' | 'text' | 'choice';
+  default: KnobValue | null; // null: none (ELEVENLABS_USD_PER_1K_CREDITS: credits only)
+  min?: number; max?: number; // int and number
+  choices?: string[]; // choice
+  rule?: string; // text: what it takes, in words
+  value: KnobValue | null; // set here; null: not set here
+  env?: string | null; // the API's own: what its environment has, null when unset
+  inForce?: KnobValue; // the API's own: what it uses now
+}
+
 export interface StudioSettings {
   brain: BrainSettings;
   song: SongSettings;
   art: ArtSettings;
+  knobs: Record<string, Knob>; // by the variable's name
   updatedAt: string | null; // null: never changed, the defaults
   defaults: { brain: BrainSettings; song: SongSettings; art: ArtSettings };
   choices: {
@@ -346,6 +366,8 @@ export interface DropletVideos {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl?: string | null; // the hook cut: the song's pre-chorus and first chorus, upright, to share
+  hookPosterUrl?: string | null;
 }
 
 /** Each video's hashtags, without the "#", most useful first (api/src/lib/tags.ts). The tab searches by them. */
@@ -451,9 +473,10 @@ export const api = {
 
   // The public Droplets tab: no sign-in needed
   // With a tag, only the droplets whose song or lesson video carries it.
-  listDroplets: (cursor?: string | null, tag?: string | null) => {
+  listDroplets: (cursor?: string | null, tag?: string | null, clips = false) => {
     const query = new URLSearchParams();
     if (tag) query.set('tag', tag);
+    if (clips) query.set('clips', '1');
     if (cursor) query.set('cursor', cursor);
     const qs = query.toString();
     return request<{ data: DropletCard[]; nextCursor: string | null }>(`/droplets${qs ? `?${qs}` : ''}`);
@@ -492,6 +515,8 @@ export const api = {
 
   // Admin: the studio's settings (api/src/routes/studio.ts). A change reaches the teacher's next run.
   getStudioSettings: () => request<StudioSettings>('/studio/settings'),
-  setStudioSettings: (change: { brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings> }) =>
+  setStudioSettings: (change: {
+    brain?: Partial<BrainSettings>; song?: SongSettings; art?: Partial<ArtSettings>; knobs?: Record<string, KnobValue | null>;
+  }) =>
     request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify(change) }),
 };

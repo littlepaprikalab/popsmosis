@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
-  contentType, dropletFileUrlError, fileError, presign, PUBLIC_CACHE_CONTROL, signUpload, storageConfig, storageReachable,
-  UPLOAD_URL_SECONDS, type StorageConfig,
+  contentType, dropletFileUrlError, fileError, legacyPublicPrefix, presign, PUBLIC_CACHE_CONTROL, signUpload, storageConfig,
+  storageReachable, UPLOAD_URL_SECONDS, type StorageConfig,
 } from './storage.js';
 
 describe('fileError', () => {
@@ -95,10 +95,12 @@ describe('presign', () => {
 describe('signUpload', () => {
   const now = new Date('2026-10-29T12:34:56Z');
 
-  it('signs a public file with its type and a long cache, and says where anyone will read it', () => {
+  it('signs a public file\'s type, names a long cache to send with it, and says where anyone will read it', () => {
     const signed = signUpload(CONFIG, 'droplets', 'cmabc123', 'a1/out/song_h.mp4', now);
     expect(signed.headers).toEqual({ 'Content-Type': 'video/mp4', 'Cache-Control': PUBLIC_CACHE_CONTROL });
-    expect(signed.uploadUrl).toBe(presign(CONFIG, 'PUT', '/droplets/cmabc123/a1/out/song_h.mp4', signed.headers, {}, UPLOAD_URL_SECONDS, now));
+    // Only the type is signed: a studio from before the move to R2 sends its own cache header, and still uploads.
+    expect(signed.uploadUrl).toBe(presign(CONFIG, 'PUT', '/droplets/cmabc123/a1/out/song_h.mp4', { 'Content-Type': 'video/mp4' }, {}, UPLOAD_URL_SECONDS, now));
+    expect(new URL(signed.uploadUrl).searchParams.get('X-Amz-SignedHeaders')).toBe('content-type;host');
     expect(signed.uploadUrl.startsWith(`https://${ACCOUNT}.r2.cloudflarestorage.com/droplets/cmabc123/a1/out/song_h.mp4?`)).toBe(true);
     expect(new URL(signed.uploadUrl).searchParams.get('X-Amz-Expires')).toBe('7200');
     expect(signed.path).toBe('droplets/cmabc123/a1/out/song_h.mp4');
@@ -134,6 +136,22 @@ describe('dropletFileUrlError', () => {
       `https://${ACCOUNT}.r2.cloudflarestorage.com/droplets/ans1/a1/out/song_h.mp4`,
     ]) {
       expect(dropletFileUrlError(bad, 'songVideoUrl', 'ans1', ENV), bad).toMatch(/under https:\/\/media\.popsmosis\.com\/ans1\//);
+    }
+  });
+
+  it('takes this droplet\'s own files in the old Supabase bucket while SUPABASE_URL is set, for a render across the switch', () => {
+    const old = 'https://qujzawtumaxedwuzqwkv.supabase.co/storage/v1/object/public/droplets';
+    const during = { ...ENV, SUPABASE_URL: 'https://qujzawtumaxedwuzqwkv.supabase.co/' };
+    expect(legacyPublicPrefix(during)).toBe(`${old}/`);
+    expect(dropletFileUrlError(`${old}/ans1/a1/out/song_h.mp4`, 'songVideoUrl', 'ans1', during)).toBeNull();
+    for (const bad of [`${old}/other/a1/out/song_h.mp4`, `${old}/ans1/a1/out/page.html`, `${old}/ans1/../x/song_h.mp4`,
+      'https://qujzawtumaxedwuzqwkv.supabase.co/storage/v1/object/public/studio/ans1/a1/out/song_h.mp4']) {
+      expect(dropletFileUrlError(bad, 'songVideoUrl', 'ans1', during), bad).toMatch(/under https:\/\/media\.popsmosis\.com\/ans1\//);
+    }
+    // Once SUPABASE_URL is gone, R2 only.
+    expect(dropletFileUrlError(`${old}/ans1/a1/out/song_h.mp4`, 'songVideoUrl', 'ans1', ENV)).not.toBeNull();
+    for (const off of ['', 'http://qujzawtumaxedwuzqwkv.supabase.co', 'https://x.supabase.co/storage/v1', 'not a url']) {
+      expect(legacyPublicPrefix({ SUPABASE_URL: off }), off).toBeNull();
     }
   });
 

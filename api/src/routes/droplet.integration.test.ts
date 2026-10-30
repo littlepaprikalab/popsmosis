@@ -86,7 +86,7 @@ d('droplet endpoints', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    for (const name of STORAGE_SETTINGS) delete process.env[name];
+    for (const name of [...STORAGE_SETTINGS, 'SUPABASE_URL']) delete process.env[name];
   });
 
   it('claims one question for its agent, renews it, and refuses a second agent until the lease lapses', async () => {
@@ -276,7 +276,7 @@ d('droplet endpoints', () => {
       publicUrl: `https://media.popsmosis.com/${answerId}/a1/out/song_h.mp4`,
     });
     const query = new URL(body.uploadUrl).searchParams;
-    expect(query.get('X-Amz-SignedHeaders')).toBe('cache-control;content-type;host');
+    expect(query.get('X-Amz-SignedHeaders')).toBe('content-type;host'); // the type: R2 refuses any other
     expect(query.get('X-Amz-Credential')).toMatch(new RegExp(`^${R2.R2_ACCESS_KEY_ID}/\\d{8}/auto/s3/aws4_request$`));
     expect(body.uploadUrl).not.toContain(R2.R2_SECRET_ACCESS_KEY);
     const studio = (await upload(keyA, { bucket: 'studio', file: 'art/hook.png' })).json();
@@ -302,6 +302,15 @@ d('droplet endpoints', () => {
       const bad = await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: url });
       expect(bad.statusCode, url).toBe(400);
     }
+    // A render across the switch may report its files in the old Supabase bucket while SUPABASE_URL is still set; the
+    // API moves them to R2 later (lib/storage-move.ts). Only this droplet's own folder there, and only until it is unset.
+    const old = `https://qujzawtumaxedwuzqwkv.supabase.co/storage/v1/object/public/droplets/${answerId}/a1/out/lesson_h.mp4`;
+    expect((await video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: old })).statusCode).toBe(400);
+    process.env.SUPABASE_URL = 'https://qujzawtumaxedwuzqwkv.supabase.co';
+    expect((await video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: old.replace(answerId, 'someone-else') })).statusCode).toBe(400);
+    expect((await video(keyA, answerId, { status: 'RENDERING', lessonVideoUrl: old })).statusCode).toBe(200);
+    delete process.env.SUPABASE_URL;
+
     expect((await video(keyA, answerId, { status: 'RENDERING', songVideoUrl: own, songPosterUrl: own.replace('.mp4', '.jpg') })).statusCode).toBe(200);
     expect((await video(keyA, answerId, { status: 'READY' })).statusCode).toBe(200);
 

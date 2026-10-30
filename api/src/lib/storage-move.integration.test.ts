@@ -54,6 +54,7 @@ function world() {
 describe.runIf(RUN)('moving the videos from Supabase Storage to R2', () => {
   let prisma: (typeof import('./prisma.js'))['default'];
   let move: (typeof import('./storage-move.js'))['moveSupabaseVideos'];
+  let sweep: (typeof import('./storage-move.js'))['sweepSupabaseVideos'];
   let agentId = '';
   let userId = '';
 
@@ -68,14 +69,17 @@ describe.runIf(RUN)('moving the videos from Supabase Storage to R2', () => {
     lessonVideoUrl: `${SUPABASE}/${id}/a1/out/lesson_h.mp4`,
     songPosterUrl: `${SUPABASE}/${id}/a1/out/song_h.jpg`,
     lessonPosterUrl: `${SUPABASE}/${id}/a1/out/lesson_h.jpg`,
+    hookVideoUrl: `${SUPABASE}/${id}/a1/out/hook_v.mp4`,
+    hookPosterUrl: `${SUPABASE}/${id}/a1/out/hook_v.jpg`,
   });
   const urlsOf = (id: string) => prisma.answer.findUniqueOrThrow({
-    where: { id }, select: { songVideoUrl: true, lessonVideoUrl: true, songPosterUrl: true, lessonPosterUrl: true },
+    where: { id },
+    select: { songVideoUrl: true, lessonVideoUrl: true, songPosterUrl: true, lessonPosterUrl: true, hookVideoUrl: true, hookPosterUrl: true },
   });
 
   beforeAll(async () => {
     prisma = (await import('./prisma.js')).default;
-    move = (await import('./storage-move.js')).moveSupabaseVideos;
+    ({ moveSupabaseVideos: move, sweepSupabaseVideos: sweep } = await import('./storage-move.js'));
   });
   afterAll(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
@@ -99,6 +103,8 @@ describe.runIf(RUN)('moving the videos from Supabase Storage to R2', () => {
       lessonVideoUrl: `https://media.popsmosis.com/${id}/a1/out/lesson_h.mp4`,
       songPosterUrl: `https://media.popsmosis.com/${id}/a1/out/song_h.jpg`,
       lessonPosterUrl: `https://media.popsmosis.com/${id}/a1/out/lesson_h.jpg`,
+      hookVideoUrl: `https://media.popsmosis.com/${id}/a1/out/hook_v.mp4`, // the hook cut moves with them
+      hookPosterUrl: `https://media.popsmosis.com/${id}/a1/out/hook_v.jpg`,
     });
     expect(await urlsOf(hidden)).toMatchObject({ songVideoUrl: `https://media.popsmosis.com/${hidden}/a2/out/song_h.mp4`, songPosterUrl: null });
 
@@ -128,7 +134,7 @@ describe.runIf(RUN)('moving the videos from Supabase Storage to R2', () => {
     expect(w.asked).toEqual([]);
     expect((await urlsOf(onR2)).songVideoUrl).toBe(`https://media.popsmosis.com/${onR2}/a1/out/song_h.mp4`);
     expect((await urlsOf(seeded)).songVideoUrl).toBe('http://localhost:3000/samples/song.mp4');
-    expect(await urlsOf(textOnly)).toEqual({ songVideoUrl: null, lessonVideoUrl: null, songPosterUrl: null, lessonPosterUrl: null });
+    expect(await urlsOf(textOnly)).toEqual({ songVideoUrl: null, lessonVideoUrl: null, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null });
   });
 
   it('keeps a droplet on Supabase when one of its files cannot be copied, and moves the rest', async () => {
@@ -191,5 +197,33 @@ describe.runIf(RUN)('moving the videos from Supabase Storage to R2', () => {
     const { failed } = await move(CONFIG, prisma, w.fetchImpl);
     expect(failed).toEqual([{ answerId: id, reason: expect.stringMatching(/changed while the files were copied/) }]);
     expect((await urlsOf(id)).songVideoUrl).toBe(changed);
+  });
+
+  it('is not an error when another API instance moved the same droplet first', async () => {
+    const id = await droplet(onSupabase);
+    const w = world();
+    // The other instance switches the URLs to the same R2 files while this one is still copying.
+    w.setOnPut(async (key) => {
+      if (key.endsWith('hook_v.jpg')) {
+        await prisma.answer.update({ where: { id }, data: Object.fromEntries(Object.entries(onSupabase(id)).map(([f, u]) => [f, u.replace(SUPABASE, CONFIG.publicUrl)])) });
+      }
+    });
+    expect(await move(CONFIG, prisma, w.fetchImpl)).toEqual({ moved: [], failed: [] });
+    expect((await urlsOf(id)).hookVideoUrl).toBe(`https://media.popsmosis.com/${id}/a1/out/hook_v.mp4`);
+  });
+
+  it('runs one sweep at a time in a process: one started while another runs does nothing', async () => {
+    await droplet(onSupabase);
+    const w = world();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    w.setOnPut(async () => held);
+    const first = sweep(CONFIG, prisma, w.fetchImpl);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(await sweep(CONFIG, prisma, w.fetchImpl)).toBeNull();
+    release();
+    expect((await first)?.moved).toHaveLength(1);
+    // And the next one runs again once the first is done.
+    expect(await sweep(CONFIG, prisma, world().fetchImpl)).toEqual({ moved: [], failed: [] });
   });
 });

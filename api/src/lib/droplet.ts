@@ -9,6 +9,7 @@
  * hashtags are copied out of the bundle when it is stored (lib/tags.ts).
  */
 import { serializeTags } from './tags.js';
+import { knob } from './knobs.js';
 
 // Tens of KB in practice; the cap keeps one answer from filling a list response or a row.
 export const DROPLET_JSON_MAX_BYTES = 256 * 1024;
@@ -24,7 +25,7 @@ const DEFAULT_VIDEO_STALE_MINUTES = 60;
 export const STALE_VIDEO_ERROR = 'The videos stopped rendering before they were finished.';
 
 export function videoStaleMinutes(): number {
-  const n = parseInt(process.env.VIDEO_STALE_MINUTES ?? '', 10);
+  const n = parseInt(knob('VIDEO_STALE_MINUTES') ?? '', 10);
   return Number.isNaN(n) || n <= 0 ? DEFAULT_VIDEO_STALE_MINUTES : n;
 }
 
@@ -60,7 +61,8 @@ export function videoUrlError(value: unknown, field: string): string | null {
 }
 
 // The video fields the page, the agent and the Droplets tab read.
-export const VIDEO_FIELDS = ['songVideoUrl', 'lessonVideoUrl', 'songPosterUrl', 'lessonPosterUrl'] as const;
+export const VIDEO_FIELDS = ['songVideoUrl', 'lessonVideoUrl', 'songPosterUrl', 'lessonPosterUrl', 'hookVideoUrl',
+  'hookPosterUrl'] as const;
 export type VideoField = (typeof VIDEO_FIELDS)[number];
 
 type VideoRow = {
@@ -69,6 +71,8 @@ type VideoRow = {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl: string | null;
+  hookPosterUrl: string | null;
   videoError: string | null;
   videoUpdatedAt: Date | null;
 };
@@ -84,6 +88,8 @@ export function serializeVideo(a: VideoRow, now: Date = new Date()) {
     lessonVideoUrl: a.lessonVideoUrl,
     songPosterUrl: a.songPosterUrl,
     lessonPosterUrl: a.lessonPosterUrl,
+    hookVideoUrl: a.hookVideoUrl,
+    hookPosterUrl: a.hookPosterUrl,
     error: stale ? STALE_VIDEO_ERROR : a.videoError,
     updatedAt: a.videoUpdatedAt?.toISOString() ?? null,
   };
@@ -124,6 +130,8 @@ export const publicDropletSelect = {
   lessonVideoUrl: true,
   songPosterUrl: true,
   lessonPosterUrl: true,
+  hookVideoUrl: true,
+  hookPosterUrl: true,
   likeCount: true,
   commentCount: true,
   songTags: true,
@@ -142,6 +150,8 @@ type PublicDropletRow = {
   lessonVideoUrl: string | null;
   songPosterUrl: string | null;
   lessonPosterUrl: string | null;
+  hookVideoUrl: string | null;
+  hookPosterUrl: string | null;
   likeCount: number;
   commentCount: number;
   songTags: string[];
@@ -178,6 +188,8 @@ function publicVideo(a: PublicDropletRow) {
     lessonVideoUrl: a.lessonVideoUrl,
     songPosterUrl: a.songPosterUrl,
     lessonPosterUrl: a.lessonPosterUrl,
+    hookVideoUrl: a.hookVideoUrl,
+    hookPosterUrl: a.hookPosterUrl,
   };
 }
 

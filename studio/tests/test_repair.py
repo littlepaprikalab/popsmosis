@@ -60,6 +60,33 @@ def test_a_mushroom_turns_over_about_its_stalk_and_its_old_place_is_filled_from_
     assert (pixels[new] == GREEN).all()
 
 
+INK = (30, 30, 30)
+
+
+def test_writing_is_painted_out_where_it_is_boxed_and_the_part_beside_it_stays():
+    h, w = 200, 400
+    rows = np.linspace(0.0, 1.0, h)[:, None, None]  # a soft wash, light yellow to light blue down the picture
+    pixels = np.broadcast_to((1 - rows) * np.array([240, 230, 160]) + rows * np.array([190, 225, 245]),
+                             (h, w, 3)).round().astype(np.uint8).copy()
+    wash = pixels.copy()
+    ys, xs = np.ogrid[:h, :w]
+    disc = (xs - 300) ** 2 + (ys - 100) ** 2 <= 40 ** 2  # a part, wider than any stroke, beside the writing
+    pixels[disc] = GREEN
+    letters = np.zeros((h, w), bool)
+    letters[60:63, 196:226] = letters[60:90, 210:213] = True  # a T
+    letters[60:116, 232:235] = letters[113:116, 232:246] = True  # an L, running on below its box
+    pixels[letters] = INK
+    painted = pixels.copy()
+    box = repair.Written(text="TL", left=194 / w, top=58 / h, right=248 / w, bottom=92 / h)
+    assert repair.unwrite(pixels, [box]) == 1
+    assert np.abs(pixels[letters].astype(int) - wash[letters].astype(int)).max() <= 6  # the wash, all of both letters
+    assert (pixels[disc] == GREEN).all()
+    near = np.zeros((h, w), bool)
+    near[40:130, 180:280] = True  # the box, grown, and the L's foot
+    assert (pixels[~near] == painted[~near]).all()  # nothing else touched
+    assert repair.unwrite(pixels, [repair.Written(text="", left=0, top=0, right=1, bottom=1)]) == 0  # not a line
+
+
 def scene_job(tmp_path, misplaced, builds_up=()):
     job = sample_media.write_job(tmp_path / "sample", art=True)
     bundle = sample_media.bundle().model_copy(update={"builds_up": [BuildUp(carries="H⁺", region=r) for r in builds_up]})

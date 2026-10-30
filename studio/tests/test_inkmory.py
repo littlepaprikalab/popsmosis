@@ -178,6 +178,17 @@ def test_a_topic_on_the_claude_brain_is_no_beat_unless_told_to_be(ink, monkeypat
     assert ink.paths()[-1] == "POST /api/agents/me/cycle-log"
 
 
+def test_the_studio_page_lets_claude_keep_the_record_whatever_this_machine_says(ink, monkeypatch):
+    """INKMORY_PLANNER_ON_CLAUDE and STUDIO_PLANNER_PERSONA as the claim carries them from /admin/studio."""
+    monkeypatch.setenv("INKMORY_PLANNER_ON_CLAUDE", "false")
+    monkeypatch.setenv("STUDIO_PLANNER_PERSONA", "record")
+    claude = {**QUESTION, "studio": {"knobs": {"INKMORY_PLANNER_ON_CLAUDE": "true", "STUDIO_PLANNER_PERSONA": "lesson"}}}
+    ask = PlannerBrain()
+    assert run(ask, api=FakeApi(claude))[0] == "DONE"
+    assert ink.paths()[-1] == "POST /api/agents/me/cycle-log"
+    assert ask.asked["bundle"][1].startswith(bundle_step.PROMPT + inkmory.LESSON_VOICE)
+
+
 def test_a_run_that_only_posts_is_no_beat(ink, jobs_root):
     api = FakeApi(MUSE)
     api.errors["post_answer"] = ApiError(503, "UNAVAILABLE", "down")

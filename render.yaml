@@ -56,7 +56,7 @@ services:
         sync: false
       - key: ADMIN_EMAILS            # comma-separated Google emails that get the admin role; anyone else signs in as a regular user
         sync: false
-      - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 20)
+      - key: QUESTION_CLAIM_MINUTES  # optional: how long the queue leases a question to one run (default 20); also a knob on /admin/studio
         sync: false
       - key: POPSMOSIS_ROUTINE_FIRE_URL   # optional: the teacher routine's API-trigger URL, so a topic wakes it at once
         sync: false
@@ -70,7 +70,7 @@ services:
         sync: false
       - key: R2_PUBLIC_URL           # the droplets bucket's custom domain, e.g. https://media.popsmosis.com
         sync: false
-      - key: VIDEO_MAX_ATTEMPTS      # optional: how many times a droplet's videos are started, recoveries included (default 2)
+      - key: VIDEO_MAX_ATTEMPTS      # optional: how many times a droplet's videos are started, recoveries included (default 2); also a knob on /admin/studio
         sync: false
 
   - type: web

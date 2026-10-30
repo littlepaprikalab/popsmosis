@@ -212,8 +212,9 @@ parts build on the facts it has already written.
    one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
-   `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`) and
-   `stage_of`. One fixed colour per structure for the whole job. A process whose parts move
+   `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
+   `stage_of` and `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
+   axes' ends; "" elsewhere). One fixed colour per structure for the whole job. A process whose parts move
    or change shape from stage to stage (mitosis, the phases of the Moon) takes a scene per
    stage, 2 to 5 of them, each with `stage_of` naming the process, all opening with the same
    framing sentence; then up to 8 scenes in all.
@@ -223,20 +224,28 @@ parts build on the facts it has already written.
    pre-chorus, chorus, verse, pre-chorus, bridge, chorus, outro). The style is one the audience listens to (for high
    school: pop with rapped verses, K-pop, R&B, dance-pop, pop-punk), with the topic's
    mood setting its tempo, or the learner's own when they ask for one: a question line
-   starting `Style:` becomes `song_style` in `request.json`. One tag names the tempo,
-   "<n> bpm" from 80 to 160; the code checks repair a missing or second one.
+   starting `Style:` becomes `song_style` in `request.json`. The style is one free-form
+   description, never a list of tags, written by the planner as a producer's brief: built on
+   the learner's style, keeping all they asked for, or grown from the rotation's style as a
+   seed, so droplets from one seed still differ. It names the tempo once, "<n> bpm" from 80 to
+   160; the code checks repair a missing or second one, and record a style split into tags or
+   one that lost the learner's tempo.
 5. `lyrics[]`: `id`, `section`, `text`, `names` (the structure names or aliases it says)
    and the `fact_id` it teaches or `"filler"`. The song is for memory, not a sung lesson:
    3–5 ideas, rhyming couplets, a story through the steps, a title line that opens the
    song and comes back in the chorus, and a chorus that chants `core_idea`; the bridge
-   sings what happens when a part fails. A line need not name a structure; one that does
+   sings what happens when a part fails, or, for a topic that is not a system (a chain of
+   events, a writer's device), another case the same idea explains, never the verses'
+   story again. A line need not name a structure; one that does
    uses its `name` or one of its `aliases`, because hearing that word is what reveals the
    structure on screen.
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
    what the song only names: every fact, step by step, and every structure drawn.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
    (`target`, `zoom`), `spotlight`, `particles`, `carries` (what the particles are: "H⁺",
-   "e⁻", "glucose"; "" for none), `caption`. No times: code adds those
+   "e⁻", "glucose", a plain word such as "price" outside science; "" for none), `caption`.
+   Particles go only where the facts say something travels: a scene where nothing does (a
+   graph, a stage) holds still, and the camera and spotlight carry it. No times: code adds those
    from the alignment. Then `builds_up`: what piles up in which space as the lesson goes
    (`[{"carries": "H⁺", "region": "Thylakoid lumen"}]`), which the video fills and empties,
    `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
@@ -276,9 +285,11 @@ passed.
 
 The same call checks each video's hashtags and its marked motions ("H⁺ travels from
 Stroma to Cytochrome b6f to Thylakoid lumen": what a line's particles carry and their
-route), each once however many lines show it. Neither is ever rewritten or fails the job:
-a tag that fails is dropped, and a motion that fails is left out of the video. Motions
-add about $0.02 a lesson.
+route), each once however many lines show it. Unmarked particles are checked too, as
+"Something travels from Romeo to Audience", except on the hook and the analogy, where they
+are the everyday thing (the analogy's water): unchecked, the planner sent dots where nothing
+travels. Neither is ever rewritten or fails the job: a tag that fails is dropped, and a
+motion that fails is left out of the video. Motions add about $0.02 a lesson.
 
 There is no teacher approval step: the fact-check is the gate.
 
@@ -565,6 +576,16 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     poison, a drug, a herbicide) go once and hold there; the stream queues up behind them,
     and a red cross shows at the blocker once the first arrives. The fact-check reads such
     a motion as "e⁻ flow from Photosystem II is stopped at Herbicide".
+  - **Axis names:** a graph scene's `axes` ("Quantity", "Price") are written at its axes'
+    ends from its first frame, in both videos: plain writing in the picture's own ink, no
+    pill, since an axis is read, not taught, and is never revealed by name. The renderer
+    finds the axes in the picture (`studio/render/axes.py`): each is the longest thin,
+    straight line across or up that is no structure's (a curve's mask is left out, so a
+    price ceiling is not taken for one); an axis not found runs along the bottom or the
+    left of what is drawn. Each name takes the spot beside its end (below, past or above
+    the x axis's; left of, above or right of the y axis's top) that, framed whole, stays
+    in the frame over the least of the picture. Where the camera leaves an end out (a
+    close-up, the upright frame's sides), its name stays at the frame's edge on that side.
   - **Glow:** a line's `glow` lights its part with a warm light past its edge, pulsing,
     for the line: light exciting photosystem II, a neuron firing. Rare, and like the
     spotlight, never on a part not yet named.
@@ -970,7 +991,7 @@ Rules that follow from Inkmory's code:
 | 2 | Oct 27 | Answer fields (bundle, fact-check, videos) and the agent endpoints; skill file runs the studio; routine environment (setup script, keys, network); Inkmory: adopt the operator, its beat and the one-step retry in the skill file, the planner's beat against a local Inkmory | in progress. Built: the `Answer` fields, a `FAILED` topic with its reason, the claim, fail, video and upload-url endpoints, the follow-up context; `python -m studio run`, `fail` and `summary`; the skill file runs the studio, retries a failed step once and writes the operator's record. Validated locally against Postgres with a stand-in brain. Left: set up the routine's environment (runbook, Option A), adopt the operator on Inkmory and run its first beat within 3 days. The planner's beat was built on Oct 28 (`studio/inkmory.py`) and run against a local Inkmory |
 | 3 | Oct 28 | ElevenLabs song and narration; Demucs + MMS timing and the drift check; the ASS karaoke fallback video end to end | built (#19). First live run on "brain structures" (Oct 27, brain on Haiku): stopped at the song, because the environment's `ELEVENLABS_API_KEY` holds the key's ID, which ElevenLabs refuses (nothing billed). On espeak speech standing in for ElevenLabs, Demucs + MMS timed all 32 lines within 0.04 s of where they were placed (110 s for a 139 s song), and the karaoke fallback rendered in 71 s. Left: the real song, narration and exam question, and the chorus drift on a sung song |
 | 4–6 | Oct 29–31 | Art (interim SVG, then Muse Image + SAM when the key arrives); timeline merge; renderer: camera, ghost, spotlight, labels, lyric band, FRQ. Match Fire or Don't on one scene before adding more | built (#18, #20). Live: the art drew 3 scenes and located 7 of 7 structures in 76 s ($0.008 on Haiku); the timeline took 0.3 s; both videos rendered in 157 s on 4 cores (the 194 s song in 90 s, the 157 s lesson in 66 s). Fixed from the run: a shadow drawn inside a structure's group was part of its mask, so the hippocampus's label pointed at the shadow; a label whose dot the camera had just moved off screen still showed, its leader running off the frame. Haiku's drawings are plain and loose (the limbic system is a red oval): draw the showcase topics with the brain on Opus. Muse Image + SAM 3.1 built with `BRAIN_PROVIDER=meta` (Oct 28), not run live yet. Left: their first live run; matching Fire or Don't |
-| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: storage was not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Oct 29: storage moved from Supabase to Cloudflare R2, whose downloads are free; its buckets, `media.popsmosis.com` and the API's settings are set up, and the two droplets already listed are moved by the API at boot (`api/src/lib/storage-move.ts`). Left: the routine's network policy, then `run` and `videos` end to end; agent credits |
+| 7 | Nov 1 | Parallel render; upload to Supabase; both players on `/learn`; the public Droplets tab; agent credits on the droplet if there is time | built (#16, #20, #21): the parallel render, the upload step, both players, the public Droplets tab, and `python -m studio videos` with its claim, heartbeat and recovery. The upload is in the pipeline: `run` claims the videos as it posts the lesson, and the skill file then starts `videos`, which ends with the upload. Not run live: storage was not set up, so the upload and `videos` (which starts from a posted lesson) wait for it. Oct 29: storage moved from Supabase to Cloudflare R2, whose downloads are free; its buckets, `media.popsmosis.com` and the API's settings are set up, and the two droplets already listed are moved by the API, at boot and hourly (`api/src/lib/storage-move.ts`). Left: the routine's network policy, then `run` and `videos` end to end; agent credits |
 | 8 | Nov 2 | AP Psych, AP Bio and three surprise topics end to end; switch the default brain to a Muse on `/admin/studio` and compare; the planner's Inkmory record starts; persona in the lesson voice, one topic each way; fix failures | |
 | 9 | Nov 3 | Stretch: vertical layout, particles, QA contact sheet; cost per droplet | Cost per droplet built early: every model call is logged with its step (`studio/ledger.py`), and each lesson on `/learn` carries a bill of materials, one line per step with its models, calls, time and cost, and the totals (README, "Bill of materials"). ElevenLabs is shown in credits unless `ELEVENLABS_USD_PER_1K_CREDITS` prices them. Particles built early (Oct 28). The contact sheet can be made (`python -m studio.render sheet`); the helper's check on it is not built. Left: the vertical layout, the QA check |
 | 10 | Nov 4 | Record the demo, write the submission (due 9:00 PM ET), buffer | |

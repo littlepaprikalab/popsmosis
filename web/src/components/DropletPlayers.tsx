@@ -1,21 +1,25 @@
 'use client';
 
 import type { DropletTags, DropletVideos, Video } from '@/lib/api';
+import { useState } from 'react';
+
 import { TagList } from '@/components/TagList';
+import { allTags } from '@/lib/tags';
 
 /**
- * A droplet's two videos: the karaoke song and the narrated lesson, each with its
- * hashtags under it. H.264 with +faststart, so a plain <video> starts playing before
- * the file has downloaded; preload="none" keeps a page of them from fetching anything
- * until one is played.
+ * A droplet's two videos: the karaoke song and the narrated lesson, with both videos'
+ * hashtags once under the pair (most are shared, and two copies took a lot of room).
+ * H.264 with +faststart, so a plain <video> starts playing before the file has
+ * downloaded; preload="none" keeps a page of them from fetching anything until one is played.
  */
-export function DropletPlayers({ video, tags }: { video: DropletVideos; tags?: DropletTags }) {
+export function DropletPlayers({ video, tags, title }: { video: DropletVideos; tags?: DropletTags; title?: string }) {
   const players = [
-    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)', tags: tags?.song ?? [], tagsLabel: 'Song tags' },
-    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)', tags: tags?.lesson ?? [], tagsLabel: 'Lesson tags' },
+    { label: 'SONG', src: video.songVideoUrl, poster: video.songPosterUrl, color: 'var(--accent-red)' },
+    { label: 'LESSON', src: video.lessonVideoUrl, poster: video.lessonPosterUrl, color: 'var(--accent-blue)' },
   ].filter((p): p is typeof p & { src: string } => !!p.src);
   if (players.length === 0) return null;
   return (
+    <>
     <div className={`grid gap-3 ${players.length > 1 ? 'sm:grid-cols-2' : ''}`} data-testid="droplet-players">
       {players.map((p) => (
         <figure key={p.label} className="min-w-0">
@@ -30,10 +34,68 @@ export function DropletPlayers({ video, tags }: { video: DropletVideos; tags?: D
             className="w-full rounded-md aspect-video"
             style={{ background: '#000', border: '1px solid var(--border)' }}
           />
-          <TagList tags={p.tags} label={p.tagsLabel} className="mt-1.5" />
         </figure>
       ))}
     </div>
+    <TagList tags={allTags(tags)} className="mt-1.5" />
+    {video.hookVideoUrl && <HookClip src={video.hookVideoUrl} poster={video.hookPosterUrl ?? null} title={title} />}
+    </>
+  );
+}
+
+/**
+ * The hook cut: the song's pre-chorus and first chorus as a short upright clip, the part students post. A small
+ * tile beside its two buttons, so it never competes with the full videos: Share hands the clip's link to the
+ * phone's share sheet (or copies it where there is none), Download saves the file.
+ */
+export function HookClip({ src, poster, title }: { src: string; poster: string | null; title?: string }) {
+  const [copied, setCopied] = useState(false);
+  async function share() {
+    const data = { title: title ? `${title}: the hook` : 'The hook', url: src };
+    if (typeof navigator.share === 'function') {
+      try {
+        await navigator.share(data);
+      } catch {
+        // the learner closed the share sheet
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(src);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // no clipboard either: the Download link still works
+    }
+  }
+  return (
+    <figure className="mt-3 flex items-end gap-3" data-testid="hook-clip">
+      <video
+        controls
+        playsInline
+        loop
+        preload="none"
+        poster={poster ?? undefined}
+        src={src}
+        aria-label="hook clip"
+        className="w-32 rounded-md"
+        style={{ aspectRatio: '9 / 16', background: '#000', border: '1px solid var(--border)' }}
+      />
+      <figcaption className="flex flex-col gap-2 pb-1">
+        <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>Hook clip</span>
+        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>The catchiest bit, ready to post.</span>
+        <div className="flex gap-2">
+          <button type="button" onClick={share} className="text-xs font-bold px-3 py-1.5 rounded-md"
+            style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }} data-testid="hook-share">
+            {copied ? 'Link copied' : 'Share clip'}
+          </button>
+          <a href={src} download className="text-xs font-bold px-3 py-1.5 rounded-md"
+            style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }} data-testid="hook-download">
+            Download
+          </a>
+        </div>
+      </figcaption>
+    </figure>
   );
 }
 

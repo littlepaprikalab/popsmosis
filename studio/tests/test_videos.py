@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio import run as operator_run
 from studio import videos
 from studio.api import ApiError
@@ -263,6 +263,21 @@ def test_recover_rebuilds_the_job_from_what_the_api_stored_never_the_learners_wo
     assert {c[2] for c in api.calls if c[0] == "claim_videos"} == {2}  # kept the attempt it was handed
 
 
+def test_recover_keeps_a_jobs_files_made_before_a_field_was_added_to_the_bundle(setup):
+    api = VideoApi()
+    job = jobs.ROOT / "q9"
+    job.mkdir(parents=True)
+    old = bundle_data()  # as written before Scene.axes: no "axes" on any scene
+    assert all("axes" not in scene for scene in old["scenes"])
+    (job / "bundle.json").write_text(json.dumps(old), encoding="utf-8")
+    (job / "art").mkdir()
+    (job / "art" / "hook.png").write_bytes(b"painted")  # paid for: must not be set aside
+    api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]
+    assert videos.recover(api=api)[:2] == ("RECOVER", "q9")
+    assert (job / "art" / "hook.png").read_bytes() == b"painted"
+    assert not list(jobs.ROOT.glob("q9.before-*"))
+
+
 def test_recover_takes_nothing_where_the_videos_cannot_be_made(setup, monkeypatch):
     api = VideoApi()
     api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]
@@ -482,6 +497,41 @@ def test_wrong_brain_settings_stop_the_videos_before_anything_is_claimed(setup, 
     api.studio_settings = lambda: {"brain": {"default": "muse-wonder"}}  # recover checks the default brain
     assert videos.recover(api=api) == ("NONE", "recover", wrong)
     assert claims(api) == [] and setup.ran == []  # no claim, no attempt taken from the queue, no step
+
+
+def test_the_studio_page_turns_the_videos_off_or_on_whatever_this_machine_says(monkeypatch):
+    monkeypatch.setenv("STUDIO_VIDEOS", "off")
+    assert REAL_UNAVAILABLE(studio={}) == "the videos are turned off here (STUDIO_VIDEOS)"
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "on"}})
+    assert "turned off" not in (REAL_UNAVAILABLE(studio={}) or "")
+    monkeypatch.delenv("STUDIO_VIDEOS")
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "off"}})
+    assert REAL_UNAVAILABLE(studio={}) == "the videos are turned off here (STUDIO_VIDEOS, set on /admin/studio)"
+
+
+def test_a_run_whose_settings_cannot_be_read_keeps_the_knobs_its_last_claim_carried(setup, monkeypatch):
+    """A detached `videos` starts with no knobs in force; the API not answering must not leave this machine's
+    STUDIO_VIDEOS=off to stop videos the page turned on."""
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.setenv("STUDIO_VIDEOS", "off")
+    job = posted()
+    jobs.keep_studio_settings(job, {"knobs": {"STUDIO_VIDEOS": "on"}})
+    knobs.use({"knobs": {}})  # a new process: nothing in force yet
+    api = VideoApi()
+    api.errors["studio_settings"] = ApiError(503, "UNAVAILABLE", "down")
+    videos.refresh_settings(job, api)
+    assert knobs.env("STUDIO_VIDEOS") == "on"
+    assert "turned off" not in (videos.unavailable(job) or "")
+
+
+def test_recover_takes_nothing_once_the_studio_page_turns_the_videos_off(setup, monkeypatch):
+    monkeypatch.setattr(videos, "unavailable", REAL_UNAVAILABLE)
+    monkeypatch.delenv("STUDIO_VIDEOS", raising=False)
+    api = VideoApi()
+    api.queue = [{"answerId": "ans9", "questionId": "q9", "attempt": 2, "bundle": bundle_data(), "factcheck": FACTCHECK}]
+    api.studio_settings = lambda: {"knobs": {"STUDIO_VIDEOS": "off"}}
+    assert videos.recover(api=api) == ("NONE", "recover", "the videos are turned off here (STUDIO_VIDEOS, set on /admin/studio)")
+    assert claims(api) == []  # no attempt taken from the queue
 
 
 # --- a topic's own brain, picked by an admin on /learn ----------------------------------------

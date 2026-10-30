@@ -10,8 +10,10 @@ import { hashApiKey, isAgentToken, isWellFormedAgentToken, bearerToken } from '.
 import { sessionCookieToken, hasSessionCookie, cacheControlForCookieResponse } from './lib/session.js';
 import { clientAddress } from './lib/public-limit.js';
 import { resolveAgentToken } from './middleware/auth.js';
-import { storageConfig, storageReachable } from './lib/storage.js';
-import { moveSupabaseVideos } from './lib/storage-move.js';
+import { legacyPublicPrefix, storageConfig, storageReachable } from './lib/storage.js';
+import { MOVE_EVERY_MS, sweepSupabaseVideos } from './lib/storage-move.js';
+import { keepKnobsFresh } from './lib/knobs.js';
+import { loadKnobs, reloadKnobs } from './lib/studio-settings.js';
 import authRoutes from './routes/auth.js';
 import questionRoutes from './routes/questions.js';
 import replyRoutes from './routes/replies.js';
@@ -43,6 +45,12 @@ export async function buildApp() {
 
   await app.register(cookie);
   await app.register(helmet, { contentSecurityPolicy: false, crossOriginEmbedderPolicy: false });
+
+  // ---- The knobs an admin set on /admin/studio (lib/knobs.ts): read again every REFRESH_MS ----
+  // On a timer rather than on requests: another instance's change is in force here within REFRESH_MS whatever the
+  // traffic, and no request waits on the read.
+  const knobTimer = keepKnobsFresh(loadKnobs, app.log);
+  app.addHook('onClose', async () => clearInterval(knobTimer));
 
   // ---- Resolve agent keys first: the proxy gate and the rate limit below both ask whether a key is real ----
   // A well-formed key is looked up (cached both ways for AGENT_TTL_MS, middleware/auth.ts); per-route guards then
@@ -241,6 +249,13 @@ if (isMain) {
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 
+  // The knobs set on /admin/studio in force before the first request. A database that does not answer within
+  // KNOB_START_WAIT_MS never keeps the API from starting: the environment's are in force until the timer reads them.
+  const KNOB_START_WAIT_MS = 5000;
+  const late = new Promise<'late'>((resolve) => setTimeout(() => resolve('late'), KNOB_START_WAIT_MS).unref());
+  await Promise.race([reloadKnobs(), late])
+    .then((read) => { if (read === 'late') app.log.warn('the knobs were not read in time; the environment\'s are in force until they are'); })
+    .catch((err) => app.log.warn({ err }, 'could not read the knobs; the environment\'s are in force'));
   const port = parseInt(process.env.PORT || '3001', 10);
   try {
     await app.listen({ port, host: '0.0.0.0' });
@@ -249,19 +264,33 @@ if (isMain) {
     process.exit(1);
   }
 
-  // Whether R2 takes the key and has both buckets, said once in the log; then the videos made before the move to R2
-  // are moved there (lib/storage-move.ts). Neither holds the API up.
+  // Whether R2 takes the key and has both buckets, said once in the log; then the videos still on Supabase Storage
+  // are moved to R2 (lib/storage-move.ts), at once and every hour after. None of it holds the API up.
   const storage = storageConfig();
   if (storage && !('problem' in storage)) {
-    (async () => {
-      const problem = await storageReachable(storage);
-      if (problem) return app.log.error(`File storage: ${problem}`);
-      app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key');
-      const { moved, failed } = await moveSupabaseVideos(storage, prisma);
-      if (moved.length) app.log.info({ answerIds: moved }, `File storage: moved ${moved.length} droplet(s)' videos from Supabase Storage to R2`);
-      for (const { answerId, reason } of failed) {
-        app.log.error({ answerId }, `File storage: a droplet's videos stay on Supabase Storage for now: ${reason}`);
-      }
-    })().catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
+    let sweeps: NodeJS.Timeout | undefined;
+    const sweep = () => sweepSupabaseVideos(storage, prisma)
+      .then((report) => {
+        if (!report) return;
+        if (report.moved.length) {
+          app.log.info({ answerIds: report.moved }, `File storage: moved ${report.moved.length} droplet(s)' videos from Supabase Storage to R2`);
+        }
+        for (const { answerId, reason } of report.failed) {
+          app.log.error({ answerId }, `File storage: a droplet's videos stay on Supabase Storage for now: ${reason}`);
+        }
+        // Done for good: nothing left, and with SUPABASE_URL gone this API takes no Supabase URL that could add one.
+        if (!report.moved.length && !report.failed.length && !legacyPublicPrefix()) clearInterval(sweeps);
+      })
+      .catch((err) => app.log.error({ err }, 'File storage: moving the videos from Supabase Storage failed'));
+    storageReachable(storage)
+      .then((problem) => {
+        if (problem) return app.log.error(`File storage: ${problem}`);
+        app.log.info('File storage: R2 has the droplets and studio buckets, and takes the key');
+        return sweep();
+      })
+      .catch((err) => app.log.error({ err }, 'File storage: the check at boot failed'));
+    // Every hour whatever the check said, so a droplet left on Supabase (a READY from an old instance during the
+    // redeploy, an R2 that was down at boot) still moves without a restart.
+    sweeps = setInterval(sweep, MOVE_EVERY_MS).unref();
   }
 }

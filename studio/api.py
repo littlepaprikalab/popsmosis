@@ -70,6 +70,13 @@ def _storage_reason(raw: bytes) -> str:
     code = re.search(r"<Code>([^<]{1,100})</Code>", text)
     message = re.search(r"<Message>([^<]{1,300})</Message>", text)
     said = ": " + ": ".join(m.group(1) for m in (code, message) if m) if code or message else ""
+    if not said:  # Supabase, for an upload signed by an API from before the move to R2, answers in JSON
+        try:
+            body = json.loads(text)
+            said = f": {str(body.get('message') or body.get('error') or '')[:300]}" if isinstance(body, dict) else ""
+        except ValueError:
+            pass
+        said = "" if said == ": " else said
     if code and code.group(1) in _KEY_CODES:
         said += "; check R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY on the API, and that its R2 token may write this bucket"
     elif code and code.group(1) == "NoSuchBucket":
@@ -119,8 +126,9 @@ class Api:
     # --- the endpoints --------------------------------------------------------
 
     def studio_settings(self) -> dict:
-        """The settings an admin sets on /admin/studio: {brain: {default, effort}, art: {claude, meta}}. {} from an
-        API too old to have them, and the studio's own defaults apply."""
+        """The settings an admin sets on /admin/studio: {brain: {default, effort}, song: {provider}, art: {claude,
+        meta}, knobs: {NAME: value}} (the knobs: studio/knobs.py). {} from an API too old to have them, and the
+        studio's own defaults apply."""
         try:
             return self.request("GET", "/api/studio/settings")
         except ApiError as e:
@@ -156,6 +164,7 @@ class Api:
     def set_video(self, answer_id: str, status: str, *, error: str | None = None, attempt: int | None = None,
                   song_video_url: str | None = None, lesson_video_url: str | None = None,
                   song_poster_url: str | None = None, lesson_poster_url: str | None = None,
+                  hook_video_url: str | None = None, hook_poster_url: str | None = None,
                   breakdown: dict | None = None) -> dict:
         """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved.
         With the attempt this run holds, 409 unless it is still the render's current attempt.
@@ -164,7 +173,8 @@ class Api:
         if attempt is not None:
             body["attempt"] = attempt
         for key, value in (("songVideoUrl", song_video_url), ("lessonVideoUrl", lesson_video_url),
-                           ("songPosterUrl", song_poster_url), ("lessonPosterUrl", lesson_poster_url)):
+                           ("songPosterUrl", song_poster_url), ("lessonPosterUrl", lesson_poster_url),
+                           ("hookVideoUrl", hook_video_url), ("hookPosterUrl", hook_poster_url)):
             if value is not None:
                 body[key] = value
         if error is not None:
@@ -184,7 +194,8 @@ class Api:
             # The routine's network policy has to allow the R2 host, unlike every other request here.
             host = urllib.parse.urlsplit(upload_url).hostname
             reason = e.message.removeprefix("the API did not answer: ")
-            raise ApiError(0, "UNREACHABLE", f"storage did not answer ({host}): {reason}") from e
+            raise ApiError(0, "UNREACHABLE", f"storage did not answer ({host}): {reason}; "
+                           "the network policy where the studio runs must allow this host") from e
         if not 200 <= status < 300:
             raise ApiError(status, "UPLOAD_FAILED", f"storage answered {status}{_storage_reason(raw)}")
 

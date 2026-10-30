@@ -276,12 +276,58 @@ def moving(data):
             d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="")
 
 
-def test_each_marked_motion_is_checked_once_and_unmarked_ones_are_not_sent():
+SOMETHING = "Something travels from Thylakoid to Cytochrome b6f"
+
+
+def test_each_motion_is_checked_once_an_unmarked_one_as_something():
     fake = FakeChecker(supported)
     report, checked = check_bundle(bundle(moving), "", fake)
     motions = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")]
-    assert motions == [("motion:v1-2", ELECTRONS), ("motion:v2-1", PROTONS)]  # after the tags, the chorus once
+    # After the tags, the chorus once.
+    assert motions == [("motion:v1-2", ELECTRONS), ("motion:v2-1", PROTONS), ("motion:b-1", SOMETHING)]
     assert report.status == "passed" and checked == bundle(moving) and dropped_motions(report) == []
+
+
+def test_a_route_nothing_travels_is_left_out_of_the_video():
+    def invented(data):  # Romeo -> Audience, as the literature droplet sent on Oct 29
+        for d in data["direction"]:
+            if d["line_id"] == "v2-1":
+                d.update(particles=["Cytochrome b6f", "Thylakoid"], carries="",
+                         also=[{"particles": ["Thylakoid", "Cytochrome b6f"], "carries": ""}])
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text.startswith("Something") else supported(text))
+    report, checked = check_bundle(bundle(invented), "", fake)
+    assert report.status == "passed" and report.corrections == []
+    v2 = next(d for d in checked.direction if d.line_id == "v2-1")
+    assert (v2.particles, v2.carries, v2.also) == ([], "", [])
+    assert [m.text for m in dropped_motions(report)] == ["Something travels from Cytochrome b6f to Thylakoid", SOMETHING]
+
+
+def test_unmarked_dots_on_the_hook_and_the_analogy_are_not_sent():
+    def everyday(data):  # the analogy's water, the hook's everyday thing
+        data["scenes"].append({**data["scenes"][1], "id": "analogy"})
+        for d in data["direction"]:
+            if d["line_id"] in ("v1-1", "n1"):
+                d.update(scene="hook", particles=["Thylakoid", "Thylakoid"], carries="")
+            elif d["line_id"] == "v2-1":
+                d.update(scene="analogy", particles=["Cytochrome b6f", "Thylakoid"], carries="")
+            elif d["line_id"] == "c1-1":
+                d.update(scene="analogy", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+
+    fake = FakeChecker(supported)
+    check_bundle(bundle(everyday), "", fake)
+    assert [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")] == [ELECTRONS]
+
+
+def test_an_unmarked_blocked_flow_is_checked_as_stopped_there():
+    def stopping(data):
+        moving(data)
+        data["blocks"] = [{"structure": "Cytochrome b6f"}]
+
+    fake = FakeChecker(supported)
+    check_bundle(bundle(stopping), "", fake)
+    motions = [line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")]
+    assert "The flow from Thylakoid is stopped at Cytochrome b6f" in motions
 
 
 def test_a_motion_that_fails_is_left_out_of_the_video_and_never_fails_the_check():
@@ -294,7 +340,7 @@ def test_a_motion_that_fails_is_left_out_of_the_video_and_never_fails_the_check(
     assert report.status == "passed" and report.corrections == []
     shown = {d.line_id: (d.particles, d.carries) for d in checked.direction if d.particles}
     assert shown == {line: (["Thylakoid", "Cytochrome b6f"], "e⁻") for line in ("v1-2", "c1-1", "c2-1", "c3-1")} | {
-        "b-1": (["Thylakoid", "Cytochrome b6f"], "")}  # an unmarked flow is not the check's
+        "b-1": (["Thylakoid", "Cytochrome b6f"], "")}  # an unmarked flow the facts support stays
     assert [(m.text, m.verdict) for m in dropped_motions(report)] == [(PROTONS, "UNSUPPORTED")]
 
 
@@ -389,3 +435,79 @@ def test_a_report_from_before_tags_still_reads():
            "lines": [{"kind": "lyric", "id": "v1-1", "text": "x", "verdict": "SUPPORTED", "source": "f1", "round": 1}]}
     assert FactCheckReport.model_validate(old).lines[0].problem == ""
 
+
+
+KEY = "Every carrier pumps H⁺"
+
+
+def with_key_lines(data):
+    data["key_lines"] = [{"from_line": "v1-1", "text": "How does light make ATP?"}, {"from_line": "v2-1", "text": KEY}]
+
+
+def test_key_lines_and_the_core_idea_are_checked_and_a_wrong_one_corrected():
+    def rule(text):
+        return ("UNSUPPORTED", "", "Only b6f pumps H⁺") if text == KEY else supported(text)
+
+    fake = FakeChecker(rule)
+    report, checked = check_bundle(bundle(with_key_lines), "", fake)
+    assert {"keyline:core_idea", "keyline:v1-1", "keyline:v2-1"} <= set(fake.ids(1))
+    assert report.status == "passed"
+    assert [k.text for k in checked.key_lines] == ["How does light make ATP?", "Only b6f pumps H⁺"]
+    assert [(c.kind, c.ids) for c in report.corrections] == [("keyline", ["v2-1"])]
+
+
+def test_a_wrong_key_line_with_no_correction_leaves_the_screen_and_never_fails_the_check():
+    def rule(text):
+        return ("UNSUPPORTED", "", "") if text == KEY else supported(text)
+
+    report, checked = check_bundle(bundle(with_key_lines), "", FakeChecker(rule))
+    assert report.status == "passed"
+    assert [k.text for k in checked.key_lines] == ["How does light make ATP?"]
+
+
+def test_a_key_line_that_never_passes_leaves_the_screen_and_the_report_keeps_it():
+    def rule(text):
+        return ("UNSUPPORTED", "", text + "!") if text.startswith(KEY) else supported(text)
+
+    report, checked = check_bundle(bundle(with_key_lines), "", FakeChecker(rule))
+    assert report.status == "passed"
+    assert [k.text for k in checked.key_lines] == ["How does light make ATP?"]
+    assert any(c.kind == "keyline" and c.verdict == "UNSUPPORTED" for c in report.lines)
+
+
+def test_a_second_flow_is_its_own_motion_and_one_that_fails_leaves_only_itself():
+    OXYGEN = "O₂ travels from Cytochrome b6f to Thylakoid"
+
+    def change(data):
+        moving(data)
+        next(d for d in data["direction"] if d["line_id"] == "v2-1")["also"] = [
+            {"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "O₂"}]
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == OXYGEN else supported(text))
+    report, checked = check_bundle(bundle(change), "", fake)
+    assert ("motion:v2-1+1", OXYGEN) in [(line["id"], line["text"]) for line in fake.payloads[0]["lines"]]
+    line = next(d for d in checked.direction if d.line_id == "v2-1")
+    assert report.status == "passed" and line.also == [] and (line.particles, line.carries) == (
+        ["Cytochrome b6f", "Thylakoid"], "H⁺")
+
+
+def test_a_route_left_out_by_the_check_is_never_drawn_and_a_passed_one_is():
+    from studio.schemas import Locations
+    from studio.steps import timeline
+    from studio.tests import sample_media
+
+    def unmarked(data):  # two unmarked routes on the overview: one the facts give, one they do not
+        for d in data["direction"]:
+            if d["line_id"] == "v1-2":
+                d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="")
+            elif d["line_id"] == "v2-1":
+                d.update(particles=["Cytochrome b6f", "Thylakoid"], carries="")
+
+    invented = "Something travels from Cytochrome b6f to Thylakoid"
+    _, checked = check_bundle(bundle(unmarked), "", FakeChecker(
+        lambda text: ("UNSUPPORTED", "", "") if text == invented else supported(text)))
+    song = timeline.build("song", checked, sample_media.timings(checked), sample_media.locations())
+    beats = {b.line_id: b for b in song.beats if b.line_id}
+    assert [p.path for p in beats["v1-2"].particles] == [["Thylakoid", "Cytochrome b6f"]]
+    assert beats["v2-1"].particles == [] and all(r.path != ["Cytochrome b6f", "Thylakoid"]
+                                                 for b in song.beats for r in b.routes)

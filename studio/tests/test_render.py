@@ -25,6 +25,7 @@ from studio.schemas import (
     Locations,
     Particles,
     Reveal,
+    Route,
     Timeline,
     TimelineCamera,
     Timing,
@@ -291,8 +292,7 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
 def test_particles_travel_between_the_structures_and_fade_in(job):
     flow = Renderer(job, flowing([flow_beat(0, 8)]))  # no labels, so nothing is drawn over the particle
     still = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
-    anchors = [(a.x, a.y) for a in (located(job, "overview", name).label_anchor for name in FLOW)]
-    stops = renderer_module.stop_points(anchors)
+    stops = flow._path_points("overview", FLOW)  # a stop in a space sits beside its neighbour on the path
     leg = max(math.dist(*stops) / renderer_module.FLOW_SPEED, renderer_module.FLOW_MIN_LEG_S)
     held = renderer_module.FLOW_PAUSE_S + leg + 0.2  # the lead particle is holding at cytochrome b6f
     gold = p.rgb("#F2C230")
@@ -309,16 +309,16 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
-    stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
+    stops = marked._path_points("overview", FLOW)
     held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
     x, y = marked.art_to_frame(held, *stops[0])
     badge, dot = marked.frame(held).copy(), plain.frame(held).copy()
 
-    def cyan_across(frame):  # how wide the cyan runs across the particle, above its word
-        row = frame[round(y) - 14, round(x) - 60:round(x) + 60, 2::-1]  # BGRA to RGB
-        return int((np.abs(row.astype(int) - p.rgb(cyan)).max(1) < 12).sum())
+    def cyan_across(frame):  # how wide the cyan runs across the particle at its widest, near where it holds
+        rows = frame[round(y) - 30:round(y) + 30, round(x) - 70:round(x) + 70, 2::-1]  # BGRA to RGB
+        return int((np.abs(rows.astype(int) - p.rgb(cyan)).max(2) < 12).sum(1).max())
 
-    assert cyan_across(dot) == 0 and cyan_across(badge) > 15  # bigger than the plain dot
+    assert cyan_across(badge) > cyan_across(dot) + 6  # bigger than the plain dot
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
@@ -607,6 +607,35 @@ def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them
     assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
 
 
+def test_a_notice_card_sits_below_the_key_band_and_upright_above_the_picture(job):
+    beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
+    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+    keyed = flowing([beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})])
+    amber = p.rgb("#F59E0B")
+    wide = Renderer(job, keyed.model_copy(update={"notices": notices}))
+    view = wide.view("overview")
+    edge, top = view[2], view[1] + wide.layout.margin + 8
+    assert view[1] == wide.layout.key_h
+    # The card's amber side starts below the key band, which no longer hides the card's top.
+    assert np.allclose(pixel(wide.frame(2.0), edge + 3, top + 40), amber, atol=12)
+    assert not np.allclose(pixel(wide.frame(2.0), edge + 3, top - 12), amber, atol=12)
+    # Upright, the card goes across the frame above the picture, which keeps the frame's whole width.
+    upright = Renderer(job, keyed.model_copy(update={"notices": notices, "title": "the light reactions"}), "v")
+    plain = Renderer(job, keyed.model_copy(update={"title": "the light reactions"}), "v")
+    tall, short = plain.view("overview"), upright.view("overview")
+    assert short[0] == tall[0] and short[2] == tall[2] == upright.layout.width  # nothing moves over
+    assert short[1] > tall[1] + 100 and short[3] == tall[3]  # it starts below the card
+    frame = upright.frame(2.0)
+    card_top = tall[1] + renderer_module.NOTICE_GAP
+    assert np.allclose(pixel(frame, upright.layout.margin + 3, card_top + 40), amber, atol=12)
+    # The hook cut carries the song's notices; one for a scene it never shows keeps no room above the picture.
+    elsewhere = Renderer(job, keyed.model_copy(update={"notices": {"synthase": notices["overview"] * 3},
+                                                       "title": "the light reactions"}), "v")
+    assert elsewhere.view("overview") == tall
+    assert np.allclose(pixel(frame, upright.layout.width - upright.layout.margin - 20, card_top + 40),
+                       (255, 255, 255), atol=12)  # white across the frame
+
+
 def test_every_ai_made_picture_is_tagged_unless_its_notice_card_says_so(job):
     beat = flow_beat(0, 4, path=[])
     plain = Renderer(job, flowing([beat]))
@@ -648,3 +677,195 @@ def test_a_long_note_is_cut_so_the_card_stays_above_the_lyric_band():
     long = " ".join(["word"] * 400)
     bottom = p.draw_notice(surface.getCanvas(), 1480, 28, 1900, [long] * 3, 22)
     assert bottom < 1080 - 110
+
+
+def test_key_terms_are_found_whole_ignoring_case_longest_first():
+    text = "H⁺ flowing back spins ATP synthase → ATP"
+    spans = p.key_term_spans(text, ["ATP", "atp synthase", "back"])
+    assert [text[a:b] for a, b in spans] == ["back", "ATP synthase", "ATP"]
+    assert p.key_term_spans("synthases", ["synthase"]) == []  # whole words only
+
+
+def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = [b.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"}) for b in timeline.beats]
+    keyed = Renderer(job, timeline.model_copy(update={"beats": beats, "key_terms": ["lumen"]}))
+    plain = Renderer(job, timeline)
+    assert keyed.view("overview")[1] == plain.view("overview")[1] + keyed.layout.key_h > 0
+    frame = keyed.frame(14.0)
+    band = frame[:keyed.layout.key_h, :, :3]
+    amber = p.rgb("#FCD34D")
+    assert ((band[..., 2] == amber[0]) & (band[..., 1] == amber[1]) & (band[..., 0] == amber[2])).sum() > 50
+    assert (band[..., :] > 200).all(axis=-1).sum() > 500  # white text
+    upright = Renderer(job, keyed.timeline.model_copy(update={"title": "the light reactions"}), "v")
+    assert upright.view("overview")[1] == upright.layout.title_h  # in the title band, which keeps its height
+    top = upright.frame(14.0)[:upright.layout.title_h, :, :3]
+    assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50
+
+
+def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    first = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    since = timeline.beats[first].t0
+    one = Route(path=["Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
+    both = Route(path=["Cytochrome b6f", "Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
+    other = Route(path=["Thylakoid", "Cytochrome b6f"], color="#F2C230", label="H⁺", since=since)  # another carrier
+    beats = [b.model_copy(update={"routes": [one, both, other]}) if b.scene == "overview" else b for b in timeline.beats]
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    legs = []
+    monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append(color))
+    last = max(i for i, b in enumerate(beats) if b.scene == "overview")
+    renderer.frame(beats[last].t1 - 0.01)
+    assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
+
+
+def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    path = ["Cytochrome b6f", "Thylakoid"]
+    flows = [Particles(path=path, color="#F2C230", label="H⁺", trail=True),
+             Particles(path=list(reversed(path)), color="#7FD1FF", label="H₂O", trail=True)]
+    beats = list(timeline.beats)
+    beats[i] = beats[i].model_copy(update={"particles": flows})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert renderer._lanes[("overview", tuple(path), "H⁺")] == 0
+    assert renderer._lanes[("overview", tuple(reversed(path)), "H₂O")] == 1  # the same stops, the other way: beside
+    first = renderer._path_points("overview", path)
+    beside = renderer._path_points("overview", path, lane=1)
+    assert all(math.dist(a, b) == pytest.approx(renderer_module.LANE_GAP) for a, b in zip(first, beside))
+    b6f = located(job, "overview", "Cytochrome b6f")
+    assert renderer._is_space("overview", located(job, "overview", "Thylakoid"))
+    x, y = first[0]  # leaving a part for a space: from its edge, where the arrow starts, not from inside it
+    box = b6f.box
+    on_edge = min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1))
+    assert on_edge == pytest.approx(0, abs=1e-6) and box.x0 <= x <= box.x1 and box.y0 <= y <= box.y1
+    x, y = renderer._path_points("overview", list(reversed(path)))[-1]  # and arriving from a space, at its edge too
+    assert min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1)) == pytest.approx(0, abs=1e-6)
+
+
+# --- a graph's axis names -------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def graph(tmp_path_factory):
+    return sample_media.write_graph_job(tmp_path_factory.mktemp("jobs") / "graph")
+
+
+def graph_art(job, scene):
+    return SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene(scene))
+
+
+def test_the_axes_are_found_as_the_long_thin_lines_that_are_no_structures(graph, job):
+    from studio.render import axes
+
+    (x0, y0, x1, _, width), (_, top, _, bottom, _) = sample_media.AXES["overview"]
+    for scene in ("overview", "ceiling"):  # the price ceiling is as long and thin, but a structure
+        across, up = graph_art(graph, scene).axis_lines()
+        # Each to within its line's width: its ends are round.
+        assert np.allclose((across.at, across.start, across.end), (y0, x0, x1), atol=width / 2 + 1)
+        assert np.allclose((up.at, up.start, up.end), (x0, top, bottom), atol=width / 2 + 1)
+    # A picture with no such line (the sample's ellipses) has none: its axes fall back to the edges of what is drawn.
+    art = graph_art(job, "overview")
+    pixels = art.art.toarray(colorType=skia.kBGRA_8888_ColorType)
+    assert axes.find(axes.distance(pixels, (255, 255, 255)), np.zeros(pixels.shape[:2], bool)) == (None, None)
+    across, up = art.axis_lines()
+    x0, y0, x1, y1 = art.content
+    assert (across.at, across.start, across.end) == (y1, x0, x1) and (up.at, up.start, up.end) == (x0, y0, y1)
+
+
+def test_a_painted_axis_a_little_off_level_is_found_whole():
+    # Level rows only, an axis half a degree off was found 264 pixels short, which put its name mid-axis.
+    from studio.render import axes
+
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), 40, np.uint8)
+    for degrees in (0.5, 1.0):
+        pixels[...] = 40
+        for x in range(300, 1500):  # the x axis, rising to its right end
+            y = round(880 - (x - 300) * math.tan(math.radians(degrees)))
+            pixels[y - 3:y + 3, x] = 240
+        for y in range(140, 880):  # the y axis, leaning right to its top
+            x = round(300 + (880 - y) * math.tan(math.radians(degrees)))
+            pixels[y, x - 3:x + 3] = 240
+        across, up = axes.find(axes.distance(pixels, (40, 40, 40)), np.zeros(pixels.shape[:2], bool))
+        assert abs(across.start - 300) <= 4 and abs(across.end - 1500) <= 4 and abs(across.at - 880) <= 15
+        assert abs(up.start - 140) <= 4 and abs(up.end - 880) <= 4 and abs(up.at - 300) <= 15
+
+
+def test_a_mask_grows_by_a_square_and_stops_at_the_edges():
+    from studio.render import axes
+
+    mask = np.zeros((9, 12), bool)
+    mask[4, 5] = mask[0, 11] = True
+    grown = axes.grow(mask, 2)
+    expected = np.zeros_like(mask)
+    expected[2:7, 3:8] = expected[0:3, 9:12] = True
+    assert (grown == expected).all() and mask.sum() == 2  # the mask itself is left as it was
+
+
+def names_drawn(job, video, t, layout="h"):
+    """The frame at t, and where it differs from the same frame with no axis names: the names' pixels."""
+    timeline = jobs.read(job / media.timeline_path(video), Timeline)
+    renderer = Renderer(job, timeline, layout)
+    plain = Renderer(job, timeline.model_copy(update={"axes": {}}), layout).frame(t).copy()
+    frame = renderer.frame(t).copy()
+    changed = np.abs(frame[..., :3].astype(int) - plain[..., :3]).max(axis=2) > 40
+    return renderer, frame, changed
+
+
+def test_a_graph_has_its_axis_names_at_their_ends_from_its_first_frame(graph):
+    t = 5.0  # the song's first line on the graph: nothing on it is named yet
+    renderer, frame, changed = names_drawn(graph, "song", t)
+    (x0, y0, x1, _, _), (_, top, _, _, _) = sample_media.AXES["overview"]
+    ends = [renderer.art_to_frame(t, x1, y0), renderer.art_to_frame(t, x0, top)]  # Quantity's, then Price's
+    ys, xs = np.nonzero(changed)
+    near = [np.hypot(xs - ex, ys - ey) < 200 for ex, ey in ends]
+    assert near[0].sum() > 300 and near[1].sum() > 300  # both written, each beside its own end
+    assert (near[0] | near[1]).all()  # and nothing else changed
+    # Plain writing in dark ink on a light picture, with no pill.
+    assert frame[changed][..., :3].min() < 90 and frame[changed][..., :3].max() > 200
+
+
+def test_in_a_close_up_the_axis_names_stay_at_the_edges_of_the_frame(graph):
+    t = 11.5  # the lesson zoomed on the equilibrium, both axes out of the view
+    renderer, _, changed = names_drawn(graph, "lesson", t)
+    assert renderer.art_to_frame(t, 300, 880)[1] > renderer.layout.height  # the x axis is below the frame
+    ys, xs = np.nonzero(changed)
+    margin, right = renderer.layout.margin, renderer.layout.width - renderer.layout.margin
+    left_top = (xs < 300) & (ys < 200)  # "Price", up the left edge
+    right_bottom = (xs > right - 300) & (ys > renderer.layout.height - renderer.layout.band_h - 200)  # "Quantity"
+    assert left_top.sum() > 300 and right_bottom.sum() > 300 and (left_top | right_bottom).all()
+    assert xs.min() >= margin - 4 and xs.max() <= right + 4
+
+
+def test_on_a_dark_picture_the_axis_names_are_light_and_upright_frames_keep_them(tmp_path):
+    dark = sample_media.write_graph_job(tmp_path / "dark", dark=True)
+    _, frame, changed = names_drawn(dark, "hook", 6.0, "v")  # the hook cut crops the y axis off its left
+    ys, xs = np.nonzero(changed)
+    assert (xs < 200).any() and (xs > 800).any()  # "Price" kept at the left edge, "Quantity" at the right
+    assert frame[changed][..., :3].max() > 220
+
+
+def test_a_graphs_frame_is_the_same_whichever_frame_a_worker_draws_first(graph):
+    # Each render worker starts at its own range: one that starts on the second graph picks its names' spots alone.
+    timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
+    late = Renderer(graph, timeline).frame(24.0).copy()
+    early = Renderer(graph, timeline)
+    early.frame(5.0), early.frame(15.0)
+    assert (early.frame(24.0) == late).all()
+
+
+def test_axis_names_stay_on_through_a_stage_fade_when_the_next_stage_has_the_same(graph):
+    timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
+    cut = next(b.t0 for b in timeline.beats if b.scene == "ceiling")
+    mid, settled = cut + renderer_module.STAGE_FADE_S / 2, cut + 2 * renderer_module.STAGE_FADE_S
+
+    def drawn(tl, t):  # how strongly the names show: the whole of their difference from the frame without them
+        frame = Renderer(graph, tl).frame(t).copy()
+        plain = Renderer(graph, tl.model_copy(update={"axes": {}})).frame(t).copy()
+        return np.abs(frame[..., :3].astype(int) - plain[..., :3]).sum()
+
+    staged = timeline.model_copy(update={"stages": [["overview", "ceiling"]]})
+    assert drawn(staged, mid) > 0.9 * drawn(staged, settled)  # the same axes: on in full mid-fade
+    renamed = staged.model_copy(update={"axes": {**staged.axes, "ceiling": staged.axes["ceiling"].model_copy(
+        update={"x": "Bread sold"})}})
+    assert drawn(renamed, mid) < 0.8 * drawn(renamed, settled)  # new names fade in with their stage
