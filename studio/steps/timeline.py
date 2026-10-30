@@ -20,7 +20,8 @@ No model calls, so it is free to run again:
   so the hook is sung within the first two seconds (PLAN section 8).
 - The particles are marked with what they carry, as a textbook prints it ("H+" -> "H⁺",
   notation()), each kind in its own colour (marker_colour()), so a proton reads apart
-  from an electron and from the ions painted in the picture.
+  from an electron and from the ions painted in the picture; a kind the pictures draw as a
+  structure ("magma", "sediment") in that structure's colour.
 - A space that something builds up in (Bundle.builds_up) fills while particles carrying it
   end there and empties while they start from it: FILL_S seconds of them fill it from
   empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
@@ -249,11 +250,15 @@ def _same(heard: str, name: str, last: bool) -> bool:
     return heard == name or (last and heard in (name + "s", name + "es"))
 
 
-def marker_colour(label: str) -> str:
-    """The colour of particles carrying `label`: its own for a common kind, else one picked by its name."""
+def marker_colour(label: str, palette: dict[str, str] | None = None) -> str:
+    """The colour of particles carrying `label`: its own for a common kind; the colour of the structure it names
+    when it is one the pictures draw (magma red, sediment tan: round 20's magma rose in a pale blue no magma is);
+    else one picked by its name."""
     if not label:
         return PARTICLE_COLOR
-    return MARKER_COLOURS.get(label) or OTHER_MARKERS[zlib.crc32(label.encode()) % len(OTHER_MARKERS)]
+    drawn = {name.casefold(): colour for name, colour in (palette or {}).items()}
+    return (MARKER_COLOURS.get(label) or drawn.get(label.casefold())
+            or OTHER_MARKERS[zlib.crc32(label.encode()) % len(OTHER_MARKERS)])
 
 
 @dataclass
@@ -388,8 +393,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
             label = notation(flow.carries)
             if len(stops) >= 2:
-                particles.append(Particles(path=stops, color=marker_colour(label), trail=True, label=label,
-                                           blocked=stops[-1] in blockers))
+                particles.append(Particles(path=stops, color=marker_colour(label, palette), trail=True, label=label,
+                                           blocked=stops[-1] in blockers, moves=flow.moves))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
         if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
             target, zoom = None, 1.0
@@ -499,6 +504,7 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
     the spaces located on its scene."""
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
     level = dict.fromkeys(builds, CROWD_START)
+    palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
     for beat in beats:
         crowds = []
         for build in builds:
@@ -509,7 +515,7 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             start = level[build]
             level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
             if region in located.get(beat["scene"], set()):
-                crowds.append(Crowd(region=region, label=label, color=marker_colour(label),
+                crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
                                     start=round(start, 4), end=round(end, 4)))
         beat["crowds"] = crowds
 

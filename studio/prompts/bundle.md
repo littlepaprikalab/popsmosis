@@ -620,11 +620,19 @@ order, keyed by `line_id`:
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.
+- `moves`: how it moves, which decides how the video draws it. "crosses" when it passes
+  through one wall, membrane or carrier, the crossing being what the line teaches (O₂ across
+  the alveolus's wall, H⁺ through ATP synthase, salt out of the tubule into the capillary):
+  particles cross it. "travels" when it goes a long way along several parts, the path being
+  what the line teaches (filtrate down the nephron, magma up through the volcano, sediment
+  down a river, food down the gut): an arrow is drawn where it passes from each part into
+  the next, since dots following a long, bending path stray off it. The same thing moving
+  on one scene moves the same way on every line. "" with no particles.
 - `also`: a second thing moving on the same line, when the line names both and they move
   at the same time: what one structure gives off together ("Protons in the lumen, oxygen
   out": H⁺ and O₂ each from Photosystem II to the lumen), or two ways at once (the pump's
-  Na⁺ out while its K⁺ comes in). One at most, with its own `particles` and `carries`
-  under the same rules; the video draws each in its own colour, side by side where they
+  Na⁺ out while its K⁺ comes in). One at most, with its own `particles`, `carries` and
+  `moves` under the same rules; the video draws each in its own colour, side by side where they
   share a path. [] on every other line: one thing moving is easier to follow, so add the
   second only when the line sings or says it.
 - `glow`: a structure that lights up on this line because an outside cause switches it on:

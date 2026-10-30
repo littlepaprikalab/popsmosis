@@ -85,6 +85,17 @@ FLOW_SPEED = 260.0  # art pixels a second: slow enough to follow
 FLOW_PAUSE_S = 0.5  # the lead particle holds at each stop
 FLOW_MIN_LEG_S = 0.8  # a short hop still takes this long, so it reads as a move
 FLOW_IN_S = 0.4
+# A flow that travels a long way along several parts (filtrate down the nephron, magma up through the volcano,
+# sediment down the river) is drawn as an arrow where it passes from each part into the next (routing.handoff),
+# not as particles: in rounds 20 and 21 the particles cut across the nephron's bends and rose through the rock of the
+# volcano, following masks that are only roughly the parts. A crossing (O₂ across the membrane, H⁺ through ATP
+# synthase, salt out of the tubule) keeps its particles: the short trip through the wall is what it teaches. The
+# bundle says which (Particles.moves); where it does not, the route does (_journey).
+BENT = 1.5  # a route this many times longer than the straight line between its ends bends with its parts: a journey
+THROUGH_MAX = 200.0  # art pixels: a route running further than this inside a part between its ends travels along it
+HANDOFF_STEP_S = 0.5  # between one hand-off's arrow and the next's, as they draw in and as the pulse runs along them
+HANDOFF_GROW_S = 0.35  # an arrow drawing itself in, from its tail
+HANDOFF_REST = 0.7  # how strong an arrow is while the pulse is on another
 STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
 ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its middle
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
@@ -710,6 +721,8 @@ class Renderer:
         self._background: tuple[tuple, skia.Image] | None = None
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
+        self._travelling: dict[tuple[str, str], bool] = {}  # (scene, what travels) -> drawn as hand-off arrows
+        self._handoff_arrows: dict[tuple, list[tuple[Point, Point]]] = {}  # each such flow's arrows, in art pixels
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
 
@@ -1063,7 +1076,8 @@ class Renderer:
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places, strength)
         if legend_rect:
-            p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend])
+            p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend],
+                          self._arrowed(beat.scene))
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, view[1] + layout.margin + 8, layout.caption_font,
                            caption_alpha)
@@ -1331,6 +1345,12 @@ class Renderer:
         for flow, (flow_in, flow_out) in zip(beat.particles, plan.runs):
             alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
             if alpha <= 0.01:
+                continue
+            if self._travels(beat.scene, flow):  # each part bumps once, as the arrow into it draws in
+                for k, (_, loc) in enumerate(self._path_stops(beat.scene, flow.path)[1:]):
+                    at = t - flow_in - k * HANDOFF_STEP_S - HANDOFF_GROW_S
+                    if 0 <= at < BUMP_S and not self._is_space(beat.scene, loc):
+                        grow[loc.name] = grow.get(loc.name, 0.0) + BUMP * math.sin(math.pi * at / BUMP_S)
                 continue
             trip, reached, through = self._arrivals(beat.scene, flow)
             if trip <= 0:
@@ -1601,6 +1621,12 @@ class Renderer:
                         routes.append((route.path, route.label, route.color))
             samples, drawn = [], set()
             for path, label, color in routes:
+                flow = self._flow_of(scene_id, path, label)
+                if flow is not None and self._travels(scene_id, flow):  # its arrows, not the route between its stops
+                    for tail, tip in self._handoffs(scene_id, flow):
+                        n = max(int(math.dist(tail, tip) / ARROW_SAMPLE), 1)
+                        samples += [(p.lerp(tail[0], tip[0], k / n), p.lerp(tail[1], tip[1], k / n)) for k in range(n + 1)]
+                    continue
                 lane = self._lanes.get((scene_id, tuple(path), label), 0)
                 pairs = self._path_stops(scene_id, path, lane)
                 for line, _, first, last, _ in self._legs(scene_id, path, lane):
@@ -1615,6 +1641,16 @@ class Renderer:
             self._scene_routes[scene_id] = samples
         scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
         return [(x * scale + dx, y * scale + dy) for x, y in self._scene_routes[scene_id]]
+
+    def _flow_of(self, scene_id: str, path: list[str], label: str):
+        """The scene's first flow on these stops carrying this, as a beat has it; None when none does."""
+        return next((f for b in self.timeline.beats if b.scene == scene_id for f in b.particles
+                     if f.path == path and f.label == label), None)
+
+    def _arrowed(self, scene_id: str) -> set[str]:
+        """What travels on the scene as hand-off arrows, which the legend keys with an arrow."""
+        return {f.label for b in self.timeline.beats if b.scene == scene_id for f in b.particles
+                if f.label and self._travels(scene_id, f)}
 
     def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
         """The key to what moves on the scene: (colour, kind, alpha) for each kind of particle its flows and spaces have
@@ -1653,6 +1689,9 @@ class Renderer:
             if alpha <= 0.01:
                 continue
             elapsed = t - flow_in
+            if self._travels(beat.scene, flow):
+                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame)
+                continue
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
             bends = None if flow.blocked else self._bends(beat.scene, flow.path, lane)
@@ -1689,6 +1728,78 @@ class Renderer:
                 p.draw_block(canvas, (x1 + (x1 - x0) / length * ahead, y1 + (y1 - y0) / length * ahead),
                              alpha * pulse * p.ease((elapsed - trip_s(points)) / FLOW_IN_S))
         canvas.restore()
+
+    def _travels(self, scene_id: str, flow) -> bool:
+        """Whether a flow is drawn as an arrow at each hand-off rather than as particles: as the bundle says
+        (Particles.moves), else when any flow on the scene carrying the same thing is a journey (_journey), so one
+        thing moves one way on a scene. Never a blocked flow, which piles up at its blocker, nor one carrying a
+        symbol ("H⁺", "O₂"): an ion or a small molecule is a particle."""
+        if flow.blocked or p.carried(flow.label):
+            return False
+        if flow.moves:
+            return flow.moves == "travels"
+        key = (scene_id, flow.label)
+        if key not in self._travelling:
+            self._travelling[key] = any(self._journey(scene_id, f) for b in self.timeline.beats if b.scene == scene_id
+                                        for f in b.particles if f.label == flow.label and not f.blocked and not f.moves)
+        return self._travelling[key]
+
+    def _journey(self, scene_id: str, flow) -> bool:
+        """Whether a flow's route is a journey along its parts: it bends with them (BENT), or runs far inside a part
+        between two others (THROUGH_MAX), as filtrate down the loop of Henle or magma up the volcano do."""
+        lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
+        points = self._path_points(scene_id, flow.path, False, lane)
+        if len(points) < 2:
+            return False
+        stops = [loc.name for _, loc in self._path_stops(scene_id, flow.path, lane)]
+        if stops[0] == stops[-1]:
+            return False  # out through a part and back into the space it left: it crosses that part, going nowhere
+        route = _dense(points, self._bends(scene_id, flow.path, lane))
+        if routing.length(route) > BENT * max(math.dist(points[0], points[-1]), 1.0):
+            return True
+        art = self.scene(scene_id)
+        return any(routing.inside(route, art.cells(name)) > THROUGH_MAX for name in stops[1:-1])
+
+    def _handoffs(self, scene_id: str, flow) -> list[tuple[Point, Point]]:
+        """A travelling flow's arrows, tail and tip in art pixels: one where it passes from each part into the next
+        (routing.handoff), pointing on toward the stop after; beside another's on the same stops (its lane)."""
+        key = (scene_id, tuple(flow.path), flow.label)
+        if key not in self._handoff_arrows:
+            art = self.scene(scene_id)
+            lane = self._lanes.get(key, 0)
+            pairs = self._path_stops(scene_id, flow.path, lane)
+            arrows = []
+            for i in range(len(pairs) - 1):
+                toward = pairs[min(i + 2, len(pairs) - 1)][0]
+                (x0, y0), (x1, y1) = routing.handoff(art.cells(pairs[i][1].name), art.cells(pairs[i + 1][1].name),
+                                                     toward)
+                if lane:  # beside the other's, across the arrow
+                    length = math.hypot(x1 - x0, y1 - y0) or 1.0
+                    nx, ny = -(y1 - y0) / length * LANE_GAP * lane, (x1 - x0) / length * LANE_GAP * lane
+                    x0, y0, x1, y1 = x0 + nx, y0 + ny, x1 + nx, y1 + ny
+                if (x0, y0) != (x1, y1):
+                    arrows.append(((x0, y0), (x1, y1)))
+            self._handoff_arrows[key] = arrows
+        return self._handoff_arrows[key]
+
+    def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
+                       on_frame) -> None:
+        """A travelling flow's arrows: drawn in one after another along its path as it sets off, then a pulse runs
+        along them in order, the way it goes, again and again."""
+        arrows = self._handoffs(scene_id, flow)
+        n = len(arrows)
+        drawn_in = n * HANDOFF_STEP_S + HANDOFF_GROW_S
+        cycle = n * HANDOFF_STEP_S + FLOW_PAUSE_S
+        for k, (tail, tip) in enumerate(arrows):
+            grown = p.ease((elapsed - k * HANDOFF_STEP_S) / HANDOFF_GROW_S)
+            pulse = 0.0
+            if elapsed >= drawn_in:
+                into = (elapsed - drawn_in) % cycle - k * HANDOFF_STEP_S
+                pulse = math.sin(math.pi * into / HANDOFF_STEP_S) if 0 <= into < HANDOFF_STEP_S else 0.0
+                strength = HANDOFF_REST + (1 - HANDOFF_REST) * pulse
+            else:
+                strength = 1.0
+            p.draw_handoff(canvas, on_frame(tail), on_frame(tip), flow.color, alpha * strength, grown, pulse)
 
     def _band_beat(self, i: int, t: float):
         """The beat whose line the band shows at t: beat i's own, or in the song, late in an

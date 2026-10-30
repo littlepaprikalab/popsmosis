@@ -673,6 +673,19 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     have, keeps them readable on any colour. Lines in a row that carry a flow (its path and
     what it carries) are one run for it, so it carries on across them, whatever joins it or
     leaves, and it waits for its stops to be revealed.
+  - **Journeys as arrows:** particles are for a crossing, the short trip through one wall that
+    a line teaches (O₂ across the alveolus's wall, H⁺ through ATP synthase, salt out of the
+    tubule). A journey along several parts (filtrate down the nephron, magma up through the
+    volcano, sediment down a river) is drawn instead as an arrow where it passes from each part
+    into the next (`routing.handoff()`), drawn in one after another the way it goes, then a pulse
+    runs along them in order: in rounds 20 and 21 dots following a long route through painted
+    masks, which are only roughly the parts, cut across the nephron's bends and rose through the
+    volcano's rock. The bundle says which (`moves`: "crosses" or "travels"); where it does not,
+    a route that bends with its parts (1.5 times the straight line) or runs more than 200 px
+    inside a part between two others travels, and so does everything else carrying the same
+    thing on that scene. An ion or small molecule printed as a symbol ("H⁺", "O₂") is always a
+    particle, and so is a blocked flow. The legend keys a journey with an arrow; what moves takes
+    the colour of the structure it names, when the pictures draw one (magma red, sediment tan).
   - **The system running:** a line that sums up (the whole scene, nothing spotlit, as the
     bundle prompt asks of summing-up and chorus lines) runs every flow its scene has shown so
     far beside its own, up to 4: on the light reactions, electrons down the chain, protons

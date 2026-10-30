@@ -473,9 +473,11 @@ def legend_rect(right: float, bottom: float, labels: list[str]) -> Rect:
     return (right - width, bottom - height, right, bottom)
 
 
-def draw_legend(canvas: skia.Canvas, rect: Rect, entries: list[tuple[str, str, float]]) -> None:
+def draw_legend(canvas: skia.Canvas, rect: Rect, entries: list[tuple[str, str, float]],
+                arrows: set[str] = frozenset()) -> None:
     """The key to what moves on the scene: a row for each (colour, kind, alpha), its particle and its name, still in
-    one corner, so the particles themselves carry no words."""
+    one corner, so the particles themselves carry no words; a short arrow for a kind in `arrows`, which travels as
+    hand-off arrows (draw_handoff)."""
     shown = max((alpha for _, _, alpha in entries), default=0.0)
     if shown <= 0.01:
         return
@@ -486,7 +488,11 @@ def draw_legend(canvas: skia.Canvas, rect: Rect, entries: list[tuple[str, str, f
     icon_w = (x1 - x0) - 2 * LEGEND_PAD - LEGEND_GAP - max(text_width(f, label) for _, label, _ in entries)
     for k, (color, label, alpha) in enumerate(entries):
         cy = y0 + LEGEND_PAD + icon_r + k * LEGEND_ROW
-        draw_kind(canvas, (x0 + LEGEND_PAD + icon_w / 2, cy), color, label, alpha, LEGEND_ICON)
+        if label in arrows:
+            mid, half = x0 + LEGEND_PAD + icon_w / 2, icon_r * 1.6
+            draw_handoff(canvas, (mid - half, cy), (mid + half, cy), color, alpha, size=LEGEND_ICON)
+        else:
+            draw_kind(canvas, (x0 + LEGEND_PAD + icon_w / 2, cy), color, label, alpha, LEGEND_ICON)
         draw_text(canvas, label, x0 + LEGEND_PAD + icon_w + LEGEND_GAP, cy + cap_height(f) / 2, f,
                   with_alpha(0xFFFFFFFF, alpha))
 
@@ -597,6 +603,41 @@ def draw_turning_arrow(canvas: skia.Canvas, centre: tuple[float, float], rx: flo
     canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFF1A1A1A, 0.6 * alpha * shade),
                                      Style=skia.Paint.kStrokeAndFill_Style, StrokeWidth=ARROW_EDGE))
     canvas.drawPath(head, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha * shade)))
+
+
+HANDOFF_WIDTH = 10.0  # a hand-off arrow's shaft, in frame pixels, inside a white halo HALO wide each side
+HANDOFF_HEAD = 26.0  # its head, from the tip back
+HANDOFF_PULSE = 0.25  # how much thicker it is as the pulse passes
+
+
+def draw_handoff(canvas: skia.Canvas, tail: tuple[float, float], tip: tuple[float, float], color: str, alpha: float,
+                 grown: float = 1.0, pulse: float = 0.0, size: float = 1.0) -> None:
+    """A straight arrow where a flow passes from one part into the next, as a textbook draws one: in the flow's
+    colour inside a white halo, so it reads on any part; drawn `grown` (0-1) of the way from its tail, `pulse` (0-1)
+    thicker as the flow passes along it; `size` scales it (the legend's)."""
+    if alpha <= 0.01 or grown <= 0.01:
+        return
+    (x0, y0), (x1, y1) = tail, tip
+    x1, y1 = x0 + (x1 - x0) * grown, y0 + (y1 - y0) * grown
+    length = math.hypot(x1 - x0, y1 - y0)
+    if length < 1.0:
+        return
+    ux, uy = (x1 - x0) / length, (y1 - y0) / length
+    width = HANDOFF_WIDTH * size * (1 + HANDOFF_PULSE * pulse)
+    head = min(HANDOFF_HEAD * size * (1 + HANDOFF_PULSE * pulse), length)
+    base = (x1 - ux * head, y1 - uy * head)
+    shape = skia.Path()
+    shape.moveTo(x1, y1)
+    shape.lineTo(base[0] - uy * head * 0.62, base[1] + ux * head * 0.62)
+    shape.lineTo(base[0] + uy * head * 0.62, base[1] - ux * head * 0.62)
+    shape.close()
+    for ink, extra in ((with_alpha(0xFFFFFFFF, 0.9 * alpha), 2 * HALO * size), (argb(color, alpha), 0.0)):
+        stroke = skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width + extra, Style=skia.Paint.kStroke_Style,
+                            StrokeCap=skia.Paint.kRound_Cap)
+        canvas.drawLine(x0, y0, base[0] + ux * 2, base[1] + uy * 2, stroke)
+        canvas.drawPath(shape, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=extra,
+                                          Style=skia.Paint.kStrokeAndFill_Style if extra else skia.Paint.kFill_Style,
+                                          StrokeJoin=skia.Paint.kRound_Join))
 
 
 BLOCK_R = 17.0  # the cross on a blocker, in frame pixels

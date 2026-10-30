@@ -101,3 +101,18 @@ def test_a_hand_off_between_parts_apart_spans_the_gap():
     b[60:140, 400:560] = True
     (tx, _), (hx, _) = routing.handoff(routing.cells(a), routing.cells(b), (480.0, 100.0))
     assert 130 <= tx <= 160 and 390 <= hx <= 420
+
+
+def test_parts_meet_when_they_touch_and_a_path_is_measured_inside_a_part():
+    a = np.zeros((20, 40), bool)
+    b = np.zeros((20, 40), bool)
+    a[5:15, 2:12] = True
+    b[5:15, 13:25] = True  # one cell apart: they meet
+    assert routing.meet(a, b)
+    far = np.zeros((20, 40), bool)
+    far[5:15, 30:38] = True
+    assert not routing.meet(a, far)
+    g = routing.GRID
+    across = [(0.0, 10 * g), (20 * g, 10 * g), (40 * g, 10 * g)]  # two steps, their middles at cells 10 and 30
+    assert routing.inside(across, a) == 20 * g and routing.inside(across, far) == 20 * g
+    assert routing.inside(across, b) == 0.0  # neither step's middle is in b

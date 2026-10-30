@@ -140,9 +140,20 @@ class Camera(Strict):
     zoom: float
 
 
+# How a flow moves, as the brain directs it (Direction.moves): through one wall as particles, or along a way through
+# several parts as an arrow at each hand-off (studio/render/renderer.py, _travels()). "" in a bundle written before
+# Oct 30, and the renderer judges by the route.
+Moves = Literal["crosses", "travels", ""]
+MOVES = ('How it moves: "crosses" when it passes through one wall, membrane or carrier (O₂ across the alveolus\'s '
+         'wall, H⁺ through ATP synthase, salt out of the tubule), drawn as particles; "travels" when it goes a long '
+         'way along several parts (filtrate down the nephron, magma up through the volcano, sediment down a river), '
+         'drawn as an arrow where it passes from each part into the next; "" with no particles')
+
+
 class Flow(Strict):
     particles: list[str] = Field(description="Structure names they travel between, in order")
     carries: str = Field(description='What they are, as a textbook prints it ("O₂")')
+    moves: Moves = Field(default_factory=str, description=MOVES)
 
 
 class Direction(Strict):
@@ -153,6 +164,7 @@ class Direction(Strict):
     particles: list[str] = Field(description="Structure names the particles travel between, in order; [] for none")
     carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
                                      '"" for none')
+    moves: Moves = Field(default_factory=str, description=MOVES)
     glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
     # A second thing moving on the line at the same time, when it names both: what one structure gives off together
@@ -162,7 +174,7 @@ class Direction(Strict):
 
     def flows(self) -> list[Flow]:
         """Everything moving on the line, the main flow first; a flow with no path is left out."""
-        main = [Flow(particles=self.particles, carries=self.carries)] if self.particles else []
+        main = [Flow(particles=self.particles, carries=self.carries, moves=self.moves)] if self.particles else []
         return main + [f for f in self.also if f.particles]
 
 
@@ -716,6 +728,7 @@ class Particles(Strict):
     trail: bool
     label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
     blocked: bool = False  # the last stop stops them (Bundle.blocks): they pile up there, not go round again
+    moves: Moves = ""  # as the bundle directs it (Direction.moves); "" in a timeline made before, or a bundle
 
     @field_validator("color")
     @classmethod

@@ -330,7 +330,7 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, mon
     word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
     shapes, legends = [], []
     monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((label, size)))
-    monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries: legends.append((rect, entries)))
+    monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries, arrows=(): legends.append((rect, entries)))
     times = (held + 1.0, held + 2.0)  # the particle has moved on; the legend has not
     for t in times:
         word.frame(t)
@@ -1198,3 +1198,61 @@ def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
     assert text == "$1,210" and alpha < 1.0 and pop > 0.5 and full == pytest.approx(1.0) and settled == 0.0
     x, y = renderer.art_to_frame(beats[on[1]].t1 - 0.01, 900, 400)
     assert later[3] < y and later[0] < x < later[2]  # above its point, across it
+
+
+def test_what_travels_is_drawn_as_an_arrow_at_each_hand_off_and_a_crossing_as_particles(job, monkeypatch):
+    # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
+    # drawn as an arrow where it passes from part to part. A crossing keeps its particles.
+    arrows, dots = [], []
+    monkeypatch.setattr(p, "draw_handoff", lambda canvas, tail, tip, color, alpha, grown=1.0, pulse=0.0, size=1.0:
+                        arrows.append((tail, tip, grown, pulse)))
+    monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
+
+    def moving(label, moves):
+        beat = flow_beat(0, 12, labels=FLOW, label=label)
+        flow = beat.particles[0].model_copy(update={"moves": moves})
+        return Renderer(job, flowing([beat.model_copy(update={"particles": [flow]})]))
+
+    travelling = moving("filtrate", "travels")
+    flow = travelling.timeline.beats[0].particles[0]
+    assert travelling._travels("overview", flow)
+    [(tail, tip)] = travelling._handoffs("overview", flow)  # one hand-off: from the thylakoid into b6f
+    b6f = located(job, "overview", "Cytochrome b6f").box
+    assert b6f.y0 - 60 <= tip[1] <= b6f.y1 + 60 and tip != tail
+    start = travelling.plans[0].runs[0][0]  # when it sets off
+    travelling.frame(start + renderer_module.HANDOFF_GROW_S / 2)  # drawing itself in
+    travelling.frame(8.0)  # long since drawn in
+    assert dots == [] and 0 < arrows[0][2] < 1 and arrows[-1][2] == 1.0
+    assert "filtrate" in travelling._arrowed("overview")  # keyed with an arrow in the legend
+
+    for label, moves in (("salt", "crosses"), ("H⁺", "travels")):  # said to cross; an ion is always a particle
+        arrows.clear(), dots.clear()
+        crossing = moving(label, moves)
+        crossing.frame(3.0)
+        assert arrows == [] and dots and not crossing._travels("overview", crossing.timeline.beats[0].particles[0])
+
+
+def test_with_no_word_from_the_bundle_a_route_that_bends_or_runs_along_a_part_travels(job, monkeypatch):
+    from types import SimpleNamespace
+
+    from studio.render import routing
+    renderer = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW, label="magma")]))
+    flow = renderer.timeline.beats[0].particles[0]
+    grid = np.zeros((1024 // routing.GRID + 1, 1792 // routing.GRID + 1), bool)
+
+    def through(points, middle_cols, names=("Magma", "Volcano", "Lava")):
+        cells = grid.copy()
+        cells[:, middle_cols[0] // routing.GRID:middle_cols[1] // routing.GRID] = True
+        monkeypatch.setattr(renderer, "_path_points", lambda *a, **k: points)
+        monkeypatch.setattr(renderer, "_bends", lambda *a, **k: [None] * (len(points) - 1))
+        monkeypatch.setattr(renderer, "_path_stops", lambda *a, **k: [(pt, SimpleNamespace(name=n))
+                                                                      for pt, n in zip(points, names)])
+        monkeypatch.setattr(renderer, "scene", lambda scene_id: SimpleNamespace(cells=lambda name: cells))
+        return renderer._journey("overview", flow)
+
+    level = [(100.0, 500.0), (700.0, 500.0), (1300.0, 500.0)]
+    assert through(level, (300, 1100))  # 1,200 px inside the volcano: up through it, a journey
+    assert not through(level, (690, 712))  # through a thin wall: a crossing
+    assert through([(100.0, 500.0), (700.0, 500.0), (100.0, 540.0)], (690, 712))  # out and nearly back: it bends
+    assert not through([(100.0, 500.0), (700.0, 500.0), (100.0, 500.0)], (300, 1100),
+                       ("Lumen", "Pump", "Lumen"))  # out through a part and back: it crosses the part

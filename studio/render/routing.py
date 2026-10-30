@@ -216,3 +216,19 @@ def _span(a: np.ndarray, b: np.ndarray) -> tuple[Point, Point]:
     i, j = np.unravel_index(int(far.argmin()), far.shape)
     (ya, xa), (yb, xb) = pa[i] + 0.5, pb[j] + 0.5
     return (float(xa * GRID), float(ya * GRID)), (float(xb * GRID), float(yb * GRID))
+
+
+def meet(a: np.ndarray, b: np.ndarray) -> bool:
+    """Whether two parts (their cells) touch, or nearly: within the two cells either way that handoff() counts."""
+    return bool((_grown(a, 2) & _grown(b, 2)).any())
+
+
+def inside(points: list[Point], region: np.ndarray) -> float:
+    """How far a path (art pixels) runs inside a part (its cells): the length of its steps whose middle is in it."""
+    rows, cols = region.shape
+    total = 0.0
+    for (x0, y0), (x1, y1) in zip(points, points[1:]):
+        r, c = int((y0 + y1) / 2 // GRID), int((x0 + x1) / 2 // GRID)
+        if 0 <= r < rows and 0 <= c < cols and region[r, c]:
+            total += math.hypot(x1 - x0, y1 - y0)
+    return total

@@ -615,3 +615,21 @@ def test_a_drawn_value_is_written_as_the_voice_says_it_and_a_tick_from_the_start
     assert [(v.text, v.since, v.tick) for v in beats[1]["values"]] == [("Year 2", 4.0, True), ("$1,331", 4.0, False)]
     assert [(v.text, v.since) for v in beats[2]["values"]] == [("$1,210", 9.2), ("Year 2", 4.0), ("$1,331", 4.0)]
     assert [v.text for v in beats[3]["values"]] == ["$1,210", "Year 2", "$1,331"]  # and stays on
+
+
+def test_how_a_flow_moves_is_kept_as_the_bundle_directs_it(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="filtrate", moves="travels")
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # written before moves: ""
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    assert [f.moves for f in song["v1-2"].particles] == ["travels"]
+    assert [f.moves for f in song["v2-1"].particles if f.label == "H⁺"] == [""]
+
+
+def test_what_moves_takes_the_colour_of_the_structure_it_names():
+    from studio.steps.timeline import MARKER_COLOURS, marker_colour
+    palette = {"Magma": "#E4572E", "Volcano": "#6B4F3A"}
+    assert marker_colour("magma", palette) == "#E4572E"  # magma rises in magma's red
+    assert marker_colour("H⁺", palette) == MARKER_COLOURS["H⁺"]  # a common kind keeps its own
+    assert marker_colour("sediment", palette) == marker_colour("sediment")  # no such structure: by its name
