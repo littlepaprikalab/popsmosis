@@ -26,9 +26,11 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import json
+import os
 import re
 import statistics
 import subprocess
+import threading
 import time
 import unicodedata
 import wave
@@ -50,11 +52,13 @@ SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
 CONTEXT_S = 5  # with this much of the audio either side of each piece
 DEMUCS_MODEL = "htdemucs"
+DEMUCS_HUB = "models--adefossez--HTDemucs"  # where Hugging Face keeps it (demucs fetches it from adefossez/HTDemucs)
 MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
 
 TURN = ".timing.lock"  # beside the jobs: the jobs on one machine time their songs in turn
+WARM_CHUNK = 8 << 20  # bytes read at a time by warm_models()
 
 
 @contextlib.contextmanager
@@ -69,6 +73,42 @@ def cpu_turn(job: Path):
             yield
         finally:
             fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def model_files() -> list[Path]:
+    """The timing models' files where torch and Hugging Face keep them: the aligner's (torch's hub, 1.2 GB) and
+    Demucs's, as the session's setup fetched them. [] where they are not (videos not made here)."""
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
+    torch_hub = Path(os.environ.get("TORCH_HOME") or cache / "torch") / "hub" / "checkpoints"
+    hf_hub = Path(os.environ.get("HF_HUB_CACHE") or Path(os.environ.get("HF_HOME") or cache / "huggingface") / "hub")
+    files = sorted(torch_hub.glob("*")) + sorted(hf_hub.glob(f"{DEMUCS_HUB}/snapshots/*/*"))
+    return [f for f in files if f.is_file()]
+
+
+_warming: threading.Thread | None = None
+
+
+def warm_models() -> None:
+    """Read the timing models' files once, in the background, so the timing step finds them in the machine's
+    disk cache. On a machine just started the first read of the aligner's took 100 s, waiting on the disk; begun
+    when a run starts, it is done while the brain writes the lesson (8 minutes and more) or while the art and the
+    song are made. Once a process, best effort, and nothing waits for it: the reads only fill the cache."""
+    global _warming
+    files = model_files()
+    if _warming is not None or not files:
+        return
+
+    def read() -> None:
+        for path in files:
+            try:
+                with open(path, "rb") as f:
+                    while f.read(WARM_CHUNK):
+                        pass
+            except OSError:
+                pass
+
+    _warming = threading.Thread(target=read, name="warm-models", daemon=True)
+    _warming.start()
 
 
 # align(vocals at 16 kHz, a list of normalised words) -> per word (start s, end s, score),

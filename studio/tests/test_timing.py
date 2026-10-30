@@ -363,3 +363,47 @@ def test_jobs_on_one_machine_time_their_songs_in_turn(tmp_path):
     for t in threads:
         t.join()
     assert max(most) == 1
+
+
+def test_the_models_files_are_found_where_torch_and_hugging_face_keep_them(tmp_path, monkeypatch):
+    aligner = tmp_path / "torch" / "hub" / "checkpoints" / "model.pt"
+    demucs = tmp_path / "hf" / "hub" / timing.DEMUCS_HUB / "snapshots" / "abc" / "955717e8.safetensors"
+    for path in (aligner, demucs):
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"weights")
+    monkeypatch.setenv("TORCH_HOME", str(tmp_path / "torch"))
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
+    monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+    assert timing.model_files() == [aligner, demucs]
+
+
+def test_the_models_files_are_read_once_in_the_background(tmp_path, monkeypatch):
+    files = [tmp_path / "a.pt", tmp_path / "b.safetensors"]
+    for path in files:
+        path.write_bytes(b"x" * (timing.WARM_CHUNK + 5))
+    opened = []
+    real_open = open
+    monkeypatch.setattr("builtins.open", lambda path, *a, **k: opened.append(path) or real_open(path, *a, **k))
+    monkeypatch.setattr(timing, "model_files", lambda: files)
+    monkeypatch.setattr(timing, "_warming", None)
+    timing.warm_models()
+    warming = timing._warming
+    warming.join(5)
+    assert warming.daemon and not warming.is_alive()  # nothing waits for it, and it is done
+    assert opened == files
+    timing.warm_models()  # once a process
+    assert timing._warming is warming and opened == files
+
+
+def test_a_run_that_may_time_a_song_starts_reading_the_models_and_others_do_not(tmp_path, monkeypatch):
+    from studio.__main__ import main
+
+    monkeypatch.setattr(jobs, "ROOT", tmp_path)
+    warmed = []
+    monkeypatch.setattr(timing, "warm_models", lambda: warmed.append(True))
+    with pytest.raises(SystemExit):
+        main(["make", "no-such-job"])
+    assert warmed == [True]
+    with pytest.raises(SystemExit):
+        main(["show", "no-such-job"])
+    assert warmed == [True]

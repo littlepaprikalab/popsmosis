@@ -124,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scorecard":
         return scorecard.main(args)
+    if args.command in ("run", "videos", "plan", "make"):  # a run that may time a song: its models' files read meanwhile
+        timing_step.warm_models()
 
     if args.command == "recover":
         result, question, reason = operator_videos.recover()
