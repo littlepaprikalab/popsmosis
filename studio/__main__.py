@@ -124,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scorecard":
         return scorecard.main(args)
-    if args.command in ("run", "videos", "plan", "make"):  # a run that may time a song: its models' files read meanwhile
+    if times_a_song(args):  # its models' files read meanwhile (timing.warm_models)
         timing_step.warm_models()
 
     if args.command == "recover":
@@ -205,6 +205,12 @@ def main(argv: list[str] | None = None) -> int:
             ok = run_steps(job, [args.name]) if args.command == "step" else True
     print_job(job, brief=args.brief)
     return 0 if ok else 1
+
+
+def times_a_song(args: argparse.Namespace) -> bool:
+    """Whether this command may time a song here, or leads to one (`run`: its videos follow on this machine)."""
+    return (args.command in ("run", "make") or (args.command == "plan" and args.videos)
+            or (args.command == "videos" and not args.background))  # --background: the detached child times it
 
 
 def run_steps(job: Path, names: list[str]) -> bool:

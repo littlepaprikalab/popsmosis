@@ -8,9 +8,12 @@ of a key instead of reaching Anthropic, Meta, Gemini or ElevenLabs. A test that 
 
 import os
 
+import threading
+
 import pytest
 
 from studio import brain
+from studio.steps import timing
 
 PAID_KEYS = (*brain.CLAUDE_KEY_VARS, brain.META_KEY_VAR, "GEMINI_API_KEY", "ELEVENLABS_API_KEY")
 LIVE = os.environ.get("STUDIO_LIVE") == "1" or os.environ.get("STUDIO_LIVE_AUDIO") == "1"
@@ -39,3 +42,10 @@ def no_planner_record(monkeypatch):
     would otherwise post to its public record from every test that runs the studio. The planner's own
     tests (test_inkmory.py) set a key and send to a stand-in."""
     monkeypatch.delenv("INKMORY_PLANNER_API_KEY", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_model_warming(monkeypatch):
+    """No test reads the timing models' 1.3 GB of files: a command run through the CLI (main(["run", ...])) would
+    start timing.warm_models(), which runs once a process. Its own test sets it back."""
+    monkeypatch.setattr(timing, "_warming", threading.Thread())

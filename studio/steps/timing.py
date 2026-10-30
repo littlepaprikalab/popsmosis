@@ -53,6 +53,7 @@ CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission
 CONTEXT_S = 5  # with this much of the audio either side of each piece
 DEMUCS_MODEL = "htdemucs"
 DEMUCS_HUB = "models--adefossez--HTDemucs"  # where Hugging Face keeps it (demucs fetches it from adefossez/HTDemucs)
+MMS_FILE = "model.pt"  # the aligner's checkpoint, as torch's hub keeps torchaudio's MMS_FA (its URL's last part)
 MMS_MODEL = "mms-fa"  # torchaudio.pipelines.MMS_FA, Meta's forced aligner
 # Characters around a word that are not part of it ("word," -> "word").
 _EDGES = "\"'.,;:!?()[]{}<>“”‘’«»…—–-*_/\\|"
@@ -81,7 +82,7 @@ def model_files() -> list[Path]:
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache")
     torch_hub = Path(os.environ.get("TORCH_HOME") or cache / "torch") / "hub" / "checkpoints"
     hf_hub = Path(os.environ.get("HF_HUB_CACHE") or Path(os.environ.get("HF_HOME") or cache / "huggingface") / "hub")
-    files = sorted(torch_hub.glob("*")) + sorted(hf_hub.glob(f"{DEMUCS_HUB}/snapshots/*/*"))
+    files = [torch_hub / MMS_FILE] + sorted(hf_hub.glob(f"{DEMUCS_HUB}/snapshots/*/*"))
     return [f for f in files if f.is_file()]
 
 
@@ -94,18 +95,17 @@ def warm_models() -> None:
     when a run starts, it is done while the brain writes the lesson (8 minutes and more) or while the art and the
     song are made. Once a process, best effort, and nothing waits for it: the reads only fill the cache."""
     global _warming
-    files = model_files()
-    if _warming is not None or not files:
+    if _warming is not None:
         return
 
     def read() -> None:
-        for path in files:
-            try:
+        try:  # finding the files too, here: nothing about the cache may fail the run
+            for path in model_files():
                 with open(path, "rb") as f:
                     while f.read(WARM_CHUNK):
                         pass
-            except OSError:
-                pass
+        except Exception:
+            pass
 
     _warming = threading.Thread(target=read, name="warm-models", daemon=True)
     _warming.start()

@@ -206,7 +206,7 @@ def _clear_home(lb: Label, size: tuple[float, float], home: tuple[float, float],
 
 
 def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float], font_size: float,
-                 avoid: list[tuple[float, float]] = ()) -> None:
+                 avoid: np.ndarray | list[tuple[float, float]] = ()) -> None:
     """Put each pill near its dot, away from the diagram's centre, inside `bounds` and off the others.
 
     A fixed number of push-apart rounds from the same start, so the same input always

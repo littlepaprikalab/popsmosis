@@ -792,7 +792,7 @@ class Renderer:
 
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
                 spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float,
-                avoid: list[Point] = ()) -> list[Rect]:
+                avoid: np.ndarray | list[Point] = ()) -> list[Rect]:
         """Draws the labels; returns where each pill landed, for what is drawn after them to keep clear."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
@@ -910,7 +910,7 @@ class Renderer:
                             self.timeline.key_terms, layout.key_font, key_alpha)
 
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
-                     arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:
+                     arrows: np.ndarray) -> dict[str, tuple[float, float, float, float]]:
         """Where each reaction pill the scene shows at any time in the video goes, as its rect in frame pixels:
         under its structure, or over it, or the same rows shifted to either side, whichever crosses the fewest
         arrows and no other pill. Placed before the labels, which then keep clear of them, as of the arrows."""
