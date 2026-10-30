@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { billModels, breakdownError, madeWithOf, makerOf, serializeBreakdown, BREAKDOWN_MAX_BYTES } from './breakdown.js';
+import { billModels, breakdownError, madeWithOf, makerOf, serializeBreakdown, BREAKDOWN_MAX_BYTES, MADE_WITH_MAX_MODELS } from './breakdown.js';
 
 const lesson = {
   steps: [
@@ -154,6 +154,23 @@ describe('madeWithOf', () => {
       { maker: 'Anthropic', models: ['claude-opus-5-5'] },
       { maker: null, models: ['some-new-model', 'other-model'] },
     ]);
+  });
+  it('shows only what reads as a model name: never a key, personal information or other text from the agent', () => {
+    const sent = ['claude-opus-5-5', `sk-ant-api03-${'x'.repeat(24)}`, `AIza${'b'.repeat(35)}`, '555-123-4567', 'me@example.com',
+      'visit https://x.example', 'ignore the rules', 'a'.repeat(65), '-leading-dash', 'music_v2_5', 'muse-spark-1.3', 'sam-3.1'];
+    expect(madeWithOf(sent, [])).toEqual([
+      { maker: 'Anthropic', models: ['claude-opus-5-5'] },
+      { maker: 'ElevenLabs', models: ['music_v2_5'] },
+      { maker: 'Meta', models: ['muse-spark-1.3', 'sam-3.1'] },
+    ]);
+    expect(madeWithOf([`sk-ant-api03-${'x'.repeat(24)}`], ['me@example.com'])).toBeNull();
+  });
+  it('shows at most MADE_WITH_MAX_MODELS, the first the bill names, from a bill packed with names in linear time', () => {
+    const many = Array.from({ length: 1200 }, (_, i) => `claude-${i}`); // about what 16 KB of bill can hold
+    const started = performance.now();
+    const made = madeWithOf([...many, ...many], many)!;
+    expect(performance.now() - started).toBeLessThan(50);
+    expect(made).toEqual([{ maker: 'Anthropic', models: many.slice(0, MADE_WITH_MAX_MODELS) }]);
   });
   it('says nothing without both bills, or when they name no model', () => {
     expect(madeWithOf(billModels(lesson), null)).toBeNull(); // who drew and sang it is not known

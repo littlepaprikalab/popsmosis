@@ -572,7 +572,10 @@ as `madeWith` on both droplet routes:
 Each model is listed once, under its `maker` (`makerOf`), the makers in the order the bill
 first names one of theirs, so the brain's comes first; models with no known maker come last,
 under `null`. Only the models: what they cost, the steps and the software that is not a model
-(ffmpeg, Skia) stay on the bill. It is `null` unless the droplet has both bills, the lesson's
+(ffmpeg, Skia) stay on the bill. The bill is the agent's to send, unchecked, and the agent is an
+LLM that reads what learners write, so only a name shaped like a model's id (letters, digits,
+`.`, `-` and `_`, up to 64) goes out, and not one that reads as a key or as personal information
+(`containsSecret`, `containsPersonalInfo`); at most 32 of them, the first the bill names. It is `null` unless the droplet has both bills, the lesson's
 and the videos' (a lesson's bill alone would leave out who drew and sang it), so a droplet
 made before the bills says nothing. The list has Postgres pick the model names out of the
 bills (`jsonb_path_query_array`, `BILL_MODELS_PATH` in `api/src/lib/breakdown.ts`), so only
