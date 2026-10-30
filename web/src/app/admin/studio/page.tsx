@@ -11,6 +11,7 @@ import PageContainer from '@/components/PageContainer';
 import { LoadingMessage } from '@/components/LoadingMessage';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { useToast } from '@/components/Toast';
+import { AnnouncementEditor } from '@/components/AnnouncementEditor';
 import { timeAgo } from '@/lib/time';
 
 // What each painter is and costs (studio/gemini.py, studio/muse.py, studio/steps/art.py). Up to three pictures a scene.
@@ -102,7 +103,8 @@ function knobSections(knobs: Record<string, Knob>) {
 const dollars = (usd: number) => (usd === 0 ? 'no ceiling' : `$${usd.toFixed(2)}`);
 
 /**
- * Admin page: the studio's settings (api/src/lib/studio-settings.ts). The default brain, who sings and who paints
+ * Admin page: first the announcement under the nav on every page (components/AnnouncementEditor.tsx), for news like
+ * songs being off. Then the studio's settings (api/src/lib/studio-settings.ts). The default brain, who sings and who paints
  * each droplet's pictures, by the brain that wrote its lesson; the teacher reads them as it starts each run, so a
  * change applies from the next one, with no redeploy. Then the knobs (api/src/lib/knobs.ts): the environment
  * variables an admin can set here instead, the API's in force at once, the studio's from the next run.
@@ -215,6 +217,10 @@ export default function AdminStudioPage() {
 
   return (
     <PageContainer className="py-6">
+      <div className="mb-10">
+        <AnnouncementEditor />
+      </div>
+
       <div className="mb-6">
         <h2 className="text-2xl font-bold tracking-wider mb-1">STUDIO</h2>
         <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>

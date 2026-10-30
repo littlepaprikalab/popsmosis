@@ -26,12 +26,13 @@ import dropletRoutes from './routes/droplets.js';
 import videoRoutes from './routes/videos.js';
 import studioRoutes from './routes/studio.js';
 import playRoutes, { PLAY_COUNT_URL } from './routes/plays.js';
+import announcementRoutes from './routes/announcement.js';
 
 export async function buildApp() {
   const app = Fastify({
     logger: process.env.NODE_ENV !== 'test',
-    // We log responses ourselves below so the two polling endpoints do not
-    // flood the logs at one line per user per 10 seconds.
+    // We log responses ourselves below so the polling endpoints do not flood
+    // the logs at one line per user per 10 seconds (the announcement: per tab per minute).
     logController: new LogController({ disableRequestLogging: true }),
   });
 
@@ -189,7 +190,7 @@ export async function buildApp() {
     });
   });
 
-  const QUIET_PATHS = new Set(['/api/health', '/api/questions/status']);
+  const QUIET_PATHS = new Set(['/api/health', '/api/questions/status', '/api/announcement']);
   app.addHook('onResponse', async (request, reply) => {
     const path = request.url.split('?')[0];
     const ms = Math.round(reply.elapsedTime);
@@ -220,6 +221,7 @@ export async function buildApp() {
   await app.register(videoRoutes);
   await app.register(studioRoutes);
   await app.register(playRoutes);
+  await app.register(announcementRoutes);
 
   // A storage setting that cannot upload is said once at boot, where whoever set it looks;
   // the rest of the API works without storage, so it still starts.

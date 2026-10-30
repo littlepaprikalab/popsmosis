@@ -7,6 +7,7 @@ import { TermsGate } from '@/components/TermsGate';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
 import { PlayCountScope } from '@/components/PlayCountScope';
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <ToastProvider>
             <Nav />
+            <AnnouncementBanner />
             <main className="flex-1">
               <ErrorBoundary>
                 {children}
