@@ -208,6 +208,188 @@ def test_labels_stay_in_the_frame_and_off_each_other():
     assert [(lb.x, lb.y) for lb in again] == [(lb.x, lb.y) for lb in labels]  # the same every time
 
 
+def _place_labels_a_point_at_a_time(labels, bounds, centre, font_size, avoid=()):
+    """place_labels as it was before it took the points to avoid as arrays: the reference it must match."""
+    sizes = [lb.size(font_size) for lb in labels]
+    homes = []
+    for lb, (w, h) in zip(labels, sizes):
+        dx, dy = lb.anchor[0] - centre[0], lb.anchor[1] - centre[1]
+        length = math.hypot(dx, dy)
+        dx, dy = (dx / length, dy / length) if length > 1 else (0.0, -1.0)
+        dy -= 0.9
+        length = math.hypot(dx, dy)
+        dx, dy = dx / length, dy / length
+        bx0, by0, bx1, by1 = lb.box
+        ax, ay = lb.anchor
+        exit_x = ((bx1 - ax) / dx if dx > 0 else (bx0 - ax) / dx) if abs(dx) > 1e-6 else 1e9
+        exit_y = ((by1 - ay) / dy if dy > 0 else (by0 - ay) / dy) if abs(dy) > 1e-6 else 1e9
+        out = min(max(min(exit_x, exit_y), 0.0), p.MAX_REACH)
+        if lb.big:
+            homes.append(lb.anchor)
+            continue
+        reach = out + p.TOUCH + min(abs(w / 2 / dx) if abs(dx) > 1e-6 else 1e9, abs(h / 2 / dy) if abs(dy) > 1e-6 else 1e9)
+        homes.append((lb.anchor[0] + dx * reach, lb.anchor[1] + dy * reach))
+
+    def clear_home(lb, size, home, others):
+        w, h = size
+        bx0, by0, bx1, by1 = lb.box
+        cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+        if lb.big:
+            spots = [(lb.anchor[0] + kx * w, lb.anchor[1] + ky * h * 1.5) for kx in (0, -1, 1) for ky in (0, -1, 1)]
+        else:
+            up, down = by0 - p.TOUCH - h / 2, by1 + p.TOUCH + h / 2
+            left, right = bx0 - p.TOUCH - w / 2, bx1 + p.TOUCH + w / 2
+            west, east = cx - w / 2 - 2 * p.TOUCH, cx + w / 2 + 2 * p.TOUCH
+            spots = [(cx, up), (cx, down), (left, cy), (right, cy), (west, up), (east, up), (west, down), (east, down)]
+
+        def crossed(spot):
+            return sum(1 for px, py in avoid if abs(px - spot[0]) < w / 2 + p.AVOID_MARGIN
+                       and abs(py - spot[1]) < h / 2 + p.AVOID_MARGIN)
+
+        def off_frame(spot):
+            x, y = spot
+            return x - w / 2 < bounds[0] or x + w / 2 > bounds[2] or y - h / 2 < bounds[1] or y + h / 2 > bounds[3]
+
+        def on_another(spot):
+            x, y = spot
+            return sum(1 for ox0, oy0, ox1, oy1 in others if x - w / 2 < ox1 and ox0 < x + w / 2
+                       and y - h / 2 < oy1 and oy0 < y + h / 2)
+
+        if not crossed(home):
+            return home
+        return min([home] + spots, key=lambda spot: (crossed(spot) + 3 * on_another(spot), off_frame(spot),
+                                                      math.dist(spot, home)))
+
+    x0, y0, x1, y1 = bounds
+    if avoid:
+        homes = [clear_home(lb, size, home, [o.box for o in labels if o is not lb and not o.big])
+                 for lb, size, home in zip(labels, sizes, homes)]
+    pos = [list(h) for h in homes]
+
+    def clamp(i):
+        w, h = sizes[i]
+        pos[i][0] = min(max(pos[i][0], x0 + w / 2), x1 - w / 2)
+        pos[i][1] = min(max(pos[i][1], y0 + h / 2), y1 - h / 2)
+
+    for i in range(len(labels)):
+        clamp(i)
+    for _ in range(40):
+        moved = False
+        for i in range(len(labels)):
+            for j in range(i + 1, len(labels)):
+                (wi, hi), (wj, hj) = sizes[i], sizes[j]
+                ox = (wi + wj) / 2 + p.GAP - abs(pos[i][0] - pos[j][0])
+                oy = (hi + hj) / 2 + p.GAP - abs(pos[i][1] - pos[j][1])
+                if ox > 0 and oy > 0:
+                    moved = True
+                    if oy <= ox:
+                        sign = 1 if pos[i][1] < pos[j][1] or (pos[i][1] == pos[j][1] and i < j) else -1
+                        pos[i][1] -= sign * oy / 2
+                        pos[j][1] += sign * oy / 2
+                    else:
+                        sign = 1 if pos[i][0] < pos[j][0] or (pos[i][0] == pos[j][0] and i < j) else -1
+                        pos[i][0] -= sign * ox / 2
+                        pos[j][0] += sign * ox / 2
+            w, h = sizes[i]
+            for dot in avoid:
+                ox = w / 2 + p.DOT_R + 6 - abs(pos[i][0] - dot[0])
+                oy = h / 2 + p.DOT_R + 6 - abs(pos[i][1] - dot[1])
+                if ox > 0 and oy > 0:
+                    moved = True
+                    if oy <= ox:
+                        pos[i][1] += oy if pos[i][1] >= dot[1] else -oy
+                    else:
+                        pos[i][0] += ox if pos[i][0] >= dot[0] else -ox
+            clamp(i)
+        if not moved:
+            break
+    return [(x, y) for x, y in pos]
+
+
+def test_labels_placed_against_arrays_of_points_land_where_they_did_a_point_at_a_time():
+    rng = np.random.default_rng(7)
+    bounds = (20.0, 20.0, 1900.0, 950.0)
+    for case in range(40):
+        labels = []
+        for i in range(int(rng.integers(1, 8))):
+            x, y = float(rng.uniform(200, 1700)), float(rng.uniform(150, 850))
+            w, h = float(rng.uniform(40, 400)), float(rng.uniform(40, 300))
+            labels.append(p.Label(name=f"Part {case}-{i}", color="#3366CC", anchor=(x, y),
+                                  box=(x - w / 2, y - h / 2, x + w / 2, y + h / 2), alpha=1,
+                                  big=bool(rng.random() < 0.2), emphasis=float(rng.choice([0.0, 0.5, 1.0]))))
+        # Points along arrows, as the renderer samples them, crossing the labels' homes; every other case so many
+        # that no home is clear and the pills are pushed off dot after dot.
+        avoid = []
+        for _ in range(int(rng.integers(0, 6)) + (40 if case % 2 else 0)):
+            (ax, ay), (bx, by) = rng.uniform((100, 100), (1800, 900), size=(2, 2))
+            n = int(math.dist((ax, ay), (bx, by)) / 12) + 1
+            avoid += [(float(ax + (bx - ax) * k / n), float(ay + (by - ay) * k / n)) for k in range(n + 1)]
+        expected = _place_labels_a_point_at_a_time(labels, bounds, (960.0, 485.0), 30, avoid)
+        p.place_labels(labels, bounds, (960.0, 485.0), 30, np.asarray(avoid).reshape(-1, 2))
+        assert [(lb.x, lb.y) for lb in labels] == expected, case
+
+
+def _blurred_whole(art, name, sigma, spot):
+    """A wash blurred over the whole picture, as SceneArt did before it blurred only as far as a wash reaches."""
+    surface = art._surface(alpha_only=True)
+    canvas = surface.getCanvas()
+    canvas.clear(skia.ColorWHITE if spot else skia.ColorTRANSPARENT)
+    paint = (skia.Paint(BlendMode=skia.BlendMode.kDstOut, ImageFilter=skia.ImageFilters.Blur(sigma, sigma)) if spot
+             else skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(sigma, sigma)))
+    canvas.drawImage(art.masks[name], 0, 0, skia.SamplingOptions(), paint)
+    return surface.makeImageSnapshot().toarray(colorType=skia.kAlpha_8_ColorType)
+
+
+def test_a_wash_blurred_only_as_far_as_it_reaches_is_the_wash_blurred_over_the_whole_picture(job):
+    # Checks skia's blur reaches no further than BLUR_REACH sigmas, as the clip assumes; a skia that changed it fails here.
+    for scene in jobs.read(job / media.LOCATIONS, Locations).scenes:
+        art = SceneArt(job, scene)
+        for name in art.masks:
+            for made, sigma, spot in ((art.ghost(name), renderer_module.EDGE_BLUR, False),
+                                      (art.spot(name), renderer_module.SPOT_BLUR, True),
+                                      (art.glow(name), renderer_module.GLOW_BLUR, False)):
+                assert np.array_equal(made.toarray(colorType=skia.kAlpha_8_ColorType),
+                                      _blurred_whole(art, name, sigma, spot)), (scene.scene, name, sigma)
+
+
+def test_washes_drawn_within_their_bounds_change_the_picture_as_drawn_whole(job):
+    """The ghost washes in a composed picture, and a ghost or glow drawn scaled and filtered onto a frame, give the
+    same pixels clipped to SceneArt.bounds as drawn over everything."""
+    scene = jobs.read(job / media.LOCATIONS, Locations).scene("overview")
+    art = SceneArt(job, scene)
+    names = list(art.masks)
+    ghosts, spots = {names[0]: 0.437, names[-1]: 1.0}, {names[0]: 0.71}
+    _, composed = art.compose(ghosts, spots)
+    surface = art._surface()
+    canvas = surface.getCanvas()
+    canvas.drawImage(art.art, 0, 0)
+    for name, level in sorted(ghosts.items()):
+        canvas.drawImage(art.ghost(name), 0, 0, skia.SamplingOptions(),
+                         skia.Paint(Color=art.paper, Alphaf=renderer_module.GHOST_WASH * level))
+    for name, level in sorted(spots.items()):
+        canvas.drawImage(art.spot(name), 0, 0, skia.SamplingOptions(),
+                         skia.Paint(Color=art.paper, Alphaf=renderer_module.SPOT_WASH * level))
+    assert np.array_equal(composed.toarray(), surface.makeImageSnapshot().toarray())
+    # And with a wash that ends in a hard edge, where a filtered draw just past its bounds still picks it up.
+    hard = SceneArt(job, scene)
+    hard._ghosts[names[0]] = hard.masks[names[0]]
+    for art, kind, image in ((art, "ghost", art.ghost(names[0])), (art, "glow", art.glow(names[0])),
+                             (hard, "ghost", hard.ghost(names[0]))):
+        frames = []
+        for clipped in (True, False):
+            frame = skia.Surface(1920, 1080)
+            c = frame.getCanvas()
+            c.drawImage(art.art, 0, 0)
+            c.translate(37.3, -12.6)
+            c.scale(1.613, 1.613)  # a camera close in, at no whole pixel
+            if clipped:
+                c.clipRect(art.bounds(kind, names[0]))
+            c.drawImage(image, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
+                        skia.Paint(Color=skia.Color(200, 80, 40), Alphaf=0.5))
+            frames.append(frame.makeImageSnapshot().toarray())
+        assert np.array_equal(*frames), kind
+
+
 @pytest.mark.parametrize("dot_x, shown", [(-15, False), (3, False), (20, True)])
 def test_a_label_is_drawn_only_while_its_dot_is_on_screen(job, monkeypatch, dot_x, shown):
     # The first live run: zoomed in on the brainstem, the cerebral cortex's dot sat just above the

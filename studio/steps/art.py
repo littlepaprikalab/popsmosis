@@ -461,6 +461,7 @@ def run_painted(job: Path, ask) -> str:
     again |= {sid for sid, stage in stages.items() if stage.first.id in again}
     todo = [scene for scene in bundle.scenes if scene.id in again]
     kept = len(bundle.scenes) - len(todo)
+    busy = muse.retried(job)
     first = [scene for scene in todo if scene.id not in stages or stages[scene.id].number == 1]
     later = [scene for scene in todo if scene not in first]
     # The scenes at the same time, then each process's later stages, redrawn from its first stage's picture.
@@ -476,6 +477,7 @@ def run_painted(job: Path, ask) -> str:
     return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
             f"tr{'ies' if tries != 1 else 'y'}"
             + (f", kept {kept} painted before" if kept else "")
+            + muse.busy_note(job, busy)  # early in the line: the summary keeps only its start
             + refusals(refused, "picture")
             + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
 

@@ -1,6 +1,6 @@
 """How long a whole droplet takes, with every paid call stood in for.
 
-    python -m studio.bench jobs/bench [--scale 10] [--keep]
+    python -m studio.bench jobs/bench [--scale 10] [--keep] [--bundle path/to/bundle.json]
 
 Makes one droplet the way the routine does: `run` writes, fact-checks and posts the lesson (to a
 stand-in API), then the videos are made as `make` makes them (art and locate beside audio and
@@ -17,6 +17,11 @@ full speed on this machine, so their share is larger here than on a live run (wh
 are --scale times longer). Prints each step's time from runs.jsonl, the lesson's and the videos'
 wall clock, and a digest of every file the steps made, so two runs can be checked byte for byte.
 No paid call is made, whatever keys the environment holds.
+
+--bundle makes the droplet from a bundle a live planner wrote (studio/scorecards/runs/*/<topic>/bundle.json)
+instead of the bench's own: its scenes, motion, key lines and conversions make frames like a live job's, its
+structures painted on a grid on Muse Image's dark slate. The bench's own droplet is the one to compare versions
+with; a planner's is the one to profile the renderer on.
 """
 
 from __future__ import annotations
@@ -25,6 +30,7 @@ import argparse
 import base64
 import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -69,6 +75,7 @@ OVERVIEW = {
 }
 SPOTS = {("hook", "Thylakoid"): (896, 512, 300), ("synthase", "ATP synthase"): (896, 512, 250),
          **{("overview", name): spot[1:] for name, spot in OVERVIEW.items()}}
+SLATE = ((32, 46, 64), (48, 64, 86))  # Muse Image's dark slate blue (art.STYLE), top to bottom, behind a planner's droplet
 NARRATION = [  # (text, scene): about three minutes read aloud, as the narration's 350 to 450 words are
     ("Light lands on the thylakoid, the stack of membranes inside the chloroplast.", "hook"),
     ("Photosystem II catches that light and pulls electrons from water.", "overview"),
@@ -109,6 +116,30 @@ def bench_bundle() -> Bundle:
     return Bundle.model_validate(data)
 
 
+def grid_spots(bundle: Bundle) -> dict[tuple[str, str], tuple[int, int, int]]:
+    """Where each structure of a planner's bundle is painted and found: its scene's structures on a grid of up to
+    four a row, each a disc filling most of its cell."""
+    spots = {}
+    for scene in bundle.scenes:
+        cols = max(1, min(len(scene.structures), 4))
+        rows = max(1, math.ceil(len(scene.structures) / cols))
+        w, h = media.ART_WIDTH / cols, media.ART_HEIGHT / rows
+        for k, structure in enumerate(scene.structures):
+            spots[(scene.id, structure.name)] = (int(w * (k % cols + 0.5)), int(h * (k // cols + 0.5)),
+                                                 int(0.38 * min(w, h)))
+    return spots
+
+
+# The droplet the stand-ins make: the bench's own unless --bundle names a planner's (main()).
+BUNDLE: Bundle | None = None
+PAINTED: dict[tuple[str, str], tuple[int, int, int]] = SPOTS
+SLATE_BEHIND = False
+
+
+def droplet() -> Bundle:
+    return BUNDLE or bench_bundle()
+
+
 class Brain:
     """Stands in for brain.ask: the bench bundle, a fact audit that finds every fact correct, a fact-check that
     supports every line, and the helper's look at a picture that finds nothing wrong."""
@@ -119,7 +150,7 @@ class Brain:
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         if schema is Bundle:
             wait("bundle", self.scale)
-            return bench_bundle().model_dump(mode="json")
+            return droplet().model_dump(mode="json")
         if schema is FactAudit:
             wait("audit", self.scale)
             return {"facts": [{"id": fact["id"], "basis": "course knowledge", "quote": "", "verdict": "CORRECT",
@@ -149,8 +180,11 @@ def painting(scene_id: str) -> bytes:
     """Muse Image's picture of a scene: each structure a disc in its colour, where SAM finds it."""
     ys, xs = np.ogrid[:media.ART_HEIGHT, :media.ART_WIDTH]
     pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), 255, np.uint8)
-    for structure in next(s for s in bench_bundle().scenes if s.id == scene_id).structures:
-        x, y, r = SPOTS[(scene_id, structure.name)]
+    if SLATE_BEHIND:
+        top, bottom = (np.array(c, np.float32) for c in SLATE)
+        pixels[:] = (top + (bottom - top) * (ys / (media.ART_HEIGHT - 1))[..., None]).astype(np.uint8)[:, :1, :]
+    for structure in next(s for s in droplet().scenes if s.id == scene_id).structures:
+        x, y, r = PAINTED[(scene_id, structure.name)]
         pixels[(xs - x) ** 2 + (ys - y) ** 2 <= r * r] = tuple(bytes.fromhex(structure.color_hex[1:]))
     return svg.png(pixels)
 
@@ -174,7 +208,7 @@ def stand_in(scale: float) -> None:
         with muse._sam_slots:  # as many at once as the real call lets through
             wait("sam", scale)
         scene, name = label.split()[1], label.split(" ", 2)[2].removesuffix(" box").split(" try ")[0]
-        x, y, r = SPOTS[(scene, name)]
+        x, y, r = PAINTED[(scene, name)]
         ys, xs = np.ogrid[:media.ART_HEIGHT, :media.ART_WIDTH]
         return [muse.Match((xs - x) ** 2 + (ys - y) ** 2 <= r * r, 0.9)]
 
@@ -226,7 +260,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("root", type=Path, help=f"a folder for the bench's job, <root>/{QUESTION} (made afresh)")
     parser.add_argument("--scale", type=float, default=10.0, help="each stand-in waits its live time divided by this")
     parser.add_argument("--keep", action="store_true", help="keep the job folder afterwards")
+    parser.add_argument("--bundle", type=Path, help="a live planner's bundle.json to make the droplet from")
     args = parser.parse_args(argv)
+    global BUNDLE, PAINTED, SLATE_BEHIND
+    if args.bundle:
+        BUNDLE = checks.load(args.bundle)
+        PAINTED, SLATE_BEHIND = grid_spots(BUNDLE), True
     # Nothing here may reach a paid API, nor the planner's record on Inkmory.
     for name in (*brain.CLAUDE_KEY_VARS, brain.META_KEY_VAR, "GEMINI_API_KEY", "INKMORY_PLANNER_API_KEY"):
         os.environ.pop(name, None)

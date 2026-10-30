@@ -363,3 +363,74 @@ def test_jobs_on_one_machine_time_their_songs_in_turn(tmp_path):
     for t in threads:
         t.join()
     assert max(most) == 1
+
+
+def test_the_models_files_are_found_where_torch_and_hugging_face_keep_them(tmp_path, monkeypatch):
+    aligner = tmp_path / "torch" / "hub" / "checkpoints" / timing.MMS_FILE
+    demucs = tmp_path / "hf" / "hub" / timing.DEMUCS_HUB / "snapshots" / "abc" / "955717e8.safetensors"
+    for path in (aligner, demucs):
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b"weights")
+    (aligner.parent / "another-model.pth").write_bytes(b"not the aligner's")  # left alone
+    monkeypatch.setenv("TORCH_HOME", str(tmp_path / "torch"))
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
+    monkeypatch.delenv("HF_HUB_CACHE", raising=False)
+    assert timing.model_files() == [aligner, demucs]
+    monkeypatch.delenv("HF_HOME")
+    monkeypatch.setenv("HF_HUB_CACHE", str(tmp_path / "hf" / "hub"))
+    assert timing.model_files() == [aligner, demucs]
+
+
+def test_the_models_files_are_read_once_in_the_background(tmp_path, monkeypatch):
+    files = [tmp_path / "a.pt", tmp_path / "b.safetensors"]
+    for path in files:
+        path.write_bytes(b"x" * (timing.WARM_CHUNK + 5))
+    opened = []
+    real_open = open
+    monkeypatch.setattr("builtins.open", lambda path, *a, **k: opened.append(path) or real_open(path, *a, **k))
+    monkeypatch.setattr(timing, "model_files", lambda: files)
+    monkeypatch.setattr(timing, "_warming", None)
+    timing.warm_models()
+    warming = timing._warming
+    warming.join(5)
+    assert warming.daemon and not warming.is_alive()  # nothing waits for it, and it is done
+    assert opened == files
+    timing.warm_models()  # once a process
+    assert timing._warming is warming and opened == files
+
+
+def test_the_models_are_read_ahead_only_where_a_song_is_timed():
+    from argparse import Namespace
+
+    from studio.__main__ import times_a_song
+
+    assert times_a_song(Namespace(command="run")) and times_a_song(Namespace(command="make"))
+    assert times_a_song(Namespace(command="plan", videos=True))
+    assert not times_a_song(Namespace(command="plan", videos=False))
+    assert times_a_song(Namespace(command="videos", background=False))
+    assert not times_a_song(Namespace(command="videos", background=True))  # the detached child reads them
+    assert not times_a_song(Namespace(command="show")) and not times_a_song(Namespace(command="wait"))
+
+
+def test_a_cli_command_that_times_a_song_starts_reading_the_models(tmp_path, monkeypatch):
+    from studio.__main__ import main
+
+    monkeypatch.setattr(jobs, "ROOT", tmp_path)
+    warmed = []
+    monkeypatch.setattr(timing, "warm_models", lambda: warmed.append(True))
+    with pytest.raises(SystemExit):
+        main(["make", "no-such-job"])
+    with pytest.raises(SystemExit):
+        main(["show", "no-such-job"])
+    assert warmed == [True]
+
+
+def test_reading_the_models_never_fails_a_run(monkeypatch):
+    def no_home():
+        raise RuntimeError("Could not determine home directory")
+
+    monkeypatch.setattr(timing, "model_files", no_home)
+    monkeypatch.setattr(timing, "_warming", None)
+    timing.warm_models()  # nothing raised here
+    timing._warming.join(5)
+    assert not timing._warming.is_alive()
