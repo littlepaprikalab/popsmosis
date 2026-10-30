@@ -235,7 +235,7 @@ def to_text(root: ET.Element) -> str:
 
 # --- the house look ---------------------------------------------------------------------
 
-LOOK = "2"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
+LOOK = "3"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
 # test pins the look's code and numbers to it, studio/tests/test_art.py)
 PAGE = "#28374B"  # the dark slate blue behind every drawing
 ROLE = "data-role"  # what a graph's context is: "axes" on the group of its axes, "point" on a point's circle
@@ -276,16 +276,22 @@ def values(root: ET.Element) -> list[Value]:
     the side it says (above, when it says none). Only marks directly in the <svg> count, as a group's move would
     shift them; at most VALUES_MAX."""
     found = []
-    for el in root:
+    for el in _marks(root):
         text = (el.get(VALUE) or el.get(TICK) or "").strip()
-        if _local(el.tag) != "circle" or not text:
-            continue
-        x, y = _number(el.get("cx")), _number(el.get("cy"))
+        at = [el.get(k, "").strip() for k in ("cx", "cy")]
+        if not text or not all(NUMBER.fullmatch(v) for v in at):
+            continue  # a mark with no point of its own ("50%", none at all) would be written at the corner
+        x, y = float(at[0]), float(at[1])
         if not (0 <= x <= ART_WIDTH and 0 <= y <= ART_HEIGHT):
             continue
         side = el.get(SIDE) if el.get(SIDE) in SIDES else "above"
         found.append(Value(text=" ".join(text.split()), at=Point(x=x, y=y), side=side, tick=el.get(VALUE) is None))
     return found[:VALUES_MAX]
+
+
+def _marks(root: ET.Element) -> list[ET.Element]:
+    """The value marks values() reads: circles directly in the <svg> with VALUE or TICK."""
+    return [el for el in root if _local(el.tag) == "circle" and (el.get(VALUE) is not None or el.get(TICK) is not None)]
 
 
 def style(root: ET.Element, structures: list[Structure], graph: bool) -> ET.Element:
@@ -297,8 +303,11 @@ def style(root: ET.Element, structures: list[Structure], graph: bool) -> ET.Elem
     for el in [el for el in root.iter(f"{{{NS}}}rect")
                if _drawn(el, parent) and _owner(el, parent) is None and _covers_page(el)]:
         parent[el].remove(el)  # a page of its own would hide PAGE, which the renderer reads off the art's edge
-    for el in [el for el in root.iter() if el.get(VALUE) is not None or el.get(TICK) is not None]:
-        parent[el].remove(el)  # a value's mark: the renderer writes the value there (values())
+    for el in _marks(root):
+        root.remove(el)  # a value's mark: the renderer writes the value there (values())
+    for el in root.iter():  # anything else marked so is drawn as it is, its mark ignored: a bar marked is still a bar
+        el.attrib.pop(VALUE, None)
+        el.attrib.pop(TICK, None)
     if graph:
         _style_graph(root, parent, {s.name: s.color_hex for s in structures})
     return root

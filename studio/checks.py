@@ -394,7 +394,8 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     for later in choruses[1:]:
         for first_id, later_id in zip(reversed(choruses[0]), reversed(later)):
             a, b = directions.get(first_id), directions.get(later_id)
-            if a and b and a.flows() != b.flows():
+            # What moves where, not how it is drawn (Direction.moves): a chorus repeats the motion, whichever way.
+            if a and b and [(f.particles, f.carries) for f in a.flows()] != [(f.particles, f.carries) for f in b.flows()]:
                 problems.append(Problem(line_id=later_id, rule="motion", repaired=False,
                                         detail=f"chorus line {later_id} moves differently from {first_id}"))
     return problems
@@ -635,5 +636,5 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         if marked != flow["carries"]:
             problems.append(Problem(line_id=line_id, rule="carries", repaired=True,
                                     detail=f"carries {flow['carries']!r} is over {MARKER_MAX} characters; unmarked"))
-        also.append({"particles": stops, "carries": marked})
+        also.append({"particles": stops, "carries": marked, "moves": flow.get("moves", "")})
     direction["also"] = also

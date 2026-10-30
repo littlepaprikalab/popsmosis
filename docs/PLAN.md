@@ -453,6 +453,11 @@ Gemini or Muse Image paints the rest, its sizes worked out from the scene's and 
 compound-interest bar chart came back from Gemini with bars at heights no fact gave, and the helper's notice
 about it on screen beside it. The art step draws those scenes and paints the others; step 4 locates the drawn
 ones from their drawings and the painted ones with SAM 3.1. On Muse's brain, which draws no SVG, they are painted.
+A scene whose drawing cannot be used (no usable SVG in its tries, or the brain failing) is painted instead, its
+record saying why, rather than failing the droplet; so are the other stages of its process, which share one
+framing. A scene that already has a painting for the bundle as it stands (a job under way when charts began to be
+drawn, a chart painted instead, a painter switched) stays painted on a resumed run; a run from scratch draws it.
+A hook or analogy marked `to_scale` by mistake is painted.
 
 **Values on a chart.** The art has no writing, but a chart is read by its numbers. The drawer marks each one with an
 empty circle directly in the `<svg>` (`data-value="$1,210"` above a bar, `data-tick="Year 2"` under its place on the
@@ -461,7 +466,12 @@ locations (`SceneLocations.values`), never drawn. The timeline writes an amount 
 of its scene ("…the balance reaches $1,210": the year-2 bar's "$1,210" pops on as the voice says it), and a tick, or
 an amount no line there says, from the scene's first beat; each stays on, as a label does (`Beat.values`). The
 renderer writes them in the house font, ringed with the page's colour like the axis names, and the labels keep clear
-of them.
+of every value the scene writes from its first frame, so they never jump as one is said. Only the marks `values()`
+reads are taken out of the drawing; a value mark on anything else (a bar) is ignored and the bar drawn, and a mark
+with no point of its own is left out rather than written at the corner. A value is written only where the picture
+shows its whole writing, clear of the caption and of the corners' AI tag, brand and legend; one the camera takes
+out of the picture fades as it reaches the edge. In the hook cut, an amount said before the cut begins is on from
+its first frame, settled, not popping as if said then.
 
 The brain decides what a scene draws and where; code decides how it looks (`svg.style()`),
 the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
@@ -697,7 +707,8 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     a route that bends with its parts (1.5 times the straight line) or runs more than 200 px
     inside a part between two others travels, and so does everything else carrying the same
     thing on that scene. An ion or small molecule printed as a symbol ("H⁺", "O₂") is always a
-    particle, and so is a blocked flow. The legend keys a journey with an arrow; what moves takes
+    particle, and so is a blocked flow; a short word ("air", "sap") is no symbol and goes as the bundle says. How far
+    a route runs inside a part is measured a cell at a time along it. The legend keys a journey with an arrow; what moves takes
     the colour of the structure it names, when the pictures draw one (magma red, sediment tan).
   - **The system running:** a line that sums up (the whole scene, nothing spotlit, as the
     bundle prompt asks of summing-up and chorus lines) runs every flow its scene has shown so

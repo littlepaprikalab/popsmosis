@@ -151,6 +151,8 @@ CUT_BLUR = 0.8  # a reacting part's edge, in art pixels: soft, so the mask's ste
 AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
 VALUE_GAP = 8.0  # frame pixels between a value's point and its writing (Beat.values)
 VALUE_FONT, TICK_FONT = 1.0, 0.85  # an amount's writing and a tick's, as shares of the label font
+VALUE_EDGE = 6.0  # frame pixels: a value this near the edge of where it may be written fades out, as a camera move
+# takes it off; a tick at rest just under its axis, low in the picture, stays clear
 DRAWN_INK = 15  # how far (the largest RGB channel) a drawn pixel is from the background, as _drawn_box has it
 
 Point = tuple[float, float]
@@ -726,6 +728,7 @@ class Renderer:
         self._travelling: dict[tuple[str, str], bool] = {}  # (scene, what travels) -> drawn as hand-off arrows
         self._handoff_arrows: dict[tuple, list] = {}  # each such flow's arrows, in art pixels, with the part entered
         self._arrowed_labels: dict[str, set[str]] = {}  # per scene, what travels as arrows (the legend's)
+        self._scene_values: dict[str, list] = {}  # per scene, every value it writes in the video (_value_points)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
 
@@ -1071,10 +1074,17 @@ class Renderer:
         same_axes = plan.fade_from is not None and (self.timeline.axes.get(plan.fade_from)
                                                     == self.timeline.axes.get(beat.scene))
         axis_rects = self._axis_names(canvas, beat.scene, cam, view, bounds, 1.0 if same_axes else fade)
-        axis_rects += self._values(canvas, beat, cam, view, t, fade)
-        # Labels keep clear of the arrows, of every reaction pill the scene shows and of the axis names and values,
-        # sampled as points.
-        pill_points = [(px, py) for x0, y0, x1, y1 in [*places.values(), *axis_rects]
+        # Values sit anywhere on the picture below the caption, but in its corners' tag, brand and legend: a tick under
+        # its axis is low in the picture, where the labels' bounds stop short of the margin and the tag.
+        corners = [r for r in (
+            p.ai_tag_rect(view[0] + layout.margin, view[3] - layout.margin, AI_TAG_FONT) if tagged else None,
+            (view[2] - layout.margin - self.brand[0], view[3] - layout.margin - self.brand[1], view[2] - layout.margin,
+             view[3] - layout.margin) if branded else None,
+            legend_rect) if r]
+        self._values(canvas, beat, cam, view, (view[0], bounds[1], view[2], view[3]), corners, t, fade)
+        # Labels keep clear of the arrows, of every reaction pill the scene shows, of the axis names and of every
+        # value the scene writes, sampled as points.
+        pill_points = self._value_points(beat.scene, cam, view) + [(px, py) for x0, y0, x1, y1 in [*places.values(), *axis_rects]
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
         strength = self._resting(i, t)
@@ -1218,29 +1228,52 @@ class Renderer:
                 rects.append(rect)
         return rects
 
-    def _values(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float, alpha: float) -> list[Rect]:
+    def _value_rect(self, v, scale: float, dx: float, dy: float) -> tuple[Rect, float]:
+        """Where a value is written (frame pixels), beside its point on its side, and its font size."""
+        size = self.layout.label_font * (TICK_FONT if v.tick else VALUE_FONT)
+        w, h, g = p.text_width(p.font("Bold" if v.tick else "ExtraBold", size), v.text), size * 1.2, VALUE_GAP
+        x, y = v.at.x * scale + dx, v.at.y * scale + dy
+        rect = {"above": (x - w / 2, y - g - h, x + w / 2, y - g), "below": (x - w / 2, y + g, x + w / 2, y + g + h),
+                "left": (x - g - w, y - h / 2, x - g, y + h / 2), "right": (x + g, y - h / 2, x + g + w, y + h / 2)}[v.side]
+        return rect, size
+
+    def _values(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, area: Rect, corners: list[Rect], t: float,
+                alpha: float) -> None:
         """The numbers a drawn chart shows (Beat.values), each beside its point on its side, fading in from its
-        `since`, an amount popping as it is said. Returns where they landed, for the labels to keep clear of."""
+        `since`, an amount popping as it is said. Only inside `area` and clear of the `corners` (the AI tag, the
+        brand, the legend): one the camera leaves out (a close-up, the upright frame's sides) is not written rather
+        than cut off, which would be misread, and one near the edge fades as it nears it, so a camera move never
+        makes it blink."""
         if not beat.values:
-            return []
+            return
         art = self.scene(beat.scene)
         scale, dx, dy = to_frame(cam, view, art)
-        rects = []
         for v in beat.values:
-            shown = alpha * p.ease((t - v.since) / LABEL_IN_S)
-            size = self.layout.label_font * (TICK_FONT if v.tick else VALUE_FONT)
-            w, h, g = p.text_width(p.font("Bold" if v.tick else "ExtraBold", size), v.text), size * 1.2, VALUE_GAP
-            x, y = v.at.x * scale + dx, v.at.y * scale + dy
-            rect = {"above": (x - w / 2, y - g - h, x + w / 2, y - g), "below": (x - w / 2, y + g, x + w / 2, y + g + h),
-                    "left": (x - g - w, y - h / 2, x - g, y + h / 2), "right": (x + g, y - h / 2, x + g + w, y + h / 2)}[v.side]
-            if rect[0] < view[0] or rect[1] < view[1] or rect[2] > view[2] or rect[3] > view[3]:
-                continue  # the camera leaves its point out (a close-up, the upright frame's sides): a cut-off number
-                # would be misread, and it would spill over the lyric band or a notice card
+            rect, size = self._value_rect(v, scale, dx, dy)
+            if any(rect[0] < c[2] and c[0] < rect[2] and rect[1] < c[3] and c[1] < rect[3] for c in corners):
+                continue
+            inset = min(rect[0] - area[0], rect[1] - area[1], area[2] - rect[2], area[3] - rect[3])
+            shown = alpha * p.ease((t - v.since) / LABEL_IN_S) * min(1.0, inset / VALUE_EDGE)
             if shown > 0.01:
                 pop = 0.0 if v.tick else 1 - p.ease((t - v.since) / p.VALUE_POP_S)
                 p.draw_value(canvas, v.text, rect, size, art.paper, shown, v.tick, pop)
-                rects.append(rect)
-        return rects
+
+    def _value_points(self, scene_id: str, cam: Cam, view: Rect) -> list[Point]:
+        """Points over every value the scene writes at any time in the video, in frame pixels, for the labels to keep
+        clear of: all of them from the scene's first frame, so a label is placed once and does not jump as a value
+        is said. A few points each (its corners, its middle and its sides' middles), as each one costs the placing."""
+        if scene_id not in self._scene_values:
+            seen = {}
+            for beat in self.timeline.beats:
+                for v in beat.values if beat.scene == scene_id else []:
+                    seen.setdefault((v.text, v.at.x, v.at.y, v.side), v)
+            self._scene_values[scene_id] = list(seen.values())
+        scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
+        points = []
+        for v in self._scene_values[scene_id]:
+            (x0, y0, x1, y1), _ = self._value_rect(v, scale, dx, dy)
+            points += [(x, y) for x in (x0, (x0 + x1) / 2, x1) for y in (y0, (y0 + y1) / 2, y1)]
+        return points
 
     def _conversions(self, canvas: skia.Canvas, beat, view: Rect, bounds: Rect, t: float,
                      places: dict[str, tuple[float, float, float, float]],
@@ -1636,8 +1669,8 @@ class Renderer:
                         routes.append((route.path, route.label, route.color))
             samples, drawn = [], set()
             for path, label, color in routes:
-                flow = self._flow_of(scene_id, path, label)
-                if flow is not None and self._travels(scene_id, flow):  # its arrows, not the route between its stops
+                flow = next((f for f in self._flows_of(scene_id, path, label) if self._travels(scene_id, f)), None)
+                if flow is not None:  # its arrows, not the route between its stops
                     for tail, tip, _ in self._handoffs(scene_id, flow):
                         n = max(int(math.dist(tail, tip) / ARROW_SAMPLE), 1)
                         samples += [(p.lerp(tail[0], tip[0], k / n), p.lerp(tail[1], tip[1], k / n)) for k in range(n + 1)]
@@ -1657,10 +1690,10 @@ class Renderer:
         scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
         return [(x * scale + dx, y * scale + dy) for x, y in self._scene_routes[scene_id]]
 
-    def _flow_of(self, scene_id: str, path: list[str], label: str):
-        """The scene's first flow on these stops carrying this, as a beat has it; None when none does."""
-        return next((f for b in self.timeline.beats if b.scene == scene_id for f in b.particles
-                     if f.path == path and f.label == label), None)
+    def _flows_of(self, scene_id: str, path: list[str], label: str) -> list:
+        """The scene's flows on these stops carrying this, as the beats have them."""
+        return [f for b in self.timeline.beats if b.scene == scene_id for f in b.particles
+                if f.path == path and f.label == label]
 
     def _arrowed(self, scene_id: str) -> set[str]:
         """What travels on the scene as hand-off arrows, which the legend keys with an arrow; once per scene."""
@@ -1750,11 +1783,14 @@ class Renderer:
         """Whether a flow is drawn as an arrow at each hand-off rather than as particles: as the bundle says
         (Particles.moves), else when any flow on the scene carrying the same thing is a journey (_journey), so one
         thing moves one way on a scene. Never a blocked flow, which piles up at its blocker, nor one carrying a
-        symbol ("H⁺", "O₂"): an ion or a small molecule is a particle."""
-        if flow.blocked or p.carried(flow.label):
+        symbol ("H⁺", "O₂", "ATP"): an ion or a small molecule is a particle, whatever the bundle says. A word ("air",
+        "magma") goes as the bundle says."""
+        if flow.blocked or p.symbol(flow.label):
             return False
         if flow.moves:
             return flow.moves == "travels"
+        # Unmarked dots too, all one way on a scene: judged a flow at a time, round 22's greenhouse would send its
+        # sunlight down as dots and its heat out as arrows, on one picture.
         key = (scene_id, flow.label)
         if key not in self._travelling:
             self._travelling[key] = any(self._journey(scene_id, f) for b in self.timeline.beats if b.scene == scene_id

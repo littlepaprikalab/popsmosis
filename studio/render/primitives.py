@@ -377,6 +377,12 @@ MARKER_PAD = 8.0  # a longer marker ("glucose") is a pill this far wider than it
 SYMBOL_MAX = 3
 
 
+def symbol(label: str) -> bool:
+    """Whether what a flow carries is written as a chemical symbol ("H⁺", "O₂", "e⁻", "ATP", "Na⁺"), not a short
+    word ("air", "sap", "mud"): short, and not all small letters."""
+    return bool(carried(label)) and not (label.isalpha() and label.islower())
+
+
 def carried(label: str) -> str:
     """What a moving particle has written on it: its label when that is a short symbol, else nothing."""
     return label if len(label) <= SYMBOL_MAX else ""
@@ -902,14 +908,20 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
     return top + height
 
 
+def ai_tag_rect(x0: float, bottom: float, font_size: float) -> Rect:
+    """Where draw_ai_tag draws its pill."""
+    h = font_size * 1.7
+    return (x0, bottom - h, x0 + text_width(font("SemiBold", font_size), NOTICE_TITLE) + font_size * 1.6, bottom)
+
+
 def draw_ai_tag(canvas: skia.Canvas, x0: float, bottom: float, font_size: float, alpha: float = 1.0) -> float:
     """A small dark pill reading "AI-generated picture", its bottom-left corner at (x0, bottom). Returns its top."""
     if alpha <= 0.01:
         return bottom
     f = font("SemiBold", font_size)
-    h = font_size * 1.7
-    w = text_width(f, NOTICE_TITLE) + font_size * 1.6
-    rrect = rounded((x0, bottom - h, x0 + w, bottom), h / 2)
+    _, top, right, _ = ai_tag_rect(x0, bottom, font_size)
+    h = bottom - top
+    rrect = rounded((x0, top, right, bottom), h / 2)
     canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha * 0.72)))
     draw_text(canvas, NOTICE_TITLE, x0 + font_size * 0.8, bottom - h / 2 + cap_height(f) / 2, f,
               with_alpha(0xFFFFFFFF, alpha * 0.92))

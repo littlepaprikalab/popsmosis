@@ -1244,6 +1244,8 @@ def test_what_travels_is_drawn_as_an_arrow_at_each_hand_off_and_a_crossing_as_pa
     assert dots == [] and 0 < arrows[0][2] < 1 and arrows[-1][2] == 1.0
     assert "filtrate" in travelling._arrowed("overview")  # keyed with an arrow in the legend
 
+    air = moving("air", "travels")  # a short word, not a symbol: it goes as the bundle says
+    assert air._travels("overview", air.timeline.beats[0].particles[0])
     for label, moves in (("salt", "crosses"), ("H⁺", "travels")):  # said to cross; an ion is always a particle
         arrows.clear(), dots.clear()
         crossing = moving(label, moves)
@@ -1292,3 +1294,26 @@ def test_a_value_the_camera_leaves_out_is_not_written_over_the_band(job, monkeyp
     view = renderer.view("overview")
     assert [text for text, _ in drawn] == ["$1,210"]
     assert all(view[0] <= r[0] and view[1] <= r[1] and r[2] <= view[2] and r[3] <= view[3] for _, r in drawn)
+
+
+def test_labels_keep_clear_of_a_value_before_it_is_said_and_one_said_before_the_cut_is_settled(job, monkeypatch):
+    from studio.schemas import Written
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    beats = list(timeline.beats)
+    early = Written(text="$1,000", at=Point(x=700, y=400), since=-3.0)  # said before the hook cut began
+    later = Written(text="$1,331", at=Point(x=1100, y=300), since=beats[on[-1]].t0 + 0.5)  # said on the last line
+    beats[on[0]] = beats[on[0]].model_copy(update={"values": [early]})
+    beats[on[-1]] = beats[on[-1]].model_copy(update={"values": [early, later]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    t = beats[on[0]].t0 + 0.01
+    cam = renderer.plans[on[0]].cam(t, renderer.view("overview"), renderer.scene("overview"))
+    points = renderer._value_points("overview", cam, renderer.view("overview"))
+    x, y = renderer.art_to_frame(t, 1100, 300)
+    assert len(points) == 18 and any(abs(px - x) < 60 and py < y for px, py in points)  # the later one's place too
+    drawn = []
+    monkeypatch.setattr(p, "draw_value", lambda canvas, text, rect, size, paper, alpha, tick, pop=0.0:
+                        drawn.append((text, alpha, pop)))
+    renderer.frame(t)
+    [(text, alpha, pop)] = drawn
+    assert text == "$1,000" and alpha == pytest.approx(1.0, abs=0.02) and pop == 0.0  # on, settled: not said now

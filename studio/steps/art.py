@@ -127,25 +127,35 @@ def painter_of(job: Path) -> Painter:
 
 def drawn(job: Path, bundle: Bundle, scene: Scene) -> bool:
     """Whether the scene is drawn as SVG: every scene when the job's painter is svg; else a scene to scale, and every
-    stage of its process with it (the stages share one picture's framing), when the brain in force can draw."""
+    stage of its process with it (the stages share one picture's framing), when the brain in force can draw, unless
+    the scene, or a stage of its process, already has a painting for the scene as the bundle now has it: painted
+    before charts were drawn (a job under way when this came in), or instead of a drawing that failed. A job keeps
+    the art it has, rather than paying to draw again what is there."""
     if painter(job) == "svg":
         return True
-    if "svg" not in brain.ART_CHOICES[brain.provider()] or _painted_instead(job, bundle, scene):
-        return False
+    group = _stages(bundle, scene)
+    return _to_scale(group) and "svg" in brain.ART_CHOICES[brain.provider()] and not any(
+        _painting_for(job, bundle, s) for s in group)
+
+
+def _stages(bundle: Bundle, scene: Scene) -> list[Scene]:
+    """The scene and the other stages of its process, or the scene alone."""
     stage = Stage.of(bundle, scene)
-    group = stage_groups(bundle.scenes)[stage.process] if stage else [scene]
+    return stage_groups(bundle.scenes)[stage.process] if stage else [scene]
+
+
+def _to_scale(group: list[Scene]) -> bool:
     # The hook and the analogy are everyday pictures: marked to scale by mistake, they are still painted.
     return any(s.axes or (s.to_scale and s.id not in EVERYDAY) for s in group)
 
 
-def _painted_instead(job: Path, bundle: Bundle, scene: Scene) -> bool:
-    """Whether the scene, to be drawn as SVG, was painted instead, since no drawing of it could be used (paint()'s
-    record says so, for the scene as the bundle now has it): a droplet with a painted chart, not none."""
+def _painting_for(job: Path, bundle: Bundle, scene: Scene) -> bool:
+    """Whether art/<scene>.json records a painting of the scene as the bundle now has it, by whichever painter."""
     try:
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
-    return isinstance(made, dict) and bool(made.get("instead_of_svg")) and made.get("key") == key(bundle, scene)
+    return isinstance(made, dict) and made.get("key") == key(bundle, scene)
 
 
 def drawn_locations(job: Path, bundle: Bundle, scene: Scene) -> SceneLocations | None:
@@ -539,9 +549,9 @@ def run_painted(job: Path, ask) -> str:
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
-    if not resume:  # a run from scratch tries again to draw what was painted instead of drawn
+    if not resume:  # a run from scratch draws what is to scale, whatever painted it before
         for scene in bundle.scenes:
-            if _painted_instead(job, bundle, scene):
+            if _to_scale(_stages(bundle, scene)) and _painting_for(job, bundle, scene):
                 _painting(job, scene).unlink()
     to_draw = [scene for scene in bundle.scenes if drawn(job, bundle, scene)]  # to scale: the brain's SVG
     drawn_ids = {scene.id for scene in to_draw}
@@ -570,10 +580,16 @@ def run_painted(job: Path, ask) -> str:
     # The scenes at the same time, those drawn as SVG with them, then each process's later stages, redrawn from its
     # first stage's picture. One that fails fails the step once the others are saved.
     made = ledger.parallel(make, to_draw + first, WORKERS)
-    painted_instead = [scene for scene, m in zip(to_draw, made) if not isinstance(m, Drawing)]
-    drawings = [(scene, m) for scene, m in zip(to_draw, made) if isinstance(m, Drawing)]
+    made, painted_first = made[:len(to_draw)], made[len(to_draw):]
+    instead = [(scene, m) for scene, m in zip(to_draw, made) if not isinstance(m, Drawing)]
+    # A process's stages are all drawn or all painted: cross-faded, a painting and a drawing share no framing.
+    with_painted = {s.id for scene, _ in instead for s in _stages(bundle, scene)}
+    instead += [(scene, paint(job, bundle, scene, ask, instead_of_svg="a stage of its process could not be drawn"))
+                for scene, m in zip(to_draw, made) if isinstance(m, Drawing) and scene.id in with_painted]
+    painted_instead = [scene for scene, _ in instead]
+    drawings = [(scene, m) for scene, m in zip(to_draw, made) if isinstance(m, Drawing) and scene.id not in with_painted]
     to_draw = [scene for scene, _ in drawings]
-    results = [m for m in made if not isinstance(m, Drawing)]
+    results = [m for _, m in instead] + painted_first
     first = painted_instead + first
     results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
                                later, WORKERS)
@@ -634,7 +650,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
     (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
     not, or the painter cannot, it is painted afresh. `instead_of_svg` says why a scene to be drawn as SVG is
-    painted instead (drawn(), _painted_instead())."""
+    painted instead (drawn())."""
     by = painter_of(job)
     if not by.redraws:
         reference = None

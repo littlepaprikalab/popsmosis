@@ -461,3 +461,20 @@ def test_a_bundle_written_before_axes_has_none():
     data = bundle_data()
     assert "axes" not in data["scenes"][0]
     assert not any(scene.axes for scene in Bundle.model_validate(data).scenes)
+
+
+def test_a_second_flow_keeps_how_it_moves_and_a_chorus_is_held_to_what_moves_not_how():
+    def change(data):
+        direction(data, "v1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺", moves="crosses",
+                                       also=[{"particles": ["Cytochrome b6f", "Thylakoid"], "carries": "filtrate",
+                                              "moves": "travels"}])
+    bundle, _, _ = review(change)
+    line = next(d for d in bundle.direction if d.line_id == "v1-1")
+    assert [f.moves for f in line.flows()] == ["crosses", "travels"]  # kept through the review, both flows
+
+    data = bundle_data()
+    choruses = [d for d in data["direction"] if d["line_id"].startswith("c")]
+    for d in choruses:
+        d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    choruses[-1]["moves"] = "crosses"  # drawn otherwise, moving the same: no chorus moves differently
+    assert not [p for p in checks.motion_problems(Bundle.model_validate(data)) if "moves differently" in p.detail]

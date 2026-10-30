@@ -277,3 +277,44 @@ def test_a_scene_to_scale_with_no_usable_drawing_is_painted_instead_and_located_
 def test_an_everyday_scene_marked_to_scale_is_still_painted(job):
     bundle = to_scale(job, "hook")
     assert not art.drawn(job, bundle, bundle.scenes[0])
+
+
+def test_a_chart_painted_before_charts_were_drawn_is_kept_and_a_painter_switch_repaints_it(job, monkeypatch):
+    # A job under way when charts began to be drawn keeps its painted chart, rather than paying to draw it again.
+    bundle = to_scale(job)
+    painter, sam = FakeGemini().install(monkeypatch), FakeMuse().install(monkeypatch)
+    ask = FakeDrawer(FakeHelper())
+    with monkeypatch.context() as m:
+        m.setattr(art, "_to_scale", lambda group: False)  # as the art step painted it before
+        art.run(job, ask)
+    overview = bundle.scenes[1]
+    assert not art.drawn(job, bundle, overview) and art.is_done(job) and ask.drawn == []
+    locate.run(job, ask)
+    assert locate.is_done(job)
+
+    jobs.keep_studio_settings(job, {"art": {"claude": "muse", "meta": "muse"}})  # the admin switches painter
+    assert not art.is_done(job) and not art.drawn(job, bundle, overview)
+    art.run(job, ask)
+    assert ask.drawn == [] and art.is_done(job)  # painted again, by Muse Image, not drawn
+    assert json.loads((job / "art" / "overview.json").read_text())["model"] == "muse-image-1.0"
+
+
+def test_the_stages_of_a_process_are_all_painted_when_one_cannot_be_drawn(job, monkeypatch):
+    data = sample_media.bundle().model_dump()
+    for scene in data["scenes"][1:]:
+        scene["stage_of"] = "photosynthesis"
+    data["scenes"][1]["to_scale"] = True
+    bundle = Bundle.model_validate(data)
+    jobs.write(job / "bundle.json", bundle)
+    FakeGemini().install(monkeypatch), FakeMuse().install(monkeypatch)
+
+    class HalfDrawn(FakeDrawer):  # the overview draws; the ATP synthase stage does not
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if system == art.PROMPT and "synthase" in label:
+                return {"text": "<svg>not a drawing"}
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    result = art.run(job, HalfDrawn(FakeHelper()))
+    assert "drew" not in result and result.endswith("; painted synthase, overview instead of drawing them as SVG")
+    assert not [s for s in bundle.scenes if (job / "art" / f"{s.id}.svg").exists()] and art.is_done(job)
+    assert not any(art.drawn(job, bundle, s) for s in bundle.scenes)
