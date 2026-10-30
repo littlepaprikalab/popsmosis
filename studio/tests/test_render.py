@@ -874,14 +874,12 @@ def test_every_frame_carries_the_brand_in_one_place_and_upright_in_the_title_ban
     assert pixel(carded.frame(2.0), *spot) == chip and carded.view("overview")[2] < spot[0]  # under the card
     titled = flowing([beat]).model_copy(update={"title": "the light reactions"})
     keyed = titled.model_copy(update={"beats": [beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})]})
-    for timeline in (titled, keyed):  # under the topic; beside it, small, over a key line
+    for timeline in (titled, keyed):  # upright, in the title band's corner, with a key line or without
         upright = Renderer(job, timeline, "v")
-        band = upright.frame(2.0)[:upright.layout.title_h, :, :3]
-        assert ((band[..., 2] == chip[0]) & (band[..., 1] == chip[1]) & (band[..., 0] == chip[2])).sum() > \
-            0.5 * upright.brand[0] * upright.brand[1]
-        corner = (upright.layout.width - upright.layout.margin - upright.brand[0] + 3,
-                  upright.layout.height - upright.layout.band_h - upright.layout.margin - upright.brand[1] / 2)
-        assert pixel(upright.frame(2.0), *corner) != chip  # not in the picture as well
+        v, (w, h) = upright.layout, upright.brand
+        frame = upright.frame(2.0)
+        assert pixel(frame, v.width - v.margin - w + 3, v.title_h - renderer_module.BRAND_GAP - h / 2) == chip
+        assert pixel(frame, v.width - v.margin - w + 3, v.height - v.band_h - v.margin - h / 2) != chip  # not twice
 
 
 def test_a_stage_fading_into_the_next_keeps_its_tag_and_card_on(job):
