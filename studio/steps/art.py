@@ -13,7 +13,9 @@ Switching makes the art again on the next run, as switching who sings does the s
 
 The SVG art. One brain call per scene draws it (studio/prompts/art.md), every structure in one group
 marked with its name. Code checks the drawing (studio/svg.py); if anything is wrong it
-asks again with the problems and the drawing, up to MAX_TRIES times in all.
+asks again with the problems and the drawing, up to MAX_TRIES times in all. The brain draws what is there and
+where; code gives it the house look (svg.style(): the dark page, and a graph's lines, axes and points) before
+it is rasterised and its masks are found.
 
 Writes, per scene (paths from studio/media.py), art/<scene>.svg (the drawing, kept for debugging and for resuming),
 art/<scene>.png and masks/<scene>/<slug>.png; then locations.json, last. A refused
@@ -30,7 +32,9 @@ structures are located. Fewer than that and the scene could not teach, so the st
 Each kept drawing starts with a key made from the topic and its scene, so art drawn for
 an earlier bundle never counts as done: if the bundle is written again, the art is too.
 Running the step again redraws every scene. A run that stopped partway (no
-locations.json yet) keeps the scenes it already drew, unless their scene changed since.
+locations.json yet) keeps the scenes it already drew, unless their scene changed since. So
+does a new look (svg.LOOK): art styled in another one is not done, and the step styles the
+kept drawings again, with no call to the brain.
 An answer cut off at the output limit counts as a refused try; any other brain error
 fails the step, and the scenes already drawn are kept for the retry.
 
@@ -165,8 +169,8 @@ def located(job: Path) -> Locations | None:
         return None
     for scene in bundle.scenes:
         drawn = {s.found_by for s in locations.scene(scene.id).structures}
-        if "svg" in drawn and not _saved(job, bundle, scene):
-            return None
+        if "svg" in drawn and (not _saved(job, bundle, scene) or locations.scene(scene.id).look != svg.LOOK):
+            return None  # drawn for another scene, or styled in another look
         if drawn - {"svg"} and not _painted(job, bundle, scene):
             return None
     return locations
@@ -225,8 +229,9 @@ def judge(text: str, scene: Scene) -> Drawing:
         return drawing
     names = [s.name for s in scene.structures if s.name not in checked.structures]
     try:
-        drawing.art = svg.rasterise(checked.root)
-        all_masks = svg.masks(checked.root, names)
+        styled = svg.style(checked.root, scene.structures, graph=bool(scene.axes))
+        drawing.art = svg.rasterise(styled)
+        all_masks = svg.masks(styled, names)
     except ValueError as e:
         drawing.problems.append(str(e))
         return drawing
@@ -297,7 +302,7 @@ def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
         structures.append(Location(name=s.name, mask=media.mask_path(scene.id, s.name), box=found.box,
                                    centroid=found.centroid, label_anchor=found.label_anchor, found_by="svg"))
     return SceneLocations(scene=scene.id, art=media.art_path(scene.id), width=media.ART_WIDTH,
-                          height=media.ART_HEIGHT, structures=structures)
+                          height=media.ART_HEIGHT, structures=structures, look=svg.LOOK)
 
 
 def key(bundle: Bundle, scene: Scene) -> str:
@@ -348,11 +353,13 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
         lines.append(f'- {s.name}{also}: {s.sam_phrase}. Colour {s.color_hex}. '
                      f'Group: <g {svg.MARK}="{s.name}">')
     parts.append("Structures to draw, each as one group:\n" + "\n".join(lines))
-    if scene.axes:  # found in the drawing as lines of their own (studio/render/axes.py), so in no structure's group
+    if scene.axes:  # styled by code (svg.style), and found in the art as lines of their own (studio/render/axes.py),
+        # so in no structure's group
         named = " and ".join(f'"{name}" at the {end}' for name, end in ((scene.axes.x, "right end of the horizontal one"),
                                                                        (scene.axes.y, "top of the vertical one")) if name)
-        parts.append("Axes: draw the graph's two axes as plain, thin dark lines outside every group, with nothing "
-                     f"written on or beside them: the video writes {named}.")
+        parts.append(f'Axes: this scene is a graph. Draw its two axes as two plain <line>s in one <g {svg.ROLE}="axes">, '
+                     "outside every structure's group, with nothing written on or beside them: the video writes "
+                     f'{named}. Draw the rest as "Graphs" in your instructions says.')
     others = [o for o in bundle.scenes if o.id != scene.id]
     if others:
         parts.append("The video's other scenes, drawn separately; draw shared structures the same way:\n" + "\n".join(

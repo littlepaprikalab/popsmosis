@@ -89,8 +89,8 @@ PAPER_EDGE = 6  # pixels: the ring around a picture whose colour is its backgrou
 
 def paper(pixels: np.ndarray) -> tuple[int, int, int]:
     """A picture's background colour: the median of a thin ring around its edge, its channels in the
-    picture's own order (H x W x 3 or more). White for the SVG art; for Muse Image's, whatever it painted
-    behind the diagram (dark slate blue, as art.STYLE asks)."""
+    picture's own order (H x W x 3 or more). The house page for the SVG art (svg.PAGE); for Muse Image's,
+    whatever it painted behind the diagram (dark slate blue, as art.STYLE asks)."""
     rgb = pixels[..., :3]
     e = PAPER_EDGE
     ring = np.concatenate([rgb[:e].reshape(-1, 3), rgb[-e:].reshape(-1, 3),
