@@ -397,8 +397,10 @@ explanation to the narration, and every word of it is easy to hear.
     - (only when the learner asks) A pop-punk anthem with a driving straight-ahead pulse;
       energetic male lead and gang vocals on the chorus; driving electric guitars, punchy live
       drums and a bright radio-ready master; 150 bpm
-  - For a younger audience: bright, playful pop with a big sing-along chorus, a clear lead
-    vocal, sung verses, and a tempo they can sing along to.
+  - For a younger audience: the pop they play themselves, never a children's song: bright,
+    current pop with a big sing-along chorus, a clear lead vocal, sung verses, and a tempo
+    they can sing along to. Not "playful": round 19's rock cycle, asked for playful pop,
+    sounded like a classroom jingle, and an 11-year-old plays what older kids play.
   - Name the tempo once, as "<n> bpm", from 80 to 160: the learner's tempo when they gave
     one, otherwise the one that fits the style and the topic's mood.
   - Never name an artist, band or song; the music generator refuses them.

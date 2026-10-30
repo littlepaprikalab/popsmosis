@@ -951,6 +951,80 @@ diabetes case after the path, and ended once. It cannot fix a sentence about som
 picture draws, since the pictures are planned before it reads anything. Round 19 writes the
 lesson first.
 
+## Round 19: the lesson written first, then everything around it
+
+Oct 30. The same three topics through the new bundle step: the script first (`studio/steps/
+script.py`), the bundle call handed it and held to it, then the narration editor. In the
+videos, particles take each leg through the parts, a cut into a close-up pushes in on the part
+first, and a picture shown for a single sung line gives way to the one before it.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Script | $0.36, 2.6 min | $0.19, 1.3 min | $0.29, 2.7 min |
+| Bundle | $1.55 | $1.37 | $1.92, 14 min |
+| Narration edit | $0.07: 6 of 35 reworded, none moved | $0.11: 11 of 33 | $0.07: 4 of 31 |
+| Kept of the script | all: essence, facts, 35 sentences | all, 33 | all, 31 |
+| Fact-check | passed, 1 round, no fixes | passed, 1 round | passed, 1 round |
+| Narration | 176 s | 155 s | 181 s (stand-in voice) |
+
+Every bundle kept its script whole: the facts and the essence word for word, every sentence on
+the scene the script put it, none reworded. The editor then moved no sentence, since the script
+already had them in order, and only smoothed words. All three fact-checks passed in one round
+with nothing to fix, against round 18's fixes and a motion cut.
+
+### The lessons
+
+Read and watched as a student would, each is now one explanation. Each hook ends on the
+question ("So how does one kind of rock turn into another?"); the analogy is laid out as
+signposts the path then uses ("That's putting things back in the backpack: reabsorption";
+"just like the pressed crayon shavings"); each step is signposted ("Now for real rock,
+starting with the volcano", "Next, look at the mountain", "Back in the nephron"); the predict
+question comes mid-way; the misconception comes where it forms (Caesar corrected right after
+his death, not before he appears); a worked case comes after the path (a granite mountain to
+sandstone to quartzite; diabetes); and each ends once, on the core idea. Rome's story runs in
+time order, year by year, from the Gracchi to Augustus, and its song does too.
+
+What was still wrong:
+
+- **The rock cycle never labelled igneous or metamorphic rock.** The script's overview asked
+  for "a zone of deep rock" rather than metamorphic rock, so no structure carried the words
+  the narration says. The script now asks for each key term that is a thing to be drawn and
+  named in the narration's words.
+- **A label on the wrong thing.** SAM answered "grey mountain" with the mountain and a pale
+  purple band underground (the picture was too muted for the colour check to tell them
+  apart), and "Mountain" was pinned on the band; "Volcano" took the whole ground. The locate
+  step now has the helper look at each scene with every label's pin drawn on it, and finds a
+  wrong one again in the helper's box: on the same picture it moved both onto the right
+  things, for under 3 cents a topic.
+- **A part SAM could not trace.** The kidneys' glomerulus, a knot of thin pink tubes, was no
+  one shape to SAM even boxed, and its close-up went unlabelled. A structure SAM cannot trace
+  in the helper's box is now the pixels there in its own colour.
+- **Rome's overview was a painted map,** and it came back wrong (the Senate house in the sea,
+  Marius in Sicily), with the art check's notice of it on screen for the whole overview. A
+  story in time now lines its people up left to right, like a timeline, instead.
+- **Rome's song corrected Caesar before singing him,** in the first pre-chorus, which the brief
+  gives the misconception. It now moves to the second when the first verse has not reached it.
+- **The editor drew one sentence out to 25 words,** and the caption shrank to fit. A sentence
+  it lengthens past 22 words keeps the writer's words.
+
+### The songs and the pictures behind them
+
+No song cut to a picture for less than 4.3 s (round 18's kidney song did so six times for 2 s).
+The songs sit on the overview for most of their length (Rome's for 48 s and then 71 s), the
+camera moving over it. Timing Lyria's songs is still the weak point: the rock cycle's had 20 of
+50 lines the aligner was unsure of, against 5 for Eleven Music's, since Lyria is aligned over
+the whole song at once and sings backing vocals and echoes the lyrics do not have.
+
+### ElevenLabs ran out
+
+The kidneys' Eleven Music song was refused: the ElevenLabs quota (131,000 credits) was spent,
+45 left, the song needing 2,197. Narration is ElevenLabs too, so the kidneys were made with
+Lyria's song and, for this round only, a stand-in voice: Gemini TTS (gemini-3.8-flash-tts) a
+sentence at a time, timed by the timing step's MMS aligner and written as the character
+timings the ElevenLabs call returns (a scratch script, not a studio feature). Gemini TTS reads
+any instruction aloud ("Say warmly:" made a 5.5 s sentence 9.7 s), so it is given the
+sentences alone; one call for the whole narration never came back.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
