@@ -738,6 +738,36 @@ def test_a_sam_call_keeps_its_slot_while_it_waits_to_ask_again(tmp_path, monkeyp
     assert held == [True]  # a busy Meta slows the others down rather than letting another call in
 
 
+def test_each_time_meta_is_busy_is_printed_and_counted_for_the_job(tmp_path, monkeypatch, capsys):
+    art_file = tmp_path / "hook.png"
+    art_file.write_bytes(picture(media.ART_WIDTH, media.ART_HEIGHT))
+    before = muse.retried(tmp_path)
+    monkeypatch.setattr(muse, "send", FakeSend((429, {"error": {"message": "busy"}}), (503, {}),
+                                               (429, {"error": {"message": "busy"}}),
+                                               (200, {"status": "completed", "output": []})))
+    assert muse.segment(tmp_path, "locate hook Thylakoid", art_file, phrase="green disc") == []
+    assert muse.retried(tmp_path) - before == {"429": 2, "503": 1}
+    assert muse.busy_note(tmp_path, before) == "; Meta asked again 3 time(s) (429 x2, 503 x1)"
+    assert muse.busy_note(tmp_path, muse.retried(tmp_path)) == ""  # nothing since
+    assert "locate hook Thylakoid: Meta answered 429; asking again in 5s" in capsys.readouterr().err
+
+
+class BusyMuse(FakeMuse):
+    """SAM that was busy once before it answered the overview's Thylakoid, as _post counts it."""
+
+    def segment(self, job, label, art_path, *, phrase=None, box=None):
+        if label == "locate overview Thylakoid":
+            muse._asked_again(job, label, "429", 5)
+        return super().segment(job, label, art_path, phrase=phrase, box=box)
+
+
+def test_the_locate_line_says_how_often_meta_was_busy(job, monkeypatch):
+    painted(job, monkeypatch)
+    BusyMuse().install(monkeypatch)
+    assert locate.run(job, FakeHelper()) == "located 4 of 4 structures with SAM 3.1; Meta asked again 1 time(s) (429 x1)"
+    assert locate.run(job, FakeHelper()) == "located 4 of 4 structures with SAM 3.1; Meta asked again 1 time(s) (429 x1)"
+
+
 def test_segment_with_a_box_sends_sams_box_prompt(tmp_path, monkeypatch):
     art_file = tmp_path / "hook.png"
     art_file.write_bytes(picture(media.ART_WIDTH, media.ART_HEIGHT))

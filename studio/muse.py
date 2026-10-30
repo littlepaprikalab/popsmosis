@@ -16,7 +16,9 @@ reads it; segment() puts each mask back on the whole art.
 
 A busy or failing server (429, 502, 503, 504), or a connection that drops, is asked again
 three times; 500 is not, since Meta says it will not go away on a retry, nor a timeout,
-since Meta may still be making (and billing) what was asked. A picture Muse Image will not make
+since Meta may still be making (and billing) what was asked. Each time is printed and counted
+for the job (retried()), and the art and locate steps say in their line how often Meta was
+busy, so a run's record shows whether SAM_IN_FLIGHT could go up. A picture Muse Image will not make
 (content policy) raises Declined, which the art step counts as a refused try.
 """
 
@@ -24,8 +26,10 @@ from __future__ import annotations
 
 import base64
 import json
+import sys
 import threading
 import time
+from collections import Counter
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -52,6 +56,8 @@ RETRY_WAITS_S = (5, 20, 60)
 # Meta takes more.
 SAM_IN_FLIGHT = 4
 _sam_slots = threading.BoundedSemaphore(SAM_IN_FLIGHT)
+_retried: dict[Path, Counter] = {}  # per job: what Meta answered that was asked for again (_post), and how often
+_retried_lock = threading.Lock()
 
 # send(method, url, headers, body) -> (status, response headers, response body). Tests pass their own.
 Send = Callable[[str, str, dict, bytes | None], tuple[int, dict, bytes]]
@@ -115,7 +121,7 @@ def paint(job: Path, label: str, prompt: str, reference: Path | None = None) -> 
     if reference is not None:
         body["images"] = [{"image_url": "data:image/png;base64," + base64.standard_b64encode(reference.read_bytes()).decode("ascii")}]
     started = time.monotonic()
-    status, answer = _post("/images/edits" if reference is not None else "/images/generations", body)
+    status, answer = _post("/images/edits" if reference is not None else "/images/generations", body, job, label)
     if status == 400 and _error(answer).get("code") == "content_policy_violation":
         raise Declined(f"Muse Image declined the picture: {_message(answer)}")
     if status != 200:
@@ -159,7 +165,7 @@ def segment(job: Path, label: str, art: Path, *, phrase: str | None = None, box:
     }
     with _sam_slots:  # held through the retries, so a busy Meta slows every caller down rather than more asking
         started = time.monotonic()
-        status, answer = _post("/responses", body)
+        status, answer = _post("/responses", body, job, label)
     if status != 200:
         raise MuseError(f"SAM 3.1 refused the request: {status} {_message(answer)}")
     try:
@@ -215,7 +221,7 @@ def _placed(raster: np.ndarray, bounds, width: int, height: int) -> np.ndarray:
 # --- helpers ----------------------------------------------------------------------------
 
 
-def _post(path: str, body: dict) -> tuple[int, bytes]:
+def _post(path: str, body: dict, job: Path | None = None, label: str = "") -> tuple[int, bytes]:
     headers = {"Authorization": f"Bearer {brain.meta_key()}", "Content-Type": "application/json"}
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
     url = brain.META_BASE_URL + path
@@ -225,11 +231,36 @@ def _post(path: str, body: dict) -> tuple[int, bytes]:
         except NoAnswer:  # a dropped connection (seen live: "Connection reset by peer"), as audio does
             if wait is None:
                 raise
+            _asked_again(job, label, "no answer", wait)
         else:
             if status not in RETRY_STATUSES or wait is None:
                 return status, answer
+            _asked_again(job, label, str(status), wait)
         sleep(wait)
     raise AssertionError("unreachable")
+
+
+def _asked_again(job: Path | None, label: str, what: str, wait: float) -> None:
+    print(f"  {label or 'Meta'}: Meta answered {what}; asking again in {wait:g}s", file=sys.stderr)
+    if job is not None:
+        with _retried_lock:
+            _retried.setdefault(job, Counter())[what] += 1
+
+
+def retried(job: Path) -> Counter:
+    """What Meta answered this job's calls with that they were asked again for, and how many times, in this
+    process so far ("429", "503", "no answer"). A step reads it before and after it runs (busy_note)."""
+    with _retried_lock:
+        return Counter(_retried.get(job, {}))
+
+
+def busy_note(job: Path, before: Counter) -> str:
+    """For a step's line: how often Meta was busy or failing while the step ran and was asked again, or ""."""
+    since = retried(job) - before
+    if not since:
+        return ""
+    return (f"; Meta asked again {sum(since.values())} time(s) ("
+            + ", ".join(f"{what} x{n}" for what, n in sorted(since.items())) + ")")
 
 
 def _error(body: bytes) -> dict:

@@ -111,6 +111,7 @@ def run(job: Path, ask=brain.ask) -> str:
     if not art.is_done(job):
         raise media.StepFailed(f"no {art.painter_of(job).title} art for this bundle; run the art step first")
     media.restart(job, media.LOCATIONS)
+    busy = muse.retried(job)
     scenes, left_out, boxed, dropped = [], [], [], 0
     # The scenes at the same time: each waits on SAM and the helper, one structure after another.
     found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), bundle.scenes, WORKERS)
@@ -134,6 +135,7 @@ def run(job: Path, ask=brain.ask) -> str:
     found = sum(len(s.structures) for s in scenes)
     return (f"located {found} of {total} structures with SAM 3.1"
             + (f", {len(boxed)} in the helper's box" if boxed else "")
+            + muse.busy_note(job, busy)  # early in the line: the summary keeps only its start
             + (f"; dropped {dropped} match{'es' if dropped != 1 else ''} in another structure's colour"
                if dropped else "")
             + (f"; left out {', '.join(left_out)}" if left_out else "")
