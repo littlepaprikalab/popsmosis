@@ -489,3 +489,25 @@ def test_a_second_flow_is_its_own_motion_and_one_that_fails_leaves_only_itself()
     line = next(d for d in checked.direction if d.line_id == "v2-1")
     assert report.status == "passed" and line.also == [] and (line.particles, line.carries) == (
         ["Cytochrome b6f", "Thylakoid"], "H⁺")
+
+
+def test_a_route_left_out_by_the_check_is_never_drawn_and_a_passed_one_is():
+    from studio.schemas import Locations
+    from studio.steps import timeline
+    from studio.tests import sample_media
+
+    def unmarked(data):  # two unmarked routes on the overview: one the facts give, one they do not
+        for d in data["direction"]:
+            if d["line_id"] == "v1-2":
+                d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="")
+            elif d["line_id"] == "v2-1":
+                d.update(particles=["Cytochrome b6f", "Thylakoid"], carries="")
+
+    invented = "Something travels from Cytochrome b6f to Thylakoid"
+    _, checked = check_bundle(bundle(unmarked), "", FakeChecker(
+        lambda text: ("UNSUPPORTED", "", "") if text == invented else supported(text)))
+    song = timeline.build("song", checked, sample_media.timings(checked), sample_media.locations())
+    beats = {b.line_id: b for b in song.beats if b.line_id}
+    assert [p.path for p in beats["v1-2"].particles] == [["Thylakoid", "Cytochrome b6f"]]
+    assert beats["v2-1"].particles == [] and all(r.path != ["Cytochrome b6f", "Thylakoid"]
+                                                 for b in song.beats for r in b.routes)

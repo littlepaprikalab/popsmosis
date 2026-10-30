@@ -404,3 +404,6 @@ def test_a_graph_is_asked_for_with_plain_axes_outside_every_structure():
             'beside them: the video writes "Quantity" at the right end of the horizontal one and "Price" at the top of '
             "the vertical one.") in asked
     assert "Axes:" not in art.user_prompt(bundle, hook)
+    # The helper checking the painting is told the axes were asked for, so it never counts them as stray lines.
+    assert f"{art.AXES} They are asked for" in art.check_prompt(bundle, graph)
+    assert art.AXES not in art.check_prompt(bundle, hook)

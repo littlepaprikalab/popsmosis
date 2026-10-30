@@ -470,7 +470,7 @@ def rebuild(job: Path, item: dict) -> None:
     bundle = Bundle.model_validate(item["bundle"])
     factcheck = FactCheckReport.model_validate(item["factcheck"])
     stored = job / "bundle.json"
-    if stored.exists() and json.loads(stored.read_text(encoding="utf-8")) != bundle.model_dump(mode="json"):
+    if stored.exists() and _read_as_now(stored) != bundle.model_dump(mode="json"):
         # Files made from another bundle are stale for this one: keep them aside rather than mix them in.
         aside = job.with_name(f"{job.name}.before-{time.strftime('%Y%m%d-%H%M%S')}")
         shutil.move(str(job), str(aside))
@@ -485,6 +485,15 @@ def rebuild(job: Path, item: dict) -> None:
     keep_brain(job, item.get("brain") or brain.choice_for_model(item.get("model")) or default, effort)
     jobs.keep_studio_settings(job, item.get("studio"))  # who paints its art
     jobs.write(job / CLAIM, {"answerId": item["answerId"], "attempt": item["attempt"]})
+
+
+def _read_as_now(path: Path) -> dict | None:
+    """A job's bundle.json as the schema now reads it, so one written before a field existed (Scene.axes) is still
+    the same lesson, with that field's default; None when it does not read."""
+    try:
+        return Bundle.model_validate_json(path.read_text(encoding="utf-8")).model_dump(mode="json")
+    except (OSError, ValueError):
+        return None
 
 
 # --- giving up -----------------------------------------------------------------------------------

@@ -313,8 +313,9 @@ def key(bundle: Bundle, scene: Scene) -> str:
 
 
 def _dump(scene: Scene) -> dict:
-    # Without an empty stage_of: a scene that is no stage keeps the key it had before stages existed.
-    return scene.model_dump(exclude=set() if scene.stage_of else {"stage_of"})
+    # Without an empty stage_of or axes: a scene that is no stage and no graph keeps the key it had before either
+    # existed, so finished jobs are not painted again.
+    return scene.model_dump(exclude={name for name in ("stage_of", "axes") if not getattr(scene, name)})
 
 
 @dataclass
@@ -686,7 +687,9 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
-            + f"\nWhat the scene should show: {scene.image_prompt}\nIt must show each of these:\n" + "\n".join(lines))
+            + f"\nWhat the scene should show: {scene.image_prompt}"
+            + (f"\n{AXES} They are asked for, and are no part to find." if scene.axes else "")
+            + "\nIt must show each of these:\n" + "\n".join(lines))
 
 
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
