@@ -22,9 +22,11 @@ from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
     Beat,
+    Box,
     Crowd,
     Locations,
     Particles,
+    Point,
     Reveal,
     Route,
     Timeline,
@@ -924,48 +926,6 @@ def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
     assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50
 
 
-def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
-    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
-    first = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
-    since = timeline.beats[first].t0
-    one = Route(path=["Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
-    both = Route(path=["Cytochrome b6f", "Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
-    other = Route(path=["Thylakoid", "Cytochrome b6f"], color="#F2C230", label="H⁺", since=since)  # another carrier
-    beats = [b.model_copy(update={"routes": [one, both, other]}) if b.scene == "overview" else b for b in timeline.beats]
-    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
-    legs = []
-    monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append(color))
-    last = max(i for i, b in enumerate(beats) if b.scene == "overview")
-    renderer.frame(beats[last].t1 - 0.01)
-    assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
-
-
-def test_past_three_arrows_those_not_travelled_on_the_line_fade(job, monkeypatch):
-    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
-    overview = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
-    since = timeline.beats[overview[0]].t0
-    colors = {"e⁻": "#4CC9F0", "H⁺": "#F2C230", "H₂O": "#7FD1FF", "O₂": "#9BE564"}
-    routes = [Route(path=["Thylakoid", "Cytochrome b6f"], color=c, label=label, since=since)
-              for label, c in colors.items()]
-    moving = Particles(path=["Thylakoid", "Cytochrome b6f"], color=colors["H⁺"], label="H⁺", trail=True)
-
-    def legs_at_the_end(routes):
-        beats = [b.model_copy(update={"routes": routes, "particles": [moving] if i == overview[-1] else []})
-                 if b.scene == "overview" else b for i, b in enumerate(timeline.beats)]
-        renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
-        legs = []
-        monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append((color, alpha)))
-        renderer.frame(beats[overview[-1]].t1 - 0.01)  # well past the fade at the line's start
-        return {color: alpha for color, alpha in legs}
-
-    four = legs_at_the_end(routes)
-    assert four[colors["H⁺"]] == pytest.approx(1.0, abs=0.05)  # travelled on this line: in full
-    assert all(four[c] == pytest.approx(renderer_module.ROUTE_PAST, abs=0.05) for label, c in colors.items()
-               if label != "H⁺")
-    three = legs_at_the_end(routes[:3])  # at most ROUTES_CLEAR: every one in full, the pathway building up
-    assert all(alpha == pytest.approx(1.0, abs=0.05) for alpha in three.values())
-
-
 def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
@@ -1116,3 +1076,37 @@ def test_axis_names_stay_on_through_a_stage_fade_when_the_next_stage_has_the_sam
     renamed = staged.model_copy(update={"axes": {**staged.axes, "ceiling": staged.axes["ceiling"].model_copy(
         update={"x": "Bread sold"})}})
     assert drawn(renamed, mid) < 0.8 * drawn(renamed, settled)  # new names fade in with their stage
+
+
+def test_a_cut_to_a_close_up_pushes_in_on_its_part_and_a_cut_back_pulls_out_of_it(job):
+    # Round 18's kidney lesson cut from the body to a nephron, and from the nephron to its tubule, with nothing to say
+    # where the new picture was: a cut between two scenes that draw the same part far apart in size goes through it.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    located = jobs.read(job / media.LOCATIONS, Locations)
+    hook = located.scene("hook")
+    small = hook.structures[0].model_copy(update={
+        "box": Box(x0=850, y0=480, x1=950, y1=560), "centroid": Point(x=900, y=520),
+        "label_anchor": Point(x=900, y=520)})
+    located = located.model_copy(update={"scenes": [s.model_copy(update={"structures": [small]})
+                                                    if s.scene == "hook" else s for s in located.scenes]})
+    first = [b for b in timeline.beats if b.scene == "hook"][-1]
+    overview = next(b for b in timeline.beats if b.scene == "overview")
+    back = overview.model_copy(update={"scene": "hook", "t0": overview.t1, "t1": overview.t1 + 4.0, "particles": [],
+                                       "routes": [], "crowds": [], "reveal": [], "labels": [], "spotlight": None,
+                                       "camera": first.camera})
+    beats = [first, overview, back]
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats, "duration": back.t1}), locations=located)
+    # The hook draws the thylakoid small and the overview large: the overview is the close-up here.
+    assert renderer._through_part("hook", "overview") == ("Thylakoid", True)
+    assert renderer._through_part("overview", "hook") == ("Thylakoid", False)
+    assert renderer._through_part("overview", "synthase") is None  # nothing drawn on both
+    # Into the close-up: the hook's last moments push in on its thylakoid, up to the cut.
+    plan = renderer.plans[0]
+    assert plan.push_at == pytest.approx(first.t1 - renderer_module.ZOOM_THROUGH_S)
+    view, art = renderer.view("hook"), renderer.scene("hook")
+    before, at_cut = plan.cam(plan.push_at, view, art), plan.cam(first.t1 - 0.01, view, art)
+    assert at_cut.zoom > before.zoom * 1.3 and 850 <= at_cut.cx <= 950
+    # Back out: the hook opens close on the thylakoid and pulls back to the whole picture.
+    out = renderer.plans[2]
+    assert out.start.zoom > out.target.zoom * 1.3 and 850 <= out.start.cx <= 950
+    assert renderer.plans[1].push_at is None  # the overview, cut back out of, does not push in

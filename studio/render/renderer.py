@@ -22,7 +22,7 @@ import numpy as np
 import skia
 
 from studio import jobs, media
-from studio.render import axes
+from studio.render import axes, routing
 from studio.render import primitives as p
 from studio.render.layouts import LAYOUTS, Layout, Rect
 from studio.schemas import Locations, SceneLocations, Timeline
@@ -53,6 +53,13 @@ NOTICE_MAX = 3  # notes on the card; any more are counted
 NOTICE_FONT = 22
 AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) without a notice card
 HOOK_ZOOM = 1.15  # frame 0 starts this far in and pulls back: motion from the first frame
+# A cut between two scenes that draw the same part, one far closer than the other (an overview and its close-up),
+# goes through that part: the last ZOOM_THROUGH_S of the wider shot push in on it before the cut, and a cut back out
+# opens on it close and pulls back. A learner sees where the close-up is. Only when the part is ZOOM_THROUGH_SCALE
+# times bigger, by area, on one scene than on the other.
+ZOOM_THROUGH_S = 0.8
+ZOOM_THROUGH_SCALE = 2.0
+ZOOM_THROUGH_MAX = 3.0  # as close as the camera goes on the part: it stops sooner where the part fills the view
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
 WHOLE_PAD = 1.1  # the whole scene keeps this much around what is drawn: labels sit against the structures
 WHOLE_MAX_ZOOM = 2.0
@@ -72,18 +79,9 @@ FLOW_PAUSE_S = 0.5  # the lead particle holds at each stop
 FLOW_MIN_LEG_S = 0.8  # a short hop still takes this long, so it reads as a move
 FLOW_IN_S = 0.4
 STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
-ROUTE_BEHIND = 0.7  # how much of a route's arrow fades where it crosses a part it goes through
 ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its middle
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
 ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
-ROUTE_GAP = 10.0  # frame pixels a route's arrow stops short of where it ends in a space
-ROUTE_EDGE_GAP = 4.0  # and of the edge of a part it reaches
-# Every path a scene's particles have travelled stays drawn, so the pathway builds up. Past ROUTES_CLEAR of them the
-# arrows are noise (round 17's kidney overview drew 15 at once, and the line being sung was lost among them): those
-# not travelled on the line fade to ROUTE_PAST, over ROUTE_FADE_S as the line starts, and come back when they are.
-ROUTES_CLEAR = 3
-ROUTE_PAST = 0.25
-ROUTE_FADE_S = 0.5
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
@@ -167,6 +165,12 @@ def _read(path: Path, color_type) -> np.ndarray:
 class SceneArt:
     """One scene's art and masks, and the washes made from them, composed on demand."""
 
+    def cells(self, name: str) -> np.ndarray:
+        """The part's outline on the routing grid (routing.cells)."""
+        if name not in self._cells:
+            self._cells[name] = routing.cells(_read(self._mask_files[name], skia.kGray_8_ColorType) > 127)
+        return self._cells[name]
+
     def __init__(self, job: Path, located: SceneLocations):
         self.located = located
         art_file = job / located.art
@@ -187,6 +191,7 @@ class SceneArt:
         self._rocks: dict[str, float] = {}
         self._axes: tuple[axes.Line, axes.Line] | None = None
         self._drawn: np.ndarray | None = None
+        self._cells: dict[str, np.ndarray] = {}
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -423,45 +428,6 @@ def to_frame(cam: Cam, view: Rect, art: SceneArt) -> tuple[float, float, float]:
     return scale, (view[0] + view[2]) / 2 - cam.cx * scale, (view[1] + view[3]) / 2 - cam.cy * scale
 
 
-def _split_at_box(line: list[Point], box: tuple[float, float, float, float]) -> list[tuple[list[Point], bool, bool]]:
-    """A line cut where it goes into and out of a box: (piece, inside the box, the last piece), in order. A straight
-    line is sampled finely first, so the cut falls close to the box's edge."""
-    if len(line) == 2:
-        n = max(int(math.dist(*line) / 6), 1)
-        line = [(p.lerp(line[0][0], line[1][0], k / n), p.lerp(line[0][1], line[1][1], k / n)) for k in range(n + 1)]
-
-    def inside(q: Point) -> bool:
-        return box[0] <= q[0] <= box[2] and box[1] <= q[1] <= box[3]
-
-    pieces: list[tuple[list[Point], bool]] = []
-    for q in line:
-        state = inside(q)
-        if pieces and pieces[-1][1] == state:
-            pieces[-1][0].append(q)
-        else:
-            if pieces:
-                pieces[-1][0].append(q)  # the pieces meet, with no gap between them
-            pieces.append(([q], state))
-    pieces = [(piece, state) for piece, state in pieces if len(piece) >= 2]
-    return [(piece, state, k == len(pieces) - 1) for k, (piece, state) in enumerate(pieces)]
-
-
-def _up_to(line: list[Point], lead: Point) -> list[Point] | None:
-    """The part of `line` up to where the lead particle has got to (its nearest point on the line), or None while
-    it has not passed the line's start: an arrow grows only forward."""
-    best = None
-    for k, (a, b) in enumerate(zip(line, line[1:])):
-        length2 = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2 or 1.0
-        u = ((lead[0] - a[0]) * (b[0] - a[0]) + (lead[1] - a[1]) * (b[1] - a[1])) / length2
-        at = (a[0] + (b[0] - a[0]) * min(max(u, 0.0), 1.0), a[1] + (b[1] - a[1]) * min(max(u, 0.0), 1.0))
-        if best is None or math.dist(at, lead) < best[0]:
-            best = (math.dist(at, lead), k, u, at)
-    _, k, u, at = best
-    if k == 0 and u <= 0:
-        return None
-    return line[:k + 1] + [at]
-
-
 def _inside(q: Point, box) -> bool:
     return box.x0 <= q[0] <= box.x1 and box.y0 <= q[1] <= box.y1
 
@@ -498,10 +464,39 @@ def bezier(a: Point, ctrl: Point, b: Point, u: float) -> Point:
 
 
 def _on_leg(points: list[Point], bends, i: int, x: float) -> Point:
-    """The point x (0 to 1) along leg i: on its curve when it bends, else on the straight line."""
-    if bends and bends[i] is not None:
-        return bezier(points[i], bends[i], points[i + 1], x)
+    """The point x (0 to 1) along leg i: along its route when it runs through the parts (routing), on its curve when
+    it bends, else on the straight line."""
+    bend = bends[i] if bends else None
+    if isinstance(bend, list):
+        return _along(bend, x * routing.length(bend))
+    if bend is not None:
+        return bezier(points[i], bend, points[i + 1], x)
     return p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)
+
+
+def _leg_seconds(points: list[Point], bends=None) -> list[float]:
+    """How long the lead particle takes over each leg: its length (a route's own, when it runs through the parts) at
+    FLOW_SPEED, and at least FLOW_MIN_LEG_S."""
+    out = []
+    for i, (a, b) in enumerate(zip(points, points[1:])):
+        bend = bends[i] if bends else None
+        out.append(max((routing.length(bend) if isinstance(bend, list) else math.dist(a, b)) / FLOW_SPEED,
+                       FLOW_MIN_LEG_S))
+    return out
+
+
+def _dense(points: list[Point], bends=None) -> list[Point]:
+    """The whole path as one line: each leg's route or curve, or the straight hop."""
+    out = [points[0]]
+    for i in range(len(points) - 1):
+        bend = bends[i] if bends else None
+        if isinstance(bend, list):
+            out += bend[1:]
+        elif bend is not None:
+            out += [bezier(points[i], bend, points[i + 1], k / CURVE_STEPS) for k in range(1, CURVE_STEPS + 1)]
+        else:
+            out.append(points[i + 1])
+    return out
 
 
 def lead_at(points: list[Point], t: float, bends=None) -> tuple[Point, int]:
@@ -509,7 +504,7 @@ def lead_at(points: list[Point], t: float, bends=None) -> tuple[Point, int]:
 
     It holds at a stop, eases to the next (along the leg's curve when `bends` gives it one), and after the last
     stop starts over from the first."""
-    legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+    legs = _leg_seconds(points, bends)
     trip, t = divmod(max(t, 0.0), FLOW_PAUSE_S * len(points) + sum(legs))
     for i, leg in enumerate(legs):
         if t < FLOW_PAUSE_S:
@@ -524,9 +519,9 @@ def lead_at(points: list[Point], t: float, bends=None) -> tuple[Point, int]:
 def lead_leg(points: list[Point], t: float, bends=None) -> tuple[Point, int, bool]:
     """Where the lead particle is t seconds after it set off, the stop it last left (it is between that stop and
     the next), and whether it has finished its first trip."""
-    if t >= trip_s(points):
+    if t >= trip_s(points, bends):
         return points[-1], len(points) - 1, True
-    legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+    legs = _leg_seconds(points, bends)
     t = max(t, 0.0)
     for i, leg in enumerate(legs):
         if t < FLOW_PAUSE_S:
@@ -538,10 +533,9 @@ def lead_leg(points: list[Point], t: float, bends=None) -> tuple[Point, int, boo
     return points[-1], len(points) - 1, True
 
 
-def trip_s(points: list[Point]) -> float:
+def trip_s(points: list[Point], bends=None) -> float:
     """How long the lead particle takes from its first stop to holding at its last."""
-    legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
-    return FLOW_PAUSE_S * (len(points) - 1) + sum(legs)
+    return FLOW_PAUSE_S * (len(points) - 1) + sum(_leg_seconds(points, bends))
 
 
 def _along(points: list[Point], d: float) -> Point:
@@ -570,9 +564,10 @@ def pile_at(points: list[Point], t: float) -> list[tuple[Point, float]]:
     return dots
 
 
-def stream_at(points: list[Point], t: float) -> list[tuple[Point, float]]:
+def stream_at(points: list[Point], t: float, bends=None) -> list[tuple[Point, float]]:
     """The dots streaming along the path at an even pace, about STREAM_GAP apart, each with
-    its fade: they fade in leaving the first stop and out reaching the last."""
+    its fade: they fade in leaving the first stop and out reaching the last. Along each leg's route or curve."""
+    points = _dense(points, bends)
     lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
     total = sum(lengths)
     if total < 1:
@@ -623,11 +618,16 @@ class BeatPlan:
     drift_from: float  # when the shot's drift set off: the start of the line its move is on
     drift: float = 1.0  # which way the camera drifts: 1 pushing in, -1 pulling back
     fade_from: str | None = None  # the stage this one fades in over (Timeline.stages)
+    push_at: float | None = None  # when the shot pushes in on the part the next scene is a close-up of...
+    push_to: Cam | None = None  # ...and where it ends, at the cut
 
     def cam(self, t: float, view: Rect, art: SceneArt) -> Cam:
         at = mix_cam(self.start, self.target, p.ease((t - self.move_at) / self.move_s))
         on = 1 + self.drift * DRIFT * (1 - math.exp(-max(t - self.drift_from, 0.0) / DRIFT_S))
-        return clamp_cam(Cam(at.cx, at.cy, at.zoom * on), view, art)
+        cam = clamp_cam(Cam(at.cx, at.cy, at.zoom * on), view, art)
+        if self.push_at is not None and t > self.push_at:
+            cam = clamp_cam(mix_cam(cam, self.push_to, p.ease((t - self.push_at) / ZOOM_THROUGH_S)), view, art)
+        return cam
 
 
 class Renderer:
@@ -639,6 +639,7 @@ class Renderer:
         self.portrait = self.layout.height > self.layout.width
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
+        self._through: dict[tuple, list[Point] | None] = {}  # legs routed through the parts (_routed)
         scene_ids = {b.scene for b in timeline.beats}
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
@@ -789,6 +790,16 @@ class Renderer:
             else:
                 start = Cam(target.cx, target.cy, target.zoom * (HOOK_ZOOM if i == 0 else SETTLE_ZOOM))
                 move_at, move_s = beat.t0, SETTLE_S * (1.4 if i == 0 else 1.0)
+                through = self._through_part(beats[i - 1].scene, beat.scene) if i else None
+                if through:
+                    part, closer = through
+                    if closer:  # into a close-up: the shot before pushes in on its part, up to the cut
+                        before = beats[i - 1]
+                        if before.t1 - before.t0 >= 2 * ZOOM_THROUGH_S:
+                            plans[-1].push_at = before.t1 - ZOOM_THROUGH_S
+                            plans[-1].push_to = self._aim(before.scene, part, ZOOM_THROUGH_MAX)
+                    else:  # back out: open close on the part, and pull back
+                        start, move_s = self._aim(beat.scene, part, ZOOM_THROUGH_MAX), MOVE_S
             prev_spot = beats[i - 1].spotlight if same else None
             spot_at = max(beat.t0, reveals.get(beat.spotlight, beat.t0))
             caption_in = caption_out = beat.t0
@@ -828,6 +839,27 @@ class Renderer:
                                   drift_from=drift_from, drift=self._drift(start, target),
                                   fade_from=beats[i - 1].scene if staged else None))
         return plans
+
+    def _through_part(self, before: str, after: str) -> tuple[str, bool] | None:
+        """The part a cut from scene `before` to `after` goes through, and whether `after` shows it closer: the part
+        both draw that is the most bigger on one than on the other, by its share of what is drawn, when that is at
+        least ZOOM_THROUGH_SCALE times. None when they share no part, or show it alike."""
+        if before == after or self.staged(before, after):
+            return None
+        a = {loc.name: loc for loc in self.locations.scene(before).structures}
+        b = {loc.name: loc for loc in self.locations.scene(after).structures}
+
+        def share(scene_id: str, loc) -> float:
+            x0, y0, x1, y1 = self.scene(scene_id).content
+            return (loc.box.x1 - loc.box.x0) * (loc.box.y1 - loc.box.y0) / max((x1 - x0) * (y1 - y0), 1.0)
+
+        best = None
+        for name in a.keys() & b.keys():
+            ratio = share(after, b[name]) / max(share(before, a[name]), 1e-6)
+            scale = max(ratio, 1 / ratio)
+            if scale >= ZOOM_THROUGH_SCALE and (best is None or scale > best[0]):
+                best = (scale, name, ratio > 1)
+        return (best[1], best[2]) if best else None
 
     @staticmethod
     def _drift(start: Cam, target: Cam) -> float:
@@ -958,8 +990,6 @@ class Renderer:
             self._crowds(canvas, beat, cam, view, t, ghosts, spots)
         if beat.turning:
             self._turning(canvas, beat, cam, view, t, ghosts, spots, face=False)
-        if beat.routes:
-            self._routes(canvas, beat, cam, view, t)
         if beat.glow:
             self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
@@ -1211,7 +1241,7 @@ class Renderer:
             lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
             points = self._path_points(scene_id, flow.path, flow.blocked, lane)
             stops = [loc for _, loc in self._path_stops(scene_id, flow.path, lane)]
-            legs = [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
+            legs = _leg_seconds(points, None if flow.blocked else self._bends(scene_id, flow.path, lane))
             part = [not self._is_space(scene_id, loc) for loc in stops]
             reached = [(k * FLOW_PAUSE_S + sum(legs[:k]), stops[k].name) for k in range(1, len(points)) if part[k]]
             through = [stops[k].name for k in range(1, len(points) - 1) if part[k]]
@@ -1405,8 +1435,13 @@ class Renderer:
         The particles ride the same curve as the arrow."""
         pairs = self._path_stops(scene_id, path, lane)
         points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
-        bends: list[Point | None] = []
+        ends = self._path_points(scene_id, path, lane=lane)  # where the particles set off and arrive
+        bends: list[Point | list[Point] | None] = []
         for i, (a, b) in enumerate(zip(points, points[1:])):
+            through = self._routed(scene_id, stops[i], stops[i + 1], ends[i], ends[i + 1])
+            if through:  # along the parts themselves, where their outlines join
+                bends.append(through)
+                continue
             if self._is_space(scene_id, stops[i]) or self._is_space(scene_id, stops[i + 1]):
                 bends.append(None)
                 continue
@@ -1417,6 +1452,17 @@ class Renderer:
             mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
             bends.append((mid[0] + nx * ROUTE_BEND * length, mid[1] + ny * ROUTE_BEND * length))
         return bends
+
+    def _routed(self, scene_id: str, first, second, a: Point, b: Point) -> list[Point] | None:
+        """The leg from a in one part to b in the next through the two parts' outlines (routing.route), or None
+        when they do not join; kept, since every frame asks."""
+        key = (scene_id, first.name, second.name, round(a[0]), round(a[1]), round(b[0]), round(b[1]))
+        if key not in self._through:
+            art = self.scene(scene_id)
+            region = art.cells(first.name) if first.name == second.name else routing.joined(
+                art.cells(first.name), art.cells(second.name))
+            self._through[key] = routing.route(region, a, b)
+        return self._through[key]
 
     def _legs(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[list[Point], bool, int, int, object]]:
         """A route's arrows, in art pixels: (the line it draws, ends in a space, its first stop, its last stop, the
@@ -1434,6 +1480,10 @@ class Renderer:
                 i += 2
                 continue
             a, b = points[i], points[i + 1]
+            if isinstance(bends[i], list):  # a route through the parts: where the particles run
+                legs.append((bends[i], space[i + 1], i, i + 1, None))
+                i += 1
+                continue
             if bends[i] is not None:
                 curve = [bezier(a, bends[i], b, k / CURVE_STEPS) for k in range(CURVE_STEPS + 1)]
                 # From where the curve leaves the part it starts in to where it enters the part it reaches.
@@ -1448,9 +1498,9 @@ class Renderer:
         return legs
 
     def _arrow_points(self, scene_id: str, cam: Cam, view: Rect) -> list[Point]:
-        """Points along every arrow the scene draws at any time in the video, in frame pixels: what labels and
-        reaction pills keep clear of. Every arrow, not only those on screen, so a label is placed once for the
-        scene and does not jump as each arrow appears."""
+        """Points along every path the scene's particles travel at any time in the video (through the parts, where
+        routing found a way), in frame pixels: what labels and reaction pills keep clear of. Every path, not only
+        those travelled on screen, so a label is placed once for the scene and does not jump as each flow starts."""
         if scene_id not in self._scene_routes:
             routes = []
             for beat in self.timeline.beats:
@@ -1474,81 +1524,6 @@ class Renderer:
         scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
         return [(x * scale + dx, y * scale + dy) for x, y in self._scene_routes[scene_id]]
 
-    def _route_strength(self, beat, route, t: float) -> float:
-        """How strongly a route's arrow and its marker are drawn on the beat: in full while its particles travel
-        it, or while the scene shows at most ROUTES_CLEAR; ROUTE_PAST otherwise. It eases from what it was on the
-        beat before (on the same scene) over ROUTE_FADE_S."""
-        def on(b) -> float:
-            if len(b.routes) <= ROUTES_CLEAR:
-                return 1.0
-            moving = any(f.path == route.path and f.label == route.label and not f.blocked for f in b.particles)
-            return 1.0 if moving else ROUTE_PAST
-
-        now = on(beat)
-        i = self._index[id(beat)]
-        before = self.timeline.beats[i - 1] if i else None
-        if before is None or before.scene != beat.scene or not any(
-                r.path == route.path and r.label == route.label for r in before.routes):
-            return now  # a route new on this beat grows in behind its particles
-        was = on(before)
-        return was + (now - was) * p.ease((t - beat.t0) / ROUTE_FADE_S)
-
-    def _routes(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float) -> None:
-        """Each path the scene's particles have travelled, as arrows from structure to structure: each leg leaves
-        the edge of the part it starts from and ends with its tip at the edge of the part it reaches (a space has
-        no edge: its leg starts or ends just inside it, beside its neighbour). A leg too short to hold its head is
-        left out. A flow through a part is drawn faded across the part's box, as if passing behind it; then the
-        markers of what travels each way."""
-        art = self.scene(beat.scene)
-        scale, dx, dy = to_frame(cam, view, art)
-        canvas.save()
-        canvas.clipRect(skia.Rect.MakeLTRB(*view))
-        drawn: set[tuple] = set()  # the hops drawn so far, so a later route never draws one again beside it
-        strength = {(tuple(r.path), r.label): self._route_strength(beat, r, t) for r in beat.routes}
-        # The routes travelled on this line first, so a hop one shares with a faded route is drawn in full.
-        for route in sorted(beat.routes, key=lambda r: -strength[(tuple(r.path), r.label)]):
-            shown = strength[(tuple(route.path), route.label)]
-            lane = self._lanes.get((beat.scene, tuple(route.path), route.label), 0)
-            pairs = self._path_stops(beat.scene, route.path, lane)
-            points = self._path_points(beat.scene, route.path, lane=lane)  # where its particles go: it grows behind them
-            # The arrow grows behind the lead particle on its first trip, then stays whole.
-            set_off = (self.run_of(self.beat_index(route.since), route.path, route.label) or (route.since,))[0]
-            lead, at, done = lead_leg(points, t - set_off, self._bends(beat.scene, route.path, lane))
-            if t < set_off:
-                continue
-            grown = []
-            for line, into_space, first, last, crossed in self._legs(beat.scene, route.path, lane):
-                hop = (pairs[first][1].name, pairs[last][1].name, route.label, route.color)
-                if hop in drawn:
-                    continue  # an earlier route on the scene draws it, from when its own particles passed
-                if done or at >= last:
-                    grown.append((line, into_space, crossed))
-                elif at >= first and (part := _up_to(line, lead)):
-                    grown.append((part, True, crossed))  # up to the particle, which covers its head
-                else:
-                    continue
-                drawn.add(hop)
-            for line, into_space, crossed in grown:
-                frame = [(x * scale + dx, y * scale + dy) for x, y in line]
-                gap = ROUTE_GAP if into_space else ROUTE_EDGE_GAP
-                while len(frame) > 2 and math.dist(frame[-2], frame[-1]) <= gap:
-                    frame.pop()  # the tip stops short of where it ends, trimmed from the end of the line
-                end, before = frame[-1], frame[-2]
-                length = math.dist(before, end)
-                if length <= gap:
-                    continue
-                frame[-1] = (end[0] - (end[0] - before[0]) / length * gap, end[1] - (end[1] - before[1]) / length * gap)
-                alpha = edge_fade(*frame[-1], view) * shown
-                if crossed is None:
-                    p.draw_route_leg(canvas, frame, route.color, alpha)
-                    continue
-                box = (crossed.box.x0 * scale + dx, crossed.box.y0 * scale + dy,
-                       crossed.box.x1 * scale + dx, crossed.box.y1 * scale + dy)
-                for piece, inside, last_piece in _split_at_box(frame, box):
-                    p.draw_route_leg(canvas, piece, route.color, alpha * ((1 - ROUTE_BEHIND) if inside else 1.0),
-                                     head=last_piece)
-        canvas.restore()
-
     def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
         """The key to what moves on the scene: (colour, kind, alpha) for each kind of particle its flows and spaces have
         shown so far whose particles cannot carry their own name (a word, not a symbol printed on them: p.carried), in
@@ -1563,7 +1538,7 @@ class Renderer:
         for route in sorted(beat.routes, key=lambda r: r.since):
             set_off = (self.run_of(self.beat_index(route.since), route.path, route.label) or (route.since,))[0]
             add(route.label, route.color, p.ease((t - set_off) / LABEL_IN_S))
-        for flow in beat.particles:  # a blocked flow draws no arrow
+        for flow in beat.particles:
             add(flow.label, flow.color, p.ease((t - beat.t0) / LABEL_IN_S))
         for crowd in beat.crowds:
             if max(crowd.start, crowd.end) > 0:  # an empty space shows no dots to name
@@ -1607,13 +1582,11 @@ class Renderer:
                     if then < 0 or earlier_trip != trip:  # no trail from before it set off, or from the last trip
                         break
                     trail.append(on_frame(earlier))
-                stream = stream_at(points, elapsed)
+                stream = stream_at(points, elapsed, bends)
             lead_xy, spaced = on_frame(lead), []
             for dot in trail:
                 if math.dist(dot, spaced[-1] if spaced else lead_xy) >= TRAIL_GAP:
                     spaced.append(dot)
-            if not flow.blocked and any(r.path == flow.path and r.label == flow.label for r in beat.routes):
-                stream = []  # the route's arrows show the way: dots along them would read as beads on a string
             p.draw_particles(canvas, flow.color, [(on_frame(q), fade) for q, fade in stream],
                              lead_xy, spaced, alpha, flow.label)
             if flow.blocked and elapsed >= trip_s(points):
