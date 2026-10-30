@@ -1,4 +1,6 @@
-"""Step 1: the bundle. One brain call writes everything the topic alone can give.
+"""Step 1: the bundle. Brain calls write everything the topic alone can give: first the lesson's script (the
+question, the essence, the facts, the scenes and the narration: studio/steps/script.py), then, in one call, the
+rest around it (the pictures, the direction, the lesson text and the song), held to the script.
 
 Writes bundle.json, after a learner has read its lesson (studio/steps/learner.py: the
 lesson is rewritten once if the learner missed its essence) and the code checks
@@ -11,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from studio import brain, checks
-from studio.steps import learner
+from studio.steps import learner, narration, script as script_step
 from studio.jobs import read, write
 from studio.schemas import Bundle, Request
 from studio.styles import style_for
@@ -39,18 +41,27 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     sees it."""
     request = read(job / "request.json", Request)
     system = PROMPT + (NOTE.format(note=note) if note.strip() else "")
+    for stale in ("audit.json", "factcheck.json", "songwriter.json", "bundle.draft.json", "bundle.invalid.json",
+                  "learner.json", narration.RECORD, script_step.RECORD):
+        (job / stale).unlink(missing_ok=True)
+    prompt = user_prompt(request, style_for(job.name))
+    script = script_step.write_script(prompt, PROMPT, ask, request.images, job)
     try:
-        answer = ask("brain", user_prompt(request, style_for(job.name)), Bundle, request.images, system=system, label="bundle")
+        answer = ask("brain", prompt + ("\n\n" + script_step.as_prompt(script) if script else ""), Bundle,
+                     request.images, system=system, label="bundle")
     except brain.InvalidOutput as e:
         (job / "bundle.invalid.json").write_text(e.raw, encoding="utf-8")
         raise
-    bundle, report = checks.review(Bundle.model_validate(answer))
-    for stale in ("audit.json", "factcheck.json", "songwriter.json", "bundle.draft.json", "bundle.invalid.json",
-                  "learner.json"):
-        (job / stale).unlink(missing_ok=True)
+    bundle = Bundle.model_validate(answer)
+    if script:
+        bundle = script_step.follow(bundle, script, job)
+    bundle, report = checks.review(bundle)
     rewritten = learner.run(job, bundle, ask, system)
     if rewritten is not bundle:  # a new lesson: the code checks read it again
         bundle, report = checks.review(rewritten)
+    edited = narration.edit(bundle, ask, job)  # the voice-over made one explanation (studio/steps/narration.py)
+    if edited is not bundle:
+        bundle, report = checks.review(edited)
     report.problems += (checks.song_length_problems(bundle) + checks.motion_problems(bundle)
                         + checks.essence_problems(bundle) + checks.key_line_problems(bundle)
                         + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))

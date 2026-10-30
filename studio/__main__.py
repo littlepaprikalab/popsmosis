@@ -56,9 +56,11 @@ from studio.schemas import AuditReport, CheckReport, FactCheckReport, Request, T
 from studio.steps import audit as audit_step
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
+from studio.steps import narration as narration_step
 from studio.steps import timing as timing_step
 
-STEPS = {"bundle": bundle_step.run, "check": checks.run, "audit": audit_step.run, "factcheck": factcheck_step.run}
+STEPS = {"bundle": bundle_step.run, "check": checks.run, "narration": narration_step.run, "audit": audit_step.run,
+         "factcheck": factcheck_step.run}
 # STARTED: the lesson or the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
 EXIT_CODES = {**operator_run.EXIT_CODES, operator_videos.STARTED: 0, operator_videos.RECOVER: 0,
               operator_videos.NONE: 0, operator_videos.RUNNING: 4}

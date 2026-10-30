@@ -1,0 +1,85 @@
+import json
+
+from studio import brain
+from studio.jobs import write
+from studio.schemas import Bundle, Request
+from studio.steps import bundle as bundle_step
+from studio.steps import script
+from studio.tests.sample import bundle_data
+
+
+def script_data(**changes) -> dict:
+    """A script the sample bundle keeps to: its facts, its scenes, and its narration reworded."""
+    data = bundle_data()
+    out = {
+        "audience": "high school", "question": "Where does a leaf's ATP come from?",
+        "core_idea": "Light pumps protons, and their flow back makes ATP.", "why_chain": [],  # no learner test
+        "key_terms": ["ATP synthase"], "facts": data["facts"], "misconception": "A common mistake is to think so.",
+        "scenes": [{"id": "hook", "picture": "A leaf."}, {"id": "overview", "picture": "A thylakoid membrane."},
+                   {"id": "synthase", "picture": "ATP synthase up close."}],
+        "narration": [{"scene": "overview", "lines": ["The light reactions happen in   the thylakoid membrane."]},
+                      {"scene": "synthase", "lines": ["So ATP synthase uses the returning protons to make ATP.", " "]}],
+    }
+    out.update(changes)
+    return out
+
+
+def asking(answers):
+    """Stands in for brain.ask: answers each call by its label."""
+    asked = []
+
+    def ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        asked.append((label, prompt, system))
+        answer = answers[label]
+        if isinstance(answer, Exception):
+            raise answer
+        return answer(prompt) if callable(answer) else answer
+
+    ask.asked = asked
+    return ask
+
+
+def unchanged_narration(prompt):
+    """The editor handing the narration back as it was given."""
+    return {"lines": [{"id": n["id"], "text": n["text"]} for n in json.loads(prompt)["narration"]]}
+
+
+def test_the_script_is_written_first_and_the_bundle_keeps_its_essence_facts_and_narration(tmp_path):
+    write(tmp_path / "request.json", Request(topic="the light reactions", course="AP Bio"))
+    ask = asking({"script": script_data(), "bundle": bundle_data(), "narration edit": unchanged_narration})
+    bundle = bundle_step.run(tmp_path, ask=ask)
+    assert [a[0] for a in ask.asked] == ["script", "bundle", "narration edit"]
+    (_, first, system), (_, second, _) = ask.asked[:2]
+    assert "## The question" in system and "## The audience" in system and "## The facts" in system
+    assert "## The song" not in system  # the script writer gets the brief's audience and facts, not the rest
+    assert second.startswith(first) and "<script>" in second and '"id": "n2"' in second
+    assert '"text": "The light reactions happen in the thylakoid membrane."' in second  # one space between words
+    assert bundle.core_idea == "Light pumps protons, and their flow back makes ATP."
+    assert [n.text for n in bundle.narration] == ["The light reactions happen in the thylakoid membrane.",
+                                                  "So ATP synthase uses the returning protons to make ATP."]
+    record = json.loads((tmp_path / script.RECORD).read_text())
+    assert record["kept"] == {"essence": True, "facts": True, "narration": True, "scenes_as_written": 2, "reworded": 1}
+
+
+def test_a_bundle_that_will_not_fit_its_script_keeps_its_own_facts_and_narration(tmp_path):
+    longer = script_data(narration=[{"scene": "overview", "lines": ["One.", "Two.", "Three."]}])
+    renamed = script_data(facts=[dict(f, id=f"g{k}") for k, f in enumerate(bundle_data()["facts"])])
+    for data in (longer, renamed):
+        b = Bundle.model_validate(bundle_data())
+        out = script.follow(b, script.Script.model_validate(data), tmp_path)
+        assert out.core_idea == data["core_idea"]
+        kept = json.loads((tmp_path / script.RECORD).read_text())["kept"]
+        if data is longer:
+            assert out.narration == b.narration and not kept["narration"] and kept["facts"]
+        else:
+            assert out.facts == b.facts and not kept["facts"] and kept["narration"]
+
+
+def test_without_a_script_the_bundle_is_written_as_before(tmp_path):
+    write(tmp_path / "request.json", Request(topic="the light reactions"))
+    for answer in (brain.BrainError("no answer"), script_data(narration=[{"scene": "elsewhere", "lines": ["Hi."]}])):
+        ask = asking({"script": answer, "bundle": bundle_data(), "narration edit": unchanged_narration})
+        bundle = bundle_step.run(tmp_path, ask=ask)
+        assert "<script>" not in ask.asked[1][1]
+        assert bundle.core_idea == bundle_data()["core_idea"]
+        assert json.loads((tmp_path / script.RECORD).read_text())["why"]

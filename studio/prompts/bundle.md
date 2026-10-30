@@ -7,6 +7,21 @@ Write the fields in the schema's order. Each part builds on the parts before it:
 first (`core_idea`, `why_chain`, `key_terms`), then the facts, which must state everything
 the essence says, then everything else, which must be true to the facts.
 
+## The script
+
+The lesson's script may come with the request, in a `<script>` block: the lesson's writer
+wrote it before you, and it stands. Take its `audience`, `core_idea`, `why_chain`,
+`key_terms`, `misconception` and `facts` word for word. Draw its scenes, with its ids and in
+its order, each `image_prompt` drawing what its `picture` says, and every part its narration
+names over that scene a structure, named as the narration says it. Speak its narration word
+for word: one narration item a sentence, in its order, with the ids it gives, each played
+over the scene its passage names. Everything else is yours, by this brief: the pictures'
+requests and structures, the direction, the lesson text and the song. The lesson text, the
+song and the key lines tell the same story as the script, in the same order, with the same
+analogy, and the first key line asks the script's `question`. You may add a scene the song
+needs (what a failure looks like, for the bridge) after the script's. Where this brief's
+rules for the narration ask for something the script does differently, the script stands.
+
 ## The audience
 
 Write the whole droplet for one audience: the lesson, the song and the narration.
@@ -62,6 +77,11 @@ the whole droplet. So:
   a plot twist. The lesson, the song, the narration and an analogy scene all use it. When
   one part also needs a picture of its own (a turnstile for ATP synthase), it may have one,
   in a fact too, as long as it fits inside the frame rather than replacing it.
+- Say where each thing happens, part by part, since the pictures show it happening in a
+  place: "the proximal tubule takes back glucose, and secretes H⁺ and some drugs into the
+  filtrate", not "the tubule secretes" when the close-up is of the proximal tubule. A step
+  the facts do not place cannot be shown anywhere: round 18's secretion was cut from its
+  close-up for want of a fact putting it there.
 - Be precise, in the words the audience's course or exam uses (for a young audience,
   plain words that are still exact). State quantities, exceptions and limits exactly
   ("only cytochrome b6f pumps protons", not "the chain pumps protons").
@@ -493,7 +513,9 @@ In this order, each section a run of lines with its own `section` value:
   takes the other case the facts give and walks it the same way, one link a line. Either
   way the bridge sings something new: a bridge that retells the verses' story (the same
   letter going astray, the same king calling the same assembly) wastes the song's best
-  eight lines.
+  eight lines. A story in time is sung in the order it happened, verse to verse to bridge:
+  the bridge never steps back to an earlier event ("88 BCE, rewind" sung after Augustus
+  left the listener lost in time).
 - **Chorus**, the last: a summary couplet first, then the chorus word for word.
 - **Outro**, 3 lines: echo the intro and end on the title line.
 
@@ -529,8 +551,9 @@ alias. Write at the audience's level, in plain spoken language: short sentences,
 markdown, no lists, nothing in parentheses. Use the droplet's analogy, on its scene for two
 or three sentences so the picture has time to land, and correct the misconception once, as
 the song does. A topic told in time (a war, a revolution, a chain of events) goes in the
-order it happened after the hook, with the year as each event comes, and corrects the
-misconception right after the overview, where it frames all that follows. Build it on `why_chain`: every step says why it
+order it happened after the hook, with the year as each event comes. Correct the
+misconception once, right where the wrong idea would form, never before the learner has met
+what it is about (Caesar corrected before Caesar comes in leaves them lost). Build it on `why_chain`: every step says why it
 happens. Keep to `key_terms`, never more than one new name in a sentence. Ask the listener
 one question mid-way and answer it in the next sentence. Open on the hook, and end on the
 core idea, in the same words as `core_idea`, then, for a process, what goes in and what
@@ -547,7 +570,9 @@ order, keyed by `line_id`:
 - `scene`: the scene on screen while the line plays. It draws every structure in the
   line's `names`. The chorus is sung three times, each time over a scene that draws what
   it names, usually the overview. Stay on a scene for several lines and cut when the
-  content moves on. Both videos open on the hook.
+  content moves on; in the song, keep a section on one scene where you can. A picture on
+  screen for one sung line (two seconds) is gone before the viewer finds anything in it,
+  so the video holds the scene before it over a run that short. Both videos open on the hook.
 - `camera`: `target` is the structure to frame ("" for the whole scene); `zoom` is 1.0
   for the whole scene and about 1.6 to 2.0 for a close-up (how to move it: "Plan the motion
   like an animator", below).
@@ -607,8 +632,8 @@ has. Plan them across the whole song before writing any one line's direction:
 - **Motion is for what travels.** A line that tells a step where something travels has
   particles for that step: that is what shows how the process works. A line that comments
   ("that's the payout"), names a part or sums up holds still, or moves the camera: the video
-  shows at most two flows at once, and keeps the arrows of the flows already shown, faded,
-  so more dots only crowd the picture. A failure scene: after the block, what has stopped
+  shows at most two flows at once, each one's dots travelling through the parts themselves
+  (along a tube, round its bends, across a wall), so more dots only crowd the picture. A failure scene: after the block, what has stopped
   stays still, and that stillness is the point. A scene where nothing travels (a graph, a
   stage, a map, a gathering of people) has no particles on any line: the camera and the
   spotlight move from part to part with the lines instead, and a dot sent between its parts
@@ -620,9 +645,12 @@ has. Plan them across the whole song before writing any one line's direction:
   the sea floor. The spotlight moves from the form a line starts from to the form it
   becomes, and the key line names the process. Particles only where something really is
   carried somewhere (sediment washed down to the sea, vapour rising to the clouds).
-- **In history, only what moved moves**: an army marching, ships, goods, money. Never land,
-  power, loyalty, votes or ideas as dots, which teach a journey that never happened. The
-  spotlight and the camera move from person to person and place to place with the story.
+- **In history, only what was carried moves**: goods, grain, money, letters. Never land,
+  power, loyalty, votes or ideas as dots, which teach a journey that never happened, and
+  never people or armies, which are drawn: dots marked "troops" leaving a drawn army read as
+  sparks, not soldiers. The spotlight and the camera move from person to person and place to
+  place with the story: the camera following the army from its figure to the city is the
+  march.
 - **What goes in and what comes out move too.** A line that says something is taken in,
   split, made or released has particles for it: the input travelling from where it comes
   from into the structure that uses it, the product travelling out to where it goes

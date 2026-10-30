@@ -35,6 +35,10 @@ class FakeAsk:
             raise brain.InvalidOutput("does not fit", "{}")
         if self.cost and self.job:
             ledger.log(self.job, [brain.Call(label, role, "claude-opus-5-5", 10, 10, self.cost, 1.0, "end_turn")])
+        if label == "script":  # no script: the bundle is written without one
+            raise brain.BrainError("no answer")
+        if label == "narration edit":  # handed back as it came
+            return {"lines": [{"id": n["id"], "text": n["text"]} for n in json.loads(prompt)["narration"]]}
         if label == "bundle":
             return {**bundle_data(), "why_chain": ["A because B", "C because D", "E because F"],
                     "key_terms": ["ATP synthase"],
@@ -111,7 +115,8 @@ def test_a_run_makes_and_scores_each_topic_and_saves_the_tables(tmp_path):
     ask_for, made = asks()
     card = scorecard.run([topic("one"), topic("two")], tmp_path, ask_for=ask_for, about=ABOUT, workers=2)
     # The bundle step alone (with its learner test), then the judge: no fact-check, art or audio.
-    assert [c["label"] for c in made["one"].calls] == ["bundle", "learner", "learner grade", "judge"]
+    assert [c["label"] for c in made["one"].calls] == ["script", "bundle", "learner", "learner grade",
+                                                       "narration edit", "judge"]
     judged = made["one"].calls[-1]
     assert judged["role"] == "judge" and judged["system"] == scorecard.RUBRIC
     assert judged["prompt"].startswith("<droplet>") and CHORUS in judged["prompt"]
@@ -173,7 +178,7 @@ def test_no_topic_starts_once_the_run_has_spent_its_budget(tmp_path):
     card = scorecard.run([topic("one"), topic("two")], tmp_path, ask_for=ask_for, about=ABOUT, workers=1, budget=1.0)
     assert "two" not in made
     assert card["topics"][1]["failed"]["error"].startswith("not run")
-    assert card["topics"][0]["cost"]["bundle"] == 1.5 and card["topics"][0]["cost"]["judge"] == 0.5
+    assert card["topics"][0]["cost"]["bundle"] == 2.5 and card["topics"][0]["cost"]["judge"] == 0.5
 
 
 def test_compare_shows_two_runs_side_by_side_and_warns_when_the_judge_changed(tmp_path):

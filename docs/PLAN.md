@@ -195,17 +195,26 @@ before the ones ahead of it exist: their paths and the rules for a media step in
 <name> <job>` runs a media step as soon as its module is in `studio/steps/`; wiring them
 into `run`, after the post, comes once they are built.
 
-That is three to five brain calls per topic: the bundle, the fact audit (and a second look
-at any fact it corrected), the fact-check, and a re-check of any lines the fact-check
-changed, with a songwriter's rewrite before it when a couplet of the song failed (plus one
-per scene for the SVG art, with the Claude brain). The helper is called
-per image and per fallback.
+That is five to seven brain calls per topic: the script, the bundle, the narration edit,
+the fact audit (and a second look at any fact it corrected), the fact-check, and a
+re-check of any lines the fact-check changed, with a songwriter's rewrite before it when a
+couplet of the song failed (plus one per scene for the SVG art, with the Claude brain).
+The helper is called per image and per fallback.
 
 ### Step 1: bundle
 
-One structured-output call returns everything that can be written from the topic alone.
-The fields are in this order on purpose: the model writes in field order, so the later
-parts build on the facts it has already written.
+First the lesson's script (`studio/steps/script.py`, `prompts/script.md` with the brief's
+rules for the audience and the facts): the question the lesson answers, the essence, the
+facts, a picture for each scene and the narration, passage by passage, written as one
+explanation before anything is drawn or sung. Round 18's lessons, written a sentence at a time
+alongside everything else, came out in pieces a learner could not follow. Then one
+structured-output call returns everything else that can be written from the topic alone,
+handed the script, which stands: code holds the bundle to its essence, facts and narration.
+Without a script (its call failed), that one call writes it all, as it did before. Then the
+learner test, and a narration editor (`studio/steps/narration.py`) that hears the voice-over
+whole and may reorder and reword it, keeping every sentence. The fields are in this order on
+purpose: the model writes in field order, so the later parts build on the facts it has
+already written.
 
 1. `course`, `topic`, `audience` ("high school" unless the learner's request names
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
