@@ -19,14 +19,19 @@ test.describe('the How it’s made page', () => {
 
   test('says what runs, what the video says about a wrong picture, and what is not done yet', async ({ page }) => {
     await page.goto('/how-its-made');
-    for (const name of ['The steps', 'When a picture is wrong, the video says so', 'Why this is hard', 'The models', 'What we don’t do yet']) {
+    for (const name of ['How it works, step by step', 'When a picture is wrong, the video tells you', 'Why this is hard',
+      'The AI models we use', 'What we don’t do yet']) {
       await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
     }
-    // Both checks that hold the lesson back, in the order they run.
-    const steps = page.locator('section[aria-labelledby="steps-title"] ol').first().getByRole('listitem');
+    // The lesson's steps in order, the last two the checks that hold it back, each saying so.
+    const steps = page.getByRole('list', { name: 'Making the lesson' }).getByRole('listitem');
     await expect(steps).toHaveCount(5);
-    await expect(steps.nth(3)).toContainText('Fact audit');
-    await expect(steps.nth(4)).toContainText('Fact-check');
+    await expect(steps.nth(3)).toContainText('Fact check');
+    await expect(steps.nth(4)).toContainText('Line check');
+    await expect(page.getByText('Fails? Nothing is posted.')).toHaveCount(2);
+    // Then the pictures and the sound, made side by side.
+    await expect(page.getByRole('list', { name: 'Pictures' }).getByRole('listitem')).toHaveCount(3);
+    await expect(page.getByRole('list', { name: 'Sound' }).getByRole('listitem')).toHaveCount(1);
     // The card as the video draws it, with the note's lead in the renderer's words.
     await expect(page.getByText('A check found these mistakes:')).toBeVisible();
     await expect(page.getByRole('article')).toHaveCount(6);

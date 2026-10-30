@@ -3,21 +3,24 @@ import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
 import { Wordmark } from '@/components/Wordmark';
 import { MakerChip } from '@/components/MakerChip';
-import { PlayIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, PlayIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 export const metadata: Metadata = {
   title: 'How it’s made',
-  description: 'How a droplet is written, painted and sung by AI, what checks it before you see it, and what those checks still miss.',
+  description: 'How AI makes each droplet, how we check it before you see it, and what our checks can still miss.',
 };
 
 // What this page says is what the studio does: when a step changes what it checks (docs/PLAN.md, section 5), change
 // the page with it. The examples are from docs/test-rounds.md, and the models are the Studio page's defaults on the
-// date below.
+// date below. It is written for a high school student, the droplets' default audience, in words a parent reads as
+// easily: short sentences and everyday words, the studio's own terms left out.
 
 const card = { background: 'var(--bg-secondary)', border: '1px solid var(--border)' } as const;
 const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 // An accent for small text, blended toward the text colour so it reads in both themes (as on the About page).
 const ink = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, var(--text-primary))`;
+// The flow's lines and arrowheads.
+const LINE = 'color-mix(in srgb, var(--text-muted) 55%, transparent)';
 
 type Kind = 'makes' | 'checks' | 'gate';
 
@@ -29,80 +32,82 @@ const KINDS: Record<Kind, { label: string; color: string }> = {
 
 interface Step { name: string; kind: Kind; text: string }
 
+// The studio's steps, as the flow draws them: the lesson's one after another (a "gate" stops the droplet when it
+// fails), then the pictures and the sound side by side, as the studio makes them, then the video from both.
 const LESSON_STEPS: Step[] = [
   {
     name: 'Plan',
     kind: 'makes',
-    text: 'The writer model first plans the lesson as one explanation: the question it answers, the one idea to '
-      + 'remember, the chain of causes behind it, the facts, and a picture for each scene. The text lesson, the '
-      + 'narration and the song are then all written from that plan.',
+    text: 'The AI writer plans the whole lesson first: the question, the one big idea, the facts, and a picture for '
+      + 'each part. The text lesson, the spoken lesson and the song are all written from this one plan.',
   },
   {
-    name: 'Code checks',
+    name: 'Rule check',
     kind: 'checks',
-    text: 'Code checks what a rule can count: every part a line names is in the scene that shows it, and every song '
-      + 'line is short enough to sing. It repairs what it can and records the rest.',
+    text: 'Simple computer rules check what can be counted. Is every part a line talks about in its picture? Is every '
+      + 'song line short enough to sing? Some problems get fixed here, and the rest are noted.',
   },
   {
-    name: 'Learner test',
+    name: 'Student test',
     kind: 'checks',
-    text: 'A second model plays a student who has never met the topic. It reads only the lesson, then explains the big '
-      + 'idea, why it works, and what would happen if a part stopped working. If it misses the main idea or most of '
-      + 'the why, the lesson is rewritten once and read again.',
+    text: 'A second AI pretends to be a student who has never seen the topic. It reads only the lesson and explains '
+      + 'it back. If it misses the big idea, or most of why it works, the lesson is rewritten once and tested again.',
   },
   {
-    name: 'Fact audit',
+    name: 'Fact check',
     kind: 'gate',
-    text: 'A fresh call to the writer model, with none of the writing conversation, judges every fact on its own '
-      + 'against what textbooks teach at the learner’s level, reading it the way an exam would. A wrong fact is '
-      + 'corrected, and the correction is judged again. Notes a learner sends show what their course covers, but '
-      + 'never make a fact true.',
+    text: 'The AI starts fresh, without seeing how the lesson was written, and checks each fact on its own against '
+      + 'what textbooks teach at your level. A wrong fact is fixed, and the fix is checked too. Notes you send help it '
+      + 'see what your class covers, but they never make a fact true.',
   },
   {
-    name: 'Fact-check',
+    name: 'Line check',
     kind: 'gate',
-    text: 'Another fresh call holds every line to the audited facts: each sentence of the lesson and the narration, '
-      + 'each couplet of the song, and every caption, on-screen line and title. A line the facts don’t support is '
-      + 'rewritten and checked again, for up to three rounds; if one still fails, the droplet isn’t posted. A line '
-      + 'not fit for a classroom fails too, and a hashtag that fails is dropped.',
+    text: 'Starting fresh again, it checks every line against those facts: the lesson, the spoken lesson, the song, '
+      + 'and every caption and title. A line that doesn’t match is rewritten and checked again, for up to three rounds. '
+      + 'Anything not right for a classroom fails too.',
   },
 ];
 
-const VIDEO_STEPS: Step[] = [
+const PICTURE_STEPS: Step[] = [
   {
     name: 'Pictures',
     kind: 'makes',
-    text: 'An image model paints each scene as a textbook diagram with no writing in it: the video writes every label '
-      + 'and word itself. With Claude writing, our default, charts and anything read to scale are drawn as code from '
-      + 'the facts’ numbers instead of painted.',
+    text: 'An AI paints each picture like a textbook diagram, with no words in it. The video adds every label and word '
+      + 'itself. When Claude writes the lesson (our default), charts and anything that must be to scale are drawn by '
+      + 'code from the real numbers instead.',
   },
   {
     name: 'Picture check',
     kind: 'checks',
-    text: 'A second model looks at every painted picture for parts that are missing, out of place or facing the wrong '
-      + 'way, and for any writing. A picture with those problems is painted once more, and one with writing in it is '
-      + 'never used. Mistakes it finds that could teach something false are shown in the video (below).',
+    text: 'A second AI looks at each painted picture. Is a part missing, in the wrong place, or facing the wrong way? '
+      + 'Is there any writing? If so, the picture is painted one more time. A picture with writing in it is never '
+      + 'used. Mistakes that could mislead you are shown in the video (see below).',
   },
   {
     name: 'Labels',
     kind: 'checks',
-    text: 'A segmentation model finds each part in the picture, and only where the picture has that part’s colour. A '
-      + 'model then looks at the picture with every label’s pin on it, to catch one on the wrong part. A part that '
-      + 'can’t be found is left unlabelled rather than guessed.',
+    text: 'Another AI finds each part in the picture, so its label points to the right spot. It only counts a spot in '
+      + 'that part’s color. Then an AI looks at every label to catch one in the wrong place. A part it can’t find gets '
+      + 'no label, not a guess.',
   },
+];
+
+const SOUND_STEPS: Step[] = [
   {
     name: 'Song and voice',
     kind: 'makes',
-    text: 'AI voices sing the song and speak the narration. Each word is then lined up with the audio, so the lyrics, '
-      + 'labels and moving parts land on time. A song whose lines mostly can’t be made out is made again.',
-  },
-  {
-    name: 'Video',
-    kind: 'makes',
-    text: 'Code draws every frame from the plan: the labels, the captions, the moving dots that show what flows where '
-      + '(fact-checked like a line), and the notes about mistakes.',
+    text: 'AI voices sing the song and read the spoken lesson. Each word is then matched to the moment it is heard, so '
+      + 'the lyrics and labels show up on time. If most of the song’s lines can’t be made out, the song is made again.',
   },
 ];
+
+const VIDEO_STEP: Step = {
+  name: 'Video',
+  kind: 'makes',
+  text: 'Code puts it all together, frame by frame: the pictures, labels, captions, the notes about mistakes, and '
+    + 'moving dots that show what goes where. The moving dots are checked against the facts too.',
+};
 
 // A note the art check wrote on a real picture, round 16's mitosis hook (docs/test-rounds.md).
 const NOTE = 'The purple new cells sit in the deeper skin as a loose row; in truth, dividing cells lie in the base of '
@@ -113,46 +118,46 @@ interface Hard { title: string; happened: string; changed: string }
 const HARD: Hard[] = [
   {
     title: 'One wrong fact spreads everywhere',
-    happened: 'The lesson, the narration and the song are all written from one set of facts, so a wrong fact turns up '
-      + 'in all three, on screen and sung. A check that only holds lines to the facts would pass every one of them.',
-    changed: 'The fact audit judges the facts themselves before anything is checked against them. It is tested on a '
-      + 'fact like “every electron hand-off pumps a proton” (only one of them does): the fact must be corrected, and '
-      + 'so must the lyric written from it.',
+    happened: 'The lesson, the spoken lesson and the song are all written from the same facts. So one wrong fact shows '
+      + 'up in all three. Checking the lines against the facts won’t catch it, because the lines match the facts.',
+    changed: 'We added the fact check, which checks the facts themselves first. We test it with a wrong fact like '
+      + '“every electron hand-off pumps a proton” (only one of them does). The fact has to be fixed, and so does the '
+      + 'song line written from it.',
   },
   {
-    title: 'A rhyme pulls toward nonsense',
-    happened: 'To land a rhyme, a model in testing wrote “Up to NADP plus into the sky” and “Calvin builds the sugar '
-      + 'from that text”. A song is replayed until it sticks, so a wrong line gets learned.',
-    changed: 'Every couplet is fact-checked as something a student will come away believing. One that fails is '
-      + 'rewritten by a songwriter pass that keeps its rhythm and rhyme, then checked again.',
+    title: 'Rhymes pull toward nonsense',
+    happened: 'To make a rhyme work, one AI in our tests wrote “Up to NADP plus into the sky.” Students replay a song '
+      + 'until it sticks, so a wrong line gets learned.',
+    changed: 'Every pair of song lines is checked for what a student would come away believing. If it fails, a '
+      + 'songwriter step rewrites it, keeping the beat and the rhyme, and it is checked again.',
   },
   {
-    title: 'Image models draw what looks right, not what is right',
-    happened: 'Asked for Earth with its axis “at right angles to the equator”, an image model drew a level equator '
-      + 'with a tilted rod through it, six times out of six.',
-    changed: 'Geometry is drawn as code, where “at right angles” is a number. Drawn that way, the axis and the tilt '
-      + 'came out right in every try.',
+    title: 'AI draws what looks right, not what is right',
+    happened: 'We asked for Earth with its axis “at right angles to the equator.” The image AI drew a flat equator with '
+      + 'a tilted stick through it. It got this wrong six times out of six.',
+    changed: 'Pictures that need exact angles or sizes are now drawn by code, where “at right angles” is an exact '
+      + 'number. In our tests, code drew the axis and the tilt right every time.',
   },
   {
     title: 'Numbers can’t be painted',
-    happened: 'A compound-interest chart came back with the simple-interest bars taller than the compound ones, and '
-      + 'every year’s interest the same height.',
-    changed: 'Charts are drawn from the facts’ numbers, $1,100, $1,210 and $1,331 each at exactly its height, and each '
-      + 'amount is written on the chart as the narrator says it.',
+    happened: 'An AI painted a chart about compound interest. It got the bars wrong: simple interest looked bigger than '
+      + 'compound interest, and every year’s interest was the same height.',
+    changed: 'Charts are now drawn by code from the real numbers. $1,100, $1,210 and $1,331 are each drawn at exactly '
+      + 'the right height, and each amount pops up as the narrator says it.',
   },
   {
     title: 'Labels land on the wrong thing',
-    happened: '“Mountain” was pinned on a band of rock underground. Another time, “Southern Hemisphere” went on '
-      + 'Earth’s northern half.',
-    changed: 'A part is found only where the picture has its colour, and a model looks at every label’s pin on the '
-      + 'picture before the video is made.',
+    happened: 'The label “Mountain” once landed on a layer of rock underground. Another time, “Southern Hemisphere” '
+      + 'landed on Earth’s northern half.',
+    changed: 'A part now only counts where the picture has its color. And an AI looks at every label on the picture '
+      + 'before the video is made.',
   },
   {
     title: 'The checker is AI too',
-    happened: 'On a mitosis picture, the check caught chromosomes bent the wrong way, but missed that there were '
-      + 'eight on each side where there should have been four.',
-    changed: 'Every AI picture is tagged, whether a mistake was found or not, and the card says what a check found, '
-      + 'never that a picture is right.',
+    happened: 'On a picture of mitosis, the check caught chromosomes bent the wrong way. But it missed that there '
+      + 'were eight on each side instead of four.',
+    changed: 'That’s why every AI picture is marked as AI-made, whether a mistake was found or not. The card only says '
+      + 'what a check found. It never says a picture is right.',
   },
 ];
 
@@ -163,7 +168,7 @@ const MODELS_AS_OF = 'October 2026';
 
 const JOBS: Job[] = [
   {
-    job: 'Plans, writes, audits and fact-checks the lesson',
+    job: 'Plans, writes and checks the lesson',
     uses: [{ name: 'Claude Opus 5.5', maker: 'Anthropic' }],
     or: [{ name: 'Muse Wonder 1.0', maker: 'Meta' }, { name: 'Muse Spark 1.3', maker: 'Meta' }],
   },
@@ -184,29 +189,29 @@ const JOBS: Job[] = [
     uses: [{ name: 'Eleven Music', maker: 'ElevenLabs' }],
     or: [{ name: 'Lyria 3.5', maker: 'Google' }],
   },
-  { job: 'Speaks the narration', uses: [{ name: 'an ElevenLabs voice', maker: 'ElevenLabs' }] },
+  { job: 'Reads the spoken lesson', uses: [{ name: 'an ElevenLabs voice', maker: 'ElevenLabs' }] },
   {
-    job: 'Lines the sung words up with the music',
+    job: 'Matches the sung words to the music',
     uses: [{ name: 'Demucs', maker: 'Meta' }, { name: 'MMS', maker: 'Meta' }],
-    note: 'run on our own machine',
+    note: 'runs on our own computer',
   },
 ];
 
 const LIMITS = [
-  'No sources are cited. Facts are judged by AI against what textbooks teach at the learner’s level, not looked up, '
-    + 'and the lesson doesn’t link to where a fact comes from.',
-  'The checkers are AI too. The fact audit and the fact-check run on the same model that wrote the lesson, each '
-    + 'starting fresh, without the writer’s reasoning. They catch a lot, not everything.',
-  'A person doesn’t review each droplet before it’s shared on the Droplets tab.',
-  'Charts and diagrams drawn as code aren’t looked over by the picture check. They’re built from the plan and its '
-    + 'numbers, and carry the AI tag like every picture.',
-  'Where the facts say nothing, a song couplet can pass on what’s true at the learner’s level, since a song speaks '
-    + 'in images. The lesson and the narration are held to the facts alone.',
-  'The song is fact-checked before it’s sung, but the singing isn’t checked word by word: only that most of its '
-    + 'lines can be made out.',
+  'We don’t list sources. The AI checks facts against what textbooks teach, but it doesn’t look them up, and the '
+    + 'lesson doesn’t show where a fact comes from.',
+  'The fact check and the line check use the same AI that wrote the lesson. It starts fresh each time, without the '
+    + 'writer’s notes, but it can still miss things.',
+  'No person reviews each droplet before it goes on the Droplets tab.',
+  'The picture check doesn’t look at charts and diagrams drawn by code. Those are built from the real numbers, and '
+    + 'they still get the AI tag.',
+  'Song lines get a little more room. If the facts don’t cover something, a song line can still pass if it’s true at '
+    + 'your level. The lesson and the spoken lesson must stick to the facts.',
+  'The song’s words are checked before it is sung. After, we only check that most of its lines can be heard, not '
+    + 'every word.',
 ];
 
-/** How a droplet is made: every step and what it checks, what the video says when a picture is wrong, why this is
+/** How a droplet is made, for anyone: every step as a flow, what the video says when a picture is wrong, why this is
  *  hard, the models, and what the checks still miss. */
 export default function HowItsMadePage() {
   return (
@@ -217,52 +222,82 @@ export default function HowItsMadePage() {
         </h1>
         <div className="flex flex-col gap-3 text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
           <p>
-            Every droplet is written, painted and sung by AI. AI is fast and fluent, and sometimes confidently wrong,
-            so most of what <Wordmark size="sm" /> does is checking. This page shows what runs on every droplet, what
-            it catches, and what it still misses.
+            AI writes, draws and sings every droplet. AI is fast, but it can be wrong and still sound sure. So most of
+            what <Wordmark size="sm" /> does is check its work. This page shows each check, what it catches, and what
+            it can still miss.
           </p>
         </div>
         <ul className="grid gap-3 mt-6 sm:grid-cols-3">
-          <Pledge color="var(--accent-green)" title="Every fact audited">
-            judged on its own against what textbooks teach
+          <Pledge color="var(--accent-green)" title="Every fact checked">
+            against what textbooks teach at your level
           </Pledge>
-          <Pledge color="var(--accent-orange)" title="Every line fact-checked">
-            lesson, narration, song and captions; nothing is posted until it passes
+          <Pledge color="var(--accent-orange)" title="Every line checked">
+            lesson, song and captions. Nothing is posted until they pass.
           </Pledge>
-          <Pledge color="var(--accent-yellow)" title="Every picture tagged">
-            as AI-made, with any mistake the check found shown beside it
+          <Pledge color="var(--accent-yellow)" title="Every picture marked as AI">
+            and mistakes we find are shown right next to it
           </Pledge>
         </ul>
       </header>
 
       <section aria-labelledby="steps-title" className="mb-12">
-        <SectionTitle id="steps-title">The steps</SectionTitle>
-        <div className="grid gap-6 md:grid-cols-2">
-          <StepList title="The lesson" sub="before anything is posted" steps={LESSON_STEPS} start={1} />
-          <StepList title="The videos" sub="while you read the lesson" steps={VIDEO_STEPS} start={LESSON_STEPS.length + 1} />
+        <SectionTitle id="steps-title">How it works, step by step</SectionTitle>
+        <p className="text-sm leading-relaxed mb-6 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+          Each box is one step, in order. A droplet must pass the steps marked <KindChip kind="gate" />, or it
+          stops there.
+        </p>
+
+        <div className="md:px-40">
+          <FlowLabel>Making the lesson</FlowLabel>
+          <ol aria-label="Making the lesson" className="flex flex-col">
+            {LESSON_STEPS.map((step, i) => (
+              <li key={step.name}>
+                {i > 0 && <Arrow />}
+                <StepNode step={step} />
+              </li>
+            ))}
+          </ol>
+          <Arrow />
+          <Milestone>The lesson is posted. You can read it now, while the videos are made.</Milestone>
         </div>
-        <p className="text-xs leading-relaxed mt-4 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
-          Changes to how droplets are written are tried on the same 12 topics, from the light reactions of
-          photosynthesis to the French Revolution, and graded against a written rubric, so a fix for one subject
-          doesn&rsquo;t quietly make another worse.
+
+        <Fork />
+        <div className="grid gap-6 md:grid-cols-2 md:gap-8">
+          <Lane title="Pictures" steps={PICTURE_STEPS} />
+          <Lane title="Sound" steps={SOUND_STEPS} />
+        </div>
+        <Join />
+
+        <div className="md:px-40">
+          <StepNode step={VIDEO_STEP} />
+          <Arrow />
+          <Milestone>Both videos are done. The droplet goes on the Droplets tab for everyone.</Milestone>
+        </div>
+
+        <p className="text-xs leading-relaxed mt-6 max-w-2xl" style={{ color: 'var(--text-muted)' }}>
+          When we change how droplets are written, we test the change on the same 12 topics, from photosynthesis to
+          the French Revolution. An AI grades each one with the same written checklist, so fixing one subject
+          doesn&rsquo;t quietly break another.
         </p>
       </section>
 
       <section aria-labelledby="notice-title" className="mb-12">
-        <SectionTitle id="notice-title">When a picture is wrong, the video says so</SectionTitle>
+        <SectionTitle id="notice-title">When a picture is wrong, the video tells you</SectionTitle>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
           <div className="flex flex-col gap-3 text-sm leading-relaxed lg:flex-1" style={{ color: 'var(--text-secondary)' }}>
             <p>
-              Image models are the least reliable part of a droplet, and painting a picture again often
-              doesn&rsquo;t help: for problems other than a missing or misplaced part, a second try was no better 9
-              times in 11. So when the picture check finds a mistake that could teach something false, it writes a
-              sentence for the student, and the video shows it on a card beside the picture for as long as the
-              picture is on screen. Matters of look, like a cell drawn oval, are left out.
+              AI pictures are the weakest part of a droplet, and painting a picture again often doesn&rsquo;t fix it.
+              For some kinds of mistakes, a second try was no better 9 times out of 11.
             </p>
             <p>
-              The check can miss a mistake too, so every other AI picture carries a small tag saying it is one, the
-              drawn ones included. An analogy&rsquo;s picture, an everyday stand-in like a tug-of-war for mitosis,
-              gets the tag but never a card: it can&rsquo;t teach the topic wrong.
+              So when the picture check finds a mistake that could teach you something false, it writes a short note.
+              The video shows that note on a card next to the picture, for as long as the picture is on screen. Small
+              things about looks, like a cell drawn oval, are left out.
+            </p>
+            <p>
+              The check can miss mistakes too. So every other AI picture has a small tag that says it&rsquo;s
+              AI-made, even the ones drawn by code. A picture that is only a comparison, like a tug-of-war standing in
+              for mitosis, gets the tag but never a card. It can&rsquo;t teach the topic wrong.
             </p>
           </div>
           <figure className="lg:w-[22rem] lg:shrink-0">
@@ -271,8 +306,8 @@ export default function HowItsMadePage() {
               <div><AiTag /></div>
             </div>
             <figcaption className="text-xs leading-relaxed mt-2" style={{ color: 'var(--text-muted)' }}>
-              The card as the video draws it, with a note the check wrote on a real picture while we tested a lesson
-              on mitosis; under it, the tag on every other picture.
+              This is how the card looks in a video. The note is a real one the check wrote while we tested a lesson
+              on mitosis. Below it is the tag on every other picture.
             </figcaption>
           </figure>
         </div>
@@ -280,23 +315,28 @@ export default function HowItsMadePage() {
 
       <section aria-labelledby="hard-title" className="mb-12">
         <SectionTitle id="hard-title">Why this is hard</SectionTitle>
-        <p className="text-sm leading-relaxed mb-6 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
-          A lesson is one thing to get right. A droplet is a lesson, a narrated video and a song, written, painted,
-          sung and timed by different models, and a mistake at any step reaches the learner, sometimes sung back to
-          them on repeat. Each of these happened in the 22 rounds of test topics we ran end to end, and each changed
-          how <Wordmark size="sm" /> works.
-        </p>
+        <div className="flex flex-col gap-3 text-sm leading-relaxed mb-6 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+          <p>
+            Getting one lesson right is hard enough. A droplet is a lesson, a video and a song. Different AIs write it,
+            paint it, sing it and time it, and a mistake at any step reaches you. In a song, you might sing it again
+            and again.
+          </p>
+          <p>
+            Everything below really happened in our 22 rounds of tests, and each one changed
+            how <Wordmark size="sm" /> works.
+          </p>
+        </div>
         <div className="grid gap-4 md:grid-cols-2">
           {HARD.map((h) => <HardCard key={h.title} hard={h} />)}
         </div>
       </section>
 
       <section aria-labelledby="models-title" className="mb-12">
-        <SectionTitle id="models-title">The models</SectionTitle>
+        <SectionTitle id="models-title">The AI models we use</SectionTitle>
         <p className="text-sm leading-relaxed mb-4 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
-          Our defaults as of {MODELS_AS_OF}. Every droplet on the{' '}
-          <Link href="/droplets" className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> names
-          the models that made it, by the version that ran, so you can tell one made on a newer model from an older one.
+          These are our defaults as of {MODELS_AS_OF}. Each droplet on the{' '}
+          <Link href="/droplets" className="underline" style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> lists
+          the exact models that made it. That way you can tell a droplet made with a newer model from an older one.
         </p>
         <ul className="rounded-lg overflow-hidden" style={card} aria-label="The models">
           {JOBS.map((j, i) => (
@@ -330,7 +370,7 @@ export default function HowItsMadePage() {
       </section>
 
       <div className="rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={card}>
-        <p className="font-bold" style={{ color: 'var(--text-primary)' }}>See what comes out of it.</p>
+        <p className="font-bold" style={{ color: 'var(--text-primary)' }}>See it for yourself.</p>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Link href="/droplets" className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
             style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
@@ -363,28 +403,114 @@ function Pledge({ color, title, children }: { color: string; title: string; chil
   );
 }
 
-function StepList({ title, sub, steps, start }: { title: string; sub: string; steps: Step[]; start: number }) {
+function FlowLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg p-4 sm:p-5" style={card}>
-      <h3 className="font-bold mb-0.5" style={{ color: 'var(--text-primary)' }}>{title}</h3>
-      <p className="text-xs mb-4" style={{ color: ink('var(--accent-purple)', 85) }}>{sub}</p>
-      <ol start={start} className="flex flex-col gap-4">
-        {steps.map((step, i) => (
-          <li key={step.name} className="flex gap-3">
-            <span aria-hidden className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[11px] font-bold"
-              style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }}>
-              {start + i}
-            </span>
-            <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{step.name}</span>
-                <KindChip kind={step.kind} />
-              </p>
-              <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{step.text}</p>
-            </div>
+    <p className="text-center text-[10px] uppercase tracking-wider font-bold mb-2" style={{ color: 'var(--text-muted)' }}>
+      {children}
+    </p>
+  );
+}
+
+/** One step of the flow. A step the droplet must pass says, beside it from md up (in the flow's gutter) and under it
+ *  on a phone, that a fail stops the droplet. */
+function StepNode({ step }: { step: Step }) {
+  const gate = step.kind === 'gate';
+  return (
+    <div className="relative">
+      <div className="rounded-lg p-4" style={gate ? { ...card, border: `1px solid ${tint('var(--accent-orange)', 55)}` } : card}>
+        <p className="flex flex-wrap items-center gap-2 mb-1">
+          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{step.name}</span>
+          <KindChip kind={step.kind} />
+        </p>
+        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{step.text}</p>
+      </div>
+      {gate && (
+        <p className="relative inline-flex items-center gap-1.5 mt-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold md:absolute md:mt-0 md:left-full md:ml-4 md:top-1/2 md:-translate-y-1/2 md:w-32"
+          style={{ color: ink('var(--accent-red)', 75), background: tint('var(--accent-red)', 10), border: `1px solid ${tint('var(--accent-red)', 40)}` }}>
+          <span aria-hidden className="hidden md:block absolute right-full top-1/2 w-4 h-px" style={{ background: tint('var(--accent-red)', 60) }} />
+          <XCircleIcon aria-hidden className="w-3.5 h-3.5 shrink-0" />
+          Fails? Nothing is posted.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Milestone({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-lg px-4 py-2.5 text-xs font-bold text-center"
+      style={{ color: ink('var(--accent-brand)', 80), background: tint('var(--accent-brand)', 12), border: `1px solid ${tint('var(--accent-brand)', 45)}` }}>
+      <CheckCircleIcon aria-hidden className="inline-block w-4 h-4 mr-1.5 align-[-0.25em]" />
+      {children}
+    </p>
+  );
+}
+
+function Arrow() {
+  return (
+    <div aria-hidden className="flex flex-col items-center py-1">
+      <span className="w-px h-4" style={{ background: LINE }} />
+      <svg viewBox="0 0 10 6" className="w-2.5 h-1.5" style={{ color: LINE }}><path d="M0 0h10L5 6z" fill="currentColor" /></svg>
+    </div>
+  );
+}
+
+// The centre of each lane, from md up: half a column in from either side, less half the gap (md:gap-8) between them.
+const LANE_CENTER = 'calc(25% - 0.5rem)';
+
+/** Where the flow splits into the pictures and the sound: a fork from md up, an arrow and a sentence on a phone,
+ *  where the lanes stack. */
+function Fork() {
+  return (
+    <>
+      <div className="md:hidden">
+        <Arrow />
+        <p className="text-center text-xs mb-3" style={{ color: 'var(--text-muted)' }}>Next, two things happen at the same time:</p>
+      </div>
+      <div aria-hidden className="hidden md:block relative h-12">
+        <span className="absolute left-1/2 top-0 h-5 w-px" style={{ background: LINE }} />
+        <span className="absolute top-5 h-px" style={{ left: LANE_CENTER, right: LANE_CENTER, background: LINE }} />
+        <span className="absolute top-5 bottom-0 w-px" style={{ left: LANE_CENTER, background: LINE }} />
+        <span className="absolute top-5 bottom-0 w-px" style={{ right: LANE_CENTER, background: LINE }} />
+        <span className="absolute left-0 right-0 top-7 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+          at the same time
+        </span>
+      </div>
+    </>
+  );
+}
+
+/** Where the lanes meet again, for the video: the mirror of the fork. */
+function Join() {
+  return (
+    <>
+      <div className="md:hidden"><Arrow /></div>
+      <div aria-hidden className="hidden md:block relative h-8">
+        <span className="absolute top-0 h-4 w-px" style={{ left: LANE_CENTER, background: LINE }} />
+        <span className="absolute top-0 h-4 w-px" style={{ right: LANE_CENTER, background: LINE }} />
+        <span className="absolute top-4 h-px" style={{ left: LANE_CENTER, right: LANE_CENTER, background: LINE }} />
+        <span className="absolute left-1/2 top-4 bottom-0 w-px" style={{ background: LINE }} />
+      </div>
+      <div className="hidden md:block"><Arrow /></div>
+    </>
+  );
+}
+
+/** One of the two lanes made at the same time. From md up, a line runs on below its last step to where the lanes
+ *  join, so the shorter lane meets the longer one. */
+function Lane({ title, steps }: { title: string; steps: Step[] }) {
+  return (
+    <div className="flex flex-col">
+      <FlowLabel>{title}</FlowLabel>
+      <ol aria-label={title} className="flex flex-col">
+        {steps.map((step) => (
+          <li key={step.name}>
+            <Arrow />
+            <StepNode step={step} />
           </li>
         ))}
       </ol>
+      <span aria-hidden className="hidden md:block flex-1 min-h-4 w-px mx-auto" style={{ background: LINE }} />
     </div>
   );
 }
@@ -392,7 +518,7 @@ function StepList({ title, sub, steps, start }: { title: string; sub: string; st
 function KindChip({ kind }: { kind: Kind }) {
   const { label, color } = KINDS[kind];
   return (
-    <span className="inline-block whitespace-nowrap text-[9px] uppercase px-1.5 py-px rounded-full font-semibold"
+    <span className="inline-block whitespace-nowrap align-middle text-[9px] uppercase px-1.5 py-px rounded-full font-semibold"
       style={{ background: tint(color, 14), border: `1px solid ${tint(color, 45)}`, color: ink(color, 85) }}>
       {label}
     </span>
@@ -445,7 +571,7 @@ function HardCard({ hard }: { hard: Hard }) {
         <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{hard.happened}</p>
       </div>
       <div>
-        <p className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: ink('var(--accent-green)', 70) }}>What changed</p>
+        <p className="text-[10px] uppercase tracking-wider font-bold mb-1" style={{ color: ink('var(--accent-green)', 70) }}>What we changed</p>
         <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{hard.changed}</p>
       </div>
     </article>
