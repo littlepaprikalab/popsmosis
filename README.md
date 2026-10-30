@@ -556,7 +556,8 @@ machine's tries, since the first machine's records died with it.
 
 Every droplet on the Droplets tab says which models made it, read from its bill: its card
 shows each maker's chip ("Made with ANTHROPIC GOOGLE ELEVENLABS META"), naming the models
-when one is hovered, and its page shows the models after each chip, by the names and
+when one is hovered, and a tap on a chip opens every maker's models in place (a phone has no
+hover) and closes them again. Its page shows the models after each chip, by the names and
 versions the studio ran (`claude-opus-5-5, claude-haiku-5-5`). So anyone watching can tell
 what made a droplet, and tell one made on a newer model from an older one. The API sends it
 as `madeWith` on both droplet routes:

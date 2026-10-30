@@ -126,6 +126,17 @@ test.describe('the Droplets tab, signed out', () => {
     // A card names the models when a maker is hovered, and to a screen reader.
     await expect(onCard.getByRole('listitem').first()).toHaveAttribute('title', 'claude-opus-5-5, claude-haiku-5-5');
     await expect(onCard.getByRole('listitem').first()).toContainText('claude-opus-5-5, claude-haiku-5-5');
+    // A phone has no hover: tapping a chip opens every maker's models in place, and tapping one again closes them.
+    const shown = card.getByTestId('made-with-models');
+    await expect(shown).toHaveCount(0);
+    const google = onCard.getByRole('button', { name: /^Google/ });
+    await expect(google).toHaveAttribute('aria-expanded', 'false');
+    await google.click();
+    await expect(page).toHaveURL(/\/droplets$/);
+    await expect(shown).toHaveText(['claude-opus-5-5, claude-haiku-5-5', 'lyria-3.5', 'eleven_multilingual_v2', 'htdemucs, mms-fa']);
+    await expect(onCard.getByRole('button', { name: 'Anthropic', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await onCard.getByRole('button', { name: 'Meta', exact: true }).click();
+    await expect(shown).toHaveCount(0);
 
     await page.goto(`/droplets/${S.droplet}`);
     const made = page.getByRole('list', { name: 'Made with' });
