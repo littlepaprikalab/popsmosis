@@ -9,6 +9,7 @@
  * hashtags are copied out of the bundle when it is stored (lib/tags.ts).
  */
 import { serializeTags } from './tags.js';
+import { billModels, madeWithOf } from './breakdown.js';
 import { knob } from './knobs.js';
 
 // Tens of KB in practice; the cap keeps one answer from filling a list response or a row.
@@ -119,7 +120,8 @@ export function followUpContext(bundle: unknown) {
 
 /**
  * Only these fields leave the database for the public endpoints: never the question,
- * its asker, its files or the follow-ups. The bundle is read for its title and lyrics.
+ * its asker, its files or the follow-ups. The bundle is read for its title and lyrics,
+ * the bills for the models they name (lib/breakdown.ts, madeWithOf), never what they cost.
  */
 export const publicDropletSelect = {
   id: true,
@@ -136,6 +138,8 @@ export const publicDropletSelect = {
   commentCount: true,
   songTags: true,
   lessonTags: true,
+  lessonBreakdown: true,
+  videoBreakdown: true,
 } as const;
 
 /** What the Droplets tab may list: the videos are READY, no admin hid it, and none is still to look at it. */
@@ -156,6 +160,9 @@ type PublicDropletRow = {
   commentCount: number;
   songTags: string[];
   lessonTags: string[];
+  // The models each bill names (billModels), or null for no bill: the list has Postgres read them out of the bills.
+  lessonModels: unknown;
+  videoModels: unknown;
 };
 
 const EXCERPT_LENGTH = 200;
@@ -205,8 +212,8 @@ function publicVideo(a: PublicDropletRow) {
 
 /**
  * A card on the list: the title, a few lines of the lesson, the videos and their
- * hashtags, and how many people liked it and commented. `liked` is the viewer's own
- * thumbs-up: false for anyone not signed in.
+ * hashtags, the models that made them, and how many people liked it and commented.
+ * `liked` is the viewer's own thumbs-up: false for anyone not signed in.
  */
 export function serializeDropletCard(a: PublicDropletRow, liked = false) {
   return {
@@ -215,6 +222,7 @@ export function serializeDropletCard(a: PublicDropletRow, liked = false) {
     excerpt: excerptOf(a.content),
     video: publicVideo(a),
     tags: serializeTags(a), // each video's hashtags; the tab searches by them (lib/tags.ts)
+    madeWith: madeWithOf(a.lessonModels, a.videoModels), // the models that made it, by maker; null: no bill to say
     likeCount: a.likeCount,
     commentCount: a.commentCount,
     liked,
@@ -223,10 +231,13 @@ export function serializeDropletCard(a: PublicDropletRow, liked = false) {
 }
 
 /** One droplet: the card, the whole lesson and the song's lyrics. */
-export function serializeDroplet(a: PublicDropletRow, liked = false) {
+export function serializeDroplet(
+  { lessonBreakdown, videoBreakdown, ...a }: Omit<PublicDropletRow, 'lessonModels' | 'videoModels'> & { lessonBreakdown: unknown; videoBreakdown: unknown },
+  liked = false,
+) {
   const lyrics = isObject(a.bundle) && Array.isArray(a.bundle.lyrics) ? a.bundle.lyrics.filter(isObject) : [];
   return {
-    ...serializeDropletCard(a, liked),
+    ...serializeDropletCard({ ...a, lessonModels: billModels(lessonBreakdown), videoModels: billModels(videoBreakdown) }, liked),
     content: a.content,
     lyrics: lyrics
       .map((l) => ({ section: typeof l.section === 'string' ? l.section : '', text: typeof l.text === 'string' ? l.text : '' }))

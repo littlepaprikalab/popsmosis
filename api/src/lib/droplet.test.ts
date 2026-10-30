@@ -88,6 +88,11 @@ describe('the public droplet', () => {
     songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null,
     likeCount: 3, commentCount: 1,
     songTags: ['atpsynthase', 'apbio', 'studysong'], lessonTags: ['atpsynthase', 'apbio'],
+    lessonModels: ['claude-opus-5-5', 'claude-opus-5-5'], videoModels: ['gemini-3.1-flash-image', 'eleven_multilingual_v2'],
+  };
+  const bills = {
+    lessonBreakdown: { steps: [{ step: 'bundle', costUsd: 0.52, models: [{ model: 'claude-opus-5-5', calls: 1, costUsd: 0.52 }] }] },
+    videoBreakdown: { steps: [{ step: 'audio', costUsd: 0.1, models: [{ model: 'eleven_multilingual_v2', calls: 2, costUsd: 0.1 }] }] },
   };
 
   it('is titled from the bundle, never the request', () => {
@@ -100,7 +105,7 @@ describe('the public droplet', () => {
     const card = serializeDropletCard(row);
     expect(card.excerpt).toBe('ATP synthase A rotary motor in the inner membrane. A B 1 2');
     expect(card.video).toEqual({ songVideoUrl: 'https://x/song.mp4', lessonVideoUrl: null, songPosterUrl: 'https://x/song.jpg', lessonPosterUrl: null });
-    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'tags', 'title', 'topic', 'video']);
+    expect(Object.keys(card).sort()).toEqual(['commentCount', 'course', 'createdAt', 'excerpt', 'id', 'likeCount', 'liked', 'madeWith', 'tags', 'title', 'topic', 'video']);
     expect(card.tags).toEqual({ song: ['atpsynthase', 'apbio', 'studysong'], lesson: ['atpsynthase', 'apbio'] });
     expect(card).toMatchObject({ likeCount: 3, commentCount: 1, liked: false }); // nobody signed in
     expect(serializeDropletCard(row, true).liked).toBe(true);
@@ -122,8 +127,24 @@ describe('the public droplet', () => {
     }
   });
 
+  it('says which models made it, by maker, and nothing else from the bills', () => {
+    expect(serializeDropletCard(row).madeWith).toEqual([
+      { maker: 'Anthropic', models: ['claude-opus-5-5'] },
+      { maker: 'Google', models: ['gemini-3.1-flash-image'] },
+      { maker: 'ElevenLabs', models: ['eleven_multilingual_v2'] },
+    ]);
+    expect(serializeDropletCard({ ...row, videoModels: null }).madeWith).toBeNull(); // no videos' bill: not the whole of it
+    const { lessonModels: _l, videoModels: _v, ...stored } = row;
+    const droplet = serializeDroplet({ ...stored, ...bills });
+    expect(droplet.madeWith).toEqual([
+      { maker: 'Anthropic', models: ['claude-opus-5-5'] }, { maker: 'ElevenLabs', models: ['eleven_multilingual_v2'] }]);
+    expect(JSON.stringify(droplet)).not.toMatch(/costUsd|calls|Breakdown|bundle/);
+    expect(serializeDroplet({ ...stored, lessonBreakdown: null, videoBreakdown: null }).madeWith).toBeNull();
+  });
+
   it('shows one with the lesson and the lyrics, and nothing else from the bundle', () => {
-    const droplet = serializeDroplet(row);
+    const { lessonModels: _l, videoModels: _v, ...stored } = row;
+    const droplet = serializeDroplet({ ...stored, ...bills });
     expect(droplet.content).toBe(row.content);
     expect(droplet.lyrics).toEqual([{ section: 'verse', text: 'Protons flow' }]);
     expect(JSON.stringify(droplet)).not.toMatch(/core_idea|scenes|fact_id/);

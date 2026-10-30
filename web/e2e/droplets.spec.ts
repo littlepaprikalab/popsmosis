@@ -117,6 +117,41 @@ test.describe('the Droplets tab, signed out', () => {
     await expect(card.getByTestId('tags').getByRole('link')).toHaveCount(4);
   });
 
+  test('says what made a droplet: the makers on its card, and their models on its page', async ({ page }) => {
+    await page.goto('/droplets');
+    const card = page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' }).first();
+    const onCard = card.getByRole('list', { name: 'Made with' });
+    // The brain's maker first, then each in the order the bill first names one of theirs.
+    await expect(onCard.getByTestId('maker')).toHaveText(['Anthropic', 'Google', 'ElevenLabs', 'Meta']);
+    // A card names the models when a maker is hovered, and to a screen reader.
+    await expect(onCard.getByRole('listitem').first()).toHaveAttribute('title', 'claude-opus-5-5, claude-haiku-5-5');
+    await expect(onCard.getByRole('listitem').first()).toContainText('claude-opus-5-5, claude-haiku-5-5');
+    // A phone has no hover: tapping a chip opens every maker's models in place, and tapping one again closes them.
+    const shown = card.getByTestId('made-with-models');
+    await expect(shown).toHaveCount(0);
+    const google = onCard.getByRole('button', { name: /^Google/ });
+    await expect(google).toHaveAttribute('aria-expanded', 'false');
+    await google.click();
+    await expect(page).toHaveURL(/\/droplets$/);
+    await expect(shown).toHaveText(['claude-opus-5-5, claude-haiku-5-5', 'lyria-3.5', 'eleven_multilingual_v2', 'htdemucs, mms-fa']);
+    await expect(onCard.getByRole('button', { name: 'Anthropic', exact: true })).toHaveAttribute('aria-expanded', 'true');
+    await onCard.getByRole('button', { name: 'Meta', exact: true }).click();
+    await expect(shown).toHaveCount(0);
+
+    await page.goto(`/droplets/${S.droplet}`);
+    const made = page.getByRole('list', { name: 'Made with' });
+    const makers = made.getByRole('listitem');
+    await expect(makers).toHaveCount(4);
+    for (const [i, [maker, models]] of [['Anthropic', 'claude-opus-5-5, claude-haiku-5-5'], ['Google', 'lyria-3.5'],
+      ['ElevenLabs', 'eleven_multilingual_v2'], ['Meta', 'htdemucs, mms-fa']].entries()) {
+      await expect(makers.nth(i).getByTestId('maker')).toHaveText(maker);
+      await expect(makers.nth(i).getByText(models, { exact: true })).toBeVisible();
+    }
+    // What made it, never what it cost: that stays on the learner's bill.
+    await expect(page.getByTestId('made-with')).not.toContainText('$');
+    await expect(page.getByText('3,214 cr')).toHaveCount(0);
+  });
+
   test('a search that fails shows no cards from the last one, and can be tried again', async ({ page }) => {
     await page.goto('/droplets');
     const cards = page.getByTestId('droplet-card');

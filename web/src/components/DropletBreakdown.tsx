@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import type { Breakdown, BreakdownModel, BreakdownStep, Progress, Video } from '@/lib/api';
+import { MakerChip } from '@/components/MakerChip';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
 const STEP_LABELS: Record<string, string> = {
@@ -49,32 +50,6 @@ export function totalCost(b: Breakdown): string {
 
 const cell = 'py-1 pr-3 align-top';
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
-
-/** Each maker's colour on the bill, from the theme's accents so it holds in light and dark. A maker not here is grey. */
-const MAKER_COLORS: Record<string, string> = {
-  Meta: 'var(--accent-blue)',
-  Anthropic: 'var(--accent-orange)',
-  Google: 'var(--accent-green)',
-  ElevenLabs: 'var(--accent-purple)',
-  FFmpeg: 'var(--accent-pink)',
-};
-
-const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
-
-/** Who made a model or tool, as a chip in the maker's colour. Nothing when the API does not know. */
-function MakerChip({ maker, className = '' }: { maker: string | null; className?: string }) {
-  if (!maker) return null;
-  const color = MAKER_COLORS[maker];
-  const style = color
-    ? { background: tint(color, 14), border: `1px solid ${tint(color, 45)}`, color }
-    : { background: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--text-secondary)' };
-  return (
-    <span data-testid="maker" style={style}
-      className={`inline-block align-middle whitespace-nowrap text-[9px] uppercase px-1.5 py-px rounded-full font-semibold ${className}`}>
-      {maker}
-    </span>
-  );
-}
 
 /** One line of a step on the bill: a model it called, or a tool it ran, at the version installed. */
 interface Line {

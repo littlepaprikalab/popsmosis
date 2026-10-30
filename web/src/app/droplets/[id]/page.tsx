@@ -14,10 +14,11 @@ import { useToast } from '@/components/Toast';
 import { DropletPlayers, Lyrics } from '@/components/DropletPlayers';
 import { LikeButton, formatCount } from '@/components/LikeButton';
 import { DropletComments } from '@/components/DropletComments';
+import { MadeWith } from '@/components/MadeWith';
 import { ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 import { CONTENT_LICENSE } from '@/lib/legal';
 
-/** One droplet on the public tab: both videos, the lesson and the song's words. */
+/** One droplet on the public tab: both videos, the models that made it, the lesson and the song's words. */
 export default function DropletPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -140,6 +141,8 @@ export default function DropletPage() {
           </a>
         </div>
       )}
+
+      <MadeWith makers={droplet.madeWith} className="mt-3" />
 
       <div className="grid gap-4 mt-6 md:grid-cols-[2fr_1fr]">
         <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>

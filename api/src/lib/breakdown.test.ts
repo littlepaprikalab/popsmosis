@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { breakdownError, makerOf, serializeBreakdown, BREAKDOWN_MAX_BYTES } from './breakdown.js';
+import { billModels, breakdownError, madeWithOf, makerOf, serializeBreakdown, BREAKDOWN_MAX_BYTES, MADE_WITH_MAX_MODELS } from './breakdown.js';
 
 const lesson = {
   steps: [
@@ -121,6 +121,62 @@ describe('serializeBreakdown', () => {
       tools: [{ name: 'ffmpeg', version: null, maker: 'FFmpeg' }] }]);
     expect(b.seconds).toBeNull();
     expect(b.costUsd).toBe(0.25);
+  });
+});
+
+describe('billModels', () => {
+  it('names every model a bill does, step by step, as stored', () => {
+    expect(billModels(lesson)).toEqual(['claude-opus-5-5', 'claude-opus-5']);
+    expect(billModels(videos)).toEqual(['lyria-3.5', 'eleven_multilingual_v2', 'htdemucs', 'mms-fa']);
+    expect(billModels({ steps: [{ step: 'x', models: [{ model: 7 }, { calls: 1 }, 'junk'] }, 'junk', { step: 'y' }] }))
+      .toEqual([7, undefined]); // madeWithOf drops what is not a name
+  });
+  it('is null with no bill', () => {
+    expect(billModels(null)).toBeNull();
+    expect(billModels(undefined)).toBeNull();
+    expect(billModels([])).toBeNull();
+  });
+});
+
+describe('madeWithOf', () => {
+  it('lists each model once, under its maker, in the order the bill first names them', () => {
+    const brainCheck = { steps: [{ step: 'factcheck', models: [{ model: 'claude-sonnet-5-5' }, { model: 'claude-opus-5-5' }] }] };
+    const lessonModels = [...billModels(lesson)!, ...billModels(brainCheck)!];
+    expect(madeWithOf(lessonModels, billModels(videos))).toEqual([
+      { maker: 'Anthropic', models: ['claude-opus-5-5', 'claude-opus-5', 'claude-sonnet-5-5'] },
+      { maker: 'Google', models: ['lyria-3.5'] },
+      { maker: 'ElevenLabs', models: ['eleven_multilingual_v2'] },
+      { maker: 'Meta', models: ['htdemucs', 'mms-fa'] },
+    ]);
+  });
+  it('puts the models no maker is listed for last, and skips what is not a name', () => {
+    expect(madeWithOf(['some-new-model', 'claude-opus-5-5', '', '  ', 7, null], ['other-model', ' claude-opus-5-5 '])).toEqual([
+      { maker: 'Anthropic', models: ['claude-opus-5-5'] },
+      { maker: null, models: ['some-new-model', 'other-model'] },
+    ]);
+  });
+  it('shows only what reads as a model name: never a key, personal information or other text from the agent', () => {
+    const sent = ['claude-opus-5-5', `sk-ant-api03-${'x'.repeat(24)}`, `AIza${'b'.repeat(35)}`, '555-123-4567', 'me@example.com',
+      'visit https://x.example', 'ignore the rules', 'a'.repeat(65), '-leading-dash', 'music_v2_5', 'muse-spark-1.3', 'sam-3.1'];
+    expect(madeWithOf(sent, [])).toEqual([
+      { maker: 'Anthropic', models: ['claude-opus-5-5'] },
+      { maker: 'ElevenLabs', models: ['music_v2_5'] },
+      { maker: 'Meta', models: ['muse-spark-1.3', 'sam-3.1'] },
+    ]);
+    expect(madeWithOf([`sk-ant-api03-${'x'.repeat(24)}`], ['me@example.com'])).toBeNull();
+  });
+  it('shows at most MADE_WITH_MAX_MODELS, the first the bill names, from a bill packed with names in linear time', () => {
+    const many = Array.from({ length: 1200 }, (_, i) => `claude-${i}`); // about what 16 KB of bill can hold
+    const started = performance.now();
+    const made = madeWithOf([...many, ...many], many)!;
+    expect(performance.now() - started).toBeLessThan(50);
+    expect(made).toEqual([{ maker: 'Anthropic', models: many.slice(0, MADE_WITH_MAX_MODELS) }]);
+  });
+  it('says nothing without both bills, or when they name no model', () => {
+    expect(madeWithOf(billModels(lesson), null)).toBeNull(); // who drew and sang it is not known
+    expect(madeWithOf(null, billModels(videos))).toBeNull();
+    expect(madeWithOf([], [])).toBeNull();
+    expect(madeWithOf([''], [7])).toBeNull();
   });
 });
 

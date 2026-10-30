@@ -879,7 +879,8 @@ account.
   are rate limited per visitor, and all visitors together per API instance
   (`api/src/lib/public-limit.ts`).
 - **Public:** a title made from the bundle (`course` and `topic`), the lesson text, both
-  videos with their hashtags, and the lyrics.
+  videos with their hashtags, the lyrics, and the models that made it, by maker, from its
+  bill of materials (README, "Made with"); never what they cost.
 - **Searchable by tag.** Every hashtag under a video is a link to the tab searched by it,
   and a box at the top searches by one typed in.
 - **Never public:** the learner's name or avatar, the request in their own words (it can

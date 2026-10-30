@@ -10,6 +10,8 @@
  * fields it knows, of the types it expects, and works out the totals itself.
  */
 
+import { containsPersonalInfo, containsSecret } from './validation.js';
+
 // About 2 KB in practice (eleven steps, a model or two each); the cap keeps one from bloating a list of cards.
 export const BREAKDOWN_MAX_BYTES = 16 * 1024;
 
@@ -127,6 +129,62 @@ function readPart(raw: unknown, part: Part): { steps: BreakdownStep[]; seconds: 
     });
   }
   return { steps, seconds: amount(raw.seconds) };
+}
+
+/**
+ * Every model a stored bill names, step by step, as stored: any type, repeats and all; null when there is no bill.
+ * The Droplets tab's list has Postgres pick out the same (BILL_MODELS_PATH), so only the names leave the database.
+ */
+export function billModels(bill: unknown): unknown[] | null {
+  if (!isObject(bill)) return null;
+  const steps = Array.isArray(bill.steps) ? bill.steps.filter(isObject) : [];
+  return steps.flatMap((s) => (Array.isArray(s.models) ? s.models.filter(isObject).map((m) => m.model) : []));
+}
+
+/** billModels() in SQL: jsonb_path_query_array(bill, BILL_MODELS_PATH::jsonpath), NULL for no bill. */
+export const BILL_MODELS_PATH = '$.steps[*].models[*].model';
+
+/**
+ * A model's name as the studio writes them: claude-opus-5-5, gemini-3.1-flash-image, eleven_multilingual_v2, mms-fa.
+ * The bill is the agent's to send, and the agent is an LLM that reads what learners write, so on the public tab a name
+ * of any other shape is left out, as is one that reads as a key or as personal information (lib/validation.ts).
+ */
+const MODEL_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+const publicModelName = (name: string) => MODEL_NAME.test(name) && !containsSecret(name) && !containsPersonalInfo(name);
+// A droplet names 8 or so; the cap holds a card's row to a line or two whatever a bill says.
+export const MADE_WITH_MAX_MODELS = 32;
+
+/** One maker's models on a droplet, as the Droplets tab says what made it. */
+export interface MadeWith {
+  maker: string | null; // makerOf; null: the models no maker is listed for
+  models: string[];
+}
+
+/**
+ * What made a droplet, for anyone watching it: every model its bill names, each once, under who made it. The makers
+ * come in the order the bill first names one of theirs (the brain first), with the models no maker is listed for
+ * last; the software that is not a model (ffmpeg, Skia) and what each call cost stay on the bill.
+ *
+ * Null unless both bills are there: a droplet on the tab has videos, and a lesson's bill alone would leave out who
+ * drew the diagrams and who sang. Null as well when the bills name no model fit to show (publicModelName). At most
+ * MADE_WITH_MAX_MODELS, the first the bill names.
+ */
+export function madeWithOf(lessonModels: unknown, videoModels: unknown): MadeWith[] | null {
+  if (!Array.isArray(lessonModels) || !Array.isArray(videoModels)) return null;
+  const seen = new Set<string>();
+  const makers = new Map<string | null, string[]>();
+  for (const raw of [...lessonModels, ...videoModels]) {
+    const model = text(raw).trim();
+    if (seen.has(model) || !publicModelName(model)) continue;
+    if (seen.size === MADE_WITH_MAX_MODELS) break;
+    seen.add(model);
+    const maker = makerOf(model);
+    const models = makers.get(maker);
+    if (models) models.push(model);
+    else makers.set(maker, [model]);
+  }
+  const groups = [...makers].map(([maker, models]) => ({ maker, models }));
+  return groups.length ? [...groups.filter((g) => g.maker), ...groups.filter((g) => !g.maker)] : null;
 }
 
 /** The droplet's bill of materials for the page, or null when the studio sent none. */
