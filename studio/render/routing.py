@@ -141,3 +141,78 @@ def _smooth(points: list[Point]) -> list[Point]:
 
 def length(points: list[Point]) -> float:
     return sum(math.dist(p, q) for p, q in zip(points, points[1:]))
+
+
+# --- hand-offs: where a flow passes from one part into the next ------------------------------------------------
+#
+# Dots travelling the routes above never quite kept to a painted tube (the nephron's coils, a volcano's narrow
+# conduit), and a learner watched them wander. A textbook draws an arrow where the flow passes from one part into the
+# next instead, and so does the video now: at the parts' meeting, pointing the way the flow goes.
+
+ARROW_CELLS = 7  # half an arrow's length, in cells
+NEAR = 8  # cells about a meeting that say which way each part lies
+ALONG_RATIO = 6.0  # a meeting this many times longer than wide is a long edge the flow runs along, not across
+ALONG_MIN = 8  # ...when it is at least this many cells
+ALONG_COS = 0.7  # ...and where the flow goes next lies that way along it: across it (a gas through the membrane it
+# shares with the alveolus), the flow crosses the edge
+
+
+def handoff(a: np.ndarray, b: np.ndarray, toward: Point) -> tuple[Point, Point]:
+    """The arrow, tail and tip in art pixels, for a flow passing from part a into part b (their cells), going on
+    toward `toward`. Where the two meet across a short join (one tube into the next), it crosses the join from a's
+    side to b's; where they meet along a long edge (magma rising in the conduit up through a volcano), it runs along
+    that edge, inside a, toward `toward`, when `toward` lies that way; where they do not meet, it spans the gap
+    between them."""
+    touch = _grown(a, 2) & _grown(b, 2)
+    ys, xs = np.nonzero(touch)
+    if not len(ys):
+        return _span(a, b)
+    if len(ys) >= ALONG_MIN:
+        spread = np.cov(np.vstack([xs, ys]))
+        values, vectors = np.linalg.eigh(spread)
+        axis = vectors[:, 1]  # (x, y), the meeting's long way
+        middle = np.array([ys.mean(), xs.mean()])
+        way = np.array([toward[0] / GRID - middle[1], toward[1] / GRID - middle[0]])
+        lies_along = abs(np.dot(axis, way)) >= ALONG_COS * (np.hypot(*way) or 1.0)
+        if (values[0] <= 0 or values[1] / max(values[0], 1e-6) >= ALONG_RATIO) and lies_along:
+            at = _near(a, middle)
+            if np.dot(axis, way) < 0:
+                axis = -axis
+            return _ends(np.array([at[1], at[0]]) + 0.5, axis)
+    k = int(np.argmin((ys - ys.mean()) ** 2 + (xs - xs.mean()) ** 2))
+    meet = np.array([ys[k], xs[k]])
+    side_a, side_b = _near(a, meet), _near(b, meet)
+    way = np.array([side_b[1] - side_a[1], side_b[0] - side_a[0]])
+    return _ends(np.array([meet[1], meet[0]]) + 0.5, way)
+
+
+def _ends(centre: np.ndarray, way: np.ndarray) -> tuple[Point, Point]:
+    unit = way / (np.hypot(*way) or 1.0)
+    tail, tip = (centre - unit * ARROW_CELLS) * GRID, (centre + unit * ARROW_CELLS) * GRID
+    return (float(tail[0]), float(tail[1])), (float(tip[0]), float(tip[1]))
+
+
+def _near(cells: np.ndarray, at: np.ndarray) -> np.ndarray:
+    """The middle (row, column) of the part's cells within NEAR of `at`; `at` itself when it has none there."""
+    y, x = int(at[0]), int(at[1])
+    window = cells[max(0, y - NEAR):y + NEAR + 1, max(0, x - NEAR):x + NEAR + 1]
+    found = np.argwhere(window)
+    return found.mean(0) + [max(0, y - NEAR), max(0, x - NEAR)] if len(found) else at.astype(float)
+
+
+def _grown(cells: np.ndarray, times: int) -> np.ndarray:
+    for _ in range(times):
+        cells = joined(cells)
+    return cells
+
+
+def _span(a: np.ndarray, b: np.ndarray) -> tuple[Point, Point]:
+    """From a's cell nearest b to b's cell nearest a (each sampled, a few hundred cells), in art pixels."""
+    pa, pb = np.argwhere(a), np.argwhere(b)
+    if not len(pa) or not len(pb):
+        return (0.0, 0.0), (0.0, 0.0)
+    pa, pb = pa[::max(1, len(pa) // 400)], pb[::max(1, len(pb) // 400)]
+    far = ((pa[:, None, :] - pb[None, :, :]) ** 2).sum(-1)
+    i, j = np.unravel_index(int(far.argmin()), far.shape)
+    (ya, xa), (yb, xb) = pa[i] + 0.5, pb[j] + 0.5
+    return (float(xa * GRID), float(ya * GRID)), (float(xb * GRID), float(yb * GRID))

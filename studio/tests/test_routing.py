@@ -65,3 +65,39 @@ def test_particles_follow_a_route_and_take_as_long_as_it_is():
     assert dots and all(q[0] in (0.0, 300.0) or q[1] == pytest.approx(300.0) for q in dots)
     halfway, _ = renderer.lead_at(points, renderer.FLOW_PAUSE_S + 900 / renderer.FLOW_SPEED / 2, [detour])
     assert halfway[1] > 0  # off the straight line, along the route
+
+
+def test_a_hand_off_crosses_the_join_from_one_tube_into_the_next():
+    first, second = np.zeros((300, 600), bool), np.zeros((300, 600), bool)
+    first[130:170, 20:300] = True  # a tube from the left...
+    second[130:170, 300:580] = True  # ...joined end to end to one going on to the right
+    (tx, ty), (hx, hy) = routing.handoff(routing.cells(first), routing.cells(second), (580.0, 150.0))
+    assert tx < 300 < hx and abs(ty - 150) < 2 * routing.GRID and abs(hy - 150) < 2 * routing.GRID
+
+
+def test_a_hand_off_along_a_long_edge_runs_inside_the_first_part_toward_where_the_flow_goes():
+    # Magma rising in its conduit up through a volcano, then out as lava at the top.
+    volcano, magma = np.zeros((600, 600), bool), np.zeros((600, 600), bool)
+    volcano[100:500, 100:500] = True
+    magma[100:560, 290:310] = True  # the conduit, the cone's whole height, and the chamber below
+    volcano[100:560, 290:310] = False
+    (tx, ty), (hx, hy) = routing.handoff(routing.cells(magma), routing.cells(volcano), (300.0, 40.0))
+    assert hy < ty and abs(hx - tx) < abs(hy - ty)  # up, along the conduit
+    assert 270 <= tx <= 330 and 270 <= hx <= 330  # inside it
+
+
+def test_a_hand_off_into_a_wall_whose_next_stop_lies_across_it_crosses_it():
+    # A gas from the alveolus into the membrane it shares with a capillary: across the long edge, not along it.
+    alveolus, membrane = np.zeros((600, 600), bool), np.zeros((600, 600), bool)
+    alveolus[50:550, 50:290] = True
+    membrane[50:550, 290:310] = True
+    (tx, ty), (hx, hy) = routing.handoff(routing.cells(alveolus), routing.cells(membrane), (450.0, 300.0))
+    assert hx > tx and abs(hy - ty) < abs(hx - tx)
+
+
+def test_a_hand_off_between_parts_apart_spans_the_gap():
+    a, b = np.zeros((200, 600), bool), np.zeros((200, 600), bool)
+    a[60:140, 20:150] = True
+    b[60:140, 400:560] = True
+    (tx, _), (hx, _) = routing.handoff(routing.cells(a), routing.cells(b), (480.0, 100.0))
+    assert 130 <= tx <= 160 and 390 <= hx <= 420
