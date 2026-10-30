@@ -117,16 +117,22 @@ class FakeMuse:
 class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
-    def __init__(self, checks=None, boxes=None, writing=None, wrong=None):
+    def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=()):
         self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check, painted out ones included
         self.boxes = boxes or {}  # structure -> a Spot dict
         self.writing = writing or {}  # scene -> the Written dicts the helper boxes, each time it is asked
         self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
+        self.unconfirmed = set(unconfirmed)  # notes the brain, asked to confirm them, finds wrong
         self.asked: list[tuple[str, str]] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
-        assert role == "helper" and len(images) == 1 and images[0].exists()
+        assert len(images) == 1 and images[0].exists()
         self.asked.append((label, prompt))
+        if schema is art.ConfirmedNotes:  # the brain's look at the notes the helper wrote
+            assert role == "brain" and system == art.NOTES_PROMPT and "The lesson's facts:" in prompt
+            notes = [line[2:] for line in prompt.split("The notes:\n")[1].splitlines()]
+            return {"keep": [n for n in notes if n not in self.unconfirmed]}
+        assert role == "helper"
         if schema is art.ArtCheck:
             assert system == art.CHECK_PROMPT
             scene = label.split()[2]
@@ -259,6 +265,7 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     assert len(made["tries"]) == 2 and made["check"]["notes"] == [note]  # still wrong after both tries
     bundle = checks.load(job / "bundle.json")
     assert art.notices(job, bundle) == {"synthase": [note]}
+    assert "art notes synthase" in helper.labels()  # confirmed by the brain before it is shown
     # The same picture as the lesson's analogy says nothing: an everyday picture cannot teach the topic wrong.
     as_analogy = bundle.model_copy(update={"scenes": [s.model_copy(update={"id": "analogy"}) if s.id == "synthase"
                                                       else s for s in bundle.scenes]})
@@ -267,6 +274,18 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     assert art._painted(job, as_analogy, as_analogy.scenes[-1]) and art.notices(job, as_analogy) == {}
     staged(job)  # a changed bundle: the pictures are no longer this bundle's, so nothing is disclosed for them
     assert art.notices(job, checks.load(job / "bundle.json")) == {}
+
+
+def test_a_note_the_brain_cannot_confirm_is_kept_in_the_record_but_never_shown(job, monkeypatch):
+    # Round 20's kidney close-up was shown beside a note putting its glucose carriers on the wrong side.
+    FakeMuse().install(monkeypatch)
+    right, wrong = "The protein's head should face the stroma.", "The carriers belong on the capillary's side."
+    helper = FakeHelper(checks={"synthase": [{"misplaced": ["head in the lumen"], "notes": [right, wrong]}]},
+                        unconfirmed=[wrong])
+    art.run(job, helper)
+    assert art.notices(job, checks.load(job / "bundle.json")) == {"synthase": [right]}
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["notes_unconfirmed"] == [wrong]
 
 
 def test_a_stage_painted_afresh_and_declined_is_a_declined_try_not_a_failed_step(job, monkeypatch):

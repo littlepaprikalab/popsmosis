@@ -69,6 +69,7 @@ import hashlib
 import json
 import math
 import shutil
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -588,12 +589,48 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     best.refused = [why for tried in tries if tried["try"] != best.attempt and (why := refusal(tried))]
+    unconfirmed = []
+    if best.check.notes:
+        kept = confirmed_notes(job, bundle, scene, best.check.notes, ask)
+        unconfirmed = [n for n in best.check.notes if n not in kept]
+        best.check = best.check.model_copy(update={"notes": kept})
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
+                                  **({"notes_unconfirmed": unconfirmed} if unconfirmed else {}),
                                   "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
                                   and stage.number > 1 else "",
                                   "try": best.attempt, "check": best.check.model_dump(), "tries": tries})
     _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
+
+
+NOTES_PROMPT = """A checker looked at a picture painted for a lesson video and wrote notes for the student \
+watching, each saying the picture shows something false and what is true. The video shows the notes beside the \
+picture, so a wrong note teaches the student something false twice. Check each note against the picture, the \
+lesson's facts and what the course's textbooks teach. Keep a note only when the picture really shows what the note \
+says and the note's correction is right; leave out one that is wrong, that you are unsure of, or that is about \
+style or looks. Return the notes you keep, word for word."""
+
+
+class ConfirmedNotes(Strict):
+    keep: list[str]
+
+
+def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], ask) -> list[str]:
+    """The notes the brain confirms against the picture and the facts. Round 20's kidney close-up was shown
+    beside a note that its glucose carriers belong on the capillary's side, which is false for the carriers
+    that take glucose out of the filtrate. When the call fails, the notes stand."""
+    facts = "\n".join(f"- {f.text}" for f in bundle.facts)
+    listed = "\n".join(f"- {n}" for n in notes)
+    try:
+        answer = ConfirmedNotes(**ask("brain", f"The picture was asked for as: {scene.image_prompt}\n\nThe lesson's "
+                                               f"facts:\n{facts}\n\nThe notes:\n{listed}", ConfirmedNotes,
+                                      [job / media.art_path(scene.id)], system=NOTES_PROMPT,
+                                      label=f"art notes {scene.id}"))
+    except Exception as e:  # the notes disclose a flawed picture; a check that fails leaves them as they were
+        print(f"art: {scene.id}: the notes could not be confirmed: {type(e).__name__}: {e}", file=sys.stderr)
+        return notes
+    kept = {" ".join(k.split()) for k in answer.keep}
+    return [n for n in notes if " ".join(n.split()) in kept]
 
 
 UNWRITE_ROUNDS = 2  # a picture's writing painted out at most this many times, each a helper's look for it and a check
