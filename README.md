@@ -572,7 +572,7 @@ text as `text/plain`, anything else as a download, all in a sandbox. Past
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden }`: take a droplet off the Droplets tab, or put it back; the lesson stays on `/learn` |
-| GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer, totals: { song, lesson, hook } }`, `fewer` the droplets with plays but under `min`, `totals` each video's counts over every droplet whatever `min` (the page's drop-off curve). The PLAYS page, `/admin/plays` |
+| GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. With `?totals=1`, `totals: { song, lesson, hook }` too: each video's counts over every droplet, whatever `min` (the page's drop-off curve, asked for once; it sums every row, about 90 ms at 300,000 droplets), left out when it cannot be read. The PLAYS page, `/admin/plays` |
 
 ### Play counts
 

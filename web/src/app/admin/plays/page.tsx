@@ -40,6 +40,10 @@ export default function AdminPlaysPage() {
   const [video, setVideo] = useState<PlayVideo>('song');
   const [min, setMin] = useState(10);
   const [ranking, setRanking] = useState<PlayRanking | null>(null);
+  // Every droplet's totals, for the chart: asked for once, not again with every switch of video or minimum, since
+  // they sum every count the API holds and do not change with either. Asked again only while none have come.
+  const [totals, setTotals] = useState<PlayRanking['totals'] | null>(null);
+  const haveTotals = useRef(false);
   const [loading, setLoading] = useState(true);
   const shown = useRef('');
 
@@ -48,7 +52,11 @@ export default function AdminPlaysPage() {
     shown.current = asked;
     setLoading(true);
     try {
-      const res = await api.listPlays(video, min);
+      const res = await api.listPlays(video, min, !haveTotals.current);
+      if (res.totals) {
+        haveTotals.current = true;
+        setTotals(res.totals); // the same whatever was asked, so kept even from an answer that came too late
+      }
       if (shown.current === asked) setRanking(res);
     } catch (err) {
       if (shown.current === asked) showToast(err instanceof Error ? err.message : 'Failed to load the plays', 'error');
@@ -88,13 +96,13 @@ export default function AdminPlaysPage() {
       </div>
 
       {/* Every droplet together, whatever the video and the minimum chosen below. An API older than it sends no totals. */}
-      {ranking?.totals && (
+      {totals && (
         <section className="mb-6 rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
           <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-primary)' }}>Where plays drop off</h3>
           <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
             Of every play of each video, across all droplets, the share still going at each point.
           </p>
-          <DropOffChart totals={ranking.totals} />
+          <DropOffChart totals={totals} />
         </section>
       )}
 

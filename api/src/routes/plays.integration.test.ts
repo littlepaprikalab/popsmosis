@@ -5,7 +5,7 @@
  * nothing about who sent it (no cookie read, no column for it), the limits that keep it from being inflated cheaply,
  * and the owner's ranking by finish rate.
  */
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 
 const RUN = process.env.INTEGRATION === '1';
@@ -313,7 +313,7 @@ d('play counts', () => {
       await plays(quiet, [4]);
       await play(atp, 'lesson', 4, fresh());
 
-      const res = await ranking('?min=2');
+      const res = await ranking('?min=2&totals=1');
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body).toMatchObject({ video: 'song', min: 2, fewer: 1 });
@@ -336,6 +336,25 @@ d('play counts', () => {
       expect((await ranking('?video=hook')).json()).toMatchObject({ data: [], fewer: 0 });
       expect((await ranking('?limit=1')).json().data).toHaveLength(1);
       expect((await ranking('?video=clip')).statusCode).toBe(400);
+      // The totals only when asked: every switch of video or minimum on the page would sum every row again.
+      expect((await ranking('?video=lesson')).json()).not.toHaveProperty('totals');
+    });
+
+    it('sends the ranking without its totals when they cannot be read, rather than neither', async () => {
+      const id = await droplet();
+      await play(id, 'song', 4, fresh());
+      const real = prisma.$queryRaw.bind(prisma);
+      const spy = vi.spyOn(prisma, '$queryRaw').mockImplementation(((strings: TemplateStringsArray, ...values: unknown[]) =>
+        strings.join('').includes('GROUP BY video') ? Promise.reject(new Error('canceling statement due to statement timeout')) : real(strings, ...values)
+      ) as typeof prisma.$queryRaw);
+      try {
+        const res = await ranking('?totals=1');
+        expect(res.statusCode).toBe(200);
+        expect(res.json()).not.toHaveProperty('totals');
+        expect(res.json().data).toHaveLength(1);
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });

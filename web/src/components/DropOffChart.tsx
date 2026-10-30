@@ -40,6 +40,7 @@ export function DropOffChart({ totals }: { totals: Record<PlayVideo, PlayCounts>
     if (!el) return;
     const measure = () => setWidth(el.clientWidth || 640);
     measure();
+    if (typeof ResizeObserver === 'undefined') return; // a browser older than it keeps the first width
     const watch = new ResizeObserver(measure);
     watch.observe(el);
     return () => watch.disconnect();
@@ -113,7 +114,11 @@ export function DropOffChart({ totals }: { totals: Record<PlayVideo, PlayCounts>
               <rect key={step.key} x={i === 0 ? MARGIN.left - band / 2 : x(i) - band / 2} y={MARGIN.top} width={band} height={plotH}
                 fill="transparent" tabIndex={0} data-testid="drop-off-point"
                 aria-label={`${step.label}: ${lines.map((l) => `${l.label} ${pct(l.values[i])}, ${l.counts[step.key]} of ${l.counts.started}`).join('; ')}`}
-                onPointerEnter={() => setActive(i)} onPointerLeave={() => setActive(null)}
+                // A mouse shows the tooltip while it is over a point. A tap leaves the point at once, so a tap pins it
+                // instead, until another point is tapped or the focus moves on.
+                onPointerEnter={(e) => { if (e.pointerType === 'mouse') setActive(i); }}
+                onPointerLeave={(e) => { if (e.pointerType === 'mouse') setActive(null); }}
+                onPointerDown={(e) => { if (e.pointerType !== 'mouse') setActive(i); }}
                 onFocus={() => setActive(i)} onBlur={() => setActive(null)} style={{ outline: 'none' }} />
             ))}
           </svg>

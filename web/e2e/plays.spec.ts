@@ -196,11 +196,13 @@ test.describe("the owner's page", () => {
     for (const event of STEPS.slice(0, 3)) {
       expect((await request.post(apiUrl(`/api/droplets/${S.droplet}/plays`), { data: { video: 'lesson', event } })).status()).toBe(204);
     }
-    const res = await request.get(apiUrl('/api/plays'), { headers: ADMIN });
+    const res = await request.get(apiUrl('/api/plays?totals=1'), { headers: ADMIN });
     const { totals } = await res.json();
     expect(totals.lesson.started).toBeGreaterThan(0);
 
     await signIn(context, S.users.ada);
+    const asked: string[] = [];
+    page.on('request', (r) => { if (new URL(r.url()).pathname === '/api/plays') asked.push(new URL(r.url()).searchParams.get('totals') ?? ''); });
     await page.goto('/admin/plays');
     const chart = page.getByTestId('drop-off-chart');
     await expect(chart.getByRole('list', { name: 'Videos' })).toContainText(`Lesson${totals.lesson.started} ${totals.lesson.started === 1 ? 'play' : 'plays'}`);
@@ -225,6 +227,32 @@ test.describe("the owner's page", () => {
     const lesson = chart.getByTestId('drop-off-table').getByRole('row', { name: /^Lesson/ });
     await expect(lesson.getByRole('cell').nth(0)).toHaveText(String(totals.lesson.started));
     await expect(lesson.getByRole('cell').nth(2)).toHaveText(new RegExp(`^${totals.lesson.reached50} · `));
+
+    // Switching the ranking's video asks for its page only: the totals came once, and the chart stays.
+    await page.getByTestId('plays-video').getByRole('button', { name: 'Hook clip' }).click();
+    await expect.poll(() => asked.length).toBe(2);
+    expect(asked).toEqual(['1', '']);
+    await expect(points).toHaveCount(5);
+  });
+
+  test('on a phone, a tapped point keeps its counts showing until another is tapped', async ({ browser, request }) => {
+    expect((await request.post(apiUrl(`/api/droplets/${S.droplet}/plays`), { data: { video: 'song', event: 'started' } })).status()).toBe(204);
+    const context = await browser.newContext({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+    await signIn(context, S.users.ada);
+    const page = await context.newPage();
+    await page.goto('/admin/plays');
+    const chart = page.getByTestId('drop-off-chart');
+    const points = chart.getByTestId('drop-off-point');
+    const tip = chart.getByTestId('drop-off-tooltip');
+    await points.nth(1).tap();
+    await expect(tip).toContainText('25% played');
+    await page.waitForTimeout(500);
+    await expect(tip).toContainText('25% played'); // still there once the finger has lifted
+    await points.nth(3).tap();
+    await expect(tip).toContainText('75% played');
+    // The chart fits the phone: nothing runs off the side of the page.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await context.close();
   });
 
   test('ranks the droplets by how many plays finished, per video, for admins only', async ({ page, context, request }) => {

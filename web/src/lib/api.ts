@@ -442,7 +442,8 @@ export interface PlayRanking {
   min: number; // the fewest starts a droplet needs to be ranked
   data: { id: string; title: string; course: string; topic: string; hidden: boolean; createdAt: string; plays: PlayCounts }[];
   fewer: number; // droplets with plays of this video, but fewer than min
-  // Each video's counts over every droplet, whatever min: the drop-off curve. Absent from an API older than it.
+  // Each video's counts over every droplet, whatever min: the drop-off curve. Only when asked (?totals=1), and absent
+  // when they could not be read or from an API older than them.
   totals?: Record<PlayVideo, PlayCounts>;
 }
 
@@ -527,7 +528,9 @@ export const api = {
     request<{ id: string; hidden: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ hidden }) }),
 
   // Admin: droplets ranked by how many of one video's plays finished (api/src/routes/plays.ts)
-  listPlays: (video: PlayVideo, min: number) => request<PlayRanking>(`/plays?${new URLSearchParams({ video, min: String(min), limit: '200' })}`),
+  // withTotals: every droplet's totals too, for the drop-off chart; they sum every count, so the page asks once.
+  listPlays: (video: PlayVideo, min: number, withTotals = false) =>
+    request<PlayRanking>(`/plays?${new URLSearchParams({ video, min: String(min), limit: '200', ...(withTotals && { totals: '1' }) })}`),
 
   // Admin: agents
   listAgents: () => request<{ data: Agent[] }>('/agents'),
