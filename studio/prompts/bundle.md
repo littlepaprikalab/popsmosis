@@ -326,8 +326,10 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   don't help explain the idea: they pull attention away from it.
 - **Correct the misconception where it would form.** Name the common mistake once, right
   after the step or idea it is about, and say why it is wrong, so the learner meets the
-  right idea and the trap together. Never before they have met what it is about, and never
-  in a section of its own after the steps.
+  right idea and the trap together. In numbered steps it goes inside the step it is about,
+  as an indented paragraph of that step, never between two steps; a mistake about the whole
+  idea rather than one step goes right after the big picture. Never before they have met
+  what it is about, and never in a section of its own after the steps.
 - **One path, then the end.** After the last step comes at most one case (one example the
   facts give, worked cause before effect, in a short paragraph), then the check. What the
   topic leads to next in the course is one sentence before the check, or nothing. Nothing
