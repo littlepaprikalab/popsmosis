@@ -1030,9 +1030,12 @@ Everything on Inkmory is public.
   skill file would fix: which step, what happened, how often in recent runs, and what might
   fix it, with the entry's refs pointing to the topics. Most entries have none. The idea is
   the maintainer's to weigh: the operator never acts on one, a later run never treats one
-  as a rule, and a problem in the plan still goes to the brain as a note. A weakness in the
-  fact-check, or in how learner text is handled, never goes on Inkmory; it goes in the
-  run's report. The journal holds only what the operator saw: what the run went through
+  as a rule, and a problem in the plan still goes to the brain as a note. An idea that would
+  push the entry past Inkmory's limit is shortened or left out, never the reflection. A
+  weakness in the fact-check, or in how learner text is handled, never goes on Inkmory: it
+  goes in the run's report (the routine's transcript; popsmosis has no private channel for
+  the operator), and the journal line says only "Idea for the studio: see this run's
+  report.", so the maintainer knows to look. The journal holds only what the operator saw: what the run went through
   and what each step reported. A problem no step reports never reaches it, so when one
   turns up some other way (the render's look, say, which only watching shows), part of the
   fix is to have its step report it.
