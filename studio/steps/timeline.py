@@ -33,7 +33,10 @@ No model calls, so it is free to run again:
   the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
 - The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
-  line, so the learner sees where a close-up sits before it is shown.
+  line, so the learner sees where a close-up sits before it is shown. A zoom counts from the whole scene's
+  framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.6 to 2.0 a close-up. The
+  whole scene frames what is drawn, often already closer than the whole art, so a close-up counted from the art
+  came out barely closer (1.8 on the sample's overview, whose whole scene is at 1.44: 1.25 times).
 - The song's camera follows the words on a long hold (_follow). A shot of the whole picture only drifts, and the
   songs sit on one picture for long runs: the 12 songs of scorecard run 20261030-0015, at 3 s a line, held a
   whole, still picture for up to 32 s, 9 times for 15 s or more. Once the song has held a whole, still picture for
@@ -358,7 +361,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
         scene = after["scene"] if after else hook
-        camera = after["camera"] if after else TimelineCamera(target=None, zoom=1.0)
+        camera = after["camera"] if after else TimelineCamera(target=None, zoom=1.0, from_whole=True)
         beats.append({"t0": t0, "t1": t1, "scene": scene, "camera": camera, "reveal": [], "spotlight": None,
                       "labels": list(revealed.get(scene, [])), "particles": [], "caption": None, "line_id": None,
                       "line": "", "words": []})
@@ -417,7 +420,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             target, zoom = None, 1.0
         opened.add(scene)
 
-        beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
+        camera = TimelineCamera(target=target, zoom=zoom, from_whole=True)
+        beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": camera,
                       "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels),
                       "named": sorted(said, key=said.get), "particles": particles,
                       "caption": None, "line_id": timed_line.line_id, "line": texts.get(timed_line.line_id, ""),

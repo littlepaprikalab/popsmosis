@@ -443,18 +443,25 @@ def test_the_camera_drifts_on_while_a_line_holds_and_lines_on_one_shot_run_on(jo
     assert Renderer._drift(renderer_module.Cam(0, 0, 1.6), renderer_module.Cam(0, 0, 1.3)) == -1.0
 
 
-def test_the_songs_following_shot_counts_from_the_whole_scene_and_keeps_the_part_in_view(job):
-    # The whole scene frames what is drawn, here closer than the whole art: a follow at 1.4 of the whole art would only
-    # have slid across (timeline._follow).
+def test_a_zoom_counts_from_the_whole_scene_and_keeps_the_part_in_view(job, monkeypatch):
+    # The whole scene frames what is drawn, here closer than the whole art (the sample's overview is a strip across the
+    # canvas). Counted from the art, the brief's 1.8 close-up came out 1.25 times closer than the whole scene, and the
+    # song's 1.4 follow (timeline._follow) only slid across.
     renderer = Renderer(job, flowing([flow_beat(0, 8, path=[], labels=FLOW)]))
     view = renderer.layout.view
     whole = renderer._whole("overview", view).zoom
-    assert whole > timeline_step.FOLLOW_ZOOM  # the sample's overview is a strip across the canvas
+    assert whole > timeline_step.FOLLOW_ZOOM
     followed = renderer._aim("overview", "Cytochrome b6f", timeline_step.FOLLOW_ZOOM, from_whole=True)
     assert followed.zoom == pytest.approx(whole * timeline_step.FOLLOW_ZOOM)
-    # A part too big to be that much closer is framed as close as it fits, never wider than the whole scene.
-    assert renderer._aim("overview", "Thylakoid", timeline_step.FOLLOW_ZOOM, from_whole=True).zoom == whole
-    # The direction's own zoom still counts from the whole art.
+    # A close-up goes as close as its part fits with room around it, here a little short of 1.8 times.
+    close = renderer._aim("overview", "Cytochrome b6f", 1.8, from_whole=True).zoom
+    assert 1.7 * whole < close <= 1.8 * whole
+    # A part too big to be closer is framed as close as it fits, never wider than the whole scene.
+    assert renderer._aim("overview", "Thylakoid", 1.8, from_whole=True).zoom == whole
+    # No shot goes past CLOSE_MAX_ZOOM of the whole art, where a picture blurs.
+    monkeypatch.setattr(renderer_module, "CLOSE_MAX_ZOOM", 2.0)
+    assert renderer._aim("overview", "Cytochrome b6f", 1.8, from_whole=True).zoom == 2.0
+    # A timeline made before from_whole counts from the whole art.
     assert renderer._aim("overview", "Cytochrome b6f", 1.4).zoom == 1.4
 
 

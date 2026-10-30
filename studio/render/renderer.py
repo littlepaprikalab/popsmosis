@@ -69,6 +69,7 @@ ZOOM_THROUGH_S = 0.8
 ZOOM_THROUGH_SCALE = 2.0
 ZOOM_THROUGH_MAX = 3.0  # as close as the camera goes on the part: it stops sooner where the part fills the view
 FIT_PAD = 1.35  # a zoomed-in target keeps this much room around its box
+CLOSE_MAX_ZOOM = 3.0  # of the whole art: as close as a shot counted from the whole scene goes; a picture blurs past it
 WHOLE_PAD = 1.1  # the whole scene keeps this much around what is drawn: labels sit against the structures
 WHOLE_MAX_ZOOM = 2.0
 PORTRAIT_MAX_ZOOM = 2.6  # about two complexes of a membrane across an upright frame
@@ -771,7 +772,7 @@ class Renderer:
         fits = min((view[2] - view[0]) / (box_w * FIT_PAD), (view[3] - view[1]) / (box_h * FIT_PAD)) / _fit(view, art)
         if from_whole:
             whole = self._whole(scene_id, view).zoom
-            zoom = max(whole, min(whole * zoom, fits))
+            zoom = max(whole, min(whole * zoom, fits, CLOSE_MAX_ZOOM))
         else:
             zoom = max(1.0, min(zoom, fits))
         if self.portrait:  # a close-up is never wider than the upright frame's whole scene

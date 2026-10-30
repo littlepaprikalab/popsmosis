@@ -50,6 +50,7 @@ def test_the_sample_job_gives_two_valid_timelines_that_open_on_the_hook(job):
     for timeline in timelines.values():
         assert timeline_problems(timeline, locations) == []
         assert timeline.beats[0].scene == "hook"
+        assert all(b.camera.from_whole for b in timeline.beats)  # every zoom counts from the whole scene's framing
         assert timeline.beats[0].t0 == 0
     song = lines(timelines["song"])
     # "Light lands on the thylakoid": the thylakoid reveals on its word, not before.
