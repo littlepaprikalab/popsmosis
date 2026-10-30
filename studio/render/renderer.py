@@ -268,14 +268,15 @@ class SceneArt:
             covered = np.zeros(pixels.shape[:2], bool)
             for mask_file in self._mask_files.values():
                 covered |= _read(mask_file, skia.kGray_8_ColorType) > 127
-            paper = (skia.ColorGetB(self.paper), skia.ColorGetG(self.paper), skia.ColorGetR(self.paper))
-            across, up = axes.find(pixels, paper, covered)
+            far = axes.distance(pixels, (skia.ColorGetB(self.paper), skia.ColorGetG(self.paper),
+                                         skia.ColorGetR(self.paper)))
+            del pixels
+            across, up = axes.find(far, covered)
             x0, y0, x1, y1 = self.content
             across = across or axes.Line(at=up.end if up else y1, start=up.at if up else x0, end=x1)
             up = up or axes.Line(at=across.start, start=y0, end=across.at)
             self._axes = across, up
-            self._drawn = (np.abs(pixels[..., :3].astype(np.int16) - np.array(paper, np.int16)).max(axis=2)
-                           > DRAWN_INK) | covered
+            self._drawn = (far > DRAWN_INK) | covered
         return self._axes
 
     def drawn_share(self, box: tuple[float, float, float, float]) -> float:

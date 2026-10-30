@@ -767,10 +767,39 @@ def test_the_axes_are_found_as_the_long_thin_lines_that_are_no_structures(graph,
     # A picture with no such line (the sample's ellipses) has none: its axes fall back to the edges of what is drawn.
     art = graph_art(job, "overview")
     pixels = art.art.toarray(colorType=skia.kBGRA_8888_ColorType)
-    assert axes.find(pixels, (255, 255, 255), np.zeros(pixels.shape[:2], bool)) == (None, None)
+    assert axes.find(axes.distance(pixels, (255, 255, 255)), np.zeros(pixels.shape[:2], bool)) == (None, None)
     across, up = art.axis_lines()
     x0, y0, x1, y1 = art.content
     assert (across.at, across.start, across.end) == (y1, x0, x1) and (up.at, up.start, up.end) == (x0, y0, y1)
+
+
+def test_a_painted_axis_a_little_off_level_is_found_whole():
+    # Level rows only, an axis half a degree off was found 264 pixels short, which put its name mid-axis.
+    from studio.render import axes
+
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), 40, np.uint8)
+    for degrees in (0.5, 1.0):
+        pixels[...] = 40
+        for x in range(300, 1500):  # the x axis, rising to its right end
+            y = round(880 - (x - 300) * math.tan(math.radians(degrees)))
+            pixels[y - 3:y + 3, x] = 240
+        for y in range(140, 880):  # the y axis, leaning right to its top
+            x = round(300 + (880 - y) * math.tan(math.radians(degrees)))
+            pixels[y, x - 3:x + 3] = 240
+        across, up = axes.find(axes.distance(pixels, (40, 40, 40)), np.zeros(pixels.shape[:2], bool))
+        assert abs(across.start - 300) <= 4 and abs(across.end - 1500) <= 4 and abs(across.at - 880) <= 15
+        assert abs(up.start - 140) <= 4 and abs(up.end - 880) <= 4 and abs(up.at - 300) <= 15
+
+
+def test_a_mask_grows_by_a_square_and_stops_at_the_edges():
+    from studio.render import axes
+
+    mask = np.zeros((9, 12), bool)
+    mask[4, 5] = mask[0, 11] = True
+    grown = axes.grow(mask, 2)
+    expected = np.zeros_like(mask)
+    expected[2:7, 3:8] = expected[0:3, 9:12] = True
+    assert (grown == expected).all() and mask.sum() == 2  # the mask itself is left as it was
 
 
 def names_drawn(job, video, t, layout="h"):
@@ -814,3 +843,29 @@ def test_on_a_dark_picture_the_axis_names_are_light_and_upright_frames_keep_them
     ys, xs = np.nonzero(changed)
     assert (xs < 200).any() and (xs > 800).any()  # "Price" kept at the left edge, "Quantity" at the right
     assert frame[changed][..., :3].max() > 220
+
+
+def test_a_graphs_frame_is_the_same_whichever_frame_a_worker_draws_first(graph):
+    # Each render worker starts at its own range: one that starts on the second graph picks its names' spots alone.
+    timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
+    late = Renderer(graph, timeline).frame(24.0).copy()
+    early = Renderer(graph, timeline)
+    early.frame(5.0), early.frame(15.0)
+    assert (early.frame(24.0) == late).all()
+
+
+def test_axis_names_stay_on_through_a_stage_fade_when_the_next_stage_has_the_same(graph):
+    timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
+    cut = next(b.t0 for b in timeline.beats if b.scene == "ceiling")
+    mid, settled = cut + renderer_module.STAGE_FADE_S / 2, cut + 2 * renderer_module.STAGE_FADE_S
+
+    def drawn(tl, t):  # how strongly the names show: the whole of their difference from the frame without them
+        frame = Renderer(graph, tl).frame(t).copy()
+        plain = Renderer(graph, tl.model_copy(update={"axes": {}})).frame(t).copy()
+        return np.abs(frame[..., :3].astype(int) - plain[..., :3]).sum()
+
+    staged = timeline.model_copy(update={"stages": [["overview", "ceiling"]]})
+    assert drawn(staged, mid) > 0.9 * drawn(staged, settled)  # the same axes: on in full mid-fade
+    renamed = staged.model_copy(update={"axes": {**staged.axes, "ceiling": staged.axes["ceiling"].model_copy(
+        update={"x": "Bread sold"})}})
+    assert drawn(renamed, mid) < 0.8 * drawn(renamed, settled)  # new names fade in with their stage
