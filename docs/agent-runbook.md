@@ -43,9 +43,6 @@ The runner needs these in its environment:
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
-| `INKMORY_PLANNER_API_KEY` | the planner agent's (Boojum's) `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the studio keeps the planner's record on every topic made on a Muse brain (README, [The planner's record on Inkmory](../README.md#the-planners-record-on-inkmory)). Only studio code reads it; the skill file never uses it |
-| `STUDIO_PLANNER_PERSONA` | optional: `record` (the default) or `lesson`, where the planner's persona and memory go: into its record only, or into the bundle prompt as well |
-| `INKMORY_PLANNER_ON_CLAUDE` | optional: `true` lets the planner keep its record on a topic whose brain is Claude. Unset, its record is Muse's only |
 | `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless Lyria sings it (the audio step). Its calls bill to that ElevenLabs account |
 | `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
@@ -53,10 +50,9 @@ The runner needs these in its environment:
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
 
-`STUDIO_PLANNER_PERSONA`, `INKMORY_PLANNER_ON_CLAUDE`, `ELEVENLABS_VOICE_ID`,
-`ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL` and `STUDIO_VIDEOS` are knobs: an admin
-can set them on `/admin/studio` instead, and a value set there wins over the one here from the
-next run (README, [Knobs](../README.md#knobs)).
+`ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL` and `STUDIO_VIDEOS`
+are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
+one here from the next run (README, [Knobs](../README.md#knobs)).
 
 The brain, the singer and the painters are not set here. Which brain writes the lessons,
 Claude's effort, who sings the song and who paints each brain's pictures are set by an admin
@@ -84,12 +80,12 @@ checks its own key, the way one person carries a separate badge for each buildin
 The operator (the Claude routine)
  ├─ on popsmosis: POPSMOSIS_API_KEY, sk_pop_…            reads the queues; the studio posts lessons with it
  └─ on Inkmory:   INKMORY_OPERATOR_API_KEY, sk_inkmory_…  writes the operator's public record
-
-The planner (the brain: Opus now, Muse Wonder from day 8)
- ├─ on popsmosis: no key. It never calls popsmosis: the studio asks the brain, then
- │                posts what it wrote with the operator's popsmosis key
- └─ on Inkmory:   INKMORY_PLANNER_API_KEY, read only by studio code
 ```
+
+The brain (Opus now, Muse Wonder from day 8) holds no key and is not an agent: it never calls
+popsmosis or Inkmory. The studio asks it, then posts what it wrote with the operator's popsmosis
+key. An `INKMORY_PLANNER_API_KEY` left in the environment from before is read by nothing:
+remove it.
 
 Neither key works on the other service: popsmosis answers 401 to an Inkmory key, as it
 would to no key at all. That is on purpose. To accept Inkmory's key, popsmosis would have

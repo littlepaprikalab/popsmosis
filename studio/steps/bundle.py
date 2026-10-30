@@ -34,11 +34,11 @@ wherever the note would bend one, and no line mentions it.
 """
 
 
-def run(job: Path, ask=brain.ask, persona: str = "", note: str = "") -> Bundle:
-    """persona: the planner's (studio/inkmory.py, STUDIO_PLANNER_PERSONA=lesson); note: the operator's
-    observation (studio/run.py). Each ends the prompt when given; the fact-check sees neither."""
+def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
+    """note: the operator's observation (studio/run.py). It ends the prompt when given; the fact-check never
+    sees it."""
     request = read(job / "request.json", Request)
-    system = PROMPT + persona + (NOTE.format(note=note) if note.strip() else "")
+    system = PROMPT + (NOTE.format(note=note) if note.strip() else "")
     try:
         answer = ask("brain", user_prompt(request, style_for(job.name)), Bundle, request.images, system=system, label="bundle")
     except brain.InvalidOutput as e:

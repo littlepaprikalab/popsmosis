@@ -336,7 +336,7 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     blockers = {b.structure for b in bundle.blocks}
     # A failure scene (one that draws a blocker) holds still after the block on purpose: what stopped stays stopped.
     # So does a scene where nothing travels on any line of either video (a graph, a stage): asked to keep every
-    # scene moving, the planner sent unmarked dots from Romeo to the audience and from one point of a graph to
+    # scene moving, the brain sent unmarked dots from Romeo to the audience and from one point of a graph to
     # another, a journey nothing makes.
     travels = {d.scene for d in bundle.direction if d.flows()}
     still = set(STILL_SCENES) | {s.id for s in bundle.scenes

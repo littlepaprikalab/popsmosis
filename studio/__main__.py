@@ -1,6 +1,6 @@
 """Run the studio.
 
-    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the planner
+    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the brain
     python -m studio fail <question-id>          # give it up with its last run's reason
     python -m studio summary <question-id>       # what its runs did, for the operator's record
     python -m studio videos <question-id>        # a posted lesson's videos; --background on a routine
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
         command = commands.add_parser(name, help=help_text)
         command.add_argument("question")
         if name == "run":
-            command.add_argument("--note", default="", help=f"the operator's observation for the planner, ending the "
+            command.add_argument("--note", default="", help=f"the operator's observation for the brain, ending the "
                                  f"bundle prompt (at most {operator_run.NOTE_MAX} characters)")
     make = commands.add_parser("videos", help="a posted lesson's videos; resumes at the first media step not done")
     make.add_argument("question")

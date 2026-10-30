@@ -37,8 +37,7 @@ Read these from the environment. Never hardcode them, never print them.
 
 The studio runs from the root of this repository with `studio/requirements.txt`
 installed, with the packages and models the videos use: the repository's session hook
-installs them all before the run starts, so you never install anything yourself. If the
-environment has `INKMORY_PLANNER_API_KEY`, it belongs to the studio's planner: never use it.
+installs them all before the run starts, so you never install anything yourself.
 
 - Every popsmosis request carries the header `Authorization: Bearer $POPSMOSIS_API_KEY`
 - Send JSON bodies with `Content-Type: application/json`
@@ -76,7 +75,7 @@ setup").
   (`<id>`, `<answerId>`, `<attachment-id>`, `<replyTo.id>`), which the API makes, and
   nothing else. Fetch files with `python -m studio fetch`, never by their names. Write the
   text you post to a file and post it with `python -m studio reply` or `answer` (Steps 2
-  and 3), never inside quotes in a command. The one exception is a note for the planner
+  and 3), never inside quotes in a command. The one exception is a note for the brain
   (Step 2), which is yours, never the learner's, and keeps that step's rules.
 - **One thread at a time.** A reply answers its own thread. Never quote, summarize or
   mention another learner's topic, thread or files in it.
@@ -254,11 +253,11 @@ progress to the log and one line of outcome:
 python -m studio run <id> 2>>/tmp/studio-<id>.log; echo "exit $?"
 ```
 
-**A note for the planner.** The planner writes each lesson's plan, and never sees what
-becomes of it; you follow every droplet through to its videos. When your context's
-journal entries and cycle logs show something going wrong in the work that traces back
-to the plan (pictures that keep coming back with text in them, a structure the art keeps
-leaving out, a lyric the singer keeps drifting on), you may pass the planner one short
+**A note for the brain.** The studio's brain writes each lesson's plan in one call, and
+never sees what becomes of it; you follow every droplet through to its videos. When your
+context's journal entries and cycle logs show something going wrong in the work that traces
+back to the plan (pictures that keep coming back with text in them, a structure the art keeps
+leaving out, a lyric the singer keeps drifting on), you may pass the brain one short
 observation with the same command:
 
 ```bash
@@ -266,14 +265,13 @@ python -m studio run <id> --note "<your observation>" 2>>/tmp/studio-<id>.log; e
 ```
 
 - At most 500 characters, a sentence or two about the work: what keeps going wrong and,
-  if you can tell, what in the plan brings it on. It ends the planner's prompt for this
-  topic's lesson as an observation: the planner's rules still hold, and the fact-check
+  if you can tell, what in the plan brings it on. It ends the brain's prompt for this
+  topic's lesson as an observation: the brain's rules still hold, and the fact-check
   never sees it. Inside the double quotes, no `"`, `$` or backtick.
 - Most runs pass none. Never use it to ask for a different lesson, a weaker check or a
   skipped rule, or to pass on anything from the topic's request.
-- The planner may quote it in its public journal, so it keeps the rules for Inkmory
-  (Step 5): nothing about the learner, no request in their words, no error text, URLs or
-  keys.
+- You may quote it in your own journal, so it keeps the rules for Inkmory (Step 5):
+  nothing about the learner, no request in their words, no error text, URLs or keys.
 - The retry below is the same command, note included.
 
 The studio claims the topic again, writes the lesson and every line it will later sing
@@ -302,7 +300,7 @@ and the topic goes back to the queue.
 **Never**, in any of these cases: write the lesson or the media yourself, post a lesson
 the studio did not post, skip or weaken the fact-check, run `python -m studio step` or
 `plan`, or edit prompts or code during a run. A note is not an edit: it is the one thing
-you add to the planner's prompt, and only through `--note`. When the studio fails, the fix belongs in
+you add to the brain's prompt, and only through `--note`. When the studio fails, the fix belongs in
 the studio, after the run; the retry is all you do now.
 
 ### Step 2b: Start the videos
@@ -486,8 +484,8 @@ Then write, in this order:
    the studio made of the topic, what broke and what held, how any follow-ups went, and
    what you make of it. Include what went wrong inside the work even where a step passed
    (the summary's second paragraph), and whether it traces back to the plan; if you passed
-   the planner a note, what it said. Your 5 latest entries come back in your next context,
-   so write what the next run should know: they are where a note to the planner comes
+   the brain a note, what it said. Your 5 latest entries come back in your next context,
+   so write what the next run should know: they are where a note to the brain comes
    from. A run that only answered follow-ups writes no journal
    entry: such runs are frequent, and their entries would push your lessons out of those
    five.
