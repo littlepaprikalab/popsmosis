@@ -19,7 +19,7 @@ CHORUS = "Protons flow and ATP grows"
 
 LYRICS = [  # id, section, text, names, fact
     ("v1-1", "verse", "Light lands on the thylakoid", ["thylakoid"], "f1"),
-    ("v1-2", "verse", "Every electron hand-off pumps a proton", [], "f2"),
+    ("v1-2", "verse", "Each electron hand-off pumps a proton", [], "f2"),
     ("c1-1", "chorus", CHORUS, [], "f3"),
     ("v2-1", "verse", "Only b6f pumps them in", [], "f2"),
     ("c2-1", "chorus", CHORUS, [], "f3"),

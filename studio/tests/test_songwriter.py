@@ -167,7 +167,7 @@ def test_factcheck_json_stays_readable_by_a_studio_from_before_the_songwriter(tm
 
 def test_a_lyric_with_a_line_break_in_it_is_still_one_line_of_its_couplet():
     def broken(data):
-        data["lyrics"][1]["text"] = "Every electron hand-off\npumps a proton"
+        data["lyrics"][1]["text"] = "Each electron hand-off\npumps a proton"
 
     unit = couplets(bundle(broken))[0]
     assert unit.members == ("v1-1", "v1-2") and unit.text == f"{FIRST}\n{SEEDED}"

@@ -282,6 +282,7 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     scale = length * 1000 / planned_ms if planned_ms else 1.0  # the song can run a little long or short
 
     levels = vocal_levels(vocals) if plan.get("sections_pinned", True) else None
+    skipped = left_out(plan, texts)
     lines, scores = [], {}
     for section in windows(plan):
         start = section["start_ms"] * scale / 1000
@@ -290,13 +291,19 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
         if levels is not None and sung_seconds(levels, start, end) < SUNG_S:
             at = round(max(end, previous), 3)
             for line_id in section["line_ids"]:
-                lines.append(TimedLine(line_id=line_id, start=at, end=at, sung=False,
-                                       words=[Word(word=w, start=at, end=at) for w, _, _ in words_of(texts[line_id])]))
+                lines.append(_unsung(line_id, texts, at))
                 scores[line_id] = None
             continue
         t0 = max(0.0, start - MARGIN_S)
         t1 = min(length, end + MARGIN_S)
-        for line, score in _align_lines(vocals, align, texts, section["line_ids"], t0, t1, previous, length):
+        sung = [line_id for line_id in section["line_ids"] if line_id not in skipped]
+        timed = iter(_align_lines(vocals, align, texts, sung, t0, t1, previous, length) if sung else [])
+        for line_id in section["line_ids"]:
+            if line_id in skipped:  # at no length where the line before it ends, and never shown
+                lines.append(_unsung(line_id, texts, lines[-1].end if lines else 0.0))
+                scores[line_id] = None
+                continue
+            line, score = next(timed)
             lines.append(line)
             scores[line.line_id] = score
     realigned = []
@@ -319,6 +326,40 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     if aligning is not None:
         _log_local(job, "song alignment", MMS_MODEL, aligning)
     return timing, {**song_report(timing, texts, scores), "realigned": realigned}
+
+
+def _unsung(line_id: str, texts: dict[str, str], at: float) -> TimedLine:
+    """A line not sung, timed at no length at `at`: the timeline never shows it."""
+    at = round(at, 3)
+    return TimedLine(line_id=line_id, start=at, end=at, sung=False,
+                     words=[Word(word=w, start=at, end=at) for w, _, _ in words_of(texts[line_id])])
+
+
+# Lyria's own text of the song: each line it sang, after its start ("[12.5:] Deep underground...") or a bare "[:]",
+# under section marks ("[[B1]]").
+LYRIA_LINE = re.compile(r"^\[[\d.]*:\]\s*")
+LYRIA_SECTION = re.compile(r"^\[\[.*\]\]$|^\[[^\]:]*\]$")
+TRUST_TEXT = 0.6  # a text that matches fewer of the lyrics than this is not the song's, and is not used
+
+
+def left_out(plan: dict, texts: dict[str, str]) -> set[str]:
+    """The lines Lyria's own text of the song (its answer's text, kept in the plan) leaves out: round 17's kidney
+    song stopped after its last chorus, and the aligner, asked for the outro too, crammed seven lines into the
+    song's last seven seconds, flashed in the band and never sung. Lines it changed a little are still sung.
+    Nothing for Eleven Music, which keeps to its sections, or for a text that does not match the lyrics."""
+    if plan.get("sections_pinned", True) or not (plan.get("text") or "").strip():
+        return set()
+    order = [line_id for section in plan["sections"] for line_id in section["line_ids"]]
+
+    def plain(text: str) -> str:
+        return " ".join(re.sub(r"[^\w\s]", "", unicodedata.normalize("NFKC", text).lower()).split())
+
+    sung = [plain(LYRIA_LINE.sub("", line.strip())) for line in plan["text"].splitlines()
+            if line.strip() and not LYRIA_SECTION.match(line.strip())]
+    matcher = SequenceMatcher(a=[plain(texts[line_id]) for line_id in order], b=sung, autojunk=False)
+    if sum(block.size for block in matcher.get_matching_blocks()) < TRUST_TEXT * len(order):
+        return set()
+    return {order[k] for op, a0, a1, _, _ in matcher.get_opcodes() if op == "delete" for k in range(a0, a1)}
 
 
 def _align_lines(vocals, align: Aligner, texts: dict[str, str], line_ids: list[str], t0: float, t1: float,
@@ -446,7 +487,7 @@ def song_notes(report: dict) -> str:
     worst = max((abs(d["drift"]) for d in report["drift"]), default=0.0)
     notes = [f"chorus drift at most {worst:.2f}s" if report["drift"] else "no repeated lines"]
     if report.get("unsung"):  # a report from before the check has none
-        notes.append(f"NOT SUNG, their section instrumental: {', '.join(report['unsung'])}")
+        notes.append(f"NOT SUNG: {', '.join(report['unsung'])}")
     if report["drifting"]:
         notes.append(f"DRIFT over {DRIFT_S}s: {', '.join(report['drifting'])}")
     if report.get("realigned"):  # a report from before the repair pass has none

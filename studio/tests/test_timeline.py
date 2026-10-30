@@ -4,7 +4,7 @@ import pytest
 
 from studio import jobs, media
 from studio.media import StepFailed
-from studio.schemas import AudioClip, Bundle, Locations, Timeline, Timing, timeline_problems
+from studio.schemas import AudioClip, Bundle, Locations, TimedLine, Timeline, Timing, timeline_problems
 from studio.steps import timeline as step
 from studio.tests import sample_media
 from studio.tests.sample import bundle_data
@@ -196,10 +196,11 @@ def test_a_line_that_sums_up_runs_every_flow_its_scene_has_shown_so_far(monkeypa
              beat("hook")]  # the hook never does
     _run_all(beats, "hook")
     moving = [[(f.path[0], f.path[-1], f.label) for f in b["particles"]] for b in beats]
-    # The hand-off runs within the whole chain, which takes its place, rather than as a second dot on its leg.
-    assert moving[4] == [("Lumen", "Stroma", "H⁺"), ("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
+    # The hand-off runs within the whole chain, which takes its place, rather than as a second dot on its leg; at
+    # most RUN_MAX (2) move, the beat's own first.
+    assert moving[4] == [("Lumen", "Stroma", "H⁺"), ("PSII", "PSI", "e⁻")]
     assert moving[5] == [("Lumen", "Stroma", "H⁺")]
-    assert moving[6] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻"), ("Lumen", "Stroma", "H⁺")]
+    assert moving[6] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
     assert moving[7] == []
     assert [len(b["particles"]) for b in beats[:4]] == [1, 1, 1, 1]  # lines that teach a step move only that step
 
@@ -505,17 +506,17 @@ def keyed(data):
     data["key_terms"] = ["ATP synthase", "lumen"]
 
 
-def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_the_last_chorus(job):
+def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_every_chorus(job):
     data = bundle_data()
     keyed(data)
     bundle = write_bundle(job, data)
     timelines = make(job)
     song = timelines["song"]
     shown = {b.line_id: b.key_line for b in song.beats if b.line_id}
+    # Each chorus sings the core idea, so it shows it, until the next key line (the bridge has none of its own).
     assert shown == {"v1-1": "How does a leaf make fuel from light?", "v1-2": "How does a leaf make fuel from light?",
-                     "c1-1": "How does a leaf make fuel from light?", "v2-1": "Light pumps H⁺ into the lumen",
-                     "c2-1": "Light pumps H⁺ into the lumen", "b-1": "Light pumps H⁺ into the lumen",
-                     "c3-1": bundle.core_idea}
+                     "c1-1": bundle.core_idea, "v2-1": "Light pumps H⁺ into the lumen",
+                     "c2-1": bundle.core_idea, "b-1": bundle.core_idea, "c3-1": bundle.core_idea}
     for i, beat in enumerate(song.beats):  # a gap holds the line before it
         if not beat.line_id and i:
             assert beat.key_line == song.beats[i - 1].key_line
@@ -564,3 +565,71 @@ def test_a_graphs_axis_names_go_to_the_videos_that_show_it(job):
     assert {scene: (a.x, a.y) for scene, a in timelines["lesson"].axes.items()} == {"synthase": ("Time", "")}
     hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
     assert hook.axes == timelines["song"].axes  # the hook cut is the song's, and shows the overview
+
+
+def test_a_picture_shown_for_one_short_line_gives_way_to_the_one_before():
+    # Round 18's kidney song cut to a scene for one two-second line six times.
+    def line(line_id, start):
+        return TimedLine(line_id=line_id, start=start, end=start + 1.8, words=[])
+
+    sung = [line("a", 0), line("b", 2), line("c", 4), line("d", 6), line("e", 8), line("f", 10), line("g", 15)]
+    scenes = {"a": "hook", "b": "overview", "c": "overview", "d": "detail", "e": "overview", "f": "detail",
+              "g": "nowhere"}
+    directions = {k: type("D", (), {"scene": v})() for k, v in scenes.items()}
+    got = step._scenes(sung, directions, {"hook", "overview", "detail"}, "hook", 20.0)
+    # d alone (2 s) holds the overview; f's run (10 to 15 s, then g, not drawn, stays on it) is long enough.
+    assert got == ["hook", "overview", "overview", "overview", "overview", "detail", "detail"]
+
+
+def test_the_hook_holds_still_whatever_its_direction_says(job, monkeypatch):
+    # Round 20's rock cycle sent a dot of sand off its cliff in the opening picture; it read as a speck.
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"])
+    write_bundle(job, data)
+    assert lines(make(job)["song"])["v1-2"].particles  # on the overview, it runs
+    monkeypatch.setattr(step, "hook_scene", lambda bundle: "overview")  # the same picture, opening the video
+    timelines = make(job)
+    assert lines(timelines["song"])["v1-2"].scene == "overview"
+    for timeline in timelines.values():
+        assert all(not b.particles for b in timeline.beats if b.scene == "overview")
+
+
+def test_a_drawn_value_is_written_as_the_voice_says_it_and_a_tick_from_the_start():
+    from types import SimpleNamespace
+
+    from studio.schemas import Point, Value, Word
+    from studio.steps.timeline import _write_values, says
+
+    assert says("$1,210", "$1,210") and says("1,210", "$1,210") and says("12", "12 years")
+    assert not says("10%", "$10") and not says("1,100", "$1,210")
+    values = [Value(text="$1,210", at=Point(x=500, y=300)), Value(text="Year 2", at=Point(x=500, y=900), side="below",
+                                                                     tick=True),
+              Value(text="$1,331", at=Point(x=700, y=250))]  # never said: written from the start
+    beats = [{"scene": "hook", "t0": 0.0, "t1": 4.0, "words": [Word(word="$1,210", start=1.0, end=1.5)]},
+             {"scene": "overview", "t0": 4.0, "t1": 8.0, "words": [Word(word="So", start=4.2, end=4.4)]},
+             {"scene": "overview", "t0": 8.0, "t1": 12.0, "words": [Word(word="reaches", start=8.5, end=9.0),
+                                                                    Word(word="$1,210", start=9.2, end=9.9)]},
+             {"scene": "overview", "t0": 12.0, "t1": 16.0, "words": []}]
+    _write_values(beats, SimpleNamespace(scenes=[SimpleNamespace(scene="overview", values=values)]))
+    assert beats[0]["values"] == []  # said on another scene: not there
+    assert [(v.text, v.since, v.tick) for v in beats[1]["values"]] == [("Year 2", 4.0, True), ("$1,331", 4.0, False)]
+    assert [(v.text, v.since) for v in beats[2]["values"]] == [("$1,210", 9.2), ("Year 2", 4.0), ("$1,331", 4.0)]
+    assert [v.text for v in beats[3]["values"]] == ["$1,210", "Year 2", "$1,331"]  # and stays on
+
+
+def test_how_a_flow_moves_is_kept_as_the_bundle_directs_it(job):
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="filtrate", moves="travels")
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # written before moves: ""
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    assert [f.moves for f in song["v1-2"].particles] == ["travels"]
+    assert [f.moves for f in song["v2-1"].particles if f.label == "H⁺"] == [""]
+
+
+def test_what_moves_takes_the_colour_of_the_structure_it_names():
+    from studio.steps.timeline import MARKER_COLOURS, marker_colour
+    palette = {"Magma": "#E4572E", "Volcano": "#6B4F3A"}
+    assert marker_colour("magma", palette) == "#E4572E"  # magma rises in magma's red
+    assert marker_colour("H⁺", palette) == MARKER_COLOURS["H⁺"]  # a common kind keeps its own
+    assert marker_colour("sediment", palette) == marker_colour("sediment")  # no such structure: by its name

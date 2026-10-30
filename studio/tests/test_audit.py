@@ -3,6 +3,7 @@ import json
 import pytest
 
 from studio import jobs
+from studio.brain import BrainError
 from studio import run as operator_run
 from studio.jobs import read, write
 from studio.schemas import AuditReport, Bundle, FactAudit, FactCheck, LyricRewrite, Request
@@ -16,7 +17,7 @@ from studio.tests.test_run import FakeApi
 # holds lines to the facts, so a lyric that says what a wrong fact says passes it.
 WRONG = "Every electron hand-off in the thylakoid membrane pumps a proton into the thylakoid lumen."
 RIGHT = FACTS[1]["text"]  # "Only cytochrome b6f pumps protons into the thylakoid lumen; the other carriers..."
-SEEDED = "Every electron hand-off pumps a proton"  # lyric v1-2, written from f2
+SEEDED = "Each electron hand-off pumps a proton"  # lyric v1-2, written from f2
 FIXED = "Only b6f pumps a proton through"
 FIRST = "Light lands on the thylakoid"  # lyric v1-1, the line SEEDED is sung in a couplet with
 GUIDE = "In the light reactions, only cytochrome b6f pumps protons into the lumen. ATP synthase makes ATP."
@@ -53,14 +54,14 @@ def check_by_the_facts(payload):
     says_every = [f["id"] for f in payload["facts"] if "every electron hand-off" in f["text"].lower()]
     checks = []
     for line in payload["lines"]:
-        if "every electron hand-off" in line["text"].lower() and not says_every:
-            fixed = "\n".join(FIXED if "every electron hand-off" in part.lower() else part
+        if "electron hand-off" in line["text"].lower() and not says_every:
+            fixed = "\n".join(FIXED if "electron hand-off" in part.lower() else part
                                for part in line["text"].split("\n"))  # a couplet keeps its other line
             checks.append({"id": line["id"], "verdict": "UNSUPPORTED", "source": "",
                            "problem": "only cytochrome b6f pumps", "corrected": fixed})
         else:
             checks.append({"id": line["id"], "verdict": "SUPPORTED", "source": says_every[0] if says_every and
-                           "every" in line["text"].lower() else "f1", "problem": "", "corrected": ""})
+                           "electron hand-off" in line["text"].lower() else "f1", "problem": "", "corrected": ""})
     return FactCheck.model_validate({"checks": checks}).model_dump()
 
 
@@ -91,8 +92,12 @@ class Studio:
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         self.labels.append(label)
+        if label == "script":  # no script: the bundle is written without one
+            raise BrainError("no answer")
         if schema is Bundle:
             return seeded_data()
+        if label == "narration edit":  # handed back as it came
+            return {"lines": [{"id": n["id"], "text": n["text"]} for n in json.loads(prompt)["narration"]]}
         if schema is FactAudit:
             return self.auditor(role, prompt, schema, system=system, label=label)
         if schema is LyricRewrite:
@@ -160,8 +165,8 @@ def test_the_audit_catches_the_wrong_fact_and_the_fact_check_then_corrects_the_l
 def test_a_whole_run_posts_the_corrected_fact_and_the_lines_rechecked_against_it(jobs_root):
     api, ask = FakeApi(), Studio()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.labels == ["bundle", "fact audit", "fact audit again", "factcheck round 1", "lyric rewrite round 1",
-                          "factcheck round 2"]
+    assert ask.labels == ["script", "bundle", "narration edit", "fact audit", "fact audit again", "factcheck round 1",
+                          "lyric rewrite round 1", "factcheck round 2"]
     posted = api.posted["bundle"]
     assert posted["facts"][1]["text"] == RIGHT and posted["lyrics"][1]["text"] == FIXED
     assert SEEDED not in json.dumps(posted) and WRONG not in json.dumps(posted)
@@ -207,7 +212,7 @@ def test_a_run_whose_audit_fails_never_reaches_the_fact_check_and_retries_the_au
                    else {"verdict": "CORRECT"})
     result, step, reason = operator_run.run("q1", api=FakeApi(), ask=first)
     assert (result, step) == ("FAILED", "audit") and reason.startswith("fact f2 is wrong")
-    assert first.labels == ["bundle", "fact audit"]
+    assert first.labels == ["script", "bundle", "narration edit", "fact audit"]
     second = Studio()
     assert operator_run.run("q1", api=FakeApi(), ask=second)[0] == "DONE"
     assert second.labels[0] == "fact audit"  # the bundle was kept

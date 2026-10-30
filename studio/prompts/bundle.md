@@ -7,6 +7,21 @@ Write the fields in the schema's order. Each part builds on the parts before it:
 first (`core_idea`, `why_chain`, `key_terms`), then the facts, which must state everything
 the essence says, then everything else, which must be true to the facts.
 
+## The script
+
+The lesson's script may come with the request, in a `<script>` block: the lesson's writer
+wrote it before you, and it stands. Take its `audience`, `core_idea`, `why_chain`,
+`key_terms`, `misconception` and `facts` word for word. Draw its scenes, with its ids and in
+its order, each `image_prompt` drawing what its `picture` says, and every part its narration
+names over that scene a structure, named as the narration says it. Speak its narration word
+for word: one narration item a sentence, in its order, with the ids it gives, each played
+over the scene its passage names. Everything else is yours, by this brief: the pictures'
+requests and structures, the direction, the lesson text and the song. The lesson text, the
+song and the key lines tell the same story as the script, in the same order, with the same
+analogy, and the first key line asks the script's `question`. You may add a scene the song
+needs (what a failure looks like, for the bridge) after the script's. Where this brief's
+rules for the narration ask for something the script does differently, the script stands.
+
 ## The audience
 
 Write the whole droplet for one audience: the lesson, the song and the narration.
@@ -62,6 +77,11 @@ the whole droplet. So:
   a plot twist. The lesson, the song, the narration and an analogy scene all use it. When
   one part also needs a picture of its own (a turnstile for ATP synthase), it may have one,
   in a fact too, as long as it fits inside the frame rather than replacing it.
+- Say where each thing happens, part by part, since the pictures show it happening in a
+  place: "the proximal tubule takes back glucose, and secretes H⁺ and some drugs into the
+  filtrate", not "the tubule secretes" when the close-up is of the proximal tubule. A step
+  the facts do not place cannot be shown anywhere: round 18's secretion was cut from its
+  close-up for want of a fact putting it there.
 - Be precise, in the words the audience's course or exam uses (for a young audience,
   plain words that are still exact). State quantities, exceptions and limits exactly
   ("only cytochrome b6f pumps protons", not "the chain pumps protons").
@@ -135,6 +155,17 @@ together they go from what the learner already knows to the parts they are learn
   between them is what the viewer sees move. No scene draws several stages side by side:
   an overview of mitosis drawn that way came back with its stages wrong. The stages are
   the overview, and the chorus plays over the stage that draws what it names.
+- When the lesson has things crossing between two spaces that lie side by side, one way and
+  the other (reabsorption back into the blood and secretion out of it; oxygen into a capillary
+  and carbon dioxide out of it), a detail scene shows the crossing up close: the two spaces
+  wide apart across the picture with the wall between them, each a structure of its own (the
+  filtrate in the tubule on one side, the blood in a capillary on the other), so one crossing
+  moves left to right and the other right to left. An overview where the two are woven
+  together (a tubule wrapped in its capillaries) cannot show which way anything crosses.
+- In a story about people (a war, a revolution, a reform), the people it turns on are drawn:
+  each a figure of their own, its structure named for the person, in the scene where they
+  act. One figure never stands for several people ("Roman general" for Marius, Sulla and
+  Caesar): the viewer cannot tell who did what.
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
 
@@ -239,6 +270,12 @@ together they go from what the learner already knows to the parts they are learn
   for the axes as two plain lines, says where they meet (at the bottom left; at the
   middle, crossing, for a graph with negative values), and asks for nothing written on
   them.
+- `to_scale`: true for a scene the learner reads amounts off: a chart, a stacked bar, a
+  number line, a shape with given sides or angles. Code then has it drawn exactly, its sizes
+  worked out from your numbers, where a painter guesses them (round 22's compound-interest
+  bars came back at heights no fact gave), so its `image_prompt` gives each size as a
+  number or as a share of another ("a gold block a third as tall as the blue one"). A graph
+  (a scene with `axes`) is drawn so whatever this says. False for every other scene.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct,
   bright mid-tone colours that stand out on the art's dark slate blue background; never
   navy, slate, dark grey or near black, which disappear into it. Only an analogy part
@@ -248,6 +285,11 @@ together they go from what the learner already knows to the parts they are learn
   lobes) can't both be structures in the same scene. When the core idea is about groups,
   draw the overview with the groups as its structures, and zoom in on their parts in the
   detail scenes.
+- A long structure that the lesson's flow travels along, through parts where different things
+  happen, is drawn as those parts, each a structure, in order (the proximal tubule, the loop of
+  Henle, the distal tubule and the collecting duct), and the lines name each part as the flow
+  reaches it, so particles visit each on their way. One structure for the whole length puts its
+  label at one end, and a flow along it jumps straight across the picture.
 
 ## The lesson
 
@@ -313,11 +355,13 @@ explanation to the narration, and every word of it is easy to hear.
   description of a few clauses. A strong one names the genre and how the verses are delivered,
   the production's texture, the tempo and the feel of the beat, the voice (its timbre, and how
   it moves from the verses into the chorus), and what leads and what accents: "Bright pop with
-  hip-hop verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat;
-  clear female vocal with a low, dark, raspy edge in rapped verses, rising into a big sing-along
-  chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a warm Rhodes", "a
-  808 that slides", "gang vocals on the hook") make a better song than adjectives ("catchy",
-  "nice", "educational").
+  melodic sung verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm
+  beat; female vocal with a low, dark, raspy edge, holding the ends of the verse lines, rising
+  into a big sing-along chorus; shimmering synths lead, claps accent the beat". Concrete sounds
+  ("a warm Rhodes", "a 808 that slides", "gang vocals on the hook") make a better song than
+  adjectives ("catchy", "nice", "educational"). The verses are sung, with a melody: rap only
+  when the learner asks for it. Rapped verses carrying a lesson come back recited, like
+  sentences read aloud.
   - **When the learner asked for a song style**, it is your brief. It may come on its own line
     ("The song style the learner asked for") or anywhere in the topic or request, in their own
     words ("ATP synthesis. Style: pop-punk", "make the song K-pop"). Keep everything they asked
@@ -332,13 +376,13 @@ explanation to the narration, and every word of it is easy to hear.
     bpm either way to suit the topic's mood), and write your own description from it, choosing
     the voice, the instruments, the textures and the mood for this topic, so that two droplets
     from the same seed sound different. With none, describe a vocals-first pop style a teenager
-    plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A faster
+    plays for fun, with sung verses and a sung chorus, between 92 and 112 bpm. A faster
     or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
   - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
     death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities). A
     dance beat under it sounds like a celebration. Write a slow, respectful song instead:
     80 to 90 bpm, a solemn, reflective mood, a sparse piano ballad with one solo cello or
-    violin, verses in a slow, plain rap or sung, and a sung chorus that is memorable without
+    violin, plainly sung verses, and a sung chorus that is memorable without
     being euphoric. Keep it sparse, so the words stay clear: never a full or epic orchestra
     (brass, timpani, a swelling choir), which sounds like a war film's victory. An
     instrument from a culture only when it belongs to the people the topic is about (an
@@ -349,49 +393,67 @@ explanation to the narration, and every word of it is easy to hear.
     map make tokens of the dead. Goods, ships and money may move; the camera and the
     spotlight show where people were taken. The rest of history keeps the rotation: a
     revolution's causes or a war's alliances are not grave in this sense.
-  - Only when there is neither, for high school and older: pop with rapped hip-hop verses,
-    K-pop, R&B, dance-pop, pop-punk and their neighbours. These work well, slowest first;
-    write in their spirit rather than copying one:
-    - Laid-back R&B with smooth rapped verses; warm electric piano, deep round bass and soft
-      finger snaps; a smooth sung chorus with stacked harmonies; clear female vocal; 85 bpm
-    - Upbeat pop with clear rapped verses and a catchy sung chorus; female vocals over bright
+  - Only when there is neither, for high school and older: pop, K-pop, R&B, dance-pop,
+    pop-punk and their neighbours, with sung verses. These work well, slowest first; write in
+    their spirit rather than copying one:
+    - Laid-back R&B with smooth sung verses; warm electric piano, deep round bass and soft
+      finger snaps; a smooth chorus with stacked harmonies; female vocal; 85 bpm
+    - Upbeat pop with a bouncy verse melody and a catchy sung chorus; female vocals over bright
       synths and punchy drums; 96 bpm
-    - K-pop with sharp, clear rapped verses from male group vocals, rising into a big catchy
-      sung chorus; punchy synth bass, crisp claps and bright synth stabs; 98 bpm
-    - Bright pop with hip-hop verses and a big sing-along chorus; clear female vocal;
-      shimmering synths lead, claps accent the beat; 104 bpm
+    - K-pop with melodic verses traded between male group vocals, rising into a big catchy
+      chorus; punchy synth bass, crisp claps and bright synth stabs; 98 bpm
+    - Bright pop with sung verses and a big sing-along chorus; female vocal; shimmering synths
+      lead, claps accent the beat; 104 bpm
     - Dance-pop on a four-on-the-floor beat; energetic male vocal into a euphoric sing-along
       chorus; bright plucked synths, handclaps and a pulsing bass; 124 bpm
     - (only when the learner asks) A pop-punk anthem with a driving straight-ahead pulse;
       energetic male lead and gang vocals on the chorus; driving electric guitars, punchy live
       drums and a bright radio-ready master; 150 bpm
-  - For a younger audience: bright, playful pop with a big sing-along chorus, a clear lead
-    vocal, sung verses or light, unhurried rap, and a tempo they can sing along to. Dense,
-    fast rap is hard for young listeners to follow.
+  - For a younger audience: the pop they play themselves, never a children's song: bright,
+    current pop with a big sing-along chorus, a clear lead vocal, sung verses, and a tempo
+    they can sing along to. Not "playful": round 19's rock cycle, asked for playful pop,
+    sounded like a classroom jingle, and an 11-year-old plays what older kids play.
   - Name the tempo once, as "<n> bpm", from 80 to 160: the learner's tempo when they gave
-    one, otherwise the one that fits the style and the topic's mood. Code times every
-    section of the song from it.
+    one, otherwise the one that fits the style and the topic's mood.
   - Never name an artist, band or song; the music generator refuses them.
-- `music.negative_styles` are short things to avoid, a list, that keep the words clear and the
-  song right for a classroom: always "mumbled vocals", "long instrumental intro", "vocals
-  buried in the mix" and "explicit lyrics", and anything the learner said they did not want.
+- `music.negative_styles` are short things to avoid, a list, that keep the song right for a
+  classroom: always "long instrumental intro" and "explicit lyrics", and anything the learner
+  said they did not want. Nothing more about diction: a singer told again and again to make
+  every word clear sings like someone reading.
 - `music.sections` is exactly intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus,
   bridge, chorus, outro (The parts, below).
 - `lyrics` is every line as sung, in order, section by section, so the chorus appears
-  three times. Below 130 bpm each line is one bar, short and punchy: about 2.4 seconds at
-  100 bpm. From 130 bpm it is two bars: about 3.2 seconds at 150. Either way a sung line
-  is roughly 6 to 10 syllables; a rapped line can carry a few more, up to about 14. The
-  song runs 2 to 2½ minutes: each verse has 8 lines below 100 bpm, 12 from 100 to 129 bpm,
-  and 8 from 130 bpm, where each line is two bars. Fill the length with the chorus coming
-  back, not with longer verses.
+  three times. A line is 6 to 9 syllables, so the singer has room to hold a note (a rapped
+  line, when the learner asks for rap, up to about 14). The singer takes the time the lines
+  need, at any tempo; each verse has 8 lines, and the song fills its length with the chorus
+  coming back, not with longer verses.
 
 ### How it sounds
 
-- **Sung, not read.** Write each line the way someone talks: whole phrases, with the
-  small words that carry the rhythm ("so", "now", "then", "that's"), never a headline
-  with the articles dropped. Say each line aloud: if it sounds like a caption or a
+- **A song, not sentences.** A lyric is the idea turned into something the listener sees,
+  feels and sings back, not a sentence with the facts in it cut into lines. A line can be a
+  fragment, a call, a question, a list, a word sung twice. Keep the small words that carry
+  the rhythm ("so", "now", "then", "that's"), never a headline with the articles dropped.
+  Sing a verse in your head: if it sounds like a paragraph cut into lines, or a caption, or a
   textbook sentence, rewrite it. Not "Sodium channels open, the membrane depolarizes", but
-  "The gates swing open, sodium floods in / Now the inside's positive, the spike begins".
+  "Click, the gate swings, sodium's in / Now the inside flips, the spike begins".
+- **Say each idea with a device, not a statement.** The song carries 3 to 5 ideas and says
+  each of them more than one way; the narration explains the rest. Mix these through the
+  song, a few of each, never the same one on every line:
+  - an image the listener can see, in place of the claim: "A pool of acid, churning all
+    day", not "the stomach breaks down protein with acid";
+  - call and response, where the answer is the term to remember: "Who splits the water? /
+    Photosystem two!";
+  - a list chant: "Light, water, CO2 in / Sugar and oxygen out";
+  - a contrast pair, two lines built the same way: "Prices up, the buyers go / Prices down,
+    the shelves run low";
+  - a part that acts like a person (the fact-check judges the point it makes): "The enzyme
+    grabs it, twists it, lets it go";
+  - a question the next line answers: "Why's a leaf so green? / It throws the green light
+    away";
+  - a number as a hook: "Minus seventy, waiting to fire";
+  - a line sung again with one word changed, so the change is the lesson: "More who want
+    it, the price climbs / More to sell, the price declines".
 - **Rhyming couplets.** Lines 1 and 2 rhyme, then 3 and 4, and so on; a near rhyme is
   fine. Rhyme on plain words, since terms are hard to rhyme. Never bend a line's meaning
   or grammar to reach a rhyme: a line that only makes sense for its rhyme sounds wrong,
@@ -402,7 +464,7 @@ explanation to the narration, and every word of it is easy to hear.
   wants in"). Things the listener can picture and count beat abstract words.
 - **Lines that are sung, never directions.** Every line is something a singer says to the listener. Never
   narrate the picture or the camera ("zoom inside to the chloroplast", "now look at the membrane"), never
-  announce a section ("here comes the bridge"). A line is at most 12 words.
+  announce a section ("here comes the bridge"). A line is 6 to 9 syllables: room to hold a note.
 - **One frame, all the way through.** Carry the droplet's frame (the everyday picture of the
   whole idea, chosen in the facts) from the intro to the outro, so every section adds to it:
   set it up in the first lines of verse 1 ("You can't spend sunshine, that's the catch / So the
@@ -438,7 +500,7 @@ In this order, each section a run of lines with its own `section` value:
   real things ("Open the gates, let sodium in", "Split the water, catch the light"), never
   pronouns standing in for them ("Pump them in, they spin it out" names nothing). It is the
   hook, the song's name, and a line of the chorus.
-- **Verse**, 8 or 12 lines (by tempo, above): the frame first, then the first half of the
+- **Verse**, 8 lines: the frame first, then the first half of the
   story, in order, one step a line or a couplet, with the surprise in it.
 - **Pre-chorus**, 2 lines: bust the misconception. Sing the right idea, and the mistake
   only as what it is not; the chorus that follows lands the right idea. Say it with a fact, not a
@@ -451,10 +513,13 @@ In this order, each section a run of lines with its own `section` value:
   opens and ends on the title line. It is word for word the same each time;
   give each repeat its own ids. A learner should be able to sing it back after hearing it
   twice.
-- **Verse**, 8 or 12 lines: the second half of the story, ending with what it makes and
+- **Verse**, 8 lines: the second half of the story, ending with what it makes and
   where that goes next.
 - **Pre-chorus**, 2 lines: link it to what comes next in the course (the next step or
-  topic in the unit), as the facts give it.
+  topic in the unit), as the facts give it. When the misconception is about something the
+  first verse has not sung yet (Caesar, in a story whose first verse ends before him), the two
+  pre-choruses swap: the first links forward, and this one busts the misconception, right
+  after the verse that sings what it is about.
 - **Chorus**, word for word again.
 - **Bridge**, 8 lines: a sung exam question. Name one thing that breaks the system (a drug,
   a toxin, a mutation, a missing part), then walk its effects in cause-and-effect order to
@@ -465,7 +530,9 @@ In this order, each section a run of lines with its own `section` value:
   takes the other case the facts give and walks it the same way, one link a line. Either
   way the bridge sings something new: a bridge that retells the verses' story (the same
   letter going astray, the same king calling the same assembly) wastes the song's best
-  eight lines.
+  eight lines. A story in time is sung in the order it happened, verse to verse to bridge:
+  the bridge never steps back to an earlier event ("88 BCE, rewind" sung after Augustus
+  left the listener lost in time).
 - **Chorus**, the last: a summary couplet first, then the chorus word for word.
 - **Outro**, 3 lines: echo the intro and end on the title line.
 
@@ -475,7 +542,8 @@ catchy lines.
 ### Lines and names
 
 - Tag each line with the id of the fact it teaches, or "filler" for a line that teaches
-  nothing (a call-out, a line of pure attitude). Make most lines teach.
+  nothing (a call-out, a line of pure attitude). Make most lines carry one of the song's ideas; a line that
+  says one again in a new way carries it too.
 - A line does not have to name a structure. When it names one the viewer should see, the
   structure's label appears the first time it is sung, so use the `name` or an alias of
   a structure drawn in the scene that line plays over, exactly as written. Group words
@@ -497,8 +565,12 @@ catchy lines.
 only names: it teaches every fact, step by step, in the order the scenes show them, and
 says why each step happens. Name every structure the scenes draw, by its `name` or an
 alias. Write at the audience's level, in plain spoken language: short sentences, no
-markdown, no lists, nothing in parentheses. Use the droplet's analogy, and correct the
-misconception once, as the song does. Build it on `why_chain`: every step says why it
+markdown, no lists, nothing in parentheses. Use the droplet's analogy, on its scene for two
+or three sentences so the picture has time to land, and correct the misconception once, as
+the song does. A topic told in time (a war, a revolution, a chain of events) goes in the
+order it happened after the hook, with the year as each event comes. Correct the
+misconception once, right where the wrong idea would form, never before the learner has met
+what it is about (Caesar corrected before Caesar comes in leaves them lost). Build it on `why_chain`: every step says why it
 happens. Keep to `key_terms`, never more than one new name in a sentence. Ask the listener
 one question mid-way and answer it in the next sentence. Open on the hook, and end on the
 core idea, in the same words as `core_idea`, then, for a process, what goes in and what
@@ -515,7 +587,9 @@ order, keyed by `line_id`:
 - `scene`: the scene on screen while the line plays. It draws every structure in the
   line's `names`. The chorus is sung three times, each time over a scene that draws what
   it names, usually the overview. Stay on a scene for several lines and cut when the
-  content moves on. Both videos open on the hook.
+  content moves on; in the song, keep a section on one scene where you can. A picture on
+  screen for one sung line (two seconds) is gone before the viewer finds anything in it,
+  so the video holds the scene before it over a run that short. Both videos open on the hook.
 - `camera`: `target` is the structure to frame ("" for the whole scene); `zoom` is 1.0
   for the whole scene and about 1.6 to 2.0 for a close-up (how to move it: "Plan the motion
   like an animator", below).
@@ -552,11 +626,19 @@ order, keyed by `line_id`:
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.
+- `moves`: how it moves, which decides how the video draws it. "crosses" when it passes
+  through one wall, membrane or carrier, the crossing being what the line teaches (O₂ across
+  the alveolus's wall, H⁺ through ATP synthase, salt out of the tubule into the capillary):
+  particles cross it. "travels" when it goes a long way along several parts, the path being
+  what the line teaches (filtrate down the nephron, magma up through the volcano, sediment
+  down a river, food down the gut): an arrow is drawn where it passes from each part into
+  the next, since dots following a long, bending path stray off it. The same thing moving
+  on one scene moves the same way on every line. "" with no particles.
 - `also`: a second thing moving on the same line, when the line names both and they move
   at the same time: what one structure gives off together ("Protons in the lumen, oxygen
   out": H⁺ and O₂ each from Photosystem II to the lumen), or two ways at once (the pump's
-  Na⁺ out while its K⁺ comes in). One at most, with its own `particles` and `carries`
-  under the same rules; the video draws each in its own colour, side by side where they
+  Na⁺ out while its K⁺ comes in). One at most, with its own `particles`, `carries` and
+  `moves` under the same rules; the video draws each in its own colour, side by side where they
   share a path. [] on every other line: one thing moving is easier to follow, so add the
   second only when the line sings or says it.
 - `glow`: a structure that lights up on this line because an outside cause switches it on:
@@ -572,15 +654,29 @@ order, keyed by `line_id`:
 The picture never moves; the particles, the camera and the spotlight are all the video
 has. Plan them across the whole song before writing any one line's direction:
 
-- **Something moves on almost every line of a scene where things travel.** A line that
-  tells a step of the process has particles for that step. Never leave more than two lines
-  in a row with no particles on a scene where something travels: when a line only comments
-  ("that's the payout"), carry on the flow it is about, or move the camera. A failure scene
-  is the exception: after the block, what has stopped stays still, and that stillness is
-  the point. A scene where nothing travels (a graph, a stage, a map, a gathering of people)
-  has no particles on any line: the camera and the spotlight move from part to part with
-  the lines instead, and a dot sent between its parts to fill the time would teach a
-  journey that never happens.
+- **Motion is for what travels.** A line that tells a step where something travels has
+  particles for that step: that is what shows how the process works. A line that comments
+  ("that's the payout"), names a part or sums up holds still, or moves the camera: the video
+  shows at most two flows at once, each one's dots travelling through the parts themselves
+  (along a tube, round its bends, across a wall), so more dots only crowd the picture. A failure scene: after the block, what has stopped
+  stays still, and that stillness is the point. A scene where nothing travels (a graph, a
+  stage, a map, a gathering of people) has no particles on any line, and nor does the hook,
+  the learner's world as it is (the video leaves them out): the camera and the
+  spotlight move from part to part with the lines instead, and a dot sent between its parts
+  to fill the time would teach a journey that never happens.
+- **A cycle of forms is change, not travel.** In a topic about one thing turning into
+  another (the rock cycle, the water cycle, a life cycle, the states of matter), the forms
+  are the structures and the change is the lesson: no dot marked with the thing itself
+  ("rock", "water") travels round the picture, as if a rock journeyed from the volcano to
+  the sea floor. The spotlight moves from the form a line starts from to the form it
+  becomes, and the key line names the process. Particles only where something really is
+  carried somewhere (sediment washed down to the sea, vapour rising to the clouds).
+- **In history, only what was carried moves**: goods, grain, money, letters. Never land,
+  power, loyalty, votes or ideas as dots, which teach a journey that never happened, and
+  never people or armies, which are drawn: dots marked "troops" leaving a drawn army read as
+  sparks, not soldiers. The spotlight and the camera move from person to person and place to
+  place with the story: the camera following the army from its figure to the city is the
+  march.
 - **What goes in and what comes out move too.** A line that says something is taken in,
   split, made or released has particles for it: the input travelling from where it comes
   from into the structure that uses it, the product travelling out to where it goes
@@ -640,8 +736,10 @@ where it happens, named as in `structures`; each species is written as a textboo
 side, 8 characters each), and one structure gets one. The video writes it beside the structure, as
 "H₂O → O₂ + H⁺ + e⁻", while a line is about it (its spotlight, glow or camera target, or a stop of its
 particles), so the learner sees every input and output on the diagram, not only hears them. A lesson that
-says "X is made into Y" at a part of the diagram has one for it. List only what the facts say; the
-fact-check holds each to them. [] when none.
+says "X is made into Y" at a part of the diagram has one for it. Only a reaction, where what goes in and
+what comes out are substances other than the structure itself: never a structure's own name as what it
+makes ("rock → magma" beside Magma), nor a cycle's forms turning into each other, which restates the labels
+and crowds the picture. List only what the facts say; the fact-check holds each to them. [] when none.
 
 ## On screen
 
@@ -657,6 +755,11 @@ the same words in both.
   turns into what or what leads to what: "Light splits water → O₂ + H⁺ + e⁻", "H⁺ flowing back spins
   ATP synthase → ATP". Use the terms from `key_terms` as the textbook writes them; the video picks
   them out in colour. Not the lyric it appears on, and not just a label already on the diagram.
+- An arrow means one thing: becomes, leads to, or goes from one place to another, with one thing or
+  one place on each side. When something moves, put the places on either side of the arrow and what
+  moves in brackets: "Secretion: blood → tubule (K⁺, H⁺, drugs)", never "Secretion: extra K⁺, H⁺,
+  drugs → blood into tubule", which reads as the drugs going into the blood. When an arrow could be
+  read two ways, say it in words.
 - The first can sit on the first sung line and ask the question the song answers ("How does a leaf
   turn light into fuel?"). The analogy's can say what stands for what ("Turnstile = ATP synthase").
   The bridge's says what fails and why.

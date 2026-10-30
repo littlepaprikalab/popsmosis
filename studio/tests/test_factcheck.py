@@ -8,7 +8,7 @@ from studio.steps import factcheck, songwriter
 from studio.steps.factcheck import check_bundle, cites, dropped_motions, dropped_tags, lines_of
 from studio.tests.sample import CHORUS, bundle_data
 
-SEEDED = "Every electron hand-off pumps a proton"
+SEEDED = "Each electron hand-off pumps a proton"
 FIXED = "Only b6f pumps a proton through"
 FIRST = "Light lands on the thylakoid"  # the line SEEDED rhymes with: lyric v1-1, in its couplet
 
@@ -245,7 +245,7 @@ def test_checks_after_a_correction_join_the_bundle_steps_checks(tmp_path):
     write(tmp_path / "checks.json", CheckReport(problems=[earlier]))
 
     def names_the_thylakoid(text):  # the correction says a name the line did not list
-        return ("UNSUPPORTED", "", "Only b6f by the thylakoid pumps") if text == SEEDED else supported(text)
+        return ("UNSUPPORTED", "", "b6f pumps by the thylakoid") if text == SEEDED else supported(text)
 
     factcheck.run(tmp_path, ask=FakeChecker(names_the_thylakoid))
     problems = read(tmp_path / "checks.json", CheckReport).problems

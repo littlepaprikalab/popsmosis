@@ -10,6 +10,7 @@ without a locate step.
     rasterise(root)                the art: RGB on the house page, ART_WIDTH x ART_HEIGHT
     masks(root, names)             per structure, where it is visible in the art
     locate(mask)                   its box, centroid and label anchor
+    values(root)                   the numbers it marks for the video to write (a bar's amount, an axis's tick)
 
 A mask is the structure painted white and everything else black, in the drawing's own
 order, so whatever is drawn on top of a structure is left out of its mask.
@@ -37,7 +38,7 @@ import numpy as np
 import skia
 
 from studio.media import ART_HEIGHT, ART_WIDTH
-from studio.schemas import Box, Point, Structure
+from studio.schemas import Box, Point, Structure, Value
 
 NS = "http://www.w3.org/2000/svg"
 XLINK = "http://www.w3.org/1999/xlink"
@@ -45,6 +46,11 @@ ET.register_namespace("", NS)
 ET.register_namespace("xlink", XLINK)
 
 MARK = "data-structure"
+# A number the video writes on a scene drawn to scale, marked where it goes by an empty circle directly in the <svg>:
+# <circle data-value="$1,210" data-side="above" cx="1230" cy="140" r="0"/>, or data-tick for an axis's tick ("Year 2").
+VALUE, TICK, SIDE = "data-value", "data-tick", "data-side"
+SIDES = ("above", "below", "left", "right")
+VALUES_MAX = 16  # a scene's values: more is a table, not a chart
 VIEWBOX = (0.0, 0.0, float(ART_WIDTH), float(ART_HEIGHT))
 MAX_BYTES = 400_000  # the prompt asks for under 40 KB; far past that it is runaway output
 MIN_AREA = 1500  # visible pixels a structure needs before a label can point at it (about 40 x 40)
@@ -229,7 +235,7 @@ def to_text(root: ET.Element) -> str:
 
 # --- the house look ---------------------------------------------------------------------
 
-LOOK = "1"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
+LOOK = "2"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
 # test pins the look's code and numbers to it, studio/tests/test_art.py)
 PAGE = "#28374B"  # the dark slate blue behind every drawing
 ROLE = "data-role"  # what a graph's context is: "axes" on the group of its axes, "point" on a point's circle
@@ -243,6 +249,10 @@ GRID_STEP = 72.0  # between a graph's grid lines, from where its axes cross
 GLOW = "house-glow"  # the id of the glow's filter
 GLOW_OF = "data-glow-of"  # on each structure's copy in the glow: whose glow it is
 GLOW_BLUR, GLOW_SPREAD, GLOW_OPACITY = 7.0, 3.0, 0.45  # its blur, its width as a multiple of the line's, how strong
+# A filled shape's outline, this share of the way from its colour to the page: in its own colour, the year-by-year
+# blocks of round 22's compound-interest bars (one structure, "Interest") ran together into one slab, and the chart was
+# about each block being a little taller than the last.
+EDGE_SHADE = 0.4
 # What a repaint replaces. A mask or a clip, which shape what is drawn, and a dash, which may mean something (an
 # asymptote), are kept.
 REPAINTED = ("fill", "stroke", "opacity", "fill-opacity", "stroke-opacity", "filter", "stroke-width", "stroke-linecap",
@@ -251,13 +261,31 @@ NUMBER = re.compile(r"[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?")
 PATH_TOKEN = re.compile(rf"[A-Za-z]|{NUMBER.pattern}")
 
 
-def _mix(color: str, white: float) -> str:
-    """The colour that share of the way to white."""
-    return "#" + "".join(f"{round(int(color[i:i + 2], 16) * (1 - white) + 255 * white):02X}" for i in (1, 3, 5))
+def _mix(color: str, white: float, toward: str = "#FFFFFF") -> str:
+    """The colour that share of the way to white, or to another colour."""
+    return "#" + "".join(f"{round(int(color[i:i + 2], 16) * (1 - white) + int(toward[i:i + 2], 16) * white):02X}"
+                         for i in (1, 3, 5))
 
 
 AXIS_INK = _mix(PAGE, 0.55)  # pale: studio/render/axes.py finds the axes as lines well apart from the page
 GRID_INK = _mix(PAGE, 0.07)  # a shade over the page, too faint to be found as an axis
+
+
+def values(root: ET.Element) -> list[Value]:
+    """The values a drawing marks for the video to write (VALUE, TICK), in its order: each where its circle is, on
+    the side it says (above, when it says none). Only marks directly in the <svg> count, as a group's move would
+    shift them; at most VALUES_MAX."""
+    found = []
+    for el in root:
+        text = (el.get(VALUE) or el.get(TICK) or "").strip()
+        if _local(el.tag) != "circle" or not text:
+            continue
+        x, y = _number(el.get("cx")), _number(el.get("cy"))
+        if not (0 <= x <= ART_WIDTH and 0 <= y <= ART_HEIGHT):
+            continue
+        side = el.get(SIDE) if el.get(SIDE) in SIDES else "above"
+        found.append(Value(text=" ".join(text.split()), at=Point(x=x, y=y), side=side, tick=el.get(VALUE) is None))
+    return found[:VALUES_MAX]
 
 
 def style(root: ET.Element, structures: list[Structure], graph: bool) -> ET.Element:
@@ -269,6 +297,8 @@ def style(root: ET.Element, structures: list[Structure], graph: bool) -> ET.Elem
     for el in [el for el in root.iter(f"{{{NS}}}rect")
                if _drawn(el, parent) and _owner(el, parent) is None and _covers_page(el)]:
         parent[el].remove(el)  # a page of its own would hide PAGE, which the renderer reads off the art's edge
+    for el in [el for el in root.iter() if el.get(VALUE) is not None or el.get(TICK) is not None]:
+        parent[el].remove(el)  # a value's mark: the renderer writes the value there (values())
     if graph:
         _style_graph(root, parent, {s.name: s.color_hex for s in structures})
     return root
@@ -360,9 +390,9 @@ def _style_structure(group: ET.Element, colour: str, parent: dict) -> None:
                                                         "stroke-linecap": "round", "stroke-linejoin": "round"}, **kept)
         else:
             if (width := _prop(el, "stroke-width")) is not None:
-                kept["stroke-width"] = width  # an outline keeps its width, in the structure's colour
-            _repaint(el, fill=colour if URL.search(fill) else fill, stroke=colour if stroke != "none" else "none",
-                     **kept)
+                kept["stroke-width"] = width  # an outline keeps its width, a shade darker than the structure
+            _repaint(el, fill=colour if URL.search(fill) else fill,
+                     stroke=_mix(colour, EDGE_SHADE, PAGE) if stroke != "none" else "none", **kept)
 
 
 def _glow(root: ET.Element, groups: list[ET.Element], parent: dict) -> None:

@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import shutil
 import re
 import threading
 import time
@@ -116,15 +117,22 @@ class FakeMuse:
 class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
-    def __init__(self, checks=None, boxes=None, writing=None):
+    def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=()):
         self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check, painted out ones included
         self.boxes = boxes or {}  # structure -> a Spot dict
         self.writing = writing or {}  # scene -> the Written dicts the helper boxes, each time it is asked
+        self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
+        self.unconfirmed = set(unconfirmed)  # notes the brain, asked to confirm them, finds wrong
         self.asked: list[tuple[str, str]] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
-        assert role == "helper" and len(images) == 1 and images[0].exists()
+        assert len(images) == 1 and images[0].exists()
         self.asked.append((label, prompt))
+        if schema is art.ConfirmedNotes:  # the brain's look at the notes the helper wrote
+            assert role == "brain" and system == art.NOTES_PROMPT and "The lesson's facts:" in prompt
+            notes = [line[2:] for line in prompt.split("The notes:\n")[1].splitlines()]
+            return {"keep": [n for n in notes if n not in self.unconfirmed]}
+        assert role == "helper"
         if schema is art.ArtCheck:
             assert system == art.CHECK_PROMPT
             scene = label.split()[2]
@@ -134,12 +142,19 @@ class FakeHelper:
         if schema is repair.Writing:
             assert system == repair.WRITING_PROMPT and prompt.startswith("A check saw this writing: ")
             return {"writing": self.writing.get(label.split()[2], [])}
+        if schema is locate.LabelCheck:
+            assert system == locate.LABELS_PROMPT and "The names pinned on it: " in prompt
+            return {"wrong": [{"name": name, "on": "something else"} for name in self.wrong.get(label.split()[2], [])]}
         assert schema is locate.Spot and system == locate.BOX_PROMPT
         name = next(n for n in SPOTS if label.endswith(" " + n))
         return self.boxes.get(name, {"seen": False, "left": 0, "top": 0, "right": 1, "bottom": 1})
 
     def labels(self):
-        return [label for label, _ in self.asked]
+        """What the helper was asked, but the label check every located scene gets."""
+        return [label for label, _ in self.asked if not label.startswith("label check ")]
+
+    def label_checks(self):
+        return [label for label, _ in self.asked if label.startswith("label check ")]
 
 
 # --- the art --------------------------------------------------------------------------------
@@ -214,7 +229,7 @@ def test_a_later_stage_is_painted_again_whenever_its_first_stage_is(job, monkeyp
     moved = bundle.model_copy(deep=True)
     moved.scenes[1].image_prompt = "A thylakoid membrane, seen from above."
     assert art.key(moved, moved.scenes[2]) != art.key(bundle, synthase)
-    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of", "axes"})], sort_keys=True)
+    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of", "axes", "to_scale"})], sort_keys=True)
     assert art.key(bundle, hook) == hashlib.sha256(before.encode()).hexdigest()[:16]
 
 
@@ -250,8 +265,27 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     assert len(made["tries"]) == 2 and made["check"]["notes"] == [note]  # still wrong after both tries
     bundle = checks.load(job / "bundle.json")
     assert art.notices(job, bundle) == {"synthase": [note]}
+    assert "art notes synthase" in helper.labels()  # confirmed by the brain before it is shown
+    # The same picture as the lesson's analogy says nothing: an everyday picture cannot teach the topic wrong.
+    as_analogy = bundle.model_copy(update={"scenes": [s.model_copy(update={"id": "analogy"}) if s.id == "synthase"
+                                                      else s for s in bundle.scenes]})
+    shutil.copy(job / "art" / "synthase.png", job / "art" / "analogy.png")
+    (job / "art" / "analogy.json").write_text(json.dumps({**made, "key": art.key(as_analogy, as_analogy.scenes[-1])}))
+    assert art._painted(job, as_analogy, as_analogy.scenes[-1]) and art.notices(job, as_analogy) == {}
     staged(job)  # a changed bundle: the pictures are no longer this bundle's, so nothing is disclosed for them
     assert art.notices(job, checks.load(job / "bundle.json")) == {}
+
+
+def test_a_note_the_brain_cannot_confirm_is_kept_in_the_record_but_never_shown(job, monkeypatch):
+    # Round 20's kidney close-up was shown beside a note putting its glucose carriers on the wrong side.
+    FakeMuse().install(monkeypatch)
+    right, wrong = "The protein's head should face the stroma.", "The carriers belong on the capillary's side."
+    helper = FakeHelper(checks={"synthase": [{"misplaced": ["head in the lumen"], "notes": [right, wrong]}]},
+                        unconfirmed=[wrong])
+    art.run(job, helper)
+    assert art.notices(job, checks.load(job / "bundle.json")) == {"synthase": [right]}
+    made = json.loads((job / "art" / "synthase.json").read_text())
+    assert made["notes_unconfirmed"] == [wrong]
 
 
 def test_a_stage_painted_afresh_and_declined_is_a_declined_try_not_a_failed_step(job, monkeypatch):
@@ -531,9 +565,19 @@ def test_an_unsure_match_asks_the_helper_for_a_box_and_sam_for_what_is_in_it(job
     assert located.found_by == "sam-box"
 
 
-def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monkeypatch):
+def test_a_structure_sam_cannot_trace_even_in_the_helpers_box_is_its_colour_there(job, monkeypatch):
+    # Round 19's glomerulus, a knot of thin pink tubes, was no one shape to SAM, even boxed.
     painted(job, monkeypatch, spots={k: v for k, v in SPOTS.items() if k != "Cytochrome b6f"})
     helper = FakeHelper(boxes={"Cytochrome b6f": {"seen": True, "left": 0.7, "top": 0.4, "right": 0.8, "bottom": 0.6}})
+    assert locate.run(job, helper) == "located 4 of 4 structures with SAM 3.1, 1 in the helper's box"
+    found = jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f")
+    assert found.found_by == "helper" and 1200 <= found.label_anchor.x <= 1400  # where it is painted
+
+
+def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monkeypatch):
+    painted(job, monkeypatch, spots={k: v for k, v in SPOTS.items() if k != "Cytochrome b6f"})
+    # The helper's box holds none of its colour either.
+    helper = FakeHelper(boxes={"Cytochrome b6f": {"seen": True, "left": 0.02, "top": 0.4, "right": 0.1, "bottom": 0.6}})
     result = locate.run(job, helper)
     assert result == "located 3 of 4 structures with SAM 3.1; left out Cytochrome b6f on overview"
     assert jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f") is None
@@ -542,6 +586,22 @@ def test_a_structure_nobody_finds_is_left_out_unless_too_few_are_left(job, monke
     with pytest.raises(media.StepFailed, match="scene synthase: SAM 3.1 found 0 of 1 structures; not ATP synthase"):
         locate.run(job, FakeHelper())
     assert not (job / media.LOCATIONS).exists()
+
+
+def test_a_label_pinned_on_the_wrong_thing_is_found_again_in_the_helpers_box_or_left_out(job, monkeypatch):
+    # Round 19's rock cycle pinned "Mountain" on a purple band underground: SAM's "grey mountain" found both.
+    painted(job, monkeypatch)
+    boxed = {"Cytochrome b6f": {"seen": True, "left": 0.7, "top": 0.4, "right": 0.8, "bottom": 0.6}}
+    helper = FakeHelper(boxes=boxed, wrong={"overview": ["Cytochrome b6f"]})
+    assert locate.run(job, helper) == "located 4 of 4 structures with SAM 3.1, 1 in the helper's box"
+    assert sorted(helper.label_checks()) == ["label check hook", "label check overview", "label check synthase"]
+    assert helper.labels() == ["locate box overview Cytochrome b6f"]
+    assert jobs.read(job / media.LOCATIONS, Locations).scene("overview").get("Cytochrome b6f").found_by == "sam-box"
+    pinned = next(prompt for label, prompt in helper.asked if label == "label check overview")
+    assert pinned.endswith("The names pinned on it: Thylakoid, Cytochrome b6f.")
+
+    unseen = FakeHelper(wrong={"overview": ["Cytochrome b6f"]})  # nor can the helper box it: left out
+    assert locate.run(job, unseen) == "located 3 of 4 structures with SAM 3.1; left out Cytochrome b6f on overview"
 
 
 class PlainWordsMuse(FakeMuse):
@@ -579,7 +639,10 @@ def test_the_plainer_words_are_the_structures_colour_and_the_phrases_last_noun()
     assert asked("blue region", "#3A86FF") == ["blue region"]  # nothing plainer left to ask
     assert asked("the cytochrome b6f", "#E07A2F") == ["the cytochrome b6f", "orange region"]
     words = {"#E76F51": "orange", "#D64550": "red", "#2A9D8F": "teal", "#6A4C93": "purple", "#277DA1": "blue",
-             "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey"}
+             "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey",
+             # the pinks and purples round 17 named wrong ("red", "light pink"), and plain pink, once "light red"
+             "#F06292": "pink", "#BA68C8": "light purple", "#9C27B0": "purple", "#FFC0CB": "pink",
+             "#DC143C": "red"}
     assert {h: art.colour_word(h) for h in words} == words
 
 

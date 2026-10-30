@@ -80,6 +80,10 @@ class FakeBrain:
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         self.labels.append(label)
+        if label == "script":  # no script: the bundle is written without one
+            raise brain.BrainError("no answer")
+        if label == "narration edit":  # handed back as it came
+            return {"lines": [{"id": n["id"], "text": n["text"]} for n in json.loads(prompt)["narration"]]}
         if schema is Bundle:
             if self.bundle_error:
                 raise self.bundle_error
@@ -113,7 +117,7 @@ def test_a_fresh_run_claims_the_topic_writes_the_lesson_and_posts_it(jobs_root):
     # tells the page it is running.
     assert api.names() == ["claim", "report_progress", "download", "download", "claim", "report_progress",
                            "claim", "report_progress", "claim", "report_progress", "post_answer"]
-    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
+    assert ask.labels == ["script", "bundle", "narration edit", "fact audit", "factcheck round 1"]
 
     job = jobs_root / "q1"
     request = jobs.read(job / "request.json", Request)
@@ -237,7 +241,7 @@ def test_running_again_resumes_at_the_step_that_failed(jobs_root):
     ask = FakeBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
     assert "download" not in api.names()  # request.json was already written
-    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
+    assert ask.labels == ["script", "bundle", "narration edit", "fact audit", "factcheck round 1"]
     runs = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert [(r["result"], r["step"]) for r in runs] == [("FAILED", "bundle"), ("DONE", "post")]
 
@@ -265,7 +269,7 @@ def test_a_new_bundle_runs_every_step_after_it(jobs_root):
     (jobs_root / "q1" / "bundle.json").unlink()  # by hand: the audit.json and factcheck.json beside it are now stale
     ask = FakeBrain()
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[0] == "DONE"
-    assert ask.labels == ["bundle", "fact audit", "factcheck round 1"]
+    assert ask.labels == ["script", "bundle", "narration edit", "fact audit", "factcheck round 1"]
 
 
 @pytest.mark.parametrize("error, reason", [
@@ -616,7 +620,7 @@ def test_a_topic_sent_to_its_own_brain_is_made_on_it_and_its_job_keeps_it(jobs_r
     api = FakeApi({**QUESTION, "brain": "muse-spark"}, studio={"brain": {"default": "claude", "effort": "high"}})
     ask = SpyBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("meta", "muse-spark-1.3")] * 3  # the bundle, the fact audit and the fact-check
+    assert ask.brains == [("meta", "muse-spark-1.3")] * 5  # the script, the bundle, its edit, the audit, the check
     assert operator_run.job_brain(jobs_root / "q1") == "muse-spark"
     assert brain.chosen_name() is None  # nothing in force once the run ends
 
@@ -634,14 +638,14 @@ def test_a_topic_without_a_brain_of_its_own_is_made_on_the_default_at_its_effort
     api = FakeApi({**QUESTION, "brain": None}, studio={"brain": {"default": "muse-wonder", "effort": "medium"}})
     ask = SpyBrain()
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("meta", "muse-wonder-1.0")] * 3
+    assert ask.brains == [("meta", "muse-wonder-1.0")] * 5
     assert (operator_run.job_brain(jobs_root / "q1"), operator_run.job_effort(jobs_root / "q1")) == ("muse-wonder", "medium")
 
 
 def test_with_no_settings_from_the_api_the_brain_is_claude_opus(jobs_root):
     api, ask = FakeApi(), SpyBrain()  # an API too old to send them
     assert operator_run.run("q1", api=api, ask=ask)[0] == "DONE"
-    assert ask.brains == [("claude", "claude-opus-5-5")] * 3
+    assert ask.brains == [("claude", "claude-opus-5-5")] * 5
 
 
 def test_a_topics_brain_the_studio_cannot_run_fails_the_topic_rather_than_holding_up_the_queue(jobs_root, monkeypatch):

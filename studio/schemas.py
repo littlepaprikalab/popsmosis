@@ -22,7 +22,7 @@ Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
 SECTION_ORDER = ["intro", "verse", "pre-chorus", "chorus", "verse", "pre-chorus", "chorus", "bridge", "chorus", "outro"]
 Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
-BPM_RANGE = (80, 160)  # the tempos the song may take; a sung line lasts 1.9 s to 3.7 s (audio.line_ms)
+BPM_RANGE = (80, 160)  # the tempos the song may take
 DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
 BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
@@ -85,6 +85,16 @@ class Scene(Strict):
     # "quantity". Both "" in a bundle written before Oct 30.
     axes: Axes = Field(default_factory=_no_axes, description='On a graph, what each axis measures, written at its end; '
                                                              '"" for both on any other scene')
+    # A painter guesses sizes: round 22's compound-interest bar chart came back with its bars at heights the lesson's
+    # numbers never gave. A scene to scale (and every graph) is drawn by the brain as SVG, its sizes worked out from
+    # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30.
+    to_scale: bool = Field(default_factory=bool, description="True for a chart, graph or figure whose sizes must be right "
+                                                             "(bars of given heights, a stacked bar, a number line, a shape "
+                                                             "with given sides or angles); false for any other scene")
+
+    def exact(self) -> bool:
+        """Drawn to scale: marked so, or a graph."""
+        return self.to_scale or bool(self.axes)
 
 
 def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
@@ -130,9 +140,20 @@ class Camera(Strict):
     zoom: float
 
 
+# How a flow moves, as the brain directs it (Direction.moves): through one wall as particles, or along a way through
+# several parts as an arrow at each hand-off (studio/render/renderer.py, _travels()). "" in a bundle written before
+# Oct 30, and the renderer judges by the route.
+Moves = Literal["crosses", "travels", ""]
+MOVES = ('How it moves: "crosses" when it passes through one wall, membrane or carrier (O₂ across the alveolus\'s '
+         'wall, H⁺ through ATP synthase, salt out of the tubule), drawn as particles; "travels" when it goes a long '
+         'way along several parts (filtrate down the nephron, magma up through the volcano, sediment down a river), '
+         'drawn as an arrow where it passes from each part into the next; "" with no particles')
+
+
 class Flow(Strict):
     particles: list[str] = Field(description="Structure names they travel between, in order")
     carries: str = Field(description='What they are, as a textbook prints it ("O₂")')
+    moves: Moves = Field(default_factory=str, description=MOVES)
 
 
 class Direction(Strict):
@@ -143,6 +164,7 @@ class Direction(Strict):
     particles: list[str] = Field(description="Structure names the particles travel between, in order; [] for none")
     carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
                                      '"" for none')
+    moves: Moves = Field(default_factory=str, description=MOVES)
     glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
     # A second thing moving on the line at the same time, when it names both: what one structure gives off together
@@ -152,7 +174,7 @@ class Direction(Strict):
 
     def flows(self) -> list[Flow]:
         """Everything moving on the line, the main flow first; a flow with no path is left out."""
-        main = [Flow(particles=self.particles, carries=self.carries)] if self.particles else []
+        main = [Flow(particles=self.particles, carries=self.carries, moves=self.moves)] if self.particles else []
         return main + [f for f in self.also if f.particles]
 
 
@@ -541,6 +563,17 @@ class Location(Strict):
     found_by: Literal["svg", "sam", "sam-box", "helper"]
 
 
+class Value(Strict):
+    """A number a scene drawn to scale shows (a bar's amount, an axis's tick, "$1,210", "Year 2"), where its SVG drawing
+    marks it. The art has no writing, so the renderer writes it, in the house font: an amount once the voice says it,
+    a tick from the scene's first frame."""
+
+    text: str
+    at: Point  # art pixels: the point it is written beside
+    side: Literal["above", "below", "left", "right"] = "above"  # which side of the point
+    tick: bool = False  # read off the axis, not said: on from the scene's first frame
+
+
 class SceneLocations(Strict):
     scene: str
     art: JobPath  # media.art_path(scene)
@@ -552,6 +585,7 @@ class SceneLocations(Strict):
     # The house look the SVG art was styled in (svg.LOOK): when it changes, the art step styles the kept drawing
     # again, with no call to the brain. "" for painted art, and for SVG art made before the look was code's.
     look: str = ""
+    values: list[Value] = []  # the numbers its SVG drawing marks (svg.values()); [] for painted art
 
     @model_validator(mode="after")
     def _consistent(self) -> SceneLocations:
@@ -698,6 +732,7 @@ class Particles(Strict):
     trail: bool
     label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
     blocked: bool = False  # the last stop stops them (Bundle.blocks): they pile up there, not go round again
+    moves: Moves = ""  # as the bundle directs it (Direction.moves); "" in a timeline made before, or a bundle
 
     @field_validator("color")
     @classmethod
@@ -755,6 +790,17 @@ class Route(Strict):
         return _hex_color(value)
 
 
+class Written(Strict):
+    """A drawn value (SceneLocations.values) as one beat shows it: written from `since` on, and on every later beat of
+    its scene."""
+
+    text: str
+    at: Point  # art pixels
+    side: Literal["above", "below", "left", "right"] = "above"
+    since: float = 0.0  # when it is first written: as the voice says it, or as the scene first shows (a tick)
+    tick: bool = False  # an axis's tick, written as the axis names are; an amount stands out, and pops as it is said
+
+
 class Converting(Strict):
     """A conversion (Bundle.conversions) as one beat shows it: written beside the structure where it happens."""
 
@@ -773,11 +819,13 @@ class Beat(Strict):
     # Every structure revealed on this scene so far, this beat's reveals included: a
     # label shows from its reveal's t and stays on every later beat of the scene.
     labels: list[str]
+    named: list[str] = []  # the structures this line says, whether or not first here; [] in a timeline made before
     particles: list[Particles]
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
     conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
     routes: list[Route] = []  # the paths drawn as arrows on this beat; [] in a timeline made before
+    values: list[Written] = []  # the drawn values written on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     key_line: str = ""  # written above the diagram (Bundle.key_lines; the core idea on the last chorus); "" for none
     caption: str | None

@@ -195,17 +195,26 @@ before the ones ahead of it exist: their paths and the rules for a media step in
 <name> <job>` runs a media step as soon as its module is in `studio/steps/`; wiring them
 into `run`, after the post, comes once they are built.
 
-That is three to five brain calls per topic: the bundle, the fact audit (and a second look
-at any fact it corrected), the fact-check, and a re-check of any lines the fact-check
-changed, with a songwriter's rewrite before it when a couplet of the song failed (plus one
-per scene for the SVG art, with the Claude brain). The helper is called
-per image and per fallback.
+That is five to seven brain calls per topic: the script, the bundle, the narration edit,
+the fact audit (and a second look at any fact it corrected), the fact-check, and a
+re-check of any lines the fact-check changed, with a songwriter's rewrite before it when a
+couplet of the song failed (plus one per scene for the SVG art, with the Claude brain).
+The helper is called per image and per fallback.
 
 ### Step 1: bundle
 
-One structured-output call returns everything that can be written from the topic alone.
-The fields are in this order on purpose: the model writes in field order, so the later
-parts build on the facts it has already written.
+First the lesson's script (`studio/steps/script.py`, `prompts/script.md` with the brief's
+rules for the audience and the facts): the question the lesson answers, the essence, the
+facts, a picture for each scene and the narration, passage by passage, written as one
+explanation before anything is drawn or sung. Round 18's lessons, written a sentence at a time
+alongside everything else, came out in pieces a learner could not follow. Then one
+structured-output call returns everything else that can be written from the topic alone,
+handed the script, which stands: code holds the bundle to its essence, facts and narration.
+Without a script (its call failed), that one call writes it all, as it did before. Then the
+learner test, and a narration editor (`studio/steps/narration.py`) that hears the voice-over
+whole and may reorder and reword it, keeping every sentence. The fields are in this order on
+purpose: the model writes in field order, so the later parts build on the facts it has
+already written.
 
 1. `course`, `topic`, `audience` ("high school" unless the learner's request names
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
@@ -215,8 +224,9 @@ parts build on the facts it has already written.
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
    `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
-   `stage_of` and `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
-   axes' ends; "" elsewhere). One fixed colour per structure for the whole job. A process whose parts move
+   `stage_of`, `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
+   axes' ends; "" elsewhere) and `to_scale` (a chart or figure the learner reads amounts off,
+   drawn as SVG; below). One fixed colour per structure for the whole job. A process whose parts move
    or change shape from stage to stage (mitosis, the phases of the Moon) takes a scene per
    stage, 2 to 5 of them, each with `stage_of` naming the process, all opening with the same
    framing sentence; then up to 8 scenes in all.
@@ -436,6 +446,22 @@ as its own named group. Rasterising the SVG gives the art, and rasterising one g
 time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
 Image, but it writes the same files, so everything downstream is built and tested against
 it unchanged. Switching the painter makes a job's art again on its next run.
+
+**To scale, whoever paints.** A scene the learner reads amounts off (a graph, or a scene with `to_scale`: a
+chart, a stacked bar, a number line, a shape with given angles) is drawn by Claude's brain as SVG even when
+Gemini or Muse Image paints the rest, its sizes worked out from the scene's and the facts' numbers. Round 22's
+compound-interest bar chart came back from Gemini with bars at heights no fact gave, and the helper's notice
+about it on screen beside it. The art step draws those scenes and paints the others; step 4 locates the drawn
+ones from their drawings and the painted ones with SAM 3.1. On Muse's brain, which draws no SVG, they are painted.
+
+**Values on a chart.** The art has no writing, but a chart is read by its numbers. The drawer marks each one with an
+empty circle directly in the `<svg>` (`data-value="$1,210"` above a bar, `data-tick="Year 2"` under its place on the
+axis; `svg.values()`), copying the amount as the narration writes it, and the marks are kept with the scene's
+locations (`SceneLocations.values`), never drawn. The timeline writes an amount from the word that says it on a beat
+of its scene ("…the balance reaches $1,210": the year-2 bar's "$1,210" pops on as the voice says it), and a tick, or
+an amount no line there says, from the scene's first beat; each stays on, as a label does (`Beat.values`). The
+renderer writes them in the house font, ringed with the page's colour like the axis names, and the labels keep clear
+of them.
 
 The brain decides what a scene draws and where; code decides how it looks (`svg.style()`),
 the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
@@ -660,6 +686,19 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     have, keeps them readable on any colour. Lines in a row that carry a flow (its path and
     what it carries) are one run for it, so it carries on across them, whatever joins it or
     leaves, and it waits for its stops to be revealed.
+  - **Journeys as arrows:** particles are for a crossing, the short trip through one wall that
+    a line teaches (O₂ across the alveolus's wall, H⁺ through ATP synthase, salt out of the
+    tubule). A journey along several parts (filtrate down the nephron, magma up through the
+    volcano, sediment down a river) is drawn instead as an arrow where it passes from each part
+    into the next (`routing.handoff()`), drawn in one after another the way it goes, then a pulse
+    runs along them in order: in rounds 20 and 21 dots following a long route through painted
+    masks, which are only roughly the parts, cut across the nephron's bends and rose through the
+    volcano's rock. The bundle says which (`moves`: "crosses" or "travels"); where it does not,
+    a route that bends with its parts (1.5 times the straight line) or runs more than 200 px
+    inside a part between two others travels, and so does everything else carrying the same
+    thing on that scene. An ion or small molecule printed as a symbol ("H⁺", "O₂") is always a
+    particle, and so is a blocked flow. The legend keys a journey with an arrow; what moves takes
+    the colour of the structure it names, when the pictures draw one (magma red, sediment tan).
   - **The system running:** a line that sums up (the whole scene, nothing spotlit, as the
     bundle prompt asks of summing-up and chorus lines) runs every flow its scene has shown so
     far beside its own, up to 4: on the light reactions, electrons down the chain, protons

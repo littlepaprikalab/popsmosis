@@ -22,9 +22,12 @@ from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
     Beat,
+    Box,
+    Converting,
     Crowd,
     Locations,
     Particles,
+    Point,
     Reveal,
     Route,
     Timeline,
@@ -306,7 +309,7 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
 
 
-def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
+def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, monkeypatch):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
@@ -323,8 +326,19 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
-    pill = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)])).frame(held)
-    assert cyan_across(pill.copy()) > cyan_across(badge) + 25  # a longer word gets a pill
+    # A word never rides a moving particle: glucose moves as its ring, and is named, still, in the legend.
+    word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
+    shapes, legends = [], []
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((label, size)))
+    monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries, arrows=(): legends.append((rect, entries)))
+    times = (held + 1.0, held + 2.0)  # the particle has moved on; the legend has not
+    for t in times:
+        word.frame(t)
+    assert p.kind_of("glucose") == "sugar" and ("glucose", 1.0) in shapes  # the lead particle, at full size
+    assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
+    assert legends[0][0] == legends[1][0]  # in one place
+    assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water")] == [
+        "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle
 
 
 def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
@@ -932,22 +946,6 @@ def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
     assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50
 
 
-def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
-    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
-    first = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
-    since = timeline.beats[first].t0
-    one = Route(path=["Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
-    both = Route(path=["Cytochrome b6f", "Thylakoid", "Cytochrome b6f"], color="#4CC9F0", label="e⁻", since=since)
-    other = Route(path=["Thylakoid", "Cytochrome b6f"], color="#F2C230", label="H⁺", since=since)  # another carrier
-    beats = [b.model_copy(update={"routes": [one, both, other]}) if b.scene == "overview" else b for b in timeline.beats]
-    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
-    legs = []
-    monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append(color))
-    last = max(i for i, b in enumerate(beats) if b.scene == "overview")
-    renderer.frame(beats[last].t1 - 0.01)
-    assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
-
-
 def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
@@ -1098,3 +1096,199 @@ def test_axis_names_stay_on_through_a_stage_fade_when_the_next_stage_has_the_sam
     renamed = staged.model_copy(update={"axes": {**staged.axes, "ceiling": staged.axes["ceiling"].model_copy(
         update={"x": "Bread sold"})}})
     assert drawn(renamed, mid) < 0.8 * drawn(renamed, settled)  # new names fade in with their stage
+
+
+def test_a_cut_to_a_close_up_pushes_in_on_its_part_and_a_cut_back_pulls_out_of_it(job):
+    # Round 18's kidney lesson cut from the body to a nephron, and from the nephron to its tubule, with nothing to say
+    # where the new picture was: a cut between two scenes that draw the same part far apart in size goes through it.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    located = jobs.read(job / media.LOCATIONS, Locations)
+    hook = located.scene("hook")
+    small = hook.structures[0].model_copy(update={
+        "box": Box(x0=850, y0=480, x1=950, y1=560), "centroid": Point(x=900, y=520),
+        "label_anchor": Point(x=900, y=520)})
+    located = located.model_copy(update={"scenes": [s.model_copy(update={"structures": [small]})
+                                                    if s.scene == "hook" else s for s in located.scenes]})
+    first = [b for b in timeline.beats if b.scene == "hook"][-1]
+    overview = next(b for b in timeline.beats if b.scene == "overview")
+    back = overview.model_copy(update={"scene": "hook", "t0": overview.t1, "t1": overview.t1 + 4.0, "particles": [],
+                                       "routes": [], "crowds": [], "reveal": [], "labels": [], "spotlight": None,
+                                       "camera": first.camera})
+    beats = [first, overview, back]
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats, "duration": back.t1}), locations=located)
+    # The hook draws the thylakoid small and the overview large: the overview is the close-up here.
+    assert renderer._through_part("hook", "overview") == ("Thylakoid", True)
+    assert renderer._through_part("overview", "hook") == ("Thylakoid", False)
+    assert renderer._through_part("overview", "synthase") is None  # nothing drawn on both
+    # Into the close-up: the hook's last moments push in on its thylakoid, up to the cut.
+    plan = renderer.plans[0]
+    assert plan.push_at == pytest.approx(first.t1 - renderer_module.ZOOM_THROUGH_S)
+    view, art = renderer.view("hook"), renderer.scene("hook")
+    before, at_cut = plan.cam(plan.push_at, view, art), plan.cam(first.t1 - 0.01, view, art)
+    assert at_cut.zoom > before.zoom * 1.3 and 850 <= at_cut.cx <= 950
+    # Back out: the hook opens close on the thylakoid and pulls back to the whole picture.
+    out = renderer.plans[2]
+    assert out.start.zoom > out.target.zoom * 1.3 and 850 <= out.start.cx <= 950
+    assert renderer.plans[1].push_at is None  # the overview, cut back out of, does not push in
+
+
+def test_past_four_labels_those_of_parts_the_line_is_not_about_rest(job):
+    # Round 21's digestion overview showed seven labels at once, and the one the voice meant was lost among them.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    many = ["Thylakoid", "Cytochrome b6f", "Stroma", "Lumen", "Photosystem II"]
+    beats = list(timeline.beats)
+    for k in on:
+        beats[k] = beats[k].model_copy(update={"labels": many, "named": [], "particles": [], "spotlight": None,
+                                               "camera": TimelineCamera(target=None, zoom=1.0)})
+    first, second = on[0], on[1]
+    beats[second] = beats[second].model_copy(update={"named": ["Thylakoid"], "spotlight": "Lumen"})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    rest = renderer_module.LABEL_REST
+    settled = renderer._resting(second, beats[second].t1)
+    assert settled["Thylakoid"] == 1.0 and settled["Lumen"] == 1.0  # said on the line; spotlit
+    assert all(settled[n] == pytest.approx(rest) for n in ("Cytochrome b6f", "Stroma", "Photosystem II"))
+    assert renderer._resting(second, beats[second].t0)["Thylakoid"] == pytest.approx(rest)  # eases up as it starts
+    assert renderer._resting(on[2], beats[on[2]].t1)["Thylakoid"] == 1.0  # still in play on the line after
+    few = beats[first].model_copy(update={"labels": many[:4]})
+    calm = Renderer(job, timeline.model_copy(update={"beats": [*beats[:first], few, *beats[first + 1:]]}))
+    assert set(calm._resting(first, few.t1).values()) == {1.0}  # four or fewer: every label in full
+
+
+def test_a_reaction_pill_rests_with_its_structures_label(job, monkeypatch):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    many = ["Thylakoid", "Cytochrome b6f", "Stroma", "Lumen", "Photosystem II"]
+    pill = Converting(structure="Cytochrome b6f", text="A → B", since=timeline.beats[on[0]].t0)
+    beats = list(timeline.beats)
+    for k in on:
+        beats[k] = beats[k].model_copy(update={"labels": many, "named": [], "particles": [], "spotlight": None,
+                                               "conversions": [pill], "camera": TimelineCamera(target=None, zoom=1.0)})
+    beats[on[1]] = beats[on[1]].model_copy(update={"named": ["Cytochrome b6f"]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    drawn = []
+    monkeypatch.setattr(p, "draw_conversion", lambda canvas, at, text, color, alpha, bounds, font: drawn.append(alpha))
+    renderer.frame(beats[on[1]].t1 - 0.01)  # named on this line: in full
+    renderer.frame(beats[on[3]].t1 - 0.01)  # two lines on, about something else: resting
+    assert drawn[0] == pytest.approx(1.0, abs=0.02) and drawn[1] == pytest.approx(renderer_module.LABEL_REST, abs=0.02)
+
+
+def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, monkeypatch):
+    # Round 21's lungs put the alveolus's and the capillary's points at the top of the picture, above and below the
+    # membrane's, and the gases ran up and down the capillary instead of across the membrane.
+    from studio.render import routing
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    renderer = Renderer(job, timeline)
+    located = renderer.locations.scene("overview")
+    sac, wall = located.get("Thylakoid"), located.get("Cytochrome b6f")
+    tall = sac.model_copy(update={"box": Box(x0=100, y0=100, x1=700, y1=950), "centroid": Point(x=400, y=520),
+                                  "label_anchor": Point(x=400, y=520)})
+    beside = wall.model_copy(update={"box": Box(x0=740, y0=100, x1=800, y1=950), "centroid": Point(x=770, y=520),
+                                     "label_anchor": Point(x=770, y=520)})
+    monkeypatch.setattr(located, "structures", [tall, beside])
+    art = renderer.scene("overview")
+    grid = np.zeros_like(art.cells("Thylakoid"))
+    grid[100 // routing.GRID:950 // routing.GRID, 100 // routing.GRID:700 // routing.GRID] = True
+    monkeypatch.setattr(art, "_cells", {"Thylakoid": grid, "Cytochrome b6f": art.cells("Cytochrome b6f")})
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name == "Thylakoid")
+    (sx, sy), (wx, wy) = renderer._path_points("overview", ["Thylakoid", "Cytochrome b6f"])
+    assert sy == pytest.approx(520) and wy == pytest.approx(520, abs=40)  # level with the wall, not at the top
+    assert 100 <= sx <= 700 - renderer_module.SPACE_REACH  # inside the space, well past its edge
+
+
+def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
+    from studio.schemas import Written
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    beats = list(timeline.beats)
+    said = beats[on[1]].t0 + 0.5
+    value = Written(text="$1,210", at=Point(x=900, y=400), side="above", since=said)
+    for k in on[1:]:
+        beats[k] = beats[k].model_copy(update={"values": [value]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    drawn = []
+    monkeypatch.setattr(p, "draw_value", lambda canvas, text, rect, size, paper, alpha, tick, pop=0.0:
+                        drawn.append((text, rect, alpha, pop)))
+    renderer.frame(said - 0.2)  # before it is said: not yet
+    assert drawn == []
+    renderer.frame(said + 0.05)  # as it is said: fading in, popping
+    renderer.frame(beats[on[1]].t1 - 0.01)  # later: in full, settled
+    (text, rect, alpha, pop), (_, later, full, settled) = drawn
+    assert text == "$1,210" and alpha < 1.0 and pop > 0.5 and full == pytest.approx(1.0) and settled == 0.0
+    x, y = renderer.art_to_frame(beats[on[1]].t1 - 0.01, 900, 400)
+    assert later[3] < y and later[0] < x < later[2]  # above its point, across it
+
+
+def test_what_travels_is_drawn_as_an_arrow_at_each_hand_off_and_a_crossing_as_particles(job, monkeypatch):
+    # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
+    # drawn as an arrow where it passes from part to part. A crossing keeps its particles.
+    arrows, dots = [], []
+    monkeypatch.setattr(p, "draw_handoff", lambda canvas, tail, tip, color, alpha, grown=1.0, pulse=0.0, size=1.0:
+                        arrows.append((tail, tip, grown, pulse)))
+    monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
+
+    def moving(label, moves):
+        beat = flow_beat(0, 12, labels=FLOW, label=label)
+        flow = beat.particles[0].model_copy(update={"moves": moves})
+        return Renderer(job, flowing([beat.model_copy(update={"particles": [flow]})]))
+
+    travelling = moving("filtrate", "travels")
+    flow = travelling.timeline.beats[0].particles[0]
+    assert travelling._travels("overview", flow)
+    [(tail, tip, into)] = travelling._handoffs("overview", flow)  # one hand-off: from the thylakoid into b6f
+    b6f = located(job, "overview", "Cytochrome b6f").box
+    assert b6f.y0 - 60 <= tip[1] <= b6f.y1 + 60 and tip != tail and into.name == "Cytochrome b6f"
+    start = travelling.plans[0].runs[0][0]  # when it sets off
+    travelling.frame(start + renderer_module.HANDOFF_GROW_S / 2)  # drawing itself in
+    travelling.frame(8.0)  # long since drawn in
+    assert dots == [] and 0 < arrows[0][2] < 1 and arrows[-1][2] == 1.0
+    assert "filtrate" in travelling._arrowed("overview")  # keyed with an arrow in the legend
+
+    for label, moves in (("salt", "crosses"), ("H⁺", "travels")):  # said to cross; an ion is always a particle
+        arrows.clear(), dots.clear()
+        crossing = moving(label, moves)
+        crossing.frame(3.0)
+        assert arrows == [] and dots and not crossing._travels("overview", crossing.timeline.beats[0].particles[0])
+
+
+def test_with_no_word_from_the_bundle_a_route_that_bends_or_runs_along_a_part_travels(job, monkeypatch):
+    from types import SimpleNamespace
+
+    from studio.render import routing
+    renderer = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW, label="magma")]))
+    flow = renderer.timeline.beats[0].particles[0]
+    grid = np.zeros((1024 // routing.GRID + 1, 1792 // routing.GRID + 1), bool)
+
+    def through(points, middle_cols, names=("Magma", "Volcano", "Lava")):
+        cells = grid.copy()
+        cells[:, middle_cols[0] // routing.GRID:middle_cols[1] // routing.GRID] = True
+        monkeypatch.setattr(renderer, "_path_points", lambda *a, **k: points)
+        monkeypatch.setattr(renderer, "_bends", lambda *a, **k: [None] * (len(points) - 1))
+        monkeypatch.setattr(renderer, "_path_stops", lambda *a, **k: [(pt, SimpleNamespace(name=n))
+                                                                      for pt, n in zip(points, names)])
+        monkeypatch.setattr(renderer, "scene", lambda scene_id: SimpleNamespace(cells=lambda name: cells))
+        return renderer._journey("overview", flow)
+
+    level = [(100.0, 500.0), (700.0, 500.0), (1300.0, 500.0)]
+    assert through(level, (300, 1100))  # 1,200 px inside the volcano: up through it, a journey
+    assert not through(level, (690, 712))  # through a thin wall: a crossing
+    assert through([(100.0, 500.0), (700.0, 500.0), (100.0, 540.0)], (690, 712))  # out and nearly back: it bends
+    assert not through([(100.0, 500.0), (700.0, 500.0), (100.0, 500.0)], (300, 1100),
+                       ("Lumen", "Pump", "Lumen"))  # out through a part and back: it crosses the part
+
+
+def test_a_value_the_camera_leaves_out_is_not_written_over_the_band(job, monkeypatch):
+    from studio.schemas import Written
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    beats = list(timeline.beats)
+    inside, edge = (Written(text="$1,210", at=Point(x=900, y=400), since=0.0),
+                    Written(text="Year 0", at=Point(x=900, y=1020), side="below", since=0.0))  # below the picture
+    beats[on[0]] = beats[on[0]].model_copy(update={"values": [inside, edge]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    drawn = []
+    monkeypatch.setattr(p, "draw_value", lambda canvas, text, rect, *a, **k: drawn.append((text, rect)))
+    renderer.frame(beats[on[0]].t1 - 0.01)
+    view = renderer.view("overview")
+    assert [text for text, _ in drawn] == ["$1,210"]
+    assert all(view[0] <= r[0] and view[1] <= r[1] and r[2] <= view[2] and r[3] <= view[3] for _, r in drawn)

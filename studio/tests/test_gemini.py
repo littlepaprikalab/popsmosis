@@ -3,10 +3,12 @@ the Gemini API, SAM 3.1 and the helper stood in for. The answer's shape is the o
 
 import base64
 import json
+from pathlib import Path
 
 import pytest
 
-from studio import brain, gemini, jobs, ledger, media
+from studio import brain, gemini, jobs, ledger, media, svg
+from studio.schemas import Axes, Bundle, Locations, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 from studio.tests.test_muse import FakeHelper, FakeMuse, FakeSend, picture
@@ -172,3 +174,106 @@ def test_on_muses_brain_the_admin_can_have_gemini_paint(job, monkeypatch):
     assert art.painter(job) == "muse"
     with brain.chosen("claude"):  # a topic sent to Claude goes by Claude's setting
         assert art.painter(job) == "gemini"
+
+
+class FakeDrawer:
+    """The brain drawing a scene to scale as SVG (studio/tests/art/), and the helper for the painted ones."""
+
+    def __init__(self, helper):
+        self.helper, self.drawn = helper, []
+
+    def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+        if system != art.PROMPT:
+            return self.helper(role, prompt, schema, images, system=system, label=label)
+        assert role == "brain" and schema is None and not images
+        self.drawn.append((label, prompt))
+        drawing = (Path(__file__).resolve().parent / "art" / f"{label.split()[1]}.svg").read_text(encoding="utf-8")
+        return {"text": drawing}
+
+
+def to_scale(job, scene_id="overview"):
+    data = sample_media.bundle().model_dump()
+    next(s for s in data["scenes"] if s["id"] == scene_id)["to_scale"] = True
+    bundle = Bundle.model_validate(data)
+    jobs.write(job / "bundle.json", bundle)
+    return bundle
+
+
+def test_a_scene_to_scale_is_drawn_as_svg_and_the_others_painted(job, monkeypatch):
+    # Round 22's compound-interest bar chart came back from Gemini with bars at heights the lesson never gave.
+    bundle = to_scale(job)
+    painter, sam = FakeGemini().install(monkeypatch), FakeMuse().install(monkeypatch)
+    ask = FakeDrawer(FakeHelper())
+    assert art.run(job, ask) == ("painted 2 scenes with Gemini 3.1 Flash Image in 2 tries; "
+                                 "drew 1 scene to scale as SVG (overview)")
+    assert sorted(label for label, _ in painter.painted) == ["art hook", "art synthase"]
+    [(label, prompt)] = ask.drawn
+    assert label == "art overview" and 'To scale: this scene\'s sizes must be right' in prompt
+    assert all(f"- {fact.text}" in prompt for fact in bundle.facts)  # the numbers its sizes come from
+    assert (job / "art" / "overview.svg").exists() and not (job / "art" / "overview.json").exists()
+    assert art.is_done(job) and not locate.is_done(job)
+    assert art.notices(job, bundle).keys() <= {"hook", "synthase"}  # no painted picture's notes on the drawing
+
+    result = locate.run(job, ask)
+    assert result.startswith("located 4 of 4 structures with SAM 3.1 and the SVG drawings (2 on 1 scene)")
+    assert locate.is_done(job)
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    assert locations_problems(locations, bundle) == []
+    assert {s.found_by for s in locations.scene("overview").structures} == {"svg"}
+    assert locations.scene("overview").look == svg.LOOK
+    assert {s.found_by for s in locations.scene("synthase").structures} == {"sam"}
+    assert not any("overview" in label for label, _, _ in sam.segmented)  # no SAM on the drawing
+
+    # Nothing changed: the next run draws and paints it all again, as a painted job's does.
+    ask.drawn.clear()
+    art.run(job, ask)
+    assert [label for label, _ in ask.drawn] == ["art overview"]
+
+
+def test_a_graph_is_drawn_to_scale_and_on_muses_brain_painted():
+    bundle = sample_media.bundle()
+    graph = bundle.scenes[1].model_copy(update={"axes": Axes(x="Year", y="Balance")})
+    assert graph.exact() and not bundle.scenes[1].exact()
+    bundle = bundle.model_copy(update={"scenes": [bundle.scenes[0], graph, bundle.scenes[2]]})
+    job = Path("unused")
+    assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, True, False]
+    with brain.chosen("muse-spark"):  # Muse's brain draws no SVG: its painter paints the graph too
+        assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, False, False]
+
+
+def test_a_scene_to_scale_with_no_usable_drawing_is_painted_instead_and_located_by_sam(job, monkeypatch):
+    # A chart the brain cannot draw is painted, as before charts were drawn: a droplet with a painted chart, not none.
+    bundle = to_scale(job)
+    painter, sam = FakeGemini().install(monkeypatch), FakeMuse().install(monkeypatch)
+
+    class Refused(FakeDrawer):
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if system == art.PROMPT:
+                self.drawn.append((label, prompt))
+                return {"text": "<svg>not a drawing"}
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    ask = Refused(FakeHelper())
+    result = art.run(job, ask)
+    assert len(ask.drawn) == art.MAX_TRIES and result.endswith("; painted overview instead of drawing it as SVG")
+    assert sorted(label for label, _ in painter.painted) == ["art hook", "art overview", "art synthase"]
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert "no usable drawing" in made["instead_of_svg"]
+    overview = bundle.scenes[1]
+    assert not art.drawn(job, bundle, overview) and art.is_done(job)
+    locate.run(job, ask)
+    assert locate.is_done(job)
+    assert {s.found_by for s in jobs.read(job / media.LOCATIONS, Locations).scene("overview").structures} == {"sam"}
+
+    # Resumed, it stays painted; from scratch, it is drawn again.
+    ask.drawn.clear()
+    (job / "art" / "hook.json").unlink()
+    art.run(job, ask)
+    assert ask.drawn == []
+    art.run(job, FakeDrawer(FakeHelper()))
+    assert art.drawn(job, bundle, overview) and (job / "art" / "overview.svg").exists()
+
+
+def test_an_everyday_scene_marked_to_scale_is_still_painted(job):
+    bundle = to_scale(job, "hook")
+    assert not art.drawn(job, bundle, bundle.scenes[0])

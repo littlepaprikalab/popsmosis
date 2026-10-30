@@ -97,29 +97,28 @@ def test_the_song_is_one_chunk_per_section_timed_by_its_lines(job, monkeypatch):
     chunks = body["composition_plan"]["chunks"]
     assert [c["text"].split("\n")[0] for c in chunks] == ["[Verse]", "[Chorus]", "[Verse]", "[Chorus]", "[Bridge]",
                                                          "[Chorus]"]
-    assert chunks[0]["text"] == "[Verse]\nLight lands on the thylakoid\nEvery electron hand-off pumps a proton"
-    # one bar a line at 112 bpm (2143 ms); a one-line section is held to the 3 s a chunk must last
-    assert [c["duration_ms"] for c in chunks] == [4286, 3000, 3000, 3000, 3000, 3000]
+    assert chunks[0]["text"] == "[Verse]\nLight lands on the thylakoid\nEach electron hand-off pumps a proton"
+    # as long as its lines take to sing: 7 and 10 syllables at 4 a second, and a second's rest each; the
+    # one-line sections are held to the 3 s a chunk must last
+    assert [c["duration_ms"] for c in chunks] == [6250, 3000, 3000, 3000, 3000, 3000]
     assert all(c["positive_styles"] == ["upbeat pop", "112 bpm"] and c["negative_styles"] == ["mumbled vocals"]
                for c in chunks)
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["song_id"] == "song123"
-    assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 4286)]
+    assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 6250)]
     assert (job / "audio/song.mp3").read_bytes() == b"ID3 song"
 
 
-@pytest.mark.parametrize("tags, verse_ms", [
-    (["pop-punk anthem at 150 bpm"], 6400),  # from 130 bpm a line is two bars: 3.2 s
-    (["dance-pop", "129 bpm"], 3721),  # below it, one bar: 1.86 s
-    (["K-pop", "98 bpm"], 4898),
-    (["upbeat pop"], 4286),  # a bundle from before the styles chose a tempo: 112 bpm
-])
-def test_each_section_is_timed_by_the_tempo_the_styles_name(tags, verse_ms):
+@pytest.mark.parametrize("tags", [["pop-punk anthem at 150 bpm"], ["laid-back R&B", "85 bpm"], ["upbeat pop"]])
+def test_a_section_takes_the_time_its_lines_need_to_sing_at_any_tempo(tags):
     data = sample_media.bundle().model_dump()
     data["music"]["positive_styles"] = tags
     plan, placed = audio.composition_plan(sample_media.bundle().model_validate(data))
-    assert plan["chunks"][0]["duration_ms"] == verse_ms  # the first verse: two lines
-    assert placed[1]["start_ms"] == verse_ms
+    assert plan["chunks"][0]["duration_ms"] == 6250  # the first verse: two lines, 17 syllables
+    assert placed[1]["start_ms"] == 6250
+    data["lyrics"][1]["text"] = "Each hand-off, every single time, pumps one more out"
+    plan, _ = audio.composition_plan(sample_media.bundle().model_validate(data))
+    assert plan["chunks"][0]["duration_ms"] == 7000  # 13 syllables: more to sing, more time
 
 
 def test_the_song_can_have_an_intro_pre_choruses_and_an_outro():
@@ -274,9 +273,11 @@ def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, m
     assert headers["x-goog-api-key"] == "gemini-key" and "xi-api-key" not in headers
     assert body["generationConfig"] == {"responseModalities": ["AUDIO", "TEXT"]}
     prompt = body["contents"][0]["parts"][0]["text"]
-    assert prompt.startswith("Style: upbeat pop, 112 bpm.\nAvoid: mumbled vocals.\nLength: about 0:19.")
-    assert "[0:00 - 0:04] Verse\n[0:04 - 0:07] Chorus\n" in prompt
-    assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEvery electron hand-off pumps a proton"
+    # the style, what to avoid and the lyrics: no length and no timings, so the singer takes the time it needs
+    assert prompt.startswith("Style: upbeat pop, 112 bpm.\nAvoid: mumbled vocals.\nSing the lines in order, section "
+                             "by section. Backing vocals and echoes of the hook are welcome.\n\nLyrics:\n")
+    assert "Length" not in prompt and "Structure" not in prompt and "0:0" not in prompt
+    assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEach electron hand-off pumps a proton"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Verse]\nOnly b6f pumps them in"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Bridge]\nFeel the gradient build"
                            "\n\n[Chorus]\nProtons flow and ATP grows")

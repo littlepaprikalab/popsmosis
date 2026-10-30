@@ -9,11 +9,13 @@
                                   into words without an aligner)
 
 Who makes the song is an admin's setting on /admin/studio, as the claim said (the job's
-settings.json, song_provider()): elevenlabs (the default) or gemini. Eleven Music
-makes each section a chunk of the length asked for, so step 6 looks for each section's
-lines where it was planned. Lyria takes the whole song as one prompt and keeps to the
-planned times only roughly, so its plan says the sections are not pinned and step 6 looks
-for its lines across the whole song. A song Lyria will not sing (it blocks the prompt, or
+settings.json, song_provider()): elevenlabs (the default) or gemini. The singer takes the
+time the lines need: Eleven Music makes each section a chunk of the length asked for, so
+each is asked for as long as its lines take to sing (line_ms), and step 6 looks for each
+section's lines where it was planned. Lyria is given the style and the lyrics and no
+length or timings at all, so its plan says the sections are not pinned and step 6 looks
+for its lines across the whole song, leaving out any its own text of the song says it did
+not sing. A song Lyria will not sing (it blocks the prompt, or
 stops for safety: it blocked the Holocaust's lyrics) is made by Eleven Music instead, and
 its plan says so. The narration is always ElevenLabs text-to-speech, whose character
 timings step 6 turns into words.
@@ -49,7 +51,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from studio import brain, jobs, knobs, ledger, media
+from studio import brain, checks, jobs, knobs, ledger, media
 from studio.api import USER_AGENT
 from studio.schemas import Bundle
 
@@ -62,8 +64,11 @@ SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this 
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "Xb7hH8MSUJpSbSDYk0k2"  # Alice: a clear, engaging British educator
-BEATS_PER_BAR = 4
-TWO_BAR_BPM = 130  # from this tempo a line is two bars, since one would be under 1.9 s (PLAN section 5, step 5)
+# How long a line takes to sing: its syllables at a singing pace, and a rest. Round 17's Lyria, told no length,
+# sang lines of about 8 syllables at 4.1 a second and took about 3 s a line with the rests between them; held to one
+# bar a line (2.2 s at 110 bpm), every line came out at the speed of speech, sung or rapped.
+SUNG_SYLLABLES_PER_S = 4.0
+LINE_REST_S = 1.0
 MIN_CHUNK_MS, MAX_CHUNK_MS = 3000, 120000  # what Eleven Music accepts per chunk
 TIMEOUT_S = 600  # a song takes a minute or two to come back
 SPEECH = ("narration",)
@@ -201,20 +206,18 @@ def sections(bundle: Bundle) -> list[dict]:
     return out
 
 
-def line_ms(bundle: Bundle) -> float:
-    """How long one line takes to sing at the tempo the song's styles name: one bar, short
-    and punchy (2.4 s at 100 bpm), or two bars from TWO_BAR_BPM (3.2 s at 150)."""
-    bpm = bundle.music.bpm
-    bars = 2 if bpm >= TWO_BAR_BPM else 1
-    return bars * BEATS_PER_BAR * 60_000 / bpm
+def line_ms(text: str) -> float:
+    """How long a line takes to sing: its syllables at SUNG_SYLLABLES_PER_S, and LINE_REST_S. An 8-syllable
+    line takes 3 s, whatever the tempo."""
+    return (checks.syllables(text) / SUNG_SYLLABLES_PER_S + LINE_REST_S) * 1000
 
 
 def planned_sections(bundle: Bundle) -> list[dict]:
-    """Each section in sung order with its lines, and where it is planned to fall: line_ms a
-    line at the tempo the styles name."""
+    """Each section in sung order with its lines, and where it is planned to fall: as long as its lines take
+    to sing (line_ms)."""
     out, at = [], 0
     for part in sections(bundle):
-        length = min(MAX_CHUNK_MS, max(MIN_CHUNK_MS, round(line_ms(bundle) * len(part["lines"]))))
+        length = min(MAX_CHUNK_MS, max(MIN_CHUNK_MS, round(sum(line_ms(text) for text in part["lines"]))))
         out.append({**part, "start_ms": at, "duration_ms": length})
         at += length
     return out
@@ -293,33 +296,21 @@ def gemini_song_model() -> str:
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
-    """Lyria's prompt: the style, the length, the planned structure and the lyrics to sing word
-    for word (its instructions apart from its lyrics, as Google advises), and where each section
-    is planned to fall."""
+    """Lyria's prompt: the style, what to avoid and the lyrics, section by section (its instructions apart from
+    its lyrics, as Google advises), and where each section is planned to fall. No length and no timings: the
+    singer takes the time the lines need, and step 6 finds them. Until round 17 it also asked for a length, a
+    timed structure, every word exactly as written with no ad-libs or repeats, and clear upfront vocals; every
+    instruction asked for diction and none for music, and the songs came back recited."""
     planned = planned_sections(bundle)
-    end_ms = planned[-1]["start_ms"] + planned[-1]["duration_ms"] if planned else 0
     music = bundle.music
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in music.positive_styles)}.")
     if music.negative_styles:
         head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
-    head += [
-        f"Length: about {_clock(end_ms)}. The singing starts within the first two seconds, with no long "
-        "intro, and the song ends soon after the last line.",
-        "Sing the lyrics below exactly as written, in order, section by section: no added lines, ad-libs or "
-        "extra repeats, and no line left out. Clear, upfront vocals, so every word is easy to hear.",
-    ]
-    structure = [f"[{_clock(p['start_ms'])} - {_clock(p['start_ms'] + p['duration_ms'])}] {p['section'].title()}"
-                 for p in planned]
+    head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
-    prompt = "\n".join(head) + "\n\nStructure:\n" + "\n".join(structure) + "\n\nLyrics:\n" + "\n\n".join(lyrics)
-    return prompt, _placed(planned)
-
-
-def _clock(ms: int) -> str:
-    seconds = round(ms / 1000)
-    return f"{seconds // 60}:{seconds % 60:02d}"
+    return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)
 
 
 def _make_gemini_song(job: Path, bundle: Bundle) -> None:

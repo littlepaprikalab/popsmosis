@@ -11,13 +11,19 @@ from studio.tests.sample import bundle_data
 def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
     write(tmp_path / "request.json", Request(topic="the light reactions", course="AP Bio"))
     (tmp_path / "factcheck.json").write_text("{}")
-    seen = {}
+    seen, labels = {}, []
 
     def fake_ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        labels.append(label)
+        if label == "script":  # no script: the bundle is written without one
+            raise brain.BrainError("no answer")
+        if label == "narration edit":  # the editor hands the narration back as written
+            return {"lines": [{"id": n["id"], "text": n["text"]} for n in bundle_data()["narration"]]}
         seen.update(role=role, prompt=prompt, schema=schema, system=system, label=label)
         return bundle_data()
 
     bundle = bundle_step.run(tmp_path, ask=fake_ask)
+    assert labels == ["script", "bundle", "narration edit"]
     assert seen["role"] == "brain" and seen["schema"] is Bundle and seen["label"] == "bundle"
     assert seen["system"] == bundle_step.PROMPT and "Teach the why, not the parts list" in seen["system"]
     assert seen["prompt"].startswith("Topic: the light reactions\n\nCourse: AP Bio\n\nThe song style for this droplet, "

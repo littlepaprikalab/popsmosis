@@ -20,7 +20,8 @@ No model calls, so it is free to run again:
   so the hook is sung within the first two seconds (PLAN section 8).
 - The particles are marked with what they carry, as a textbook prints it ("H+" -> "H⁺",
   notation()), each kind in its own colour (marker_colour()), so a proton reads apart
-  from an electron and from the ions painted in the picture.
+  from an electron and from the ions painted in the picture; a kind the pictures draw as a
+  structure ("magma", "sediment") in that structure's colour.
 - A space that something builds up in (Bundle.builds_up) fills while particles carrying it
   end there and empties while they start from it: FILL_S seconds of them fill it from
   empty, DRAIN_S would empty it, and it never drops below CROWD_MIN. How full it is runs
@@ -45,6 +46,9 @@ No model calls, so it is free to run again:
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
+- The values a scene drawn to scale marks (SceneLocations.values: "$1,210" on a bar, "Year 2" under it) are written
+  as the voice says them, from the word that says the number, and stay on every later beat of the scene; a tick,
+  and an amount no line on the scene says, from the scene's first beat.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
 - Beats meet exactly: each starts where the one before it ends, from 0 to the end.
 """
@@ -78,6 +82,7 @@ from studio.schemas import (
     Timing,
     Turning,
     Word,
+    Written,
     stage_groups,
     timeline_problems,
     timing_problems,
@@ -100,7 +105,8 @@ DRAIN_S = 10.0  # seconds of them leaving that would empty it
 CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
-RUN_MAX = 4  # flows moving at once on a beat that sums up: more is a swarm, not a pathway
+RUN_MAX = 2  # flows moving at once on a beat that sums up: round 17's rock cycle moved 4 at once, and it read as a swarm
+SCENE_MIN_S = 3.5  # a picture on screen for less than this (one sung line) gives way to the one before it
 TAIL_S = 1.5  # the last picture stays on screen this long after the voice ends
 INTRO_MAX_S = 2.0  # the song's first line is sung by then, or its intro is cut
 INTRO_KEEP_S = 1.0  # a cut intro keeps this much before the first sung word
@@ -204,6 +210,7 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
                       if t0 <= w.start < t1],
             "conversions": [c.model_copy(update={"since": max(c.since - t0, 0.0)}) for c in beat.conversions],
             "routes": [r.model_copy(update={"since": max(r.since - t0, 0.0)}) for r in beat.routes],
+            "values": [v.model_copy(update={"since": max(v.since - t0, 0.0)}) for v in beat.values],
         }))
     duration = round(t1 - t0, 3)
     beats[-1] = beats[-1].model_copy(update={"t1": duration})
@@ -243,11 +250,15 @@ def _same(heard: str, name: str, last: bool) -> bool:
     return heard == name or (last and heard in (name + "s", name + "es"))
 
 
-def marker_colour(label: str) -> str:
-    """The colour of particles carrying `label`: its own for a common kind, else one picked by its name."""
+def marker_colour(label: str, palette: dict[str, str] | None = None) -> str:
+    """The colour of particles carrying `label`: its own for a common kind; the colour of the structure it names
+    when it is one the pictures draw (magma red, sediment tan: round 20's magma rose in a pale blue no magma is);
+    else one picked by its name."""
     if not label:
         return PARTICLE_COLOR
-    return MARKER_COLOURS.get(label) or OTHER_MARKERS[zlib.crc32(label.encode()) % len(OTHER_MARKERS)]
+    drawn = {name.casefold(): colour for name, colour in (palette or {}).items()}
+    return (MARKER_COLOURS.get(label) or drawn.get(label.casefold())
+            or OTHER_MARKERS[zlib.crc32(label.encode()) % len(OTHER_MARKERS)])
 
 
 @dataclass
@@ -336,6 +347,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
                       "line": "", "words": []})
         captions.append(None)
 
+    scenes = _scenes(sung, directions, set(located), hook, voice.duration)
     first = sung[0].start if sung else voice.duration
     cursor = 0.0
     if first >= GAP_S:
@@ -348,11 +360,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         t1 = max(t1, cursor + 1 / media.FPS)
 
         direction = directions.get(timed_line.line_id)
-        scene = direction.scene if direction else (beats[-1]["scene"] if beats else hook)
-        if not any(b["line_id"] for b in beats):
-            scene = hook  # both videos open on the hook
-        if scene not in located:
-            scene = beats[-1]["scene"] if beats else hook
+        scene = scenes[i]
         scene_names = names.get(scene) or Names([])
         labels = revealed.setdefault(scene, [])
 
@@ -366,7 +374,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         reveals = [Reveal(name=name, t=cursor) for name in heard
                    if name in located.get(scene, set()) and name not in labels]
         labels += [r.name for r in reveals]
-        for name, index in sorted(scene_names.heard([w.word for w in words]).items(), key=lambda e: e[1]):
+        said = scene_names.heard([w.word for w in words])
+        for name, index in sorted(said.items(), key=lambda e: e[1]):
             if name not in labels:
                 labels.append(name)
                 reveals.append(Reveal(name=name, t=min(max(words[index].start, cursor), t1)))
@@ -377,20 +386,23 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         target = _shown(direction.camera.target, scene_names, labels) if direction else None
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
         particles = []
-        for flow in direction.flows() if direction else []:  # the main flow, and one moving with it
+        # The hook holds still: it is the learner's world as it is, and a dot travelling over it (round 20's sand
+        # leaving a cliff, round 21's food going down a throat) read as a speck on the picture, not a lesson.
+        for flow in direction.flows() if direction and scene != hook else []:  # the main flow, and one with it
             stops = [s for s in (scene_names.canonical(p) for p in flow.particles) if s]
             stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
             label = notation(flow.carries)
             if len(stops) >= 2:
-                particles.append(Particles(path=stops, color=marker_colour(label), trail=True, label=label,
-                                           blocked=stops[-1] in blockers))
+                particles.append(Particles(path=stops, color=marker_colour(label, palette), trail=True, label=label,
+                                           blocked=stops[-1] in blockers, moves=flow.moves))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
         if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
             target, zoom = None, 1.0
         opened.add(scene)
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
-                      "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels), "particles": particles,
+                      "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels),
+                      "named": sorted(said, key=said.get), "particles": particles,
                       "caption": None, "line_id": timed_line.line_id, "line": texts.get(timed_line.line_id, ""),
                       "words": words})
         captions.append((direction.caption.strip() or None) if direction else None)
@@ -408,6 +420,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     beats[-1]["t1"] = duration
     _fill_crowds(beats, bundle, located)
     _convert(beats, bundle, located)
+    _write_values(beats, locations)
     _run_all(beats, hook)
     _turn(beats, bundle, located)
     _route(beats)
@@ -419,6 +432,32 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
                     key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
+
+
+def _scenes(sung: list, directions: dict, located: set[str], hook: str, end: float) -> list[str]:
+    """Each line's scene: its direction's, or the one before where that is not drawn, the first line's the hook (both
+    videos open on it). A run of lines on one scene shorter than SCENE_MIN_S keeps the scene before it: round 18's
+    kidney song cut to a picture for a single two-second line six times, and each was gone before the eye found
+    anything in it."""
+    scenes: list[str] = []
+    for line in sung:
+        direction = directions.get(line.line_id)
+        scene = direction.scene if direction else (scenes[-1] if scenes else hook)
+        if not scenes:
+            scene = hook
+        elif scene not in located:
+            scene = scenes[-1]
+        scenes.append(scene)
+    starts = [line.start for line in sung] + [end]
+    k = 0
+    while k < len(scenes):
+        j = k
+        while j + 1 < len(scenes) and scenes[j + 1] == scenes[k]:
+            j += 1
+        if k > 0 and starts[j + 1] - starts[k] < SCENE_MIN_S:
+            scenes[k:j + 1] = [scenes[k - 1]] * (j + 1 - k)
+        k = j + 1
+    return scenes
 
 
 CORE_SAID = 0.6  # the share of the core idea's words a narration sentence says to be the one that says it
@@ -434,9 +473,9 @@ def _says_core_idea(bundle: Bundle) -> int:
 
 def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
-    sentence in the lesson), held through the gaps after it. From the last chorus, or the narration's last
-    sentence that says it, to the end, the core idea, the whole why chain in one line, unless a key line starts
-    later."""
+    sentence in the lesson), held through the gaps after it. From each chorus (the core idea sung), or the
+    narration's last sentence that says it, the core idea, the whole why chain in one line, until a key line
+    starts later: round 19's Rome song held "Gracchi killed → politics settled by force" over its first chorus."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -445,13 +484,11 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
         return  # a bundle written before key lines: no band, the picture as it was
     if video == "song":
         choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
-        finale = choruses[-1] if choruses else len(lines)
-        while finale > 0 and finale - 1 in choruses:
-            finale -= 1  # where the last chorus starts
+        core_from = [i for i in choruses if i - 1 not in choruses]  # where each chorus starts
     else:
-        finale = _says_core_idea(bundle)
+        core_from = [_says_core_idea(bundle)]
     if bundle.core_idea.strip():
-        starts.append((finale, " ".join(bundle.core_idea.split())))
+        starts += [(at, " ".join(bundle.core_idea.split())) for at in core_from]
     starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
     for i, beat in enumerate(beats):
         if beat["line_id"] in order:
@@ -467,6 +504,7 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
     the spaces located on its scene."""
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
     level = dict.fromkeys(builds, CROWD_START)
+    palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
     for beat in beats:
         crowds = []
         for build in builds:
@@ -477,7 +515,7 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             start = level[build]
             level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
             if region in located.get(beat["scene"], set()):
-                crowds.append(Crowd(region=region, label=label, color=marker_colour(label),
+                crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
                                     start=round(start, 4), end=round(end, 4)))
         beat["crowds"] = crowds
 
@@ -499,6 +537,41 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
                        since=scene[c.structure])
             for c in bundle.conversions if c.structure in scene]
+
+
+def _write_values(beats: list[dict], locations: Locations) -> None:
+    """The drawn values each beat writes (SceneLocations.values): an amount from the word that first says it on a
+    beat of its scene, a tick (and an amount no line there says) from the scene's first beat; each stays on every later
+    beat of the scene, as a label does."""
+    marked = {s.scene: s.values for s in locations.scenes if s.values}
+    since: dict[str, list[float]] = {}
+    for scene, values in marked.items():
+        on = [b for b in beats if b["scene"] == scene]
+        if not on:
+            continue
+        words = [w for b in on for w in b["words"]]
+        since[scene] = [on[0]["t0"] if v.tick else next((w.start for w in words if says(w.word, v.text)), on[0]["t0"])
+                        for v in values]
+    for beat in beats:
+        beat["values"] = [Written(text=v.text, at=v.at, side=v.side, since=round(t, 3), tick=v.tick)
+                          for v, t in zip(marked.get(beat["scene"], []), since.get(beat["scene"], [])) if t < beat["t1"]]
+
+
+def says(word: str, value: str) -> bool:
+    """Whether a word says a value's number: the same digits, with no sign the value lacks ("$1,210" and "1,210" say
+    "$1,210"; "10%" does not say "$10")."""
+    number = next((token for token in value.split() if any(c.isdigit() for c in token)), None)
+    if number is None:
+        return False
+    word = word.strip(".,;:!?\"'()")
+
+    def digits(text: str) -> str:
+        return "".join(c for c in text if c.isdigit() or c == ".").strip(".")
+
+    def signs(text: str) -> set[str]:
+        return {c for c in text if not c.isalnum() and c not in ",."}
+
+    return digits(word) == digits(number) and signs(word) <= signs(number)
 
 
 def _within(short: Particles, long: Particles) -> bool:

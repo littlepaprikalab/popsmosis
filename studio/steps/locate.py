@@ -1,7 +1,8 @@
 """Step 4: locate each structure in the art (docs/PLAN.md, section 5).
 
 With the SVG art (an admin's setting for Claude's brain) the art step already wrote the masks
-and locations.json, so there is nothing to do.
+and locations.json, so there is nothing to do. With painted art, a scene the art step drew to scale as SVG
+(art.drawn()) is located from its drawing (art.drawn_locations()), with no SAM; the others as below.
 
 With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each structure (studio/muse.py):
 
@@ -45,6 +46,7 @@ from __future__ import annotations
 import math
 import re
 import shutil
+import sys
 import threading
 from pathlib import Path
 
@@ -83,6 +85,7 @@ JUDGED = 0.2  # a match needs this share of its pixels in some structure's colou
 # almost none is not it. Round 8's "green turbine" came back as a band of brown earth across the picture,
 # with the green turbine below it, and was labelled.
 PAINTED = 0.001
+OWN_PIXELS_MIN = 2000  # pixels of its own colour in the helper's box that make a structure SAM could not trace
 
 BOX_PROMPT = """You find one part in an illustration, for a segmentation model that will then trace it. \
 Say whether the part is in the picture (`seen`) and give the box around all of it as fractions of the \
@@ -101,6 +104,26 @@ class Spot(Strict):
     bottom: float
 
 
+LABELS_PROMPT = """You check where the labels of a textbook picture will be pinned before a video is made from \
+it. Each red dot on the picture, with a name in a white tag beside it, is where that name's label will point. A dot \
+is right when it sits on the thing the name means, anywhere on it, even near its edge. It is wrong when it sits on \
+something else: another part, the background, a layer or region that is not it, or the other one of two look-alike \
+things (the volcano for "Mountain"). List every name whose dot is wrong, and say in a few words what it sits on; \
+list none when every dot is right. Judge by what the picture shows, not by the tag's position: the tag is only \
+placed beside its dot."""
+
+
+class WrongLabel(Strict):
+    name: str
+    on: str
+
+
+class LabelCheck(Strict):
+    """The labels whose dot is not on what they name."""
+
+    wrong: list[WrongLabel]
+
+
 def run(job: Path, ask=brain.ask) -> str:
     if art.painter(job) == "svg":
         if is_done(job):
@@ -111,20 +134,29 @@ def run(job: Path, ask=brain.ask) -> str:
     if not art.is_done(job):
         raise media.StepFailed(f"no {art.painter_of(job).title} art for this bundle; run the art step first")
     media.restart(job, media.LOCATIONS)
-    scenes, left_out, boxed, dropped = [], [], [], 0
+    by_scene, left_out, boxed, dropped = {}, [], [], 0
+    drawn = [scene for scene in bundle.scenes if art.drawn(job, bundle, scene)]
+    for scene in drawn:
+        by_scene[scene.id] = art.drawn_locations(job, bundle, scene)
+        if by_scene[scene.id] is None:
+            raise media.StepFailed(f"scene {scene.id}: no SVG drawing for this bundle; run the art step again")
+        left_out += [f"{s.name} on {scene.id}" for s in scene.structures
+                     if not any(loc.name == s.name for loc in by_scene[scene.id].structures)]
+    painted = [scene for scene in bundle.scenes if scene.id not in by_scene]
     # The scenes at the same time: each waits on SAM and the helper, one structure after another.
-    found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), bundle.scenes, WORKERS)
+    found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), painted, WORKERS)
     repaired = []
-    for scene, (located, how, wrong, done) in zip(bundle.scenes, found_all):
+    for scene, (located, how, wrong, done) in zip(painted, found_all):
         repaired += [f"{scene.id}: {what}" for what in done]
         dropped += wrong
         if len(located) < max(1, math.ceil(len(scene.structures) / 2)):
             missing = [s.name for s in scene.structures if s.name not in located]
             raise media.StepFailed(f"scene {scene.id}: SAM 3.1 found {len(located)} of {len(scene.structures)} "
                                    f"structures; not {', '.join(missing)}")
-        scenes.append(save(job, scene, located, how))
+        by_scene[scene.id] = save(job, scene, located, how)
         left_out += [f"{s.name} on {scene.id}" for s in scene.structures if s.name not in located]
-        boxed += [name for name, by in how.items() if by == "sam-box"]
+        boxed += [name for name, by in how.items() if by in ("sam-box", "helper")]
+    scenes = [by_scene[scene.id] for scene in bundle.scenes]
     locations = Locations(scenes=scenes)
     problems = locations_problems(locations, bundle)
     if problems:  # a bug here, not in the art
@@ -132,7 +164,10 @@ def run(job: Path, ask=brain.ask) -> str:
     write(job / media.LOCATIONS, locations)
     total = sum(len(s.structures) for s in bundle.scenes)
     found = sum(len(s.structures) for s in scenes)
+    in_drawings = sum(len(by_scene[scene.id].structures) for scene in drawn)
     return (f"located {found} of {total} structures with SAM 3.1"
+            + (f" and the SVG drawings ({in_drawings} on {len(drawn)} scene{'s' if len(drawn) != 1 else ''})"
+               if drawn else "")
             + (f", {len(boxed)} in the helper's box" if boxed else "")
             + (f"; dropped {dropped} match{'es' if dropped != 1 else ''} in another structure's colour"
                if dropped else "")
@@ -169,7 +204,56 @@ def find_all(job: Path, scene: Scene, ask) -> tuple[dict[str, tuple[np.ndarray, 
         if result is not None:
             mask, found, by = result
             located[structure.name], how[structure.name] = (mask, found), by
+    # Then the helper looks at where every label would be pinned, and a pin on the wrong thing is found again in the
+    # helper's box, or left out. Round 19's rock cycle pinned "Mountain" on a pale purple band underground: SAM had
+    # found the mountain and the band for "grey mountain", in a picture too muted for the colours to tell them apart.
+    for name in wrong_labels(job, scene, located, picture, ask):
+        structure = next(s for s in scene.structures if s.name == name)
+        again = in_helper_box(job, scene, structure, picture, ask, colours)
+        if again is None:
+            del located[name], how[name]
+        else:
+            located[name], how[name] = (again[0], again[1]), "sam-box"
     return located, how, colours.dropped
+
+
+def wrong_labels(job: Path, scene: Scene, located: dict[str, tuple[np.ndarray, svg.Found]], picture: Path,
+                 ask) -> list[str]:
+    """The located structures whose label anchor the helper sees on something else; none when the check fails."""
+    if not located:
+        return []
+    import tempfile
+
+    import skia
+
+    from studio.render import primitives as p
+
+    image = skia.Image.open(str(picture))
+    surface = skia.Surface(image.width(), image.height())
+    canvas = surface.getCanvas()
+    canvas.drawImage(image, 0, 0)
+    f = p.font("bold", 26)
+    for name, (_, found) in located.items():
+        x, y = found.label_anchor.x, found.label_anchor.y
+        canvas.drawCircle(x, y, 12, skia.Paint(AntiAlias=True, Color=skia.ColorWHITE))
+        canvas.drawCircle(x, y, 8, skia.Paint(AntiAlias=True, Color=p.argb("#FF2D55")))
+        width = p.text_width(f, name)
+        left = x + 18 if x + 18 + width + 12 < image.width() else x - 18 - width - 12
+        canvas.drawRoundRect(skia.Rect.MakeXYWH(left, y - 18, width + 12, 34), 8, 8,
+                             skia.Paint(AntiAlias=True, Color=p.argb("#FFFFFF", 0.92)))
+        p.draw_text(canvas, name, left + 6, y + p.cap_height(f) / 2, f, p.argb("#111111"))
+    names = ", ".join(located)
+    try:
+        with tempfile.TemporaryDirectory(prefix="popsmosis-labels-") as tmp:
+            preview = Path(tmp) / f"{scene.id}.png"
+            surface.makeImageSnapshot().save(str(preview), skia.kPNG)
+            check = LabelCheck(**ask("helper", f"The picture was asked for as: {scene.image_prompt}\n"
+                                               f"The names pinned on it: {names}.", LabelCheck, [preview],
+                                     system=LABELS_PROMPT, label=f"label check {scene.id}"))
+    except Exception as e:  # the check guards the labels; a check that fails never fails the step
+        print(f"locate: {scene.id}: the label check failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return []
+    return [w.name for w in check.wrong if w.name in located]
 
 
 def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
@@ -186,12 +270,23 @@ def find(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
             found = svg.locate(mask)
             if found is not None:
                 return mask, found, "sam"
+    return in_helper_box(job, scene, structure, picture, ask, colours)
+
+
+def in_helper_box(job: Path, scene: Scene, structure: Structure, picture: Path, ask,
+                  colours: Colours) -> tuple[np.ndarray, svg.Found, str] | None:
+    """The one thing SAM finds in the helper's box around the structure; None when there is none."""
     box = helper_box(scene, structure, picture, ask)
     if box is None:
         return None
-    matched = [m for m in muse.segment(job, label + " box", picture, box=box) if colours.fits(m.mask, structure)]
+    label = f"locate {scene.id} {structure.name} box"
+    matched = [m for m in muse.segment(job, label, picture, box=box) if colours.fits(m.mask, structure)]
     if not matched:
-        return None
+        # SAM traces shapes: a loose tangle (round 19's glomerulus, a knot of thin pink tubes) is no one shape to
+        # it, even boxed. Painted in its own colour, it is the pixels in the box of that colour.
+        mask = colours.own(structure, box)
+        found = svg.locate(mask) if mask.sum() >= OWN_PIXELS_MIN else None
+        return (mask, found, "helper") if found is not None else None
     best = max(matched, key=lambda m: -1.0 if m.confidence is None else m.confidence)
     found = svg.locate(best.mask)
     return (best.mask, found, "sam-box") if found is not None else None
@@ -281,6 +376,17 @@ class Colours:
         if own + other < JUDGED * len(pixels):
             return background, (0.0 if (self.painted & own_colour).any() else None)
         return background, float(own / (own + other))
+
+    def own(self, structure: Structure, box: Box) -> np.ndarray:
+        """The pixels in the box painted in the structure's colour: nearer its colour than any other structure's or
+        the background's, and near enough to count as it."""
+        mine = self.names.index(structure.name)
+        mask = np.zeros(self.pixels.shape[:2], bool)
+        x0, y0, x1, y1 = (int(v) for v in (box.x0, box.y0, box.x1, box.y1))
+        window = self.pixels[y0:y1, x0:x1]
+        far = distance(window.reshape(-1, 3), self.refs).reshape(*window.shape[:2], -1)
+        mask[y0:y1, x0:x1] = (far.argmin(-1) == mine) & (far.min(-1) <= CLOSE)
+        return mask
 
     def fits(self, mask: np.ndarray, structure: Structure) -> bool:
         """Whether a match can be the structure: not mostly the background, nor another structure's colour."""

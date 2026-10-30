@@ -761,6 +761,429 @@ voice are not priced), and SAM found 20 of 20 parts.
   mistake, as it missed the anaphase count, every other picture carries a small
   "AI-generated picture" tag at its bottom left, the SVG drawings too.
 
+## Round 17: three topics drawn at random, each sung by Eleven Music and by Lyria
+
+Oct 30. Three topics drawn at random from 24 that no round and no scorecard topic had used:
+**World History: why the Roman Republic fell** ("How did Rome go from a republic to an
+empire?"), the first history topic through the videos; **6th grade science: the rock cycle**
+("How does one kind of rock turn into another?"); and **Anatomy and Physiology: how the kidneys
+filter blood** ("How does a nephron make urine?"). Each ran `plan` on Claude Opus 5.5 at high
+effort, then `make` with what `/admin/studio` has now written to the job's `settings.json`
+(Gemini 3.1 Flash Image painting, Eleven Music singing). The finished job was then copied, the
+copy's song switched to Lyria 3.5, and `make` run on it again: the song, its timing, the
+timeline and the videos were made again on the same lesson, pictures and narration, so the two
+singers are compared on the same lyrics. All three topics ran at once on one 4-core container;
+nothing was posted.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Audience | high school | 6th grade | high school |
+| Fact-check | passed in 2 rounds, 1 line fixed; 1 motion left out | passed in 1 round | passed in 1 round |
+| Pictures | 7 for 6 scenes | 5 for 5 | 4 for 4 |
+| Located | 15 of 17, 2 by the helper's box | 15 of 16 | 13 of 14, 3 by the box |
+| Narration | 188 s | 182 s | 181 s |
+| Lesson (bundle, audit, fact-check) | $2.11, 14 min | $1.83, 12 min | $1.79, 11 min |
+| Videos | $0.63 + 1,137 credits | $0.44 + 1,126 credits | $0.41 + 1,122 credits |
+| Topic to both videos | 32 min | 27 min | 20 min |
+| Sung again by Lyria, to both videos | 17 min, $0.08 | 19 min, $0.08 | 18 min, $0.08 |
+
+The videos' dollars are the pictures (Gemini, about 7 cents each with its check) and SAM; the
+credits are the narration's. Eleven Music sends no cost header, so its songs are unpriced; a
+Lyria song is $0.08. The times are long because the three topics' timing steps ran at once:
+Demucs took 3 to 7 minutes a song, and the timing step 4 to 14.
+
+### The two singers
+
+| | Eleven Music: Rome | Rocks | Kidneys | Lyria: Rome | Rocks | Kidneys |
+|---|---|---|---|---|---|---|
+| Made in | 16 s | 16 s | 22 s | 46 s | 38 s | 43 s |
+| Length, planned 127 / 125 / 132 s | 126.6 s | 125.0 s | 132.0 s | 131.6 s | 130.8 s | 133.3 s |
+| Aligner unsure of | 7 of 58 lines | 0 of 50 | 0 of 55 | 9 of 58 | 12 of 50 | 16 of 55 |
+| Mean aligner score | 0.55 | 0.67 | 0.67 | 0.61 | 0.55 | 0.43 |
+| Chorus drift, at most | 3.33 s | 0.04 s | 0.06 s | 1.11 s | 2.67 s | 1.09 s |
+
+Both sang from the first second, at the tempo asked (a rough beat count of each song), and
+Lyria sang every line as written in two of three songs.
+
+- **Eleven Music timed far better on two of three.** On the rock cycle and the kidneys the
+  aligner was sure of every line and the choruses repeated to within 0.06 s, as in round 3. Its
+  sections are pinned, so it keeps the planned length to the tenth of a second.
+- **Rome was the exception, on both.** Its lines are long and full of names and dates ("And the
+  Senate named him Augustus in twenty-seven BC"), one bar each at 110 bpm. Eleven Music's
+  last chorus came out with one line timed at 5.4 s and the next at 0.8 s, the outro's "Cross
+  the Rubicon, there's no way back home" at no length at all (it never shows in the band), and
+  the second verse's first line, ten words, in 0.3 s. The aligner scored that line 0.34,
+  just above the 0.3 that counts as unsure, so nothing flagged it; a check on words a second
+  would. Lyria's Rome drifted less and timed every line at 0.56 s or more.
+- **Lyria left the kidney song's outro out, and the timing step does not know.** Lyria's answer
+  carries a `text` of what it sang (kept in `audio/song.plan.json`): for the kidneys it stops
+  after the last chorus, without the three outro lines, and its vocals go quiet at 130 s. The
+  aligner, asked to find the outro after the last chorus, put the chorus's last four lines and
+  the outro's three into the song's last 7.4 s, about a second each (scores 0.02 to 0.10), so
+  the band flashes lines that are never sung. For Eleven Music the step marks a section with no
+  singing as not sung; for Lyria, whose sections are not pinned, that check is skipped. Reading
+  Lyria's text and marking the lines it leaves out as not sung would fix this.
+- **Lyria says when it sang each line, sometimes.** Two of its three texts give each line a
+  start time on the bar grid (`[12.5:] Deep underground, the magma cools so slow`). They
+  match the aligner: every rock-cycle line within 0.9 s of where it was aligned (most 0.1 to
+  0.5 s after, the voice coming in after the bar), every Rome line within 1.7 s, chorus lines
+  the aligner scored unsure among them. They could give the aligner each line's window, or
+  check it. The kidney text had no times.
+- **Lyria makes the song in 40 s or so, Eleven Music in 20.** Lyria ran 1 to 6 s past the
+  planned length.
+
+### The pictures
+
+- **Fixed: a label on the wrong part, from naming colours wrong** (`studio/steps/art.py`,
+  `colour_word`). The art step asks for each part's colour by name, and named Material Pink
+  (#F06292, hue 340) "red" and Material Purple (#9C27B0, hue 291) "pink": purple stopped at 290
+  degrees, pink at 335. Rome's overview, a timeline the bundle asked for as blue, pink and
+  purple, was asked for as "Roman Republic blue, Civil wars red, Roman Empire light pink", and
+  painted that way; SAM's "pink bar" then found the Empire, and the label "Civil wars" went on
+  it for the whole video. Purple now runs to 310, pink to 345, and a light red is called pink
+  (#FFC0CB was "light red"). Of 159 colours in this round's and the scorecard's bundles, 9 are
+  named differently, each now as it looks. Repainted with the fix ($0.08 for the picture and
+  its check), the timeline came back blue, pink and purple, and the two labels sat on their own
+  sections. Its blue came back a deep navy, far darker than asked, and the Republic was left
+  out, as round 8's navy lumen was.
+- **A map of Caesar's time drawn with today's borders.** The bundle asked for "Gaul, the land
+  of modern France" and "the Italian peninsula", and Gemini drew modern France and modern Italy
+  (its first try had every European border of today and was refused, for a stray dot). The
+  Rubicon, which in 49 BC divided Italy from Cisalpine Gaul, Caesar's own province, sits inside
+  "Italy"; the song sings, rightly, that he crossed it into Italy. The checker passed the map.
+  The Rubicon, a short cyan squiggle, was not located, so the army's route runs from Gaul's
+  label to Italy's across the sea west of Corsica. History maps need the period's borders, and
+  saying so to the checker.
+- **A box mask with holes shows as speckle.** SAM could not find the kidney close-up's Bowman's
+  capsule, a pale ring and the pale space inside it, by any phrase; the helper's box gave a
+  mask with holes in the pale space, and each time the song spotlit the capsule the holes
+  darkened to grey blotches around the glomerulus (round 1's speckle, on a pale space).
+- **The science and the everyday scenes look like the textbook.** The kidneys, ureters and
+  bladder in the body; the glomerulus in Bowman's capsule; a nephron with its loop, the
+  capillaries around it and a collecting duct; the rock cycle as block diagrams a 6th grader
+  can read, with a volcano, a magma chamber and a purple metamorphic band. The everyday scenes
+  are clean (a backpack, a bed and a bin; crayon shavings, a pressed block, a swirled block and
+  melted wax; an office, a boss with pay envelopes and his workers), and so are Rome's: small
+  farms beside a walled estate, a general on horseback between the Senate and his legions,
+  Augustus as the Prima Porta statue.
+- **Rome's overview was a bare bar.** A timeline in three colours is a diagram with nothing
+  in it to look at, on screen for 22 of the song's lines (50 s); a topic told in time needs its
+  overview to be a scene, or several.
+
+### The lessons
+
+All three passed the fact audit in one call and the fact-check, 97 to 102 lines supported and
+none unsupported. The rock cycle was written for the 6th grade its course named; the kidneys,
+asked for in an anatomy course with no grade, for high school. The fact-check's one fix
+(Rome) turned "You've seen this pattern before" into "The same pattern shows up later", since
+the facts do not say the learner has seen it, and it left out one marked motion, an army
+travelling from the legions to the Senate. The songs carry their metaphors through
+(cleaning out a backpack; a crayon shaved, pressed and melted; a boss who pays the workers), and
+each bridge walks a case the facts give: diabetes filling the filtrate with more glucose than
+the carriers can take back; limestone to marble to sediment without ever being igneous; Sulla
+marching on Rome.
+
+## Round 18: the same three topics, sung, and watched as a student would
+
+Oct 30. Round 17's three topics again, after the changes its videos asked for: the songs'
+lines short and sung (6 to 9 syllables, verses of 8 lines, devices from songwriting rather
+than sentences), each section given the time its lines take to sing and the song as long as
+that makes it (90 to 240 s), Lyria's own account of what it sang used to find a line it left
+out; labels that stay where their part is, while what moves is a particle (a glucose
+hexagon, a water drop, a short symbol such as H⁺ printed on its dot) named once in a legend;
+the pictures asked for no label lines; the particles taking each leg of a flow through the
+parts themselves where their outlines join (`studio/render/routing.py`), with no arrows
+drawn; and a narration editor (`studio/steps/narration.py`). Same set-up as round 17: `plan`
+on Claude Opus 5.5 at high effort, Gemini painting, Eleven Music singing, then a copy sung by
+Lyria. Nothing was posted.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Lesson (bundle, audit, fact-check) | $2.12 | $1.68 | $1.89 |
+| Pictures and SAM | $0.55 | $0.96, one painted again twice | $0.68, one painted again |
+| Song, Eleven Music / Lyria | 158 s / 182 s | 154 s / 154 s | 158 s / 173 s |
+| Narration | 180 s | 178 s | 191 s |
+
+The kidneys' Lyria song was blocked once (PROHIBITED_CONTENT) and the studio sang it with
+Eleven Music instead, silently: a round has to read `provider` in `song.plan.json` before
+calling a song Lyria's. Asked again, Lyria sang it. Two pictures came back with painted
+pointer lines where labels would hang (the "sticks"): `NO_TEXT` now rules them out and the
+picture check lists them, and the repainted pictures were clean.
+
+### The songs
+
+Measured on the vocals Demucs separated, round 17's songs were sung at 4 to 6 words a second,
+a rap's pace, and round 18's at 2.5 to 3.3. Eleven Music's sections are all about as loud as
+each other (the kidneys': verse -20 dB, chorus -19, bridge -17), where Lyria's chorus stands
+out (-19 against -21 to -23), which may be why Eleven Music still sounds like shouting. Rome's
+song sang its story out of order: Augustus, then "Eighty-eight BCE, rewind" for Sulla in the
+bridge. The kidneys' song video cut to a picture for a single two-second line six times.
+
+### Watched as a student
+
+Each lesson video was watched a frame a line, asking at each whether a student who has not
+met the topic would know what they are looking at and why it comes next:
+
+- **No question to answer.** The kidneys' hook gave five facts (where the kidneys sit, 180
+  liters, the bladder, 99 % taken back, a million nephrons) and never asked anything; Rome's
+  showed the US Capitol. The question was on screen, in the key line, but the voice did not
+  ask it.
+- **Talking about what is not there.** "Rome elected two consuls each year" over four
+  generals; "lava that cools fast at the surface makes rock with tiny crystals" over a
+  volcano with no lava and no igneous rock drawn at all; "each kidney holds about a million
+  nephrons" over a body with no nephron in it, then a cut to a nephron from nowhere.
+- **The correction before what it corrects.** Rome's "a common mistake is to think Julius
+  Caesar was Rome's first emperor" came 32 seconds in, a minute before Caesar did, as the
+  prompt asked ("right after the overview").
+- **Side roads.** Pumice that floats, granite countertops, "the same osmosis your own cells
+  know", Kaiser and Czar: each true, each a turn off the path.
+- **The ending three times.** The kidneys' lesson told diabetes, then the core idea, then
+  went back to the body for "blood flows in, and urine flows out".
+- **Dots for people.** Rome's armies marched as purple dots marked "troops", which read as
+  sparks next to the drawn soldiers.
+- **A crossing named but not shown.** The kidneys' close-up named secretion with nothing
+  moving: the fact-check had cut its motion, since no fact put secretion in the proximal
+  tubule the close-up was of.
+
+The narration editor, tried on the kidneys' narration by itself ($0.15), fixed the order: it
+opened on "So how does your body keep what it needs and get rid of its waste?", told the
+diabetes case after the path, and ended once. It cannot fix a sentence about something no
+picture draws, since the pictures are planned before it reads anything. Round 19 writes the
+lesson first.
+
+## Round 19: the lesson written first, then everything around it
+
+Oct 30. The same three topics through the new bundle step: the script first (`studio/steps/
+script.py`), the bundle call handed it and held to it, then the narration editor. In the
+videos, particles take each leg through the parts, a cut into a close-up pushes in on the part
+first, and a picture shown for a single sung line gives way to the one before it.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Script | $0.36, 2.6 min | $0.19, 1.3 min | $0.29, 2.7 min |
+| Bundle | $1.55 | $1.37 | $1.92, 14 min |
+| Narration edit | $0.07: 6 of 35 reworded, none moved | $0.11: 11 of 33 | $0.07: 4 of 31 |
+| Kept of the script | all: essence, facts, 35 sentences | all, 33 | all, 31 |
+| Fact-check | passed, 1 round, no fixes | passed, 1 round | passed, 1 round |
+| Narration | 176 s | 155 s | 181 s (stand-in voice) |
+
+Every bundle kept its script whole: the facts and the essence word for word, every sentence on
+the scene the script put it, none reworded. The editor then moved no sentence, since the script
+already had them in order, and only smoothed words. All three fact-checks passed in one round
+with nothing to fix, against round 18's fixes and a motion cut.
+
+### The lessons
+
+Read and watched as a student would, each is now one explanation. Each hook ends on the
+question ("So how does one kind of rock turn into another?"); the analogy is laid out as
+signposts the path then uses ("That's putting things back in the backpack: reabsorption";
+"just like the pressed crayon shavings"); each step is signposted ("Now for real rock,
+starting with the volcano", "Next, look at the mountain", "Back in the nephron"); the predict
+question comes mid-way; the misconception comes where it forms (Caesar corrected right after
+his death, not before he appears); a worked case comes after the path (a granite mountain to
+sandstone to quartzite; diabetes); and each ends once, on the core idea. Rome's story runs in
+time order, year by year, from the Gracchi to Augustus, and its song does too.
+
+What was still wrong:
+
+- **The rock cycle never labelled igneous or metamorphic rock.** The script's overview asked
+  for "a zone of deep rock" rather than metamorphic rock, so no structure carried the words
+  the narration says. The script now asks for each key term that is a thing to be drawn and
+  named in the narration's words.
+- **A label on the wrong thing.** SAM answered "grey mountain" with the mountain and a pale
+  purple band underground (the picture was too muted for the colour check to tell them
+  apart), and "Mountain" was pinned on the band; "Volcano" took the whole ground. The locate
+  step now has the helper look at each scene with every label's pin drawn on it, and finds a
+  wrong one again in the helper's box: on the same picture it moved both onto the right
+  things, for under 3 cents a topic.
+- **A part SAM could not trace.** The kidneys' glomerulus, a knot of thin pink tubes, was no
+  one shape to SAM even boxed, and its close-up went unlabelled. A structure SAM cannot trace
+  in the helper's box is now the pixels there in its own colour.
+- **Rome's overview was a painted map,** and it came back wrong (the Senate house in the sea,
+  Marius in Sicily), with the art check's notice of it on screen for the whole overview. A
+  story in time now lines its people up left to right, like a timeline, instead.
+- **Rome's song corrected Caesar before singing him,** in the first pre-chorus, which the brief
+  gives the misconception. It now moves to the second when the first verse has not reached it.
+- **The editor drew one sentence out to 25 words,** and the caption shrank to fit. A sentence
+  it lengthens past 22 words keeps the writer's words.
+
+### The songs and the pictures behind them
+
+No song cut to a picture for less than 4.3 s (round 18's kidney song did so six times for 2 s).
+The songs sit on the overview for most of their length (Rome's for 48 s and then 71 s), the
+camera moving over it. Timing Lyria's songs is still the weak point: the rock cycle's had 20 of
+50 lines the aligner was unsure of, against 5 for Eleven Music's, since Lyria is aligned over
+the whole song at once and sings backing vocals and echoes the lyrics do not have.
+
+### ElevenLabs ran out
+
+The kidneys' Eleven Music song was refused: the ElevenLabs quota (131,000 credits) was spent,
+45 left, the song needing 2,197. Narration is ElevenLabs too, so the kidneys were made with
+Lyria's song and, for this round only, a stand-in voice: Gemini TTS (gemini-3.8-flash-tts) a
+sentence at a time, timed by the timing step's MMS aligner and written as the character
+timings the ElevenLabs call returns (a scratch script, not a studio feature). Gemini TTS reads
+any instruction aloud ("Say warmly:" made a 5.5 s sentence 9.7 s), so it is given the
+sentences alone; one call for the whole narration never came back.
+
+## Round 20: the same three topics, with round 19's fixes
+
+Oct 30. The script asked to draw the key terms and to line a story in time up as a timeline
+of its people; the locate step checking where each label is pinned and finding an untraceable
+part by its colour; a young audience's song asked for the pop they play. ElevenLabs had no
+credits left, so every song is Lyria's and the narration the stand-in voice (round 19), one job
+a topic.
+
+| | Rome | Rock cycle | Kidneys |
+|---|---|---|---|
+| Lesson and pictures | $2.67 | $2.74 | $3.19 |
+| Script kept | all, 32 sentences | all, 31 | all, 31 |
+| Fact-check | passed in 2 rounds, 1 fix | passed in 1 | passed in 1 |
+| Located | 26 of 26, 14 in the helper's box | 21 of 23 | 27 of 27 |
+
+- **Rome** opens on July and August, named for Caesar and Augustus ("So how did a republic
+  that hated kings end up with an emperor?"), lays the club analogy out as signposts (the
+  committee is the Senate, the captains the consuls, the bouncers the legions: "once a captain
+  pays them, they obey him"), and walks a timeline line-up of the Senate, Marius, Sulla, Caesar
+  and Augustus, each with his legions, the camera moving along it as each is named. The one
+  thing that moved, the pay, travels from Marius to his legions. Caesar is corrected right
+  after the Ides of March, and the song's second pre-chorus corrects him after the verse that
+  sings him.
+- **The rock cycle** labels igneous, sedimentary and metamorphic rock where each forms (the
+  igneous rock was painted too faintly for SAM, the helper's box or its colour to find, and
+  went unlabelled), maps each kind to a crayon (shavings, pressed block, bent block, melted
+  into a mold), and works Hawaii's black sand as its case.
+- **The kidneys** show the nephron as "one of about a million tiny tubes like this", go into
+  each close-up from the step that needs it and back ("Back on the main path"), and every part
+  was located, the glomerulus included.
+
+Still in the way: the art check's notice card, which lists what a picture still gets wrong
+beside it, stood beside the Rome analogy for the whole scene, for four committee members where
+the analogy had five. An analogy's picture now discloses nothing: it cannot teach the topic
+wrong. Elsewhere the card is a choice the product made, and it is on screen whenever a picture
+keeps a mistake (the rock cycle's metamorphic rock "far above the magma").
+
+## Round 21: three topics the studio had never seen
+
+Oct 30. Three topics drawn from the pool round 17 drew from, none tuned on: **AP World
+History: how the Silk Road connected the world**, **7th grade life science: how the stomach
+and intestines digest food** and **Anatomy and Physiology: how the lungs exchange gases**. The
+draw first gave a second history topic (the causes of World War I); it was drawn again from
+outside history, for a third subject. Lyria and the stand-in voice, as round 20.
+
+| | Silk Road | Digestion | Lungs |
+|---|---|---|---|
+| Lesson and pictures | $2.96 | $2.89 | $2.90 |
+| Audience | high school | 7th grade | high school |
+| Script kept | all, 31 sentences | all, 29 | all, 32 |
+| Fact-check | passed in 1 round | passed in 2, 2 fixes | passed in 1 |
+
+Each is one explanation, in the shape the script asks for: a hook that ends on the question
+(paper and silk from China; a sandwich gone in a second that your cells cannot use; the lungs'
+70 square meters), an analogy whose parts become signposts (a relay race whose handoff zones
+are oasis cities; a LEGO model taken apart into bricks small enough for the "mail slot" of the
+intestine's wall; a train at a crowded platform, its open doors the respiratory membrane), the
+steps in order with "First", "Next", "Back on the map", a predict question (what happens to the
+price of silk at each stop?), the misconception where it forms (one road travelled end to end;
+the stomach doing most of the digestion; the lungs pumping oxygen), a worked case after the
+path (the Black Death riding the relay; lactose intolerance; pneumonia) and one ending.
+
+### The songs, heard by Gemini
+
+None of these songs could be heard here, so Gemini (gemini-3.8-flash) listened to each, as a
+producer and as a 16-year-old (a scratch script, under a cent a song). It is one model's ears,
+so its numbers are for comparing versions of a song, not alone, but it tells a bad song from a
+good one: round 17's kidney song, sung at 4 to 5 words a second, it heard as "spoken or
+rapped", melody 4 of 10, overall 6.5, and it caught round 17's Rome song stepping back in time.
+
+| | Vocals | Melody | Chorus sticks | Would play it | Overall |
+|---|---|---|---|---|---|
+| Round 17, kidneys, Eleven Music | spoken or rapped | 4 | 8 | 5 | 6.5 |
+| Round 18, kidneys, Eleven Music | sung | 8 | 8 | 7 | 7.5 |
+| Round 18, kidneys, Lyria | sung | 8 | 8 | 7 | 8 |
+| Round 18, kidneys, Eleven Music with section cues | sung | 8 | 9 | 7 | 8 |
+| Round 19, rock cycle, Eleven Music / Lyria | sung | 7 / 8 | 8 / 8 | 4 / 5 | 7 / 7 |
+| Round 19, Rome, Eleven Music / Lyria | mostly sung / sung | 7 / 8 | 8 / 9 | 6 / 7 | 7 / 8 |
+| Round 20, Rome / rock cycle, Lyria | sung | 8 / 8 | 9 / 9 | 7 / 6 | 8 / 8 |
+| Round 21, Silk Road / digestion, Lyria | sung | 8 / 8 | 8 / 8 | 7 / 6 | 8 / 7.5 |
+
+Lyria's songs heard a little better than Eleven Music's on the same lyrics, as the owner heard
+them. The rock cycle's round 19 song, asked for "playful pop", it heard as "an elementary school
+curriculum jingle" (would play it: 4); round 20's, written before the young style changed, 6.
+What it still marks down: bridges crammed with facts, and a corny shouted line in the 7th grade
+song ("Bloated belly!").
+
+The section cues are a scratch test on Eleven Music (each section's chunk given its own
+delivery: soft and close in the verses, full in the chorus, stripped back in the bridge, and
+shouting, rap and rushing avoided), made from round 18's kidney lyrics, with a second version
+given more time a line; neither is in the studio, and they wait for the owner's ears.
+
+### Then, from what rounds 20 and 21 showed
+
+- **A note that taught a falsehood.** The helper's note beside round 20's kidney close-up said its glucose
+  carriers belonged on the capillary's side, which is false for the carriers that take glucose out of the
+  filtrate: the card meant to disclose a flawed picture taught something wrong itself. A note is now shown
+  only once the brain, given the picture and the lesson's facts, has not found it false or about something the
+  picture does not show (`confirmed_notes`). Asked to keep only notes it was sure of, it dropped 7 of 8 and
+  flipped on one between two asks, so it keeps what it cannot settle: the video would rather disclose a doubt
+  than hide a mistake. Told so, it kept 5 of 7 notes on rounds 20 and 21 and still dropped the false one.
+- **Too much on screen.** Round 21's digestion overview, for a 7th grader, showed seven labels, two reaction
+  pills ("food → chyme") and a five-row legend at once. The timeline now records the parts each line says,
+  and past four labels on screen, a label (and its reaction pill) rests faint unless this line or the one
+  before names its part, it is spotlit or framed, or particles travel to it. Every label stays where its part
+  is; the eye goes to the one the voice means.
+- **A stale banner over the chorus.** The song showed the last verse's key line over its first two choruses
+  ("Gracchi killed → politics settled by force"). Every chorus now shows the core idea it sings.
+
+Rounds 20 and 21 were drawn again with all of these (timeline and render only, no paid calls).
+
+## Round 22: three more new topics, one of them abstract
+
+Oct 30. Every fix above, on three topics drawn from subjects not yet tried: **AP Biology: how
+natural selection works** ("Is evolution the same thing as natural selection?"), **Environmental
+Science: how greenhouse gases warm the Earth**, and **Personal Finance: how compound interest
+grows money**. The draw first gave plate tectonics, too near the rock cycle; it was drawn again
+between the two topics with no process to draw, the Pythagorean theorem and compound interest.
+Lyria and the stand-in voice; $9.17 for the three ($3.04, $3.05, $3.09), every script kept whole,
+the fact-checks passed (natural selection's with 2 fixes in 2 rounds).
+
+- **Natural selection** is the night's clearest video: a vending machine restocked by its sales
+  as the analogy, three generations of beetles painted side by side with a bar under each
+  shifting from green to brown, a bird's close-up where the green beetle stands out ("Which
+  beetles do you think it spots first?"), the misconception right after (no beetle changed
+  colour), antibiotic resistance as the case in two dishes, and a rockfall for drift, so the
+  ending can answer the question: selection is one cause of evolution, not the same thing.
+- **Greenhouse gases**: a bathtub with its drain partly plugged; the close-up of the air brings
+  nitrogen, oxygen, carbon dioxide, water vapour and methane forward one at a time as each is
+  named, the rest resting.
+- **Compound interest** reads well (a snowball rolling down the hill of time; $1,000 at 10 %
+  worked year by year; a close-up of the $110 that shows the $10 interest earned) but its
+  painted chart contradicts it: simple-interest bars taller than the compound ones and every
+  year's interest the same height, the four mistakes the check found listed beside it for the
+  whole overview. A painter cannot draw numbers to scale; a scene with axes needs drawing (the
+  studio's SVG art), not painting. Its hook also gave the answer away before the question,
+  which the script asks it not to.
+
+Gemini heard the three songs as sung: overall 8 (natural selection, greenhouse) and 7 (compound
+interest, "cluttered with numbers").
+
+### Then: the math drawn, and its numbers written
+
+Compound interest again, from a copy of round 22's job, with its four chart scenes drawn by
+Claude as SVG (the overview's bars, the stacked bar, the two savers' curves, the credit card's
+bars) and the hook and analogy kept as Gemini painted them; the stacked bar marked `to_scale` by
+hand, since the bundle came before the field. Each drawing took one try, about $0.07, and came
+out to the facts' numbers exactly: $1,000 of principal as 550 px, the years' interest as 55, 60.5
+and 66.55 px ($100, $110, $121), simple interest's totals as 605, 660 and 715 px. No notice card:
+nothing was wrong to disclose. Two things the first render showed, both fixed: the graph look
+flattened each block's outline into its own colour, so the three years of interest ran together
+as one gold slab (now a darker outline, svg.LOOK 2); and a chart read only by its bars is half
+read. Drawn again, the drawer marked its values ("$1,210" over the year-2 bar, "Year 2" under
+it), and each amount now appears on the word that says it: "$1,100" at 76.9 s, "$1,210" at 90.8 s,
+"$1,331" at 126.6 s, "$10,290" and "$5,740" as the two savers are compared. Still to fix: the close-up
+wrote "One hundred dollars" (its sentence spells it out; the drawer now writes figures), and its
+pills crowd the thin top blocks, which is what a director's review would catch
+(docs/director-review.md).
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
@@ -778,6 +1201,11 @@ python -m studio show <id> --brief
 ```
 
 For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
+
+To hear a lesson sung by the other singer (round 17), copy the finished job, set
+`{"song": {"provider": "gemini"}}` (or `"elevenlabs"`) in the copy's `settings.json`, and run
+`make` on the copy: it makes the song, its timing, the timeline and the videos again, and
+keeps the rest.
 
 These rounds set the brain and the painter with environment variables (`BRAIN_PROVIDER`,
 `ART_PROVIDER`), which the studio no longer reads: an admin sets both on `/admin/studio`

@@ -211,7 +211,7 @@ def timings(the_bundle: Bundle) -> dict[str, Timing]:
 # By line: the scene, what it reveals (the word heard), the spotlight, the camera's target and zoom.
 SONG_DIRECTION = {
     "v1-1": ("hook", [("Thylakoid", "thylakoid")], None, None, 1.0),
-    "v1-2": ("overview", [("Thylakoid", "Every")], None, None, 1.0),
+    "v1-2": ("overview", [("Thylakoid", "Each")], None, None, 1.0),
     "c1-1": ("overview", [], None, None, 1.0),
     "v2-1": ("overview", [("Cytochrome b6f", "b6f")], "Cytochrome b6f", "Cytochrome b6f", 1.8),
     "c2-1": ("overview", [], "Cytochrome b6f", None, 1.0),

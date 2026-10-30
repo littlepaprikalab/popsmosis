@@ -31,7 +31,7 @@ PHOTOSYNTHESIS = {
 def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
     lines = [
         Line("lyric", "v1-1", "Photosystem II splits water for electrons"),
-        Line("lyric", "v1-2", "Every electron hand-off pumps a proton"),
+        Line("lyric", "v1-2", "Each electron hand-off pumps a proton"),
         Line("lyric", "v1-3", "ATP synthase turns the proton flow to ATP"),
     ]
     checks = ask_checker(lines, lines, PHOTOSYNTHESIS, "", brain.ask, 1)
@@ -42,7 +42,7 @@ def test_the_fact_check_flags_every_hand_off_pumping_a_proton(monkeypatch):
 
     seeded = checks["lyric:v1-2"]
     assert seeded.verdict == "UNSUPPORTED"
-    assert seeded.corrected and seeded.corrected != "Every electron hand-off pumps a proton"
+    assert seeded.corrected and seeded.corrected != "Each electron hand-off pumps a proton"
     assert checks["lyric:v1-1"].verdict == "SUPPORTED"
     assert checks["lyric:v1-3"].verdict == "SUPPORTED"
 
