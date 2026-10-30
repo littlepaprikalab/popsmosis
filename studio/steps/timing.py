@@ -16,6 +16,12 @@ repeat more than DRIFT_S away from the median of its repeats is flagged in the
 report and in the step's summary line; the timing is still written, since the
 renderer can live with it, but a flagged section is the one to regenerate.
 
+Not sung: Eleven Music sometimes makes a chunk with no singing in it (an intro left
+instrumental). A pinned section whose own chunk holds less than SUNG_S of singing has
+its lines marked not sung, timed at no length where the chunk ends, so the videos
+never show them and the aligner does not take them out of the next section's audio.
+The report and the summary line name them.
+
 torch, torchaudio and demucs are imported only when the song is aligned, so the rest
 of the studio (and its tests) load without them. Both models run on this machine, so
 calls.jsonl logs them with their time and no cost (studio/ledger.py).
@@ -45,6 +51,13 @@ VOCALS = "audio/song.vocals.wav"
 DRIFT_S = 0.5
 MARGIN_S = 2.0  # how far past its planned ends each section's window reaches
 LOW_SCORE = 0.3  # a line the aligner is this unsure of was probably sung differently
+# A section is sung when its chunk holds at least SUNG_S of vocals within QUIET_DB of the song's loud singing
+# (its LOUD_PERCENTILE level, every FRAME_S). The unsung intro of Oct 30 sat 53 to 71 dB below it, the singing
+# within 10 dB; a pickup into the next section, or a breath, is shorter than SUNG_S.
+SUNG_S = 0.5
+QUIET_DB = 30.0
+LOUD_PERCENTILE = 95
+FRAME_S = 0.05
 SAMPLE_RATE = 16000
 CHUNK_S = 30  # the aligner hears a longer window this much at a time (_emission)
 CONTEXT_S = 5  # with this much of the audio either side of each piece
@@ -246,11 +259,21 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     planned_ms = sum(s["duration_ms"] for s in plan["sections"])
     scale = length * 1000 / planned_ms if planned_ms else 1.0  # the song can run a little long or short
 
+    levels = vocal_levels(vocals) if plan.get("sections_pinned", True) else None
     lines, scores = [], {}
     for section in windows(plan):
-        t0 = max(0.0, section["start_ms"] * scale / 1000 - MARGIN_S)
-        t1 = min(length, (section["start_ms"] + section["duration_ms"]) * scale / 1000 + MARGIN_S)
+        start = section["start_ms"] * scale / 1000
+        end = min(length, (section["start_ms"] + section["duration_ms"]) * scale / 1000)
         previous = lines[-1].end if lines else 0.0
+        if levels is not None and sung_seconds(levels, start, end) < SUNG_S:
+            at = round(max(end, previous), 3)
+            for line_id in section["line_ids"]:
+                lines.append(TimedLine(line_id=line_id, start=at, end=at, sung=False,
+                                       words=[Word(word=w, start=at, end=at) for w, _, _ in words_of(texts[line_id])]))
+                scores[line_id] = None
+            continue
+        t0 = max(0.0, start - MARGIN_S)
+        t1 = min(length, end + MARGIN_S)
         for line, score in _align_lines(vocals, align, texts, section["line_ids"], t0, t1, previous, length):
             lines.append(line)
             scores[line.line_id] = score
@@ -324,13 +347,38 @@ def windows(plan: dict) -> list[dict]:
     return [{"line_ids": [i for s in plan["sections"] for i in s["line_ids"]], "start_ms": 0, "duration_ms": planned_ms}]
 
 
+def vocal_levels(vocals) -> list[float] | None:
+    """The separated vocals' level every FRAME_S, in dB below the song's loud singing; None when nothing in
+    them is sung at all, so no section can be told from the rest."""
+    import numpy as np
+
+    mono = np.asarray(vocals, dtype=np.float32).reshape(-1)
+    frame = int(FRAME_S * SAMPLE_RATE)
+    frames = len(mono) // frame
+    if not frames:
+        return None
+    rms = np.sqrt((mono[:frames * frame].reshape(frames, frame) ** 2).mean(axis=1))
+    loud = float(np.percentile(rms, LOUD_PERCENTILE))
+    if loud < 1e-4:  # -80 dBFS: silence
+        return None
+    return (20 * np.log10(np.maximum(rms, 1e-12) / loud)).tolist()
+
+
+def sung_seconds(levels: list[float], t0: float, t1: float) -> float:
+    """How long the vocals between t0 and t1 (song time) are within QUIET_DB of the song's loud singing."""
+    frames = levels[max(0, int(t0 / FRAME_S)):max(0, int(t1 / FRAME_S))]
+    return sum(level >= -QUIET_DB for level in frames) * FRAME_S
+
+
 def song_report(timing: Timing, texts: dict[str, str], scores: dict[str, float | None]) -> dict:
-    """Each line's length and aligner score, and the chorus repeats that drift more than DRIFT_S."""
+    """Each line's length and aligner score, the chorus repeats that drift more than DRIFT_S, and the lines
+    not sung (their rows say so, and they are left out of the drift)."""
     rows = [{"line_id": line.line_id, "text": texts[line.line_id], "seconds": round(line.end - line.start, 3),
-             "score": scores.get(line.line_id)} for line in timing.lines]
+             "score": scores.get(line.line_id), **({} if line.sung else {"sung": False})} for line in timing.lines]
     by_text: dict[str, list[dict]] = {}
     for row in rows:
-        by_text.setdefault(" ".join(spoken(w) for w, _, _ in words_of(row["text"])), []).append(row)
+        if row.get("sung", True):
+            by_text.setdefault(" ".join(spoken(w) for w, _, _ in words_of(row["text"])), []).append(row)
     drift = []
     for repeats in by_text.values():
         if len(repeats) < 2:
@@ -344,6 +392,7 @@ def song_report(timing: Timing, texts: dict[str, str], scores: dict[str, float |
         "drift": drift,
         "drifting": [d["line_id"] for d in drift if abs(d["drift"]) > DRIFT_S + TOLERANCE_S / 10],
         "unsure": [r["line_id"] for r in rows if r["score"] is not None and r["score"] < LOW_SCORE],
+        "unsung": [r["line_id"] for r in rows if not r.get("sung", True)],
     }
 
 
@@ -351,6 +400,8 @@ def song_notes(report: dict) -> str:
     """The report in a few words, for the summary line and `python -m studio show`."""
     worst = max((abs(d["drift"]) for d in report["drift"]), default=0.0)
     notes = [f"chorus drift at most {worst:.2f}s" if report["drift"] else "no repeated lines"]
+    if report.get("unsung"):  # a report from before the check has none
+        notes.append(f"NOT SUNG, their section instrumental: {', '.join(report['unsung'])}")
     if report["drifting"]:
         notes.append(f"DRIFT over {DRIFT_S}s: {', '.join(report['drifting'])}")
     if report.get("realigned"):  # a report from before the repair pass has none

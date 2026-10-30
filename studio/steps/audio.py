@@ -13,8 +13,10 @@ settings.json, song_provider()): elevenlabs (the default) or gemini. Eleven Musi
 makes each section a chunk of the length asked for, so step 6 looks for each section's
 lines where it was planned. Lyria takes the whole song as one prompt and keeps to the
 planned times only roughly, so its plan says the sections are not pinned and step 6 looks
-for its lines across the whole song. The narration is always ElevenLabs text-to-speech,
-whose character timings step 6 turns into words.
+for its lines across the whole song. A song Lyria will not sing (it blocks the prompt, or
+stops for safety: it blocked the Holocaust's lyrics) is made by Eleven Music instead, and
+its plan says so. The narration is always ElevenLabs text-to-speech, whose character
+timings step 6 turns into words.
 
 The two are asked for at the same time (the song takes longest), after the keys and the
 speech's length are checked. One that fails fails the step once the others are saved, so
@@ -77,6 +79,15 @@ class NoAnswer(media.StepFailed):
     """The request never reached the server, or the connection dropped: safe to send again."""
 
 
+class Blocked(media.StepFailed):
+    """Gemini will not sing what the song says: its prompt was blocked, or its answer stopped for safety."""
+
+
+# Why a Gemini answer stops with no song when what it would sing is refused. RECITATION (too close to a known song)
+# is not here: the song fails as before.
+BLOCKED_FINISH_REASONS = {"SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII"}
+
+
 def _urllib_send(method: str, url: str, headers: dict, body: bytes | None) -> tuple[int, dict, bytes]:
     request = urllib.request.Request(url, data=body, headers={"User-Agent": USER_AGENT, **headers}, method=method)
     host = urllib.parse.urlsplit(url).hostname
@@ -119,8 +130,7 @@ def run(job: Path, ask=brain.ask) -> str:
 
     def make(kind: str) -> str:
         if kind == "song":
-            _make_song(job, bundle, provider)
-            return f"song ({provider})"
+            return f"song ({_make_song(job, bundle, provider)})"
         _make_speech(job, kind, speech_lines(bundle, kind))
         return kind
 
@@ -147,8 +157,11 @@ def _current(job: Path, bundle: Bundle, kind: str) -> bool:
         made_from = json.loads((job / plan_path(kind)).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False  # step 6 needs what it was made from, so it is made again
-    if kind == "song" and made_from.get("provider", "elevenlabs") != song_provider(job):
-        return False  # who sings was switched since: the one now chosen makes it again
+    # Who sings was switched since: the one now chosen makes it again. A song Eleven Music made because Lyria
+    # would not sing it stands for either.
+    if kind == "song" and song_provider(job) not in (made_from.get("provider", "elevenlabs"),
+                                                     (made_from.get("instead_of") or {}).get("provider")):
+        return False
     wanted = song_lines(bundle) if kind == "song" else speech_lines(bundle, kind)
     return [[i, t] for i, t in made_from.get("source", [])] == [[i, t] for i, t in wanted]
 
@@ -212,11 +225,24 @@ def _placed(planned: list[dict]) -> list[dict]:
     return [{k: part[k] for k in ("section", "line_ids", "start_ms", "duration_ms")} for part in planned]
 
 
-def _make_song(job: Path, bundle: Bundle, provider: str) -> None:
-    if provider == "gemini":
-        _make_gemini_song(job, bundle)
-    else:
+def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
+    """Make the song; say who made it."""
+    if provider != "gemini":
         _make_eleven_song(job, bundle)
+        return "elevenlabs"
+    try:
+        _make_gemini_song(job, bundle)
+        return "gemini"
+    except Blocked as e:
+        # Lyria refuses some grave topics' lyrics outright: "Why the Holocaust happened" was blocked twice
+        # (blockReason OTHER) on Oct 30, where the same style without the lyrics was made. Eleven Music sang them.
+        print(f"audio: {e}; Eleven Music makes the song instead", file=sys.stderr)
+        try:
+            _make_eleven_song(job, bundle, instead_of={"provider": "gemini", "model_id": gemini_song_model(),
+                                                       "reason": str(e)})
+        except media.StepFailed as again:
+            raise media.StepFailed(f"{e}, and Eleven Music could not make it instead: {again}") from again
+        return f"elevenlabs, as {e}"
 
 
 # Eleven Music: one chunk per section, each exactly as long as asked, and each asked for the song's own style and
@@ -238,7 +264,8 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     return {"chunks": chunks}, _placed(planned)
 
 
-def _make_eleven_song(job: Path, bundle: Bundle) -> None:
+def _make_eleven_song(job: Path, bundle: Bundle, instead_of: dict | None = None) -> None:
+    """instead_of: the provider chosen, which would not sing the song, and why; kept in the plan."""
     plan, placed = composition_plan(bundle)
     body = {"model_id": MUSIC_MODEL, "composition_plan": plan}
     started = time.monotonic()
@@ -252,6 +279,7 @@ def _make_eleven_song(job: Path, bundle: Bundle) -> None:
         "source": song_lines(bundle), "provider": "elevenlabs", "model_id": MUSIC_MODEL,
         "sections": placed, "sections_pinned": True,
         "song_id": _header(headers, "song-id"), "headers": _kept(headers), "request": body,
+        **({"instead_of": instead_of} if instead_of else {}),
     })
     _write_bytes(job / media.audio_path("song"), audio)
 
@@ -324,13 +352,15 @@ def read_gemini_song(answer: bytes) -> tuple[bytes, str, dict]:
         raise media.StepFailed(f"Gemini sent back something unreadable for the song: {e}") from e
     blocked = (data.get("promptFeedback") or {}).get("blockReason")
     if blocked:
-        raise media.StepFailed(f"Gemini blocked the song's prompt: {blocked}")
+        raise Blocked(f"Gemini blocked the song's prompt: {blocked}")
     candidate = (data.get("candidates") or [{}])[0] or {}
     parts = (candidate.get("content") or {}).get("parts") or []
     sounds = [part.get("inlineData") or part.get("inline_data") for part in parts if isinstance(part, dict)]
     sounds = [s for s in sounds if isinstance(s, dict) and _mime(s).lower().startswith("audio/")]
     if not sounds:
-        raise media.StepFailed(f"Gemini sent back no song (finish reason: {candidate.get('finishReason') or 'none given'})")
+        reason = candidate.get("finishReason")
+        error = Blocked if reason in BLOCKED_FINISH_REASONS else media.StepFailed
+        raise error(f"Gemini sent back no song (finish reason: {reason or 'none given'})")
     try:
         audio = base64.b64decode(sounds[-1]["data"], validate=True)  # the last, as the SDKs' output_audio
     except (KeyError, ValueError, TypeError) as e:

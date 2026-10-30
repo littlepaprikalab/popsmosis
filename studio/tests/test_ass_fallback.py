@@ -1,6 +1,7 @@
 import json
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -47,6 +48,30 @@ def test_the_art_follows_each_lines_scene_and_falls_back_to_white(tmp_path):
     rows = listing.splitlines()
     assert rows[1].endswith("art/hook.png'") and rows[2] == "duration 2.500"
     assert rows[3].endswith("white.png'") and rows[4] == "duration 7.500"
+
+
+def test_a_line_the_song_never_sings_gets_no_subtitle(tmp_path, monkeypatch):
+    job = sample_media.write_job(tmp_path / "sample")
+    (job / "audio").mkdir(exist_ok=True)
+    (job / media.audio_path("song")).write_bytes(b"ID3")
+    song = jobs.read(job / media.timing_path("song"), Timing).model_dump()
+    at = song["lines"][1]["start"]
+    song["lines"][0].update(start=at, end=at, sung=False,
+                            words=[{**w, "start": at, "end": at} for w in song["lines"][0]["words"]])
+    jobs.write(job / media.timing_path("song"), Timing.model_validate(song))
+    seen = {}
+
+    def ffmpeg(command, cwd=None, **kwargs):  # what it was given to draw, in place of drawing it
+        if cwd:  # the video, not the white picture for lines with no art
+            seen["ass"] = (cwd / "song.ass").read_text(encoding="utf-8")
+        Path(command[-1]).write_bytes(b"made")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(ass_fallback.subprocess, "run", ffmpeg)
+    ass_fallback.make(job)
+    events = [row for row in seen["ass"].splitlines() if row.startswith("Dialogue:")]
+    assert len(events) == len(sample_media.bundle().lyrics) - 1
+    assert "Light" not in seen["ass"] and "Every" in seen["ass"]  # v1-1 is not shown; v1-2 is
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")

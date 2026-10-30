@@ -96,6 +96,64 @@ def test_the_song_is_aligned_section_by_section_in_song_time(made):
     assert report["drifting"] == [] and report["unsure"] == []
 
 
+def _sung(seconds, quiet=(), gain=0.3):
+    """Vocals singing throughout at `gain`, but for the (start, end, gain) stretches in `quiet`."""
+    rng = np.random.default_rng(0)
+    vocals = (rng.standard_normal((1, int(seconds * timing.SAMPLE_RATE))) * gain).astype(np.float32)
+    for start, end, level in quiet:
+        vocals[:, int(start * timing.SAMPLE_RATE):int(end * timing.SAMPLE_RATE)] *= level / gain
+    return vocals
+
+
+def _chunks(job, length=30.1):
+    """Each planned section's lines, start and end in song time: the plan stretched to the song's length."""
+    sections = json.loads((job / audio.plan_path("song")).read_text())["sections"]
+    scale = length * 1000 / sum(s["duration_ms"] for s in sections) / 1000
+    return [(s["line_ids"], s["start_ms"] * scale, (s["start_ms"] + s["duration_ms"]) * scale) for s in sections]
+
+
+def test_a_section_with_no_singing_in_its_chunk_is_not_sung(made):
+    """Eleven Music left the first chunk instrumental (the Holocaust song's intro, Oct 30): the aligner put its
+    lines on the next section's first bar and squashed that line into 0.75 s."""
+    (ids, _, end), (next_ids, _, _), *_ = _chunks(made)
+    calls = []
+    bundle = sample_media.bundle()
+    texts = {line.id: line.text for line in bundle.lyrics}
+    vocals = _sung(30.1, quiet=[(0.0, end, 0.0003)])  # Demucs' bleed, 60 dB down
+    timed, report = timing.song_timing(made, bundle, align=even_aligner(calls), vocals=vocals)
+    assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    assert len(calls) == 5  # not asked for the chunk that sings nothing
+    for line_id in ids:
+        line = timed.line(line_id)
+        assert not line.sung and line.start == line.end == round(end, 3)
+        assert [w.word for w in line.words] == [w for w, _, _ in words_of(texts[line_id])]
+        assert all(w.start == w.end == line.start for w in line.words)
+    assert timed.line(next_ids[0]).start >= end and timed.line(next_ids[0]).sung
+    assert report["unsung"] == ids == ["v1-1", "v1-2"]
+    assert [r for r in report["lines"] if r["line_id"] == "v1-1"][0] == {
+        "line_id": "v1-1", "text": texts["v1-1"], "seconds": 0.0, "score": None, "sung": False}
+    assert "NOT SUNG, their section instrumental: v1-1, v1-2" in timing.song_notes(report)
+    assert report["unsure"] == []
+
+
+def test_quiet_singing_is_sung_and_a_pickup_into_the_next_section_is_not(made):
+    (ids, _, end), *_ = _chunks(made)
+    bundle = sample_media.bundle()
+    soft = _sung(30.1, quiet=[(0.0, end, 0.03)])  # 20 dB under the rest: a hushed verse
+    timed, report = timing.song_timing(made, bundle, align=even_aligner([]), vocals=soft)
+    assert report["unsung"] == [] and all(timed.line(i).sung for i in ids)
+    pickup = _sung(30.1, quiet=[(0.0, end - 0.3, 0.0)])  # only the next section's first syllables, sung early
+    timed, report = timing.song_timing(made, bundle, align=even_aligner([]), vocals=pickup)
+    assert report["unsung"] == ids
+
+
+def test_silent_vocals_leave_every_section_to_the_aligner(made):
+    """Nothing to measure a section against: as before the check, the aligner places every line."""
+    vocals = np.zeros((1, int(30.1 * timing.SAMPLE_RATE)), dtype=np.float32)
+    timed, report = timing.song_timing(made, sample_media.bundle(), align=even_aligner([]), vocals=vocals)
+    assert report["unsung"] == [] and all(line.sung for line in timed.lines)
+
+
 def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
     """Lyria keeps to the planned sections only roughly (an intro, a longer verse), so its
     lines are looked for in the whole song at once rather than where each was planned."""
@@ -112,9 +170,10 @@ def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
     audio.run(job)
 
     calls = []
-    vocals = np.zeros((1, int(41.0 * timing.SAMPLE_RATE)), dtype=np.float32)
+    vocals = _sung(41.0, quiet=[(0.0, 10.0, 0.0)])  # Lyria's own 10 s intro: no chunk was planned for it
     timed, report = timing.song_timing(job, bundle, align=even_aligner(calls), vocals=vocals)
     assert timing_problems(timed, [line.id for line in bundle.lyrics]) == []
+    assert report["unsung"] == []  # its sections are not pinned, so none is held to a chunk
     (heard, words), = calls  # one window: the whole song
     assert heard == vocals.shape[-1]
     assert words[:5] == ["light", "lands", "on", "the", "thylakoid"] and words[-5:] == ["protons", "flow", "and",
