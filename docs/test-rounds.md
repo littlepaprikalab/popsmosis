@@ -1117,6 +1117,25 @@ delivery: soft and close in the verses, full in the chorus, stripped back in the
 shouting, rap and rushing avoided), made from round 18's kidney lyrics, with a second version
 given more time a line; neither is in the studio, and they wait for the owner's ears.
 
+### Then, from what rounds 20 and 21 showed
+
+- **A note that taught a falsehood.** The helper's note beside round 20's kidney close-up said its glucose
+  carriers belonged on the capillary's side, which is false for the carriers that take glucose out of the
+  filtrate: the card meant to disclose a flawed picture taught something wrong itself. A note is now shown
+  only once the brain, given the picture and the lesson's facts, has not found it false or about something the
+  picture does not show (`confirmed_notes`). Asked to keep only notes it was sure of, it dropped 7 of 8 and
+  flipped on one between two asks, so it keeps what it cannot settle: the video would rather disclose a doubt
+  than hide a mistake. Told so, it kept 5 of 7 notes on rounds 20 and 21 and still dropped the false one.
+- **Too much on screen.** Round 21's digestion overview, for a 7th grader, showed seven labels, two reaction
+  pills ("food → chyme") and a five-row legend at once. The timeline now records the parts each line says,
+  and past four labels on screen, a label (and its reaction pill) rests faint unless this line or the one
+  before names its part, it is spotlit or framed, or particles travel to it. Every label stays where its part
+  is; the eye goes to the one the voice means.
+- **A stale banner over the chorus.** The song showed the last verse's key line over its first two choruses
+  ("Gracchi killed → politics settled by force"). Every chorus now shows the core idea it sings.
+
+Rounds 20 and 21 were drawn again with all of these (timeline and render only, no paid calls).
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
