@@ -166,6 +166,8 @@ def handoff(a: np.ndarray, b: np.ndarray, toward: Point) -> tuple[Point, Point]:
     touch = _grown(a, 2) & _grown(b, 2)
     ys, xs = np.nonzero(touch)
     if not len(ys):
+        if not a.any() or not b.any():
+            return (0.0, 0.0), (0.0, 0.0)  # a part with nothing of it on the grid: no arrow
         (x0, y0), (x1, y1) = _span(a, b)
         if math.hypot(x1 - x0, y1 - y0) >= 2 * ARROW_CELLS * GRID:
             return (x0, y0), (x1, y1)
@@ -230,11 +232,16 @@ def meet(a: np.ndarray, b: np.ndarray) -> bool:
 
 
 def inside(points: list[Point], region: np.ndarray) -> float:
-    """How far a path (art pixels) runs inside a part (its cells): the length of its steps whose middle is in it."""
+    """How far a path (art pixels) runs inside a part (its cells), measured a cell's length at a time, so a long
+    straight step that only ends in the part counts only its end."""
     rows, cols = region.shape
     total = 0.0
     for (x0, y0), (x1, y1) in zip(points, points[1:]):
-        r, c = int((y0 + y1) / 2 // GRID), int((x0 + x1) / 2 // GRID)
-        if 0 <= r < rows and 0 <= c < cols and region[r, c]:
-            total += math.hypot(x1 - x0, y1 - y0)
+        length = math.hypot(x1 - x0, y1 - y0)
+        n = max(1, math.ceil(length / GRID))
+        for k in range(n):
+            u = (k + 0.5) / n
+            r, c = int((y0 + (y1 - y0) * u) // GRID), int((x0 + (x1 - x0) * u) // GRID)
+            if 0 <= r < rows and 0 <= c < cols and region[r, c]:
+                total += length / n
     return total

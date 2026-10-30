@@ -113,9 +113,17 @@ def test_parts_meet_when_they_touch_and_a_path_is_measured_inside_a_part():
     far[5:15, 30:38] = True
     assert not routing.meet(a, far)
     g = routing.GRID
-    across = [(0.0, 10 * g), (20 * g, 10 * g), (40 * g, 10 * g)]  # two steps, their middles at cells 10 and 30
-    assert routing.inside(across, a) == 20 * g and routing.inside(across, far) == 20 * g
-    assert routing.inside(across, b) == 0.0  # neither step's middle is in b
+    across = [(0.0, 10 * g), (20 * g, 10 * g), (40 * g, 10 * g)]  # two long, straight steps along row 10
+    # Only what runs inside each part counts, not the whole of a step that ends in it: a straight step from well
+    # outside a carrier to its middle is not a run along it.
+    assert routing.inside(across, a) == pytest.approx(10 * g) and routing.inside(across, far) == pytest.approx(8 * g)
+    assert routing.inside(across, b) == pytest.approx(12 * g)
+
+
+def test_a_part_with_nothing_on_the_grid_gets_no_arrow():
+    a = np.zeros((20, 40), bool)
+    a[5:15, 2:12] = True
+    assert routing.handoff(a, np.zeros((20, 40), bool), (100.0, 60.0)) == ((0.0, 0.0), (0.0, 0.0))
 
 
 def test_parts_that_nearly_touch_get_an_arrow_as_long_as_any_other_across_their_gap():

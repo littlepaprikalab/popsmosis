@@ -628,7 +628,7 @@ LOOK_CODE = ("style", "_style_graph", "_style_axes", "_steps", "_style_structure
 LOOK_NUMBERS = ("PAGE", "LINE_WIDTH", "BAND", "AXIS_WIDTH", "AXIS_SHARE", "POINT_WIDTH", "ARROW", "GRID_STEP", "GLOW",
                 "GLOW_OF", "GLOW_BLUR", "GLOW_SPREAD", "GLOW_OPACITY", "REPAINTED", "AXIS_INK", "GRID_INK", "ROLE",
                 "NAMED", "EDGE_SHADE")
-LOOK_PINNED = ("2", "97c4fe1354a7")  # 2: a filled shape's outline a shade darker than it (EDGE_SHADE); value marks left out
+LOOK_PINNED = ("3", "55e5d719c166")  # 3: what else a value mark is on is drawn, the mark ignored
 
 
 def _as_code(function) -> str:
@@ -708,3 +708,15 @@ def test_a_drawn_scenes_values_are_kept_with_its_locations(job):
     located = jobs.read(job / media.LOCATIONS, Locations)
     assert [(v.text, v.tick) for v in located.scene("overview").values] == [("$1,331", False), ("Year 3", True)]
     assert located.scene("hook").values == []
+
+
+def test_a_value_mark_anywhere_else_is_ignored_and_one_without_a_point_is_left_out():
+    bar = '<g data-structure="Interest"><rect data-value="$100" x="800" y="300" width="200" height="400" ' \
+          'fill="#FFC845"/></g>'
+    text = svg_text(bar, '<circle data-value="$999" r="0"/>', '<circle data-tick="Year 2" cx="50%" cy="900" r="0"/>')
+    text = text.replace("<svg ", '<svg data-value="$1" ', 1)
+    root = svg.check(text, [Structure(name="Interest", aliases=[], sam_phrase="gold bar", color_hex="#FFC845")]).root
+    assert svg.values(root) == []  # neither has a point of its own; nothing is written at the corner
+    styled = svg.style(root, [], graph=False)
+    assert not [el for el in styled.iter() if el.get(svg.VALUE) or el.get(svg.TICK)]
+    assert svg.masks(styled, ["Interest"])["Interest"].sum() > 50_000  # the bar marked by mistake is still drawn

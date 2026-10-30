@@ -210,7 +210,9 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
                       if t0 <= w.start < t1],
             "conversions": [c.model_copy(update={"since": max(c.since - t0, 0.0)}) for c in beat.conversions],
             "routes": [r.model_copy(update={"since": max(r.since - t0, 0.0)}) for r in beat.routes],
-            "values": [v.model_copy(update={"since": max(v.since - t0, 0.0)}) for v in beat.values],
+            # A value said before the cut is on from its first frame, settled: not fading in, nor popping, as if said
+            # then.
+            "values": [v.model_copy(update={"since": round(v.since - t0, 3)}) for v in beat.values],
         }))
     duration = round(t1 - t0, 3)
     beats[-1] = beats[-1].model_copy(update={"t1": duration})
