@@ -33,9 +33,9 @@ EDGE_BLUR = 3.0  # sigma of a ghost's edge, in art pixels
 SPOT_BLUR = 1.2  # a spotlight's edge stays crisp, so the bright structure keeps its outline
 REVEAL_S = 0.4  # ghost to full
 LABEL_IN_S = 0.35
-# Past LABELS_CALM labels on screen, those of parts the line is not about rest at LABEL_REST: round 21's digestion
-# overview showed seven labels, two reaction pills and a five-row legend at once, and a 7th grader could not tell
-# which part the voice meant. A part is in play while this line or the one before names it, it is spotlit or framed,
+# Past LABELS_CALM labels on screen, those of parts the line is not about rest at LABEL_REST, and their reaction
+# pills with them: round 21's digestion overview showed seven labels, two reaction pills and a five-row legend at
+# once, and a 7th grader could not tell which part the voice meant. A part is in play while this line or the one before names it, it is spotlit or framed,
 # or particles travel to it; a label eases between rest and full as a line starts.
 LABELS_CALM = 4
 LABEL_REST = 0.4
@@ -1053,10 +1053,11 @@ class Renderer:
         pill_points = [(px, py) for x0, y0, x1, y1 in [*places.values(), *axis_rects]
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
+        strength = self._resting(i, t)
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
-                     self._resting(i, t))
+                     strength)
         if beat.conversions:
-            self._conversions(canvas, beat, view, bounds, t, places)
+            self._conversions(canvas, beat, view, bounds, t, places, strength)
         if legend_rect:
             p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend])
         if beat.caption:
@@ -1188,8 +1189,10 @@ class Renderer:
         return rects
 
     def _conversions(self, canvas: skia.Canvas, beat, view: Rect, bounds: Rect, t: float,
-                     places: dict[str, tuple[float, float, float, float]]) -> None:
-        """What each structure the beat is about turns into what, in the pill placed for it."""
+                     places: dict[str, tuple[float, float, float, float]],
+                     strength: dict[str, float] | None = None) -> None:
+        """What each structure the beat is about turns into what, in the pill placed for it, resting with its
+        structure's label (LABELS_CALM)."""
         font = self.layout.label_font * 1.25
         for conv in beat.conversions:
             if conv.structure not in places:
@@ -1197,7 +1200,8 @@ class Renderer:
             x0, y0, x1, y1 = places[conv.structure]
             cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
             p.draw_conversion(canvas, (cx, cy), conv.text, self.timeline.palette[conv.structure],
-                              p.ease((t - conv.since) / LABEL_IN_S) * edge_fade(cx, cy, view), bounds, font)
+                              p.ease((t - conv.since) / LABEL_IN_S) * edge_fade(cx, cy, view)
+                              * (strength or {}).get(conv.structure, 1.0), bounds, font)
 
     def _card(self, scene_id: str, view: Rect) -> tuple[skia.Image, float, float]:
         """The scene's notice card as an image and where it goes: drawn once, as wrapping its notes and blurring

@@ -23,6 +23,7 @@ from studio.schemas import (
     AudioClip,
     Beat,
     Box,
+    Converting,
     Crowd,
     Locations,
     Particles,
@@ -1133,3 +1134,21 @@ def test_past_four_labels_those_of_parts_the_line_is_not_about_rest(job):
     few = beats[first].model_copy(update={"labels": many[:4]})
     calm = Renderer(job, timeline.model_copy(update={"beats": [*beats[:first], few, *beats[first + 1:]]}))
     assert set(calm._resting(first, few.t1).values()) == {1.0}  # four or fewer: every label in full
+
+
+def test_a_reaction_pill_rests_with_its_structures_label(job, monkeypatch):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    many = ["Thylakoid", "Cytochrome b6f", "Stroma", "Lumen", "Photosystem II"]
+    pill = Converting(structure="Cytochrome b6f", text="A → B", since=timeline.beats[on[0]].t0)
+    beats = list(timeline.beats)
+    for k in on:
+        beats[k] = beats[k].model_copy(update={"labels": many, "named": [], "particles": [], "spotlight": None,
+                                               "conversions": [pill], "camera": TimelineCamera(target=None, zoom=1.0)})
+    beats[on[1]] = beats[on[1]].model_copy(update={"named": ["Cytochrome b6f"]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    drawn = []
+    monkeypatch.setattr(p, "draw_conversion", lambda canvas, at, text, color, alpha, bounds, font: drawn.append(alpha))
+    renderer.frame(beats[on[1]].t1 - 0.01)  # named on this line: in full
+    renderer.frame(beats[on[3]].t1 - 0.01)  # two lines on, about something else: resting
+    assert drawn[0] == pytest.approx(1.0, abs=0.02) and drawn[1] == pytest.approx(renderer_module.LABEL_REST, abs=0.02)
