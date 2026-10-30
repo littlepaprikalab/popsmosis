@@ -1,0 +1,155 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "How did one shooting in Sarajevo start a world war?",
+    "core_idea": "A single assassination became a world war because alliances and war plans pulled each great power in, one after another.",
+    "why_chain": [
+      "Militarism and the alliance system had left Europe's great powers heavily armed and pledged to back their partners.",
+      "When the nationalist Gavrilo Princip killed Franz Ferdinand, Austria-Hungary blamed Serbia and, backed by Germany, declared war on it.",
+      "Russia saw itself as Serbia's protector, so it began mobilization of its huge army.",
+      "Germany treated Russia's mobilization as a threat, so it declared war on Russia and then on Russia's ally France.",
+      "Germany's Schlieffen Plan sent its army through neutral Belgium, so Britain, which had promised to protect Belgium, declared war."
+    ],
+    "key_terms": [
+      "Franz Ferdinand",
+      "Austria-Hungary",
+      "Serbia",
+      "nationalism",
+      "militarism",
+      "alliance system",
+      "mobilization",
+      "Schlieffen Plan"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "By 1914 Europe's great powers were divided by an alliance system into two camps: the Triple Alliance of Germany, Austria-Hungary and Italy, and the Triple Entente of France, Russia and Britain. Germany was Austria-Hungary's ally, and Russia had been France's ally since the 1890s; these promises meant a war between two powers could drag in their partners. The powers also practiced militarism, building huge armies and detailed war plans so they could mobilize, meaning call up and move their armies, fast; Britain and Germany raced to build giant battleships called dreadnoughts. Rivalry for colonies, called imperialism, added tension, and historians group these long-term causes as militarism, alliances, imperialism and nationalism.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "Nationalism, the wish of a people to have its own nation-state, ran high in the Balkans, where Serbia hoped to unite the South Slavs, many of whom lived under Austria-Hungary. On 28 June 1914, Archduke Franz Ferdinand, heir to Austria-Hungary's throne, rode through Sarajevo in an open car, and Gavrilo Princip, a nineteen-year-old Bosnian Serb nationalist who wanted South Slavs living under Austria-Hungary united with Serbia, shot and killed him and his wife Sophie. Princip had been armed by the Black Hand, a secret Serbian nationalist society. Austria-Hungary blamed Serbia, got Germany's promise of full support, sent Serbia a harsh ultimatum and declared war on Serbia on 28 July 1914. A common mistake is to think the assassination alone caused World War I: it was only the spark, and the alliance system, militarism, imperialism and nationalism are what turned a quarrel between Austria-Hungary and Serbia into a war among the great powers.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "Russia saw itself as Serbia's protector and on 30 July 1914 began general mobilization, calling up its huge army. Germany, Austria-Hungary's ally, treated this as a threat: it declared war on Russia on 1 August and on Russia's ally France on 3 August. Germany's war plan, the Schlieffen Plan, aimed to avoid fighting on two fronts at once by beating France quickly, sending its army through Belgium, a neutral country, and only then turning east against Russia. In an 1839 treaty Britain had promised to protect Belgium's neutrality, so when German troops entered Belgium on 4 August 1914, Britain declared war on Germany that same day. By then, about five weeks after the assassination, five great powers were at war: Austria-Hungary, Germany, Russia, France and Britain; Italy stayed neutral until it joined the Triple Entente's side in 1915. The Schlieffen Plan stalled in France at the Battle of the Marne in September 1914, which led to trench warfare on the Western Front.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "World War I lasted from 1914 to 1918, and many towns in the countries that fought it have stone memorials listing local soldiers who died. The way the war spread is like a scuffle on a crowded street where both fighters have friends who promised to back them up: one shove, and the friends pile in, then their friends too. The shove is the assassination, the two fighters are Austria-Hungary and Serbia, and the friends are their allies and protectors: Germany behind Austria-Hungary, Russia behind Serbia, then France and Britain.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think the assassination of Franz Ferdinand alone caused World War I. It was only the spark: the alliance system, militarism, imperialism and nationalism turned a quarrel between Austria-Hungary and Serbia into a war among the great powers.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A stone war memorial in a quiet town square, a bronze soldier statue on top and rows of carved soldiers' names on its base."
+      },
+      {
+        "id": "analogy",
+        "picture": "A crowded street at night. In the middle, the two fighters shove each other, one on the left and one on the right. Behind each fighter stands a group of friends, ready to step in."
+      },
+      {
+        "id": "overview",
+        "picture": "A timeline of seven soldiers standing left to right in the order their countries went to war in 1914, each in his country's uniform with its flag: Austria-Hungary, Serbia, Russia, Germany, France, Belgium, Britain. Germany's and Austria-Hungary's soldiers wear matching armbands of one color, Russia's and France's matching armbands of another, and behind Russia's soldier stand rows of more soldiers, Russia's huge army."
+      },
+      {
+        "id": "arms-race",
+        "picture": "A close-up of a harbor behind the line of soldiers: a British dreadnought and a German dreadnought, giant battleships, moored side by side, with stacks of artillery shells on the dock between them."
+      },
+      {
+        "id": "sarajevo",
+        "picture": "A close-up of a street in Sarajevo in 1914: an open car carrying Franz Ferdinand in a uniform and plumed hat, and on the pavement beside it Gavrilo Princip, a young man holding a pistol."
+      },
+      {
+        "id": "belgium",
+        "picture": "A close-up of western Europe: Germany on the right, Belgium in the middle with a small Belgian soldier at its border, France below and to the left, and Britain across the sea at the top left with a British soldier on its coast. A column of German troops stands inside Belgium, facing France."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "In towns across Europe, stone memorials list local soldiers who died in the war of 1914 to 1918.",
+          "That war began with one shooting, on 28 June 1914.",
+          "Within about five weeks, five of Europe's great powers were at war.",
+          "So how did one shooting start a world war?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Picture a scuffle on a crowded street, where both fighters have friends who promised to back them up.",
+          "One shove, and the friends pile in, then their friends too.",
+          "In 1914, the shove was the assassination, and the two fighters were Austria-Hungary and Serbia.",
+          "The friends were their allies and protectors."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Here are the countries, left to right, in the order they went to war.",
+          "The armbands show the alliance system: Germany was Austria-Hungary's ally, and Russia was France's.",
+          "Those promises meant a war between two powers could drag in their partners."
+        ]
+      },
+      {
+        "scene": "arms-race",
+        "lines": [
+          "First, the background.",
+          "For years, the great powers practiced militarism, building huge armies and detailed war plans.",
+          "Britain and Germany even raced to build giant battleships called dreadnoughts.",
+          "So by 1914, every great power was armed and could mobilize fast."
+        ]
+      },
+      {
+        "scene": "sarajevo",
+        "lines": [
+          "Next comes the spark, in Sarajevo.",
+          "Franz Ferdinand, heir to Austria-Hungary's throne, rode through the city in an open car.",
+          "Gavrilo Princip, a nineteen-year-old Bosnian Serb, shot and killed him.",
+          "Princip was driven by nationalism: he wanted South Slavs living under Austria-Hungary united with Serbia."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back on the line, Austria-Hungary blamed Serbia.",
+          "With Germany's promise of full support, it declared war on Serbia on 28 July.",
+          "But Russia saw itself as Serbia's protector, so it began mobilization, calling up its huge army.",
+          "What do you think Germany, Austria-Hungary's ally, did next?",
+          "On 1 August, it declared war on Russia, then on Russia's ally France two days later.",
+          "A common mistake is to think the assassination alone caused the war.",
+          "It was only the spark: the alliance system and militarism turned one quarrel into a war among great powers."
+        ]
+      },
+      {
+        "scene": "belgium",
+        "lines": [
+          "Now, why did Britain join in?",
+          "Germany's Schlieffen Plan aimed to beat France quickly, to avoid fighting on two fronts at once.",
+          "Its army would sweep through Belgium, a neutral country.",
+          "But in 1839, Britain had promised to protect Belgium's neutrality.",
+          "So when German troops entered Belgium on 4 August, Britain declared war on Germany that same day."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "A single assassination became a world war because alliances and war plans pulled each great power in, one after another.",
+          "One shooting started a war between Austria-Hungary and Serbia, and promises of backup pulled in Russia, Germany, France and Britain."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 33,
+    "reworded": 0
+  }
+}

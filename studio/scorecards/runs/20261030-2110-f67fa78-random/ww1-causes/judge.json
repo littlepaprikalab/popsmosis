@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Two shots fired, great powers pulled in\" is concrete and memorable, with real actions (shots fired, powers pulled in), and it is the core idea in miniature. It opens and closes the chorus. It is a little passive and it names the cause and effect without the rope, so it is not quite the big move. The lesson opens on \"How did one assassination start a war across Europe?\" and the narration opens on town war memorials, which is from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The roped climbers (\"The rope is meant to stop a fall, but if one climber slips, the rope can drag the others down\") do the same job as alliances and fit the whole idea, and the Italy section (\"the rope never pulled\") fits inside it. The lesson and narration carry it with headers like \"The slip\" and \"The rope pulls\". The song sets it up in v1-1 and uses it in the chorus (\"One rope ties them, the drag begins\"), the bridge and the outro. It thins out in verse 2 and the pre-choruses, where the rope is not mentioned.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration give each link with its cause: \"Russia saw itself as Serbia's protector, so it began mobilization\", \"The quickest road to Paris ran through neutral Belgium, so the German army marched into Belgium\", and \"Britain had promised to protect Belgium's neutrality, so... declared war\". The Italy example shows the alliance mechanism. One gap is that the step from Russia's mobilization to Germany declaring war on Russia and France is thin (\"saw a threat\"), and why France is included is not explained until the Schlieffen Plan. The song carries the chain's gist.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "In order they tell the story from the opening question through alliances, the spark, Germany's backing, mobilization, the Schlieffen Plan, Belgium and Britain, and Italy. Most are steps with arrows, and they are short. Some weaknesses: the first is a question, not a step, and the last, \"Austria-Hungary attacked first, so Italy stayed neutral\", ends on a side case and not on the core idea. The Schlieffen line starts at n22, which is the Schlieffen Plan, but the Germany-declares-war link sits on the Russia line, whose lyric v2-3 does not cover Germany's declaration. \"Gavrilo Princip kills...\" starts on the \"open car\" line, before the shooting is named.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "\"Austria-Hungary had attacked first, so Italy stayed neutral in 1914\" (lesson, narration n27-n28, key line, bridge b-3 to b-4)",
+      "problem": "It is the standard account, but Italy's neutrality is presented as flowing straight from the treaty's defensive terms, and it also did not want to fight, which is left out.",
+      "correction": "Italy argued the alliance was defensive and Austria-Hungary had started the war, so it declared neutrality; it also had its own territorial interests against Austria-Hungary."
+    },
+    {
+      "claim": "\"Germany saw a threat, so it declared war on Russia on August 1, then on France on August 3\" (narration n20; lesson step 4)",
+      "problem": "This implies the Triple Alliance's rope pulled Germany in, but Germany's alliance with Austria-Hungary was not the reason it declared war on France; France was attacked because of the Schlieffen Plan.",
+      "correction": "Germany declared war on Russia over its mobilization, then on France because the Schlieffen Plan required defeating France first."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts, dates and sequence (June 28, July 28, August 1, 3 and 4; Bosnia annexed 1908; Italy neutral in 1914 and joining in 1915) are right. The main imprecisions are the thin explanation for why Germany declared war on France and the simplified framing of the alliances as a single rope. The song also says \"Austria strikes and Russia calls\", which is fine. Nothing a learner would carry away wrong, but a teacher would tighten the Germany-France link.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong, repeatable chant: \"Two shots fired, great powers pulled in / One rope ties them, the drag begins\". Many verse lines read like captions or lists, such as \"Armies growing: that's militarism\", \"Serbs against Austria: nationalism\" and \"Schlieffen Plan: through Belgium, fast advance\". Rhymes are sometimes bent (\"Austria attacks\" with \"we've got your back\"; \"advance\"/\"France\"; \"no call\"), and several lines run long, such as \"Help a partner if attacked, that's all\". Verse 1 also drifts into labels.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the question \"How did one assassination start a war across Europe?\", gives the big picture with the roped-team image, and builds in cause-and-effect order. It asks \"What do you think Germany... did next?\" and answers it straight away. It names the misconception and why it is wrong, and ends with a check that needs the core idea. It carries many terms and names for a first-time learner (eight key terms, plus the table), and the Italy section plus the table add length without much gain.",
+    "score": 4
+  }
+}

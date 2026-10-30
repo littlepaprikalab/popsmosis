@@ -1,0 +1,22 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-8",
+      "rule": "lyric-style",
+      "detail": "\"Franz Ferdinand's shot, now who's to blame?\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "p2-2",
+      "rule": "lyric-style",
+      "detail": "\"But the chain keeps pulling past Europe's shore\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-1",
+      "rule": "lyric-style",
+      "detail": "\"Japan's been Britain's friend since oh-two\" runs 11 syllables, over 10",
+      "repaired": false
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "hook": {
+    "reason": "The title line \"Count the ways the heat can spread\" is concrete, singable after one hearing and opens and closes the chorus, so it is close to the core idea in miniature. It names counting and spreading, though \"count the ways\" is abstract and the line has no real thing in it to act on. The lesson opens on the learner's own question, \"If entropy isn't disorder, what is it?\", which is what they asked. The narration opens on hot coffee cooling, from the learner's world, but the question about disorder is not picked up until n24.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The two dice are the frame: \"Each die's a particle... Seven beats two at six times the rate.\" They carry the counting idea well and recur in the song's intro, chorus c3-1 and outro. But they picture only the counting part, not what the whole thing is for, which is energy spreading. After v1 the dice nearly vanish from the lesson and narration, which move to packets and coffee. The coffee-cooling example fits the dice only loosely, and the fridge and ice material sit outside any picture.",
+    "score": 3
+  },
+  "why_chain": {
+    "reason": "The lesson teaches every link in order, each with its cause: random passing makes arrangements equally likely, more ways turn up more often, spreading has more ways (5 vs 35), huge numbers make it a law, and so heat flows one way. The narration follows the same order, and n15–n16 ask and answer the prediction. Link 3 is a little loose: the 5-vs-35 example is the number of ways, and the narration then says \"like rolling a seven\" without showing that the spread macrostate beats the concentrated one. The link between the second law and heat flowing one way is made by the numbers section more than by the chain. The song carries the gist.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Several lines are real steps: \"Random collisions → every arrangement equally likely\", \"More microstates → that macrostate turns up more often\" and \"Spread over more molecules → vastly more ways\". But the first, \"If entropy isn't disorder, what is it?\", is a question, not a step. \"Entropy counts ways, not messiness\" has no narration anchor and is a slogan. \"Second law limits heat engine efficiency: next topic\" is off-chain, and \"Fridge loses power...\" is a side example. The \"Dice: exact faces = microstate\" line is a label. The core idea never lands as a closing line, and the chain's final link, hot to cold and never back, is missing.",
+    "score": 2
+  },
+  "errors": [
+    {
+      "claim": "Lesson step 3 / narration n18: \"4 energy packets kept on 2 molecules can be arranged in only 5 ways, but spread over 4 molecules in 35 ways\" (narration n17 says \"four molecules sharing four energy packets\" and then n18 \"Kept on the two coffee molecules\")",
+      "problem": "The 5-vs-35 comparison is not like-for-like with the physical situation. Comparing different numbers of molecules does not show that spreading beats staying concentrated within a fixed system, and n17 says four molecules while n18 puts the same packets on two. The 35 is also not a spread-out macrostate competing with the 5 as an equal-probability alternative. In the narration the \"two coffee molecules\" are one part of the four, so the 5 ways are a subset of the 35, which is mostly fine, but the wording suggests 5 ways are available when the packets stay in the coffee.",
+      "correction": "Say that within the four molecules there are 35 arrangements in total, and only 5 of them keep all four packets on the two coffee molecules, so about 86% of arrangements have the energy spread to the air."
+    },
+    {
+      "claim": "Lesson: \"Water even freezes into orderly ice below 0 °C, because the heat it releases raises the colder surroundings' entropy by more...\"; pre-chorus p1-2: \"Neat ice forms, total entropy's raised\"",
+      "problem": "The song states the conclusion with no cause, and the lesson treats freezing as raising the surroundings' entropy because heat is released, without saying that the surroundings must be colder than the water. The lesson does say \"colder\", so only the song misleads.",
+      "correction": "Keep the lesson's reasoning; in the song say something like \"Ice forms, the heat it sheds spreads out\"."
+    },
+    {
+      "claim": "Narration n9: \"Entropy counts those ways, so seven, with more microstates, comes up six times as often.\"",
+      "problem": "Entropy counts microstates, but the claim that seven comes up six times as often than two depends on the dice being fair, which n14 only says afterward. It is a minor ordering flaw.",
+      "correction": "State that each pair of faces is equally likely before saying seven comes up six times as often."
+    }
+  ],
+  "accuracy": {
+    "reason": "The physics is sound: S = k ln W, the 5 and 35 counts are right (C(5,1)=5 and C(7,4)=35 for packets on 2 and 4 molecules), the 1800 J example gives −5 and +6 J/K, and the card-deck and ice points are correct for thermodynamic entropy. There is one real weakness: the 5-vs-35 comparison is built on a different number of molecules, and the narration changes between four molecules and two. The song's \"neat ice forms, total entropy's raised\" drops the cause. The song's bridge line \"the hot-to-cold way\" for heat flowing from the warmer kitchen to the shelf is fine. Overall, one imprecision a teacher would tighten.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant (\"Count the ways the heat can spread / More ways spread, so that's where it heads\") with clean rhymes and a repeated title. But much of the song is textbook sentences set in rhyme: \"Each die's a particle, toss them high / The total's the macrostate you spy\", \"Four packets on two molecules: five\", \"Coffee drops five, the room air gains six / One more joule per kelvin in the mix\" and \"Heat engines are next in line / The second law caps how well they shine\". Several lines run past 10 syllables, and \"the odds stack up\" and \"in the mix\" are filler tags. The lines are mostly rhythmic and rhymed, so this is better than prose, but verse 2 and the pre-chorus read like captions.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on the learner's question and gives the big picture right away, and the dice give a first-time learner a way in. It asks one prediction (\"What do you think happens when coffee and air molecules pass packets at random...?\") and answers it right after, and it names the misconception and gives a reason. The closing check, \"Why does heat almost always flow from hot coffee into cool air, when energy would be conserved either way?\", can only be answered by someone who understood. But it carries many terms for high school (microstate, macrostate, energy packets, second law, S = k ln W, Boltzmann's constant, Q/T, first law), and the numbers section and the heat-engine line could be cut. The misconception paragraph is placed in the middle of the chain, between steps 4 and 5, which breaks its flow.",
+    "score": 3
+  }
+}

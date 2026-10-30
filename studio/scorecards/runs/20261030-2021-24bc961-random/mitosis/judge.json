@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Copy the page, deal one each way\" is concrete, singable and captures the whole move (copy, then deal out), and it opens and closes the chorus. The lesson opens on a real question, \"How does mitosis make two identical cells?\", and the narration opens on \"Scrape your knee\", which is from the learner's world. It loses a little because \"Copy the page\" is not obviously about cells without the frame, and the lesson's second sentence turns to a definition.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The recipe-book picture (photocopy each page, clip it to its copy, deal one of each pair into two binders) does the job of the whole process, and it carries through the intro, chorus, outro, lesson and narration (n22 \"That's the dealing\"). The nondisjunction bridge and metaphase checkpoint sit inside it only loosely, and the bridge lets the picture go. The mapping of pages and clips to chromosomes and chromatids is slightly off: a page is a chromosome but the 'copy' is a chromatid, and the song never says which is which.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "All five links are taught in order with their causes: \"so each pole can receive one chromatid of every chromosome\", \"so the two copies will be pulled in different directions\", and \"so mitosis only has to separate the copies\". The narration adds \"That matters, because now each copy will be pulled a different way\" and \"Lined up like this, every chromosome is ready to split evenly\". The song carries the gist. The last link, a nucleus forming and the cell dividing so that both daughters hold the full set, is stated more as sequence than as cause.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most lines are steps in order, such as \"Fibers from opposite poles attach, one per sister chromatid\" and \"Anaphase: chromatids separate → one copy of each per pole\". But the first is only the title question, and the second, \"Page = chromosome, clip = centromere, binder = daughter cell\", is a label. \"Metaphase: chromosomes lined up single file across the middle\" is also a label with no 'so', and it starts at n16 \"Back on the path, metaphase comes next\", which is a transition and not the step. The key line \"Cell divides → two daughter cells, 46 chromosomes each\" starts at v2-7 and n25, where the cell is only pinching in two. Telophase and the core idea are missing from the chain.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric p1-1/p1-2: \"Interphase copies, then mitosis starts / And all it does is pull the pairs apart\"; also narration n8 and key line \"Interphase copies DNA\"",
+      "problem": "Mitosis does more than pull pairs apart: it also condenses chromosomes, forms the spindle and rebuilds nuclei and divides the cell. This is a loose simplification, though the lesson says \"mitosis only separates the copies\", so it is the course's own wording.",
+      "correction": "Say mitosis only separates the copies, without any new DNA copying, rather than 'all it does is pull the pairs apart'."
+    },
+    {
+      "claim": "Lesson step 2 and lyric v1-5 to v1-8: spindle fibers attach in prophase",
+      "problem": "Spindle fibers grow in prophase, but attaching to the centromere (kinetochores) is usually placed in late prophase/prometaphase, so teaching it as part of prophase may mislead slightly.",
+      "correction": "Say the fibers attach at the end of prophase, and say that this happens before metaphase."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts are mostly correct for high school: copying in interphase, 46 chromosomes in each daughter cell, anaphase separation, nondisjunction and the metaphase checkpoint. There are two small imprecisions. \"all it does is pull the pairs apart\" overstates what mitosis does. Attachment is placed in prophase, where it usually belongs to prometaphase, and the checkpoint is called a metaphase checkpoint, which matches the course. Nothing a learner would carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are short and sung-like: \"Copy the page, deal one each way\", \"Two cells the same, that's how they're made\". The chorus is a strong chant. But some lines read as captions or textbook sentences: \"Prophase hooks, metaphase lines them straight\" (misrhymes with \"away\"/\"same\" loosely), \"Forty-six in a skin cell, here's the twist\", \"Each new cell still ends with forty-six\" (a slant rhyme), and the bridge's \"The two don't match and may not work right\". Several lines run past 10 syllables, such as \"Centromere splits, the twins divide\" and the bridge lines. The terms prophase, metaphase, anaphase and cytokinesis are stacked in the chorus, which makes it a list.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the recipe-book picture, builds step by step with causes, asks \"What do you think happens when the fibers start to pull?\", names the misconception and ends on \"Why does each daughter cell end up with the full 46 chromosomes\". But the prediction question comes just before step 4 without being answered right away in a clearly marked way, and the nondisjunction and meiosis sections bring in new terms (nondisjunction, checkpoint, cleavage furrow, cell plate) that a first-time learner may not need. The misconception comes late. The closing check is answerable from the misconception paragraph as well as from understanding.",
+    "score": 4
+  }
+}

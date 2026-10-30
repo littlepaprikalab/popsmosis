@@ -1,0 +1,2133 @@
+{
+  "course": "Thermodynamics",
+  "topic": "Entropy",
+  "audience": "high school",
+  "core_idea": "Entropy counts the ways particles and energy can be arranged; nature drifts toward states with the most ways.",
+  "why_chain": [
+    "What we observe, like gas filling a box, is a macrostate, and many exact arrangements of molecules, called microstates, can produce it.",
+    "Entropy measures how many microstates fit a macrostate, so more ways means higher entropy.",
+    "Molecules move randomly, so a system ends up in the macrostate with the most microstates simply because it is overwhelmingly likely.",
+    "Spread-out particles and energy have vastly more microstates than bunched ones, so things spread and total entropy rises: the second law."
+  ],
+  "key_terms": [
+    "entropy",
+    "macrostate",
+    "microstate",
+    "second law of thermodynamics",
+    "isolated system"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "A macrostate is the overall condition of a system that we can observe or measure, such as its temperature, pressure and volume, or a gas filling its box. A microstate is one exact arrangement of every particle's position and energy, and many different microstates can give the same macrostate. Entropy measures how many microstates fit a macrostate: the more microstates, the higher the entropy. Boltzmann's equation states this as S = k ln W, where W is the number of microstates and k is Boltzmann's constant; entropy is measured in joules per kelvin. It is a common mistake to think entropy simply means disorder or messiness. Disorder is only a loose metaphor: entropy counts microstates, which measures how widely energy and particles are spread among the arrangements available, not how messy things look. Visible messiness, like an untidy room or a shuffled deck of cards, is not what thermodynamic entropy measures.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Rolling two dice is an everyday picture of entropy. The total you roll is like a macrostate, and each exact pair of faces is like a microstate. A total of seven can be made six ways: 1 and 6, 2 and 5, 3 and 4, 4 and 3, 5 and 2, and 6 and 1. A total of two can be made only one way, 1 and 1. So seven comes up six times as often as two, not because the dice prefer seven, but because more microstates make it. In the same way, a system ends up in the macrostate with the most microstates because it is the most likely.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "Picture a box of gas with a left half and a right half. With four gas molecules there are sixteen microstates: all four in the left half happens in only one of them, while two molecules in each half happens in six. As the number of molecules grows, evenly spread arrangements vastly outnumber bunched ones: with 100 molecules, the chance of finding all of them in the left half at any moment is less than one in a million trillion trillion. Molecules move randomly, so a gas spreads to fill its container, and a drop of food coloring spreads through water and never gathers back into a drop. This is the second law of thermodynamics: the total entropy of an isolated system, one that trades no energy or matter with its surroundings, tends to increase and never decreases. The law is statistical: for any large system a decrease is so unlikely that it is never observed.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "When heat Q flows into a system at absolute temperature T, its entropy rises by Q divided by T (ΔS = Q/T, for heat transferred reversibly at constant temperature). When a mug of hot coffee sits in a cool room, heat leaves the coffee at a higher temperature and enters the room at a lower temperature, so the room gains more entropy than the coffee loses, and total entropy rises. That is why heat flows on its own from hot to cold, never from cold to hot. A refrigerator can move heat from cold to hot only by using work, electrical energy, and it releases even more heat into the kitchen, so total entropy still rises. Entropy leads to the next topic, Gibbs free energy, which combines entropy and enthalpy to predict whether a reaction happens on its own.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think entropy simply means disorder or messiness. Entropy actually counts the microstates that fit a macrostate, so it measures how widely energy and particles are spread, not how messy things look.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a chemistry textbook draws it, of a clear glass of water standing on a table: the glass large in the centre of the picture, the water inside it tinted light blue, a single red drop of food coloring just entering the water at the top, with a faint red cloud spreading below it in the upper part of the water. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Glass of water",
+          "aliases": [
+            "glass of water",
+            "glass"
+          ],
+          "sam_phrase": "blue glass",
+          "color_hex": "#5BC0EB"
+        },
+        {
+          "name": "Food coloring",
+          "aliases": [
+            "drop of food coloring",
+            "food coloring",
+            "drop"
+          ],
+          "sam_phrase": "red drop",
+          "color_hex": "#FF4D4D"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of pairs of white dice with black pips on a table top. On the left, one pair of dice showing a one and a one, sitting on a small orange tray. On the right, six pairs of dice in a column, showing one and six, two and five, three and four, four and three, five and two, and six and one, all sitting together on one long green tray. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Total of two",
+          "aliases": [
+            "one way"
+          ],
+          "sam_phrase": "orange tray",
+          "color_hex": "#FF9F1C"
+        },
+        {
+          "name": "Total of seven",
+          "aliases": [
+            "six ways"
+          ],
+          "sam_phrase": "green tray",
+          "color_hex": "#7BD389"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a sealed box of gas seen from the front: the box's walls a thick light purple frame filling the centre of the picture, a dashed white line down its middle, the left half of the inside tinted yellow, the right half of the inside tinted pink, and about a hundred small white dots, the gas molecules, spread evenly through both halves. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Box of gas",
+          "aliases": [
+            "box of gas",
+            "isolated system",
+            "whole box",
+            "full box"
+          ],
+          "sam_phrase": "purple frame",
+          "color_hex": "#B388FF"
+        },
+        {
+          "name": "Left half",
+          "aliases": [
+            "left half"
+          ],
+          "sam_phrase": "yellow rectangle",
+          "color_hex": "#FFD166"
+        },
+        {
+          "name": "Right half",
+          "aliases": [
+            "right half"
+          ],
+          "sam_phrase": "pink rectangle",
+          "color_hex": "#F78FB3"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "four-molecules",
+      "image_prompt": "Educational diagram, as a statistical physics textbook draws it, of the sixteen microstates of four gas molecules in a box: sixteen identical small square boxes, each with a dashed line down its middle and four small white molecules inside it, drawn as a circle, a square, a triangle and a star. The boxes stand in five columns on a common baseline, left to right: a column of one box with all four molecules in its left half, tinted orange; a column of four boxes with three molecules in the left half, plain white outlines; a column of six boxes with two molecules in each half, tinted green; a column of four boxes with three molecules in the right half, plain white outlines; and a column of one box with all four molecules in its right half, a plain white outline. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "All on the left",
+          "aliases": [
+            "all on the left",
+            "all four in the left half"
+          ],
+          "sam_phrase": "orange square",
+          "color_hex": "#FF9F1C"
+        },
+        {
+          "name": "Two in each half",
+          "aliases": [
+            "two in each half",
+            "two molecules in each half",
+            "spread evenly"
+          ],
+          "sam_phrase": "green squares",
+          "color_hex": "#7BD389"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": true
+    },
+    {
+      "id": "coffee",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a mug of hot coffee on a table in a cool room: the room's back wall tinted cyan behind everything, a tan mug full of hot coffee on a table in the lower left, a thermometer standing in the coffee with its red liquid reaching high, and a thermometer hanging on the wall on the right with its red liquid low. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Hot coffee",
+          "aliases": [
+            "hot coffee",
+            "coffee"
+          ],
+          "sam_phrase": "tan mug",
+          "color_hex": "#D4A373"
+        },
+        {
+          "name": "Cool room",
+          "aliases": [
+            "cool room",
+            "room"
+          ],
+          "sam_phrase": "cyan wall",
+          "color_hex": "#3DDBD9"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "fridge",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a refrigerator in a kitchen: the kitchen's back wall tinted peach across the whole picture, a white refrigerator standing in front of it on the left with its door closed, and a plain kitchen counter on the right. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Refrigerator",
+          "aliases": [
+            "fridge"
+          ],
+          "sam_phrase": "white fridge",
+          "color_hex": "#F0F0F0"
+        },
+        {
+          "name": "Kitchen",
+          "aliases": [
+            "kitchen"
+          ],
+          "sam_phrase": "peach wall",
+          "color_hex": "#FFB38A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    }
+  ],
+  "lesson_markdown": "## What is entropy, really, if it isn't just disorder?\n\nPut a drop of food coloring into a glass of water and it spreads through the whole glass, and it never gathers back into a drop. The reason is entropy. Here is the big idea: **entropy counts the ways particles and energy can be arranged, and nature drifts toward states with the most ways.**\n\n### The picture: rolling two dice\n\nRoll two dice. The total you roll is like a **macrostate**, and each exact pair of faces is like a **microstate**. A total of seven can be made six ways: 1 and 6, 2 and 5, 3 and 4, 4 and 3, 5 and 2, and 6 and 1. A total of two can be made only one way, 1 and 1. So seven comes up six times as often as two, not because the dice prefer seven, but because more microstates make it.\n\n### How it works\n\n1. **What you see is a macrostate; the exact arrangement is a microstate.** A macrostate is the overall condition you can observe or measure, such as a gas's temperature, pressure and volume, or a gas filling its box. A microstate is one exact arrangement of every particle's position and energy. Just as many pairs of faces can give the same total, many different microstates can give the same macrostate.\n2. **Entropy counts the microstates.** Entropy measures how many microstates fit a macrostate: the more microstates, the higher the entropy. On the dice, seven is the high-entropy total. Boltzmann's equation states it as S = k ln W, where W is the number of microstates and k is Boltzmann's constant, and entropy is measured in joules per kelvin.\n\n   A common mistake is to think entropy simply means disorder or messiness. Disorder is only a loose metaphor: entropy counts microstates, which measures how widely energy and particles are spread among the arrangements available, not how messy things look. An untidy room or a shuffled deck of cards is not what thermodynamic entropy measures.\n3. **Random motion lands on the macrostate with the most ways.** Picture a box of gas with a left half and a right half, holding just four molecules. There are sixteen microstates: only one puts all four in the left half, while six put two molecules in each half. Like seven on the dice, the even spread turns up more often because more microstates make it.\n\n   What do you think happens with 100 molecules: would you ever catch them all in the left half? Practically never, since the chance at any moment is less than one in a million trillion trillion. Molecules move randomly, so a system ends up in the macrostate with the most microstates, because it is overwhelmingly likely.\n4. **Spreading raises entropy: the second law.** Spread-out arrangements vastly outnumber bunched ones, so a gas spreads to fill its container and food coloring spreads through water. This is the **second law of thermodynamics**: the total entropy of an **isolated system**, one that trades no energy or matter with its surroundings, tends to increase and never decreases. The law is statistical: for any large system, a decrease is so unlikely that it is never observed.\n\n### One case: hot coffee in a cool room\n\nWhen heat Q flows into a system at absolute temperature T, its entropy rises by Q/T (for heat transferred reversibly at constant temperature). Heat leaves a mug of hot coffee at a higher temperature and enters the cool room at a lower one, so the room gains more entropy than the coffee loses, and total entropy rises. That is why heat flows on its own from hot to cold, never from cold to hot.\n\nNext in the course, entropy joins enthalpy in Gibbs free energy, which predicts whether a reaction happens on its own.\n\n**Check yourself:** The second law is statistical, so why do you never see all the gas in a box crowd into one half?\n\nWant to dig deeper? Ask a follow-up question.",
+  "music": {
+    "positive_styles": [
+      "Breezy indie-pop with melodic sung verses; bright strummed acoustic guitar, a bouncy bass line and little glockenspiel sparkles over a loose, sunny groove; 110 bpm with handclaps on the backbeat; warm, slightly husky male lead, easy and conversational in the verses, opening up into a big chorus where gang vocals shout the hook back; acoustic guitar leads, claps and a tambourine accent the beat"
+    ],
+    "negative_styles": [
+      "long instrumental intro",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "And the most ways win the game",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Roll two dice, the total's what you see",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "Like a macrostate, the summary",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Snake eyes, just one way to roll a two",
+      "names": [
+        "one way"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Seven's got six ways to come through",
+      "names": [
+        "six ways"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "The dice don't love the seven, no",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "More ways to make it, so it shows",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Entropy counts the microstates",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "That sit behind each macrostate",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "Entropy's not the mess on the floor",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "It counts the microstates, that's the core",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Place the particles and energy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "More ways means more entropy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "So nature drifts to the most, and stays",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Take a box of gas, split down the middle",
+      "names": [
+        "box of gas"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Random molecules, here's the riddle",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Four of them: all on the left? Just one",
+      "names": [
+        "all on the left"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Two in each half? Six, so spread has won",
+      "names": [
+        "Two in each half"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "A hundred all left? The odds aren't brilliant",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Less than one in a million trillion trillion",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "So the gas spreads out: the second law",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Sealed off, total entropy won't fall",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Next, entropy meets enthalpy",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Will a reaction run alone? We'll see",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Place the particles and energy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "More ways means more entropy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "So nature drifts to the most, and stays",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Here's the test: a fridge, cold inside",
+      "names": [
+        "fridge"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "It moves heat out to the warm side",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Heat won't go from cold to hot for free",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "So it runs on work, electricity",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Even more heat out in the kitchen, so",
+      "names": [
+        "kitchen"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "Total entropy still has to grow",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "The second law still doesn't break",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "Spreading out's the likely road to take",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Seven on the dice, gas spread wide",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Both have the most ways on their side",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Place the particles and energy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "More ways means more entropy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "So nature drifts to the most, and stays",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Now the drop won't gather back",
+      "names": [
+        "drop"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Far more ways to spread than pack",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Roll the dice and count the ways",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Put one drop of food coloring into a glass of water.",
+      "names": [
+        "drop of food coloring",
+        "glass of water"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "Without stirring, it spreads through the whole glass.",
+      "names": [
+        "glass"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "Wait as long as you like, and it never gathers back into a drop.",
+      "names": [
+        "drop"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n4",
+      "text": "The usual explanation is entropy, often called disorder.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "But what is entropy, really?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n29",
+      "text": "In plain words, entropy counts the ways particles and energy can be arranged.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n30",
+      "text": "So it isn't really disorder: it measures how widely energy and particles are spread, and that's why the drop never gathers back.",
+      "names": [
+        "drop"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "Roll two dice: the total is like a macrostate, and each exact pair of faces is like a microstate.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n7",
+      "text": "Seven can be made six ways, but two only one way, so seven turns up six times as often.",
+      "names": [
+        "six ways",
+        "one way"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n8",
+      "text": "Entropy is that kind of count: how many microstates make the same macrostate.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "Now the real thing: a box of gas with a left half and a right half.",
+      "names": [
+        "box of gas",
+        "left half",
+        "right half"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n10",
+      "text": "What we see, gas filling the whole box, is the macrostate.",
+      "names": [
+        "whole box"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "One exact arrangement of every molecule's position and energy is a microstate.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n12",
+      "text": "Shrink the box to four molecules, and there are sixteen microstates.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n13",
+      "text": "Only one of them puts all four in the left half.",
+      "names": [
+        "all four in the left half"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n14",
+      "text": "But six of them put two molecules in each half.",
+      "names": [
+        "two molecules in each half"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n15",
+      "text": "So spread evenly beats all on the left six to one, just like seven beats two on the dice.",
+      "names": [
+        "spread evenly",
+        "all on the left"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n16",
+      "text": "Back in the full box, picture a hundred molecules.",
+      "names": [
+        "full box"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n17",
+      "text": "What are the odds of catching them all in the left half at one moment?",
+      "names": [
+        "left half"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "Less than one in a million trillion trillion.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n19",
+      "text": "The molecules move randomly, so the gas ends up spread out, the macrostate with by far the most microstates.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "Now treat the box as an isolated system, one that trades no energy or matter with its surroundings.",
+      "names": [
+        "isolated system"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "For an isolated system, total entropy never decreases, and that's the second law of thermodynamics.",
+      "names": [
+        "isolated system"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "Now, what else does entropy explain, like why hot coffee cools down in a cool room?",
+      "names": [
+        "hot coffee",
+        "cool room"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "When heat flows into something, its entropy rises by the heat divided by its absolute temperature.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Heat leaves the coffee at a higher temperature and enters the room at a lower one.",
+      "names": [
+        "coffee",
+        "room"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "Dividing by the smaller temperature gives a bigger result, so the room gains more entropy than the coffee loses.",
+      "names": [
+        "room",
+        "coffee"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Total entropy rises, and that's why heat flows on its own from hot to cold.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n22",
+      "text": "So, back to the gas: entropy measures how widely energy and particles are spread among the arrangements available.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n23",
+      "text": "Entropy counts the ways particles and energy can be arranged, and nature drifts toward states with the most ways.",
+      "names": [],
+      "fact_id": "f1"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Total of two",
+        "zoom": 1.6
+      },
+      "spotlight": "Total of two",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Total of seven",
+        "zoom": 1.6
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "S = k ln W",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Left half",
+        "Right half"
+      ],
+      "carries": "molecule",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "four-molecules",
+      "camera": {
+        "target": "All on the left",
+        "zoom": 1.7
+      },
+      "spotlight": "All on the left",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "four-molecules",
+      "camera": {
+        "target": "Two in each half",
+        "zoom": 1.7
+      },
+      "spotlight": "Two in each half",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Left half",
+        "Right half"
+      ],
+      "carries": "molecule",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "fridge",
+      "camera": {
+        "target": "Refrigerator",
+        "zoom": 1.6
+      },
+      "spotlight": "Refrigerator",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Refrigerator",
+      "particles": [
+        "Refrigerator",
+        "Kitchen"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Refrigerator",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "fridge",
+      "camera": {
+        "target": "Refrigerator",
+        "zoom": 1.6
+      },
+      "spotlight": "Refrigerator",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "Refrigerator",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Kitchen",
+      "particles": [
+        "Refrigerator",
+        "Kitchen"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "Food coloring",
+        "zoom": 1.6
+      },
+      "spotlight": "Food coloring",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Food coloring",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Glass of water",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "Food coloring",
+        "zoom": 1.6
+      },
+      "spotlight": "Food coloring",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Food coloring",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "four-molecules",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "four-molecules",
+      "camera": {
+        "target": "All on the left",
+        "zoom": 1.7
+      },
+      "spotlight": "All on the left",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "four-molecules",
+      "camera": {
+        "target": "Two in each half",
+        "zoom": 1.7
+      },
+      "spotlight": "Two in each half",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "four-molecules",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Two in each half",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "Left half",
+        "zoom": 1.6
+      },
+      "spotlight": "Left half",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Left half",
+        "Right half"
+      ],
+      "carries": "molecule",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "coffee",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Hot coffee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "coffee",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "coffee",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Hot coffee",
+      "particles": [
+        "Hot coffee",
+        "Cool room"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "coffee",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Cool room",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "coffee",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Cool room"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Box of gas",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "What is entropy, really, if it isn't just disorder?",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Dice: total = macrostate, each pair of faces = microstate",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "More microstates per macrostate → higher entropy",
+      "from_narration": "n8"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "4 molecules: all left = 1 microstate; 2 per half = 6",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Random motion → the likeliest macrostate: the most microstates",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Second law of thermodynamics: isolated system's total entropy never decreases",
+      "from_narration": "n20"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Fridge: cold → hot (heat) needs work; total entropy rises",
+      "from_narration": ""
+    }
+  ],
+  "tags": {
+    "song": [
+      "entropy",
+      "secondlaw",
+      "thermodynamics",
+      "microstates",
+      "macrostate",
+      "physics",
+      "indiepop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "entropy",
+      "secondlaw",
+      "thermodynamics",
+      "microstates",
+      "macrostate",
+      "physics",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

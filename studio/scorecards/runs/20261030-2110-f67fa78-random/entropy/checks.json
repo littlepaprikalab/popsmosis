@@ -1,0 +1,64 @@
+{
+  "problems": [
+    {
+      "line_id": "p1-2",
+      "rule": "lyric-style",
+      "detail": "\"It counts the microstates, that's the core\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-2",
+      "rule": "lyric-style",
+      "detail": "\"Random molecules, here's the riddle\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-5",
+      "rule": "lyric-style",
+      "detail": "\"A hundred all left? The odds aren't brilliant\" runs 12 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-6",
+      "rule": "lyric-style",
+      "detail": "\"Less than one in a million trillion trillion\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-8",
+      "rule": "lyric-style",
+      "detail": "\"Sealed off, total entropy won't fall\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "p2-2",
+      "rule": "lyric-style",
+      "detail": "\"Will a reaction run alone? We'll see\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-8",
+      "rule": "lyric-style",
+      "detail": "\"Spreading out's the likely road to take\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "c1-1",
+      "rule": "motion",
+      "detail": "6 lines in a row from c1-1 with nothing moving, on a scene where things travel",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-8",
+      "rule": "motion",
+      "detail": "8 lines in a row from v2-8 with nothing moving, on a scene where things travel",
+      "repaired": false
+    },
+    {
+      "line_id": "c3-1",
+      "rule": "motion",
+      "detail": "7 lines in a row from c3-1 with nothing moving, on a scene where things travel",
+      "repaired": false
+    }
+  ]
+}

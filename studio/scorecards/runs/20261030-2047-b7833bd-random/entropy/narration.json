@@ -1,0 +1,263 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "A hot cup of coffee always cools down to the temperature of the room."
+    },
+    {
+      "id": "n2",
+      "text": "It never pulls heat out of the cooler air and gets hotter."
+    },
+    {
+      "id": "n3",
+      "text": "Yet energy would still be conserved if it did."
+    },
+    {
+      "id": "n4",
+      "text": "So if entropy isn't disorder, what is it, and why does it make cooling one-way?"
+    },
+    {
+      "id": "n5",
+      "text": "Think of rolling two dice, where each die is like a particle."
+    },
+    {
+      "id": "n6",
+      "text": "The total you see is the macrostate, the big picture we measure, like temperature."
+    },
+    {
+      "id": "n7",
+      "text": "The exact faces are a microstate, one precise arrangement underneath."
+    },
+    {
+      "id": "n8",
+      "text": "A total of seven can be rolled six ways, but a total of two only one way."
+    },
+    {
+      "id": "n9",
+      "text": "Entropy counts those ways, so seven, with more microstates, comes up six times as often."
+    },
+    {
+      "id": "n10",
+      "text": "Now look inside, where the hot coffee meets the cool room air."
+    },
+    {
+      "id": "n11",
+      "text": "Energy is shared out in small energy packets, and coffee molecules each carry many."
+    },
+    {
+      "id": "n12",
+      "text": "Room air molecules carry far fewer."
+    },
+    {
+      "id": "n13",
+      "text": "Where they touch, molecules collide and pass energy packets around at random."
+    },
+    {
+      "id": "n14",
+      "text": "Every arrangement of energy packets is equally likely, like every pair of faces on the dice."
+    },
+    {
+      "id": "n15",
+      "text": "So will the energy packets stay crowded in the coffee?"
+    },
+    {
+      "id": "n16",
+      "text": "No, and counting the ways shows why."
+    },
+    {
+      "id": "n17",
+      "text": "Take just four molecules sharing four energy packets."
+    },
+    {
+      "id": "n18",
+      "text": "Kept on the two coffee molecules, the energy packets can be arranged only five ways."
+    },
+    {
+      "id": "n19",
+      "text": "Spread over all four molecules, they can be arranged thirty-five ways."
+    },
+    {
+      "id": "n20",
+      "text": "So random passing lands on spread-out arrangements far more often, like rolling a seven."
+    },
+    {
+      "id": "n21",
+      "text": "A real cup holds roughly ten trillion trillion molecules, so spreading becomes essentially certain."
+    },
+    {
+      "id": "n22",
+      "text": "Back at the coffee and the room air, this is the second law of thermodynamics."
+    },
+    {
+      "id": "n23",
+      "text": "The total entropy of an isolated system never goes down, so the energy spreads into the air."
+    },
+    {
+      "id": "n24",
+      "text": "A common mistake is to think entropy means messiness."
+    },
+    {
+      "id": "n25",
+      "text": "But nothing here looks messier: the energy packets just spread out, because spread-out arrangements are far more numerous."
+    },
+    {
+      "id": "n26",
+      "text": "Now, let's put numbers on the coffee cooling."
+    },
+    {
+      "id": "n27",
+      "text": "When heat flows, entropy changes by the heat divided by the temperature in kelvins."
+    },
+    {
+      "id": "n28",
+      "text": "Say 1800 joules flow from coffee at 360 kelvins into room air at 300 kelvins."
+    },
+    {
+      "id": "n29",
+      "text": "The coffee loses 5 joules per kelvin of entropy, but the air gains 6."
+    },
+    {
+      "id": "n30",
+      "text": "So the total rises by 1, and the reverse would lower it, so it never happens on its own."
+    },
+    {
+      "id": "n31",
+      "text": "So entropy counts the ways energy can be arranged, and energy spreads out because spread-out states have vastly more ways."
+    },
+    {
+      "id": "n32",
+      "text": "Concentrated heat goes in, spread-out heat comes out, and that's why your coffee always cools."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "A hot cup of coffee always cools down to the temperature of the room."
+    },
+    {
+      "id": "n2",
+      "text": "It never pulls heat out of the cooler air and gets hotter."
+    },
+    {
+      "id": "n3",
+      "text": "Yet energy would still be conserved if it did."
+    },
+    {
+      "id": "n4",
+      "text": "So what is entropy, and why does it make cooling one-way?"
+    },
+    {
+      "id": "n5",
+      "text": "Think of rolling two dice, where each die is like a particle."
+    },
+    {
+      "id": "n6",
+      "text": "The total you see is the macrostate, the big picture we measure, like temperature."
+    },
+    {
+      "id": "n7",
+      "text": "The exact faces are a microstate, one precise arrangement underneath."
+    },
+    {
+      "id": "n8",
+      "text": "A total of seven can be rolled six ways, but a total of two only one way."
+    },
+    {
+      "id": "n9",
+      "text": "Entropy counts those ways, so seven, with more microstates, comes up six times as often."
+    },
+    {
+      "id": "n10",
+      "text": "Now look inside, where the hot coffee meets the cool room air."
+    },
+    {
+      "id": "n11",
+      "text": "Energy is shared out in small energy packets, and coffee molecules each carry many."
+    },
+    {
+      "id": "n12",
+      "text": "Room air molecules carry far fewer."
+    },
+    {
+      "id": "n13",
+      "text": "Where they touch, molecules collide and pass energy packets around at random."
+    },
+    {
+      "id": "n14",
+      "text": "So every arrangement of energy packets is equally likely, like every pair of faces on the dice."
+    },
+    {
+      "id": "n15",
+      "text": "So will the energy packets stay crowded in the coffee?"
+    },
+    {
+      "id": "n16",
+      "text": "No, and counting the ways shows why."
+    },
+    {
+      "id": "n17",
+      "text": "Take just four molecules sharing four energy packets."
+    },
+    {
+      "id": "n18",
+      "text": "Kept on the two coffee molecules, the energy packets can be arranged only five ways."
+    },
+    {
+      "id": "n19",
+      "text": "Spread over all four molecules, they can be arranged thirty-five ways."
+    },
+    {
+      "id": "n20",
+      "text": "So random passing lands on spread-out arrangements far more often, like rolling a seven."
+    },
+    {
+      "id": "n21",
+      "text": "A real cup holds roughly ten trillion trillion molecules, so spreading becomes essentially certain."
+    },
+    {
+      "id": "n22",
+      "text": "Back at the coffee and the room air, that certainty is the second law of thermodynamics."
+    },
+    {
+      "id": "n23",
+      "text": "The total entropy of an isolated system never goes down, so the energy spreads into the air."
+    },
+    {
+      "id": "n24",
+      "text": "A common mistake is to think entropy means messiness."
+    },
+    {
+      "id": "n25",
+      "text": "But nothing here looks messier; the energy packets simply spread out, because spread-out arrangements are far more numerous."
+    },
+    {
+      "id": "n26",
+      "text": "Now, let's put numbers on the coffee cooling."
+    },
+    {
+      "id": "n27",
+      "text": "When heat flows, entropy changes by the heat divided by the temperature in kelvins."
+    },
+    {
+      "id": "n28",
+      "text": "Say 1800 joules flow from coffee at 360 kelvins into room air at 300 kelvins."
+    },
+    {
+      "id": "n29",
+      "text": "The coffee loses 5 joules per kelvin of entropy, but the air gains 6."
+    },
+    {
+      "id": "n30",
+      "text": "So the total rises by 1, and since the reverse would lower it, it never happens on its own."
+    },
+    {
+      "id": "n31",
+      "text": "So entropy counts the ways energy can be arranged, and energy spreads out because spread-out states have vastly more ways."
+    },
+    {
+      "id": "n32",
+      "text": "Concentrated heat goes in, spread-out heat comes out, and that's why your coffee always cools."
+    }
+  ]
+}

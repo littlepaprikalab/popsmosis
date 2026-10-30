@@ -1,0 +1,28 @@
+{
+  "problems": [
+    {
+      "line_id": "v2-7",
+      "rule": "lyric-style",
+      "detail": "\"Coffee's entropy dips, air's climbs more\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-2",
+      "rule": "lyric-style",
+      "detail": "\"Water's entropy drops, but there's a price\" runs 12 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-4",
+      "rule": "lyric-style",
+      "detail": "\"So the kitchen's entropy climbs more there\" runs 11 syllables, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "c3-2",
+      "rule": "lyric-style",
+      "detail": "\"Total entropy climbs, that's the rule\" runs 11 syllables, over 10",
+      "repaired": false
+    }
+  ]
+}

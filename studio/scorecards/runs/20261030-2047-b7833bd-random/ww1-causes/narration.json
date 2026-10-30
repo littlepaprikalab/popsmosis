@@ -1,0 +1,271 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "In towns across Europe, stone memorials list local soldiers who died in the war of 1914 to 1918."
+    },
+    {
+      "id": "n2",
+      "text": "That war began with one shooting, on 28 June 1914."
+    },
+    {
+      "id": "n3",
+      "text": "Within about five weeks, five of Europe's great powers were at war."
+    },
+    {
+      "id": "n4",
+      "text": "So how did one shooting start a world war?"
+    },
+    {
+      "id": "n5",
+      "text": "Picture a scuffle on a crowded street, where both fighters have friends who promised to back them up."
+    },
+    {
+      "id": "n6",
+      "text": "One shove, and the friends pile in, then their friends too."
+    },
+    {
+      "id": "n7",
+      "text": "In 1914, the shove was the assassination, and the two fighters were Austria-Hungary and Serbia."
+    },
+    {
+      "id": "n8",
+      "text": "The friends were their allies and protectors."
+    },
+    {
+      "id": "n9",
+      "text": "Here are the countries, left to right, in the order they went to war."
+    },
+    {
+      "id": "n10",
+      "text": "The armbands show the alliance system: Germany was Austria-Hungary's ally, and Russia was France's."
+    },
+    {
+      "id": "n11",
+      "text": "Those promises meant a war between two powers could drag in their partners."
+    },
+    {
+      "id": "n12",
+      "text": "First, the background."
+    },
+    {
+      "id": "n13",
+      "text": "For years, the great powers practiced militarism, building huge armies and detailed war plans."
+    },
+    {
+      "id": "n14",
+      "text": "Britain and Germany even raced to build giant battleships called dreadnoughts."
+    },
+    {
+      "id": "n15",
+      "text": "So by 1914, every great power was armed and could mobilize fast."
+    },
+    {
+      "id": "n16",
+      "text": "Next comes the spark, in Sarajevo."
+    },
+    {
+      "id": "n17",
+      "text": "Franz Ferdinand, heir to Austria-Hungary's throne, rode through the city in an open car."
+    },
+    {
+      "id": "n18",
+      "text": "Gavrilo Princip, a nineteen-year-old Bosnian Serb, shot and killed him."
+    },
+    {
+      "id": "n19",
+      "text": "Princip was driven by nationalism: he wanted South Slavs living under Austria-Hungary united with Serbia."
+    },
+    {
+      "id": "n20",
+      "text": "Back on the line, Austria-Hungary blamed Serbia."
+    },
+    {
+      "id": "n21",
+      "text": "With Germany's promise of full support, it declared war on Serbia on 28 July."
+    },
+    {
+      "id": "n22",
+      "text": "But Russia saw itself as Serbia's protector, so it began mobilization, calling up its huge army."
+    },
+    {
+      "id": "n23",
+      "text": "What do you think Germany, Austria-Hungary's ally, did next?"
+    },
+    {
+      "id": "n24",
+      "text": "On 1 August, it declared war on Russia, then on Russia's ally France two days later."
+    },
+    {
+      "id": "n25",
+      "text": "A common mistake is to think the assassination alone caused the war."
+    },
+    {
+      "id": "n26",
+      "text": "It was only the spark: the alliance system and militarism turned one quarrel into a war among great powers."
+    },
+    {
+      "id": "n27",
+      "text": "Now, why did Britain join in?"
+    },
+    {
+      "id": "n28",
+      "text": "Germany's Schlieffen Plan aimed to beat France quickly, to avoid fighting on two fronts at once."
+    },
+    {
+      "id": "n29",
+      "text": "Its army would sweep through Belgium, a neutral country."
+    },
+    {
+      "id": "n30",
+      "text": "But in 1839, Britain had promised to protect Belgium's neutrality."
+    },
+    {
+      "id": "n31",
+      "text": "So when German troops entered Belgium on 4 August, Britain declared war on Germany that same day."
+    },
+    {
+      "id": "n32",
+      "text": "A single assassination became a world war because alliances and war plans pulled each great power in, one after another."
+    },
+    {
+      "id": "n33",
+      "text": "One shooting started a war between Austria-Hungary and Serbia, and promises of backup pulled in Russia, Germany, France and Britain."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "In towns across Europe, stone memorials list local soldiers who died in the war of 1914 to 1918."
+    },
+    {
+      "id": "n2",
+      "text": "That war began with one shooting, on 28 June 1914."
+    },
+    {
+      "id": "n3",
+      "text": "Within about five weeks, five of Europe's great powers were at war."
+    },
+    {
+      "id": "n4",
+      "text": "So how did one shooting start a world war?"
+    },
+    {
+      "id": "n5",
+      "text": "Picture a scuffle on a crowded street, where both fighters have friends who promised to back them up."
+    },
+    {
+      "id": "n6",
+      "text": "One shove, and the friends pile in, then their friends too."
+    },
+    {
+      "id": "n7",
+      "text": "In 1914, the shove was the assassination, and the two fighters were Austria-Hungary and Serbia."
+    },
+    {
+      "id": "n8",
+      "text": "The friends were their allies and protectors."
+    },
+    {
+      "id": "n9",
+      "text": "Here are the real countries, left to right, in the order they went to war."
+    },
+    {
+      "id": "n10",
+      "text": "The armbands show the alliance system: Germany was Austria-Hungary's ally, and Russia was France's."
+    },
+    {
+      "id": "n11",
+      "text": "Those promises meant a war between two powers could drag in their partners."
+    },
+    {
+      "id": "n12",
+      "text": "But there was more background, too."
+    },
+    {
+      "id": "n13",
+      "text": "For years, the great powers practiced militarism, building huge armies and detailed war plans."
+    },
+    {
+      "id": "n14",
+      "text": "Britain and Germany even raced to build giant battleships called dreadnoughts."
+    },
+    {
+      "id": "n15",
+      "text": "So by 1914, every great power was armed and could mobilize fast."
+    },
+    {
+      "id": "n16",
+      "text": "Then came the spark, in Sarajevo."
+    },
+    {
+      "id": "n17",
+      "text": "Franz Ferdinand, heir to Austria-Hungary's throne, rode through the city in an open car."
+    },
+    {
+      "id": "n18",
+      "text": "Gavrilo Princip, a nineteen-year-old Bosnian Serb, shot and killed him."
+    },
+    {
+      "id": "n19",
+      "text": "Princip was driven by nationalism: he wanted South Slavs living under Austria-Hungary united with Serbia."
+    },
+    {
+      "id": "n25",
+      "text": "Back on the line, a common mistake is to think the assassination alone caused the war."
+    },
+    {
+      "id": "n26",
+      "text": "But it was only the spark: the alliance system and militarism are what turned one quarrel into a war among great powers."
+    },
+    {
+      "id": "n20",
+      "text": "Here's how it happened: Austria-Hungary blamed Serbia."
+    },
+    {
+      "id": "n21",
+      "text": "With Germany's promise of full support, it declared war on Serbia on 28 July."
+    },
+    {
+      "id": "n22",
+      "text": "But Russia saw itself as Serbia's protector, so it began mobilization, calling up its huge army."
+    },
+    {
+      "id": "n23",
+      "text": "Germany, Austria-Hungary's ally, treated that as a threat."
+    },
+    {
+      "id": "n24",
+      "text": "So on 1 August, it declared war on Russia, then on Russia's ally France two days later."
+    },
+    {
+      "id": "n27",
+      "text": "Then why did Britain join in?"
+    },
+    {
+      "id": "n28",
+      "text": "Germany's Schlieffen Plan aimed to beat France quickly, to avoid fighting on two fronts at once."
+    },
+    {
+      "id": "n29",
+      "text": "So its army would sweep through Belgium, a neutral country."
+    },
+    {
+      "id": "n30",
+      "text": "But in 1839, Britain had promised to protect Belgium's neutrality."
+    },
+    {
+      "id": "n31",
+      "text": "So when German troops entered Belgium on 4 August, Britain declared war on Germany that same day."
+    },
+    {
+      "id": "n32",
+      "text": "A single assassination became a world war because alliances and war plans pulled each great power in, one after another."
+    },
+    {
+      "id": "n33",
+      "text": "One shooting started a war between Austria-Hungary and Serbia, and promises of backup pulled in Russia, Germany, France and Britain."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Before a cell divides, it copies every chromosome, and then mitosis pulls the copies apart evenly so that the two new cells each get the same full set and match the original.",
+      "why": "First, during interphase, the cell copies its DNA, so each chromosome becomes two identical sister chromatids joined at the centromere. In prophase the chromosomes coil up and the nuclear envelope breaks down, which lets spindle fibers from the two poles reach the chromosomes. In metaphase the fibers attach at the centromeres and the chromosomes line up across the middle, so one chromatid of each chromosome faces each pole. In anaphase the spindle fibers shorten and pull the sister chromatids apart to opposite poles, and each chromatid now counts as its own chromosome, so each pole gets a full set of 46. In telophase a nuclear envelope forms around each set, and in cytokinesis the cytoplasm splits (a cleavage furrow in animal cells, a cell plate in plant cells). Because the copying happened first and the separation is even, both daughter cells end up identical.",
+      "what_if": "If the sister chromatids of one chromosome failed to separate in anaphase (nondisjunction), both chromatids would be pulled to the same pole. Then one daughter cell would have 47 chromosomes and the other 45, because the spindle fibers did not split that pair. The lesson says cells with the wrong number of chromosomes often don't work properly or die. The lesson doesn't explain exactly why the wrong number causes problems, so I can't say more than that."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

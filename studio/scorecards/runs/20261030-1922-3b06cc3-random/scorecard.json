@@ -1,0 +1,362 @@
+{
+  "about": {
+    "started": "2026-10-30T19:22:32+0000",
+    "commit": "3b06cc368f14b9a04d8136e899bd9c642772a7d6",
+    "dirty": false,
+    "prompt": "704388f79701",
+    "rubric": "714bdf3624bd",
+    "topics": "5ae9d6c133b8",
+    "brain": "Claude Opus 5.5",
+    "model": "claude-opus-5-5",
+    "effort": "high",
+    "judge": "claude-sonnet-5-5 at high",
+    "name": "20261030-1922-3b06cc3-random",
+    "topic_ids": [
+      "ww1-causes",
+      "mitosis",
+      "entropy"
+    ],
+    "note": "3 topics picked at random from a pool of 24 outside topics.json (topics.json here)",
+    "finished": "2026-10-30T19:35:25+0000",
+    "minutes": 12.9
+  },
+  "topics": [
+    {
+      "id": "ww1-causes",
+      "subject": "history",
+      "level": "high school",
+      "topic": "why World War I started",
+      "course": "World History",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "lyric-style": 2
+        },
+        "problems": [
+          "c1-1 lyric-style: the title line \"Two shots fired, the allies pile in\" names nothing from the core idea, why chain or key terms, or leans on pronouns",
+          "c1-1 lyric-style: the chorus says too little of the core idea: at most one of its words"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 4,
+          "of": 5,
+          "passed": true,
+          "missing": [
+            "The student never explains that the great powers split into the Triple Alliance and the Triple Entente out of fear of each other; they mention only 'two blocs' and 'alliances' as a long-term cause, without naming the two alliances or giving the fear that drove them."
+          ]
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Two shots fired, the allies pile in\" is concrete, easy to sing back and close to the core idea, but \"the allies pile in\" is slightly vague and the Allies were not yet formed in the way it implies. The lesson opens on a real question, \"How could two shots fired in one city pull Europe's great powers into a world war?\". The narration opens on the Archduke's car taking a wrong turn, which is a vivid scene but not from the learner's own world.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The schoolyard with two crews promising backup fits the whole alliance mechanism, and it is carried through the lyric (v1-1, v1-2, b-5), the lesson and the narration, with Italy fitting inside it. But it is a somewhat stock picture of escalating fights. It is dropped from the chorus and the second verse, and the narration's \"kid in green\" is never tied to Serbia. It also covers the alliance link better than the Belgium and Schlieffen link.",
+          "score": 3
+        },
+        "why_chain": {
+          "reason": "The lesson and narration walk through the links in order with causes: \"Fearing each other, the powers split...\", \"Russia, which saw itself as protector of Serbia, began to mobilize\", \"To reach France fast... marched through neutral Belgium\", \"Britain had promised in 1839... so it declared war\". The step from Russian mobilization to Germany declaring war on Russia is only stated, not explained, since the lesson never says Germany treated mobilization as a threat or was bound to Austria. Why Germany declared war on France is left to the check question. The Italy and Marne sections add material outside the chain.",
+          "score": 3
+        },
+        "key_lines": {
+          "reason": "Most lines are steps with arrows, such as \"Fear → Triple Alliance vs. Triple Entente, promising partners help\", and they are short and plain. Several problems remain. The first, \"How did one assassination start a world war?\", is a question rather than a step. \"Germany backs Austria-Hungary → war on Serbia\" is placed at c1-2, away from where Germany's support is sung (v2-1). The Russia line starts at the chorus. The final line leaves the chain at the Marne and Italy, and no line states the core idea.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The main facts are right: the dates, the Schlieffen Plan, the Belgium treaty of 1839, Italy's neutrality and its 1915 switch. The song has a few loose lines, such as \"its ally\" for France in v2-4, which reads as Germany's ally, and \"the allies pile in\" used before the Allies existed as a bloc. The lesson also lets the alliance-promise picture cover Britain, whose entry came from the Belgium treaty. A teacher would tighten these, but a learner would carry away nothing badly wrong.",
+          "score": 4
+        },
+        "singability": {
+          "reason": "Many lines read like textbook captions and overrun the bar, such as \"Triple Alliance in the middle, Triple Entente on the flanks\", \"The Schlieffen Plan: beat France first, 'cause Russia mobilizes late\" and \"Germany declared on Russia, then on France, its ally\" (which also bends grammar to rhyme). \"Late/wait\" and \"side/wide\" rhymes are fine. The chorus is a simple, repeatable chant. The long bridge on Italy is a clumsy fit in a song with limited space.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a question, and the table, the schoolyard picture and the numbered chain are clear. It asks \"What do you think Russia did next?\" and answers it straight away, names the misconception, and ends on a good check, \"why did Germany declare war on France?\". But the misconception sits late, after the chain. The Italy and Marne sections plus NATO add terms and material beyond the core idea, and the check is hard to answer from the lesson, since the Russia-to-France link is never explained.",
+          "score": 3
+        }
+      },
+      "errors": [
+        {
+          "claim": "Lyric p1-2: \"Alliances and armies made one killing a world war\" and c1-4 \"France and Britain join\" in the sequence",
+          "problem": "The lyric's chorus order implies France joined after Russia mobilized, and in c1-3 the line \"Russia mobilizes, Germany declares war\" skips that Germany declared on Russia and France as separate steps, which blurs who acted; this is minor and mostly compression.",
+          "correction": "Keep the wording but make clear that Germany declared war on Russia and then France, and that Britain joined over Belgium."
+        },
+        {
+          "claim": "Lyric i-1/c1-1 \"Two shots fired, the allies pile in\"",
+          "problem": "\"The allies\" suggests the Allied powers were all drawn in by the shots, but the Central Powers and the Allies are different sides, and Germany and Austria acted first.",
+          "correction": "Use wording such as \"the powers pile in\" to cover both sides."
+        },
+        {
+          "claim": "Lyric v2-4: \"Germany declared on Russia, then on France, its ally\"",
+          "problem": "\"Its ally\" reads as Germany's ally, but France was Russia's ally.",
+          "correction": "\"then on France, Russia's ally\"."
+        },
+        {
+          "claim": "Lyric c3-1 and the lesson's \"Italy had signed the Triple Alliance... In 1915 it joined the Allies\" with b-6 \"in 1914 it sat tight\"",
+          "problem": "The lyric's claim that Italy's treaty was simply \"just defense\" and that Austria 'made the first move' is fine, but the lesson says Britain's ties had 'no firm promise' while the narration says Britain acted over Belgium, so the schoolyard 'pulled in by promises' framing slightly overstates alliance promises as the cause of Britain's entry.",
+          "correction": "Say plainly that Britain entered because of its 1839 treaty with Belgium, not because of an alliance promise."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "One assassination sparked a local war, and alliance promises pulled the great powers in, one after another.",
+      "why_chain": [
+        "Militarism, imperialism and nationalism left Europe's great powers armed, distrustful and ready to fight.",
+        "Because they feared each other, they split into the Triple Alliance and the Triple Entente, ready to back their partners.",
+        "When a Bosnian Serb nationalist killed Franz Ferdinand, Austria-Hungary, backed by Germany, declared war on Serbia.",
+        "Russia began mobilization to protect Serbia, so Germany declared war on Russia and on its ally France.",
+        "Germany's Schlieffen Plan sent its army through neutral Belgium, so Britain declared war too."
+      ],
+      "title_line": "Two shots fired, the allies pile in",
+      "bpm": 96,
+      "cost": {
+        "bundle": 1.7935,
+        "judge": 0.0343,
+        "unpriced": false
+      },
+      "seconds": 768.8
+    },
+    {
+      "id": "mitosis",
+      "subject": "biology",
+      "level": "high school",
+      "topic": "how mitosis makes two identical cells",
+      "course": "Biology",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 1,
+        "by_rule": {
+          "not-in-scene": 1,
+          "lyric-style": 1
+        },
+        "problems": [
+          "n30 not-in-scene: names Skin cells, which scene \"telophase\" does not draw",
+          "p2-2 lyric-style: \"But it divides twice, so its cells hold half, for egg and sperm\" runs 13 words, over 12"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Copy the chromosomes, pull the pairs apart\" is concrete actions on real things and is the core idea in miniature. It opens and closes the chorus and can be sung back after one hearing. The lesson opens on a real question, \"When you scrape your knee, where do the new skin cells come from?\", and the narration opens on the same knee scrape from the learner's world. The one small flaw is that \"pairs\" is slightly abstract.",
+          "score": 5
+        },
+        "frame": {
+          "reason": "The folders-and-pages picture, \"filling two folders with the same packet of pages\", does the same job as the whole process: copy everything, clip each copy to its original, then pull the clipped pairs apart. It is set up in v1-1, returns in the chorus (\"Each new cell gets every page\") and the outro, and appears in the lesson and narration. The picture is dropped in verse 2 and the bridge, and the lesson never uses it again after the analogy section, so it is not carried through every step. The clipped pairs map neatly onto sister chromatids.",
+          "score": 4
+        },
+        "why_chain": {
+          "reason": "The lesson and narration give the causes: \"The copying comes first so that the cell never splits its only copy of any instruction\"; coiling happens because the DNA would otherwise tangle (\"about 2 metres\"); and the pull gives \"one copy of every chromosome\", so the two sets match because the chromatids are identical. Each link follows from the one before. Metaphase is thinner: the lesson never says why lining up in the middle matters, only that the cell checks every attachment. Telophase and cytokinesis are described but not given a reason. The song carries the gist through v2-5 and v2-6.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "The lines read in order as a chain: copy, coil, line up, pull apart, telophase and cytokinesis. Several are steps with consequences, such as \"Prophase: chromosomes coil tight → moved without tangling\". But the first is a question, not a step. \"Folders = new cells, pages = chromosomes\" is a label. \"Each new cell gets the full set, not half\" has no narration anchor. The line about the prophase step starts on v1-5 and not at the start of the prophase step. The final line, about the drug, is a tangent, and the core idea line is missing at the end.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The science is correct at high-school level: copying in interphase, sister chromatids joined at the centromere, coiling in prophase, the 46 chromosomes, the spindle, taxol, and meiosis dividing twice. One imprecision is that the key line says \"Prophase: chromosomes coil tight → moved without tangling\" while the lyric at that line is about length, not coiling. Another is that the narration describes the lesson's \"cell checks\" step without naming the checkpoint. I find nothing a learner would carry away wrong.",
+          "score": 5
+        },
+        "singability": {
+          "reason": "The chorus is a strong, chantable hook with clean rhymes (\"apart/part\", \"whole/goal\"). Many verse lines run long for a bar, even rapped: v1-5 \"Unwound, one cell's DNA would run about two metres long\" and v2-1 \"In metaphase the fibers hook each chromosome from both sides\" are heavy. Some read like textbook sentences: v1-4 \"Each chromosome's two sister chromatids, clipped as one\" and p2-2 \"But it divides twice, so its cells hold half, for egg and sperm\", which has no rhyme and overruns. v2-7 and v2-8 reach for rhyme with \"and then\" and \"grow again\".",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on the knee question, gives the big idea and the folders analogy, and goes step by step. It has a Predict prompt (\"What do you think happens when the fibers start to pull?\") answered right after in anaphase. The misconception is named and corrected, and it ends on \"If a cell started mitosis without first copying its DNA, why could it not make two identical cells?\", which tests the core idea. Weaknesses: eight-plus new terms, and a side trip into taxol and meiosis that is not essential for a first read.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Key line \"Prophase: chromosomes coil tight → moved without tangling\" (from lyric v1-5 and narration n12)",
+          "problem": "v1-5 sings only the 2-metre length and v1-6 gives the coiling, so the line starts one lyric line before its step is sung.",
+          "correction": "Start this key line at v1-6 \"So prophase coils it tight...\" (or move the line so it matches the sung step)."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "Each chromosome is copied, then spindle fibers pull the two copies apart, so each new cell gets one full set.",
+      "why_chain": [
+        "The cell copies its DNA first, so each chromosome becomes two identical sister chromatids.",
+        "In prophase the chromosomes coil up, because long loose DNA would tangle when moved.",
+        "In metaphase spindle fibers attach from both poles and line the chromosomes up in the middle.",
+        "In anaphase the fibers pull the sister chromatids to opposite poles, so each side gets one copy of every chromosome.",
+        "Telophase and cytokinesis close each set in a nucleus and split the cell, giving two identical cells."
+      ],
+      "title_line": "Copy the chromosomes, pull the pairs apart",
+      "bpm": 92,
+      "cost": {
+        "bundle": 1.3031,
+        "judge": 0.037,
+        "unpriced": false
+      },
+      "seconds": 524.8
+    },
+    {
+      "id": "entropy",
+      "subject": "physics",
+      "level": "college",
+      "topic": "what entropy is",
+      "course": "Thermodynamics",
+      "made": true,
+      "failed": null,
+      "checks": {
+        "left": 2,
+        "repaired": 0,
+        "by_rule": {
+          "lyric-style": 2
+        },
+        "problems": [
+          "v1-4 lyric-style: \"But a total of seven's got six, so it comes up the most\" runs 13 words, over 12",
+          "v2-2 lyric-style: \"Heat flows to the cooler room air till their temps are the same\" runs 13 words, over 12"
+        ]
+      },
+      "learner": {
+        "first": {
+          "core_idea": true,
+          "links": 5,
+          "of": 5,
+          "passed": true,
+          "missing": []
+        },
+        "rewritten": null
+      },
+      "rubric": {
+        "hook": {
+          "reason": "The title line \"Count the ways, let the energy spread\" is short, concrete and close to the core idea, and it opens and closes the chorus so it sticks. \"Count the ways\" is a bit abstract, since the 'ways' are not a real thing until the dice come in. The lesson opens on the learner's own puzzle, \"If entropy means disorder, why does a neat crystal of ice ever form?\", which is strong. The narration opens on hot coffee cooling, which is from the learner's world.",
+          "score": 4
+        },
+        "frame": {
+          "reason": "The droplet's everyday picture is dice, a model of counting outcomes. The song sets it up early (\"Roll the dice, and the seven comes out ahead\") and the lesson and narration use it, but the song's later sections drop it for coffee and the freezer. Dice fit the counting idea well, but they are not an everyday thing doing the same job as the whole of entropy, namely energy spreading out. Narration n2 pictures a box of gas before it reaches the dice, so two pictures compete. It is apt for the counting half and weaker for energy spreading.",
+          "score": 3
+        },
+        "why_chain": {
+          "reason": "The lesson and narration walk through macrostate, microstate, entropy as a count, random hopping, the biggest count winning, huge numbers, and then the second law. Each step carries its cause, for example \"The molecules keep colliding and trading energy, so the box hops between microstates\" and the explanation of why the colder object gains more entropy. The freezer example adds the link that a part can lose entropy if the surroundings gain more. One thin spot is how counting microstates connects to energy spreading out: the claim that spread-out energy has more ways is asserted in the song (\"spread-out has more\") rather than shown with energy examples.",
+          "score": 4
+        },
+        "key_lines": {
+          "reason": "The ten lines mostly read as steps in order, such as \"Molecules collide → system hops between microstates at random\" and \"Huge particle numbers → practically always found spread out\". The first line, \"Why does energy spread out on its own?\", is a question, not a step, and it starts at i-1, where the song sings \"Count the ways\" but the narration is about coffee. \"Entropy ≠ disorder\" is closer to a slogan, and \"Dice total = macrostate\" is a label. The chain ends on the freezer, not on the core idea itself. The set is also long.",
+          "score": 3
+        },
+        "accuracy": {
+          "reason": "The physics is sound for high school: S = k ln W, the 16 microstates and 6-way split, ΔS = Q/T with the steady-temperature caveat, and the freezer accounting are all correct. The song holds to the same standard: \"Heat goes hot to cold, the gas fills the space\" and \"Entropy's not mess\" are fair. Saying \"Total entropy climbs\" without \"isolated system\" in the chorus is a small looseness.",
+          "score": 5
+        },
+        "singability": {
+          "reason": "The chorus is a clean chant that repeats and is easy to sing back. Many verse lines overrun the rapped limit of about 14 syllables, for example v1-8 \"Sixteen ways to arrange them, and they keep shuffling past\" and v2-2 \"Heat flows to the cooler room air till their temps are the same\". Several read like textbook sentences, such as v2-6 \"In an isolated system it never drops at all\", and some rhymes are loose or forced (\"cases/passes\", \"home\" for \"on its own\"). The bridge and verses are long but still mostly whole phrases.",
+          "score": 3
+        },
+        "lesson_clarity": {
+          "reason": "It opens on a real question, builds on dice then gas, and has a Predict step answered right after. It names the disorder misconception and explains why it is wrong with the freezing water example. The closing check, \"Nothing pushes a gas into the empty half of a box, so why does it end up spread through both halves?\", can be answered with the counting idea. It carries a fair number of new terms (microstate, macrostate, second law, isolated system, Boltzmann's formula, ΔS=Q/T), and the engine remark at the end could be cut.",
+          "score": 4
+        }
+      },
+      "errors": [
+        {
+          "claim": "Song c3-2: \"More ways, more entropy, and spread-out's what you'll find\"; also lyric v1-4 \"a total of seven's got six, so it comes up the most\"",
+          "problem": "This is not really wrong, but v1-4 is fine. The only real issue is lyric v2-4 \"The cold gains more entropy than the hot gives away\", which is fine for the ΔS=Q/T case. No real error found in this line.",
+          "correction": "No correction needed."
+        }
+      ],
+      "audience": "high school",
+      "core_idea": "Entropy counts the ways energy can be spread out; things drift toward the state with the most ways.",
+      "why_chain": [
+        "A macrostate, the state you can measure, can be built from many microstates, the exact arrangements of particles and energy.",
+        "Entropy counts those microstates, so a macrostate that can happen in more ways has higher entropy.",
+        "Particles keep colliding and trading energy, so the system keeps hopping from microstate to microstate at random.",
+        "Spread-out macrostates have vastly more microstates, so the system is practically always found spread out.",
+        "So in an isolated system total entropy rises: a gas fills its box and heat flows from hot to cold."
+      ],
+      "title_line": "Count the ways, let the energy spread",
+      "bpm": 110,
+      "cost": {
+        "bundle": 1.5287,
+        "judge": 0.028,
+        "unpriced": false
+      },
+      "seconds": 637.2
+    }
+  ],
+  "summary": {
+    "topics": 3,
+    "made": 3,
+    "judged": 3,
+    "failed": {},
+    "rubric": {
+      "hook": {
+        "mean": 4.33,
+        "lowest": 4,
+        "low": 0
+      },
+      "frame": {
+        "mean": 3.33,
+        "lowest": 3,
+        "low": 0
+      },
+      "why_chain": {
+        "mean": 3.67,
+        "lowest": 3,
+        "low": 0
+      },
+      "key_lines": {
+        "mean": 3,
+        "lowest": 3,
+        "low": 0
+      },
+      "accuracy": {
+        "mean": 4.67,
+        "lowest": 4,
+        "low": 0
+      },
+      "singability": {
+        "mean": 3,
+        "lowest": 3,
+        "low": 0
+      },
+      "lesson_clarity": {
+        "mean": 3.67,
+        "lowest": 3,
+        "low": 0
+      }
+    },
+    "checks": {
+      "left": 6,
+      "repaired": 1,
+      "per_droplet": 2,
+      "by_rule": {
+        "lyric-style": 5,
+        "not-in-scene": 1
+      }
+    },
+    "learner": {
+      "tested": 3,
+      "first_passed": 3,
+      "first_core_idea": 3,
+      "first_links": 14,
+      "of": 15,
+      "rewritten": 0,
+      "passed_after_rewrite": 0
+    },
+    "errors": 6,
+    "cost": {
+      "bundle": 4.63,
+      "judge": 0.1,
+      "unpriced": false
+    }
+  }
+}

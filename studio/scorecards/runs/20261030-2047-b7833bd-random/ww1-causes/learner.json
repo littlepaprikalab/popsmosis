@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "World War I began because one assassination in Sarajevo set off a chain reaction, as alliances and military war plans pulled one great power after another into a war that started as a quarrel between Austria-Hungary and Serbia.",
+      "why": "First, Europe was split into two alliance camps (Germany, Austria-Hungary and Italy versus France, Russia and Britain), and the powers had big armies, war plans and an arms race, so a fight between two countries could drag in their partners. Nationalism in the Balkans made Serbia want to unite the South Slavs, many of whom lived under Austria-Hungary. On 28 June 1914 Gavrilo Princip shot Franz Ferdinand. Austria-Hungary blamed Serbia, got Germany's backing, and declared war on Serbia on 28 July. Russia saw itself as Serbia's protector and mobilized on 30 July. Germany treated that as a threat and declared war on Russia on 1 August and on Russia's ally France on 3 August. Germany's Schlieffen Plan meant attacking France fast through neutral Belgium so it would not fight two fronts at once. Britain had promised in an 1839 treaty to protect Belgium, so when German troops entered Belgium on 4 August, Britain declared war on Germany. So the assassination was only the spark, and the alliances and war plans spread the fire.",
+      "what_if": "If the alliance system stopped working, for example if Russia had not felt bound to protect Serbia, then the war would probably have stayed a fight between Austria-Hungary and Serbia. Russia would not have mobilized, so Germany would not have declared war on Russia and France, and Britain would not have been dragged in through Belgium. The lesson says the alliances are what turned the quarrel into a great power war, so without them it likely would not have spread, though the lesson does not say for sure what would have happened."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

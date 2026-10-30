@@ -1,0 +1,20 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Entropy counts how many microstates (exact arrangements of particles and energy) fit a macrostate, and nature drifts toward the state with the most ways, which is why things like food coloring spread out and never gather back.",
+      "why": "First, what we observe (temperature, pressure, gas filling a box) is a macrostate, while the exact positions and energies of every particle are a microstate, and many microstates can give the same macrostate, like many dice pairs giving a total of seven. Entropy measures how many microstates there are (S = k ln W). Second, particles move randomly, so the system is most likely to be found in the macrostate with the most microstates. With 4 gas molecules, 6 of 16 microstates are an even split but only 1 has all on the left. With 100 molecules, all on one side is practically never seen. Third, spread-out arrangements vastly outnumber bunched ones, so gases spread out and entropy of an isolated system tends to increase, which is the second law. It is statistical, so a decrease is just absurdly unlikely, not impossible. For hot coffee, heat Q leaving at high T lowers entropy by less than the same heat entering the cool room at low T raises it, so total entropy goes up and heat flows from hot to cold.",
+      "what_if": "If molecules stopped moving randomly, the reason for the gas spreading would break down. The lesson says a system ends up in the macrostate with the most microstates because random motion makes that overwhelmingly likely. Without random motion, gas molecules wouldn't keep shuffling among arrangements, so there'd be no reason for food coloring to spread through the water or for the gas to fill the box evenly. The lesson doesn't say exactly what would happen physically, but the drift toward high entropy would no longer be explained."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

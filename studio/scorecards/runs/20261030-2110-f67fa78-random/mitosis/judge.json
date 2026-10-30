@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Copy each chromosome, split the pair\" is concrete, built from actions on real things, and sings back easily. It names the copy-then-split move, though it leaves out the even pull-apart. The lesson opens on \"How does one cell split into two identical cells?\", which is a good question, and the narration opens on \"When you scrape your knee\", which comes from the learner's world. A small slip: the lesson's own question line is not the title, and the first key line is the lesson's question rather than a step.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The recipe book shared between two kitchens suits the whole job of mitosis: pages photocopied, clipped to copies, then unclipped so each kitchen gets a complete book. It appears in the lesson and narration (n4-n6) and in the song's v1-1 and v1-2, and the c3-2 line \"Two matching books on either side\" carries it into the final chorus. It is mostly dropped in the later verses, the chorus, and the bridge, which is mostly literal chromosome talk. The lesson ties \"the clips come undone\" to anaphase, which is a good use of the picture.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach each link with its cause: \"the nuclear envelope breaks down... With the envelope gone, spindle fibers... can reach the chromosomes\", and \"That lineup matters, because it puts one sister chromatid of every chromosome facing each pole\". Anaphase's pull gives \"each pole ends up with one full set\". The song carries the gist in order. A few links are slightly thin: telophase and cytokinesis are described as events rather than why they make two matching cells, and the lesson's anaphase link says \"so each pole ends up with one full set\" after the pull, which works. Overall it is complete and ordered.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Several lines are real steps, such as \"Prophase: envelope breaks down → spindle fibers reach chromosomes\" and \"Anaphase: spindle fibers shorten → sister chromatids to opposite poles\". But the first line is the lesson's question, not a step, and \"Pages = chromosomes, kitchens = daughter cells\" is a label. Timing is off in places: the prophase line starts at v1-5 and the metaphase line at v1-6, which fits, but the first line starts at i-1, a lyric that does not ask the question, and the narration n11 \"Next comes prophase\" and n14 \"Now zoom in on metaphase\" are labels with the step coming later. The chain also lacks the core-idea line, and the nondisjunction line is an extra branch. The \"Interphase\" line has a good cause and effect.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric v1-1 to v1-2 and the lesson: \"Copy each page before they cook\" / \"Every page is photocopied\" (recipe frame, as used in the chorus \"One in, two out, matching inside\", c1-4)",
+      "problem": "\"One in, two out\" is vague and could be read as one cell yielding two, but it also suggests one chromosome in and two out, which does not match the chorus's own stated meaning.",
+      "correction": "Say something like \"One cell in, two cells out, matching inside\"."
+    },
+    {
+      "claim": "Lyric pc1-1 to pc1-2 and v1-4: \"Interphase copies, then it begins\"",
+      "problem": "The grammar is loose, since \"it\" has no clear referent, but the claim itself is accurate; no factual correction needed beyond clarity.",
+      "correction": "Say \"Interphase copies, then mitosis begins\"."
+    }
+  ],
+  "accuracy": {
+    "reason": "The science is correct for high school: copying in interphase, chromatid separation in anaphase, 46 chromosomes per pole, and nondisjunction giving 47 and 45. The one claim to tighten is the song's c1-4 \"One in, two out, matching inside\", which is ambiguous about what goes in and out. Nothing a learner would carry away wrong. The bridge's \"One extra page, one page is gone\" is an apt description of 47 and 45. The line \"Meiosis next: sex cells get half\" is fine.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are short and chantable, such as the chorus \"Copy each chromosome, split the pair\" and \"Line them up for an even share\", with clean rhymes (pair/share, side/inside). But several lines read like captions: \"Prophase coils them, the wall breaks down\", \"Interphase copies, then it begins\", and the bridge's \"So both new cells have the count wrong\" and \"Or die, one stuck pair was all it took\" run long and bend grammar to rhyme. \"Forty-six per pole, a full set home\" is a forced rhyme tag. The stage-by-stage verses feel like a list of terms.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "The lesson opens on a question, gives the big idea and the recipe picture, and builds step by step with causes. It names the misconception and why it is wrong. It includes a prediction prompt (\"What do you think happens when the spindle fibers shorten?\") answered right after. It ends on a check that needs the core idea: \"Mitosis itself copies nothing, so why do both daughter cells still end up with a full, identical set?\" Weaknesses: eight key terms plus centromere, cleavage furrow, cell plate and nondisjunction is a lot for a first read, and the nondisjunction section and the meiosis note are extra beyond the core idea.",
+    "score": 4
+  }
+}

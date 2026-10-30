@@ -1,0 +1,10 @@
+{
+  "problems": [
+    {
+      "line_id": "c3-2",
+      "rule": "lyric-style",
+      "detail": "\"Every promise opened one more door\" runs 11 syllables, over 10",
+      "repaired": false
+    }
+  ]
+}

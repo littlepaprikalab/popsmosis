@@ -1,0 +1,247 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "Put one drop of food coloring into a glass of water."
+    },
+    {
+      "id": "n2",
+      "text": "Without stirring, it spreads through the whole glass."
+    },
+    {
+      "id": "n3",
+      "text": "Wait as long as you like, and it never gathers back into a drop."
+    },
+    {
+      "id": "n4",
+      "text": "The usual explanation is entropy, often called disorder."
+    },
+    {
+      "id": "n5",
+      "text": "But what is entropy, really?"
+    },
+    {
+      "id": "n6",
+      "text": "Roll two dice: the total is like a macrostate, and each exact pair of faces is like a microstate."
+    },
+    {
+      "id": "n7",
+      "text": "Seven can be made six ways, but two only one way, so seven turns up six times as often."
+    },
+    {
+      "id": "n8",
+      "text": "Entropy is that kind of count: how many microstates make the same macrostate."
+    },
+    {
+      "id": "n9",
+      "text": "Now the real thing: a box of gas with a left half and a right half."
+    },
+    {
+      "id": "n10",
+      "text": "What we see, gas filling the whole box, is the macrostate."
+    },
+    {
+      "id": "n11",
+      "text": "One exact arrangement of every molecule's position and energy is a microstate."
+    },
+    {
+      "id": "n12",
+      "text": "Shrink the box to four molecules, and there are sixteen microstates."
+    },
+    {
+      "id": "n13",
+      "text": "Only one of them puts all four in the left half."
+    },
+    {
+      "id": "n14",
+      "text": "But six of them put two molecules in each half."
+    },
+    {
+      "id": "n15",
+      "text": "So spread evenly beats all on the left six to one, just like seven beats two on the dice."
+    },
+    {
+      "id": "n16",
+      "text": "Back in the full box, picture a hundred molecules."
+    },
+    {
+      "id": "n17",
+      "text": "What are the odds of catching them all in the left half at one moment?"
+    },
+    {
+      "id": "n18",
+      "text": "Less than one in a million trillion trillion."
+    },
+    {
+      "id": "n19",
+      "text": "The molecules move randomly, so the gas ends up spread out, the macrostate with by far the most microstates."
+    },
+    {
+      "id": "n20",
+      "text": "That's the second law of thermodynamics: the total entropy of an isolated system never decreases."
+    },
+    {
+      "id": "n21",
+      "text": "An isolated system is one that trades no energy or matter with its surroundings."
+    },
+    {
+      "id": "n22",
+      "text": "Now, a common mistake is to think entropy simply means disorder."
+    },
+    {
+      "id": "n23",
+      "text": "Entropy counts microstates, so it measures how widely energy and particles are spread, not how messy things look."
+    },
+    {
+      "id": "n24",
+      "text": "Now, why does hot coffee cool down in a cool room?"
+    },
+    {
+      "id": "n25",
+      "text": "When heat flows into something, its entropy rises by the heat divided by its absolute temperature."
+    },
+    {
+      "id": "n26",
+      "text": "Heat leaves the coffee at a higher temperature and enters the room at a lower one."
+    },
+    {
+      "id": "n27",
+      "text": "Dividing by the smaller temperature gives a bigger result, so the room gains more entropy than the coffee loses."
+    },
+    {
+      "id": "n28",
+      "text": "Total entropy rises, and that's why heat flows on its own from hot to cold."
+    },
+    {
+      "id": "n29",
+      "text": "So entropy counts the ways particles and energy can be arranged, and nature drifts toward states with the most ways."
+    },
+    {
+      "id": "n30",
+      "text": "It isn't disorder: it's the number of microstates behind what you see, and it's why the drop never gathers back."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "Put one drop of food coloring into a glass of water."
+    },
+    {
+      "id": "n2",
+      "text": "Without stirring, it spreads through the whole glass."
+    },
+    {
+      "id": "n3",
+      "text": "Wait as long as you like, and it never gathers back into a drop."
+    },
+    {
+      "id": "n4",
+      "text": "The usual explanation is entropy, often called disorder."
+    },
+    {
+      "id": "n5",
+      "text": "But what is entropy, really?"
+    },
+    {
+      "id": "n29",
+      "text": "In plain words, entropy counts the ways particles and energy can be arranged."
+    },
+    {
+      "id": "n30",
+      "text": "So it isn't really disorder: it measures how widely energy and particles are spread, and that's why the drop never gathers back."
+    },
+    {
+      "id": "n6",
+      "text": "Roll two dice: the total is like a macrostate, and each exact pair of faces is like a microstate."
+    },
+    {
+      "id": "n7",
+      "text": "Seven can be made six ways, but two only one way, so seven turns up six times as often."
+    },
+    {
+      "id": "n8",
+      "text": "Entropy is that kind of count: how many microstates make the same macrostate."
+    },
+    {
+      "id": "n9",
+      "text": "Now the real thing: a box of gas with a left half and a right half."
+    },
+    {
+      "id": "n10",
+      "text": "What we see, gas filling the whole box, is the macrostate."
+    },
+    {
+      "id": "n11",
+      "text": "One exact arrangement of every molecule's position and energy is a microstate."
+    },
+    {
+      "id": "n12",
+      "text": "Shrink the box to four molecules, and there are sixteen microstates."
+    },
+    {
+      "id": "n13",
+      "text": "Only one of them puts all four in the left half."
+    },
+    {
+      "id": "n14",
+      "text": "But six of them put two molecules in each half."
+    },
+    {
+      "id": "n15",
+      "text": "So spread evenly beats all on the left six to one, just like seven beats two on the dice."
+    },
+    {
+      "id": "n16",
+      "text": "Back in the full box, picture a hundred molecules."
+    },
+    {
+      "id": "n17",
+      "text": "What are the odds of catching them all in the left half at one moment?"
+    },
+    {
+      "id": "n18",
+      "text": "Less than one in a million trillion trillion."
+    },
+    {
+      "id": "n19",
+      "text": "The molecules move randomly, so the gas ends up spread out, the macrostate with by far the most microstates."
+    },
+    {
+      "id": "n21",
+      "text": "Now treat the box as an isolated system, one that trades no energy or matter with its surroundings."
+    },
+    {
+      "id": "n20",
+      "text": "For an isolated system, total entropy never decreases, and that's the second law of thermodynamics."
+    },
+    {
+      "id": "n24",
+      "text": "Now, what else does entropy explain, like why hot coffee cools down in a cool room?"
+    },
+    {
+      "id": "n25",
+      "text": "When heat flows into something, its entropy rises by the heat divided by its absolute temperature."
+    },
+    {
+      "id": "n26",
+      "text": "Heat leaves the coffee at a higher temperature and enters the room at a lower one."
+    },
+    {
+      "id": "n27",
+      "text": "Dividing by the smaller temperature gives a bigger result, so the room gains more entropy than the coffee loses."
+    },
+    {
+      "id": "n28",
+      "text": "Total entropy rises, and that's why heat flows on its own from hot to cold."
+    },
+    {
+      "id": "n22",
+      "text": "So, back to the gas: entropy measures how widely energy and particles are spread among the arrangements available."
+    },
+    {
+      "id": "n23",
+      "text": "Entropy counts the ways particles and energy can be arranged, and nature drifts toward states with the most ways."
+    }
+  ]
+}

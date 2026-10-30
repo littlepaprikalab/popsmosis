@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"One shot fired, the allies pile in\" is concrete and singable, and it is the core idea in miniature, with real actions (shot, pile in). \"The allies\" is slightly generic, and the lesson opens on a real question, \"How did one shooting in Sarajevo start a world war?\". The narration opens on stone memorials in towns, which is from the learner's world but is a distant, somber entry rather than a pull.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The street scuffle, \"both fighters have friends who promised to back them up. One shove, and the friends pile in\", does the same job as the whole causal process and maps the parts (shove, fighters, friends) inside it. It is set up in the song's verse 1 and returns in the title line and the outro (\"A crowded street, one shove, one fight\"), and the lesson and narration use it. It drops out of the second verse, pre-choruses and bridge, and the lesson does not say where the picture breaks (for example, nations had treaty obligations and war plans, not just loyalty).",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach each link with its cause: \"Russia saw itself as Serbia's protector, so it began mobilization\", \"Germany... treated that as a threat\", and the Schlieffen Plan through Belgium leading to Britain's 1839 promise. The step from Russian mobilization to Germany's war declaration is thin: why mobilization threatened Germany, given its two-front plan, is only implied. The second link also skips why Austria-Hungary blamed Serbia, though nationalism and Black Hand ties are partly given. The song carries the gist well.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "The lines read as a chain from the question through alliances, assassination, Austria's war, Russia, Germany, and Belgium/Britain. Several are labels or notation rather than steps: \"Shove = assassination; fighters = Austria-Hungary and Serbia\" and \"Assassination = spark...\". The first line is the question, not a step, and the last line (stalls at the Marne) goes beyond the core idea. Some start points do not match the step: \"Nationalism → Princip kills Franz Ferdinand\" is attached to a narration line about the open car, and the Schlieffen line starts on the Belgium lyric against a narration line about the plan's aim. The \"Britain declares war\" step has no line of its own.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson step 5 / narration n23-n24: \"Germany, Austria-Hungary's ally, treated that as a threat: it declared war on Russia on 1 August\" and chain link 4 that Germany then declared war on France as 'Russia's ally'",
+      "problem": "This slightly overstates the reason: Germany declared war on France mainly because the Schlieffen Plan required beating France first, not just because France was Russia's ally.",
+      "correction": "Say Germany declared war on France because its war plan required defeating France before turning on Russia."
+    },
+    {
+      "claim": "Song c1-4 / c3-6: \"Five great powers, five weeks in\" and lyric v2-3 \"One month later, war's declared\"",
+      "problem": "The assassination was 28 June and Austria's declaration was 28 July, so \"one month later\" is fine; but the \"five weeks\" counts the assassination to 4 August, which makes the 'five great powers' fall within the five weeks only because Britain joined on day 37, a fair round number. No real issue beyond rounding.",
+      "correction": "No change needed beyond optionally saying 'about five weeks'."
+    }
+  ],
+  "accuracy": {
+    "reason": "The facts are largely right: the dates, the 1839 treaty, Princip's age, the alliances, and the Marne. The one real imprecision is the Germany-France link, which the song and lesson present as an ally-chain when the Schlieffen Plan was the cause. The \"Triple Alliance\" is shown with Italy, and the lesson omits that Italy stayed neutral in the main text, though facts mention it. Nothing a learner would carry away badly wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are short and chantable with good call-and-response in the chorus: \"One shot fired, the allies pile in / Pledges, war plans, the world war begins\". Some verse lines read like textbook captions: \"Germany says that's a threat, so war\", \"Russia's move? Mobilization!\", \"Huge army called across the nation\". There are several forced rhymes (\"Serbia yearns\", \"Serbia's named\", \"Britain\" with \"pile in\", \"war\" with \"ally more\"). The bridge is nearly all narration, with \"That same day, war from Britain\" grammatically bent to fit.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "The lesson opens on a question, gives the big picture with the street image, and builds step by step on causes. It has a prediction prompt (\"What do you think Germany did when Russia mobilized?\") answered immediately, and it names the misconception. However, the misconception is placed mid-list, splitting steps 5 and 6 awkwardly; the numbered list gets close to a list of parts; the many terms (alliance system, militarism, nationalism, mobilization, Schlieffen, dreadnoughts) are heavy; and the final check (\"Why did a quarrel between Austria-Hungary and Serbia end with Britain at war with Germany?\") is good but can be answered by repeating the Belgium step.",
+    "score": 3
+  }
+}

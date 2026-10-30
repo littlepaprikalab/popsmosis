@@ -1,0 +1,23 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "World War I started because one assassination sparked a local war between Austria-Hungary and Serbia, and the alliance promises between the great powers (plus long-term tensions) pulled one country after another into a huge war.",
+      "why": "First, the long-term causes (MAIN: militarism, alliances, imperialism, nationalism) left Europe armed, distrustful and ready to fight, split into two blocs. Then on 28 June 1914 Princip, a Bosnian Serb nationalist, killed Archduke Franz Ferdinand. Austria-Hungary blamed Serbia and, backed by Germany, sent harsh demands; Serbia accepted most but not all, so Austria-Hungary declared war on 28 July. Russia saw itself as Serbia's protector and mobilized its army. Germany, allied with Austria-Hungary, declared war on Russia on 1 August, and on France, Russia's ally, on 3 August. Germany's Schlieffen Plan was to beat France fast before turning on Russia, so it marched through neutral Belgium. Britain had promised in 1839 to protect Belgium, so it declared war on 4 August. Because these countries had empires, the fighting spread around the world. So the assassination was only the spark, and the tensions and alliances made it a world war.",
+      "what_if": "If the alliance system had stopped working, for example if Germany had not promised Austria-Hungary full support or Russia had not backed Serbia, the war would probably have stayed a local fight between Austria-Hungary and Serbia. The chain where each country's promise pulled in the next would have broken, so Russia, Germany and France would not have been dragged in one after another. The lesson doesn't say for sure what would have happened, but it does show Italy staying neutral at first because its promise was only defensive, which suggests alliances really decided who joined."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        false,
+        true,
+        true,
+        true
+      ],
+      "missing": [
+        "The student never explains that the great powers split into the Triple Alliance and the Triple Entente out of fear of each other; they mention only 'two blocs' and 'alliances' as a long-term cause, without naming the two alliances or giving the fear that drove them."
+      ]
+    },
+    "passed": true
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Entropy counts the number of ways energy can be arranged among particles, and because spread-out arrangements have vastly more ways, energy naturally spreads out, so total entropy in an isolated system never goes down.",
+      "why": "First, a macrostate (what we measure, like temperature) can be made by many microstates (exact arrangements of energy). Second, in a simple model, particles pass energy packets randomly when they collide, so every microstate is equally likely. Third, that means the macrostate with the most microstates shows up most often, like a seven on dice. Fourth, hot coffee has more packets per molecule than the air, so random passing spreads the energy into the air, where there are many more arrangements (35 ways versus 5 in the example). Fifth, with about 10^25 molecules the difference in counts is so huge that spreading is essentially certain, which is the second law. So heat flows from hot to cold, not back, even though energy would be conserved either way. The numbers agree: 1800 J leaving 360 K coffee lowers its entropy by 5 J/K but raises the 300 K air's by 6 J/K, so total entropy goes up by 1 J/K.",
+      "what_if": "The lesson describes the random passing of energy packets in collisions, where every arrangement is equally likely. If that stopped working, for example if particles only passed energy in a fixed, non-random way, then the more-ways-comes-up-more-often idea would no longer apply, and energy might not spread out. The coffee might not cool toward the air's temperature in the usual way. I'm guessing here, because the lesson doesn't say what would really happen, only that random sharing is the reason spreading occurs."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

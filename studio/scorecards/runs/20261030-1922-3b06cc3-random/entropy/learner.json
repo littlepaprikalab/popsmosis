@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Entropy counts how many ways particles and energy can be arranged in a system, and systems drift toward the state with the most ways, which means energy spreads out.",
+      "why": "A macrostate (what we can measure, like how many molecules are in each half of a box) is made of many microstates (exactly which molecule is where). Entropy is S = k ln W, so more microstates means more entropy. Molecules keep colliding and trading energy, so the system hops between microstates, and each one is equally likely. Spread-out macrostates contain far more microstates than bunched-up ones. With 4 molecules, 2 on each side has 6 ways but all 4 on the left has 1 way. With a huge number of molecules the gap is enormous, so the gas is almost always found spread out. Nothing pushes it, it is just overwhelmingly likely. The same thing explains the second law: heat flows from hot coffee to cold air, and the cold air gains more entropy than the coffee loses, so total entropy goes up.",
+      "what_if": "Take the freezer that makes ice. The ice crystal has lower entropy than the liquid water, which is allowed only because the freezer uses electrical work to pump heat into the kitchen, where the air gains more entropy than the water lost. If the freezer lost power, nothing would pump heat out, so heat would flow back in from the warmer room and the ice would melt, because that raises total entropy. The lesson doesn't say more about how the freezer's pump works inside."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

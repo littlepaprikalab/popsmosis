@@ -1,0 +1,150 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "How does mitosis make two identical cells?",
+    "core_idea": "The cell copies every chromosome, then pulls the copies apart so each new cell gets a full set.",
+    "why_chain": [
+      "Before mitosis, in interphase, the cell copies its DNA, so each chromosome becomes two identical sister chromatids.",
+      "Spindle fibers from opposite poles attach one to each sister chromatid, so the two sisters are tied to different sides of the cell.",
+      "In metaphase the chromosomes line up across the middle, so every pair is in place to split evenly.",
+      "In anaphase the sisters separate and are pulled to opposite poles, so each side gets one copy of every chromosome.",
+      "Cytokinesis splits the cell between the two sets, so each daughter cell has the same chromosomes as the parent."
+    ],
+    "key_terms": [
+      "chromosome",
+      "sister chromatids",
+      "interphase",
+      "spindle fibers",
+      "metaphase",
+      "anaphase",
+      "cytokinesis",
+      "daughter cells"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "Mitosis is the division of a cell's nucleus that, followed by cytokinesis, produces two genetically identical daughter cells. It is used for growth, for repair, and for asexual reproduction: when you scrape your knee, skin cells around the wound divide by mitosis to replace the ones you lost. Human body cells have 46 chromosomes, and each new cell made by mitosis carries the same 46 chromosomes as the cell it came from. Mitosis works like a library opening a second branch: it photocopies every book, clips each copy to its original, then sends one of each clipped pair to each branch, so both branches get the full collection. The books match chromosomes, each clipped pair matches two sister chromatids, and the two branches match the two daughter cells.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "Before mitosis begins, during interphase, the cell copies all its DNA, so each chromosome becomes two identical sister chromatids joined at the centromere. A common mistake is to think DNA is copied during mitosis itself; in fact the copying is done in interphase, and mitosis only separates the copies already made. In prophase, the first stage of mitosis, the chromosomes coil up tightly enough to see, the nuclear envelope breaks down, and spindle fibers grow out from the two poles of the cell. Spindle fibers from opposite poles attach to each chromosome at its centromere, one to each sister chromatid, so each sister is tied to a different pole. In metaphase the chromosomes line up single file across the middle of the cell.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "In anaphase the sister chromatids split apart at the centromere and each is pulled to the opposite pole as the spindle fibers shorten and drag the chromatids along. Once separated, each chromatid counts as its own chromosome, so each pole ends up with one copy of every chromosome. In telophase the chromosomes uncoil and a new nuclear envelope, and so a new nucleus, forms around each set. Then cytokinesis splits the cytoplasm: in animal cells a cleavage furrow pinches the cell in two, and in plant cells a cell plate forms that becomes a new cell wall. The result is two daughter cells, each with the same chromosomes as the parent. Next in the course, meiosis halves the chromosome number to make sex cells.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "If one pair of sister chromatids fails to separate in anaphase, an error called nondisjunction, both chromatids get pulled to the same pole. So one daughter cell gets an extra chromosome and the other is missing one, and the two cells are no longer identical. When the controls on the cell cycle fail, cells can keep dividing by mitosis without stopping and form a tumor, as happens in cancer.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think DNA is copied during mitosis itself. In fact the cell copies its DNA earlier, in interphase, and mitosis only separates the copies already made, which is why each daughter cell gets a complete set.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A knee with a healing scrape on the left. On the right, a magnified patch of skin cells at the edge of the scrape, one of them dividing into two new cells, each with chromosomes in its nucleus."
+      },
+      {
+        "id": "analogy",
+        "picture": "On the left, the original library with shelves of books. In the middle, a table where each book is clipped to its photocopy, making clipped pairs. On the right, two branch library buildings, each with a full shelf holding one book from every clipped pair."
+      },
+      {
+        "id": "overview",
+        "picture": "A row of six animal cells from left to right like a timeline: the interphase cell with copied DNA inside its nucleus; the prophase cell with coiled X-shaped chromosomes and spindle fibers growing from its two poles; the metaphase cell with the chromosomes lined up single file across the middle; the anaphase cell with sister chromatids at the two poles; the telophase cell with a new nucleus around each set and a cleavage furrow pinching it, labeled cytokinesis; and two daughter cells, each with the same chromosomes."
+      },
+      {
+        "id": "chromosome-detail",
+        "picture": "A close-up of one copied chromosome from the prophase cell: two sister chromatids joined at the centromere, with a spindle fiber from each of the two poles attached at the centromere, one to each sister chromatid."
+      },
+      {
+        "id": "anaphase-detail",
+        "picture": "A close-up of the anaphase cell: the sister chromatids split apart, one of each pair near each pole, attached to short spindle fibers running to the two poles, so each pole holds one copy of every chromosome."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "When you scrape your knee, skin cells around the wound divide to replace the ones you lost.",
+          "Each new cell carries the same 46 chromosomes as the cell it came from.",
+          "So how does one cell become two identical cells?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Think of a library opening a second branch.",
+          "It photocopies every book, clips each copy to its original, then sends one of each pair to each branch.",
+          "In a cell, the books are chromosomes, and each clipped pair is two sister chromatids.",
+          "The two branches are the daughter cells, and each gets the full collection."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Here is the whole process, left to right.",
+          "It starts before mitosis, in interphase, when the cell copies all its DNA.",
+          "A common mistake is to think DNA is copied during mitosis itself.",
+          "But the copying is done in interphase, and mitosis only separates the copies.",
+          "Next comes prophase, when the chromosomes coil up and the nuclear envelope breaks down.",
+          "Then spindle fibers grow out from the two poles of the cell."
+        ]
+      },
+      {
+        "scene": "chromosome-detail",
+        "lines": [
+          "Up close, each copied chromosome is two sister chromatids, joined at the centromere.",
+          "That's a book clipped to its copy.",
+          "Spindle fibers from opposite poles attach there, one to each sister chromatid.",
+          "So each sister is tied to a different pole."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back in the row, metaphase comes next.",
+          "The chromosomes line up single file across the middle of the cell.",
+          "With fibers from both poles pulling on every chromosome, what happens when the sisters let go?"
+        ]
+      },
+      {
+        "scene": "anaphase-detail",
+        "lines": [
+          "They split apart, and each one is pulled to the opposite pole.",
+          "That's anaphase, as the spindle fibers shorten and drag the chromatids along.",
+          "So each pole ends up with one copy of every chromosome, like each branch getting one book from every pair."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back in the row, telophase follows, and a new nucleus forms around each set.",
+          "Then cytokinesis splits the cytoplasm, as a cleavage furrow pinches the cell in two.",
+          "That leaves two daughter cells, each with the same chromosomes as the parent.",
+          "Now, what happens if one pair of sister chromatids fails to separate in anaphase?",
+          "Both chromatids get pulled to the same pole.",
+          "So one daughter cell gets an extra chromosome, and the other is missing one.",
+          "The two cells are no longer identical."
+        ]
+      },
+      {
+        "scene": "hook",
+        "lines": [
+          "So the cell copies every chromosome, then pulls the copies apart so each new cell gets a full set.",
+          "That's how one skin cell at your knee becomes two identical cells, each with the same 46 chromosomes."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 32,
+    "reworded": 0
+  }
+}

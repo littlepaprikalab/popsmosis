@@ -1,0 +1,23 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Mitosis (followed by cytokinesis) makes two genetically identical cells by first copying every chromosome and then pulling the copies apart so each new cell gets a full set.",
+      "why": "First, in interphase, the cell copies all its DNA, so each chromosome becomes two identical sister chromatids joined at the centromere. In prophase the chromosomes coil up, the nuclear envelope breaks down, and spindle fibers grow from the two poles and attach to the sisters, one sister to each pole. In metaphase the chromosomes line up across the middle. In anaphase the sisters split at the centromere and the shortening spindle fibers drag each chromatid to opposite poles, so each pole gets one copy of every chromosome. In telophase new nuclei form around each set, and cytokinesis splits the cytoplasm (a cleavage furrow in animal cells, a cell plate in plant cells). The result is two daughter cells with the same chromosomes as the parent, like 46 in human body cells. It works because copying happens first and the sisters are tied to opposite poles.",
+      "what_if": "If one pair of sister chromatids failed to separate in anaphase (nondisjunction), both chromatids would be pulled to the same pole. One daughter cell would get an extra chromosome and the other would be missing one, so the cells would no longer be identical or have the correct full set. The lesson doesn't say what happens to those cells afterward, so I can't say more than that."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        false,
+        true,
+        true
+      ],
+      "missing": [
+        "Metaphase lining up is stated but not linked to its purpose: that having every pair aligned in the middle lets them split evenly."
+      ]
+    },
+    "passed": true
+  }
+}

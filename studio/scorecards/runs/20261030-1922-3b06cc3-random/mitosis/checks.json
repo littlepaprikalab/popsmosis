@@ -1,0 +1,22 @@
+{
+  "problems": [
+    {
+      "line_id": "n30",
+      "rule": "unlisted-name",
+      "detail": "says \"skin cells\" but does not list it; added",
+      "repaired": true
+    },
+    {
+      "line_id": "n30",
+      "rule": "not-in-scene",
+      "detail": "names Skin cells, which scene \"telophase\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "p2-2",
+      "rule": "lyric-style",
+      "detail": "\"But it divides twice, so its cells hold half, for egg and sperm\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "v1-4",
+      "rule": "lyric-style",
+      "detail": "\"But a total of seven's got six, so it comes up the most\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-2",
+      "rule": "lyric-style",
+      "detail": "\"Heat flows to the cooler room air till their temps are the same\" runs 13 words, over 12",
+      "repaired": false
+    }
+  ]
+}

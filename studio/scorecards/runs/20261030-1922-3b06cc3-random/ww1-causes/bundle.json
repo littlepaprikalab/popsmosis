@@ -1,0 +1,2060 @@
+{
+  "course": "World History",
+  "topic": "the causes of World War I",
+  "audience": "high school",
+  "core_idea": "One assassination sparked a local war, and alliance promises pulled the great powers in, one after another.",
+  "why_chain": [
+    "Militarism, imperialism and nationalism left Europe's great powers armed, distrustful and ready to fight.",
+    "Because they feared each other, they split into the Triple Alliance and the Triple Entente, ready to back their partners.",
+    "When a Bosnian Serb nationalist killed Franz Ferdinand, Austria-Hungary, backed by Germany, declared war on Serbia.",
+    "Russia began mobilization to protect Serbia, so Germany declared war on Russia and on its ally France.",
+    "Germany's Schlieffen Plan sent its army through neutral Belgium, so Britain declared war too."
+  ],
+  "key_terms": [
+    "militarism",
+    "imperialism",
+    "nationalism",
+    "alliance system",
+    "Triple Alliance",
+    "Triple Entente",
+    "mobilization",
+    "Schlieffen Plan"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "In the decades before 1914, tensions among Europe's great powers built up. Historians often sum up the long-term causes of World War I as MAIN: militarism, alliances, imperialism and nationalism. Militarism meant huge armies and detailed war plans, and Britain and Germany raced to build the biggest navy of new battleships called dreadnoughts. Imperialism meant competition for colonies, which bred distrust, for example between Germany and France over Morocco. Nationalism, intense pride in one's own nation, ran high. In the Balkans, Serbian nationalists wanted to unite the South Slavs, including those ruled by neighbouring Austria-Hungary, which saw Serbia as a threat. These tensions left the great powers armed, distrustful and ready to fight.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Fearing one another, the great powers formed two rival blocs, often called the alliance system. The Triple Alliance joined Germany, Austria-Hungary and Italy. The Triple Entente joined France, Russia and Britain. On the map, Germany and Austria-Hungary sat in the middle of Europe, with France to the west, Russia to the east and Britain across the sea to the north-west. The Triple Alliance and the alliance between France and Russia promised help if a partner was attacked. Britain's ties to France and Russia were looser, with no firm promise to fight. The alliance system worked like a schoolyard where two crews have each promised to back up their friends: one shove between two kids pulls in their friends, then their friends' friends, until the whole yard is fighting. The Triple Alliance was defensive. In 1914 Italy argued that Austria-Hungary had started the war rather than defending itself, so the treaty did not bind Italy, and Italy stayed neutral. In 1915 Italy joined the Allies after they promised it land from Austria-Hungary. In the schoolyard picture, Italy had promised backup if its partner got jumped, not if its partner started the fight. The same idea of collective defence lives on in NATO, whose 1949 treaty says an attack on one member is an attack on all.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "On 28 June 1914, in Sarajevo, the capital of Bosnia, Gavrilo Princip, a Bosnian Serb nationalist, shot and killed Archduke Franz Ferdinand, the heir to the throne of Austria-Hungary, and his wife Sophie. Earlier that day a bomb thrown at the Archduke's car had failed to kill him. Later the car took a wrong turn and stopped right beside Princip, who fired two shots. Austria-Hungary blamed Serbia. After Germany promised its full support, often called the blank check, Austria-Hungary sent Serbia an ultimatum of harsh demands. Serbia accepted most but not all of them, and Austria-Hungary declared war on Serbia on 28 July 1914. Russia saw itself as the protector of Serbia and its fellow Slavs, so it began mobilization, getting its army ready for war, which was widely seen as a step toward war. Germany declared war on Russia on 1 August and on France, Russia's ally, on 3 August. A common mistake is to think the assassination alone caused World War I. It was only the spark: the long-term tensions, such as huge armies, and the alliance system turned a local war between Austria-Hungary and Serbia into a world war.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "Germany feared a war on two fronts, against France in the west and Russia in the east. Its Schlieffen Plan aimed to beat France quickly while Russia was still slow to mobilize, and then turn east to fight Russia. To reach France fast, the German army marched through neutral Belgium in August 1914. Britain had promised in an 1839 treaty to protect Belgium's neutrality, so on 4 August 1914 it declared war on Germany. In about a week, from 28 July to 4 August, a Balkan war had become a war among Europe's great powers: the Central Powers, led by Germany and Austria-Hungary, against the Allies, led by France, Russia and Britain. Because these powers ruled empires and colonies around the globe, the fighting spread far beyond Europe, and it became known as a world war. The Schlieffen Plan failed when French and British forces stopped the German advance at the Battle of the Marne in September 1914. Both sides then dug trenches, and the Western Front settled into a stalemate of trench warfare, the next part of the story.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think the assassination of Franz Ferdinand alone caused World War I. It was only the spark: the long-term tensions and the alliance system turned a local war between Austria-Hungary and Serbia into a world war.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a world history textbook pictures it, of a street corner in Sarajevo in 1914: a narrow cobbled street running across the picture, a row of low stone buildings with shopfronts behind it, and in the middle of the street an open-top touring car of 1914, painted white, stopped at the corner. No people in the scene. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Archduke's car",
+          "aliases": [
+            "Franz Ferdinand's car"
+          ],
+          "sam_phrase": "white car",
+          "color_hex": "#F2F2F2"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      }
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a textbook draws an everyday example, of a school playground seen from the side: a grey playground surface across the bottom and a brick school wall behind it; on the left, a group of five students in orange shirts standing close together; in the middle, a little to the right, one student in a green shirt facing them; on the right, just behind the student in green, a group of five students in light blue shirts standing close together. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Orange crew",
+          "aliases": [
+            "orange crew"
+          ],
+          "sam_phrase": "orange shirts",
+          "color_hex": "#F2994A"
+        },
+        {
+          "name": "Kid in green",
+          "aliases": [
+            "kid in green"
+          ],
+          "sam_phrase": "green shirt",
+          "color_hex": "#6FCF97"
+        },
+        {
+          "name": "Blue crew",
+          "aliases": [
+            "blue crew"
+          ],
+          "sam_phrase": "light blue shirts",
+          "color_hex": "#56CCF2"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      }
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a world history textbook draws it, of a map of Europe in 1914, the Atlantic Ocean on the left and the Mediterranean Sea below: Germany, Austria-Hungary and Italy in the centre and south, tinted orange together; France to the west, Britain across the sea to the north-west and the Russian Empire to the east, all three tinted light blue; small Serbia in the Balkans, south of Austria-Hungary, tinted green; every other country plain light grey, and the seas left plain. Clean country borders. A clean textbook map, each country simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Triple Alliance",
+          "aliases": [],
+          "sam_phrase": "orange region",
+          "color_hex": "#F2994A"
+        },
+        {
+          "name": "Triple Entente",
+          "aliases": [],
+          "sam_phrase": "light blue region",
+          "color_hex": "#56CCF2"
+        },
+        {
+          "name": "Serbia",
+          "aliases": [],
+          "sam_phrase": "green region",
+          "color_hex": "#6FCF97"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      }
+    },
+    {
+      "id": "crisis",
+      "image_prompt": "Educational diagram, as a world history textbook draws it, of a map of Europe in 1914, the Atlantic Ocean on the left and the Mediterranean Sea below: Germany in the centre tinted purple; Austria-Hungary to its south-east tinted red; small Serbia south of Austria-Hungary tinted green; the Russian Empire to the east tinted tan; France to the west tinted blue; small Belgium between Germany and France tinted yellow; Britain across the sea to the north-west tinted pink; every other country plain light grey, and the seas left plain. Clean country borders. A clean textbook map, each country simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Germany",
+          "aliases": [],
+          "sam_phrase": "purple region",
+          "color_hex": "#B37FEB"
+        },
+        {
+          "name": "Austria-Hungary",
+          "aliases": [
+            "Austria"
+          ],
+          "sam_phrase": "red region",
+          "color_hex": "#EF5B5B"
+        },
+        {
+          "name": "Serbia",
+          "aliases": [],
+          "sam_phrase": "green region",
+          "color_hex": "#6FCF97"
+        },
+        {
+          "name": "Russia",
+          "aliases": [],
+          "sam_phrase": "tan region",
+          "color_hex": "#D4A373"
+        },
+        {
+          "name": "France",
+          "aliases": [],
+          "sam_phrase": "blue region",
+          "color_hex": "#4F8EF7"
+        },
+        {
+          "name": "Belgium",
+          "aliases": [],
+          "sam_phrase": "yellow region",
+          "color_hex": "#F2C94C"
+        },
+        {
+          "name": "Britain",
+          "aliases": [],
+          "sam_phrase": "pink region",
+          "color_hex": "#F48FB1"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      }
+    },
+    {
+      "id": "italy-detail",
+      "image_prompt": "Educational diagram, as a world history textbook draws it, of a map of central and southern Europe in 1914, the Mediterranean Sea below: Italy, its long peninsula reaching into the sea, tinted teal; Austria-Hungary to its north-east tinted red; Germany to the north tinted purple; every other country plain light grey, and the seas left plain. Clean country borders. A clean textbook map, each country simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Italy",
+          "aliases": [],
+          "sam_phrase": "teal region",
+          "color_hex": "#2DD4BF"
+        },
+        {
+          "name": "Austria-Hungary",
+          "aliases": [
+            "Austria"
+          ],
+          "sam_phrase": "red region",
+          "color_hex": "#EF5B5B"
+        },
+        {
+          "name": "Germany",
+          "aliases": [],
+          "sam_phrase": "purple region",
+          "color_hex": "#B37FEB"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      }
+    }
+  ],
+  "lesson_markdown": "# Why World War I Started\n\nHow could two shots fired in one city pull Europe's great powers into a world war?\n\nWorld War I began in the summer of 1914, and its spark was the killing of Archduke Franz Ferdinand. The key idea: **one assassination sparked a local war, and alliance promises pulled the great powers in, one after another.**\n\n## The long-term causes: MAIN\n\nHistorians often sum up the long-term causes as **MAIN**. Here the story is simplified to its main links.\n\n| Cause | What it meant |\n|---|---|\n| **Militarism** | Huge armies, detailed war plans, and a race between Britain and Germany to build battleships called dreadnoughts |\n| **Alliances** | Two rival blocs, the Triple Alliance and the Triple Entente |\n| **Imperialism** | Competition for colonies, which bred distrust, as between Germany and France over Morocco |\n| **Nationalism** | Intense national pride; Serbian nationalists wanted to unite the South Slavs, including those ruled by Austria-Hungary |\n\nTogether these left the great powers armed, distrustful and ready to fight.\n\n## Two crews in a schoolyard\n\nPicture a schoolyard where two crews have each promised to back up their friends. One shove between two kids pulls in their friends, then their friends' friends, until the whole yard is fighting. That is how the **alliance system** worked:\n\n- **Triple Alliance:** Germany, Austria-Hungary and Italy\n- **Triple Entente:** France, Russia and Britain\n\nThe Triple Alliance and the alliance between France and Russia promised help if a partner was attacked. Britain's ties were looser, with no firm promise to fight.\n\n## How two shots became a world war\n\n1. On 28 June 1914 in Sarajevo, Gavrilo Princip, a Bosnian Serb nationalist, shot and killed Franz Ferdinand, heir to the throne of Austria-Hungary. The Archduke's car had taken a wrong turn and stopped right beside Princip.\n2. Austria-Hungary blamed Serbia. With Germany's promise of full support, it sent Serbia harsh demands, and when Serbia accepted most but not all, it declared war on 28 July.\n\nWhat do you think Russia did next?\n\n3. Russia, which saw itself as the protector of Serbia, began **mobilization**, getting its army ready for war, a move widely seen as a step toward war.\n4. Germany declared war on Russia on 1 August and on France, Russia's ally, on 3 August.\n5. Germany's **Schlieffen Plan** aimed to beat France quickly before turning on Russia, so its army marched through neutral Belgium.\n6. Britain had promised in 1839 to protect Belgium's neutrality, so it declared war on Germany on 4 August.\n\nIn about a week, a Balkan war had become a war among Europe's great powers. Because they ruled empires and colonies around the globe, the fighting spread far beyond Europe.\n\n## Not just the assassination\n\nA common mistake is to think the assassination alone caused World War I. It was only the spark: the long-term tensions and the alliance system turned a local war between Austria-Hungary and Serbia into a world war.\n\n## Italy: when a promise did not pull\n\nItaly had signed the Triple Alliance, but the treaty was defensive. Italy argued that Austria-Hungary had started the war rather than defending itself, so Italy stayed neutral in 1914. In 1915 it joined the Allies after they promised it land from Austria-Hungary. In the schoolyard picture, Italy had promised backup if its partner got jumped, not if its partner started the fight.\n\nYou may have met this kind of promise in the news: NATO's 1949 treaty says an attack on one member is an attack on all.\n\n## What came next\n\nThe Schlieffen Plan failed when French and British forces stopped the German advance at the Battle of the Marne in September 1914. Both sides dug trenches, and the Western Front settled into a stalemate of trench warfare.\n\n**Check yourself:** The crisis began between Austria-Hungary and Serbia, so why did Germany declare war on France?\n\nGot a follow-up question? Ask away, for example about the Schlieffen Plan or the war in the trenches.",
+  "music": {
+    "positive_styles": [
+      "Moody Latin pop on a light dembow groove at 96 bpm; minor-key nylon-string guitar plucks over a soft reggaeton bounce, warm round sub bass and crisp off-beat handclaps; clear male vocal delivering smooth, crisp rapped verses with every word up front, rising into a big, catchy sung chorus with stacked harmonies; plucked guitar leads, finger snaps and a light shaker accent the beat, with a clean, bright, modern mix"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "gunshot sound effects"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Promise on promise, and the great powers are in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Picture a schoolyard: an orange crew, a blue crew",
+      "names": [
+        "orange crew",
+        "blue crew"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "Each swore: if you get jumped, then I'm jumping in for you",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Militarism, empires, and a fierce national pride",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Europe's great powers armed up, and each one picked a side",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Triple Alliance in the middle, Triple Entente on the flanks",
+      "names": [
+        "Triple Alliance",
+        "Triple Entente"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Built on backup if attacked, the partners closed ranks",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Sarajevo: Franz Ferdinand's car takes a wrong turn and stops",
+      "names": [
+        "Franz Ferdinand's car"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Right beside Gavrilo Princip, and he fires two shots",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "But the shots were just the spark, the tension came before",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Alliances and armies made one killing a world war",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Austria strikes Serbia, and the chain begins",
+      "names": [
+        "Austria",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Russia mobilizes, Germany declares war",
+      "names": [
+        "Russia",
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "France and Britain join, and it spreads from shore to shore",
+      "names": [
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Germany told Austria, you've got our full support",
+      "names": [
+        "Germany",
+        "Austria"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "So Austria declared war on Serbia, the peace cut short",
+      "names": [
+        "Austria",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Russia backed its fellow Slavs and started to mobilize",
+      "names": [
+        "Russia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Germany declared on Russia, then on France, its ally",
+      "names": [
+        "Germany",
+        "Russia",
+        "France"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "The Schlieffen Plan: beat France first, 'cause Russia mobilizes late",
+      "names": [
+        "France",
+        "Russia"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "So they marched through neutral Belgium, and Britain wouldn't wait",
+      "names": [
+        "Belgium",
+        "Britain"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Britain kept its word to Belgium, entered on the Allied side",
+      "names": [
+        "Britain",
+        "Belgium"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "In about a week, a Balkan fight went continent-wide",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "But the fast plan failed, at the Marne the Germans stopped",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Both sides dug trenches, and the Western Front got locked",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Austria strikes Serbia, and the chain begins",
+      "names": [
+        "Austria",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Russia mobilizes, Germany declares war",
+      "names": [
+        "Russia",
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "France and Britain join, and it spreads from shore to shore",
+      "names": [
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Now Italy had signed with Germany and Austria, too",
+      "names": [
+        "Italy",
+        "Germany",
+        "Austria"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "But the deal was just defense, so what did Italy do?",
+      "names": [
+        "Italy"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Austria made the first move, Austria went on the attack",
+      "names": [
+        "Austria"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Not a war of defense, so Italy held back",
+      "names": [
+        "Italy"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Backup when you're jumped, not when your partner starts the fight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "So Italy stayed neutral, and in 1914 it sat tight",
+      "names": [
+        "Italy"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Then in 1915, promised land, it joined the other side",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "A defense deal held it back, a land deal changed its mind",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Years of MAIN causes stacked the tension up so high",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Two shots, and the alliances turned a local war worldwide",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Austria strikes Serbia, and the chain begins",
+      "names": [
+        "Austria",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Russia mobilizes, Germany declares war",
+      "names": [
+        "Russia",
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "France and Britain join, and it spreads from shore to shore",
+      "names": [
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Promise on promise, and the great powers are in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Austria, Russia, Germany, France, then Britain",
+      "names": [
+        "Austria",
+        "Russia",
+        "Germany",
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Two shots fired, the allies pile in",
+      "names": [],
+      "fact_id": "f3"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "On the twenty-eighth of June, 1914, in Sarajevo, the Archduke's car took a wrong turn and stopped.",
+      "names": [
+        "Archduke's car"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "Right beside it, Gavrilo Princip, a Bosnian Serb nationalist, fired two shots, killing Archduke Franz Ferdinand and his wife Sophie.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "To see how two shots grew into a world war, picture a schoolyard.",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n4",
+      "text": "An orange crew and a blue crew have each promised to back up their friends.",
+      "names": [
+        "orange crew",
+        "blue crew"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n5",
+      "text": "One shove at the kid in green pulls in the blue crew, then the orange crew, until the whole yard is fighting.",
+      "names": [
+        "kid in green",
+        "blue crew",
+        "orange crew"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n6",
+      "text": "Europe's tensions had built up for decades, and historians sum up these long-term causes as MAIN: militarism, alliances, imperialism and nationalism.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "Militarism meant huge armies and a naval race to build battleships called dreadnoughts.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "Imperialism had the powers competing for colonies, which bred distrust.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "Nationalism ran high, and nationalists in Serbia wanted to unite the South Slavs, including many ruled by the empire next door.",
+      "names": [
+        "Serbia"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Fearing each other, the powers split into the Triple Alliance in the middle and the Triple Entente around it.",
+      "names": [
+        "Triple Alliance",
+        "Triple Entente"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "Their treaties promised help if a partner was attacked, though the British ties were looser.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "Franz Ferdinand had been heir to the throne of Austria-Hungary, and it blamed Serbia for his killing.",
+      "names": [
+        "Austria-Hungary",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n13",
+      "text": "Backed by Germany, Austria-Hungary sent Serbia harsh demands, and when Serbia refused some, it declared war on July twenty-eighth.",
+      "names": [
+        "Germany",
+        "Austria-Hungary",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n14",
+      "text": "What do you think Russia did next?",
+      "names": [
+        "Russia"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n15",
+      "text": "Russia, which saw itself as protector of Serbia, began to mobilize its army, a move widely seen as a step toward war.",
+      "names": [
+        "Russia",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n16",
+      "text": "Germany then declared war on Russia, and two days later on France, the ally of Russia.",
+      "names": [
+        "Germany",
+        "Russia",
+        "France"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n17",
+      "text": "Fearing a war on two fronts, Germany followed its Schlieffen Plan: beat France fast while Russia was slow to mobilize, then turn east.",
+      "names": [
+        "Germany",
+        "France",
+        "Russia"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n18",
+      "text": "To reach France fast, the German army marched through neutral Belgium.",
+      "names": [
+        "France",
+        "Belgium"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n19",
+      "text": "Britain had promised in 1839 to protect the neutrality of Belgium, so on the fourth of August it declared war on Germany.",
+      "names": [
+        "Britain",
+        "Belgium",
+        "Germany"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n20",
+      "text": "In about a week, a Balkan war had become a war among Europe's great powers.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n21",
+      "text": "Because these powers ruled empires around the globe, the fighting spread far beyond Europe and became a world war.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n22",
+      "text": "The plan failed at the Battle of the Marne in September 1914, and both sides dug the trenches of the Western Front.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n23",
+      "text": "A common mistake is to think the assassination alone caused the war.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "It was only the spark: the long-term tensions and the alliance system turned a local war into a world war.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n25",
+      "text": "Italy had signed with Germany and Austria-Hungary, but the treaty was defensive, and Austria-Hungary had started the war rather than defending itself.",
+      "names": [
+        "Italy",
+        "Germany",
+        "Austria-Hungary"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n26",
+      "text": "So Italy stayed neutral in 1914, then joined the Allies in 1915 after they promised it land from Austria-Hungary.",
+      "names": [
+        "Italy",
+        "Austria-Hungary"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n27",
+      "text": "So remember: one assassination sparked a local war, and alliance promises pulled the great powers in, one after another.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n28",
+      "text": "The cause was years of tension and a chain of promises, and the result was a world war.",
+      "names": [],
+      "fact_id": "f4"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Blue crew",
+        "zoom": 1.6
+      },
+      "spotlight": "Blue crew",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "MAIN causes",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "hook",
+      "camera": {
+        "target": "Archduke's car",
+        "zoom": 1.6
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "hook",
+      "camera": {
+        "target": "Archduke's car",
+        "zoom": 1.8
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "crisis",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "crisis",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "crisis",
+      "camera": {
+        "target": "Germany",
+        "zoom": 1.6
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "crisis",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "crisis",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "crisis",
+      "camera": {
+        "target": "France",
+        "zoom": 1.6
+      },
+      "spotlight": "France",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "crisis",
+      "camera": {
+        "target": "Belgium",
+        "zoom": 1.8
+      },
+      "spotlight": "Belgium",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "crisis",
+      "camera": {
+        "target": "Britain",
+        "zoom": 1.6
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "crisis",
+      "camera": {
+        "target": "France",
+        "zoom": 1.6
+      },
+      "spotlight": "France",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "crisis",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "crisis",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "crisis",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "crisis",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "Archduke's car",
+        "zoom": 1.6
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Archduke's car",
+        "zoom": 1.8
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "Kid in green",
+        "zoom": 1.6
+      },
+      "spotlight": "Kid in green",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Serbia",
+        "zoom": 1.8
+      },
+      "spotlight": "Serbia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Triple Entente",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "crisis",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "crisis",
+      "camera": {
+        "target": "Serbia",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "crisis",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "crisis",
+      "camera": {
+        "target": "Germany",
+        "zoom": 1.6
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "crisis",
+      "camera": {
+        "target": "Belgium",
+        "zoom": 1.8
+      },
+      "spotlight": "Belgium",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "crisis",
+      "camera": {
+        "target": "Britain",
+        "zoom": 1.6
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "crisis",
+      "camera": {
+        "target": "France",
+        "zoom": 1.6
+      },
+      "spotlight": "France",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Archduke's car",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "italy-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "crisis",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How did one assassination start a world war?",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Two crews promising backup = the alliance system",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "Militarism + imperialism + nationalism → armed, distrustful great powers",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Fear → Triple Alliance vs. Triple Entente, promising partners help",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Franz Ferdinand assassinated → Austria-Hungary blames Serbia",
+      "from_narration": "n12"
+    },
+    {
+      "from_line": "c1-2",
+      "text": "Germany backs Austria-Hungary → war on Serbia",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "c1-3",
+      "text": "Russian mobilization → Germany declares war on Russia and France",
+      "from_narration": "n15"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Schlieffen Plan → army through neutral Belgium → Britain joins",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "Plan stalls at the Marne → trench warfare",
+      "from_narration": "n22"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Defensive treaty, Austria-Hungary struck first → Italy stays neutral",
+      "from_narration": "n25"
+    }
+  ],
+  "tags": {
+    "song": [
+      "worldwar1",
+      "ww1",
+      "causesofww1",
+      "franzferdinand",
+      "worldhistory",
+      "history",
+      "latinpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "worldwar1",
+      "ww1",
+      "causesofww1",
+      "franzferdinand",
+      "worldhistory",
+      "history",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "problems": [
+    {
+      "line_id": "v2-1",
+      "rule": "not-in-scene",
+      "detail": "names Anaphase, which scene \"anaphase-detail\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n2",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"hook\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n5",
+      "rule": "not-in-scene",
+      "detail": "names Sister chromatids, which scene \"analogy\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n9",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n12",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n13",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n13",
+      "rule": "not-in-scene",
+      "detail": "names Poles, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n13",
+      "rule": "not-in-scene",
+      "detail": "names Spindle fibers, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n14",
+      "rule": "not-in-scene",
+      "detail": "names Metaphase, which scene \"metaphase-detail\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n19",
+      "rule": "not-in-scene",
+      "detail": "names Anaphase, which scene \"anaphase-detail\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n23",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n26",
+      "rule": "not-in-scene",
+      "detail": "names Anaphase, which scene \"nondisjunction\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n29",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"nondisjunction\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "n31",
+      "rule": "not-in-scene",
+      "detail": "names Chromosomes, which scene \"overview\" does not draw",
+      "repaired": false
+    },
+    {
+      "line_id": "v1-7",
+      "rule": "lyric-style",
+      "detail": "\"Single file, chromosomes in a row\" runs 11 syllables, over 10",
+      "repaired": false
+    }
+  ]
+}
