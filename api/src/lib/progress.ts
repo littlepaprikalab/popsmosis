@@ -7,11 +7,12 @@
  * makes the videos it goes on the answer (PUT /api/answers/:id/video/progress), and its bill is the videos' bill
  * so far. The page shows it as the bill of materials filling in, one line per step: done, running or waiting.
  *
- * The page holds the lesson text back while the videos are made, so a learner meets the droplet through its
- * videos, not through a text the videos then repeat. Not for ever: the text shows once the videos are READY or
- * FAILED, once a second attempt starts (the first went quiet or was given up), and LESSON_HOLD_MINUTES after the
- * lesson was posted, whichever comes first. Each of these only ever becomes true, so a lesson once shown is never
- * hidden again.
+ * The lesson text shows as soon as the lesson is posted, which the studio does the moment its fact-check passes:
+ * the videos follow above it when they are done, 20 to 30 minutes later, with the bill filling in under the text
+ * meanwhile. LESSON_HOLD_MINUTES (0 by default) holds the text back instead, so a learner meets the droplet
+ * through its videos rather than through a text the videos then repeat: until the videos are READY or FAILED, a
+ * second attempt starts (the first went quiet or was given up), or that many minutes have passed since the post,
+ * whichever comes first. Each of these only ever becomes true, so a lesson once shown is never hidden again.
  */
 import { breakdownError, serializeBreakdown, type Breakdown } from './breakdown.js';
 import { videoStaleMinutes } from './droplet.js';
@@ -21,9 +22,10 @@ const STEP_MAX_LENGTH = 40;
 // Two at a time in practice (the art and the audio run side by side); the cap keeps a report small.
 const STEPS_MAX = 12;
 
-const DEFAULT_LESSON_HOLD_MINUTES = 20;
+// The text shows at once: a learner reads the lesson while its videos are made, rather than waiting for them.
+const DEFAULT_LESSON_HOLD_MINUTES = 0;
 
-/** How long after the lesson is posted the page waits for its videos before it shows the text anyway. */
+/** How long after the lesson is posted the page waits for its videos before it shows the text anyway; 0, never. */
 export function lessonHoldMinutes(): number {
   const n = parseInt(process.env.LESSON_HOLD_MINUTES ?? '', 10);
   return Number.isNaN(n) || n < 0 ? DEFAULT_LESSON_HOLD_MINUTES : n;
@@ -131,6 +133,7 @@ export function awaitingVideos(
   // Never past the stale limit either: a render quiet that long reads FAILED and shows the text, and a late
   // heartbeat that makes it RENDERING again must not hide it.
   const hold = Math.min(lessonHoldMinutes(), videoStaleMinutes());
+  if (hold <= 0) return false; // even when the database's clock is a moment ahead of this server's
   if (now.getTime() - answer.createdAt.getTime() >= hold * 60_000) return false;
   return !video || (video.status === 'RENDERING' && answer.videoAttempts <= 1);
 }

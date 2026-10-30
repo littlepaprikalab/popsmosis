@@ -5,6 +5,15 @@ to its own ffmpeg (H.264, video only). The ranges are joined with `-c copy`, and
 audio is mixed from the timeline's clips and added once at the end, since audio
 encoded per range clicks at the joins. Everything is written under a temporary
 folder and moved into place last.
+
+encode_all() makes several videos at once (the render step's song, lesson and hook cut)
+on one set of workers. Each is split into the ranges it would get alone, so its file is
+the same byte for byte; the workers take the ranges of all of them, the longest video's
+first, and a video's ranges are joined and its audio added (one ffmpeg, on one core) as
+soon as they are drawn, while the workers go on with the others'. Made one after
+another, every video ended with most cores idle through its last ranges and its audio
+(8 to 10 s on one core for a 3-minute video): on `python -m studio.bench`, the three
+videos took 15% less time at once than one after another.
 """
 
 from __future__ import annotations
@@ -16,6 +25,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,7 +40,11 @@ CRF = "20"
 
 
 class EncodeError(Exception):
-    pass
+    """A video could not be made; `index` is its place in encode_all()'s list."""
+
+    def __init__(self, message: str, index: int = 0):
+        super().__init__(message)
+        self.index = index
 
 
 def ffmpeg() -> str:
@@ -109,47 +123,122 @@ def _die_with_parent() -> bool:
     return parent is None or os.getppid() == int(parent)
 
 
-def _render_ranges(job: Path, timeline: Timeline, layout: str, chunks: list[tuple[int, int]], paths: list[Path],
-                   n_workers: int, tmp_dir: Path) -> None:
-    """Run render_range for each range in its own `python -m studio.render.encode` process, n at a time.
+@dataclass
+class _Video:
+    """One video of encode_all(): what it is made from, its ranges, and how many are still to draw."""
+
+    index: int
+    timeline: Timeline
+    out: Path
+    layout: str
+    folder: Path  # its own temporary folder: the timeline the workers read, its ranges, the joined video
+    chunks: list[tuple[int, int]]
+    left: int
+    started: float | None = None  # when its first range started, by time.monotonic(): its time limit runs from then
+
+    def part(self, k: int) -> Path:
+        return self.folder / f"part{k:03d}.mp4"
+
+
+def _finish(job: Path, video: _Video) -> float:
+    """Join a video's ranges, add its audio, and move it into place; return when it was, by time.monotonic().
+    A failure is an EncodeError naming the video by its index."""
+    try:
+        return _join(job, video)
+    except (EncodeError, OSError) as e:
+        raise EncodeError(str(e), video.index) from e
+
+
+def _join(job: Path, video: _Video) -> float:
+    timeline, tmp_dir = video.timeline, video.folder
+    listing = tmp_dir / "parts.txt"
+    listing.write_text("".join(f"file '{video.part(k).name}'\n" for k in range(len(video.chunks))))
+    joined = tmp_dir / "video.mp4"
+    _run([ffmpeg(), "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
+          "-c", "copy", str(joined)], timeout=time_limit(timeline))
+    final = tmp_dir / "final.mp4"
+    if timeline.audio:
+        inputs, mix = audio_filter(job, timeline)
+        _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(joined), *inputs, "-filter_complex", mix,
+              "-map", "0:v", "-map", "[mix]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+              "-t", f"{timeline.duration:.3f}", "-movflags", "+faststart", str(final)], timeout=time_limit(timeline))
+    else:
+        _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(joined), "-c", "copy", "-movflags", "+faststart",
+              str(final)], timeout=time_limit(timeline))
+    video.out.parent.mkdir(parents=True, exist_ok=True)
+    partial = video.out.with_name(f".{video.out.name}.partial")
+    shutil.move(str(final), partial)
+    os.replace(partial, video.out)
+    shutil.rmtree(tmp_dir, ignore_errors=True)  # its ranges, now in the video: the others' still need the disk
+    return time.monotonic()
+
+
+def _render_ranges(job: Path, made: list[_Video], n_workers: int, finishing: ThreadPoolExecutor) -> dict[int, float]:
+    """Draw every video's ranges, each in its own `python -m studio.render.encode` process, n at a time, and
+    finish each video (_finish, on `finishing`) once its last range is drawn. Returns when each was finished,
+    by time.monotonic().
 
     Plain processes rather than multiprocessing, so a worker never re-runs the
     caller's script; the first failure stops the rest and is raised as EncodeError.
     """
-    timeline_file = tmp_dir / "timeline.json"
-    timeline_file.write_text(timeline.model_dump_json(), encoding="utf-8")
     env = dict(os.environ, PYTHONPATH=os.pathsep.join(filter(None, [str(ROOT), os.environ.get("PYTHONPATH")])),
                **{PARENT_ENV: str(os.getpid())})
-    waiting = list(zip(chunks, paths))
-    deadline = time.monotonic() + time_limit(timeline)
-    running: list[tuple[subprocess.Popen, Path, tuple[int, int]]] = []
+    for video in made:
+        (video.folder / "timeline.json").write_text(video.timeline.model_dump_json(), encoding="utf-8")
+    # The longest video's ranges first: the shortest's are what is left to share out at the end.
+    order = sorted(made, key=lambda v: -v.timeline.frame_count)
+    waiting = [(video, k) for video in order for k in range(len(video.chunks))]
+    running: list[tuple[subprocess.Popen, Path, _Video, int]] = []
+    # A video with no frames has no ranges to wait for (and its join fails, saying so).
+    finished: dict[int, Future] = {}
+    for video in made:
+        if not video.left:
+            video.started = time.monotonic()
+            finished[video.index] = finishing.submit(_finish, job, video)
     try:
-        while waiting or running:
+        while waiting or running or not all(f.done() for f in finished.values()):
             while waiting and len(running) < n_workers:
-                (first, last), path = waiting.pop(0)
+                video, k = waiting.pop(0)
+                if video.started is None:
+                    video.started = time.monotonic()
+                (first, last), path = video.chunks[k], video.part(k)
                 log = path.with_suffix(".worker.log")
                 with open(log, "wb") as err:
                     proc = subprocess.Popen(
-                        [sys.executable, "-m", "studio.render.encode", str(job.resolve()), str(timeline_file),
-                         layout, str(first), str(last), str(path)],
+                        [sys.executable, "-m", "studio.render.encode", str(job.resolve()),
+                         str(video.folder / "timeline.json"), video.layout, str(first), str(last), str(path)],
                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=err, env=env)
-                running.append((proc, log, (first, last)))
+                running.append((proc, log, video, k))
             for item in list(running):
-                proc, log, (first, last) = item
+                proc, log, video, k = item
                 code = proc.poll()
                 if code is None:
                     continue
                 running.remove(item)
                 if code:
+                    first, last = video.chunks[k]
                     lines = log.read_text(errors="replace").strip().splitlines()
-                    raise EncodeError(lines[-1] if lines else f"the worker for frames {first}-{last} exited {code}")
-            if time.monotonic() > deadline:
-                raise EncodeError(f"the render took over {time_limit(timeline):.0f} s; its workers were stopped")
+                    raise EncodeError(lines[-1] if lines else f"the worker for frames {first}-{last} exited {code}",
+                                      video.index)
+                video.left -= 1
+                if not video.left:
+                    finished[video.index] = finishing.submit(_finish, job, video)
+            for future in finished.values():
+                if future.done() and future.exception():
+                    raise future.exception()  # an EncodeError naming its video (_finish)
+            # Each video's own time limit, from its first range to its file: one that hangs is caught as soon
+            # as it would have been alone.
+            for video in made:
+                over = video.started is not None and time.monotonic() > video.started + time_limit(video.timeline)
+                if over and not (video.index in finished and finished[video.index].done()):
+                    raise EncodeError(f"the render took over {time_limit(video.timeline):.0f} s; its workers were "
+                                      "stopped", video.index)
             time.sleep(0.05)
     finally:
-        for proc, _, _ in running:
+        for proc, _, _, _ in running:
             proc.kill()
             proc.wait()
+    return {index: future.result() for index, future in finished.items()}
 
 
 def ranges(frames: int, parts: int) -> list[tuple[int, int]]:
@@ -180,37 +269,30 @@ def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[l
 
 def encode(job: Path, timeline: Timeline, out: Path, layout: str = "h", parts: int | None = None) -> Rendered:
     """Render the whole timeline to `out` (an .mp4) with its audio."""
+    return encode_all(job, [(timeline, out, layout)], parts)[0]
+
+
+def encode_all(job: Path, videos: list[tuple[Timeline, Path, str]], parts: int | None = None) -> list[Rendered]:
+    """Render each timeline to its .mp4 (timeline, out, layout) with its audio, all at once on one set of
+    workers; the same files, byte for byte, as encode() would make one after another. A video that fails stops
+    the rest, raised as EncodeError with its index in `videos`; those already finished are kept."""
     started = time.monotonic()
-    for clip in timeline.audio:
-        if not (job / clip.path).exists():
-            raise EncodeError(f"no audio file {clip.path}")
-    frames = timeline.frame_count
+    for index, (timeline, _, _) in enumerate(videos):
+        for clip in timeline.audio:
+            if not (job / clip.path).exists():
+                raise EncodeError(f"no audio file {clip.path}", index)
     n_workers = parts or workers()
-    # More ranges than workers, so one slow range does not hold up the rest.
-    chunks = ranges(frames, n_workers * 2)
-    with tempfile.TemporaryDirectory(prefix="popsmosis-render-") as tmp:
-        tmp_dir = Path(tmp)
-        paths = [tmp_dir / f"part{i:03d}.mp4" for i in range(len(chunks))]
-        _render_ranges(job, timeline, layout, chunks, paths, n_workers, tmp_dir)
-        listing = tmp_dir / "parts.txt"
-        listing.write_text("".join(f"file '{p.name}'\n" for p in paths))
-        video = tmp_dir / "video.mp4"
-        _run([ffmpeg(), "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(listing),
-              "-c", "copy", str(video)], timeout=time_limit(timeline))
-        final = tmp_dir / "final.mp4"
-        if timeline.audio:
-            inputs, mix = audio_filter(job, timeline)
-            _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(video), *inputs, "-filter_complex", mix,
-                  "-map", "0:v", "-map", "[mix]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-                  "-t", f"{timeline.duration:.3f}", "-movflags", "+faststart", str(final)], timeout=time_limit(timeline))
-        else:
-            _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(video), "-c", "copy", "-movflags", "+faststart",
-                  str(final)], timeout=time_limit(timeline))
-        out.parent.mkdir(parents=True, exist_ok=True)
-        partial = out.with_name(f".{out.name}.partial")
-        shutil.move(str(final), partial)
-        os.replace(partial, out)
-    return Rendered(path=out, frames=frames, seconds=time.monotonic() - started)
+    with tempfile.TemporaryDirectory(prefix="popsmosis-render-") as tmp, \
+            ThreadPoolExecutor(max(1, len(videos)), thread_name_prefix="finish") as finishing:
+        made = []
+        for index, (timeline, out, layout) in enumerate(videos):
+            folder = Path(tmp) / str(index)
+            folder.mkdir()
+            # More ranges than workers, so one slow range does not hold up the rest.
+            chunks = ranges(timeline.frame_count, n_workers * 2)
+            made.append(_Video(index, timeline, out, layout, folder, chunks, len(chunks)))
+        done = _render_ranges(job, made, n_workers, finishing)
+    return [Rendered(path=v.out, frames=v.timeline.frame_count, seconds=done[v.index] - started) for v in made]
 
 
 def write_poster(job: Path, timeline: Timeline, out: Path, layout: str = "h") -> float:
