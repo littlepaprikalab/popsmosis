@@ -640,7 +640,8 @@ has. Plan them across the whole song before writing any one line's direction:
   shows at most two flows at once, each one's dots travelling through the parts themselves
   (along a tube, round its bends, across a wall), so more dots only crowd the picture. A failure scene: after the block, what has stopped
   stays still, and that stillness is the point. A scene where nothing travels (a graph, a
-  stage, a map, a gathering of people) has no particles on any line: the camera and the
+  stage, a map, a gathering of people) has no particles on any line, and nor does the hook,
+  the learner's world as it is (the video leaves them out): the camera and the
   spotlight move from part to part with the lines instead, and a dot sent between its parts
   to fill the time would teach a journey that never happens.
 - **A cycle of forms is change, not travel.** In a topic about one thing turning into

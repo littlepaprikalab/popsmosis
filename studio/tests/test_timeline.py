@@ -579,3 +579,16 @@ def test_a_picture_shown_for_one_short_line_gives_way_to_the_one_before():
     got = step._scenes(sung, directions, {"hook", "overview", "detail"}, "hook", 20.0)
     # d alone (2 s) holds the overview; f's run (10 to 15 s, then g, not drawn, stays on it) is long enough.
     assert got == ["hook", "overview", "overview", "overview", "overview", "detail", "detail"]
+
+
+def test_the_hook_holds_still_whatever_its_direction_says(job, monkeypatch):
+    # Round 20's rock cycle sent a dot of sand off its cliff in the opening picture; it read as a speck.
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"])
+    write_bundle(job, data)
+    assert lines(make(job)["song"])["v1-2"].particles  # on the overview, it runs
+    monkeypatch.setattr(step, "hook_scene", lambda bundle: "overview")  # the same picture, opening the video
+    timelines = make(job)
+    assert lines(timelines["song"])["v1-2"].scene == "overview"
+    for timeline in timelines.values():
+        assert all(not b.particles for b in timeline.beats if b.scene == "overview")

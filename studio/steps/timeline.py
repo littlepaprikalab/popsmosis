@@ -376,7 +376,9 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         target = _shown(direction.camera.target, scene_names, labels) if direction else None
         zoom = min(max(direction.camera.zoom, 1.0), MAX_ZOOM) if target and direction else 1.0
         particles = []
-        for flow in direction.flows() if direction else []:  # the main flow, and one moving with it
+        # The hook holds still: it is the learner's world as it is, and a dot travelling over it (round 20's sand
+        # leaving a cliff, round 21's food going down a throat) read as a speck on the picture, not a lesson.
+        for flow in direction.flows() if direction and scene != hook else []:  # the main flow, and one with it
             stops = [s for s in (scene_names.canonical(p) for p in flow.particles) if s]
             stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
             label = notation(flow.carries)
