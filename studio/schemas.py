@@ -546,6 +546,9 @@ class TimedLine(Strict):
     start: float
     end: float
     words: list[Word]  # every word of the line, in order
+    # False: its section of the song has no singing (Eleven Music left the chunk instrumental), so it is timed at
+    # no length where that section ends and never shown (step 6)
+    sung: bool = True
 
 
 class Timing(Strict):

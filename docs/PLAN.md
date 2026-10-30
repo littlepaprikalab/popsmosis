@@ -424,9 +424,18 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   that drifts more than 0.5 s. If a section was sung wrong, regenerate that section only.
   Built: the flag, in `timing/song_report.json` and the step's summary line. Not built:
   the regeneration.
+- **Not sung:** Eleven Music can make a chunk with no singing in it. The Holocaust song's
+  5.7 s intro came back instrumental (Oct 30), and the aligner put the intro's two lines on
+  verse 1's first bar, squashing that line into 0.75 s. Now a pinned section whose own
+  chunk holds under 0.5 s of vocals within 30 dB of the song's loud singing has its lines
+  marked `sung: false`, at no length where the chunk ends. The next section is aligned
+  from there, the videos never show those lines, and the intro cut starts at the first
+  sung word. The report's `unsung` and the summary line name them; drift leaves them out.
+  A Lyria song's sections are not pinned, so none is checked. Whether "[Intro]" makes
+  Eleven Music play an instrumental lead-in is still to be tested, and costs a song.
 
-Output is a `Timing` per audio file: each line by id, with its start, end and
-`[{word, start, end}]`.
+Output is a `Timing` per audio file: each line by id, with its start, end,
+`[{word, start, end}]`, and `sung` (false only for a line the song never sings).
 
 ### Step 7: timeline
 

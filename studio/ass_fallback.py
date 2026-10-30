@@ -30,6 +30,7 @@ SUNG, UNSUNG = "#1F2937", "#9CA3AF"
 def make(job: Path) -> Path:
     bundle = jobs.read(job / "bundle.json", Bundle)
     timing = jobs.read(job / media.timing_path("song"), Timing)
+    timing = timing.model_copy(update={"lines": [line for line in timing.lines if line.sung]})  # shows what is sung
     song = job / media.audio_path("song")
     if not song.exists():
         raise media.StepFailed(f"no {media.audio_path('song')} to put under the video")
