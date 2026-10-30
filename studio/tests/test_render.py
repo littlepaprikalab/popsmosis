@@ -17,6 +17,7 @@ skia = pytest.importorskip("skia", reason="skia-python is not installed (or its 
 from studio import jobs, media
 from studio.render import primitives as p
 from studio.render.encode import EncodeError, audio_filter, encode, encode_all, poster_time, ranges, write_poster
+from studio.render.layouts import LAYOUTS
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
@@ -638,6 +639,33 @@ def test_videos_made_at_once_on_one_set_of_workers_are_the_files_made_one_by_one
     assert [r.frames for r in together] == [r.frames for r in alone] == [60, 30]
     for one, both in zip(alone, together):
         assert both.path.read_bytes() == one.path.read_bytes()
+
+
+@needs_ffmpeg
+def test_an_upright_hook_cut_with_a_notice_card_made_beside_the_song_is_the_file_made_alone(job, tmp_path):
+    # Each worker builds its own Renderer, and an upright one keeps room above the picture for the tallest card:
+    # every worker must keep the same room, so the hook cut made beside the song is the one made alone, card and all.
+    notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
+    song = short_timeline(job, "song").model_copy(update={"notices": notices})
+    hook = short_timeline(job, "hook").model_copy(update={"notices": notices, "title": "the light reactions"})
+    alone = encode(job, hook, tmp_path / "alone_hook.mp4", media.HOOK_LAYOUT, parts=2)
+    together = encode_all(job, [(song, tmp_path / "song.mp4", "h"), (hook, tmp_path / "hook.mp4", media.HOOK_LAYOUT)],
+                          parts=2)
+    assert together[1].path.read_bytes() == alone.path.read_bytes()
+    # The workers drew the card: the frame decoded from the video is the one a Renderer draws, not the one without.
+    n, size = 45, LAYOUTS[media.HOOK_LAYOUT]
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(together[1].path), "-vf", f"select=eq(n\\,{n})",
+                          "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "bgr24", "-"], capture_output=True, check=True)
+    decoded = np.frombuffer(raw.stdout, np.uint8).reshape(size.height, size.width, 3).astype(int)
+    carded = Renderer(job, hook, media.HOOK_LAYOUT)
+    assert carded._card_h > 0
+    rows = slice(int(carded.view("overview")[1] - carded._card_h), int(carded.view("overview")[1]))
+    plain = Renderer(job, hook.model_copy(update={"notices": {}}), media.HOOK_LAYOUT)
+
+    def off(renderer):
+        return np.abs(decoded[rows] - renderer.frame(n / hook.fps)[rows, :, :3].astype(int)).mean()
+
+    assert off(carded) < 4 < off(plain)
 
 
 @needs_ffmpeg
