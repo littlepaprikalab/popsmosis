@@ -3,7 +3,7 @@ import Link from 'next/link';
 import PageContainer from '@/components/PageContainer';
 import { Wordmark } from '@/components/Wordmark';
 import { MakerChip } from '@/components/MakerChip';
-import { CheckCircleIcon, PlayIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, ExclamationTriangleIcon, PlayIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
 export const metadata: Metadata = {
   title: 'How it’s made',
@@ -30,7 +30,8 @@ const KINDS: Record<Kind, { label: string; color: string }> = {
   gate: { label: 'Must pass', color: 'var(--accent-orange)' },
 };
 
-interface Step { name: string; kind: Kind; text: string }
+// `discloses`: what the step cannot fix, the video says (the picture check's notes, Timeline.notices).
+interface Step { name: string; kind: Kind; text: string; discloses?: boolean }
 
 // The studio's steps, as the flow draws them: the lesson's one after another (a "gate" stops the droplet when it
 // fails), then the pictures and the sound side by side, as the studio makes them, then the video from both.
@@ -82,7 +83,8 @@ const PICTURE_STEPS: Step[] = [
     kind: 'checks',
     text: 'A second AI looks at each painted picture. Is a part missing, in the wrong place, or facing the wrong way? '
       + 'Is there any writing? If so, the picture is painted one more time. A picture with writing in it is never '
-      + 'used. Mistakes that could mislead you are shown in the video (see below).',
+      + 'used.',
+    discloses: true,
   },
   {
     name: 'Labels',
@@ -388,7 +390,7 @@ export default function HowItsMadePage() {
 
 function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <h2 id={id} className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: ink('var(--accent-yellow)', 55) }}>
+    <h2 id={id} className="text-xs font-bold uppercase tracking-wider mb-4 scroll-mt-18" style={{ color: ink('var(--accent-yellow)', 55) }}>
       {children}
     </h2>
   );
@@ -412,7 +414,8 @@ function FlowLabel({ children }: { children: React.ReactNode }) {
 }
 
 /** One step of the flow. A step the droplet must pass says, beside it from md up (in the flow's gutter) and under it
- *  on a phone, that a fail stops the droplet. */
+ *  on a phone, that a fail stops the droplet; a step that discloses what it cannot fix says so under it, linking to
+ *  the card the video shows. */
 function StepNode({ step }: { step: Step }) {
   const gate = step.kind === 'gate';
   return (
@@ -431,6 +434,16 @@ function StepNode({ step }: { step: Step }) {
           <XCircleIcon aria-hidden className="w-3.5 h-3.5 shrink-0" />
           Fails? Nothing is posted.
         </p>
+      )}
+      {step.discloses && (
+        <a href="#notice-title" className="flex gap-1.5 mt-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold leading-relaxed hover:brightness-110"
+          style={{ color: ink('var(--accent-yellow)', 55), background: tint('var(--accent-yellow)', 10), border: `1px solid ${tint('var(--accent-yellow)', 45)}` }}>
+          <ExclamationTriangleIcon aria-hidden className="w-3.5 h-3.5 shrink-0 mt-[0.2em]" />
+          <span>
+            Still wrong in a way that could mislead you? The video says so, right next to the
+            picture. <span className="underline whitespace-nowrap">See how ↓</span>
+          </span>
+        </a>
       )}
     </div>
   );

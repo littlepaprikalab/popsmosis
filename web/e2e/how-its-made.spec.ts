@@ -30,7 +30,12 @@ test.describe('the How it’s made page', () => {
     await expect(steps.nth(4)).toContainText('Line check');
     await expect(page.getByText('Fails? Nothing is posted.')).toHaveCount(2);
     // Then the pictures and the sound, made side by side.
-    await expect(page.getByRole('list', { name: 'Pictures' }).getByRole('listitem')).toHaveCount(3);
+    const pictures = page.getByRole('list', { name: 'Pictures' });
+    await expect(pictures.getByRole('listitem')).toHaveCount(3);
+    // What the picture check cannot fix, the video says: the step points down to the card.
+    await pictures.getByRole('link', { name: /^Still wrong in a way that could mislead you\?/ }).click();
+    await expect(page).toHaveURL(/#notice-title$/);
+    await expect(page.getByRole('heading', { level: 2, name: 'When a picture is wrong, the video tells you' })).toBeInViewport();
     await expect(page.getByRole('list', { name: 'Sound' }).getByRole('listitem')).toHaveCount(1);
     // The card as the video draws it, with the note's lead in the renderer's words.
     await expect(page.getByText('A check found these mistakes:')).toBeVisible();
