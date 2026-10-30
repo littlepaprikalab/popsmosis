@@ -5,7 +5,7 @@ import urllib.request
 import pytest
 
 from studio import api as api_module
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio.__main__ import main
 from studio.api import Api
 from studio.steps import upload
@@ -477,3 +477,24 @@ def test_a_render_picked_up_elsewhere_gets_the_hook_cuts_timeline_too(job):
     assert "timeline_hook.json" not in upload.private_files(job)[0]
     (job / "timeline_hook.json").write_text("{}")
     assert "timeline_hook.json" in upload.private_files(job)[0]
+
+
+def test_the_lesson_alone_uploads_and_reports_only_the_lesson_video(job, server):
+    """STUDIO_VIDEOS=lesson: READY names the lesson video alone, and a song or hook cut left from a run that made them
+    stays here."""
+    (job / "out" / "hook_v.mp4").write_bytes(b"mp4 hook")
+    (job / "out" / "hook_v.jpg").write_bytes(b"jpg hook")
+    (job / "timeline_hook.json").write_text("{}")
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    line = upload.run(job, api=api_for(server))
+    assert {p for p in server.stored if p.startswith("droplets/")} == {
+        "droplets/ans1/out/lesson_h.mp4", "droplets/ans1/out/lesson_h.jpg"}
+    private = {p.removeprefix("studio/ans1/") for p in server.stored if p.startswith("studio/")}
+    assert {"audio/narration.mp3", "timing/narration_words.json", "timeline_lesson.json"} <= private
+    assert not private & {"audio/song.mp3", "timing/song_words.json", "timeline_song.json", "timeline_hook.json"}
+    [patch] = server.patches()
+    del patch["breakdown"]
+    assert patch == {"status": "READY", "lessonVideoUrl": f"{MEDIA}/ans1/out/lesson_h.mp4",
+                     "lessonPosterUrl": f"{MEDIA}/ans1/out/lesson_h.jpg"}
+    assert jobs.read(job / upload.UPLOADED, upload.Uploaded).song_video_url is None
+    assert line.endswith(f"videos READY: {MEDIA}/ans1/out/lesson_h.mp4")

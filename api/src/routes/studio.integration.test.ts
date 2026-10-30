@@ -194,7 +194,7 @@ d('studio settings', () => {
       value: null, env: null, inForce: 'experimental-cc-routine-2026-04-01',
     });
     // The studio's environment is on the teacher's machine: nothing about it here.
-    expect(knobs.STUDIO_VIDEOS).toEqual({ where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'off'], value: null });
+    expect(knobs.STUDIO_VIDEOS).toEqual({ where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'lesson', 'off'], value: null });
     expect(knobs.ELEVENLABS_USD_PER_1K_CREDITS).toEqual({ where: 'studio', kind: 'number', default: null, min: 0, max: 100, value: null });
     // Never a secret, nor a knob that is not one.
     expect(Object.keys(knobs)).not.toContain('JWT_SECRET');

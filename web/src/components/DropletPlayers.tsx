@@ -8,8 +8,9 @@ import { allTags } from '@/lib/tags';
 import { countClip, countPlays } from '@/lib/plays';
 
 /**
- * A droplet's two videos: the karaoke song and the narrated lesson, with both videos'
- * hashtags once under the pair (most are shared, and two copies took a lot of room).
+ * A droplet's videos: the karaoke song and the narrated lesson, or the lesson alone when it was made with no song
+ * (STUDIO_VIDEOS=lesson), with both videos' hashtags once under the pair (most are shared, and two copies took a lot
+ * of room).
  * H.264 with +faststart, so a plain <video> starts playing before the file has
  * downloaded; preload="none" keeps a page of them from fetching anything until one is played.
  * How far each play gets is counted, with nothing about who watched (lib/plays.ts).
@@ -116,7 +117,7 @@ export function LessonVideos({ answerId, video, tags }: { answerId: string; vide
     return (
       <p className="text-xs mt-3 flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="videos-rendering">
         <span className="inline-block w-1.5 h-1.5 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
-        The song and lesson videos are rendering… they appear here when they are done.
+        The videos are rendering… they appear here when they are done.
       </p>
     );
   }

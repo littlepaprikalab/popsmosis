@@ -44,7 +44,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from studio import brain, checks, ledger
+from studio import brain, checks, ledger, media
 from studio.jobs import read, write
 from studio.schemas import Bundle, CheckReport, Request, Strict
 from studio.steps import bundle as bundle_step
@@ -536,6 +536,11 @@ def main(args) -> int:
         if args.out:
             Path(args.out).write_text(text, encoding="utf-8")
         return 0
+    if media.lesson_only():
+        # A bundle for the lesson video alone has no song, and the rubric judges one: refused before anything is paid.
+        print("scorecard: STUDIO_VIDEOS is lesson, which writes no song, and the rubric judges the song; run it with "
+              "STUDIO_VIDEOS unset or on", file=sys.stderr)
+        return 2
     topics = load_topics()
     if args.resume and args.topics:
         print("scorecard: a resumed run keeps the topics it started with", file=sys.stderr)

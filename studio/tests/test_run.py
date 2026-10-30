@@ -7,8 +7,8 @@ import pytest
 from studio import brain, jobs
 from studio import run as operator_run
 from studio.api import PROGRESS_TIMEOUT_S, Api, ApiError
-from studio.schemas import Bundle, FactAudit, FactCheck, Request
-from studio.tests.sample import bundle_data
+from studio.schemas import Bundle, FactAudit, FactCheck, FactCheckReport, LessonBundle, Request
+from studio.tests.sample import bundle_data, lesson_bundle_data
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 
@@ -88,6 +88,8 @@ class FakeBrain:
             if self.bundle_error:
                 raise self.bundle_error
             return bundle_data()
+        if schema is LessonBundle:  # the lesson video alone (STUDIO_VIDEOS=lesson): no song
+            return lesson_bundle_data([{"text": "Light splits water → O₂ + H⁺ + e⁻", "from_narration": "n1"}])
         if schema is FactAudit:
             return FactAudit.model_validate({"facts": [
                 {"id": fact["id"], "basis": "course knowledge", "quote": "", "verdict": self.fact,
@@ -920,3 +922,25 @@ def test_the_command_line_starts_the_lesson_in_the_background_and_waits_on_it(jo
     monkeypatch.setattr(operator_run, "wait", lambda question, minutes=None: ("RUNNING", "bundle", "still going"))
     assert main(["wait", "q1"]) == 4
     assert capsys.readouterr().out.splitlines()[-1] == "RUNNING bundle: still going"
+
+
+def test_with_the_song_off_on_the_studio_page_the_lesson_is_written_checked_and_posted_with_no_song(jobs_root, capsys):
+    """STUDIO_VIDEOS=lesson, as the claim carries it: the bundle is asked for without its song, the fact-check
+    checks no lyric, style or song tag and never calls the songwriter, and the lesson posted has no song."""
+    api, ask = FakeApi(), FakeBrain()
+    api.studio = {"knobs": {"STUDIO_VIDEOS": "lesson"}}
+    assert operator_run.run("q1", api=api, ask=ask) == ("DONE", "post", "lesson posted as answer ans1")
+    assert "lyric rewrite round 1" not in ask.labels
+    bundle = jobs.read(jobs_root / "q1" / "bundle.json", Bundle)
+    assert not bundle.sung and [k.from_narration for k in bundle.key_lines] == ["n1"]
+    report = jobs.read(jobs_root / "q1" / "factcheck.json", FactCheckReport)
+    assert report.status == "passed"
+    assert not [c for c in report.lines if c.kind in ("lyric", "style", "avoid") or c.id.startswith("song-")]
+    assert ("keyline", "n1") in {(c.kind, c.id) for c in report.lines}
+    assert api.posted["bundle"]["lyrics"] == [] and api.posted["bundle"]["tags"]["song"] == []
+    from studio.__main__ import main
+
+    capsys.readouterr()
+    assert main(["show", "q1"]) == 0
+    assert "No song: written for the lesson video alone" in capsys.readouterr().out
+

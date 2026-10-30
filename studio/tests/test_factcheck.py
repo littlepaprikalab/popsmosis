@@ -3,10 +3,10 @@ import json
 import pytest
 
 from studio.jobs import read, write
-from studio.schemas import Bundle, FactCheck, FactCheckReport, LyricRewrite, Request
+from studio.schemas import Bundle, FactCheck, FactCheckReport, LessonBundle, LyricRewrite, Request, bundle_of
 from studio.steps import factcheck, songwriter
 from studio.steps.factcheck import check_bundle, cites, dropped_motions, dropped_tags, lines_of
-from studio.tests.sample import CHORUS, bundle_data
+from studio.tests.sample import CHORUS, bundle_data, lesson_bundle_data
 
 SEEDED = "Each electron hand-off pumps a proton"
 FIXED = "Only b6f pumps a proton through"
@@ -627,3 +627,14 @@ def test_a_caption_on_a_video_is_checked_against_the_facts_and_corrected():
     assert report.status == "passed"
     assert checked.direction[1].caption == "Only b6f pumps"
     assert [(c.kind, c.ids) for c in report.corrections] == [("caption", [checked.direction[1].line_id])]
+
+
+def test_a_bundle_with_no_song_sends_no_lyric_style_or_song_tag_and_keys_its_key_lines_by_the_narration():
+    keys = [{"text": "Light splits water → O₂", "from_narration": "n1"},
+            {"text": "H⁺ flow spins ATP synthase → ATP", "from_narration": "n2"}]
+    bundle = bundle_of(LessonBundle.model_validate(lesson_bundle_data(keys)).model_dump())
+    lines = lines_of(bundle)
+    assert not [line for line in lines if line.kind in (factcheck.LYRIC, factcheck.STYLE, factcheck.AVOID)]
+    assert not [line for line in lines if line.kind == factcheck.TAG and line.id.startswith("song-")]
+    keyed = [line.key for line in lines if line.kind == factcheck.KEY]
+    assert keyed == ["keyline:core_idea", "keyline:n1", "keyline:n2"] and len(set(keyed)) == len(keyed)

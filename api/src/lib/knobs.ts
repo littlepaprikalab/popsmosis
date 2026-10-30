@@ -44,8 +44,8 @@ export const KNOBS = {
     where: 'api', kind: 'text', default: 'experimental-cc-routine-2026-04-01',
     pattern: /^[a-z0-9][a-z0-9-]{0,99}$/, rule: 'lowercase letters, digits and hyphens',
   },
-  // The studio (studio/knobs.py).
-  STUDIO_VIDEOS: { where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'off'] },
+  // The studio (studio/knobs.py). STUDIO_VIDEOS: both videos, the lesson video alone (no song, no hook cut), or none.
+  STUDIO_VIDEOS: { where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'lesson', 'off'] },
   ELEVENLABS_VOICE_ID: {
     where: 'studio', kind: 'text', default: 'Xb7hH8MSUJpSbSDYk0k2', pattern: /^[A-Za-z0-9]{1,64}$/,
     rule: 'an ElevenLabs voice id: letters and digits',

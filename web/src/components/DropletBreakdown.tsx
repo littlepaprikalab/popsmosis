@@ -13,7 +13,7 @@ const STEP_LABELS: Record<string, string> = {
   post: 'Post the lesson',
   art: 'Draw the diagrams',
   locate: 'Find the labels',
-  audio: 'Song and voice',
+  audio: 'Make the audio', // the song and the voice, or the voice alone (STUDIO_VIDEOS=lesson): its models say which
   timing: 'Time the words',
   timeline: 'Plan the videos',
   render: 'Render',

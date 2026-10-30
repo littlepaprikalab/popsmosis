@@ -279,7 +279,10 @@ def print_job(job: Path, brief: bool = False) -> None:
             print(_wrap(f"{scene.id}: " + ", ".join(
                 s.name + (f" ({'/'.join(s.aliases)})" if s.aliases else "") for s in scene.structures), indent=4))
         print("\n## Lyrics\n")
-        print(_wrap("Style: " + ", ".join(bundle.music.positive_styles), indent=7) + "\n")
+        if not bundle.sung:
+            print("No song: written for the lesson video alone (STUDIO_VIDEOS=lesson)\n")
+        else:
+            print(_wrap("Style: " + ", ".join(bundle.music.positive_styles), indent=7) + "\n")
         section = None
         for lyric in bundle.lyrics:
             if lyric.section != section:
