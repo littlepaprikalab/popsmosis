@@ -196,10 +196,11 @@ def test_a_line_that_sums_up_runs_every_flow_its_scene_has_shown_so_far(monkeypa
              beat("hook")]  # the hook never does
     _run_all(beats, "hook")
     moving = [[(f.path[0], f.path[-1], f.label) for f in b["particles"]] for b in beats]
-    # The hand-off runs within the whole chain, which takes its place, rather than as a second dot on its leg.
-    assert moving[4] == [("Lumen", "Stroma", "H⁺"), ("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
+    # The hand-off runs within the whole chain, which takes its place, rather than as a second dot on its leg; at
+    # most RUN_MAX (2) move, the beat's own first.
+    assert moving[4] == [("Lumen", "Stroma", "H⁺"), ("PSII", "PSI", "e⁻")]
     assert moving[5] == [("Lumen", "Stroma", "H⁺")]
-    assert moving[6] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻"), ("Lumen", "Stroma", "H⁺")]
+    assert moving[6] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
     assert moving[7] == []
     assert [len(b["particles"]) for b in beats[:4]] == [1, 1, 1, 1]  # lines that teach a step move only that step
 

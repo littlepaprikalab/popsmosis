@@ -348,7 +348,7 @@ def _check_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_line"]])
 
 
-STILL_LINES_MAX = 2  # lines in a row with nothing moving on a scene where things travel
+STILL_LINES_MAX = 4  # lines in a row with nothing moving on a scene where things travel: a line that comments or sums up holds still
 STILL_SCENES = ("hook", "analogy")  # scenes where nothing needs to move
 
 

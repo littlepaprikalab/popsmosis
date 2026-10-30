@@ -929,6 +929,32 @@ def test_a_hop_two_routes_share_is_drawn_once(job, monkeypatch):
     assert legs.count("#4CC9F0") == 2 and legs.count("#F2C230") == 1  # Thylakoid → b6f once, b6f → Thylakoid once
 
 
+def test_past_three_arrows_those_not_travelled_on_the_line_fade(job, monkeypatch):
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    overview = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    since = timeline.beats[overview[0]].t0
+    colors = {"e⁻": "#4CC9F0", "H⁺": "#F2C230", "H₂O": "#7FD1FF", "O₂": "#9BE564"}
+    routes = [Route(path=["Thylakoid", "Cytochrome b6f"], color=c, label=label, since=since)
+              for label, c in colors.items()]
+    moving = Particles(path=["Thylakoid", "Cytochrome b6f"], color=colors["H⁺"], label="H⁺", trail=True)
+
+    def legs_at_the_end(routes):
+        beats = [b.model_copy(update={"routes": routes, "particles": [moving] if i == overview[-1] else []})
+                 if b.scene == "overview" else b for i, b in enumerate(timeline.beats)]
+        renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+        legs = []
+        monkeypatch.setattr(p, "draw_route_leg", lambda canvas, line, color, alpha, head=True: legs.append((color, alpha)))
+        renderer.frame(beats[overview[-1]].t1 - 0.01)  # well past the fade at the line's start
+        return {color: alpha for color, alpha in legs}
+
+    four = legs_at_the_end(routes)
+    assert four[colors["H⁺"]] == pytest.approx(1.0, abs=0.05)  # travelled on this line: in full
+    assert all(four[c] == pytest.approx(renderer_module.ROUTE_PAST, abs=0.05) for label, c in colors.items()
+               if label != "H⁺")
+    three = legs_at_the_end(routes[:3])  # at most ROUTES_CLEAR: every one in full, the pathway building up
+    assert all(alpha == pytest.approx(1.0, abs=0.05) for alpha in three.values())
+
+
 def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")

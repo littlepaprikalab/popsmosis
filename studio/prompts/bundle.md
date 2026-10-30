@@ -129,6 +129,17 @@ together they go from what the learner already knows to the parts they are learn
   between them is what the viewer sees move. No scene draws several stages side by side:
   an overview of mitosis drawn that way came back with its stages wrong. The stages are
   the overview, and the chorus plays over the stage that draws what it names.
+- When the lesson has things crossing between two spaces that lie side by side, one way and
+  the other (reabsorption back into the blood and secretion out of it; oxygen into a capillary
+  and carbon dioxide out of it), a detail scene shows the crossing up close: the two spaces
+  wide apart across the picture with the wall between them, each a structure of its own (the
+  filtrate in the tubule on one side, the blood in a capillary on the other), so one crossing
+  moves left to right and the other right to left. An overview where the two are woven
+  together (a tubule wrapped in its capillaries) cannot show which way anything crosses.
+- In a story about people (a war, a revolution, a reform), the people it turns on are drawn:
+  each a figure of their own, its structure named for the person, in the scene where they
+  act. One figure never stands for several people ("Roman general" for Marius, Sulla and
+  Caesar): the viewer cannot tell who did what.
 - For a younger audience, draw fewer structures in each scene (two or three) and leave
   the finer parts out.
 
@@ -242,6 +253,11 @@ together they go from what the learner already knows to the parts they are learn
   lobes) can't both be structures in the same scene. When the core idea is about groups,
   draw the overview with the groups as its structures, and zoom in on their parts in the
   detail scenes.
+- A long structure that the lesson's flow travels along, through parts where different things
+  happen, is drawn as those parts, each a structure, in order (the proximal tubule, the loop of
+  Henle, the distal tubule and the collecting duct), and the lines name each part as the flow
+  reaches it, so particles visit each on their way. One structure for the whole length puts its
+  label at one end, and a flow along it jumps straight across the picture.
 
 ## The lesson
 
@@ -510,8 +526,11 @@ catchy lines.
 only names: it teaches every fact, step by step, in the order the scenes show them, and
 says why each step happens. Name every structure the scenes draw, by its `name` or an
 alias. Write at the audience's level, in plain spoken language: short sentences, no
-markdown, no lists, nothing in parentheses. Use the droplet's analogy, and correct the
-misconception once, as the song does. Build it on `why_chain`: every step says why it
+markdown, no lists, nothing in parentheses. Use the droplet's analogy, on its scene for two
+or three sentences so the picture has time to land, and correct the misconception once, as
+the song does. A topic told in time (a war, a revolution, a chain of events) goes in the
+order it happened after the hook, with the year as each event comes, and corrects the
+misconception right after the overview, where it frames all that follows. Build it on `why_chain`: every step says why it
 happens. Keep to `key_terms`, never more than one new name in a sentence. Ask the listener
 one question mid-way and answer it in the next sentence. Open on the hook, and end on the
 core idea, in the same words as `core_idea`, then, for a process, what goes in and what
@@ -585,15 +604,25 @@ order, keyed by `line_id`:
 The picture never moves; the particles, the camera and the spotlight are all the video
 has. Plan them across the whole song before writing any one line's direction:
 
-- **Something moves on almost every line of a scene where things travel.** A line that
-  tells a step of the process has particles for that step. Never leave more than two lines
-  in a row with no particles on a scene where something travels: when a line only comments
-  ("that's the payout"), carry on the flow it is about, or move the camera. A failure scene
-  is the exception: after the block, what has stopped stays still, and that stillness is
-  the point. A scene where nothing travels (a graph, a stage, a map, a gathering of people)
-  has no particles on any line: the camera and the spotlight move from part to part with
-  the lines instead, and a dot sent between its parts to fill the time would teach a
-  journey that never happens.
+- **Motion is for what travels.** A line that tells a step where something travels has
+  particles for that step: that is what shows how the process works. A line that comments
+  ("that's the payout"), names a part or sums up holds still, or moves the camera: the video
+  shows at most two flows at once, and keeps the arrows of the flows already shown, faded,
+  so more dots only crowd the picture. A failure scene: after the block, what has stopped
+  stays still, and that stillness is the point. A scene where nothing travels (a graph, a
+  stage, a map, a gathering of people) has no particles on any line: the camera and the
+  spotlight move from part to part with the lines instead, and a dot sent between its parts
+  to fill the time would teach a journey that never happens.
+- **A cycle of forms is change, not travel.** In a topic about one thing turning into
+  another (the rock cycle, the water cycle, a life cycle, the states of matter), the forms
+  are the structures and the change is the lesson: no dot marked with the thing itself
+  ("rock", "water") travels round the picture, as if a rock journeyed from the volcano to
+  the sea floor. The spotlight moves from the form a line starts from to the form it
+  becomes, and the key line names the process. Particles only where something really is
+  carried somewhere (sediment washed down to the sea, vapour rising to the clouds).
+- **In history, only what moved moves**: an army marching, ships, goods, money. Never land,
+  power, loyalty, votes or ideas as dots, which teach a journey that never happened. The
+  spotlight and the camera move from person to person and place to place with the story.
 - **What goes in and what comes out move too.** A line that says something is taken in,
   split, made or released has particles for it: the input travelling from where it comes
   from into the structure that uses it, the product travelling out to where it goes
@@ -653,8 +682,10 @@ where it happens, named as in `structures`; each species is written as a textboo
 side, 8 characters each), and one structure gets one. The video writes it beside the structure, as
 "H₂O → O₂ + H⁺ + e⁻", while a line is about it (its spotlight, glow or camera target, or a stop of its
 particles), so the learner sees every input and output on the diagram, not only hears them. A lesson that
-says "X is made into Y" at a part of the diagram has one for it. List only what the facts say; the
-fact-check holds each to them. [] when none.
+says "X is made into Y" at a part of the diagram has one for it. Only a reaction, where what goes in and
+what comes out are substances other than the structure itself: never a structure's own name as what it
+makes ("rock → magma" beside Magma), nor a cycle's forms turning into each other, which restates the labels
+and crowds the picture. List only what the facts say; the fact-check holds each to them. [] when none.
 
 ## On screen
 
@@ -670,6 +701,11 @@ the same words in both.
   turns into what or what leads to what: "Light splits water → O₂ + H⁺ + e⁻", "H⁺ flowing back spins
   ATP synthase → ATP". Use the terms from `key_terms` as the textbook writes them; the video picks
   them out in colour. Not the lyric it appears on, and not just a label already on the diagram.
+- An arrow means one thing: becomes, leads to, or goes from one place to another, with one thing or
+  one place on each side. When something moves, put the places on either side of the arrow and what
+  moves in brackets: "Secretion: blood → tubule (K⁺, H⁺, drugs)", never "Secretion: extra K⁺, H⁺,
+  drugs → blood into tubule", which reads as the drugs going into the blood. When an arrow could be
+  read two ways, say it in words.
 - The first can sit on the first sung line and ask the question the song answers ("How does a leaf
   turn light into fuel?"). The analogy's can say what stands for what ("Turnstile = ATP synthase").
   The bridge's says what fails and why.

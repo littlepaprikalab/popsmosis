@@ -79,6 +79,12 @@ ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels 
 BADGE_APART = 70.0  # frame pixels: one marker per spot, where several routes start together
 ROUTE_GAP = 10.0  # frame pixels a route's arrow stops short of where it ends in a space
 ROUTE_EDGE_GAP = 4.0  # and of the edge of a part it reaches
+# Every path a scene's particles have travelled stays drawn, so the pathway builds up. Past ROUTES_CLEAR of them the
+# arrows are noise (round 17's kidney overview drew 15 at once, and the line being sung was lost among them): those
+# not travelled on the line fade to ROUTE_PAST, over ROUTE_FADE_S as the line starts, and come back when they are.
+ROUTES_CLEAR = 3
+ROUTE_PAST = 0.25
+ROUTE_FADE_S = 0.5
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
@@ -1462,6 +1468,25 @@ class Renderer:
         scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
         return [(x * scale + dx, y * scale + dy) for x, y in self._scene_routes[scene_id]]
 
+    def _route_strength(self, beat, route, t: float) -> float:
+        """How strongly a route's arrow and its marker are drawn on the beat: in full while its particles travel
+        it, or while the scene shows at most ROUTES_CLEAR; ROUTE_PAST otherwise. It eases from what it was on the
+        beat before (on the same scene) over ROUTE_FADE_S."""
+        def on(b) -> float:
+            if len(b.routes) <= ROUTES_CLEAR:
+                return 1.0
+            moving = any(f.path == route.path and f.label == route.label and not f.blocked for f in b.particles)
+            return 1.0 if moving else ROUTE_PAST
+
+        now = on(beat)
+        i = self._index[id(beat)]
+        before = self.timeline.beats[i - 1] if i else None
+        if before is None or before.scene != beat.scene or not any(
+                r.path == route.path and r.label == route.label for r in before.routes):
+            return now  # a route new on this beat grows in behind its particles
+        was = on(before)
+        return was + (now - was) * p.ease((t - beat.t0) / ROUTE_FADE_S)
+
     def _routes(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float) -> None:
         """Each path the scene's particles have travelled, as arrows from structure to structure: each leg leaves
         the edge of the part it starts from and ends with its tip at the edge of the part it reaches (a space has
@@ -1474,7 +1499,10 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         badges: list[tuple[Point, str, str, float]] = []
         drawn: set[tuple] = set()  # the hops drawn so far, so a later route never draws one again beside it
-        for route in beat.routes:
+        strength = {(tuple(r.path), r.label): self._route_strength(beat, r, t) for r in beat.routes}
+        # The routes travelled on this line first, so a hop one shares with a faded route is drawn in full.
+        for route in sorted(beat.routes, key=lambda r: -strength[(tuple(r.path), r.label)]):
+            shown = strength[(tuple(route.path), route.label)]
             lane = self._lanes.get((beat.scene, tuple(route.path), route.label), 0)
             pairs = self._path_stops(beat.scene, route.path, lane)
             points = self._path_points(beat.scene, route.path, lane=lane)  # where its particles go: it grows behind them
@@ -1505,7 +1533,7 @@ class Renderer:
                 if length <= gap:
                     continue
                 frame[-1] = (end[0] - (end[0] - before[0]) / length * gap, end[1] - (end[1] - before[1]) / length * gap)
-                alpha = edge_fade(*frame[-1], view)
+                alpha = edge_fade(*frame[-1], view) * shown
                 if crossed is None:
                     p.draw_route_leg(canvas, frame, route.color, alpha)
                     continue
@@ -1519,7 +1547,8 @@ class Renderer:
                 at_frame = (tail[0] * scale + dx, tail[1] * scale + dy)
                 if all(math.dist(at_frame, other[0]) > BADGE_APART for other in badges):
                     badges.append((at_frame, route.color, route.label,
-                                   p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view)))
+                                   p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view)
+                                   * shown))
         for at_frame, color, label, alpha in badges:
             p.draw_marker(canvas, at_frame, color, label, alpha)
         canvas.restore()
