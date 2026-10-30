@@ -343,13 +343,21 @@ HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any col
 MARKER_R = 18.0  # a marked particle: room for "H⁺" inside it, in frame pixels; one size wherever it is drawn
 MARKER_FONT = 20.0
 MARKER_PAD = 8.0  # a longer marker ("glucose") is a pill this far wider than its word, each side
+# What moves carries at most a symbol ("H⁺", "e⁻", "ATP"), as a textbook draws an ion. A word ("glucose",
+# "sediment", "loot") never moves: round 17's videos raced word pills across the picture, too fast to read and
+# pulling the eye off everything else. A word is written, still, at the tail of its arrow (Renderer._routes).
+SYMBOL_MAX = 3
+
+
+def carried(label: str) -> str:
+    """What a moving particle has written on it: its label when that is a short symbol, else nothing."""
+    return label if len(label) <= SYMBOL_MAX else ""
 
 
 def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[float, float], float]],
                    lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float, label: str = "") -> None:
     """What travels between structures: dots streaming along the path (each with its own fade,
-    0-1), and the lead particle with its trail, the newest position first; marked with what it
-    is when there is a label."""
+    0-1), and the lead particle with its trail, the newest position first, drawn as its kind is (draw_kind)."""
     halo, fill = skia.Paint(AntiAlias=True), skia.Paint(AntiAlias=True)
     for (x, y), fade in stream:
         if alpha * fade <= 0.01:
@@ -362,15 +370,97 @@ def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[flo
     fill.setColor(argb(color, alpha))
     for k, (x, y) in reversed(list(enumerate(trail, 1))):
         canvas.drawCircle(x, y, 0.8 * PARTICLE_R * (1 - k / (len(trail) + 1)), fill)
-    if label:
-        draw_marker(canvas, lead, color, label, alpha)
+    draw_kind(canvas, lead, color, label, alpha)
+
+
+# Kinds a reader tells apart at a glance: a short symbol ("H⁺", "H₂O", "ATP") printed on its disc; a longer word drawn
+# as textbooks draw it, a sugar as its ring (a hexagon), water as a drop; anything else a dot in its colour. The legend in the corner
+# names each kind moving on the scene, so nothing that moves carries a word.
+SUGARS = {"glucose", "sugar", "sugars", "sucrose", "fructose", "galactose", "lactose", "maltose"}
+WATER = {"water"}
+
+
+def kind_of(label: str) -> str:
+    """How a particle carrying `label` is drawn: "sugar", "water", "symbol" or "dot"."""
+    if carried(label):  # short enough to print on the particle itself: "H⁺", "H₂O", "ATP"
+        return "symbol"
+    plain = label.strip().lower()
+    return "sugar" if plain in SUGARS else "water" if plain in WATER else "dot"
+
+
+def _kind_path(kind: str, x: float, y: float, r: float) -> skia.Path:
+    path = skia.Path()
+    if kind == "sugar":  # pointy-topped, a little wider than a dot so it reads as the same size
+        corners = [(x + 1.15 * r * math.cos(math.radians(30 + 60 * k)), y + 1.15 * r * math.sin(math.radians(30 + 60 * k)))
+                   for k in range(6)]
+        path.moveTo(*corners[0])
+        for corner in corners[1:]:
+            path.lineTo(*corner)
+        path.close()
+    elif kind == "water":  # a drop: a point on top, round below
+        path.moveTo(x, y - 1.3 * r)
+        path.cubicTo(x + 1.05 * r, y - 0.15 * r, x + 1.05 * r, y + r, x, y + r)
+        path.cubicTo(x - 1.05 * r, y + r, x - 1.05 * r, y - 0.15 * r, x, y - 1.3 * r)
+        path.close()
+    else:
+        path.addCircle(x, y, r)
+    return path
+
+
+def draw_kind(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,
+              size: float = 1.0) -> None:
+    """One particle of the kind `label` names (kind_of), at `size` of a lead particle: a symbol's disc, a sugar's
+    hexagon, water's drop or a dot, in its colour with a white halo and a darker ring, so it reads on any colour."""
+    if alpha <= 0.01:
         return
-    halo.setColor(with_alpha(0xFFFFFFFF, alpha))
-    canvas.drawCircle(lead[0], lead[1], PARTICLE_R + HALO, halo)
-    canvas.drawCircle(lead[0], lead[1], PARTICLE_R, fill)
-    ring = skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2.5,
-                      Color=argb(darken(color, 3.0), alpha))
-    canvas.drawCircle(lead[0], lead[1], PARTICLE_R - 1.25, ring)
+    kind = kind_of(label)
+    if kind == "symbol":
+        draw_marker(canvas, at, color, label, alpha, size)
+        return
+    r = PARTICLE_R * size
+    canvas.drawPath(_kind_path(kind, at[0], at[1], r),
+                    skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2 * HALO * size,
+                               Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawPath(_kind_path(kind, at[0], at[1], r), skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
+    canvas.drawPath(_kind_path(kind, at[0], at[1], r - 1.25 * size),
+                    skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2.5 * size,
+                               Color=argb(darken(color, 3.0), alpha)))
+
+
+LEGEND_FONT = 22.0
+LEGEND_ICON = 0.7  # its particles, at this share of their size on the picture
+LEGEND_ROW = 38.0
+LEGEND_PAD = 14.0
+LEGEND_GAP = 12.0  # between a row's particle and its name
+LEGEND_BG = 0xD91B2536  # a dark panel, a little see-through, that reads over any picture
+
+
+def legend_rect(right: float, bottom: float, labels: list[str]) -> Rect:
+    """Where the legend for these kinds sits, its bottom-right corner at (right, bottom)."""
+    f = font("Bold", LEGEND_FONT)
+    icon = 2 * max(MARKER_R, PARTICLE_R) * LEGEND_ICON + max((text_width(font("ExtraBold", MARKER_FONT * LEGEND_ICON), l)
+                                                            for l in labels if kind_of(l) == "symbol"), default=0) * 0.4
+    width = 2 * LEGEND_PAD + icon + LEGEND_GAP + max(text_width(f, label) for label in labels)
+    height = 2 * LEGEND_PAD + LEGEND_ROW * len(labels) - (LEGEND_ROW - 2 * MARKER_R * LEGEND_ICON)
+    return (right - width, bottom - height, right, bottom)
+
+
+def draw_legend(canvas: skia.Canvas, rect: Rect, entries: list[tuple[str, str, float]]) -> None:
+    """The key to what moves on the scene: a row for each (colour, kind, alpha), its particle and its name, still in
+    one corner, so the particles themselves carry no words."""
+    shown = max((alpha for _, _, alpha in entries), default=0.0)
+    if shown <= 0.01:
+        return
+    x0, y0, x1, y1 = rect
+    canvas.drawRRect(rounded(rect, 12), skia.Paint(AntiAlias=True, Color=with_alpha(LEGEND_BG, shown)))
+    f = font("Bold", LEGEND_FONT)
+    icon_r = max(MARKER_R, PARTICLE_R) * LEGEND_ICON
+    icon_w = (x1 - x0) - 2 * LEGEND_PAD - LEGEND_GAP - max(text_width(f, label) for _, label, _ in entries)
+    for k, (color, label, alpha) in enumerate(entries):
+        cy = y0 + LEGEND_PAD + icon_r + k * LEGEND_ROW
+        draw_kind(canvas, (x0 + LEGEND_PAD + icon_w / 2, cy), color, label, alpha, LEGEND_ICON)
+        draw_text(canvas, label, x0 + LEGEND_PAD + icon_w + LEGEND_GAP, cy + cap_height(f) / 2, f,
+                  with_alpha(0xFFFFFFFF, alpha))
 
 
 def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,

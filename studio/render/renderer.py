@@ -76,7 +76,6 @@ ROUTE_BEHIND = 0.7  # how much of a route's arrow fades where it crosses a part 
 ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its middle
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
 ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
-BADGE_APART = 70.0  # frame pixels: one marker per spot, where several routes start together
 ROUTE_GAP = 10.0  # frame pixels a route's arrow stops short of where it ends in a space
 ROUTE_EDGE_GAP = 4.0  # and of the edge of a part it reaches
 # Every path a scene's particles have travelled stays drawn, so the pathway builds up. Past ROUTES_CLEAR of them the
@@ -975,6 +974,11 @@ class Renderer:
         bottom = layout.margin + (AI_TAG_FONT * 1.7 + 10 if tagged else 0)  # labels keep clear of the tag
         bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
         arrows = self._arrow_points(beat.scene, cam, view)
+        legend = self._legend(beat, t)
+        legend_rect = p.legend_rect(bounds[2], bounds[3], [label for _, label, _ in legend]) if legend else None
+        if legend_rect:  # labels and reaction pills keep clear of it as of an arrow
+            x0, y0, x1, y1 = legend_rect
+            arrows = arrows + [(x0 + i * (x1 - x0) / 8, y0 + j * (y1 - y0) / 4) for i in range(9) for j in range(5)]
         places = self._pill_places(beat.scene, cam, view, bounds, arrows)
         # A graph's axis names are on from its first frame; a stage fading in fades in its own, unless the stage
         # before has the same.
@@ -989,6 +993,8 @@ class Renderer:
         self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points)
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places)
+        if legend_rect:
+            p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend])
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, view[1] + layout.margin + 8, layout.caption_font,
                            caption_alpha)
@@ -1324,7 +1330,7 @@ class Renderer:
                 speed = 0.5 + 0.08 * (k % 5)
                 at = ((px + CROWD_DRIFT * math.sin(speed * t + phase)) * scale + dx,
                       (py + CROWD_DRIFT * math.cos(0.8 * speed * t + 2 * phase)) * scale + dy)
-                if crowd.label:
+                if p.carried(crowd.label):
                     p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade)
                 else:
                     p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
@@ -1497,7 +1503,6 @@ class Renderer:
         scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
-        badges: list[tuple[Point, str, str, float]] = []
         drawn: set[tuple] = set()  # the hops drawn so far, so a later route never draws one again beside it
         strength = {(tuple(r.path), r.label): self._route_strength(beat, r, t) for r in beat.routes}
         # The routes travelled on this line first, so a hop one shares with a faded route is drawn in full.
@@ -1542,16 +1547,28 @@ class Renderer:
                 for piece, inside, last_piece in _split_at_box(frame, box):
                     p.draw_route_leg(canvas, piece, route.color, alpha * ((1 - ROUTE_BEHIND) if inside else 1.0),
                                      head=last_piece)
-            if done and route.label and grown:  # what travels this way, at the arrow's tail, once it has passed
-                tail = grown[0][0][0]
-                at_frame = (tail[0] * scale + dx, tail[1] * scale + dy)
-                if all(math.dist(at_frame, other[0]) > BADGE_APART for other in badges):
-                    badges.append((at_frame, route.color, route.label,
-                                   p.ease((t - set_off - trip_s(points)) / LABEL_IN_S) * edge_fade(*at_frame, view)
-                                   * shown))
-        for at_frame, color, label, alpha in badges:
-            p.draw_marker(canvas, at_frame, color, label, alpha)
         canvas.restore()
+
+    def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
+        """The key to what moves on the scene: (colour, kind, alpha) for each kind of particle its flows and spaces have
+        shown so far whose particles cannot carry their own name (a word, not a symbol printed on them: p.carried), in
+        the order they first appeared, each fading in as its particles set off. Nothing that moves carries a word, so
+        the words are read here, still, in one corner."""
+        kinds: dict[str, tuple[str, str, float]] = {}
+
+        def add(label: str, color: str, alpha: float) -> None:
+            if label and not p.carried(label) and label not in kinds:
+                kinds[label] = (color, label, alpha)
+
+        for route in sorted(beat.routes, key=lambda r: r.since):
+            set_off = (self.run_of(self.beat_index(route.since), route.path, route.label) or (route.since,))[0]
+            add(route.label, route.color, p.ease((t - set_off) / LABEL_IN_S))
+        for flow in beat.particles:  # a blocked flow draws no arrow
+            add(flow.label, flow.color, p.ease((t - beat.t0) / LABEL_IN_S))
+        for crowd in beat.crowds:
+            if max(crowd.start, crowd.end) > 0:  # an empty space shows no dots to name
+                add(crowd.label, crowd.color, 1.0)
+        return list(kinds.values())
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),

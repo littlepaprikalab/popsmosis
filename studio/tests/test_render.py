@@ -306,7 +306,7 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
 
 
-def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
+def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, monkeypatch):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
@@ -323,8 +323,19 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job):
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
-    pill = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)])).frame(held)
-    assert cyan_across(pill.copy()) > cyan_across(badge) + 25  # a longer word gets a pill
+    # A word never rides a moving particle: glucose moves as its ring, and is named, still, in the legend.
+    word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
+    shapes, legends = [], []
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((label, size)))
+    monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries: legends.append((rect, entries)))
+    times = (held + 1.0, held + 2.0)  # the particle has moved on; the legend has not
+    for t in times:
+        word.frame(t)
+    assert p.kind_of("glucose") == "sugar" and ("glucose", 1.0) in shapes  # the lead particle, at full size
+    assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
+    assert legends[0][0] == legends[1][0]  # in one place
+    assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water")] == [
+        "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle
 
 
 def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
