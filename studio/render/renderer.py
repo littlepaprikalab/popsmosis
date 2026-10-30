@@ -41,6 +41,7 @@ LABELS_CALM = 4
 LABEL_REST = 0.4
 SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
 SPACE_REACH = 55.0  # art pixels: a path's stop in a space sits this far past its neighbour's edge
+ACROSS_SHARE = 0.5  # ...and, beside an upright wall, at least this share of the way on to the space's middle
 LANE_GAP = 46.0  # art pixels between two things travelling the same stops side by side
 SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
 SPOT_S = 0.6
@@ -1418,13 +1419,42 @@ class Renderer:
         second thing travelling the same stops, _lanes) every point moves aside, so the two run side by side."""
         located = self.locations.scene(scene_id)
         stops = [loc for name in path if (loc := located.get(name)) is not None]
+        art = self.scene(scene_id)
 
         def beside(loc, near) -> Point:
+            inset = (loc.box.y1 - loc.box.y0) * 0.1
+            upright = loc.box.y1 - loc.box.y0 > loc.box.x1 - loc.box.x0
+            if upright and loc.box.y0 + inset <= near.label_anchor.y <= loc.box.y1 - inset:
+                level = across(loc, near)
+                if level is not None:
+                    return level
             x = min(max(near.label_anchor.x, loc.box.x0), loc.box.x1)
             below = (loc.box.y0 + loc.box.y1) / 2 > near.label_anchor.y
             y = near.box.y1 + SPACE_REACH if below else near.box.y0 - SPACE_REACH
-            inset = (loc.box.y1 - loc.box.y0) * 0.1
             return x, min(max(y, loc.box.y0 + inset), loc.box.y1 - inset)
+
+        def across(loc, near) -> Point | None:
+            """An upright space level with its neighbour (an alveolus beside the wall it shares with a capillary):
+            the point inside the space, going from the neighbour's label point toward the space at the same
+            height, past where it starts by SPACE_REACH or ACROSS_SHARE of the way on to its middle; None when the
+            space does not start that way. A wide space (a lumen, the air above a chimney) has its neighbours above
+            or below it. Round 21's lungs put both spaces' points at the top, above and below the wall's, and the
+            gases ran up and down the capillary instead of across the membrane."""
+            cells = art.cells(loc.name)
+            y, x = near.label_anchor.y, near.label_anchor.x
+            step = routing.GRID if loc.centroid.x >= x else -routing.GRID
+            row = int(y // routing.GRID)
+            if not 0 <= row < cells.shape[0]:
+                return None
+            while loc.box.x0 <= x <= loc.box.x1 or (x < loc.box.x0 and step > 0) or (x > loc.box.x1 and step < 0):
+                col = int(x // routing.GRID)
+                if 0 <= col < cells.shape[1] and cells[row, col]:
+                    # Far enough in that the crossing reads: from just inside the edge, the gases crossed the
+                    # lungs' membrane in a hop too short to see.
+                    deep = max(SPACE_REACH, ACROSS_SHARE * abs(loc.centroid.x - x))
+                    return min(max(x + math.copysign(deep, step), loc.box.x0), loc.box.x1), y
+                x += step
+            return None
 
         out: list[tuple[Point, object, bool]] = []
         for i, loc in enumerate(stops):

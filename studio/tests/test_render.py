@@ -1152,3 +1152,26 @@ def test_a_reaction_pill_rests_with_its_structures_label(job, monkeypatch):
     renderer.frame(beats[on[1]].t1 - 0.01)  # named on this line: in full
     renderer.frame(beats[on[3]].t1 - 0.01)  # two lines on, about something else: resting
     assert drawn[0] == pytest.approx(1.0, abs=0.02) and drawn[1] == pytest.approx(renderer_module.LABEL_REST, abs=0.02)
+
+
+def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, monkeypatch):
+    # Round 21's lungs put the alveolus's and the capillary's points at the top of the picture, above and below the
+    # membrane's, and the gases ran up and down the capillary instead of across the membrane.
+    from studio.render import routing
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    renderer = Renderer(job, timeline)
+    located = renderer.locations.scene("overview")
+    sac, wall = located.get("Thylakoid"), located.get("Cytochrome b6f")
+    tall = sac.model_copy(update={"box": Box(x0=100, y0=100, x1=700, y1=950), "centroid": Point(x=400, y=520),
+                                  "label_anchor": Point(x=400, y=520)})
+    beside = wall.model_copy(update={"box": Box(x0=740, y0=100, x1=800, y1=950), "centroid": Point(x=770, y=520),
+                                     "label_anchor": Point(x=770, y=520)})
+    monkeypatch.setattr(located, "structures", [tall, beside])
+    art = renderer.scene("overview")
+    grid = np.zeros_like(art.cells("Thylakoid"))
+    grid[100 // routing.GRID:950 // routing.GRID, 100 // routing.GRID:700 // routing.GRID] = True
+    monkeypatch.setattr(art, "_cells", {"Thylakoid": grid, "Cytochrome b6f": art.cells("Cytochrome b6f")})
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name == "Thylakoid")
+    (sx, sy), (wx, wy) = renderer._path_points("overview", ["Thylakoid", "Cytochrome b6f"])
+    assert sy == pytest.approx(520) and wy == pytest.approx(520, abs=40)  # level with the wall, not at the top
+    assert 100 <= sx <= 700 - renderer_module.SPACE_REACH  # inside the space, well past its edge
