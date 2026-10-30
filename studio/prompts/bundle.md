@@ -48,7 +48,10 @@ the whole droplet. So:
   or topic in the unit), what it resembles that the learner may already know (the same
   trick in another topic of the course), and the stakes when it goes wrong: a way it can fail, with what
   follows from it step by step, for the song's bridge ("cyanide blocks the chain's last
-  carrier, so the cell stops making most of its ATP"). Facts that hold only definitions make dry lines.
+  carrier, so the cell stops making most of its ATP"). A topic that is not a system that can
+  break (a chain of events, a writer's device) needs, for the bridge, another case the same
+  idea explains instead, worked through step by step: the same device in another play, the
+  same causes in another revolution. Facts that hold only definitions make dry lines.
 - Choose one everyday picture for the droplet, the frame for the whole idea, and put it in
   the fact it explains, saying what it matches. Choose it by what the whole thing is *for*:
   find the everyday thing that does the same job (a trade, a delivery, a relay, a recipe, a
@@ -90,7 +93,9 @@ Then:
   out: a learner can hold a handful of new names, and each extra one pushes out the idea.
 - `misconception`: the most common misunderstanding of the topic at this level and its
   correction, in one or two sentences. The facts must state the correction, because the
-  lesson, the song and the narration each correct it once.
+  lesson, the song and the narration each correct it once, and that the mistake is a common
+  one ("A common mistake is to think the two forces cancel"): the lesson names it as one,
+  and the fact-check rewrites a "many students think" that no fact supports.
 
 ## Scenes and structures
 
@@ -287,57 +292,73 @@ explanation to the narration, and every word of it is easy to hear.
 
 ### The music
 
-- `music.positive_styles` are short style tags for a music generator, one idea each:
-  genre, mood, tempo, instruments, voices and mix ("K-pop", "hip-hop verses", "male
-  group vocals", "punchy synth bass", "98 bpm").
-  - **When the learner asked for a song style**, it is your source of inspiration. Keep
-    what they asked for (the genre, the voices, the instruments, the tempo) and fill in
-    what they left out in the same spirit. It may come on its own line ("The song style
-    the learner asked for") or anywhere in the topic or request, in their own words
-    ("ATP synthesis. Style: pop-punk", "make the song K-pop").
+- `music.positive_styles` is the song's style for a music generator in free-form words, one entry,
+  never a list of tags: the sound described the way a producer would brief it, in one flowing
+  description of a few clauses. A strong one names the genre and how the verses are delivered,
+  the production's texture, the tempo and the feel of the beat, the voice (its timbre, and how
+  it moves from the verses into the chorus), and what leads and what accents: "Bright pop with
+  hip-hop verses; sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat;
+  clear female vocal with a low, dark, raspy edge in rapped verses, rising into a big sing-along
+  chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a warm Rhodes", "a
+  808 that slides", "gang vocals on the hook") make a better song than adjectives ("catchy",
+  "nice", "educational").
+  - **When the learner asked for a song style**, it is your brief. It may come on its own line
+    ("The song style the learner asked for") or anywhere in the topic or request, in their own
+    words ("ATP synthesis. Style: pop-punk", "make the song K-pop"). Keep everything they asked
+    for, the genre, voices, instruments, mood and tempo, and their own vivid words where they
+    work; then build on it as a producer would: turn vague words into sounds, and fill in what
+    they left out in the same spirit and in the mood of the topic. Never trade what they asked
+    for for something else. Describe the sound of an artist, band or song they named instead of
+    naming it, and leave out what would hide the words or does not belong in a classroom
+    (screamed or growled vocals, explicit lyrics).
   - **Otherwise**, the request carries a style from the studio's rotation, so droplets do not
-    all sound alike: build `positive_styles` from it, keeping its genre, voices and tempo. With
-    none, choose a vocals-first pop style a teenager plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A
-    faster or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
-  - Only when there is neither, for high school and older: pop with rapped hip-hop verses, K-pop, R&B, dance-pop,
-    pop-punk and their neighbours. These styles work well, slowest first; write in their
-    spirit rather than copying one:
-    - laid-back R&B with smooth rapped verses, warm electric piano, deep round bass,
-      soft finger snaps, smooth sung chorus with stacked harmonies, clear female vocal,
-      85 bpm, clear diction
-    - upbeat pop with hip-hop verses, clear rapped verses, catchy sung chorus, female
-      vocals, moderate tempo 96 bpm, bright synths, punchy drums, educational, clear
-      diction
-    - K-pop with hip-hop verses, vocals start immediately, no instrumental intro, vocals
-      upfront in the mix, male group vocals, sharp clear rapped verses, big catchy sung
-      chorus, moderate tempo 98 bpm, punchy synth bass, crisp claps, bright synth stabs,
-      educational, clear diction
-    - upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female
-      vocal, warm synths, finger snaps, 100 bpm, clear diction
-    - bright pop with hip-hop verses, rapped verses, big sing-along chorus, clear female
-      vocal, shimmering synths, claps, 104 bpm, clear diction
-    - dance-pop with a four-on-the-floor beat, energetic male vocal, euphoric sing-along
-      chorus, bright plucked synths, handclaps, pulsing bass, 124 bpm, clear diction
-    - (only when the learner asks) pop-punk anthem at 150 bpm with a driving straight-ahead pulse, energetic male lead
-      vocal and gang vocals on the chorus, bright radio-ready master, driving electric
-      guitars and punchy live drums, clear diction
-  - For a younger audience: bright, playful pop with a big sing-along chorus, a clear
-    lead vocal, sung verses or light, unhurried rap, and a tempo they can sing along to.
-    Dense, fast rap is hard for young listeners to follow.
-  - Whatever the style, include these: clear diction, vocals upfront in the mix, vocals
-    start immediately with no instrumental intro (the hook is sung in the first two
-    seconds), and a big catchy sung chorus.
-  - Name the tempo in exactly one tag, "<n> bpm", from 80 to 160: the learner's tempo
-    when they gave one, otherwise the one that fits the style and the topic's mood. Code
-    times every section of the song from this tag.
-  - Never name an artist, band or song in a tag; the music generator refuses them. When
-    the learner names one, describe its sound instead.
-- `music.negative_styles` keep the words clear and the song right for a classroom: for
-  example "mumbled vocals", "long instrumental intro", "vocals buried in the mix",
-  "explicit lyrics", and anything the learner said they did not want. When the
-  learner's style asks for something that would hide the words or does not belong in a
-  classroom (screamed or growled vocals, explicit lyrics), keep the rest of their style
-  and leave that part out.
+    all sound alike. It is a seed, not the answer: keep its genre and roughly its tempo (a few
+    bpm either way to suit the topic's mood), and write your own description from it, choosing
+    the voice, the instruments, the textures and the mood for this topic, so that two droplets
+    from the same seed sound different. With none, describe a vocals-first pop style a teenager
+    plays for fun, with clear rapped verses and a sung chorus, between 92 and 112 bpm. A faster
+    or heavier genre (pop-punk, a 150 bpm anthem) only when the learner asks for one.
+  - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
+    death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities). A
+    dance beat under it sounds like a celebration. Write a slow, respectful song instead:
+    80 to 90 bpm, a solemn, reflective mood, a sparse piano ballad with one solo cello or
+    violin, verses in a slow, plain rap or sung, and a sung chorus that is memorable without
+    being euphoric. Keep it sparse, so the words stay clear: never a full or epic orchestra
+    (brass, timpani, a swelling choir), which sounds like a war film's victory. An
+    instrument from a culture only when it belongs to the people the topic is about (an
+    erhu for the Nanjing Massacre); borrowed for anyone else's tragedy it sounds like a
+    stereotype. No dance beat, drops, claps or party sounds; "dance beat", "euphoric",
+    "upbeat", "party" and "epic orchestral" go in `negative_styles`. The people such a
+    topic is about are never particles: dots marked "people" or "trains" carried across a
+    map make tokens of the dead. Goods, ships and money may move; the camera and the
+    spotlight show where people were taken. The rest of history keeps the rotation: a
+    revolution's causes or a war's alliances are not grave in this sense.
+  - Only when there is neither, for high school and older: pop with rapped hip-hop verses,
+    K-pop, R&B, dance-pop, pop-punk and their neighbours. These work well, slowest first;
+    write in their spirit rather than copying one:
+    - Laid-back R&B with smooth rapped verses; warm electric piano, deep round bass and soft
+      finger snaps; a smooth sung chorus with stacked harmonies; clear female vocal; 85 bpm
+    - Upbeat pop with clear rapped verses and a catchy sung chorus; female vocals over bright
+      synths and punchy drums; 96 bpm
+    - K-pop with sharp, clear rapped verses from male group vocals, rising into a big catchy
+      sung chorus; punchy synth bass, crisp claps and bright synth stabs; 98 bpm
+    - Bright pop with hip-hop verses and a big sing-along chorus; clear female vocal;
+      shimmering synths lead, claps accent the beat; 104 bpm
+    - Dance-pop on a four-on-the-floor beat; energetic male vocal into a euphoric sing-along
+      chorus; bright plucked synths, handclaps and a pulsing bass; 124 bpm
+    - (only when the learner asks) A pop-punk anthem with a driving straight-ahead pulse;
+      energetic male lead and gang vocals on the chorus; driving electric guitars, punchy live
+      drums and a bright radio-ready master; 150 bpm
+  - For a younger audience: bright, playful pop with a big sing-along chorus, a clear lead
+    vocal, sung verses or light, unhurried rap, and a tempo they can sing along to. Dense,
+    fast rap is hard for young listeners to follow.
+  - Name the tempo once, as "<n> bpm", from 80 to 160: the learner's tempo when they gave
+    one, otherwise the one that fits the style and the topic's mood. Code times every
+    section of the song from it.
+  - Never name an artist, band or song; the music generator refuses them.
+- `music.negative_styles` are short things to avoid, a list, that keep the words clear and the
+  song right for a classroom: always "mumbled vocals", "long instrumental intro", "vocals
+  buried in the mix" and "explicit lyrics", and anything the learner said they did not want.
 - `music.sections` is exactly intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus,
   bridge, chorus, outro (The parts, below).
 - `lyrics` is every line as sung, in order, section by section, so the chorus appears
@@ -423,7 +444,12 @@ In this order, each section a run of lines with its own `section` value:
   a toxin, a mutation, a missing part), then walk its effects in cause-and-effect order to
   the final outcome, one link a line ("no myelin, so the signal crawls"). Pick a break
   the facts describe: every effect the bridge sings must be what the facts say follows
-  from that break, not from another one.
+  from that break, not from another one. For a topic that is not a system (a chain of
+  events, a writer's device), the verses have already walked its chain, so the bridge
+  takes the other case the facts give and walks it the same way, one link a line. Either
+  way the bridge sings something new: a bridge that retells the verses' story (the same
+  letter going astray, the same king calling the same assembly) wastes the song's best
+  eight lines.
 - **Chorus**, the last: a summary couplet first, then the chorus word for word.
 - **Outro**, 3 lines: echo the intro and end on the title line.
 
@@ -459,8 +485,11 @@ markdown, no lists, nothing in parentheses. Use the droplet's analogy, and corre
 misconception once, as the song does. Build it on `why_chain`: every step says why it
 happens. Keep to `key_terms`, never more than one new name in a sentence. Ask the listener
 one question mid-way and answer it in the next sentence. Open on the hook, and end on the
-core idea, in the same words as `core_idea`, then what goes in, what comes out, and why it
-matters.
+core idea, in the same words as `core_idea`, then, for a process, what goes in and what
+comes out, or, for any other idea, its cause and its result, and why it matters. Only
+something that is really taken in and given out "goes in" or "comes out": a secret, a
+function or war debt does not ("In go war debt and costly bread, out comes a revolution"
+sounds like a formula and teaches nothing).
 
 ## Direction
 
@@ -482,19 +511,26 @@ order, keyed by `line_id`:
   zoom 1.0).
 - On the line that corrects the misconception, spotlight the structure it is about, so
   the correction lands on it.
-- `particles`: for a line about something that travels (a signal, a molecule), the
-  structures it travels between, in order; otherwise []. Use them whenever a line tells
-  how something moves through the steps: the motion is what shows how a process works,
-  and the pictures draw none of it.
+- `particles`: for a line about something that travels (a signal, a molecule, money, a
+  letter), the structures it travels between, in order; otherwise []. Use them whenever a
+  line tells how something moves through the steps: the motion is what shows how a process
+  works, and the pictures draw none of it. Only what the facts say travels that way moves:
+  never a route made up to keep the dots busy (from a character to the audience, from a
+  king to his people, from one line of a graph to another), which shows a journey nothing
+  makes. Many topics outside science have little or nothing that travels (a writer's
+  device, a graph, a chain of events); their scenes hold still, with [] here.
 - `carries`: what those particles are, written on the moving dot: the molecule or ion as a
   textbook prints it, with its superscripts and subscripts ("H⁺", "e⁻", "O₂", "Ca²⁺",
-  "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line. It
+  "H₂O", "glucose"), at most 8 characters, the same for the same thing in every line.
+  Anything else that travels is named in a plain word ("price", "letter", "taxes"), at most
+  8 letters too, so the fact-check sees it: a longer one is dropped and goes unchecked. It
   must be what really travels that path (protons through ATP synthase, electrons along the
-  chain). "" when there are no particles, for what has no chemical name (a nerve signal,
-  light), and on the analogy scene, where what moves is the everyday thing (its water
-  stands for the protons, so marking it "H₂O" would mislead). The fact-check holds each
-  marked motion to the facts, as it does a line, and leaves out one they do not support:
-  every route a marked particle takes must follow from the facts.
+  chain, the price up to equilibrium). "" when there are no particles, for a nerve signal
+  or light, and on the analogy scene, where what moves is the everyday thing (its water
+  stands for the protons, so marking it "H₂O" would mislead).
+  When you cannot say what would travel a route, the facts do not give it: leave it out.
+  The fact-check holds each marked motion to the facts, as it does a line, and leaves out
+  one they do not support: every route a marked particle takes must follow from the facts.
   Where a failure scene shows a flow stopped, its particles run to what stops it, the
   blocker last ("Photosystem II", "Herbicide"), and `blocks` names the blocker: the video
   shows them piling up there, going no further.
@@ -518,11 +554,15 @@ order, keyed by `line_id`:
 The picture never moves; the particles, the camera and the spotlight are all the video
 has. Plan them across the whole song before writing any one line's direction:
 
-- **Something moves on almost every line of a diagram scene.** A line that tells a step of
-  the process has particles for that step. Never leave more than two lines in a row on a
-  diagram scene with no particles: when a line only comments ("that's the payout"), carry
-  on the flow it is about, or move the camera. A failure scene is the exception: after the
-  block, what has stopped stays still, and that stillness is the point.
+- **Something moves on almost every line of a scene where things travel.** A line that
+  tells a step of the process has particles for that step. Never leave more than two lines
+  in a row with no particles on a scene where something travels: when a line only comments
+  ("that's the payout"), carry on the flow it is about, or move the camera. A failure scene
+  is the exception: after the block, what has stopped stays still, and that stillness is
+  the point. A scene where nothing travels (a graph, a stage, a map, a gathering of people)
+  has no particles on any line: the camera and the spotlight move from part to part with
+  the lines instead, and a dot sent between its parts to fill the time would teach a
+  journey that never happens.
 - **What goes in and what comes out move too.** A line that says something is taken in,
   split, made or released has particles for it: the input travelling from where it comes
   from into the structure that uses it, the product travelling out to where it goes

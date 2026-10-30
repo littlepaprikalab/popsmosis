@@ -172,6 +172,14 @@ def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired
         ("v1-1", False), ("v1-2", False)]
 
 
+def test_next_up_and_here_comes_announce_a_section_but_are_sung_before_anything_else():
+    narrates = [bool(checks.DIRECTION_LINE.match(text)) for text in (
+        "Next up, the bridge", "Now next up is the chorus", "Here comes the bridge", "Here we go again",
+        "Next up, the power rule, with no limit to compute", "Next up: estar plus an -ando, the present progressive",
+        "Here comes HIV with a protein like a key")]
+    assert narrates == [True, True, True, True, False, False, False]
+
+
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     def change(data):
         direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
@@ -273,9 +281,23 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
 
     assert styles(["K-pop", "98 BPM"]) == (["K-pop", "98 BPM"], [])
     repaired = [("music", "tempo", True)]
-    assert styles(["bright pop"]) == (["bright pop", "112 bpm"], repaired)  # none named: what songs used to be
+    assert styles(["bright pop."]) == (["bright pop, 112 bpm"], repaired)  # none named: what songs used to be, said
+    # at the end of the description
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+
+
+def test_the_song_style_is_one_description_that_keeps_the_learners_tempo():
+    def found(styles, asked=""):
+        data = bundle_data()
+        data["music"]["positive_styles"] = styles
+        return [p.detail for p in checks.style_problems(Bundle.model_validate(data), asked)]
+
+    asked = "Bright pop with hip-hop verses; buoyant 104 bpm beat"
+    # Built on in the writer's own words, as long as the learner's tempo stays.
+    assert found(["Bright pop with sharp hip-hop verses; glassy synths over a buoyant 104 bpm beat"], asked) == []
+    assert found(["Bright pop; 98 bpm"], asked) == ["the song is at 98 bpm, not the 104 bpm the learner asked for"]
+    assert found(["bright pop", "hip-hop verses", "104 bpm"]) == ["the style is 3 tags, not one free-form description"]
 
 
 def test_a_process_needs_two_stages_or_more():
@@ -298,32 +320,33 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
 
 
-def test_only_the_verses_are_asked_to_rap_and_the_rest_to_sing():
+def test_every_section_is_asked_for_the_songs_own_style_with_nothing_added():
     from studio.steps import audio
 
     data = bundle_data()
-    data["music"]["positive_styles"] = ["pop with clear rapped verses", "100 bpm"]
+    data["music"]["positive_styles"] = ["Pop with clear rapped verses, rising into a sung chorus; 100 bpm."]
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
-    by_section = {c["text"].splitlines()[0]: c for c in plan["chunks"]}
-    assert "clear rapped verse" in by_section["[Verse]"]["positive_styles"]
-    assert "rapping" not in by_section["[Verse]"]["negative_styles"]
-    assert "rapping" in by_section["[Chorus]"]["negative_styles"]
-    assert "sung melodic vocal, not rapped" in by_section["[Chorus]"]["positive_styles"]
-    data["music"]["positive_styles"] = ["bright pop", "100 bpm"]  # no rap asked for: nothing added
-    plan, _ = audio.composition_plan(Bundle.model_validate(data))
-    assert all("rapp" not in " ".join(c["positive_styles"] + c["negative_styles"]) for c in plan["chunks"])
+    assert all(c["positive_styles"] == bundle.music.positive_styles for c in plan["chunks"])
+    assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
+    prompt, _ = audio.song_prompt(bundle)
+    assert "never rapped" not in prompt and prompt.startswith(f"Style: {bundle.music.positive_styles[0]}\n")
+    assert ".." not in prompt  # the description's own full stop is the sentence's
 
 
-def test_a_song_that_stands_still_or_directs_its_choruses_differently_is_recorded():
+def test_a_scene_where_things_travel_and_the_song_stands_still_is_recorded():
     data = bundle_data()
     for d in data["direction"]:
         d.update(particles=[], carries="")
+    # Nothing travels on the overview in either video: a still picture (a graph, a stage), never asked to move.
+    assert checks.motion_problems(Bundle.model_validate(data)) == []
+    direction(data, "n1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")  # now something does
     found = [(p.line_id, p.detail) for p in checks.motion_problems(Bundle.model_validate(data))]
     still = [line for line, detail in found if "nothing moving" in detail]
-    assert still, "a song with nothing moving on its diagram scenes is recorded"
-    assert all(next(d.scene for d in Bundle.model_validate(data).direction if d.line_id == line) != "hook"
-               for line in still)  # the hook need not move
+    assert still == ["v1-1"], "a song standing still on a scene where things travel is recorded"
+    direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+    # v1-1 alone is short enough; the five still lines after v1-2 are not.
+    assert [p.line_id for p in checks.motion_problems(Bundle.model_validate(data))] == ["c1-1"]
 
 
 def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
@@ -346,6 +369,17 @@ def test_key_lines_are_recorded_when_too_few_or_too_long():
     assert found == ["1 key lines, not 3 to 10", "no key line is placed in the narration, so the lesson video shows none",
                      f'the key line "{" ".join(["word"] * 11)}" runs 11 words, over 10']
     assert checks.key_line_problems(Bundle.model_validate(bundle_data())) == []  # before the why chain
+
+
+def test_the_arrows_and_signs_in_a_key_line_are_not_words():
+    data = bundle_data()
+    data["why_chain"] = ["a", "b", "c"]
+    data["key_lines"] = [{"from_line": "v1-1", "text": "Rise over run → average rate of change = secant slope",
+                          "from_narration": "n1"},  # 9 words, an arrow and a sign: as the prompt asks
+                         {"from_line": "v1-2", "text": "One vote per estate → Third Estate outvoted two to one"},
+                         {"from_line": "v2-1", "text": "Corner: slopes 1 vs −1 → no limit → so no derivative there"}]
+    found = [p.detail for p in checks.key_line_problems(Bundle.model_validate(data))]
+    assert found == ['the key line "Corner: slopes 1 vs −1 → no limit → so no derivative there" runs 11 words, over 10']
 
 
 def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_kept():
@@ -389,6 +423,15 @@ def test_the_song_shape_check_holds_any_subject_to_its_own_idea():
                   "Debt and hunger turned the French people against the king.") == []
     assert shaped("Feel it rise, let it go",
                   "Debt and hunger turned the French people against the king.") != []
+
+
+def test_a_bridge_that_retells_the_verses_is_recorded_and_one_on_a_new_case_is_not():
+    idea = "Light splits water, and the protons it pumps make ATP."
+    retold = shaped("Split the water, catch the light", idea,
+                    [("b-1", "Light lands, and every hand-off pumps a proton")])  # verse 1 again
+    assert retold == ["the bridge retells the verses: 1 of its 1 lines sing what the verses sang (b-1)"]
+    assert shaped("Split the water, catch the light", idea,
+                  [("b-1", "A herbicide jams photosystem two, so the flow stops")]) == []
 
 
 def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded():

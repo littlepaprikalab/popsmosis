@@ -16,6 +16,7 @@
  */
 import { breakdownError, serializeBreakdown, type Breakdown } from './breakdown.js';
 import { videoStaleMinutes } from './droplet.js';
+import { knob } from './knobs.js';
 
 // The studio's step names are short (bundle, factcheck, timeline...); a bill caps them the same.
 const STEP_MAX_LENGTH = 40;
@@ -26,7 +27,7 @@ const DEFAULT_LESSON_HOLD_MINUTES = 20;
 
 /** How long after the lesson is posted the page waits for its videos before it shows the text anyway. */
 export function lessonHoldMinutes(): number {
-  const n = parseInt(process.env.LESSON_HOLD_MINUTES ?? '', 10);
+  const n = parseInt(knob('LESSON_HOLD_MINUTES') ?? '', 10);
   return Number.isNaN(n) || n < 0 ? DEFAULT_LESSON_HOLD_MINUTES : n;
 }
 

@@ -99,8 +99,13 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
 
 
 LYRIC_WORDS_MAX = 12
-# A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast").
-DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+(?:we|comes)|next\s+up)\b", re.I)
+# A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
+# and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
+# next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
+# arriving ("Here comes HIV with a protein like a key"), as three droplets did on Oct 29.
+SECTION_NAMES = r"(?:intro|verse|pre-chorus|chorus|bridge|hook|outro)"
+DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+we"
+                            rf"|(?:next\s+up|here\s+comes)\W+(?:(?:is|comes|the|a)\s+)*{SECTION_NAMES}\b)\b", re.I)
 
 
 def _check_lyric_style(data: dict, problems: list) -> None:
@@ -132,6 +137,10 @@ def song_length_problems(bundle: Bundle) -> list[Problem]:
 
 
 CHORUSES = 3  # the chorus comes back after each pre-chorus and once more at the end
+# A bridge line is sung already when this share of its words is in the verses; a bridge with half its lines sung
+# already retells them. Of six droplets on Oct 29, the two that retold their verses (a play's plot, the steps to a
+# revolution) had 4 and 6 such lines of 8; the four that took a new case (a poison, a corner, a law) had 0 or 1.
+RETOLD_SHARE, RETOLD_LINES = 2 / 3, 1 / 2
 ATTITUDE_MAX = 2  # claim-free tags in the whole song ("for real", "no doubt"); more are rhymes filled with nothing
 ATTITUDE = re.compile(r"\b(?:for real|no doubt|it'?s true|you see|you know|believe (?:it|me)|no lie|that'?s the trick"
                       r"|that'?s the rule|that'?s a fact|word up|check it)\b", re.I)
@@ -149,8 +158,9 @@ def _stems(text: str) -> set[str]:
 def song_shape_problems(bundle: Bundle) -> list[Problem]:
     """The song against the rules a check can count, for any subject: the chorus three times; a title line that
     names real things from the droplet's own idea, not pronouns; a chorus that says the idea; verses no longer
-    than the tempo asks for; few claim-free tags. Recorded, not repaired; the bundle step adds them. A bundle
-    written before the why chain existed has nothing to hold the hook to."""
+    than the tempo asks for; a bridge that sings something new, not the verses again; few claim-free tags.
+    Recorded, not repaired; the bundle step adds them. A bundle written before the why chain existed has nothing
+    to hold the hook to."""
     if not bundle.why_chain:
         return []
     problems: list[Problem] = []
@@ -181,11 +191,34 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
         if section == "verse" and len(lines) > most:
             problems.append(Problem(line_id=lines[0].id, rule="lyric-style", repaired=False,
                                     detail=f"a verse of {len(lines)} lines, over {most} at {bundle.music.bpm} bpm"))
+    verses = _stems(" ".join(line.text for section, lines in runs if section == "verse" for line in lines))
+    bridge = [line for section, lines in runs if section == "bridge" for line in lines]
+    retold = [line for line in bridge if (words := _stems(line.text)) and len(words & verses) >= RETOLD_SHARE * len(words)]
+    if bridge and len(retold) >= RETOLD_LINES * len(bridge):
+        problems.append(Problem(line_id=bridge[0].id, rule="lyric-style", repaired=False,
+                                detail=f"the bridge retells the verses: {len(retold)} of its {len(bridge)} lines sing "
+                                       f"what the verses sang ({', '.join(line.id for line in retold)})"))
     tagged = sorted({line.text for line in bundle.lyrics if ATTITUDE.search(line.text)})
     if len(tagged) > ATTITUDE_MAX:
         problems.append(Problem(line_id="lyrics", rule="lyric-style", repaired=False,
                                 detail=f"{len(tagged)} lines end on a claim-free tag, over {ATTITUDE_MAX}: "
                                        + "; ".join(f'"{t}"' for t in tagged)))
+    return problems
+
+
+def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
+    """The song's style against the bundle prompt's rule: one free-form description, not tags, that keeps what
+    the learner asked for. Code can count only the tempo of that: the writer builds on the rest in its own words.
+    Recorded, not repaired, as the song's shape is."""
+    styles = bundle.music.positive_styles
+    problems = []
+    if len(styles) > 1:
+        problems.append(Problem(line_id="music", rule="song-style", repaired=False,
+                                detail=f"the style is {len(styles)} tags, not one free-form description"))
+    if (found := BPM_TAG.search(asked)) and round(float(found.group(1))) != bundle.music.bpm:
+        problems.append(Problem(line_id="music", rule="song-style", repaired=False,
+                                detail=f"the song is at {bundle.music.bpm} bpm, not the {found.group(1)} bpm the "
+                                       f"learner asked for"))
     return problems
 
 
@@ -218,6 +251,11 @@ KEY_LINE_WORDS_MAX = 10
 KEY_LINES = (3, 10)  # the why chain's 3 to 5 links, a link or two lines each
 
 
+def key_line_words(text: str) -> int:
+    """The words in a key line: the arrows and signs the prompt asks for ("→", "=") are not words."""
+    return sum(1 for token in text.split() if re.search(r"\w", token))
+
+
 def key_line_problems(bundle: Bundle) -> list[Problem]:
     """The key lines against their limits: some to show, each at most KEY_LINE_WORDS_MAX words. Recorded, not
     repaired (the renderer fits a long one onto two rows); the bundle step adds them. A bundle written before the
@@ -232,7 +270,7 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
         problems.append(Problem(line_id="key_lines", rule="key-line", repaired=False,
                                 detail="no key line is placed in the narration, so the lesson video shows none"))
     for key in bundle.key_lines:
-        words = len(key.text.split())
+        words = key_line_words(key.text)
         if words > KEY_LINE_WORDS_MAX:
             problems.append(Problem(line_id=key.from_line, rule="key-line", repaired=False,
                                     detail=f'the key line "{key.text}" runs {words} words, over {KEY_LINE_WORDS_MAX}'))
@@ -266,24 +304,30 @@ def _check_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_line"]])
 
 
-STILL_LINES_MAX = 2  # lines in a row on a diagram scene with nothing moving
+STILL_LINES_MAX = 2  # lines in a row with nothing moving on a scene where things travel
 STILL_SCENES = ("hook", "analogy")  # scenes where nothing needs to move
 
 
 def motion_problems(bundle: Bundle) -> list[Problem]:
     """The song's direction against the planning rules a check can count: no more than STILL_LINES_MAX lines in a
-    row on a diagram scene with no particles, and every chorus directed alike (compared from its end, since the
-    last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them."""
+    row with no particles on a scene where something travels, and every chorus directed alike (compared from its
+    end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them."""
     directions = {d.line_id: d for d in bundle.direction}
     blockers = {b.structure for b in bundle.blocks}
     # A failure scene (one that draws a blocker) holds still after the block on purpose: what stopped stays stopped.
-    still = set(STILL_SCENES) | {s.id for s in bundle.scenes if blockers & {x.name for x in s.structures}}
+    # So does a scene where nothing travels on any line of either video (a graph, a stage): asked to keep every
+    # scene moving, the planner sent unmarked dots from Romeo to the audience and from one point of a graph to
+    # another, a journey nothing makes.
+    travels = {d.scene for d in bundle.direction if d.flows()}
+    still = set(STILL_SCENES) | {s.id for s in bundle.scenes
+                                 if s.id not in travels or blockers & {x.name for x in s.structures}}
     problems, run = [], []
 
     def close_run() -> None:
         if len(run) > STILL_LINES_MAX:
             problems.append(Problem(line_id=run[0], rule="motion", repaired=False,
-                                    detail=f"{len(run)} lines in a row from {run[0]} on a diagram scene with nothing moving"))
+                                    detail=f"{len(run)} lines in a row from {run[0]} with nothing moving, on a scene "
+                                           f"where things travel"))
         run.clear()
 
     for line in bundle.lyrics:
@@ -376,8 +420,8 @@ def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
     bpm = bundle.music.bpm
     styles = [BPM_TAG.sub(lambda found: found[0] if round(float(found[1])) == bpm else f"{bpm} bpm", style)
               for style in music["positive_styles"]]
-    if not any(BPM_TAG.search(style) for style in styles):
-        styles.append(f"{bpm} bpm")
+    if not any(BPM_TAG.search(style) for style in styles):  # said at the end of the description, not as a tag
+        styles = [*styles[:-1], f"{styles[-1].rstrip(' .,;')}, {bpm} bpm"] if styles else [f"{bpm} bpm"]
     if styles == music["positive_styles"]:
         return []
     music["positive_styles"] = styles

@@ -42,6 +42,7 @@ SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
 SETTLE_ZOOM = 1.06
 STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
 NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
+NOTICE_GAP = 16  # frame px above and below the card in an upright frame, where it sits across the top of the picture
 NOTICE_MAX = 3  # notes on the card; any more are counted
 NOTICE_FONT = 22
 AI_TAG_FONT = 18  # the tag on every AI-made picture (Timeline.ai_pictures) without a notice card
@@ -556,6 +557,12 @@ class Renderer:
         for group in timeline.stages:
             if self._beside & set(group):
                 self._beside |= set(group)
+        # An upright frame has no room beside the picture: there the card goes across the frame above it, and the
+        # picture starts below the tallest card, so every scene with one keeps the same framing.
+        self._card_h = 0.0
+        shown = [notes for scene_id, notes in timeline.notices.items() if scene_id in scene_ids]  # the hook cut
+        if self.portrait and shown:  # carries the song's notices, scenes it never shows included
+            self._card_h = max(self._card_height(notes) for notes in shown) + 2 * NOTICE_GAP
         for i, beat in enumerate(timeline.beats):
             if i and self.staged(timeline.beats[i - 1].scene, beat.scene):
                 before, now = self.revealed.get(timeline.beats[i - 1].scene, {}), self.revealed.get(beat.scene, {})
@@ -584,11 +591,13 @@ class Renderer:
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
-        has one."""
+        has one, or in an upright frame below it."""
         x0, y0, x1, y1 = self.layout.view
         if self.keyed:
             y0 += self.layout.key_h
-        return (x0, y0, x1 - NOTICE_W, y1) if scene_id in self._beside else (x0, y0, x1, y1)
+        if scene_id not in self._beside:
+            return (x0, y0, x1, y1)
+        return (x0, y0 + self._card_h, x1, y1) if self.portrait else (x0, y0, x1 - NOTICE_W, y1)
 
     def staged(self, before: str, after: str) -> bool:
         """Whether going from one scene to the other is one stage of a process giving way to a later one. Back to
@@ -918,14 +927,24 @@ class Renderer:
             surface = skia.Surface(layout.width, layout.height)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorTRANSPARENT)
-            top = layout.margin + 8
-            bottom = p.draw_notice(canvas, view[2], top, layout.width - layout.margin, notes[:NOTICE_MAX],
+            if self.portrait:  # across the frame, in the room kept above the picture
+                left, top = layout.margin, view[1] - self._card_h + NOTICE_GAP
+            else:  # beside the picture, level with its top, below the key band
+                left, top = view[2], view[1] + layout.margin + 8
+            bottom = p.draw_notice(canvas, left, top, layout.width - layout.margin, notes[:NOTICE_MAX],
                                    NOTICE_FONT, more=max(len(notes) - NOTICE_MAX, 0))
-            x0, y0 = max(int(view[2]) - 24, 0), max(int(top) - 24, 0)
+            x0, y0 = max(int(left) - 24, 0), max(int(top) - 24, 0)
             x1, y1 = layout.width, min(int(bottom) + 32, layout.height)
             card = surface.makeImageSnapshot(skia.IRect.MakeLTRB(x0, y0, x1, y1))
             self._cards[scene_id] = (card, float(x0), float(y0))
         return self._cards[scene_id]
+
+    def _card_height(self, notes: list[str]) -> float:
+        """How tall a card of these notes is across an upright frame: drawn once where nothing shows it."""
+        width = self.layout.width - 2 * self.layout.margin
+        scratch = skia.Surface(int(width) + 1, 1)
+        return p.draw_notice(scratch.getCanvas(), 0, 0, width, notes[:NOTICE_MAX], NOTICE_FONT,
+                             more=max(len(notes) - NOTICE_MAX, 0))
 
     def _turning(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float,
                  ghosts: dict[str, float], spots: dict[str, float], face: bool) -> None:

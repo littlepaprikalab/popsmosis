@@ -23,7 +23,8 @@ there is never asked for again, unless the bundle's lines have changed since it 
 or for the song, who sings it (its .json says what it was made from and by whom). To redo one by hand, delete its
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
 the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
-Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model.
+Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model, on
+/admin/studio or in the environment (studio/knobs.py).
 
 What it spent. Each call that comes back made is logged to calls.jsonl (studio/ledger.py),
 with its model, its time and its price: a Lyria song at its model's price per song; an
@@ -46,7 +47,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable
 
-from studio import brain, jobs, ledger, media
+from studio import brain, jobs, knobs, ledger, media
 from studio.api import USER_AGENT
 from studio.schemas import Bundle
 
@@ -218,27 +219,10 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> None:
         _make_eleven_song(job, bundle)
 
 
-# Eleven Music: one chunk per section, each exactly as long as asked.
-
-# Told one style for every section, the song rapped all the way through: a style that says "rapped verses"
-# is read for the chorus too. So only the verses are asked to rap, and the other sections to sing.
-SUNG_SECTIONS = {"intro", "pre-chorus", "chorus", "bridge", "outro"}
-
-
-def raps(bundle: Bundle) -> bool:
-    return any("rap" in style.lower() or "hip-hop" in style.lower() for style in bundle.music.positive_styles)
-
-
-def section_styles(bundle: Bundle, section: str) -> tuple[list[str], list[str]]:
-    """The styles to ask one section for, and what to avoid in it."""
-    positive, negative = list(bundle.music.positive_styles), list(bundle.music.negative_styles)
-    if raps(bundle):
-        if section in SUNG_SECTIONS:
-            positive.append("sung melodic vocal, not rapped")
-            negative += ["rapping", "rapped vocals", "spoken word"]
-        else:
-            positive.append("clear rapped verse")
-    return positive, negative
+# Eleven Music: one chunk per section, each exactly as long as asked, and each asked for the song's own style and
+# avoid list as the bundle writes them, nothing added: how the verses and the chorus are sung is the style's to say
+# ("rapped verses, rising into a big sing-along chorus"). Until Oct 29 code added "clear rapped verse" to the verses
+# and "sung melodic vocal, not rapped" to the rest, after a song told one style for every section rapped throughout.
 
 
 def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
@@ -247,8 +231,8 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     chunks = [{
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
-        "positive_styles": section_styles(bundle, part["section"])[0],
-        "negative_styles": section_styles(bundle, part["section"])[1],
+        "positive_styles": list(bundle.music.positive_styles),
+        "negative_styles": list(bundle.music.negative_styles),
         "context_adherence": "high",
     } for part in planned]
     return {"chunks": chunks}, _placed(planned)
@@ -275,7 +259,7 @@ def _make_eleven_song(job: Path, bundle: Bundle) -> None:
 # Lyria on the Gemini API: the whole song from one prompt, which it follows only roughly.
 
 def gemini_song_model() -> str:
-    return os.environ.get("GEMINI_SONG_MODEL", "").strip() or GEMINI_SONG_MODEL
+    return knobs.env("GEMINI_SONG_MODEL").strip() or GEMINI_SONG_MODEL
 
 
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
@@ -286,13 +270,10 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     end_ms = planned[-1]["start_ms"] + planned[-1]["duration_ms"] if planned else 0
     music = bundle.music
     head = []
-    if music.positive_styles:
-        head.append(f"Style: {', '.join(music.positive_styles)}.")
+    if music.positive_styles:  # a free-form style may end on its own full stop
+        head.append(f"Style: {', '.join(style.rstrip(' .') for style in music.positive_styles)}.")
     if music.negative_styles:
-        head.append(f"Avoid: {', '.join(music.negative_styles)}.")
-    if raps(bundle):
-        head.append("The verses are rapped, clearly; the intro, pre-chorus, chorus, bridge and outro are sung "
-                    "melodically, never rapped.")
+        head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
     head += [
         f"Length: about {_clock(end_ms)}. The singing starts within the first two seconds, with no long "
         "intro, and the song ends soon after the last line.",
@@ -400,7 +381,7 @@ def speech_lines(bundle: Bundle, kind: str) -> list[tuple[str, str]]:
 
 
 def voice_id() -> str:
-    return os.environ.get("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
+    return knobs.env("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
 
 
 def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
@@ -471,7 +452,7 @@ def eleven_credits(headers: dict) -> float | None:
 
 def eleven_usd_per_1k_credits() -> float | None:
     """What 1,000 ElevenLabs credits cost on this account's plan (ELEVENLABS_USD_PER_1K_CREDITS), or None."""
-    raw = os.environ.get(ELEVENLABS_PRICE_VAR, "").strip()
+    raw = knobs.env(ELEVENLABS_PRICE_VAR).strip()
     if not raw:
         return None
     try:

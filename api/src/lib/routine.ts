@@ -22,9 +22,12 @@
  * and that path is the latency this module exists to remove.
  */
 
-// The /fire endpoint ships behind a dated beta header. Overridable so a header
-// version can be rolled forward without a code change.
-const FIRE_BETA_HEADER = process.env.POPSMOSIS_ROUTINE_BETA || 'experimental-cc-routine-2026-04-01';
+import { knob } from './knobs.js';
+
+// The /fire endpoint ships behind a dated beta header. Overridable (on
+// /admin/studio, or in the environment) so a header version can be rolled
+// forward without a code change.
+const DEFAULT_FIRE_BETA_HEADER = 'experimental-cc-routine-2026-04-01';
 const FIRE_TIMEOUT_MS = 10_000;
 // At least as long as a run takes end to end, or the trailing fire is guaranteed
 // to wake a second session while the first is still working — which then mostly
@@ -51,6 +54,15 @@ export function parseDebounceMs(raw: string | undefined): number {
   return Math.min(seconds, MAX_DEBOUNCE_SECONDS) * 1000;
 }
 
+export function fireBetaHeader(): string {
+  return knob('POPSMOSIS_ROUTINE_BETA') || DEFAULT_FIRE_BETA_HEADER;
+}
+
+/** The cooldown in force: read at every write, so a change on /admin/studio applies from the next one. */
+export function debounceMs(): number {
+  return parseDebounceMs(knob('POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS'));
+}
+
 export class RoutineTrigger {
   private lastFiredAt = 0;
   private trailing: NodeJS.Timeout | null = null;
@@ -59,7 +71,8 @@ export class RoutineTrigger {
   constructor(
     private readonly url: string,
     private readonly token: string,
-    private readonly debounceMs: number,
+    // A number, or the cooldown in force read at each write (debounceMs()).
+    private readonly debounce: number | (() => number),
     private readonly hasWork: () => Promise<boolean>,
   ) {}
 
@@ -99,10 +112,11 @@ export class RoutineTrigger {
 
   // Milliseconds left on the cooldown.
   private dueInMs(): number {
+    const windowMs = typeof this.debounce === 'function' ? this.debounce() : this.debounce;
     const elapsed = Date.now() - this.lastFiredAt;
     // A clock stepping backwards must not push a trailing fire past one window.
-    if (elapsed < 0) return this.debounceMs;
-    return this.debounceMs - elapsed;
+    if (elapsed < 0) return windowMs;
+    return windowMs - elapsed;
   }
 
   private start(reason: string, log: FireLogger): void {
@@ -140,7 +154,7 @@ export class RoutineTrigger {
         method: 'POST',
         headers: {
           authorization: `Bearer ${this.token}`,
-          'anthropic-beta': FIRE_BETA_HEADER,
+          'anthropic-beta': fireBetaHeader(),
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
         },
@@ -211,7 +225,7 @@ export function routineTrigger(): RoutineTrigger | null {
     // Both unset is the normal deployment without an API-triggered routine:
     // whatever schedule the runner has is then the only thing that wakes it.
     cached = url !== '' && token !== ''
-      ? new RoutineTrigger(url, token, parseDebounceMs(process.env.POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS), queuesHaveWork)
+      ? new RoutineTrigger(url, token, debounceMs, queuesHaveWork)
       : null;
   }
   return cached;

@@ -10,7 +10,7 @@ import os
 
 import pytest
 
-from studio import brain
+from studio import brain, knobs
 
 PAID_KEYS = (*brain.CLAUDE_KEY_VARS, brain.META_KEY_VAR, "GEMINI_API_KEY", "ELEVENLABS_API_KEY")
 LIVE = os.environ.get("STUDIO_LIVE") == "1" or os.environ.get("STUDIO_LIVE_AUDIO") == "1"
@@ -22,6 +22,12 @@ def default_brain(monkeypatch):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(brain, "_chosen", None)
     monkeypatch.setattr(brain, "_effort", None)
+
+
+@pytest.fixture(autouse=True)
+def no_knobs(monkeypatch):
+    """None of the knobs an admin sets on /admin/studio in force: a test's own settings put them there."""
+    monkeypatch.setattr(knobs, "_set", {})
 
 
 @pytest.fixture(autouse=True)

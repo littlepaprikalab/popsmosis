@@ -15,6 +15,7 @@
  * account's go with it.
  */
 import { AppError } from './errors.js';
+import { knob } from './knobs.js';
 import prisma, { runTransaction, type TxClient } from './prisma.js';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -28,10 +29,10 @@ function intEnv(raw: string | undefined, fallback: number): number {
 
 export function usageLimits(env: NodeJS.ProcessEnv = process.env) {
   return {
-    topicsPerUserPerDay: intEnv(env.QUESTIONS_PER_USER_PER_DAY, 10),
+    topicsPerUserPerDay: intEnv(knob('QUESTIONS_PER_USER_PER_DAY', env), 10),
     // Site-wide, everyone's topics together: the ceiling on a day's model spend. 0: no ceiling.
-    topicsPerDay: intEnv(env.TOPICS_PER_DAY, 100),
-    repliesPerUserPerHour: intEnv(env.REPLIES_PER_USER_PER_HOUR, 30),
+    topicsPerDay: intEnv(knob('TOPICS_PER_DAY', env), 100),
+    repliesPerUserPerHour: intEnv(knob('REPLIES_PER_USER_PER_HOUR', env), 30),
   };
 }
 

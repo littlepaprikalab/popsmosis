@@ -7,6 +7,7 @@
  * email, their Google picture or their id. The counts live on the droplet's row and are
  * kept by triggers (prisma/migrations/20261031120000_droplet_engagement).
  */
+import { knob } from './knobs.js';
 
 export const COMMENT_MAX_LENGTH = 1000;
 export const COMMENTS_PAGE_SIZE = 20;
@@ -15,7 +16,7 @@ export const COMMENTS_PAGE_MAX = 50;
 export const COMMENTS_ON_CARD = 2;
 
 export function commentsPerUserPerHour(): number {
-  const n = parseInt(process.env.DROPLET_COMMENTS_PER_USER_PER_HOUR ?? '', 10);
+  const n = parseInt(knob('DROPLET_COMMENTS_PER_USER_PER_HOUR') ?? '', 10);
   return Number.isNaN(n) || n <= 0 ? 30 : n;
 }
 

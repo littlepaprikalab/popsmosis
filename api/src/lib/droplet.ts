@@ -9,6 +9,7 @@
  * hashtags are copied out of the bundle when it is stored (lib/tags.ts).
  */
 import { serializeTags } from './tags.js';
+import { knob } from './knobs.js';
 
 // Tens of KB in practice; the cap keeps one answer from filling a list response or a row.
 export const DROPLET_JSON_MAX_BYTES = 256 * 1024;
@@ -24,7 +25,7 @@ const DEFAULT_VIDEO_STALE_MINUTES = 60;
 export const STALE_VIDEO_ERROR = 'The videos stopped rendering before they were finished.';
 
 export function videoStaleMinutes(): number {
-  const n = parseInt(process.env.VIDEO_STALE_MINUTES ?? '', 10);
+  const n = parseInt(knob('VIDEO_STALE_MINUTES') ?? '', 10);
   return Number.isNaN(n) || n <= 0 ? DEFAULT_VIDEO_STALE_MINUTES : n;
 }
 

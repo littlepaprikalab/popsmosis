@@ -2,7 +2,8 @@
  * The studio's settings on /admin/studio, against a real Postgres (DATABASE_URL). Skipped unless INTEGRATION=1.
  *
  * Covers: only admins change them, admins and the teacher read them, a change is checked and kept, and the
- * studio's claims carry it.
+ * studio's claims carry it. The knobs (lib/knobs.ts): the API's own are in force on the next request, the studio's
+ * are sent to the teacher, and a cleared one is the environment's again.
  */
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -39,6 +40,8 @@ d('studio settings', () => {
 
   beforeEach(async () => {
     await prisma.$executeRawUnsafe('TRUNCATE settings, replies, answers, questions, agents, users RESTART IDENTITY CASCADE');
+    (await import('../lib/knobs.js')).putKnobs({}); // what this instance has in force, as the table now is
+    delete process.env.VIDEO_MAX_ATTEMPTS;
     const { generateApiKey } = await import('../lib/apikey.js');
     const { SESSION_EXPIRES_IN } = await import('../lib/session.js');
     const key = generateApiKey();
@@ -60,6 +63,7 @@ d('studio settings', () => {
       brain: { default: 'claude', effort: 'high' },
       song: { provider: 'elevenlabs' },
       art: { claude: 'gemini', meta: 'muse' },
+      knobs: expect.any(Object),
       updatedAt: null,
       defaults: {
         brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
@@ -77,6 +81,7 @@ d('studio settings', () => {
     expect(asTeacher.statusCode).toBe(200);
     expect(asTeacher.json()).toEqual({
       brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+      knobs: {},
     });
     expect((await app.inject({ method: 'PUT', url: '/api/studio/settings', headers: asAgent, payload: { art: { claude: 'muse' } } })).statusCode).toBe(401);
     expect((await get(learnerCookie)).statusCode).toBe(403);
@@ -142,16 +147,91 @@ d('studio settings', () => {
     const claim = () => app.inject({ method: 'POST', url: `/api/questions/${pending.id}/claim`, headers: asAgent });
     const brain = { default: 'claude', effort: 'high' };
     const song = { provider: 'elevenlabs' };
-    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' } });
-    await put(adminCookie, { art: { claude: 'svg' } });
-    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' } });
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'gemini', meta: 'muse' }, knobs: {} });
+    await put(adminCookie, { art: { claude: 'svg' }, knobs: { ELEVENLABS_VOICE_ID: 'Voice42' } });
+    const knobs = { ELEVENLABS_VOICE_ID: 'Voice42' };
+    expect((await claim()).json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' }, knobs });
 
     const answered = await prisma.question.create({ data: { userId, content: 'Osmosis', status: 'ANSWERED' } });
     const answer = await prisma.answer.create({
       data: { questionId: answered.id, agentId, content: 'A lesson.', bundle: { topic: 'osmosis' }, factcheck: { status: 'passed' } },
     });
     const videos = await app.inject({ method: 'POST', url: `/api/answers/${answer.id}/video/claim`, headers: asAgent, payload: {} });
-    expect(videos.json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' } });
+    expect(videos.json().studio).toEqual({ brain, song, art: { claude: 'svg', meta: 'muse' }, knobs });
+  });
+
+  it('shows an admin every knob: what it takes, its default, and for the API\'s own its environment and what is in force', async () => {
+    process.env.VIDEO_MAX_ATTEMPTS = '3';
+    const knobs = (await get(adminCookie)).json().knobs;
+    expect(knobs.VIDEO_MAX_ATTEMPTS).toEqual({ where: 'api', kind: 'int', default: 2, min: 1, max: 10, value: null, env: '3', inForce: 3 });
+    expect(knobs.QUESTION_CLAIM_MINUTES).toMatchObject({ value: null, env: null, inForce: 20 });
+    expect(knobs.POPSMOSIS_ROUTINE_BETA).toEqual({
+      where: 'api', kind: 'text', default: 'experimental-cc-routine-2026-04-01', rule: 'lowercase letters, digits and hyphens',
+      value: null, env: null, inForce: 'experimental-cc-routine-2026-04-01',
+    });
+    // The studio's environment is on the teacher's machine: nothing about it here.
+    expect(knobs.STUDIO_VIDEOS).toEqual({ where: 'studio', kind: 'choice', default: 'on', choices: ['on', 'off'], value: null });
+    expect(knobs.ELEVENLABS_USD_PER_1K_CREDITS).toEqual({ where: 'studio', kind: 'number', default: null, min: 0, max: 100, value: null });
+    // Never a secret, nor a knob that is not one.
+    expect(Object.keys(knobs)).not.toContain('JWT_SECRET');
+    expect(Object.keys(knobs)).not.toContain('ATTACHMENT_RETENTION_DAYS');
+
+    const changed = await put(adminCookie, { knobs: { VIDEO_MAX_ATTEMPTS: 5 } });
+    expect(changed.statusCode).toBe(200);
+    expect(changed.json().knobs.VIDEO_MAX_ATTEMPTS).toMatchObject({ value: 5, env: '3', inForce: 5 });
+    expect(changed.json().updatedAt).not.toBeNull();
+    // Cleared, the environment's value is in force again.
+    const cleared = await put(adminCookie, { knobs: { VIDEO_MAX_ATTEMPTS: null } });
+    expect(cleared.json().knobs.VIDEO_MAX_ATTEMPTS).toMatchObject({ value: null, env: '3', inForce: 3 });
+    expect((await prisma.setting.findUnique({ where: { key: 'knobs' } }))?.value).toEqual({});
+  });
+
+  it('puts an API knob in force on the next request, with no restart', async () => {
+    const ask = (content: string) =>
+      app.inject({ method: 'POST', url: '/api/questions', headers: asUser(learnerCookie), payload: { content } });
+    expect((await put(adminCookie, { knobs: { QUESTIONS_PER_USER_PER_DAY: 1 } })).statusCode).toBe(200);
+    expect((await ask('Diffusion')).statusCode).toBe(201);
+    const refused = await ask('Osmosis');
+    expect(refused.statusCode).toBe(429);
+    expect(refused.json().error.message).toBe('Max 1 questions per 24 hours');
+    await put(adminCookie, { knobs: { QUESTIONS_PER_USER_PER_DAY: null } });
+    expect((await ask('Osmosis')).statusCode).toBe(201);
+  });
+
+  it('sends the teacher only the studio\'s knobs, and keeps both of two set at the same moment', async () => {
+    const saves = await Promise.all([
+      put(adminCookie, { knobs: { STUDIO_VIDEOS: 'off' } }),
+      put(adminCookie, { knobs: { GEMINI_SONG_MODEL: 'lyria-3-clip-preview', ELEVENLABS_USD_PER_1K_CREDITS: 0.3 } }),
+      put(adminCookie, { knobs: { LESSON_HOLD_MINUTES: 0 } }),
+    ]);
+    expect(saves.map((r) => r.statusCode)).toEqual([200, 200, 200]);
+    const teacher = await app.inject({ method: 'GET', url: '/api/studio/settings', headers: asAgent });
+    expect(teacher.json().knobs).toEqual({
+      STUDIO_VIDEOS: 'off', GEMINI_SONG_MODEL: 'lyria-3-clip-preview', ELEVENLABS_USD_PER_1K_CREDITS: 0.3,
+    });
+    expect((await get(adminCookie)).json().knobs.LESSON_HOLD_MINUTES).toMatchObject({ value: 0, inForce: 0 });
+  });
+
+  it('refuses a knob that is not one or a value it does not take, and changes nothing else in the request', async () => {
+    const refused = await put(adminCookie, { art: { claude: 'svg' }, knobs: { QUESTION_CLAIM_MINUTES: 0 } });
+    expect(refused.statusCode).toBe(400);
+    expect(refused.json().error.message).toBe('knobs.QUESTION_CLAIM_MINUTES must be a whole number from 1 to 1440');
+    expect((await put(adminCookie, { knobs: { DATABASE_URL: 'postgres://elsewhere' } })).json().error.message).toBe('knobs has no DATABASE_URL');
+    expect((await put(adminCookie, { knobs: {} })).statusCode).toBe(400);
+    expect((await put(learnerCookie, { knobs: { TOPICS_PER_DAY: 0 } })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'PUT', url: '/api/studio/settings', headers: asAgent, payload: { knobs: { STUDIO_VIDEOS: 'off' } } })).statusCode).toBe(401);
+    const now = (await get(adminCookie)).json();
+    expect(now.art).toEqual({ claude: 'gemini', meta: 'muse' });
+    expect(now.knobs.QUESTION_CLAIM_MINUTES.value).toBeNull();
+  });
+
+  it('reads a change another instance stored, and drops a stored value no longer allowed', async () => {
+    await prisma.setting.create({ data: { key: 'knobs', value: { VIDEO_STALE_MINUTES: 30, VIDEO_MAX_ATTEMPTS: 99 } } });
+    const knobs = (await get(adminCookie)).json().knobs;
+    expect(knobs.VIDEO_STALE_MINUTES).toMatchObject({ value: 30, inForce: 30 });
+    expect(knobs.VIDEO_MAX_ATTEMPTS).toMatchObject({ value: null, inForce: 2 });
+    const { videoStaleMinutes } = await import('../lib/droplet.js');
+    expect(videoStaleMinutes()).toBe(30);
   });
 
   it('never shows a learner the studio settings on their own topics', async () => {

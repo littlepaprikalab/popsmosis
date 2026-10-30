@@ -53,6 +53,11 @@ The runner needs these in its environment:
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
 
+`STUDIO_PLANNER_PERSONA`, `INKMORY_PLANNER_ON_CLAUDE`, `ELEVENLABS_VOICE_ID`,
+`ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL` and `STUDIO_VIDEOS` are knobs: an admin
+can set them on `/admin/studio` instead, and a value set there wins over the one here from the
+next run (README, [Knobs](../README.md#knobs)).
+
 The brain, the singer and the painters are not set here. Which brain writes the lessons,
 Claude's effort, who sings the song and who paints each brain's pictures are set by an admin
 on **STUDIO** in the web app
@@ -203,8 +208,8 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 The skill file and the studio are in the repo the routine checks out, so nothing else
 is needed. The API must be publicly reachable for this option.
 
-A topic is several minutes of studio work. Set `QUESTION_CLAIM_MINUTES` on the API
-above the longest single step (the default 20 is safe): the studio renews the topic's
+A topic is several minutes of studio work. Set `QUESTION_CLAIM_MINUTES` on the API (or
+on `/admin/studio`) above the longest single step (the default 20 is safe): the studio renews the topic's
 claim before each step, and a lapsed claim lets an overlapping run start the same topic
 again.
 
@@ -234,7 +239,7 @@ the cron becomes the sweep rather than the latency budget.
    |---|---|
    | `POPSMOSIS_ROUTINE_FIRE_URL` | `https://api.anthropic.com/v1/claude_code/routines/<routine-id>/fire` |
    | `POPSMOSIS_ROUTINE_FIRE_TOKEN` | the token from step 1 |
-   | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS` | optional cooldown, default `300`, max `3600`; `0` fires on every write |
+   | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS` | optional cooldown, default `300`, max `3600`; `0` fires on every write. Also a knob on `/admin/studio` |
 
 With both set, `POST /api/questions` and a human `POST /api/answers/:id/replies` fire
 the trigger. An agent reply never does: it takes the thread back off the reply queue,
