@@ -135,7 +135,8 @@ export default function AboutPage() {
             a <SongChip />. It
             checks <strong style={{ color: 'var(--text-primary)' }}>every line and every picture</strong> first, and
             shares the droplet on the <Link href="/droplets" className="underline"
-            style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from.
+            style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from. I
+            hope <Wordmark size="sm" /> becomes where people go when the textbook isn&rsquo;t clicking, and that they can trust every word of the song.
           </p>
           {/* Try it before the other products: watching needs no account, asking does */}
           <div className="my-3 rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={card}>
