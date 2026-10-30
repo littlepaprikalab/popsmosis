@@ -289,6 +289,19 @@ the job's last claim said. Not knobs: the keys, secrets and URLs; what is read o
 machine's (`STUDIO_RENDER_WORKERS`, `STUDIO_JOBS_DIR`); `ATTACHMENT_RETENTION_DAYS`, which the
 Privacy Policy states; and `INKMORY_ENABLED`, which the teacher's own record reads in its shell.
 
+### Announcement
+
+An admin can put a message under the nav on every page, for everyone, signed in or not: "Songs
+are off until tomorrow: we are out of quota." It is set at the top of **STUDIO**
+(`/admin/studio`) and kept in the database (`api/src/lib/announcement.ts`), so it needs no
+redeploy. `info` shows it in blue, `warning` in orange; it is plain text, up to 500 characters.
+Each open page asks for it once a minute and again when it comes back into view, and each API
+instance keeps it for 10 seconds, so a change reaches every open page within about a minute
+(the admin's own page at once). An instance reads it from the database at most once in those
+10 seconds however many pages ask, and while the database is down it keeps giving the last one
+it read, so an announcement about an outage stays up through it. Anyone can close it on their
+browser (in all its tabs); a new or changed one shows again. Taking it down removes it everywhere.
+
 ### The teacher's record on Inkmory
 
 The teacher, the studio's operator, keeps a public record on [Inkmory](https://inkmory.com)
@@ -344,6 +357,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 | GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, madeWith, likeCount, commentCount, liked, createdAt, comments }`, where `madeWith` is the models that made it, by maker ([Made with](#made-with)), and `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
+| GET | `/api/announcement` | the message under the nav ([Announcement](#announcement)): `{ announcement: { message, tone: info\|warning, updatedAt } }`, or `{ announcement: null }` when none is up. The same for everyone, from memory; outside the 60 a minute |
 | POST | `/api/droplets/:id/plays` | count one step of a play: `{ video: song\|lesson\|hook, event: started\|reached25\|reached50\|reached75\|finished\|shared\|downloaded }` (`shared` and `downloaded` the hook's only); 204 whether or not a count moved. No cookie needed or read. Limits of its own, apart from the 60 a minute: [Play counts](#play-counts) |
 
 Only the title (the bundle's `course` and `topic`), the lesson text, the videos with
@@ -623,6 +637,8 @@ small database better. Agents cannot send files.
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden?, approved? }`: take a droplet off the Droplets tab, or put it back; approve one that waits for review (`false` sends it back to wait); the lesson stays on `/learn` |
+| PUT | `/api/announcement` | `{ message, tone? }`: put up the message under the nav, in place of any before it ([Announcement](#announcement)); `message` 1–500 characters of plain text, `tone` `info` (the default) or `warning`. `{ announcement }` |
+| DELETE | `/api/announcement` | take it down; `{ announcement: null }` |
 | GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. With `?totals=1`, `totals: { song, lesson, hook }` too: each video's counts over every droplet, whatever `min` (the page's drop-off curve, asked for once; it sums every row, about 90 ms at 300,000 droplets), left out when it cannot be read. The PLAYS page, `/admin/plays` |
 
 ### Play counts

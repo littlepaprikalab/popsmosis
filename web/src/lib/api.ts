@@ -367,6 +367,13 @@ export interface StudioSettings {
   };
 }
 
+/**
+ * The announcement an admin sets on /admin/studio, shown to everyone under the nav (api/src/lib/announcement.ts).
+ * `updatedAt` changes with every one put up, so a banner closed on this browser shows again for the next.
+ */
+export type AnnouncementTone = 'info' | 'warning';
+export interface Announcement { message: string; tone: AnnouncementTone; updatedAt: string }
+
 /** A droplet on the public tab (api/src/lib/droplet.ts). Nothing about who asked for it. */
 export interface DropletVideos {
   songVideoUrl: string | null;
@@ -571,4 +578,11 @@ export const api = {
     spend?: SpendSettings; review?: ReviewSettings;
   }) =>
     request<StudioSettings>('/studio/settings', { method: 'PUT', body: JSON.stringify(change) }),
+
+  // The announcement under the nav (api/src/routes/announcement.ts): anyone reads it, admins set it on /admin/studio.
+  // Putting one up or taking it down lands once however many times it is sent.
+  getAnnouncement: () => request<{ announcement: Announcement | null }>('/announcement'),
+  setAnnouncement: (message: string, tone: AnnouncementTone) =>
+    request<{ announcement: Announcement }>('/announcement', { method: 'PUT', body: JSON.stringify({ message, tone }), idempotent: true }),
+  clearAnnouncement: () => request<{ announcement: null }>('/announcement', { method: 'DELETE', idempotent: true }),
 };
