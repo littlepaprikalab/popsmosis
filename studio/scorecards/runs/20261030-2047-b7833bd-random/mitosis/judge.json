@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Copy the chromosomes, split in two\" is concrete, singable after one hearing, and names the big move (copy, then split). It is close to the core idea in miniature, though \"split in two\" is a little vague about what splits. The lesson opens on a good question, \"How does mitosis make two identical cells?\", and the narration opens on a scraped knee, which comes from the learner's world.",
+    "score": 5
+  },
+  "frame": {
+    "reason": "The library opening a second branch is an apt picture of the whole job: copy every book, clip each copy to its original, send one of each pair to each branch. It is set up early in the lesson and narration, and the song brings it in at v1-1 and the outro (\"Copy every book, a branch brand new\"). But the song drops the picture in the chorus, bridge and second verse, which are mostly plain terminology. Lines like \"Cytokinesis: two new homes\" only hint at it.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration teach every link in order, each with its cause: copy in interphase, so two sisters; fibers attach one to each, \"so each sister is tied to a different pole\"; then anaphase, \"so each pole ends up with one copy of every chromosome\". Metaphase is weakly explained, because the droplet never says why lining up gives an even split. The prediction question sits oddly after metaphase, and the telophase step is treated mostly as description. The song carries the gist, and the bridge adds the nondisjunction contrast.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read in order they follow the chain: interphase copy, the misconception line, spindle fibers tying each sister to a different pole, anaphase \"sisters split → each pole gets every chromosome\", then cytokinesis. The first line is a question rather than a step, and the second (\"Books = chromosomes...\") is a label. Metaphase is also a label with no because. Nondisjunction goes beyond the core chain. Several start in sensible places, but the interphase line is split from the misconception line, and \"Cytokinesis splits the cell → two identical daughter cells\" starts at v2-8 properly.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lyric v1-7 \"Then they coil up tight enough to see\" sits right after the interphase verse with no prophase named; also v1-8 \"Forty-six of them in you and me\"",
+      "problem": "The coiling is in prophase and is placed under interphase, so it implies the chromosomes become visible during copying. And the chromosomes number 46 before copying, but after copying there are 46 chromosomes of two chromatids each, which the line does not distinguish.",
+      "correction": "Put the coiling after interphase and label it as prophase, or cut it from the interphase verse."
+    },
+    {
+      "claim": "Lyric v2-4 \"Right across the middle, like an aisle\" and v2-3 \"Metaphase lines them up single file\"",
+      "problem": "This is minor; chromosomes line up at the metaphase plate, but 'single file' is a fair simplification, so it is not really an error.",
+      "correction": "No change needed."
+    }
+  ],
+  "accuracy": {
+    "reason": "The science is largely correct: DNA copied in interphase, spindle fibers attach one to each sister, sisters split in anaphase, nondisjunction, and 46 chromosomes. The song's v1-7 and v1-8 jumble the order by putting prophase coiling inside the interphase verse. Also \"Mitosis splits them, never makes\" is a slight overstatement but acceptable. The narration's n22 and n21 are out of order in the listing, though that is only an ordering issue. One imprecision a teacher would tighten.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "Many lines are short and chantable (\"Copy the chromosomes, split in two\", \"Spindle fibers reach from either side\"), and the chorus is easy to sing back. The rhymes are mostly clean, though \"two\" / \"new\" is repeated. Some lines read like textbook captions: \"Interphase comes before the split\", \"Metaphase lines them up single file\", \"Meiosis is next, it halves the count\". Others strain the rhyme or the meaning: \"p1-2 Mitosis splits them, never makes\" is an unfinished thought, and \"To make the sex cells, a different route\" does not rhyme with \"count\". The bridge runs past what is natural for a bridge in places, such as b-3 and b-8.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question and the knee example, gives the big idea and the library picture, builds step by step on why, names the misconception and explains why it is wrong, and asks a prediction question that is answered right after (\"what do you think happens when the sisters let go? They split apart...\"). The closing check, \"If a cell skipped interphase... why couldn't both of its daughter cells get a full set?\", can only be answered by someone who understands the core idea. The weaknesses: the prediction question comes after metaphase, which is slightly awkward, and the term load is high for a first read (centromere, cleavage furrow, cell plate, nondisjunction, telophase).",
+    "score": 4
+  }
+}

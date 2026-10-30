@@ -1,0 +1,133 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "If entropy isn't disorder, what is it?",
+    "core_idea": "Entropy counts the ways energy can be arranged; energy spreads out because spread-out states have vastly more ways.",
+    "why_chain": [
+      "Particles constantly pass energy to each other at random in collisions, so every possible arrangement of energy is equally likely.",
+      "So a macrostate that can happen in more ways, more microstates, turns up more often, just as a total of seven turns up most with two dice.",
+      "The same energy spread over more particles can be arranged in vastly more ways, so random passing almost always spreads it out.",
+      "With trillions of trillions of particles the odds are so lopsided that total entropy never goes down, which is the second law of thermodynamics.",
+      "That is why heat flows from hot coffee into cool room air and never back on its own."
+    ],
+    "key_terms": [
+      "entropy",
+      "microstate",
+      "macrostate",
+      "energy packets",
+      "second law of thermodynamics"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "A macrostate is the large-scale state of a system that we can measure, such as its temperature, pressure and volume. A microstate is one exact arrangement of the system's particles and their energy. Entropy is in effect a count of the microstates that fit a macrostate: more microstates means higher entropy. Precisely, Boltzmann's formula is S = k ln W, where W is the number of microstates and k is Boltzmann's constant, 1.38 × 10⁻²³ J/K, so entropy is measured in joules per kelvin. Everyday picture: rolling two dice. Each die is like a particle, the exact pair of faces is like a microstate, and the total you see is like the macrostate. A total of seven can be rolled six ways, but a total of two only one way, a 1 and a 1, so seven comes up six times as often as two. Entropy counts those ways, like counting the ways to roll a total.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "In a simple model, energy is shared out among particles in small energy packets, and particles constantly pass energy packets to each other at random when they collide; in an isolated system, every arrangement of the energy is equally likely, like every pair of faces on fair dice. A hot object, such as hot coffee, has more energy packets per molecule than a cooler one, such as the room air around it. The same energy spread over more particles can be arranged in vastly more ways: 4 energy packets kept on 2 molecules can be arranged in only 5 ways, but spread over 4 molecules they can be arranged in 35 ways. Real objects hold enormous numbers of particles; a cup of coffee holds roughly 10²⁵ molecules, about ten trillion trillion. With so many particles, spread-out macrostates have so overwhelmingly many more microstates that the energy is essentially certain to spread out. That is why heat flows from hot to cold and a gas spreads to fill its container.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "The second law of thermodynamics says the total entropy of an isolated system never goes down; in real, spontaneous processes it goes up. The first law, conservation of energy, would allow hot coffee to pull heat out of the cooler room air and get hotter, since energy would still be conserved; the second law forbids it, because that would lower total entropy. When a small amount of heat Q flows at a temperature T in kelvins, entropy changes by Q divided by T. Example: if 1800 joules flow from coffee at 360 kelvins into room air at 300 kelvins, with temperatures staying nearly constant, the coffee loses 1800/360 = 5 joules per kelvin of entropy and the air gains 1800/300 = 6 joules per kelvin, so total entropy rises by 1 joule per kelvin. Heat flowing the other way would lower total entropy by 1 joule per kelvin, so it never happens on its own. The second law also limits how efficient heat engines can be, the next topic in the unit.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "A common mistake is to think entropy means disorder or messiness. Entropy is about how many microscopic ways energy and particles can be arranged, not how messy things look: a shuffled deck of cards has essentially the same thermodynamic entropy as a sorted one. Water freezing below 0 °C into orderly ice crystals lowers the water's own entropy, yet freezing still happens, because the heat it releases spreads into the colder surroundings and raises their entropy by more, so total entropy rises. Likewise, a refrigerator can make its inside colder only by using electrical work and releasing even more heat into the kitchen, so total entropy still rises; if the power fails, heat flows back in from the warmer kitchen and the food warms up.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think entropy means messiness or disorder. Entropy counts the microscopic ways energy can be arranged, so energy spreading out raises entropy whether or not anything looks messier, and even orderly ice can form while total entropy rises.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A mug of hot coffee on a table in a room, with the cool room air around it."
+      },
+      {
+        "id": "analogy",
+        "picture": "Two pairs of dice side by side on a table. The left pair shows a 3 and a 4, a total of seven; the right pair shows a 1 and a 1, a total of two."
+      },
+      {
+        "id": "overview",
+        "picture": "A zoomed-in view of where the hot coffee meets the cool room air, with a boundary down the middle where they touch. On the left, coffee molecules packed close, each carrying several glowing energy packets; on the right, room air molecules spread apart, each carrying few energy packets."
+      },
+      {
+        "id": "sharing-detail",
+        "picture": "A close-up of the boundary in the overview: four molecules in a row, two coffee molecules on the left and two room air molecules on the right. Four glowing energy packets sit on the two coffee molecules."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "A hot cup of coffee always cools down to the temperature of the room.",
+          "It never pulls heat out of the cooler air and gets hotter.",
+          "Yet energy would still be conserved if it did.",
+          "So if entropy isn't disorder, what is it, and why does it make cooling one-way?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Think of rolling two dice, where each die is like a particle.",
+          "The total you see is the macrostate, the big picture we measure, like temperature.",
+          "The exact faces are a microstate, one precise arrangement underneath.",
+          "A total of seven can be rolled six ways, but a total of two only one way.",
+          "Entropy counts those ways, so seven, with more microstates, comes up six times as often."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Now look inside, where the hot coffee meets the cool room air.",
+          "Energy is shared out in small energy packets, and coffee molecules each carry many.",
+          "Room air molecules carry far fewer.",
+          "Where they touch, molecules collide and pass energy packets around at random.",
+          "Every arrangement of energy packets is equally likely, like every pair of faces on the dice.",
+          "So will the energy packets stay crowded in the coffee?"
+        ]
+      },
+      {
+        "scene": "sharing-detail",
+        "lines": [
+          "No, and counting the ways shows why.",
+          "Take just four molecules sharing four energy packets.",
+          "Kept on the two coffee molecules, the energy packets can be arranged only five ways.",
+          "Spread over all four molecules, they can be arranged thirty-five ways.",
+          "So random passing lands on spread-out arrangements far more often, like rolling a seven.",
+          "A real cup holds roughly ten trillion trillion molecules, so spreading becomes essentially certain."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back at the coffee and the room air, this is the second law of thermodynamics.",
+          "The total entropy of an isolated system never goes down, so the energy spreads into the air.",
+          "A common mistake is to think entropy means messiness.",
+          "But nothing here looks messier: the energy packets just spread out, because spread-out arrangements are far more numerous.",
+          "Now, let's put numbers on the coffee cooling.",
+          "When heat flows, entropy changes by the heat divided by the temperature in kelvins.",
+          "Say 1800 joules flow from coffee at 360 kelvins into room air at 300 kelvins.",
+          "The coffee loses 5 joules per kelvin of entropy, but the air gains 6.",
+          "So the total rises by 1, and the reverse would lower it, so it never happens on its own."
+        ]
+      },
+      {
+        "scene": "hook",
+        "lines": [
+          "So entropy counts the ways energy can be arranged, and energy spreads out because spread-out states have vastly more ways.",
+          "Concentrated heat goes in, spread-out heat comes out, and that's why your coffee always cools."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 32,
+    "reworded": 0
+  }
+}

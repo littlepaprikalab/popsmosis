@@ -1,0 +1,263 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "When you scrape your knee, skin cells around the wound divide to replace the ones you lost."
+    },
+    {
+      "id": "n2",
+      "text": "Each new cell carries the same 46 chromosomes as the cell it came from."
+    },
+    {
+      "id": "n3",
+      "text": "So how does one cell become two identical cells?"
+    },
+    {
+      "id": "n4",
+      "text": "Think of a library opening a second branch."
+    },
+    {
+      "id": "n5",
+      "text": "It photocopies every book, clips each copy to its original, then sends one of each pair to each branch."
+    },
+    {
+      "id": "n6",
+      "text": "In a cell, the books are chromosomes, and each clipped pair is two sister chromatids."
+    },
+    {
+      "id": "n7",
+      "text": "The two branches are the daughter cells, and each gets the full collection."
+    },
+    {
+      "id": "n8",
+      "text": "Here is the whole process, left to right."
+    },
+    {
+      "id": "n9",
+      "text": "It starts before mitosis, in interphase, when the cell copies all its DNA."
+    },
+    {
+      "id": "n10",
+      "text": "A common mistake is to think DNA is copied during mitosis itself."
+    },
+    {
+      "id": "n11",
+      "text": "But the copying is done in interphase, and mitosis only separates the copies."
+    },
+    {
+      "id": "n12",
+      "text": "Next comes prophase, when the chromosomes coil up and the nuclear envelope breaks down."
+    },
+    {
+      "id": "n13",
+      "text": "Then spindle fibers grow out from the two poles of the cell."
+    },
+    {
+      "id": "n14",
+      "text": "Up close, each copied chromosome is two sister chromatids, joined at the centromere."
+    },
+    {
+      "id": "n15",
+      "text": "That's a book clipped to its copy."
+    },
+    {
+      "id": "n16",
+      "text": "Spindle fibers from opposite poles attach there, one to each sister chromatid."
+    },
+    {
+      "id": "n17",
+      "text": "So each sister is tied to a different pole."
+    },
+    {
+      "id": "n18",
+      "text": "Back in the row, metaphase comes next."
+    },
+    {
+      "id": "n19",
+      "text": "The chromosomes line up single file across the middle of the cell."
+    },
+    {
+      "id": "n20",
+      "text": "With fibers from both poles pulling on every chromosome, what happens when the sisters let go?"
+    },
+    {
+      "id": "n21",
+      "text": "They split apart, and each one is pulled to the opposite pole."
+    },
+    {
+      "id": "n22",
+      "text": "That's anaphase, as the spindle fibers shorten and drag the chromatids along."
+    },
+    {
+      "id": "n23",
+      "text": "So each pole ends up with one copy of every chromosome, like each branch getting one book from every pair."
+    },
+    {
+      "id": "n24",
+      "text": "Back in the row, telophase follows, and a new nucleus forms around each set."
+    },
+    {
+      "id": "n25",
+      "text": "Then cytokinesis splits the cytoplasm, as a cleavage furrow pinches the cell in two."
+    },
+    {
+      "id": "n26",
+      "text": "That leaves two daughter cells, each with the same chromosomes as the parent."
+    },
+    {
+      "id": "n27",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?"
+    },
+    {
+      "id": "n28",
+      "text": "Both chromatids get pulled to the same pole."
+    },
+    {
+      "id": "n29",
+      "text": "So one daughter cell gets an extra chromosome, and the other is missing one."
+    },
+    {
+      "id": "n30",
+      "text": "The two cells are no longer identical."
+    },
+    {
+      "id": "n31",
+      "text": "So the cell copies every chromosome, then pulls the copies apart so each new cell gets a full set."
+    },
+    {
+      "id": "n32",
+      "text": "That's how one skin cell at your knee becomes two identical cells, each with the same 46 chromosomes."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "When you scrape your knee, skin cells around the wound divide to replace the ones you lost."
+    },
+    {
+      "id": "n2",
+      "text": "Each new cell carries the same 46 chromosomes as the cell it came from."
+    },
+    {
+      "id": "n3",
+      "text": "So how does one cell become two identical cells?"
+    },
+    {
+      "id": "n4",
+      "text": "Think of a library opening a second branch."
+    },
+    {
+      "id": "n5",
+      "text": "It photocopies every book, clips each copy to its original, then sends one of each pair to each branch."
+    },
+    {
+      "id": "n6",
+      "text": "In a cell, the books are chromosomes, and each clipped pair is two sister chromatids."
+    },
+    {
+      "id": "n7",
+      "text": "The two branches are the daughter cells, and each gets the full collection."
+    },
+    {
+      "id": "n8",
+      "text": "Here is the whole process, left to right."
+    },
+    {
+      "id": "n9",
+      "text": "It starts before mitosis, in interphase, when the cell copies all its DNA."
+    },
+    {
+      "id": "n10",
+      "text": "A common mistake is to think DNA is copied during mitosis itself."
+    },
+    {
+      "id": "n11",
+      "text": "But the copying is done in interphase, and mitosis only separates the copies."
+    },
+    {
+      "id": "n12",
+      "text": "Next comes prophase, when the chromosomes coil up and the nuclear envelope breaks down."
+    },
+    {
+      "id": "n13",
+      "text": "Then spindle fibers grow out from the two poles of the cell."
+    },
+    {
+      "id": "n14",
+      "text": "Up close, each copied chromosome is two sister chromatids, joined at the centromere."
+    },
+    {
+      "id": "n15",
+      "text": "That's a book clipped to its copy."
+    },
+    {
+      "id": "n16",
+      "text": "Spindle fibers from opposite poles attach there, one to each sister chromatid."
+    },
+    {
+      "id": "n17",
+      "text": "So each sister is tied to a different pole."
+    },
+    {
+      "id": "n18",
+      "text": "Back in the row, metaphase comes next."
+    },
+    {
+      "id": "n19",
+      "text": "The chromosomes line up single file across the middle of the cell."
+    },
+    {
+      "id": "n20",
+      "text": "With fibers from both poles pulling on every chromosome, what happens when the sisters let go?"
+    },
+    {
+      "id": "n22",
+      "text": "They split apart in anaphase, and the spindle fibers shorten and drag the chromatids along."
+    },
+    {
+      "id": "n21",
+      "text": "So each one is pulled to the opposite pole."
+    },
+    {
+      "id": "n23",
+      "text": "That means each pole ends up with one copy of every chromosome, like each branch getting one book from every pair."
+    },
+    {
+      "id": "n24",
+      "text": "Back in the row, telophase follows, and a new nucleus forms around each set."
+    },
+    {
+      "id": "n25",
+      "text": "Then cytokinesis splits the cytoplasm, as a cleavage furrow pinches the cell in two."
+    },
+    {
+      "id": "n26",
+      "text": "That leaves two daughter cells, each with the same chromosomes as the parent."
+    },
+    {
+      "id": "n27",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?"
+    },
+    {
+      "id": "n28",
+      "text": "Both chromatids get pulled to the same pole."
+    },
+    {
+      "id": "n29",
+      "text": "So one daughter cell gets an extra chromosome, and the other is missing one."
+    },
+    {
+      "id": "n30",
+      "text": "That means the two cells are no longer identical."
+    },
+    {
+      "id": "n31",
+      "text": "So, in short: the cell copies every chromosome, then pulls the copies apart so each new cell gets a full set."
+    },
+    {
+      "id": "n32",
+      "text": "That's how one skin cell at your knee becomes two identical cells, each with the same 46 chromosomes."
+    }
+  ]
+}

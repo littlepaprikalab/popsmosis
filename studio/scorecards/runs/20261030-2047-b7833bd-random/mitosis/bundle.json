@@ -1,0 +1,2307 @@
+{
+  "course": "Biology",
+  "topic": "Mitosis",
+  "audience": "high school",
+  "core_idea": "The cell copies every chromosome, then pulls the copies apart so each new cell gets a full set.",
+  "why_chain": [
+    "Before mitosis, in interphase, the cell copies its DNA, so each chromosome becomes two identical sister chromatids.",
+    "Spindle fibers from opposite poles attach one to each sister chromatid, so the two sisters are tied to different sides of the cell.",
+    "In metaphase the chromosomes line up across the middle, so every pair is in place to split evenly.",
+    "In anaphase the sisters separate and are pulled to opposite poles, so each side gets one copy of every chromosome.",
+    "Cytokinesis splits the cell between the two sets, so each daughter cell has the same chromosomes as the parent."
+  ],
+  "key_terms": [
+    "chromosome",
+    "sister chromatids",
+    "interphase",
+    "spindle fibers",
+    "metaphase",
+    "anaphase",
+    "cytokinesis",
+    "daughter cells"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Mitosis is the division of a cell's nucleus that, followed by cytokinesis, produces two genetically identical daughter cells. It is used for growth, for repair, and for asexual reproduction: when you scrape your knee, skin cells around the wound divide by mitosis to replace the ones you lost. Human body cells have 46 chromosomes, and each new cell made by mitosis carries the same 46 chromosomes as the cell it came from. Mitosis works like a library opening a second branch: it photocopies every book, clips each copy to its original, then sends one of each clipped pair to each branch, so both branches get the full collection. The books match chromosomes, each clipped pair matches two sister chromatids, and the two branches match the two daughter cells.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Before mitosis begins, during interphase, the cell copies all its DNA, so each chromosome becomes two identical sister chromatids joined at the centromere. A common mistake is to think DNA is copied during mitosis itself; in fact the copying is done in interphase, and mitosis only separates the copies already made. In prophase, the first stage of mitosis, the chromosomes coil up tightly enough to see, the nuclear envelope breaks down, and spindle fibers grow out from the two poles of the cell. Spindle fibers from opposite poles attach to each chromosome at its centromere, one to each sister chromatid, so each sister is tied to a different pole. In metaphase the chromosomes line up single file across the middle of the cell.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "In anaphase the sister chromatids split apart at the centromere and each is pulled to the opposite pole as the spindle fibers shorten and drag the chromatids along. Once separated, each chromatid counts as its own chromosome, so each pole ends up with one copy of every chromosome. In telophase the chromosomes uncoil and a new nuclear envelope, and so a new nucleus, forms around each set. Then cytokinesis splits the cytoplasm: in animal cells a cleavage furrow pinches the cell in two, and in plant cells a cell plate forms that becomes a new cell wall. The result is two daughter cells, each with the same chromosomes as the parent. Next in the course, meiosis halves the chromosome number to make sex cells.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "If one pair of sister chromatids fails to separate in anaphase, an error called nondisjunction, both chromatids get pulled to the same pole. So one daughter cell gets an extra chromosome and the other is missing one, and the two cells are no longer identical. When the controls on the cell cycle fail, cells can keep dividing by mitosis without stopping and form a tumor, as happens in cancer.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think DNA is copied during mitosis itself. In fact the cell copies its DNA earlier, in interphase, and mitosis only separates the copies already made, which is why each daughter cell gets a complete set.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational diagram, as a biology textbook draws it, of where cell division turns up in everyday life. On the left, a person's bent knee in a natural light peach skin tone, with a small healing scrape on its front. On the right, a large round magnified inset of the skin at the edge of the scrape: a patch of purple skin cells packed side by side, and in the middle of the patch one cell pinched in at its waist into two yellow new cells, each with a round nucleus holding a few small chromosomes. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Scraped knee",
+          "aliases": [
+            "knee",
+            "scraped knee",
+            "wound"
+          ],
+          "sam_phrase": "peach knee",
+          "color_hex": "#F4A582"
+        },
+        {
+          "name": "Skin cells",
+          "aliases": [
+            "skin cells",
+            "skin cell"
+          ],
+          "sam_phrase": "purple cells",
+          "color_hex": "#C38BFF"
+        },
+        {
+          "name": "New cells",
+          "aliases": [
+            "new cell"
+          ],
+          "sam_phrase": "yellow cells",
+          "color_hex": "#FFE45C"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational diagram, as a textbook draws an everyday analogy, of a library stocking a second branch. On the left, a tall wooden bookshelf full of gold books in the original library. In the middle, a wooden table holding a row of blue clipped pairs, each a blue book with its blue photocopy clipped to it by a paper clip. On the right, two small green branch library buildings side by side, each with a wide open front showing one full shelf of books inside. No people. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Books",
+          "aliases": [
+            "books",
+            "book"
+          ],
+          "sam_phrase": "gold books",
+          "color_hex": "#FFC845"
+        },
+        {
+          "name": "Clipped pairs",
+          "aliases": [
+            "clipped pair"
+          ],
+          "sam_phrase": "blue stacks",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Branch libraries",
+          "aliases": [
+            "branches",
+            "branch"
+          ],
+          "sam_phrase": "green buildings",
+          "color_hex": "#5CD67A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of the stages of mitosis as a row of six animal cells from left to right like a timeline, evenly spaced across the middle of the picture, each round and about the same size. First, the interphase cell tinted purple, with a large round nucleus holding loose threads of copied DNA. Second, the prophase cell tinted red, with coiled X-shaped chromosomes and short spindle fibers growing from its two poles. Third, the metaphase cell tinted orange, with its X-shaped chromosomes lined up single file in an upright row across its middle and spindle fibers reaching them from both poles. Fourth, the anaphase cell tinted teal, slightly stretched, with single chromatids gathered near each of its two poles. Fifth, the telophase cell tinted magenta, pinched in at its middle by a cleavage furrow, with a new nucleus at each end. Sixth, two small separate round daughter cells tinted green, each with a nucleus. The chromosomes and fibers inside each cell are a lighter shade of that cell's own colour. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer.",
+      "structures": [
+        {
+          "name": "Interphase",
+          "aliases": [
+            "interphase"
+          ],
+          "sam_phrase": "purple cell",
+          "color_hex": "#B57BFF"
+        },
+        {
+          "name": "Prophase",
+          "aliases": [
+            "prophase"
+          ],
+          "sam_phrase": "red cell",
+          "color_hex": "#FF5C5C"
+        },
+        {
+          "name": "Metaphase",
+          "aliases": [
+            "metaphase"
+          ],
+          "sam_phrase": "orange cell",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "Anaphase",
+          "aliases": [
+            "anaphase"
+          ],
+          "sam_phrase": "teal cell",
+          "color_hex": "#2ED3C6"
+        },
+        {
+          "name": "Telophase and cytokinesis",
+          "aliases": [
+            "telophase",
+            "cytokinesis",
+            "cleavage furrow"
+          ],
+          "sam_phrase": "magenta cell",
+          "color_hex": "#FF6FD8"
+        },
+        {
+          "name": "Daughter cells",
+          "aliases": [
+            "daughter cells",
+            "daughter cell"
+          ],
+          "sam_phrase": "green cells",
+          "color_hex": "#5CD67A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "chromosome-detail",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of one copied chromosome close up, as seen in prophase. A large X-shaped chromosome in the centre of the picture, made of two sky blue sister chromatids side by side, joined at their narrow middle by a small yellow centromere. A small orange pole at the far left and another at the far right. One green spindle fiber runs from the left pole to the left side of the centromere, attached to the left chromatid, and one green spindle fiber runs from the right pole to the right side of the centromere, attached to the right chromatid. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding.",
+      "structures": [
+        {
+          "name": "Sister chromatids",
+          "aliases": [
+            "sister chromatids",
+            "sister chromatid",
+            "chromatids"
+          ],
+          "sam_phrase": "blue rods",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Centromere",
+          "aliases": [
+            "centromere"
+          ],
+          "sam_phrase": "yellow bead",
+          "color_hex": "#FFD23F"
+        },
+        {
+          "name": "Spindle fibers",
+          "aliases": [
+            "spindle fibers"
+          ],
+          "sam_phrase": "green threads",
+          "color_hex": "#9BE15D"
+        },
+        {
+          "name": "Poles",
+          "aliases": [
+            "poles",
+            "pole"
+          ],
+          "sam_phrase": "orange dots",
+          "color_hex": "#FFA94D"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "anaphase-detail",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of an animal cell in anaphase, close up. A large oval cell stretched from left to right across the picture, its outline a thin white membrane. A small orange pole inside the left end and another inside the right end. Four sky blue single chromatids clustered near the left pole and four matching sky blue chromatids clustered near the right pole, each attached to a short green spindle fiber running to its pole. The middle of the cell is clear. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer.",
+      "structures": [
+        {
+          "name": "Sister chromatids",
+          "aliases": [
+            "sister chromatids",
+            "sister chromatid",
+            "chromatids"
+          ],
+          "sam_phrase": "blue rods",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Spindle fibers",
+          "aliases": [
+            "spindle fibers"
+          ],
+          "sam_phrase": "green threads",
+          "color_hex": "#9BE15D"
+        },
+        {
+          "name": "Poles",
+          "aliases": [
+            "poles",
+            "pole"
+          ],
+          "sam_phrase": "orange dots",
+          "color_hex": "#FFA94D"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "nondisjunction",
+      "image_prompt": "Educational diagram, as a Campbell Biology figure draws it, of an animal cell in anaphase, close up, with one error. A large oval cell stretched from left to right across the picture, its outline a thin white membrane. A small orange pole inside the left end and another inside the right end. Three sky blue single chromatids clustered near the left pole and three matching sky blue chromatids clustered near the right pole, each attached to a short green spindle fiber running to its pole. Beside the left pole, one red X-shaped pair of chromatids still joined at its middle, attached to the left pole by a green spindle fiber. The middle of the cell is clear. A clean, modern biology textbook illustration: semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient shading, clean outlines, vibrant colour coding; the membrane a phospholipid bilayer.",
+      "structures": [
+        {
+          "name": "Sister chromatids",
+          "aliases": [
+            "sister chromatids",
+            "sister chromatid",
+            "chromatids"
+          ],
+          "sam_phrase": "blue rods",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Spindle fibers",
+          "aliases": [
+            "spindle fibers"
+          ],
+          "sam_phrase": "green threads",
+          "color_hex": "#9BE15D"
+        },
+        {
+          "name": "Poles",
+          "aliases": [
+            "poles",
+            "pole"
+          ],
+          "sam_phrase": "orange dots",
+          "color_hex": "#FFA94D"
+        },
+        {
+          "name": "Stuck pair",
+          "aliases": [
+            "stuck pair"
+          ],
+          "sam_phrase": "red X",
+          "color_hex": "#FF5C5C"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    }
+  ],
+  "lesson_markdown": "## How does mitosis make two identical cells?\n\nWhen you scrape your knee, skin cells around the wound divide by mitosis to replace the ones you lost. Mitosis, followed by cytokinesis, turns one cell into two genetically identical daughter cells. It is used for growth, for repair and for asexual reproduction.\n\nThe big idea: **the cell copies every chromosome, then pulls the copies apart so each new cell gets a full set.**\n\n### Think of a library\n\nPicture a library opening a second branch. It photocopies every book, clips each copy to its original, then sends one of each clipped pair to each branch, so both branches get the full collection. In a cell, the books are chromosomes, each clipped pair is two sister chromatids, and the two branches are the two daughter cells.\n\n### Step by step\n\n1. **Copy every book: interphase.** Before mitosis begins, during interphase, the cell copies all its DNA. Each chromosome becomes two identical sister chromatids joined at the centromere, like a book clipped to its copy.\n\n   A common mistake is to think DNA is copied during mitosis itself. In fact the copying is already done in interphase, and mitosis only separates the copies already made.\n\n2. **Tie each copy to a branch: prophase.** The chromosomes coil up tightly enough to see, the nuclear envelope breaks down, and spindle fibers grow out from the two poles of the cell. Spindle fibers from opposite poles attach at the centromere, one to each sister chromatid, so each sister is tied to a different pole.\n\n3. **Line up the pairs: metaphase.** The chromosomes line up single file across the middle of the cell.\n\n   Each sister is tied to a different pole, so what do you think happens when the sisters let go? They split apart at the centromere, and each is pulled to the opposite pole.\n\n4. **Send one of each pair to each branch: anaphase.** The spindle fibers shorten and drag the chromatids along. Once separated, each chromatid counts as its own chromosome, so each pole ends up with one copy of every chromosome.\n\n5. **Open both branches: telophase and cytokinesis.** In telophase the chromosomes uncoil and a new nucleus forms around each set. Then cytokinesis splits the cytoplasm: in animal cells a cleavage furrow pinches the cell in two, and in plant cells a cell plate forms that becomes a new cell wall. The result is two daughter cells, each with the same chromosomes as the parent: in human body cells, the same 46.\n\n### When one pair won't split\n\nIf one pair of sister chromatids fails to separate in anaphase, an error called nondisjunction, both chromatids get pulled to the same pole. So one daughter cell gets an extra chromosome, the other is missing one, and the two cells are no longer identical.\n\nNext in the course, meiosis halves the chromosome number to make sex cells.\n\n**Check yourself:** If a cell skipped interphase and went straight into mitosis, why couldn't both of its daughter cells get a full set of chromosomes?\n\nGot a follow-up question? Ask it below.",
+  "music": {
+    "positive_styles": [
+      "Laid-back R&B with smooth, melodic sung verses; warm Rhodes electric piano chords and a deep, round sub bass under soft finger snaps on the two and four; an unhurried 92 bpm groove with a gentle swing; a warm, breathy female lead that glides through the verses, holding the ends of the lines, then opens up into a smooth chorus of stacked three-part harmonies; the Rhodes leads, with a light shaker and muted guitar licks filling the gaps"
+    ],
+    "negative_styles": [
+      "long instrumental intro",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "That's how a scraped knee heals up new",
+      "names": [
+        "scraped knee"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Open a branch, copy every book",
+      "names": [
+        "branch",
+        "book"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "Make a clipped pair, hook to hook",
+      "names": [
+        "clipped pair"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Interphase comes before the split",
+      "names": [
+        "Interphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "It copies DNA, every bit",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Now each chromosome's two of a kind",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Sister chromatids, matched line for line",
+      "names": [
+        "Sister chromatids"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Then they coil up tight enough to see",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Forty-six of them in you and me",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "The copies come first, in interphase",
+      "names": [
+        "interphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Mitosis splits them, never makes",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "One full set for every cell that's new",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Line them up, pull the sisters apart",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Two daughter cells, same in every part",
+      "names": [
+        "daughter cells"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Spindle fibers reach from either side",
+      "names": [
+        "Spindle fibers"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "One to each sister, roped on tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Metaphase lines them up single file",
+      "names": [
+        "Metaphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Right across the middle, like an aisle",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "In anaphase the sisters let go",
+      "names": [
+        "anaphase"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Fibers shorten, pull them to the poles",
+      "names": [
+        "poles"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Split apart, each one's a chromosome",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "Cytokinesis: two new homes",
+      "names": [
+        "Cytokinesis"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Meiosis is next, it halves the count",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "To make the sex cells, a different route",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "One full set for every cell that's new",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Line them up, pull the sisters apart",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Two daughter cells, same in every part",
+      "names": [
+        "daughter cells"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "What if one pair just won't let go?",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "That stuck pair drags to the same pole",
+      "names": [
+        "stuck pair",
+        "pole"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "One cell gets extra, one's left with less",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Same parent, two different sets",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Nondisjunction, that's the name",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "No longer twins, no longer the same",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Each pair must split, one copy per side",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "So both new sets match, line for line",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Copied first, in interphase",
+      "names": [
+        "interphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Pulled apart in anaphase",
+      "names": [
+        "anaphase"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "One full set for every cell that's new",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Line them up, pull the sisters apart",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Two daughter cells, same in every part",
+      "names": [
+        "daughter cells"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Copy every book, a branch brand new",
+      "names": [
+        "book",
+        "branch"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Each branch gets the full collection too",
+      "names": [
+        "branch"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Copy the chromosomes, split in two",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "When you scrape your knee, skin cells around the wound divide to replace the ones you lost.",
+      "names": [
+        "knee",
+        "skin cells",
+        "wound"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n2",
+      "text": "Each new cell carries the same 46 chromosomes as the cell it came from.",
+      "names": [
+        "new cell"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n3",
+      "text": "So how does one cell become two identical cells?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n4",
+      "text": "Think of a library opening a second branch.",
+      "names": [
+        "branch"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "It photocopies every book, clips each copy to its original, then sends one of each pair to each branch.",
+      "names": [
+        "book",
+        "branch"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "In a cell, the books are chromosomes, and each clipped pair is two sister chromatids.",
+      "names": [
+        "books",
+        "clipped pair",
+        "sister chromatids"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "The two branches are the daughter cells, and each gets the full collection.",
+      "names": [
+        "branches",
+        "daughter cells"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "Here is the whole process, left to right.",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n9",
+      "text": "It starts before mitosis, in interphase, when the cell copies all its DNA.",
+      "names": [
+        "interphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n10",
+      "text": "A common mistake is to think DNA is copied during mitosis itself.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "But the copying is done in interphase, and mitosis only separates the copies.",
+      "names": [
+        "interphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "Next comes prophase, when the chromosomes coil up and the nuclear envelope breaks down.",
+      "names": [
+        "prophase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "Then spindle fibers grow out from the two poles of the cell.",
+      "names": [
+        "spindle fibers",
+        "poles"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "Up close, each copied chromosome is two sister chromatids, joined at the centromere.",
+      "names": [
+        "sister chromatids",
+        "centromere"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "That's a book clipped to its copy.",
+      "names": [
+        "book"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n16",
+      "text": "Spindle fibers from opposite poles attach there, one to each sister chromatid.",
+      "names": [
+        "Spindle fibers",
+        "poles",
+        "sister chromatid"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "So each sister is tied to a different pole.",
+      "names": [
+        "pole"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "Back in the row, metaphase comes next.",
+      "names": [
+        "metaphase"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "The chromosomes line up single file across the middle of the cell.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n20",
+      "text": "With fibers from both poles pulling on every chromosome, what happens when the sisters let go?",
+      "names": [
+        "poles"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n22",
+      "text": "They split apart in anaphase, and the spindle fibers shorten and drag the chromatids along.",
+      "names": [
+        "spindle fibers",
+        "chromatids",
+        "anaphase"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "So each one is pulled to the opposite pole.",
+      "names": [
+        "pole"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "That means each pole ends up with one copy of every chromosome, like each branch getting one book from every pair.",
+      "names": [
+        "pole",
+        "branch",
+        "book"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "Back in the row, telophase follows, and a new nucleus forms around each set.",
+      "names": [
+        "telophase"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n25",
+      "text": "Then cytokinesis splits the cytoplasm, as a cleavage furrow pinches the cell in two.",
+      "names": [
+        "cytokinesis",
+        "cleavage furrow"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n26",
+      "text": "That leaves two daughter cells, each with the same chromosomes as the parent.",
+      "names": [
+        "daughter cells"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n27",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?",
+      "names": [
+        "anaphase",
+        "sister chromatids"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "Both chromatids get pulled to the same pole.",
+      "names": [
+        "chromatids",
+        "pole"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "So one daughter cell gets an extra chromosome, and the other is missing one.",
+      "names": [
+        "daughter cell"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n30",
+      "text": "That means the two cells are no longer identical.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n31",
+      "text": "So, in short: the cell copies every chromosome, then pulls the copies apart so each new cell gets a full set.",
+      "names": [
+        "new cell"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n32",
+      "text": "That's how one skin cell at your knee becomes two identical cells, each with the same 46 chromosomes.",
+      "names": [
+        "skin cell",
+        "knee"
+      ],
+      "fact_id": "f1"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Scraped knee",
+        "zoom": 1.6
+      },
+      "spotlight": "Scraped knee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "Books",
+        "zoom": 1.6
+      },
+      "spotlight": "Books",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Clipped pairs",
+        "zoom": 1.6
+      },
+      "spotlight": "Clipped pairs",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Interphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Interphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "Sister chromatids",
+        "zoom": 1.6
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "sister chromatids",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "Sister chromatids",
+        "zoom": 1.6
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Interphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Daughter cells",
+        "zoom": 1.6
+      },
+      "spotlight": "Daughter cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "Spindle fibers",
+        "zoom": 1.6
+      },
+      "spotlight": "Spindle fibers",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Metaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Metaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Metaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Metaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Anaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Anaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Spindle fibers",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "Sister chromatids",
+        "zoom": 1.6
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "overview",
+      "camera": {
+        "target": "Telophase and cytokinesis",
+        "zoom": 1.8
+      },
+      "spotlight": "Telophase and cytokinesis",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Daughter cells",
+        "zoom": 1.6
+      },
+      "spotlight": "Daughter cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "nondisjunction",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "nondisjunction",
+      "camera": {
+        "target": "Stuck pair",
+        "zoom": 1.7
+      },
+      "spotlight": "Stuck pair",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "nondisjunction",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Stuck pair",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "nondisjunction",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "nondisjunction",
+      "camera": {
+        "target": "Stuck pair",
+        "zoom": 1.6
+      },
+      "spotlight": "Stuck pair",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "nondisjunction",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "nondisjunction",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Anaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Daughter cells",
+        "zoom": 1.6
+      },
+      "spotlight": "Daughter cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Branch libraries",
+        "zoom": 1.6
+      },
+      "spotlight": "Branch libraries",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Skin cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "New cells",
+        "zoom": 1.7
+      },
+      "spotlight": "New cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Branch libraries",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Books",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Clipped pairs",
+        "zoom": 1.6
+      },
+      "spotlight": "Clipped pairs",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "analogy",
+      "camera": {
+        "target": "Branch libraries",
+        "zoom": 1.6
+      },
+      "spotlight": "Branch libraries",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Interphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Interphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "Interphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Interphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "Prophase",
+        "zoom": 1.8
+      },
+      "spotlight": "Prophase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "Prophase",
+        "zoom": 1.8
+      },
+      "spotlight": "Prophase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "Sister chromatids",
+        "zoom": 1.6
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Spindle fibers",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "chromosome-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Poles",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "Metaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Metaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "Metaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Metaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Metaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "Spindle fibers",
+        "zoom": 1.6
+      },
+      "spotlight": "Spindle fibers",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Sister chromatids",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "anaphase-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Poles",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "overview",
+      "camera": {
+        "target": "Telophase and cytokinesis",
+        "zoom": 1.8
+      },
+      "spotlight": "Telophase and cytokinesis",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "Telophase and cytokinesis",
+        "zoom": 1.8
+      },
+      "spotlight": "Telophase and cytokinesis",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "overview",
+      "camera": {
+        "target": "Daughter cells",
+        "zoom": 1.6
+      },
+      "spotlight": "Daughter cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "overview",
+      "camera": {
+        "target": "Anaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Anaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "Anaphase",
+        "zoom": 1.8
+      },
+      "spotlight": "Anaphase",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "Daughter cells",
+        "zoom": 1.6
+      },
+      "spotlight": "Daughter cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n32",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "New cells",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How does mitosis make two identical cells?",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Books = chromosomes, clipped pairs = sister chromatids",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-3",
+      "text": "Interphase: each chromosome copied → two sister chromatids",
+      "from_narration": "n9"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "DNA is copied in interphase, not during mitosis",
+      "from_narration": "n11"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Spindle fibers tie each sister to a different pole",
+      "from_narration": "n16"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "Metaphase: chromosomes line up across the middle",
+      "from_narration": "n18"
+    },
+    {
+      "from_line": "v2-5",
+      "text": "Anaphase: sisters split → each pole gets every chromosome",
+      "from_narration": "n21"
+    },
+    {
+      "from_line": "v2-8",
+      "text": "Cytokinesis splits the cell → two identical daughter cells",
+      "from_narration": "n25"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Nondisjunction: one pair doesn't split → mismatched daughter cells",
+      "from_narration": "n27"
+    }
+  ],
+  "tags": {
+    "song": [
+      "mitosis",
+      "celldivision",
+      "sisterchromatids",
+      "cytokinesis",
+      "biology",
+      "rnb",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "mitosis",
+      "celldivision",
+      "sisterchromatids",
+      "cytokinesis",
+      "biology",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

@@ -1,0 +1,2203 @@
+{
+  "course": "Thermodynamics",
+  "topic": "Entropy",
+  "audience": "high school",
+  "core_idea": "Entropy counts the ways energy can be arranged; energy spreads out because spread-out states have vastly more ways.",
+  "why_chain": [
+    "Particles constantly pass energy to each other at random in collisions, so every possible arrangement of energy is equally likely.",
+    "So a macrostate that can happen in more ways, more microstates, turns up more often, just as a total of seven turns up most with two dice.",
+    "The same energy spread over more particles can be arranged in vastly more ways, so random passing almost always spreads it out.",
+    "With trillions of trillions of particles the odds are so lopsided that total entropy never goes down, which is the second law of thermodynamics.",
+    "That is why heat flows from hot coffee into cool room air and never back on its own."
+  ],
+  "key_terms": [
+    "entropy",
+    "microstate",
+    "macrostate",
+    "energy packets",
+    "second law of thermodynamics"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "A macrostate is the large-scale state of a system that we can measure, such as its temperature, pressure and volume. A microstate is one exact arrangement of the system's particles and their energy. Entropy is in effect a count of the microstates that fit a macrostate: more microstates means higher entropy. Precisely, Boltzmann's formula is S = k ln W, where W is the number of microstates and k is Boltzmann's constant, 1.38 × 10⁻²³ J/K, so entropy is measured in joules per kelvin. Everyday picture: rolling two dice. Each die is like a particle, the exact pair of faces is like a microstate, and the total you see is like the macrostate. A total of seven can be rolled six ways, but a total of two only one way, a 1 and a 1, so seven comes up six times as often as two. Entropy counts those ways, like counting the ways to roll a total.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "In a simple model, energy is shared out among particles in small energy packets, and particles constantly pass energy packets to each other at random when they collide; in an isolated system, every arrangement of the energy is equally likely, like every pair of faces on fair dice. A hot object, such as hot coffee, has more energy packets per molecule than a cooler one, such as the room air around it. The same energy spread over more particles can be arranged in vastly more ways: 4 energy packets kept on 2 molecules can be arranged in only 5 ways, but spread over 4 molecules they can be arranged in 35 ways. Real objects hold enormous numbers of particles; a cup of coffee holds roughly 10²⁵ molecules, about ten trillion trillion. With so many particles, spread-out macrostates have so overwhelmingly many more microstates that the energy is essentially certain to spread out. That is why heat flows from hot to cold and a gas spreads to fill its container.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "The second law of thermodynamics says the total entropy of an isolated system never goes down; in real, spontaneous processes it goes up. The first law, conservation of energy, would allow hot coffee to pull heat out of the cooler room air and get hotter, since energy would still be conserved; the second law forbids it, because that would lower total entropy. When a small amount of heat Q flows at a temperature T in kelvins, entropy changes by Q divided by T. Example: if 1800 joules flow from coffee at 360 kelvins into room air at 300 kelvins, with temperatures staying nearly constant, the coffee loses 1800/360 = 5 joules per kelvin of entropy and the air gains 1800/300 = 6 joules per kelvin, so total entropy rises by 1 joule per kelvin. Heat flowing the other way would lower total entropy by 1 joule per kelvin, so it never happens on its own. The second law also limits how efficient heat engines can be, the next topic in the unit.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "A common mistake is to think entropy means disorder or messiness. Entropy is about how many microscopic ways energy and particles can be arranged, not how messy things look: a shuffled deck of cards has essentially the same thermodynamic entropy as a sorted one. Water freezing below 0 °C into orderly ice crystals lowers the water's own entropy, yet freezing still happens, because the heat it releases spreads into the colder surroundings and raises their entropy by more, so total entropy rises. Likewise, a refrigerator can make its inside colder only by using electrical work and releasing even more heat into the kitchen, so total entropy still rises; if the power fails, heat flows back in from the warmer kitchen and the food warms up.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think entropy means messiness or disorder. Entropy counts the microscopic ways energy can be arranged, so energy spreading out raises entropy whether or not anything looks messier, and even orderly ice can form while total entropy rises.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a physics textbook opens a chapter, of a caramel brown mug filled with hot coffee standing on a light grey tabletop in a room, the mug in the centre of the picture with the coffee's surface showing at its top. The cool room air all around the mug is shown as a light blue haze filling the space around it. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Hot coffee",
+          "aliases": [
+            "hot cup of coffee",
+            "coffee molecules"
+          ],
+          "sam_phrase": "brown mug",
+          "color_hex": "#C8864A"
+        },
+        {
+          "name": "Room air",
+          "aliases": [
+            "cooler air",
+            "room air molecules"
+          ],
+          "sam_phrase": "blue haze",
+          "color_hex": "#8EC9FF"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a statistics textbook draws it, of two pairs of dice side by side on a light grey tabletop. On the left, a pair of green dice, one showing three pips on its top face and the other showing four pips. On the right, a pair of pink dice, both showing one pip on their top faces. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Total of seven",
+          "aliases": [],
+          "sam_phrase": "green dice",
+          "color_hex": "#5FD068"
+        },
+        {
+          "name": "Total of two",
+          "aliases": [],
+          "sam_phrase": "pink dice",
+          "color_hex": "#FF6FB5"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of a zoomed-in view of where hot coffee meets cool room air, with a straight vertical boundary down the middle of the picture where they touch. On the left half, coffee molecules drawn as caramel brown spheres packed close together, each with several small glowing yellow sparks sitting on it that stand for energy packets. On the right half, room air molecules drawn as light blue spheres spread far apart, each with one yellow spark or none sitting on it. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Hot coffee",
+          "aliases": [
+            "hot cup of coffee",
+            "coffee molecules"
+          ],
+          "sam_phrase": "brown spheres",
+          "color_hex": "#C8864A"
+        },
+        {
+          "name": "Room air",
+          "aliases": [
+            "cooler air",
+            "room air molecules"
+          ],
+          "sam_phrase": "blue spheres",
+          "color_hex": "#8EC9FF"
+        },
+        {
+          "name": "Energy packets",
+          "aliases": [
+            "packets"
+          ],
+          "sam_phrase": "yellow sparks",
+          "color_hex": "#FFD84A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "sharing-detail",
+      "image_prompt": "Educational diagram, as a physics textbook draws it, of four molecules in a row across the middle of the picture, evenly spaced. The two on the left are caramel brown spheres standing for coffee molecules; the two on the right are light blue spheres standing for room air molecules. Four small glowing yellow sparks standing for energy packets sit on the two brown spheres, two on each, and the blue spheres have none. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Hot coffee",
+          "aliases": [
+            "hot cup of coffee",
+            "coffee molecules"
+          ],
+          "sam_phrase": "brown spheres",
+          "color_hex": "#C8864A"
+        },
+        {
+          "name": "Room air",
+          "aliases": [
+            "cooler air",
+            "room air molecules"
+          ],
+          "sam_phrase": "blue spheres",
+          "color_hex": "#8EC9FF"
+        },
+        {
+          "name": "Energy packets",
+          "aliases": [
+            "packets"
+          ],
+          "sam_phrase": "yellow sparks",
+          "color_hex": "#FFD84A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "fridge",
+      "image_prompt": "Educational illustration, as a physics textbook draws it, of a white refrigerator standing in a kitchen, the refrigerator in the centre of the picture with its door closed. The warm kitchen air all around the refrigerator is shown as an orange haze filling the space around it. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Fridge",
+          "aliases": [],
+          "sam_phrase": "white fridge",
+          "color_hex": "#EDEDED"
+        },
+        {
+          "name": "Warm kitchen",
+          "aliases": [
+            "warmer kitchen"
+          ],
+          "sam_phrase": "orange haze",
+          "color_hex": "#FF9F45"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    }
+  ],
+  "lesson_markdown": "## If entropy isn't disorder, what is it?\n\nEntropy is a count: it counts the ways energy can be arranged among a system's particles. Energy spreads out because spread-out states have vastly more ways, and that is why heat flows from hot coffee into cooler room air and not back.\n\n### Think of dice\n\nRoll two dice. Each die is like a particle, the exact pair of faces is like a **microstate**, and the total you see is like the **macrostate**.\n\n- **Macrostate:** the large-scale state we can measure, such as temperature, pressure and volume.\n- **Microstate:** one exact arrangement of the particles and their energy.\n\nA total of seven can be rolled six ways, but a total of two only one way, a 1 and a 1, so seven comes up six times as often as two. **Entropy** counts those ways: more microstates means higher entropy. Precisely, S = k ln W, where W is the number of microstates and k is Boltzmann's constant, 1.38 × 10⁻²³ J/K.\n\n### Why energy spreads out\n\n1. **Every roll is fair.** In a simple model, energy is shared out in small **energy packets**, and particles pass them to each other at random when they collide. So in an isolated system every arrangement of the energy is equally likely, like every pair of faces on fair dice.\n2. **More ways come up more often.** A macrostate with more microstates turns up more often, just as a seven comes up six times as often as a two.\n3. **Count the coffee's ways.** Hot coffee has more energy packets per molecule than the cooler room air around it. What do you think happens when coffee and air molecules pass packets at random where they touch? The energy spreads into the air: 4 energy packets kept on 2 molecules can be arranged in only 5 ways, but spread over 4 molecules in 35 ways, so spreading out is like rolling a seven.\n4. **Huge numbers make it a law.** A cup of coffee holds roughly 10²⁵ molecules, about ten trillion trillion, so spread-out macrostates have so overwhelmingly many more microstates that spreading is essentially certain. This is the **second law of thermodynamics**: the total entropy of an isolated system never goes down, and in real, spontaneous processes it goes up.\n\nA common mistake is to think entropy means disorder or messiness. It doesn't: entropy counts the microscopic ways energy and particles can be arranged, so a shuffled deck of cards has essentially the same thermodynamic entropy as a sorted one. Water even freezes into orderly ice below 0 °C, because the heat it releases raises the colder surroundings' entropy by more than the water's own entropy falls.\n\n5. **So heat only flows one way.** Energy would still be conserved if hot coffee pulled heat out of the cooler room air, so the first law allows it; the second law forbids it, because that would lower total entropy.\n\n### Putting numbers on it\n\nWhen a small amount of heat Q flows at a temperature T in kelvins, entropy changes by Q/T. If 1800 J flow from coffee at 360 K into room air at 300 K, with temperatures staying nearly constant, the coffee loses 1800/360 = 5 J/K and the air gains 1800/300 = 6 J/K. Total entropy rises by 1 J/K, while heat flowing the other way would lower it by 1 J/K, so that never happens on its own.\n\nNext in the unit, you'll see how the second law limits how efficient heat engines can be.\n\n**Check yourself:** Why does heat almost always flow from hot coffee into cool air, when energy would be conserved either way?\n\nWant to dig into any part of this? Ask a follow-up question.",
+  "music": {
+    "positive_styles": [
+      "Breezy indie-pop with melodic sung verses; bright strummed acoustic guitar and a jangly electric lead over a light, bouncy kick and snare, a warm round bass and handclaps on the backbeat; sunny, airy production with a touch of room reverb; 110 bpm; warm, slightly husky male vocal, easy and close in the verses, lifting into a big chorus doubled by gang vocals singing together; a glockenspiel twinkle accents the hook"
+    ],
+    "negative_styles": [
+      "long instrumental intro",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Roll the dice, see sevens pull ahead",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Each die's a particle, toss them high",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "The total's the macrostate you spy",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Each exact pair's a microstate",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Seven beats two at six times the rate",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Entropy just counts the ways",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "More ways, more entropy, always",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Molecules bump, the packets jump",
+      "names": [
+        "packets"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Passed around at random, bump by bump",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "Not the mess, it's counting ways",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Neat ice forms, total entropy's raised",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "More ways spread, so that's where it heads",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Hot to cold, not back on its own",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "So the total entropy has grown",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Four packets on two molecules: five",
+      "names": [
+        "packets"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "Spread on four, the ways hit thirty-five",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Ten trillion trillion in your cup",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "So the spreading's sure, the odds stack up",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Total entropy won't go down",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "That's the second law, it holds its ground",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Coffee drops five, the room air gains six",
+      "names": [
+        "room air"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "One more joule per kelvin in the mix",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Heat engines are next in line",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "The second law caps how well they shine",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "More ways spread, so that's where it heads",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Hot to cold, not back on its own",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "So the total entropy has grown",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Plug in the fridge, it chills inside",
+      "names": [
+        "fridge"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Dumps more heat out, total's on the rise",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Then the power fails, no work to pay",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "Heat flows back in the hot-to-cold way",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "From the warmer kitchen to the shelf",
+      "names": [
+        "warmer kitchen"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "The heat moves in all by itself",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Your food warms up, the cold is gone",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "No work to fight it, the spread goes on",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "From the dice to your coffee cup",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "More ways spread, so the total's up",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "More ways spread, so that's where it heads",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Hot to cold, not back on its own",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "So the total entropy has grown",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Roll the dice, see sevens pull ahead",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "Your hot coffee cools, the heat has fled",
+      "names": [
+        "hot coffee"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Count the ways the heat can spread",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "A hot cup of coffee always cools down to the temperature of the room.",
+      "names": [
+        "hot cup of coffee"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n2",
+      "text": "It never pulls heat out of the cooler air and gets hotter.",
+      "names": [
+        "cooler air"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "Yet energy would still be conserved if it did.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n4",
+      "text": "So what is entropy, and why does it make cooling one-way?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n5",
+      "text": "Think of rolling two dice, where each die is like a particle.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "The total you see is the macrostate, the big picture we measure, like temperature.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "The exact faces are a microstate, one precise arrangement underneath.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "A total of seven can be rolled six ways, but a total of two only one way.",
+      "names": [
+        "total of seven",
+        "total of two"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "Entropy counts those ways, so seven, with more microstates, comes up six times as often.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Now look inside, where the hot coffee meets the cool room air.",
+      "names": [
+        "hot coffee",
+        "room air"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n11",
+      "text": "Energy is shared out in small energy packets, and coffee molecules each carry many.",
+      "names": [
+        "energy packets",
+        "coffee molecules"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "Room air molecules carry far fewer.",
+      "names": [
+        "Room air molecules"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "Where they touch, molecules collide and pass energy packets around at random.",
+      "names": [
+        "energy packets"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "So every arrangement of energy packets is equally likely, like every pair of faces on the dice.",
+      "names": [
+        "energy packets"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "So will the energy packets stay crowded in the coffee?",
+      "names": [
+        "energy packets"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n16",
+      "text": "No, and counting the ways shows why.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "Take just four molecules sharing four energy packets.",
+      "names": [
+        "energy packets"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "Kept on the two coffee molecules, the energy packets can be arranged only five ways.",
+      "names": [
+        "coffee molecules",
+        "energy packets"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "Spread over all four molecules, they can be arranged thirty-five ways.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n20",
+      "text": "So random passing lands on spread-out arrangements far more often, like rolling a seven.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n21",
+      "text": "A real cup holds roughly ten trillion trillion molecules, so spreading becomes essentially certain.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n22",
+      "text": "Back at the coffee and the room air, that certainty is the second law of thermodynamics.",
+      "names": [
+        "room air"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "The total entropy of an isolated system never goes down, so the energy spreads into the air.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "A common mistake is to think entropy means messiness.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n25",
+      "text": "But nothing here looks messier; the energy packets simply spread out, because spread-out arrangements are far more numerous.",
+      "names": [
+        "energy packets"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n26",
+      "text": "Now, let's put numbers on the coffee cooling.",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n27",
+      "text": "When heat flows, entropy changes by the heat divided by the temperature in kelvins.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n28",
+      "text": "Say 1800 joules flow from coffee at 360 kelvins into room air at 300 kelvins.",
+      "names": [
+        "room air"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n29",
+      "text": "The coffee loses 5 joules per kelvin of entropy, but the air gains 6.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n30",
+      "text": "So the total rises by 1, and since the reverse would lower it, it never happens on its own.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n31",
+      "text": "So entropy counts the ways energy can be arranged, and energy spreads out because spread-out states have vastly more ways.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n32",
+      "text": "Concentrated heat goes in, spread-out heat comes out, and that's why your coffee always cools.",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "macrostate",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "Energy packets",
+        "zoom": 1.7
+      },
+      "spotlight": "Energy packets",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Room air",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "fridge",
+      "camera": {
+        "target": "Fridge",
+        "zoom": 1.6
+      },
+      "spotlight": "Fridge",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Fridge",
+      "particles": [
+        "Fridge",
+        "Warm kitchen"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Fridge",
+      "particles": [
+        "Warm kitchen",
+        "Fridge"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Warm kitchen",
+      "particles": [
+        "Warm kitchen",
+        "Fridge"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Fridge",
+      "particles": [
+        "Warm kitchen",
+        "Fridge"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "fridge",
+      "camera": {
+        "target": "Fridge",
+        "zoom": 1.6
+      },
+      "spotlight": "Fridge",
+      "particles": [
+        "Warm kitchen",
+        "Fridge"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "fridge",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Warm kitchen",
+        "Fridge"
+      ],
+      "carries": "heat",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Hot coffee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Hot coffee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Room air",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "analogy",
+      "camera": {
+        "target": "Total of seven",
+        "zoom": 1.6
+      },
+      "spotlight": "Total of seven",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "Hot coffee",
+        "zoom": 1.6
+      },
+      "spotlight": "Hot coffee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "Room air",
+        "zoom": 1.6
+      },
+      "spotlight": "Room air",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Hot coffee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "Hot coffee",
+        "zoom": 1.6
+      },
+      "spotlight": "Hot coffee",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "sharing-detail",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Energy packets",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Room air",
+      "particles": [
+        "Hot coffee",
+        "Room air"
+      ],
+      "carries": "energy",
+      "moves": "crosses",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n32",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "If entropy isn't disorder, what is it?",
+      "from_narration": "n4"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Dice: exact faces = microstate, total = macrostate",
+      "from_narration": "n6"
+    },
+    {
+      "from_line": "v1-4",
+      "text": "More microstates → that macrostate turns up more often",
+      "from_narration": "n8"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Random collisions → every arrangement equally likely",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "Entropy counts ways, not messiness",
+      "from_narration": ""
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Spread over more molecules → vastly more ways",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "Trillions of molecules → total entropy never drops: second law",
+      "from_narration": "n21"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Coffee loses 5 J/K, air gains 6 → total +1 J/K",
+      "from_narration": "n27"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "Second law limits heat engine efficiency: next topic",
+      "from_narration": ""
+    },
+    {
+      "from_line": "b-1",
+      "text": "Fridge loses power → heat flows back in → food warms",
+      "from_narration": ""
+    }
+  ],
+  "tags": {
+    "song": [
+      "entropy",
+      "secondlaw",
+      "thermodynamics",
+      "physics",
+      "microstates",
+      "heatflow",
+      "indiepop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "entropy",
+      "secondlaw",
+      "thermodynamics",
+      "physics",
+      "microstates",
+      "heatflow",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}
