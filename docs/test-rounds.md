@@ -1136,6 +1136,36 @@ given more time a line; neither is in the studio, and they wait for the owner's 
 
 Rounds 20 and 21 were drawn again with all of these (timeline and render only, no paid calls).
 
+## Round 22: three more new topics, one of them abstract
+
+Oct 30. Every fix above, on three topics drawn from subjects not yet tried: **AP Biology: how
+natural selection works** ("Is evolution the same thing as natural selection?"), **Environmental
+Science: how greenhouse gases warm the Earth**, and **Personal Finance: how compound interest
+grows money**. The draw first gave plate tectonics, too near the rock cycle; it was drawn again
+between the two topics with no process to draw, the Pythagorean theorem and compound interest.
+Lyria and the stand-in voice; $9.17 for the three ($3.04, $3.05, $3.09), every script kept whole,
+the fact-checks passed (natural selection's with 2 fixes in 2 rounds).
+
+- **Natural selection** is the night's clearest video: a vending machine restocked by its sales
+  as the analogy, three generations of beetles painted side by side with a bar under each
+  shifting from green to brown, a bird's close-up where the green beetle stands out ("Which
+  beetles do you think it spots first?"), the misconception right after (no beetle changed
+  colour), antibiotic resistance as the case in two dishes, and a rockfall for drift, so the
+  ending can answer the question: selection is one cause of evolution, not the same thing.
+- **Greenhouse gases**: a bathtub with its drain partly plugged; the close-up of the air brings
+  nitrogen, oxygen, carbon dioxide, water vapour and methane forward one at a time as each is
+  named, the rest resting.
+- **Compound interest** reads well (a snowball rolling down the hill of time; $1,000 at 10 %
+  worked year by year; a close-up of the $110 that shows the $10 interest earned) but its
+  painted chart contradicts it: simple-interest bars taller than the compound ones and every
+  year's interest the same height, the four mistakes the check found listed beside it for the
+  whole overview. A painter cannot draw numbers to scale; a scene with axes needs drawing (the
+  studio's SVG art), not painting. Its hook also gave the answer away before the question,
+  which the script asks it not to.
+
+Gemini heard the three songs as sung: overall 8 (natural selection, greenhouse) and 7 (compound
+interest, "cluttered with numbers").
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
