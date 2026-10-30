@@ -1,0 +1,20 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Spanish switches the verb after que into the subjunctive mood when the main clause expresses a wish, doubt, or feeling, because that action is only in someone's head and not stated as a fact.",
+      "why": "First, the main clause decides the mood: its verb either states a fact (sé) or expresses a wish, doubt, or feeling (espero). Second, wishes, doubts, and feelings (the WEIRDO triggers) present the action in the dependent clause as hoped for, doubted, or reacted to rather than reported as real, so that verb goes subjunctive. Third, there is usually a change of subject, as in one person hoping about another's action; with the same subject you use an infinitive instead. The word que doesn't cause it, it just links the clauses. So espero que vengas is subjunctive because espero is a hope, while sé que vienes stays indicative because knowing states a fact. To build the form, you take the yo form, drop the -o, and add the opposite ending (e for -ar, a for -er/-ir), so vengo becomes vengas.",
+      "what_if": "If the main clause stopped being the thing that decides the mood, and the verb after que just stayed indicative, then we'd get sentences like espero que vienes. The lesson says people would still understand you, but it would sound wrong and lose points on a test. It would also erase the difference between the panel (what is really happening) and the thought bubble (what's only in someone's head), so a hope or doubt would sound like a stated fact. The lesson doesn't say more about other consequences, and it doesn't fully explain the no creo que venga question, so I can't say for sure why dropping the no changes the verb to viene."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

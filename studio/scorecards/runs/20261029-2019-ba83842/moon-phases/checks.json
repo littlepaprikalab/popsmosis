@@ -1,0 +1,28 @@
+{
+  "problems": [
+    {
+      "line_id": "n23",
+      "rule": "name-not-said",
+      "detail": "lists \"full moon\" but never says it; dropped",
+      "repaired": true
+    },
+    {
+      "line_id": "p2-1",
+      "rule": "lyric-style",
+      "detail": "\"Next up, eclipses, when the three line up in a row\" narrates the picture instead of being sung",
+      "repaired": false
+    },
+    {
+      "line_id": "music",
+      "rule": "lyric-style",
+      "detail": "47 lines at 96 bpm sing for about 118 s, outside 120 to 160",
+      "repaired": false
+    },
+    {
+      "line_id": "v1-5",
+      "rule": "key-line",
+      "detail": "the key line \"Sun lights the facing side → half the Moon always lit\" runs 11 words, over 10",
+      "repaired": false
+    }
+  ]
+}

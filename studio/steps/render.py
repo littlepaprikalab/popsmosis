@@ -5,11 +5,14 @@
     out/hook_v.mp4, out/hook_v.jpg      the hook cut, 1080x1920, when the song has one (timeline_hook.json)
 
 The drawing is in studio/render/: renderer.py draws a frame at a time, encode.py
-splits the frames across processes and adds the audio. No model calls.
+splits the frames across processes and adds the audio. The videos are made at once on
+one set of workers (encode_all()), each the same file it would be made alone, and each
+one's time in the step's line runs from the start of the step. No model calls.
 """
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from studio import media
@@ -30,26 +33,39 @@ def videos(job: Path) -> list[tuple[str, str]]:
 
 def run(job: Path, ask=None) -> str:
     """Render the videos; `ask` is unused (no model calls)."""
-    from studio.render.encode import EncodeError, encode, write_poster
+    from studio.render.encode import EncodeError, encode_all, write_poster
     from studio.render.renderer import RenderError
 
+    made = videos(job)
     # A re-render cut off halfway must not leave last time's videos looking done.
-    media.restart(job, *(path(video, layout) for video, layout in videos(job)
-                         for path in (media.video_path, media.poster_path)))
+    media.restart(job, *(path(video, layout) for video, layout in made for path in (media.video_path, media.poster_path)))
     locations = read(job / media.LOCATIONS, Locations)
-    done = []
-    for video, layout in videos(job):
+    timelines = []
+    for video, _ in made:
         timeline = read(job / media.timeline_path(video), Timeline)
         problems = timeline_problems(timeline, locations)
         if problems:
             raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
+        timelines.append(timeline)
+
+    def posters() -> None:
+        for (video, layout), timeline in zip(made, timelines):
+            try:
+                write_poster(job, timeline, job / media.poster_path(video, layout), layout)
+            except RenderError as e:
+                raise StepFailed(f"{video}: {e}") from e
+
+    # All the videos at once, on one set of workers (encode_all), and their posters drawn meanwhile.
+    with ThreadPoolExecutor(1) as drawing:
+        drawn = drawing.submit(posters)
         try:
-            write_poster(job, timeline, job / media.poster_path(video, layout), layout)
-            rendered = encode(job, timeline, job / media.video_path(video, layout), layout)
-        except (RenderError, EncodeError) as e:
-            raise StepFailed(f"{video}: {e}") from e
-        done.append(f"{video} {timeline.duration:.0f} s in {rendered.seconds:.0f} s")
-    return "rendered " + ", ".join(done)
+            rendered = encode_all(job, [(timeline, job / media.video_path(video, layout), layout)
+                                        for (video, layout), timeline in zip(made, timelines)])
+        except EncodeError as e:
+            raise StepFailed(f"{made[e.index][0]}: {e}") from e
+        drawn.result()
+    return "rendered " + ", ".join(f"{video} {timeline.duration:.0f} s in {done.seconds:.0f} s"
+                                   for (video, _), timeline, done in zip(made, timelines, rendered))
 
 
 def is_done(job: Path) -> bool:

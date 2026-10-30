@@ -16,7 +16,7 @@ skia = pytest.importorskip("skia", reason="skia-python is not installed (or its 
 
 from studio import jobs, media
 from studio.render import primitives as p
-from studio.render.encode import EncodeError, audio_filter, encode, poster_time, ranges, write_poster
+from studio.render.encode import EncodeError, audio_filter, encode, encode_all, poster_time, ranges, write_poster
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
     AudioClip,
@@ -624,6 +624,43 @@ def test_a_video_encodes_in_parts_with_its_audio_added_once(job, tmp_path):
     data = rendered.path.read_bytes()
     assert data.index(b"moov") < data.index(b"mdat")  # +faststart: it plays before it has downloaded
     assert not list(tmp_path.glob(".*partial"))
+
+
+@needs_ffmpeg
+def test_videos_made_at_once_on_one_set_of_workers_are_the_files_made_one_by_one(job, tmp_path):
+    song, lesson = short_timeline(job, "song"), short_timeline(job, "lesson")
+    # A video of another length, so its ranges fall elsewhere: the line alone.
+    lesson = Timeline.model_validate({**lesson.model_dump(), "duration": 1.0, "beats": [lesson.beats[0].model_dump()],
+                                      "audio": [lesson.audio[0].model_dump()]})
+    alone = [encode(job, timeline, tmp_path / f"alone_{timeline.video}.mp4", parts=2) for timeline in (song, lesson)]
+    together = encode_all(job, [(song, tmp_path / "song.mp4", "h"), (lesson, tmp_path / "lesson.mp4", "h")], parts=2)
+    assert [r.path.name for r in together] == ["song.mp4", "lesson.mp4"]
+    assert [r.frames for r in together] == [r.frames for r in alone] == [60, 30]
+    for one, both in zip(alone, together):
+        assert both.path.read_bytes() == one.path.read_bytes()
+
+
+@needs_ffmpeg
+def test_a_video_that_cannot_be_made_is_named_by_its_place_in_the_list(job, tmp_path):
+    broken = short_timeline(job, "lesson")
+    broken.audio[0] = AudioClip(path="audio/missing.mp3", at=0)
+    with pytest.raises(EncodeError, match="no audio file audio/missing.mp3") as raised:
+        encode_all(job, [(short_timeline(job, "song"), tmp_path / "song.mp4", "h"), (broken, tmp_path / "lesson.mp4", "h")],
+                   parts=2)
+    assert raised.value.index == 1
+
+
+@needs_ffmpeg
+def test_a_video_whose_audio_cannot_be_added_is_named_by_its_place_and_the_others_are_kept(job, tmp_path):
+    work = tmp_path / "job"
+    shutil.copytree(job, work)
+    song, lesson = short_timeline(work, "song"), short_timeline(work, "lesson")
+    (work / "audio" / "broken.mp3").write_bytes(b"not audio")
+    lesson.audio[0] = AudioClip(path="audio/broken.mp3", at=0, end=1.0)  # fails in its join, the last to finish
+    with pytest.raises(EncodeError) as raised:
+        encode_all(work, [(song, tmp_path / "song.mp4", "h"), (lesson, tmp_path / "lesson.mp4", "h")], parts=2)
+    assert raised.value.index == 1
+    assert (tmp_path / "song.mp4").stat().st_size and not (tmp_path / "lesson.mp4").exists()
 
 
 @needs_ffmpeg

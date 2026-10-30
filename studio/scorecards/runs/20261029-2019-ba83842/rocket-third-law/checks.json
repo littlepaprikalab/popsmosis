@@ -1,0 +1,52 @@
+{
+  "problems": [
+    {
+      "line_id": "p1-2",
+      "rule": "lyric-style",
+      "detail": "\"It pushes its own exhaust, so it works when the air is gone\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-6",
+      "rule": "lyric-style",
+      "detail": "\"The gas is light, it gets flung back fast, and out it goes\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "v2-10",
+      "rule": "lyric-style",
+      "detail": "\"Than at sea level, where the air pushes back at the engine's base\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "b-6",
+      "rule": "lyric-style",
+      "detail": "\"It coasts straight on at the same speed, it doesn't stop at all\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "music",
+      "rule": "lyric-style",
+      "detail": "55 lines at 112 bpm sing for about 118 s, outside 120 to 160",
+      "repaired": false
+    },
+    {
+      "line_id": "b-1",
+      "rule": "motion",
+      "detail": "8 lines in a row from b-1 on a diagram scene with nothing moving",
+      "repaired": false
+    },
+    {
+      "line_id": "v1-1",
+      "rule": "key-line",
+      "detail": "the key line \"Push on an object → it pushes back, equal and opposite\" runs 11 words, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-1",
+      "rule": "key-line",
+      "detail": "the key line \"Fuel runs out → no thrust → rocket coasts, same speed\" runs 11 words, over 10",
+      "repaired": false
+    }
+  ]
+}

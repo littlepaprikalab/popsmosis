@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "v2-3",
+      "rule": "key-line",
+      "detail": "the key line \"Voting by order → clergy and nobles outvote 2 to 1\" runs 11 words, over 10",
+      "repaired": false
+    },
+    {
+      "line_id": "b-5",
+      "rule": "key-line",
+      "detail": "the key line \"Troops near Paris → crowd storms Bastille → king loses Paris\" runs 11 words, over 10",
+      "repaired": false
+    }
+  ]
+}

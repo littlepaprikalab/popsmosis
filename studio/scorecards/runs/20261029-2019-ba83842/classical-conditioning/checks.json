@@ -1,0 +1,16 @@
+{
+  "problems": [
+    {
+      "line_id": "v2-4",
+      "rule": "lyric-style",
+      "detail": "\"So the dog learns the tone means the food is next in line\" runs 13 words, over 12",
+      "repaired": false
+    },
+    {
+      "line_id": "c1-1",
+      "rule": "lyric-style",
+      "detail": "the chorus says too little of the core idea: at most one of its words",
+      "repaired": false
+    }
+  ]
+}

@@ -360,6 +360,57 @@ class CheckReport(Strict):
     problems: list[Problem]
 
 
+# --- The fact audit, between the bundle and the fact-check ---------------------
+
+FactVerdict = Literal["CORRECT", "WRONG", "UNSURE"]
+Basis = Literal["study guide", "course knowledge"]
+
+
+class FactJudgement(Strict):
+    id: str
+    basis: Basis = Field(description='"study guide" when the guide covers this fact; otherwise "course knowledge"')
+    quote: str = Field(description='With basis "study guide": the guide\'s words it is judged by, copied exactly. Otherwise ""')
+    verdict: FactVerdict
+    problem: str = Field(description='WRONG or UNSURE: what is wrong, or what you cannot confirm, in one sentence. Otherwise ""')
+    corrected: str = Field(description='WRONG: the fact rewritten to be correct. Otherwise ""')
+
+
+class FactAudit(Strict):
+    facts: list[FactJudgement]
+
+
+class AuditedFact(Strict):
+    id: str
+    text: str  # as the bundle has it after the audit: a corrected fact's correction
+    verdict: FactVerdict | None  # the last verdict, on this text; None: never got one
+    basis: Basis | Literal[""]  # "" with no verdict
+    quote: str
+    problem: str
+    call: int  # the call that gave the verdict; 0 if none did
+    cited_by: list[str]  # the lyrics and narration sentences written from it (their fact_id)
+
+
+class FactCorrection(Strict):
+    id: str
+    before: str
+    after: str
+    problem: str
+    basis: Basis
+    cited_by: list[str]  # the lines the fact-check reads against `after`, told what `before` said
+
+
+class AuditReport(Strict):
+    """audit.json: the verdict on every fact of the bundle, and the corrections made to them."""
+
+    status: Literal["passed", "failed"]
+    reason: str
+    judged_against: Basis  # "study guide" when the learner gave one, else "course knowledge"
+    audience: str  # the level the facts were judged at
+    calls: int
+    facts: list[AuditedFact]
+    corrections: list[FactCorrection]
+
+
 # --- Step 2: the fact-check ---------------------------------------------------
 
 
@@ -391,9 +442,23 @@ class Correction(Strict):
     round: int
     kind: Literal["lyric", "narration", "lesson", "frq", "keyline"]  # "frq": as for CheckedLine
     ids: list[str]
-    before: str
+    before: str  # a couplet's lines joined by "\n"
     after: str
     problem: str
+    # Who wrote `after`. Kept out of factcheck.json, which a studio from before the songwriter must still read (its
+    # models refuse a field they do not know): songwriter.json beside it lists the songwriter's.
+    by: Literal["checker", "songwriter"] = Field(default="checker", exclude=True)
+
+
+class RewrittenCouplet(Strict):
+    id: str
+    lines: list[str] = Field(description="The couplet rewritten, a line for each line it had, in order")
+
+
+class LyricRewrite(Strict):
+    """What the songwriter writes for the couplets the fact-check failed (studio/steps/songwriter.py)."""
+
+    couplets: list[RewrittenCouplet]
 
 
 class FactCheckReport(Strict):

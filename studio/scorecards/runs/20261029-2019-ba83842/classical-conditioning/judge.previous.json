@@ -1,0 +1,34 @@
+{
+  "hook": {
+    "reason": "The title line \"Play a sound, then serve the meal\" is concrete, made of actions on real things, and sings back easily, and it names the pairing move. It does not carry the payoff that the sound alone triggers the response, so it is the setup rather than the whole core idea. The lesson opens on a real question, \"Why does the lunch bell make you hungry?\", and the narration opens on the lunch bell, which is the learner's world. That is a strong set of openings, a little short of the full idea in miniature.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The weather forecast (\"dark clouds come to mean rain\") fits the whole job: a signal that predicts an important event, so the body reacts early. The song sets it up in v1-1 and returns to it in the bridge (\"The forecast's just on mute\"), in c3-1 and in the outro (\"that sound became a forecast of a meal\"). The lesson and narration use it, and the lunch bell fits inside it. It fades in the middle verses, which are mostly term definitions, and the chorus before c3 says \"link\" more than \"forecast\".",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and narration walk the chain in order: reflex, then neutral tone, then pairing so the tone predicts food, then the tone alone triggers salivation, then extinction and recovery with \"suppresses rather than erasing\". Rescorla adds the reason the pairing works: \"the tone signals food is coming\". The song carries the gist in c1-4 and the bridge. The weak spot is link 3 to 4: the lesson never says why a tone after the food works poorly, which it leaves for the check question. Extra material (Garcia, generalization, operant) sits beside the chain rather than inside it.",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Read in order, the seven lines tell the chain from the reflex to extinction and suppression. Most are steps with arrows, such as \"Extinction: tone without food → conditioned response weakens\". The first line is a question rather than a step, and it is not what the song or narration says at that point. \"Acquisition: tone just before food → tone predicts food\" begins at c1-1, which is the sung pairing, so the placement works. \"After rest → spontaneous recovery\" begins at b-5, one line after the extinction step finishes. Several lines carry the terms \"unconditioned\" and \"conditioned\", which the learner needs. The link that the tone alone triggers the response is present but is a bare label with arrow shape.",
+    "score": 4
+  },
+  "errors": [
+    "Song v1-6: \"the drool's the unconditioned response, it's hard-wired\" — \"hard-wired\" is slightly loose, since the study guide says unlearned and automatic. This is a minor imprecision only.",
+    "Song p2-2 \"Operant ties reinforcement or punishment to how you act\" — acceptable simplification, but \"to how you act\" blurs that operant conditioning links a behavior to its consequence."
+  ],
+  "accuracy": {
+    "reason": "The facts match the study guide throughout: half-second timing, Rescorla on reliability, Garcia on single-pairing aversion, the Little Albert details, and extinction as suppression not erasure. The lesson even labels itself \"the simplified textbook version\". The only imprecisions are the loose \"hard-wired\" in v1-6 and \"ties ... to how you act\" in p2-2, which a teacher might tighten but a learner would not carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a short, rhyming chant (\"Play a sound, then serve the meal / Again and again, till the link gets real\") that a learner could sing back after two hearings, and the bridge rhymes cleanly. Many verse lines are textbook sentences that overrun the bar, such as v2-3 \"Not just how often they're paired, it's how reliable the sign\" and v1-7 \"A tone before training's a neutral stimulus, nothing more\", and v2-1 \"Tone, then food, over and over, that's acquisition\" reads like a caption. Some rhymes are forced: \"nothing more / dry as before\", \"a lesson of its own\", and \"reliable the sign\". The p2 pre-chorus is a classical-versus-operant definition that does not sing well. The chorus is strong, but the verses are heavy.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "The lesson opens on a question, gives the forecast picture, builds the steps with causes, and has a \"Predict:\" prompt answered at once (\"It salivates anyway\"). It names the misconception and says what differs: the trigger. It ends on a check that needs the idea: \"Why would a tone that plays after the food work poorly\". It is weakened by the load of new terms (US, UR, NS, CS, CR, acquisition, extinction, spontaneous recovery, generalization, discrimination), the table drifting toward a list, and Garcia and operant additions near the end that dilute the core idea.",
+    "score": 3
+  }
+}

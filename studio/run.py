@@ -6,6 +6,7 @@ from the queue and runs this on its id. The steps, each done once its file exist
 
     request    request.json, attachments/   the topic and the files sent with it
     bundle     bundle.json, checks.json
+    audit      audit.json                   the facts judged; done once it has passed the facts bundle.json has
     factcheck  factcheck.json               done only once it has passed
     post       posted.json                  the lesson, bundle and fact-check, saved on the API
 
@@ -60,11 +61,12 @@ from studio import brain, checks, jobs, knobs, ledger
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
-from studio.schemas import Bundle, FactCheckReport, Request
+from studio.schemas import AuditReport, Bundle, FactCheckReport, Request
+from studio.steps import audit as audit_step
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
 
-STEPS = ledger.LESSON_STEPS  # ("request", "bundle", "factcheck", "post")
+STEPS = ledger.LESSON_STEPS  # ("request", "bundle", "audit", "factcheck", "post")
 DONE, FAILED, STOPPED = "DONE", "FAILED", "STOPPED"
 EXIT_CODES = {DONE: 0, FAILED: 1, STOPPED: 3}
 ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
@@ -105,6 +107,8 @@ def is_done(job: Path, step: str) -> bool:
             jobs.read(job / "request.json", Request)
         elif step == "bundle":
             checks.load(job / "bundle.json")
+        elif step == "audit":
+            return audit_step.is_done(job)
         elif step == "factcheck":
             return jobs.read(job / "factcheck.json", FactCheckReport).status == "passed"
         else:
@@ -414,13 +418,22 @@ def make_bundle(job: Path, api: Api, question: dict, ask, note: str = "") -> str
     return f"{bundle.course} / {bundle.topic}"
 
 
+def make_audit(job: Path, api: Api, question: dict, ask) -> str:
+    report = audit_step.run(job, ask=ask)
+    if report.status == "failed":
+        raise StepFailed(report.reason)
+    return audit_step.describe(report)
+
+
 def make_factcheck(job: Path, api: Api, question: dict, ask) -> str:
     report = factcheck_step.run(job, ask=ask)
     if report.status == "failed":
         raise StepFailed(report.reason)
     dropped = len(factcheck_step.dropped_tags(report))
     still = len(factcheck_step.dropped_motions(report))
+    sung = sum(c.by == "songwriter" for c in report.corrections)
     return f"passed in {report.rounds} round(s), {len(report.corrections)} correction(s)" + (
+        f", {sung} by the songwriter" if sung else "") + (
         f", {dropped} tag(s) dropped" if dropped else "") + (f", {still} motion(s) left out" if still else "")
 
 
@@ -463,7 +476,8 @@ def _claim_videos(job: Path, api: Api) -> None:
         print(f"post: videos not claimed: {type(e).__name__}: {e}", file=sys.stderr)
 
 
-STEP_RUNNERS = {"request": make_request, "bundle": make_bundle, "factcheck": make_factcheck, "post": post_lesson}
+STEP_RUNNERS = {"request": make_request, "bundle": make_bundle, "audit": make_audit, "factcheck": make_factcheck,
+                "post": post_lesson}
 
 
 def lesson_model(job: Path) -> str | None:
@@ -532,9 +546,14 @@ def summary(question_id: str) -> str:
                 if s["result"] == DONE:
                     took[s["step"]] = s["seconds"]
         timed = [f"{name} {took[name] / 60:.1f} min"
-                 for name in ("bundle", "factcheck", "install", "art", "audio", "timing", "render", "upload") if name in took]
+                 for name in ("bundle", "audit", "factcheck", "install", "art", "audio", "timing", "render", "upload")
+                 if name in took]
         if timed:
             parts.append(", ".join(timed) + ".")
+    if (job / "audit.json").exists():
+        audit = jobs.read(job / "audit.json", AuditReport)
+        parts.append(f"Fact audit {audit.status}: " + (audit_step.describe(audit) if audit.status == "passed"
+                                                       else _short(audit.reason, 160)) + ".")
     if (job / "factcheck.json").exists():
         report = jobs.read(job / "factcheck.json", FactCheckReport)
         dropped = len(factcheck_step.dropped_tags(report))

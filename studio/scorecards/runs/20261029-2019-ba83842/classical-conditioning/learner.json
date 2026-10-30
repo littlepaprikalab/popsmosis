@@ -1,0 +1,23 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "Classical conditioning is learning to link two stimuli, so a neutral signal that reliably comes just before something that triggers a reflex ends up triggering that same kind of response by itself.",
+      "why": "First, something like food (the US) automatically makes the dog salivate (the UR) with no learning. Second, a tone starts out neutral (NS), so it does nothing. Third, the tone is paired with the food over and over, ideally coming about half a second before it, so the tone predicts the food. Fourth, the dog's brain learns that the tone means food is coming, so the body gets ready ahead of time. After enough pairings the tone alone makes the dog salivate: the tone is now a CS and the salivating is a CR. The lesson says Rescorla showed it depends on how reliably the tone predicts the food, not just how often they happen together. The lesson doesn't explain what happens in the brain to make this link.",
+      "what_if": "If the tone stopped reliably coming before the food, for example if it played after the food or was just as likely to happen without food, conditioning would work poorly or not happen. The lesson says the signal has to predict the US, so a tone that comes after the food can't act as a forecast. The dog wouldn't learn that the tone means food is coming, so it wouldn't salivate to the tone alone. The lesson doesn't give the exact reason a tone after the food fails beyond the prediction idea."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        false
+      ],
+      "missing": [
+        "If the tone keeps sounding without food, the response weakens (extinction) but can return after a rest, because the link was suppressed, not erased."
+      ]
+    },
+    "passed": true
+  }
+}

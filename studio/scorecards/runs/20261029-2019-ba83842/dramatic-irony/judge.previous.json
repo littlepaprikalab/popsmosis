@@ -1,0 +1,36 @@
+{
+  "hook": {
+    "reason": "The title line \"Wait, Romeo, she's only sleeping\" is concrete, singable after one hearing, and opens and closes the chorus and outro. It names the tomb moment rather than the whole core idea (the gap between audience and character knowledge), so it's a vivid part, not the big move in miniature. The lesson opens on a real question (\"Why would Shakespeare tell you how his play ends before the first scene even starts?\"), and the narration opens on a viewer on the couch, which is from the learner's world.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "The scary-movie viewer yelling \"Don't open that door!\" is an apt everyday picture of what dramatic irony does, and it fits the whole idea: the audience sees what the character can't. It is set up in verse 1 and returns in the outro (\"We shout at the stage, but he can't hear a thing\"), and the lesson and narration both use it. It is thinner in the bridge and middle chorus, and the narration drops it after n4, but it stays coherent and doesn't mislead.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson walks the chain in order: the Prologue gives the ending, characters act on beliefs, the Lady Capulet example shows the audience seeing the gap, and the gap builds suspense. The tomb section adds the widest gap and the cause (the quarantined letter). Some links are asserted more than explained, since the lesson says \"The characters act on what they believe\" and moves on, and the dread step is stated in the lesson's opening paragraph and again at n12 rather than reasoned out. The song carries the gist through the chorus lines \"He thinks she's gone and we're filled with dread\" and \"We know the plan in the letter he never read\".",
+    "score": 4
+  },
+  "key_lines": {
+    "reason": "Most lines are real steps (\"Prologue reveals the ending → audience knows more than characters\", \"Letter blocked → Romeo hears only that Juliet is dead\"). Several problems remain. The first is a question, not a step. The second is a label equation (\"Viewer yelling at a movie = audience at a play\"). \"Not a twist...\" is a side-note on the misconception, not a chain link. \"We know what they don't → suspense and dread\" starts at v2-3, the family mourning, so it is placed where a different step is sung, and the order jumbles the chain (the letter comes last, after the tomb). The set doesn't read as a clean first-link-to-core-idea chain.",
+    "score": 3
+  },
+  "errors": [
+    "\"Forty-two hours, then she'll open up her eyes\" / \"makes her seem dead for forty-two hours\": in the play the friar says the potion lasts \"two and forty hours,\" which is consistent; no error here, but it is specific detail beyond what students need.",
+    "\"Fourteen lines before a single scene begins\" (v1-3): the Prologue is fourteen lines, but the song says it \"tells you how the lovers' story ends\" while the lesson accurately says the lovers will take their lives. This is a fair simplification and not an error.",
+    "\"Friar John's in quarantine, it's stuck in his hands\" (b-2): a loose phrase; the letter is stuck with him, not literally in his hands. Minor imprecision in the song.",
+    "\"Prologue reveals the ending → audience knows more than characters\": the Prologue states the lovers' deaths and the feud ending, but not the potion or the letter; the song's \"we know the plan in the letter he never read\" relies on the audience seeing the friar's plan onstage, which is correct, but a learner could think the Prologue gives away everything."
+  ],
+  "accuracy": {
+    "reason": "The plot, the Prologue (fourteen-line sonnet spoken by the Chorus), the quarantine of Friar John, Balthasar's news, the \"two and forty hours\" and the red lips and cheeks all match the play, and the three types of irony are used correctly. The misconception is handled correctly. The lines are only loosely worded in places (\"it's stuck in his hands\"; \"Romeo notices lips and cheeks still red\" is the play's detail that Romeo says death has not yet taken her beauty), which a teacher would tighten. Nothing a learner would carry away wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "At 92 bpm, most lines are natural, conversational and rhyme cleanly (\"sake/heartbreak\", \"tomb/soon\", \"feud/you\"), and the chorus chant \"Wait, Romeo, she's only sleeping\" sings back easily. Several verse lines overrun the bar (\"So you watch them fall in love already knowing\", \"Now her mother thinks she's weeping for her cousin's sake\"), and the bridge narrates plot in a rushed, caption-like way (\"Balthasar rides to Romeo and says that she's dead\"). The rhyme \"already knowing / where it's going\" is a near-rhyme, \"stuck in his hands\" bends meaning for the rhyme with \"lands\", and \"sleeping / leading\" in the chorus is a loose rhyme.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a question, gives the big picture with the movie frame, builds the how-it-works steps, includes one prediction question answered right after (\"What do you think Romeo believes when he finds Juliet in the tomb?\"), names the misconception and why it's wrong, and closes with a check only someone who understood can answer (\"Why does the tomb scene feel so tense, even though the Prologue already told you...\"). It is pitched well for grade 9. It carries many new terms (dramatic irony, suspense, situational, verbal, tragedy, Prologue, Chorus) and a lot of plot detail (Friar John, Balthasar-less, forty-two hours), and the stray line \"Got a follow-up question? Ask away.\" is worth cutting.",
+    "score": 4
+  }
+}

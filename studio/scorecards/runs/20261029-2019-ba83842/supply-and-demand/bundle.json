@@ -1,0 +1,2720 @@
+{
+  "course": "Economics",
+  "topic": "How supply and demand set a price",
+  "audience": "high school",
+  "core_idea": "Price moves until buyers want exactly what sellers offer: shortages push it up, surpluses push it down.",
+  "why_chain": [
+    "When the price rises, buyers want less, because the good now costs more compared with other things they could buy.",
+    "When the price rises, sellers offer more, because selling more becomes more profitable.",
+    "Below the equilibrium price, buyers want more than sellers offer, so the shortage lets sellers raise the price.",
+    "Above the equilibrium price, sellers offer more than buyers want, so the surplus pushes sellers to cut the price.",
+    "At the equilibrium price the amounts match, so nothing pushes the price and it stops moving."
+  ],
+  "key_terms": [
+    "demand",
+    "supply",
+    "law of demand",
+    "law of supply",
+    "equilibrium price",
+    "shortage",
+    "surplus",
+    "price ceiling"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "Demand is how much of a good buyers are willing and able to buy at each price. By the law of demand, when the price of a good rises, the quantity demanded falls, and when the price falls, the quantity demanded rises, because a higher price makes the good cost more compared with other things buyers could spend their money on; so the demand curve slopes down. Supply is how much sellers are willing and able to offer at each price. By the law of supply, when the price rises, the quantity supplied rises, and when it falls, the quantity supplied falls, because a higher price makes selling more profitable; so the supply curve slopes up. On a supply and demand graph, price is on the vertical axis and quantity on the horizontal axis. A change in the price moves buyers and sellers along their curves; a change in something else shifts a whole curve, which is the next topic in the unit: for example, a new trend that makes more people want a good shifts the demand curve to the right, which raises both the equilibrium price and the equilibrium quantity.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "The equilibrium price is the one price at which the quantity demanded equals the quantity supplied; on the graph it is where the demand curve and the supply curve cross, the equilibrium point. When the price is below equilibrium, buyers want more than sellers offer, a shortage, so buyers compete for the scarce goods and sellers can raise the price; as it rises, buyers want less and sellers offer more until the shortage closes. When the price is above equilibrium, sellers offer more than buyers want, a surplus, so unsold goods pile up and sellers cut the price; as it falls, buyers want more and sellers offer less until the surplus closes. At the equilibrium price there is no shortage to push the price up and no surplus to push it down, so it stops moving. So in a competitive market, shortages push the price up and surpluses push it down until buyers want exactly what sellers offer, and no one has to know or announce the equilibrium price: buyers and sellers reacting to shortages and surpluses push the price there by themselves. A common mistake is to think sellers simply choose any price they like: in a competitive market a seller who charges above equilibrium is left with unsold goods, a surplus, and must cut the price, so buyers and sellers together set the price.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "When a limited sneaker release has many more buyers than pairs, there is a shortage: the pairs sell out quickly, and resellers can charge more than the store price because buyers compete for the scarce pairs. When a big summer harvest brings more strawberries to stores than shoppers want at the old price, there is a surplus, and stores cut the price so the strawberries sell before they spoil. A market works like an auction that runs both ways: the bidders stand for demand, the items for sale stand for supply, and the auctioneer's call stands for the price; while more hands are raised than there are items, the price climbs, and while items sit with no hands raised, the price drops, until the hands raised match the items for sale. The same push and pull of supply and demand sets wages in the labor market, where workers supply labor and employers demand it.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "A price ceiling is a legal maximum price. When a government sets a price ceiling below the equilibrium price, such as a rent cap set below the market rent, the price cannot rise to close the gap, so the shortage does not go away: at the low price buyers still want more than sellers offer, sellers offer less than they would at the equilibrium price, and buyers end up waiting in lines or on waiting lists for goods that run out. A price ceiling set above the equilibrium price has no effect, because the market price is already below it.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "Many students think sellers simply choose any price they like. In a competitive market, a seller who charges above equilibrium is left with a surplus of unsold goods and must cut the price, so buyers and sellers together set the price.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as an economics textbook opener draws it, of a sneaker store: a shelf on the right holding just three pairs of turquoise sneakers, and a long line of shoppers in pink jackets on the left, waiting their turn and facing the shelf. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Shopper line",
+          "aliases": [
+            "line of shoppers"
+          ],
+          "sam_phrase": "pink jackets",
+          "color_hex": "#FF7AC8"
+        },
+        {
+          "name": "Sneakers",
+          "aliases": [
+            "sneakers"
+          ],
+          "sam_phrase": "turquoise sneakers",
+          "color_hex": "#3FE0D0"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as an economics textbook draws an everyday comparison, of an auction room: on the left, a crowd of bidders in light blue shirts with their hands raised; in the middle, a long table holding a few orange gift boxes, the items for sale; on the right, an auctioneer standing behind a yellow podium. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Bidders",
+          "aliases": [
+            "bidders"
+          ],
+          "sam_phrase": "blue crowd",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Items for sale",
+          "aliases": [
+            "items for sale",
+            "items"
+          ],
+          "sam_phrase": "orange boxes",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "Auctioneer",
+          "aliases": [
+            "auctioneer"
+          ],
+          "sam_phrase": "yellow podium",
+          "color_hex": "#FFE04D"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational diagram, as an economics textbook draws it, of a supply and demand graph: a vertical price axis up the left side and a horizontal quantity axis along the bottom, both thin white lines; a light blue demand curve drawn as a straight line sloping down from the upper left to the lower right; an orange supply curve drawn as a straight line sloping up from the lower left to the upper right; a yellow dot where the two curves cross in the middle. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Demand curve",
+          "aliases": [
+            "demand curve"
+          ],
+          "sam_phrase": "blue line",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Supply curve",
+          "aliases": [
+            "supply curve"
+          ],
+          "sam_phrase": "orange line",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "Equilibrium point",
+          "aliases": [
+            "equilibrium point",
+            "equilibrium price",
+            "equilibrium"
+          ],
+          "sam_phrase": "yellow dot",
+          "color_hex": "#FFE04D"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "gaps",
+      "image_prompt": "Educational diagram, as an economics textbook draws it, of a supply and demand graph: a vertical price axis up the left side and a horizontal quantity axis along the bottom, both thin white lines; a light blue demand curve drawn as a straight line sloping down from the upper left to the lower right; an orange supply curve drawn as a straight line sloping up from the lower left to the upper right; a yellow dot where the two curves cross in the middle. Below the yellow dot, a red horizontal bar reaching from the orange supply curve on its left to the light blue demand curve on its right. Above the yellow dot, a purple horizontal bar reaching from the light blue demand curve on its left to the orange supply curve on its right. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Demand curve",
+          "aliases": [
+            "demand curve"
+          ],
+          "sam_phrase": "blue line",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Supply curve",
+          "aliases": [
+            "supply curve"
+          ],
+          "sam_phrase": "orange line",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "Equilibrium point",
+          "aliases": [
+            "equilibrium point",
+            "equilibrium price",
+            "equilibrium"
+          ],
+          "sam_phrase": "yellow dot",
+          "color_hex": "#FFE04D"
+        },
+        {
+          "name": "Shortage gap",
+          "aliases": [
+            "shortage",
+            "shortages"
+          ],
+          "sam_phrase": "red bar",
+          "color_hex": "#FF5A6E"
+        },
+        {
+          "name": "Surplus gap",
+          "aliases": [
+            "surplus",
+            "surpluses"
+          ],
+          "sam_phrase": "purple bar",
+          "color_hex": "#B57BFF"
+        }
+      ],
+      "stage_of": ""
+    },
+    {
+      "id": "price-ceiling",
+      "image_prompt": "Educational diagram, as an economics textbook draws it, of a supply and demand graph with a price ceiling: a vertical price axis up the left side and a horizontal quantity axis along the bottom, both thin white lines; a light blue demand curve drawn as a straight line sloping down from the upper left to the lower right; an orange supply curve drawn as a straight line sloping up from the lower left to the upper right; a yellow dot where the two curves cross in the middle. Below the yellow dot, a green horizontal line running across the whole graph. Just below the green line, a red horizontal bar reaching from the orange supply curve on its left to the light blue demand curve on its right. A clean textbook schematic, each object simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Demand curve",
+          "aliases": [
+            "demand curve"
+          ],
+          "sam_phrase": "blue line",
+          "color_hex": "#4FA3FF"
+        },
+        {
+          "name": "Supply curve",
+          "aliases": [
+            "supply curve"
+          ],
+          "sam_phrase": "orange line",
+          "color_hex": "#FF9F40"
+        },
+        {
+          "name": "Equilibrium point",
+          "aliases": [
+            "equilibrium point",
+            "equilibrium price",
+            "equilibrium"
+          ],
+          "sam_phrase": "yellow dot",
+          "color_hex": "#FFE04D"
+        },
+        {
+          "name": "Price ceiling",
+          "aliases": [
+            "price ceiling",
+            "rent cap"
+          ],
+          "sam_phrase": "green line",
+          "color_hex": "#4CD97B"
+        },
+        {
+          "name": "Shortage gap",
+          "aliases": [
+            "shortage",
+            "shortages"
+          ],
+          "sam_phrase": "red bar",
+          "color_hex": "#FF5A6E"
+        }
+      ],
+      "stage_of": ""
+    }
+  ],
+  "lesson_markdown": "# How Supply and Demand Set a Price\n\n**Why do limited sneakers resell for more than the store price, while strawberries get cheaper after a big summer harvest?**\n\nBoth prices follow one rule. In a competitive market, the price moves until buyers want exactly what sellers offer: shortages push it up, surpluses push it down.\n\n## Two sides of every market\n\n| Side | What it means | When the price rises |\n|---|---|---|\n| **Demand** | How much buyers are willing and able to buy at each price | Buyers want less: the **law of demand** |\n| **Supply** | How much sellers are willing and able to offer at each price | Sellers offer more: the **law of supply** |\n\nBuyers want less at a higher price because the good now costs more compared with other things they could spend on. Sellers offer more because selling more becomes more profitable. On a graph with price up the side and quantity along the bottom, that makes the demand curve slope down and the supply curve slope up.\n\n## How the price finds its level\n\nThink of a market as an auction that runs both ways: while more hands are raised than there are items, the price climbs, and while items sit with no hands raised, the price drops.\n\n1. **Price too low → shortage.** Buyers want more than sellers offer, so buyers compete for the scarce goods and sellers can raise the price.\n2. **Price too high → surplus.** Sellers offer more than buyers want, so unsold goods pile up and sellers cut the price.\n3. **Each move closes the gap.** A rising price makes buyers want less and sellers offer more; a falling price makes buyers want more and sellers offer less.\n4. **The price settles at the equilibrium price**, the one price where the quantity demanded equals the quantity supplied, where the two curves cross.\n\n**Predict:** once the price reaches equilibrium, what will push it anywhere else?\n\nNothing will: there is no shortage to push it up and no surplus to push it down, so it stops moving.\n\nHere's the surprising part: no one has to know or announce the equilibrium price. Buyers and sellers reacting to shortages and surpluses push the price there by themselves.\n\n## In real life\n\n- **A sneaker drop:** many more buyers than pairs is a shortage, so the pairs sell out and resellers can charge more than the store price.\n- **Summer strawberries:** a big harvest brings more strawberries than shoppers want at the old price, a surplus, so stores cut the price.\n\nThe same push and pull sets wages in the labor market, where workers supply labor and employers demand it.\n\n## A common mistake\n\nIt's tempting to think sellers simply choose any price they like. In a competitive market, a seller who charges above equilibrium is left with unsold goods, so buyers and sellers together set the price.\n\n## When the price can't move\n\nA **price ceiling** is a legal maximum price. When one is set below the equilibrium price, such as a rent cap below the market rent, the price cannot rise to close the gap. The shortage stays, sellers offer less than they would at equilibrium, and buyers end up in lines or on waiting lists.\n\nNext in the unit: shifts. A new trend that makes more people want a good shifts the whole demand curve right, which raises both the equilibrium price and the equilibrium quantity.\n\n*This lesson uses the simple model of a competitive market.*\n\n**Check yourself:** A store prices a new game console below its equilibrium price. What happens to the price next, and why?\n\nHave a follow-up question? Ask it below!",
+  "music": {
+    "positive_styles": [
+      "K-pop",
+      "hip-hop verses",
+      "sharp clear rapped verses",
+      "male group vocals",
+      "big catchy sung chorus",
+      "punchy synth bass",
+      "crisp claps",
+      "bright synth stabs",
+      "100 bpm",
+      "vocals start immediately",
+      "no instrumental intro",
+      "vocals upfront in the mix",
+      "clear diction",
+      "educational"
+    ],
+    "negative_styles": [
+      "mumbled vocals",
+      "long instrumental intro",
+      "vocals buried in the mix",
+      "explicit lyrics",
+      "screamed vocals",
+      "heavy distortion"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "Buyers and sellers set it side by side",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Think of the market as an auction room",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "More bidders than items, and the price will zoom",
+      "names": [
+        "bidders",
+        "items"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Items left sitting with no hands in the air",
+      "names": [
+        "Items"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "The auctioneer drops the price right there",
+      "names": [
+        "auctioneer"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Climb the demand curve and the buyers want less",
+      "names": [
+        "demand curve"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Other things look cheaper, so they spend on the rest",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "That's the law of demand, so the curve slopes down",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Lower the price and more buyers come around",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-9",
+      "section": "verse",
+      "text": "Law of supply: a higher price, the profit's bigger",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-10",
+      "section": "verse",
+      "text": "So sellers offer more, and the supply curve climbs higher",
+      "names": [
+        "supply curve"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-11",
+      "section": "verse",
+      "text": "Nobody's in charge of where the price lands",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-12",
+      "section": "verse",
+      "text": "Equilibrium's found by buyers' and sellers' hands",
+      "names": [
+        "Equilibrium"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "A seller can't just name it, charge too high and it sits",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "Stuck with a surplus, so they cut the price a bit",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "Got a shortage? Then the price takes flight",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Got a surplus? Then the price will drop",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Till buyers want what's there, then the sliding stops",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Set the price too low and the buyers pile in",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "They want more than sellers offer, so a shortage begins",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "More buyers than pairs, the sneakers sell out fast",
+      "names": [
+        "sneakers"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Resellers ask more than the store had asked",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Each time it climbs, the buyers want a little less",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "And sellers bring more, so the shortage gets compressed",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Big summer harvest, the berries piling high",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "A surplus, so the stores cut the price, so more will buy",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-9",
+      "section": "verse",
+      "text": "As it falls, more buyers walk through the door",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-10",
+      "section": "verse",
+      "text": "Sellers offer less till the surplus is no more",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-11",
+      "section": "verse",
+      "text": "Now they meet at equilibrium, where the curves collide",
+      "names": [
+        "equilibrium"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v2-12",
+      "section": "verse",
+      "text": "No shortage, no surplus, so the price won't slide",
+      "names": [
+        "shortage",
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "Next, a new trend shifts the demand curve right",
+      "names": [
+        "demand curve"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Now the price and the amount both climb to a new height",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "Got a shortage? Then the price takes flight",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Got a surplus? Then the price will drop",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Till buyers want what's there, then the sliding stops",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "A rent cap's a price ceiling, set low by law",
+      "names": [
+        "rent cap",
+        "price ceiling"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "So the price can't climb to close the gap at all",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Buyers still want more than the sellers bring",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "So the shortage stays, the gap won't shrink",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "Sellers offer less at that capped-down rate",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "So the goods run out and the buyers wait",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Buyers on waiting lists, and the lines run long",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "The price can't move, so the shortage holds on",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "Shortage pushes up, surplus pushes down",
+      "names": [
+        "Shortage",
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Till it lands at equilibrium and stands its ground",
+      "names": [
+        "equilibrium"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "Got a shortage? Then the price takes flight",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Got a surplus? Then the price will drop",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Till buyers want what's there, then the sliding stops",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "Buyers and sellers set it side by side",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "From sneakers to strawberries, the same rise and slide",
+      "names": [
+        "sneakers"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Supply meets demand, the price sits tight",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "Picture a sneaker drop with a long line of shoppers and only a few pairs of sneakers on the shelf.",
+      "names": [
+        "line of shoppers",
+        "sneakers"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n2",
+      "text": "With many more buyers than pairs, the sneakers sell out, and resellers charge more than the store price.",
+      "names": [
+        "sneakers"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n3",
+      "text": "But when a big summer harvest brings extra strawberries, stores cut the price.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n4",
+      "text": "Both come from one rule: the price moves until buyers want exactly what sellers offer.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n5",
+      "text": "A market works like an auction: bidders stand for demand, items for sale for supply, and the auctioneer's call for the price.",
+      "names": [
+        "bidders",
+        "items for sale",
+        "auctioneer"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n6",
+      "text": "More hands than items, and the price climbs; items left with no hands raised, and it drops.",
+      "names": [
+        "items"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n7",
+      "text": "Economists draw this as a graph of price against quantity.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n8",
+      "text": "The demand curve shows how much buyers want at each price.",
+      "names": [
+        "demand curve"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "By the law of demand, a higher price means buyers want less, because the good costs more compared with other things they could buy.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "The supply curve shows how much sellers offer at each price.",
+      "names": [
+        "supply curve"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "By the law of supply, a higher price means sellers offer more, because selling becomes more profitable.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n12",
+      "text": "The curves cross at the equilibrium point, where the amounts match, and that price is the equilibrium price.",
+      "names": [
+        "equilibrium point",
+        "equilibrium price"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n13",
+      "text": "Below equilibrium, buyers want more than sellers offer: a shortage.",
+      "names": [
+        "equilibrium",
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "Buyers compete for the scarce goods, so sellers can raise the price.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "As it rises, buyers want less and sellers offer more, so the shortage closes.",
+      "names": [
+        "shortage"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n16",
+      "text": "Above equilibrium, sellers offer more than buyers want: a surplus.",
+      "names": [
+        "equilibrium",
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n17",
+      "text": "Unsold goods pile up, so sellers cut the price.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n18",
+      "text": "As it falls, buyers want more and sellers offer less, so the surplus closes.",
+      "names": [
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n19",
+      "text": "So what happens once the price reaches equilibrium?",
+      "names": [
+        "equilibrium"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n20",
+      "text": "It stops moving, because no shortage pushes it up and no surplus pushes it down.",
+      "names": [
+        "shortage",
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n21",
+      "text": "The surprise is that no one has to know or announce the equilibrium price.",
+      "names": [
+        "equilibrium price"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n22",
+      "text": "Many people think sellers simply choose any price they like.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n23",
+      "text": "But a seller who charges above equilibrium is stuck with a surplus, so buyers and sellers set the price together.",
+      "names": [
+        "equilibrium",
+        "surplus"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n24",
+      "text": "Next in the unit, a new trend shifts the demand curve right, raising both the equilibrium price and quantity.",
+      "names": [
+        "demand curve",
+        "equilibrium price"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n25",
+      "text": "The same push and pull sets wages, where workers supply labor and employers demand it.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n26",
+      "text": "A price ceiling is a legal maximum price, such as a rent cap.",
+      "names": [
+        "price ceiling",
+        "rent cap"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "Set below the equilibrium price, it stops the price from rising.",
+      "names": [
+        "equilibrium price"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "So the shortage stays, and sellers offer less than they would at equilibrium.",
+      "names": [
+        "shortage",
+        "equilibrium"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "Buyers end up waiting in lines or on waiting lists for goods that run out.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n30",
+      "text": "Price moves until buyers want exactly what sellers offer: shortages push it up, surpluses push it down.",
+      "names": [
+        "shortages",
+        "surpluses"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n31",
+      "text": "What goes in is what buyers want and sellers offer at each price; what comes out is one equilibrium price.",
+      "names": [
+        "equilibrium price"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n32",
+      "text": "It matters because this is how competitive markets set prices.",
+      "names": [],
+      "fact_id": "f2"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shopper line",
+        "Sneakers"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Sneakers",
+        "Shopper line"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Bidders",
+        "Auctioneer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "Bidders",
+        "zoom": 1.6
+      },
+      "spotlight": "Bidders",
+      "particles": [
+        "Bidders",
+        "Auctioneer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "Items for sale",
+        "zoom": 1.6
+      },
+      "spotlight": "Items for sale",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "analogy",
+      "camera": {
+        "target": "Auctioneer",
+        "zoom": 1.6
+      },
+      "spotlight": "Auctioneer",
+      "particles": [
+        "Auctioneer",
+        "Bidders"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Demand curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Equilibrium point",
+        "Demand curve"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Demand curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Demand curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "overview",
+      "camera": {
+        "target": "Demand curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "Law of demand",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Equilibrium point",
+        "Demand curve"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Supply curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-10",
+      "scene": "overview",
+      "camera": {
+        "target": "Supply curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Supply curve",
+      "particles": [
+        "Equilibrium point",
+        "Supply curve"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-11",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-12",
+      "scene": "overview",
+      "camera": {
+        "target": "Equilibrium point",
+        "zoom": 1.6
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [
+        "Supply curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Demand curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Equilibrium point",
+        "Surplus gap"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "gaps",
+      "camera": {
+        "target": "Surplus gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "gaps",
+      "camera": {
+        "target": "Shortage gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Equilibrium point",
+        "Shortage gap"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "gaps",
+      "camera": {
+        "target": "Shortage gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Demand curve",
+        "Shortage gap"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "hook",
+      "camera": {
+        "target": "Sneakers",
+        "zoom": 1.6
+      },
+      "spotlight": "Sneakers",
+      "particles": [
+        "Sneakers",
+        "Shopper line"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shopper line",
+        "Sneakers"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "gaps",
+      "camera": {
+        "target": "Shortage gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "gaps",
+      "camera": {
+        "target": "Surplus gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Equilibrium point",
+        "Surplus gap"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "gaps",
+      "camera": {
+        "target": "Surplus gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-9",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-10",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-11",
+      "scene": "gaps",
+      "camera": {
+        "target": "Equilibrium point",
+        "zoom": 1.6
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "Equilibrium price",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "v2-12",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Demand curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [
+        "Equilibrium point",
+        "Supply curve"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "b-1",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Price ceiling",
+        "zoom": 1.6
+      },
+      "spotlight": "Price ceiling",
+      "particles": [
+        "Shortage gap",
+        "Price ceiling"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "Legal maximum price",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Price ceiling",
+        "zoom": 1.6
+      },
+      "spotlight": "Price ceiling",
+      "particles": [
+        "Shortage gap",
+        "Price ceiling"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Shortage gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Shortage gap",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Supply curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Supply curve",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Price ceiling",
+        "zoom": 1.6
+      },
+      "spotlight": "Price ceiling",
+      "particles": [
+        "Shortage gap",
+        "Price ceiling"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "gaps",
+      "camera": {
+        "target": "Equilibrium point",
+        "zoom": 1.6
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "o-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shopper line",
+        "Sneakers"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "hook",
+      "camera": {
+        "target": "Sneakers",
+        "zoom": 1.6
+      },
+      "spotlight": "Sneakers",
+      "particles": [
+        "Sneakers",
+        "Shopper line"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shopper line",
+        "Sneakers"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shopper line",
+      "particles": [
+        "Shopper line",
+        "Sneakers"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "Sneakers",
+        "zoom": 1.6
+      },
+      "spotlight": "Sneakers",
+      "particles": [
+        "Sneakers",
+        "Shopper line"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shopper line",
+        "Sneakers"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Bidders",
+        "Auctioneer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Auctioneer",
+        "zoom": 1.6
+      },
+      "spotlight": "Auctioneer",
+      "particles": [
+        "Bidders",
+        "Auctioneer"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "Demand curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "Demand curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Equilibrium point",
+        "Demand curve"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "Supply curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Supply curve",
+      "particles": [
+        "Supply curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "Supply curve",
+        "zoom": 1.6
+      },
+      "spotlight": "Supply curve",
+      "particles": [
+        "Equilibrium point",
+        "Supply curve"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "overview",
+      "camera": {
+        "target": "Equilibrium point",
+        "zoom": 1.6
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "n13",
+      "scene": "gaps",
+      "camera": {
+        "target": "Shortage gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Equilibrium point",
+        "Shortage gap"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "gaps",
+      "camera": {
+        "target": "Shortage gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "gaps",
+      "camera": {
+        "target": "Surplus gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Equilibrium point",
+        "Surplus gap"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "gaps",
+      "camera": {
+        "target": "Surplus gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "n20",
+      "scene": "gaps",
+      "camera": {
+        "target": "Equilibrium point",
+        "zoom": 1.6
+      },
+      "spotlight": "Equilibrium point",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "n22",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "gaps",
+      "camera": {
+        "target": "Surplus gap",
+        "zoom": 1.6
+      },
+      "spotlight": "Surplus gap",
+      "particles": [
+        "Surplus gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Demand curve",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Supply curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Demand curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "n26",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Price ceiling",
+        "zoom": 1.6
+      },
+      "spotlight": "Price ceiling",
+      "particles": [
+        "Shortage gap",
+        "Price ceiling"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "Price ceiling",
+        "zoom": 1.6
+      },
+      "spotlight": "Price ceiling",
+      "particles": [
+        "Shortage gap",
+        "Price ceiling"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Shortage gap",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "price-ceiling",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Shortage gap",
+        "Equilibrium point"
+      ],
+      "carries": "price",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Surplus gap",
+            "Equilibrium point"
+          ],
+          "carries": "price"
+        }
+      ]
+    },
+    {
+      "line_id": "n31",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [
+        "Demand curve",
+        "Equilibrium point"
+      ],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": [
+        {
+          "particles": [
+            "Supply curve",
+            "Equilibrium point"
+          ],
+          "carries": ""
+        }
+      ]
+    },
+    {
+      "line_id": "n32",
+      "scene": "gaps",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [
+    {
+      "structure": "Price ceiling"
+    }
+  ],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How do buyers and sellers set a price?",
+      "from_narration": "n1"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Auction: bidders = demand, items for sale = supply",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Price ↑ → buyers want less (law of demand)",
+      "from_narration": "n8"
+    },
+    {
+      "from_line": "v1-9",
+      "text": "Price ↑ → more profit → sellers offer more (law of supply)",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Price too low → shortage → price rises",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Price too high → surplus → price falls",
+      "from_narration": "n16"
+    },
+    {
+      "from_line": "v2-11",
+      "text": "No shortage, no surplus → price stops at equilibrium",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "p2-1",
+      "text": "New trend shifts demand right → equilibrium price and quantity rise",
+      "from_narration": "n24"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Price ceiling below equilibrium → price can't rise → shortage stays",
+      "from_narration": "n26"
+    }
+  ],
+  "tags": {
+    "song": [
+      "supplyanddemand",
+      "equilibriumprice",
+      "economics",
+      "shortage",
+      "surplus",
+      "priceceiling",
+      "kpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "supplyanddemand",
+      "equilibriumprice",
+      "economics",
+      "shortage",
+      "surplus",
+      "priceceiling",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

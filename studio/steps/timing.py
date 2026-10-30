@@ -38,6 +38,7 @@ import subprocess
 import time
 import unicodedata
 import wave
+from concurrent.futures import ThreadPoolExecutor
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Callable
@@ -248,13 +249,19 @@ def song_timing(job: Path, bundle: Bundle, align: Aligner | None = None, vocals=
     """The song's Timing and its report. `align` and `vocals` stand in for MMS and Demucs in tests."""
     plan = json.loads((job / audio_step.plan_path("song")).read_text(encoding="utf-8"))
     length = audio_step.duration(job / media.audio_path("song"))
-    if vocals is None:
-        started, cached = time.monotonic(), vocals_current(job)
-        vocals = separate_vocals(job)
-        if not cached:
-            _log_local(job, "song vocals", DEMUCS_MODEL, started)
-    aligning = None if align else time.monotonic()
-    align = align or mms_aligner()
+    # The aligner loads while Demucs runs. The first read of its 1.2 GB on a fresh machine took 100 s here, waiting on
+    # the disk while Demucs works the cores; once the file is cached its load is 9 s, and beside Demucs saves a few.
+    if align is None:
+        _import_models()
+    with ThreadPoolExecutor(1, thread_name_prefix="mms") as loading:
+        aligner = None if align else loading.submit(mms_aligner)
+        if vocals is None:
+            started, cached = time.monotonic(), vocals_current(job)
+            vocals = separate_vocals(job)
+            if not cached:
+                _log_local(job, "song vocals", DEMUCS_MODEL, started)
+        aligning = None if align else time.monotonic()
+        align = align or aligner.result()
     texts = {line.id: line.text for line in bundle.lyrics}
     planned_ms = sum(s["duration_ms"] for s in plan["sections"])
     scale = length * 1000 / planned_ms if planned_ms else 1.0  # the song can run a little long or short
@@ -330,6 +337,19 @@ def _align_lines(vocals, align: Aligner, texts: dict[str, str], line_ids: list[s
         out.append((TimedLine(line_id=line_id, start=line_words[0].start, end=line_words[-1].end, words=line_words),
                     round(sum(line_scores) / len(line_scores), 3) if line_scores else None))
     return out
+
+
+def _import_models() -> None:
+    """Import Demucs's and the aligner's packages in this thread, before the aligner loads in another: torchaudio
+    imported by both threads at once deadlocked on its module locks. Without them installed, the steps say so
+    when they import them."""
+    try:
+        import demucs.apply  # noqa: F401
+        import demucs.pretrained  # noqa: F401
+        import torchaudio.functional  # noqa: F401
+        import torchaudio.pipelines  # noqa: F401
+    except ImportError:
+        pass
 
 
 def _log_local(job: Path, label: str, model: str, started: float) -> None:

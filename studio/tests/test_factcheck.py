@@ -3,29 +3,52 @@ import json
 import pytest
 
 from studio.jobs import read, write
-from studio.schemas import Bundle, FactCheck, FactCheckReport, Request
-from studio.steps import factcheck
+from studio.schemas import Bundle, FactCheck, FactCheckReport, LyricRewrite, Request
+from studio.steps import factcheck, songwriter
 from studio.steps.factcheck import check_bundle, cites, dropped_motions, dropped_tags, lines_of
 from studio.tests.sample import CHORUS, bundle_data
 
 SEEDED = "Every electron hand-off pumps a proton"
 FIXED = "Only b6f pumps a proton through"
+FIRST = "Light lands on the thylakoid"  # the line SEEDED rhymes with: lyric v1-1, in its couplet
+
+
+def judge(rule, text):
+    """rule(line) for each line of a couplet, put together: the couplet fails when a line of it does, corrected
+    line by line (no correction when a failing line has none); one line is judged as it is."""
+    parts = text.split("\n")
+    verdicts = [rule(part) for part in parts]
+    if len(parts) == 1:
+        return verdicts[0]
+    if any(v is None for v in verdicts):
+        return None
+    wrong = [v for v in verdicts if v[0] == "UNSUPPORTED"]
+    if wrong:
+        fixed = "\n".join(v[2] if v[0] == "UNSUPPORTED" else part for v, part in zip(verdicts, parts))
+        return "UNSUPPORTED", "", fixed if all(v[2] for v in wrong) else ""
+    return next((v for v in verdicts if v[0] == "SUPPORTED"), verdicts[0])
 
 
 class FakeChecker:
-    """Stands in for brain.ask: judges each line with `rule(text)`, records every payload."""
+    """Stands in for brain.ask: judges each line with `rule(text)` (a couplet line by line), records every
+    payload. Asked to rewrite, it answers `song(couplets)`, by default with none, so the checker's fix is used."""
 
-    def __init__(self, rule):
-        self.rule = rule
-        self.payloads = []
+    def __init__(self, rule, song=None):
+        self.rule, self.song = rule, song
+        self.payloads, self.songs = [], []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+        if schema is LyricRewrite:
+            assert role == "brain" and system == songwriter.PROMPT and label.startswith("lyric rewrite round ")
+            self.songs.append(json.loads(prompt))
+            written = self.song(self.songs[-1]["couplets"]) if self.song else []
+            return LyricRewrite.model_validate({"couplets": written}).model_dump()
         assert role == "brain" and schema is FactCheck and system == factcheck.PROMPT
         payload = json.loads(prompt)
         self.payloads.append(payload)
         checks = []
         for line in payload["lines"]:
-            verdict = self.rule(line["text"])
+            verdict = judge(self.rule, line["text"])
             if verdict is None:
                 continue  # the checker skipped this line
             name, source, corrected = verdict
@@ -60,7 +83,7 @@ def test_every_line_is_checked_once_and_chorus_repeats_only_once():
     assert report.status == "passed" and report.rounds == 1 and checked == bundle()
     sent = fake.ids(1)
     assert sent.count("lyric:c1-1") == 1 and "lyric:c2-1" not in sent and "lyric:c3-1" not in sent
-    assert sent[:2] == ["lyric:v1-1", "lyric:v1-2"]
+    assert sent[:2] == ["lyric:v1-1,v1-2", "lyric:c1-1"]  # the song a couplet at a time
     assert [k for k in sent if k.startswith("lesson:")] == [f"lesson:{i}" for i in range(1, 7)]
     assert len(report.lines) == len(lines_of(bundle())) and all(line.round == 1 for line in report.lines)
 
@@ -69,14 +92,15 @@ def test_a_fix_is_applied_and_only_the_changed_line_is_rechecked():
     fake = FakeChecker(seeded_is_wrong)
     report, checked = check_bundle(bundle(), "", fake)
     assert report.status == "passed" and report.rounds == 2
-    assert fake.ids(2) == ["lyric:v1-2"]
-    assert fake.payloads[1]["lines"][0]["previous"] == "Light lands on the thylakoid"
-    assert "previous" not in fake.payloads[0]["lines"][1]
-    assert checked.lyrics[1].text == FIXED
+    assert fake.ids(2) == ["lyric:v1-1,v1-2"]
+    assert fake.payloads[1]["lines"][0]["text"] == f"{FIRST}\n{FIXED}"  # its rhyme comes with it
+    assert "previous" not in fake.payloads[1]["lines"][0]  # the song's first couplet: nothing comes before it
+    assert checked.lyrics[0].text == FIRST and checked.lyrics[1].text == FIXED
     [correction] = report.corrections
-    assert (correction.round, correction.ids, correction.before, correction.after) == (1, ["v1-2"], SEEDED, FIXED)
-    fixed_line = next(line for line in report.lines if line.id == "v1-2")
-    assert (fixed_line.text, fixed_line.verdict, fixed_line.round) == (FIXED, "SUPPORTED", 2)
+    assert (correction.round, correction.ids, correction.before, correction.after, correction.by) == (
+        1, ["v1-1", "v1-2"], f"{FIRST}\n{SEEDED}", f"{FIRST}\n{FIXED}", "checker")
+    fixed_line = next(line for line in report.lines if line.id == "v1-1,v1-2")
+    assert (fixed_line.text, fixed_line.verdict, fixed_line.round) == (f"{FIRST}\n{FIXED}", "SUPPORTED", 2)
 
 
 def test_a_chorus_fix_rewrites_every_repeat():
@@ -120,21 +144,30 @@ def test_it_fails_after_three_rounds_when_fixes_keep_failing():
     fake = FakeChecker(never_right)
     report, checked = check_bundle(bundle(), "", fake)
     assert report.status == "failed" and report.rounds == 3 and len(fake.payloads) == 3
-    assert "lyric v1-2" in report.reason and "wrong" in report.reason
+    assert "lyric v1-1, v1-2" in report.reason and "wrong" in report.reason
     assert checked.lyrics[1].text == SEEDED + " again again"  # the last fix is never applied unchecked
 
 
 def test_it_fails_at_once_when_a_wrong_line_has_no_correction():
     def rule(text):
-        if text == "Light lands on the thylakoid":
-            return "UNSUPPORTED", "", "Light reactions run in the thylakoid"  # fixable, but never applied
-        return ("UNSUPPORTED", "", "") if text == SEEDED else supported(text)
+        if text == "Feel the gradient build":
+            return "UNSUPPORTED", "", "Feel the proton gradient build"  # fixable, but never applied
+        return ("UNSUPPORTED", "", "") if text.startswith("The light reactions happen") else supported(text)
 
     fake = FakeChecker(rule)
     report, checked = check_bundle(bundle(), "", fake)
     assert report.status == "failed" and len(fake.payloads) == 1
-    assert report.reason == "lyric v1-2 is unsupported and has no correction: wrong"
+    assert report.reason == "narration n1 is unsupported and has no correction: wrong"
     assert checked == bundle() and report.corrections == []
+    assert fake.songs == []  # no songwriter is paid for a check that fails anyway
+
+
+def test_a_wrong_couplet_with_no_correction_from_the_checker_or_the_songwriter_fails():
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == SEEDED else supported(text))
+    report, checked = check_bundle(bundle(), "", fake)
+    assert report.status == "failed" and len(fake.payloads) == 1 and len(fake.songs) == 1
+    assert report.reason == "lyric v1-1, v1-2 is unsupported and has no correction: wrong"
+    assert checked == bundle()
 
 
 def test_missing_verdicts_and_made_up_sources_are_asked_again():
@@ -150,13 +183,13 @@ def test_missing_verdicts_and_made_up_sources_are_asked_again():
 
     fake = FakeChecker(flaky)
     report, _ = check_bundle(bundle(), "", fake)
-    assert report.status == "passed" and fake.ids(2) == ["lyric:v1-1", "lyric:b-1"]
+    assert report.status == "passed" and fake.ids(2) == ["lyric:v1-1,v1-2", "lyric:b-1"]
 
 
 def test_lines_that_never_get_a_verdict_fail_the_check():
     report, _ = check_bundle(bundle(), "", FakeChecker(lambda t: None if t == SEEDED else supported(t)))
     assert report.status == "failed" and report.rounds == 3
-    assert 'lyric v1-2 "Every electron hand-off pumps a proton": no verdict' in report.reason
+    assert f'lyric v1-1, v1-2 "{FIRST} / {SEEDED}": no verdict' in report.reason
 
 
 def test_cites_needs_a_real_fact_id_or_a_study_guide_quote():
@@ -232,7 +265,7 @@ def test_tags_are_checked_once_each_with_what_a_tag_is_judged_by():
     assert tags == [("tag:song-1", "#photosynthesis"), ("tag:song-2", "#lightreactions"), ("tag:song-3", "#apbio"),
                     ("tag:song-4", "#studysong"), ("tag:song-5", "#pop"), ("tag:lesson-4", "#explained")]
     assert fake.payloads[0]["about"] == {"course": "AP Biology", "topic": "the light reactions",
-                                         "song_style": "upbeat pop, 112 bpm"}
+                                         "audience": "high school", "song_style": "upbeat pop, 112 bpm"}
     assert report.status == "passed" and checked.tags == bundle().tags and dropped_tags(report) == []
     assert [line.id for line in report.lines if line.kind == "tag"] == [
         "song-1", "song-2", "song-3", "song-4", "song-5", "lesson-1", "lesson-2", "lesson-3", "lesson-4"]
@@ -410,14 +443,19 @@ def test_a_blocked_flow_is_checked_as_stopped_there():
 def test_a_tag_never_rides_along_with_a_corrected_line():
     fake = FakeChecker(seeded_is_wrong)
     report, _ = check_bundle(bundle(), "", fake)
-    # The re-check is only the corrected lyric: the tags already have their verdicts.
-    assert fake.ids(2) == ["lyric:v1-2"] and "about" not in fake.payloads[1]
+    # The re-check is only the corrected couplet, with what a lyric is judged by: the tags have their verdicts.
+    assert fake.ids(2) == ["lyric:v1-1,v1-2"] and fake.payloads[1]["about"]["audience"] == "high school"
+
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "Only cytochrome b6f pumps protons into the lumen.")
+                       if text == "Only cytochrome b6f pumps protons." else supported(text))
+    check_bundle(bundle(), "", fake)
+    assert fake.ids(2) == ["lesson:3"] and "about" not in fake.payloads[1]  # a lesson line rests on the facts alone
 
 
 def test_a_bundle_without_tags_sends_none_and_no_about():
     fake = FakeChecker(supported)
     report, checked = check_bundle(bundle(lambda d: d.pop("tags")), "", fake)
-    assert report.status == "passed" and "about" not in fake.payloads[0]
+    assert report.status == "passed" and set(fake.payloads[0]["about"]) == {"course", "topic", "audience", "song_style"}
     assert not [i for i in fake.ids(1) if i.startswith("tag:")]
 
 
