@@ -397,7 +397,12 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   length reads true (a variable-bitrate MP3 without a length header reads a few percent
   off). A quota error waits the `retryDelay` it names. Lyria keeps to the planned times
   only roughly, so the song's plan says its sections are not pinned and step 6 aligns it
-  as a whole. Switching the provider makes a job's song again, not its speech.
+  as a whole. Switching the provider makes a job's song again, not its speech. A song
+  Lyria will not sing, its prompt blocked or its answer stopped for safety, is made by
+  Eleven Music instead, and the song's plan names Lyria's refusal (`instead_of`); the
+  song is then not asked of either again until its lines change. Lyria blocked "Why the
+  Holocaust happened" twice (`blockReason` OTHER, Oct 30), where the same style with no
+  lyrics was made.
 - **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
   and per-character timings, so it needs no aligner.
 - **No exam question:** both videos ended on a read-aloud exam question (`audio/frq.mp3`)
