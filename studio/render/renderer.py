@@ -100,6 +100,8 @@ PILE_MAX = 12
 # GLOW_HZ times a second between half and full GLOW_ALPHA.
 GLOW_COLOR = "#FFF3B0"
 GLOW_BLUR = 18.0
+WASH_PAD = 2  # art pixels around a wash's bounds that a filtered draw of it may still reach (SceneArt.bounds)
+BLUR_REACH = 4  # sigmas past a mask's edge that skia's blur of it can be other than 0 (SceneArt.reach)
 GLOW_ALPHA = 0.75
 GLOW_HZ = 1.2
 GLOW_IN_S = 0.4
@@ -166,6 +168,8 @@ class SceneArt:
             self._mask_files[s.name] = mask_file
         self._ghosts: dict[str, skia.Image] = {}
         self._spots: dict[str, skia.Image] = {}
+        self._bounds: dict[tuple[str, str], skia.Rect] = {}  # where each ghost or glow wash is not 0 (bounds())
+        self._mask_boxes: dict[str, tuple[int, int, int, int] | None] = {}  # each mask's bounds, for reach()
         self._composed: OrderedDict[tuple, skia.Image] = OrderedDict()
         self.content = _drawn_box(pixels, located, (b, g, r))
         self.centre = (self.width / 2, self.height / 2)
@@ -177,6 +181,20 @@ class SceneArt:
         kind = skia.kAlpha_8_ColorType if alpha_only else skia.kBGRA_8888_ColorType
         return skia.Surface.MakeRaster(skia.ImageInfo.Make(self.width, self.height, kind, skia.kPremul_AlphaType))
 
+    def reach(self, name: str, sigma: float) -> skia.Rect:
+        """The structure's mask's bounds, out as far as a blur of `sigma` carries it (BLUR_REACH). A blur drawn
+        clipped to it is the same, pixel for pixel, as drawn over the whole picture (the mask is 0 everywhere else,
+        and so is its blur), and a seventh of the work: a whole-picture blur took 150 to 190 ms."""
+        if name not in self._mask_boxes:
+            alpha = self.masks[name].toarray(colorType=skia.kAlpha_8_ColorType).reshape(self.height, self.width)
+            ys, xs = np.nonzero(alpha)
+            self._mask_boxes[name] = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1) if len(xs) else None
+        box = self._mask_boxes[name]
+        if box is None:
+            return skia.Rect.MakeEmpty()
+        pad = math.ceil(BLUR_REACH * sigma) + 4
+        return skia.Rect.MakeLTRB(box[0] - pad, box[1] - pad, box[2] + pad, box[3] + pad)
+
     def ghost(self, name: str) -> skia.Image:
         """Where the structure is, with a soft edge: drawn in the background's colour at GHOST_WASH over the art.
 
@@ -185,10 +203,24 @@ class SceneArt:
             surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorTRANSPARENT)
+            canvas.clipRect(self.reach(name, EDGE_BLUR))
             canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(EDGE_BLUR, EDGE_BLUR)))
             self._ghosts[name] = surface.makeImageSnapshot()
         return self._ghosts[name]
+
+    def bounds(self, kind: str, name: str) -> skia.Rect:
+        """Where the structure's ghost or glow wash (kind) is not 0, in art pixels, WASH_PAD more each side. A wash
+        drawn clipped to it changes the same pixels by the same amounts as drawn whole: elsewhere it is 0, which
+        leaves a pixel as it is, and the pad takes in every pixel a filtered, scaled draw samples it into. Drawn
+        whole, a wash costs 25 ms a frame however little of the picture it covers."""
+        if (kind, name) not in self._bounds:
+            image = self.ghost(name) if kind == "ghost" else self.glow(name)
+            alpha = image.toarray(colorType=skia.kAlpha_8_ColorType).reshape(image.height(), image.width())
+            ys, xs = np.nonzero(alpha)
+            self._bounds[(kind, name)] = skia.Rect.MakeEmpty() if not len(xs) else skia.Rect.MakeLTRB(
+                int(xs.min()) - WASH_PAD, int(ys.min()) - WASH_PAD, int(xs.max()) + 1 + WASH_PAD, int(ys.max()) + 1 + WASH_PAD)
+        return self._bounds[(kind, name)]
 
     def spot(self, name: str) -> skia.Image:
         """Everywhere but the structure: drawn in the background's colour at SPOT_WASH, it leaves only that
@@ -197,6 +229,7 @@ class SceneArt:
             surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorWHITE)
+            canvas.clipRect(self.reach(name, SPOT_BLUR))
             canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
                              skia.Paint(BlendMode=skia.BlendMode.kDstOut,
                                         ImageFilter=skia.ImageFilters.Blur(SPOT_BLUR, SPOT_BLUR)))
@@ -234,6 +267,7 @@ class SceneArt:
             surface = self._surface(alpha_only=True)
             canvas = surface.getCanvas()
             canvas.clear(skia.ColorTRANSPARENT)
+            canvas.clipRect(self.reach(name, GLOW_BLUR))
             canvas.drawImage(self.masks[name], 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(GLOW_BLUR, GLOW_BLUR)))
             self._glows[name] = surface.makeImageSnapshot()
@@ -267,8 +301,11 @@ class SceneArt:
         canvas = surface.getCanvas()
         canvas.drawImage(self.art, 0, 0)
         for name, level in key[0]:
+            canvas.save()
+            canvas.clipRect(self.bounds("ghost", name))
             canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=self.paper, Alphaf=GHOST_WASH * level))
+            canvas.restore()
         for name, level in key[1]:
             canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=self.paper, Alphaf=SPOT_WASH * level))
@@ -536,6 +573,7 @@ class Renderer:
         self.portrait = self.layout.height > self.layout.width
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
+        self._geometry: dict[tuple, list] = {}  # each route's stops, points, bends and legs, worked out once
         scene_ids = {b.scene for b in timeline.beats}
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
@@ -579,8 +617,9 @@ class Renderer:
         self.surface = skia.Surface(self.pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         self._background: tuple[tuple, skia.Image] | None = None
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
-        self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
+        self._scene_routes: dict[str, np.ndarray] = {}  # points along each scene's arrows, in art pixels, (n, 2)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
+        self._placed: tuple[tuple, list[tuple[float, float]]] | None = None  # the last frame's labels and their places
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
@@ -771,7 +810,17 @@ class Renderer:
                 labels.append(p.Label(name=name, color=self.timeline.palette[name], anchor=(ax, ay), box=box, alpha=alpha,
                                       big=big, emphasis=spots.get(name, 0.0)))
         centre = (art.centre[0] * scale + dx, art.centre[1] * scale + dy)
-        p.place_labels(labels, bounds, centre, self.layout.label_font, avoid)
+        # Placed as the frame before when everything placing them hangs on is as it was (a still camera, the same
+        # labels): place_labels gives the same places for the same input, and their alpha has no part in it.
+        avoid = np.asarray(avoid, dtype=np.float64).reshape(-1, 2)
+        key = (tuple((lb.name, lb.anchor, lb.box, lb.big, lb.emphasis) for lb in labels), bounds, centre,
+               self.layout.label_font, avoid.tobytes())
+        if self._placed is not None and self._placed[0] == key:
+            for lb, (x, y) in zip(labels, self._placed[1]):
+                lb.x, lb.y = x, y
+        else:
+            p.place_labels(labels, bounds, centre, self.layout.label_font, avoid)
+            self._placed = (key, [(lb.x, lb.y) for lb in labels])
         for lb in sorted(labels, key=lambda lb: lb.emphasis):  # the spotlit one on top
             p.draw_label(canvas, lb, self.layout.label_font)
         rects = []
@@ -831,7 +880,8 @@ class Renderer:
         pill_points = [(px, py) for x0, y0, x1, y1 in places.values()
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
-        self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points)
+        self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t,
+                     np.concatenate([arrows, np.asarray(pill_points, dtype=np.float64).reshape(-1, 2)]))
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places)
         if beat.caption:
@@ -875,6 +925,7 @@ class Renderer:
         scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
         font = self.layout.label_font * 1.25
         places: dict[str, tuple[float, float, float, float]] = {}
+        ax, ay = arrows[:, 0], arrows[:, 1]
         for conv in self._scene_pills[scene_id]:
             loc = located.get(conv.structure)
             if loc is None:
@@ -891,7 +942,7 @@ class Renderer:
                 rect = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
                 hit = 50 * sum(1 for r in places.values() if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
                                and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
-                hit += sum(1 for ax, ay in arrows if rect[0] - 8 < ax < rect[2] + 8 and rect[1] - 8 < ay < rect[3] + 8)
+                hit += int(np.count_nonzero((rect[0] - 8 < ax) & (ax < rect[2] + 8) & (rect[1] - 8 < ay) & (ay < rect[3] + 8)))
                 score = hit + 0.01 * math.dist((cx, cy), (x, below))  # nearest of the equally clear spots
                 if best is None or score < best[0]:
                     best = (score, rect)
@@ -982,6 +1033,7 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
+        canvas.clipRect(art.bounds("glow", beat.glow))
         canvas.drawImage(art.glow(beat.glow), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
                          skia.Paint(Color=p.argb(GLOW_COLOR), Alphaf=alpha, BlendMode=skia.BlendMode.kScreen))
         canvas.restore()
@@ -1007,6 +1059,7 @@ class Renderer:
             canvas.save()
             canvas.translate(dx, dy)
             canvas.scale(scale, scale)
+            canvas.clipRect(art.bounds("ghost", crowd.region))
             canvas.drawImage(art.ghost(crowd.region), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
                              skia.Paint(Color=p.argb(crowd.color), Alphaf=CROWD_TINT * level * alpha))
             canvas.restore()
@@ -1031,7 +1084,34 @@ class Renderer:
         wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         return wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
 
+    # A route's stops, points, bends and legs come from the locations and the path alone, never the time: worked
+    # out once each and kept (_geometry), where every frame asked again, hundreds of times.
+
     def _path_stops(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[Point, object]]:
+        key = ("stops", scene_id, tuple(path), lane)
+        if (found := self._geometry.get(key)) is None:
+            found = self._geometry[key] = self._find_stops(scene_id, path, lane)
+        return found
+
+    def _path_points(self, scene_id: str, path: list[str], blocked: bool = False, lane: int = 0) -> list[Point]:
+        key = ("points", scene_id, tuple(path), blocked, lane)
+        if (found := self._geometry.get(key)) is None:
+            found = self._geometry[key] = self._find_points(scene_id, path, blocked, lane)
+        return found
+
+    def _bends(self, scene_id: str, path: list[str], lane: int = 0) -> list[Point | None]:
+        key = ("bends", scene_id, tuple(path), lane)
+        if (found := self._geometry.get(key)) is None:
+            found = self._geometry[key] = self._find_bends(scene_id, path, lane)
+        return found
+
+    def _legs(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[list[Point], bool, int, int, object]]:
+        key = ("legs", scene_id, tuple(path), lane)
+        if (found := self._geometry.get(key)) is None:
+            found = self._geometry[key] = self._find_legs(scene_id, path, lane)
+        return found
+
+    def _find_stops(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[Point, object]]:
         """Where particles stop along a path, in art pixels, each with the structure it is in: a structure's label
         point, but a space's point just past the edge of the structure next to it on the path, on the space's side,
         so a flow into the lumen ends just under the complex that pumps it rather than across the picture. A space
@@ -1072,7 +1152,7 @@ class Renderer:
             pairs = [((x + nx, y + ny), loc) for (x, y), loc in pairs]
         return pairs
 
-    def _path_points(self, scene_id: str, path: list[str], blocked: bool = False, lane: int = 0) -> list[Point]:
+    def _find_points(self, scene_id: str, path: list[str], blocked: bool = False, lane: int = 0) -> list[Point]:
         """Where the particles travel, in art pixels: the path's stops, except that a flow between a part and a
         space leaves or enters the part at its edge on the space's side, where the arrow does (water is split at
         Photosystem II's lumen face: an H⁺ set off from the middle of the complex looked to fall through it). A
@@ -1089,7 +1169,7 @@ class Renderer:
             points[-1] = _leave(z, y, last.box)
         return points
 
-    def _bends(self, scene_id: str, path: list[str], lane: int = 0) -> list[Point | None]:
+    def _find_bends(self, scene_id: str, path: list[str], lane: int = 0) -> list[Point | None]:
         """Each leg's bend, in art pixels: a hop from one part to the next (both stops parts, not spaces) curves
         up in a gentle arc, the hand-off a textbook draws; a flow into, out of or through a space runs straight.
         The particles ride the same curve as the arrow."""
@@ -1108,7 +1188,7 @@ class Renderer:
             bends.append((mid[0] + nx * ROUTE_BEND * length, mid[1] + ny * ROUTE_BEND * length))
         return bends
 
-    def _legs(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[list[Point], bool, int, int, object]]:
+    def _find_legs(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[list[Point], bool, int, int, object]]:
         """A route's arrows, in art pixels: (the line it draws, ends in a space, its first stop, its last stop, the
         part it passes through or None). A
         leg leaves the edge of the part it starts from and ends at the edge of the part it reaches, curved when it
@@ -1137,7 +1217,7 @@ class Renderer:
             i += 1
         return legs
 
-    def _arrow_points(self, scene_id: str, cam: Cam, view: Rect) -> list[Point]:
+    def _arrow_points(self, scene_id: str, cam: Cam, view: Rect) -> np.ndarray:
         """Points along every arrow the scene draws at any time in the video, in frame pixels: what labels and
         reaction pills keep clear of. Every arrow, not only those on screen, so a label is placed once for the
         scene and does not jump as each arrow appears."""
@@ -1160,9 +1240,9 @@ class Renderer:
                         n = max(int(math.dist(start, end) / ARROW_SAMPLE), 1)
                         samples += [(p.lerp(start[0], end[0], k / n), p.lerp(start[1], end[1], k / n))
                                     for k in range(n + 1)]
-            self._scene_routes[scene_id] = samples
+            self._scene_routes[scene_id] = np.asarray(samples, dtype=np.float64).reshape(-1, 2)
         scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
-        return [(x * scale + dx, y * scale + dy) for x, y in self._scene_routes[scene_id]]
+        return self._scene_routes[scene_id] * scale + (dx, dy)  # (n, 2), as x * scale + dx a point at a time
 
     def _routes(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float) -> None:
         """Each path the scene's particles have travelled, as arrows from structure to structure: each leg leaves

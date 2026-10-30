@@ -13,6 +13,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import skia
 
 from studio.render.layouts import Rect
@@ -183,9 +184,11 @@ def _clear_home(lb: Label, size: tuple[float, float], home: tuple[float, float],
         west, east = cx - w / 2 - 2 * TOUCH, cx + w / 2 + 2 * TOUCH
         spots = [(cx, up), (cx, down), (left, cy), (right, cy), (west, up), (east, up), (west, down), (east, down)]
 
-    def crossed(spot) -> int:
+    px, py = avoid[:, 0], avoid[:, 1]
+
+    def crossed(spot) -> int:  # the points within the pill and its margin, counted as one at a time would
         x, y = spot
-        return sum(1 for px, py in avoid if abs(px - x) < w / 2 + AVOID_MARGIN and abs(py - y) < h / 2 + AVOID_MARGIN)
+        return int(np.count_nonzero((np.abs(px - x) < w / 2 + AVOID_MARGIN) & (np.abs(py - y) < h / 2 + AVOID_MARGIN)))
 
     def off_frame(spot) -> bool:
         x, y = spot
@@ -230,7 +233,10 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
         reach = out + TOUCH + min(abs(w / 2 / dx) if abs(dx) > 1e-6 else 1e9, abs(h / 2 / dy) if abs(dy) > 1e-6 else 1e9)
         homes.append((lb.anchor[0] + dx * reach, lb.anchor[1] + dy * reach))
     x0, y0, x1, y1 = bounds
-    if avoid:
+    # Hundreds of points along the arrows, every frame: compared as arrays, with the same arithmetic as one at a
+    # time, so the places come out the same to the last bit.
+    avoid = np.asarray(avoid, dtype=np.float64).reshape(-1, 2)
+    if len(avoid):
         homes = [_clear_home(lb, size, home, avoid, bounds, [o.box for o in labels if o is not lb and not o.big])
                  for lb, size, home in zip(labels, sizes, homes)]
     pos = [list(h) for h in homes]
@@ -242,7 +248,7 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
 
     for i in range(len(labels)):
         clamp(i)
-    dots = list(avoid)  # a label's own dot is drawn only when its pill ends up far from it, so it is not avoided
+    dots_x, dots_y = avoid[:, 0], avoid[:, 1]  # a label's own dot is drawn only far from its pill: not avoided
     for _ in range(40):
         moved = False
         for i in range(len(labels)):
@@ -260,17 +266,25 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
                         s = 1 if pos[i][0] < pos[j][0] or (pos[i][0] == pos[j][0] and i < j) else -1
                         pos[i][0] -= s * ox / 2
                         pos[j][0] += s * ox / 2
-            # Keep the pill off every dot, its own included.
+            # Keep the pill off every dot, in order: from the next dot it overlaps, pushed off it, to the next.
             w, h = sizes[i]
-            for dot in dots:
-                ox = w / 2 + DOT_R + 6 - abs(pos[i][0] - dot[0])
-                oy = h / 2 + DOT_R + 6 - abs(pos[i][1] - dot[1])
-                if ox > 0 and oy > 0:
-                    moved = True
-                    if oy <= ox:
-                        pos[i][1] += oy if pos[i][1] >= dot[1] else -oy
-                    else:
-                        pos[i][0] += ox if pos[i][0] >= dot[0] else -ox
+            reach_x, reach_y = w / 2 + DOT_R + 6, h / 2 + DOT_R + 6
+            k = 0
+            while k < len(dots_x):
+                ox = reach_x - np.abs(pos[i][0] - dots_x[k:])
+                oy = reach_y - np.abs(pos[i][1] - dots_y[k:])
+                hits = np.flatnonzero((ox > 0) & (oy > 0))
+                if not len(hits):
+                    break
+                first = int(hits[0])
+                k += first
+                hit_x, hit_y = float(ox[first]), float(oy[first])
+                moved = True
+                if hit_y <= hit_x:
+                    pos[i][1] += hit_y if pos[i][1] >= dots_y[k] else -hit_y
+                else:
+                    pos[i][0] += hit_x if pos[i][0] >= dots_x[k] else -hit_x
+                k += 1
             clamp(i)
         if not moved:
             break
