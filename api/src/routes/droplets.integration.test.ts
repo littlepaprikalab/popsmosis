@@ -102,6 +102,7 @@ d('the Droplets tab', () => {
       excerpt: 'Lesson 10: ATP synthase spins.',
       video: { songVideoUrl: SONG, lessonVideoUrl: LESSON, songPosterUrl: null, lessonPosterUrl: null, hookVideoUrl: null, hookPosterUrl: null },
       tags: { song: [], lesson: [] }, // a droplet made before there were tags
+      madeWith: null, // and before the bills
       likeCount: 0, commentCount: 0, liked: false,
       createdAt: expect.any(String),
       comments: { data: [], nextCursor: null },
@@ -183,6 +184,51 @@ d('the Droplets tab', () => {
     // A hidden droplet leaves the search with the tab.
     await prisma.answer.update({ where: { id }, data: { hiddenAt: new Date() } });
     expect(await ids('/api/droplets?tag=apbio')).toEqual([another]);
+  });
+
+  it('says which models made a droplet from its two bills, and nothing else from them', async () => {
+    const agent = { authorization: `Bearer ${agentKey}` };
+    const q = await prisma.question.create({ data: { userId: learnerId, content: 'ATP synthase for my AP Bio exam on Friday' } });
+    await app.inject({ method: 'POST', url: `/api/questions/${q.id}/claim`, headers: agent });
+    const lessonBill = { seconds: 200, steps: [
+      { step: 'request', seconds: 0.3, tries: 1, models: [] },
+      { step: 'bundle', seconds: 180, tries: 1, models: [{ model: 'claude-opus-5-5', calls: 1, costUsd: 0.5213, credits: null }] },
+      { step: 'factcheck', seconds: 20, tries: 1, models: [
+        { model: 'claude-opus-5-5', calls: 1, costUsd: 0.2, credits: null }, { model: 'claude-sonnet-5-5', calls: 2, costUsd: 0.01, credits: null }] },
+    ] };
+    const videoBill = { seconds: 400, steps: [
+      { step: 'art', seconds: 60, tries: 1, models: [{ model: 'gemini-3.1-flash-image', calls: 3, costUsd: 0.12, credits: null }], tools: [{ name: 'skia-python', version: '144.1' }] },
+      { step: 'audio', seconds: 90, tries: 1, models: [{ model: 'music_v2_5', calls: 1, costUsd: null, credits: 4100 }, { model: 'eleven_multilingual_v2', calls: 2, costUsd: null, credits: 900 }] },
+      { step: 'timing', seconds: 100, tries: 1, models: [{ model: 'htdemucs', calls: 1, costUsd: 0, credits: null }, { model: 'mms-fa', calls: 1, costUsd: 0, credits: null }] },
+      { step: 'render', seconds: 150, tries: 1, models: [], tools: [{ name: 'ffmpeg', version: '7.1.1' }] },
+    ] };
+    const posted = await app.inject({
+      method: 'POST', url: `/api/questions/${q.id}/answer`, headers: agent,
+      payload: { content: 'ATP synthase spins.', bundle: BUNDLE, factcheck: FACTCHECK, breakdown: lessonBill },
+    });
+    expect(posted.statusCode).toBe(201);
+    const id = posted.json().id as string;
+    const patchVideo = (payload: object) => app.inject({ method: 'PATCH', url: `/api/answers/${id}/video`, headers: agent, payload });
+    expect((await patchVideo({ status: 'RENDERING' })).statusCode).toBe(200);
+    expect((await patchVideo({ status: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON, breakdown: videoBill })).statusCode).toBe(200);
+
+    const madeWith = [
+      { maker: 'Anthropic', models: ['claude-opus-5-5', 'claude-sonnet-5-5'] },
+      { maker: 'Google', models: ['gemini-3.1-flash-image'] },
+      { maker: 'ElevenLabs', models: ['music_v2_5', 'eleven_multilingual_v2'] },
+      { maker: 'Meta', models: ['htdemucs', 'mms-fa'] },
+    ];
+    // The list has Postgres read the names out of the bills; the droplet's page reads the bills: the two agree.
+    const card = (await get('/api/droplets')).json().data[0];
+    const page = (await get(`/api/droplets/${id}`)).json();
+    expect(card.madeWith).toEqual(madeWith);
+    expect(page.madeWith).toEqual(madeWith);
+    for (const body of [card, page]) expect(JSON.stringify(body)).not.toMatch(/costUsd|credits|0\.5213|skia|ffmpeg|seconds/);
+
+    // A videos' bill the READY left out: the lesson's alone would not say who drew and sang it, so neither says.
+    await prisma.$executeRaw`UPDATE answers SET "videoBreakdown" = NULL WHERE id = ${id}`;
+    expect((await get('/api/droplets')).json().data[0].madeWith).toBeNull();
+    expect((await get(`/api/droplets/${id}`)).json().madeWith).toBeNull();
   });
 
   it('copies the tags when the videos go READY, for a lesson posted to an API older than them', async () => {

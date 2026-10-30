@@ -341,7 +341,7 @@ Errors are always `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, likeCount, commentCount, liked, createdAt, comments }`, where `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
+| GET | `/api/droplets` | the Droplets tab: droplets whose videos are READY, that no admin hid and none is still to review, newest first; `?cursor=`, `?limit=` (12, at most 24); `?tag=` only those whose song or lesson video carries that hashtag (`#APBio` and `apbio` alike, [Tags](#tags)). Each: `{ id, title, course, topic, excerpt, video, tags, madeWith, likeCount, commentCount, liked, createdAt, comments }`, where `madeWith` is the models that made it, by maker ([Made with](#made-with)), and `comments` is its newest two (`{ data, nextCursor }`; the cursor carries on at `/comments`, null when those are all) |
 | GET | `/api/droplets/:id` | one droplet, by its answer id: the same, plus the lesson `content`, the song's `lyrics` and the first page of its `comments` (`{ data, nextCursor }`), so a droplet's page is one request; 404 unless it is on the tab |
 | GET | `/api/droplets/:id/comments` | its comments, newest first, for the pages after the first; `?cursor=`, `?limit=` (20, at most 50). `{ data: [{ id, content, createdAt, author: { name }, mine }], nextCursor, commentCount }`; 404 unless it is on the tab |
 | POST | `/api/droplets/:id/plays` | count one step of a play: `{ video: song\|lesson\|hook, event: started\|reached25\|reached50\|reached75\|finished\|shared\|downloaded }` (`shared` and `downloaded` the hook's only); 204 whether or not a count moved. No cookie needed or read. Limits of its own, apart from the 60 a minute: [Play counts](#play-counts) |
@@ -497,7 +497,7 @@ is priced per token (`studio/brain.py`), a Lyria song per song, and Demucs and M
 the studio's machine for free. ElevenLabs bills in its plan's credits: they are shown as
 credits (`credits`) unless `ELEVENLABS_USD_PER_1K_CREDITS` gives their price. A model whose
 provider said neither is counted in `unpriced`. The bill stays on `/learn`: the public
-Droplets tab never shows it.
+Droplets tab shows only the models it names ([Made with](#made-with)).
 
 #### While a droplet is made
 
@@ -551,6 +551,36 @@ is reported and the step goes on, a line cut short by a kill is skipped, and a b
 cannot be read, is too big (16 KB) or holds a number JSON has no word for is left out of
 the request rather than sent for the API to refuse. A render recovered on another machine counts only that
 machine's tries, since the first machine's records died with it.
+
+### Made with
+
+Every droplet on the Droplets tab says which models made it, read from its bill: its card
+shows each maker's chip ("Made with ANTHROPIC GOOGLE ELEVENLABS META"), naming the models
+when one is hovered, and its page shows the models after each chip, by the names and
+versions the studio ran (`claude-opus-5-5, claude-haiku-5-5`). So anyone watching can tell
+what made a droplet, and tell one made on a newer model from an older one. The API sends it
+as `madeWith` on both droplet routes:
+
+```json
+"madeWith": [ { "maker": "Anthropic", "models": ["claude-opus-5-5", "claude-haiku-5-5"] },
+              { "maker": "Google", "models": ["lyria-3.5"] },
+              { "maker": "ElevenLabs", "models": ["eleven_multilingual_v2"] },
+              { "maker": "Meta", "models": ["htdemucs", "mms-fa"] } ]
+```
+
+Each model is listed once, under its `maker` (`makerOf`), the makers in the order the bill
+first names one of theirs, so the brain's comes first; models with no known maker come last,
+under `null`. Only the models: what they cost, the steps and the software that is not a model
+(ffmpeg, Skia) stay on the bill. It is `null` unless the droplet has both bills, the lesson's
+and the videos' (a lesson's bill alone would leave out who drew and sang it), so a droplet
+made before the bills says nothing. The list has Postgres pick the model names out of the
+bills (`jsonb_path_query_array`, `BILL_MODELS_PATH` in `api/src/lib/breakdown.ts`), so only
+the names leave the database for a page of cards. Nothing in it is about the learner: the models a
+droplet is made with depend on the Studio settings and an admin's pick, not on what the
+learner sent.
+
+These are not hashtags: a hashtag is a search the fact-check holds to the lesson's content
+([Tags](#tags)), which drops a brand, and the 10 a video has are for the topic.
 
 ### Attachments
 
@@ -650,8 +680,8 @@ ORDER BY p.finished::float8 / p.started DESC, p.started DESC, a.id;
 
 Two sides, kept apart in the API (`api/src/lib/privacy.ts`):
 
-- **Public:** the lesson, its videos, lyrics, hashtags and a title from the bundle's
-  `course` and `topic`, on the Droplets tab. Nothing about who asked.
+- **Public:** the lesson, its videos, lyrics, hashtags, the models that made it and a title
+  from the bundle's `course` and `topic`, on the Droplets tab. Nothing about who asked.
 - **The learner's own:** their name, email and photo, the request in their words, their
   files and the follow-up thread. A learner sees only their own topics on `/learn`, and only
   they post follow-ups in their thread. Admins see everyone's (to moderate and fix things)

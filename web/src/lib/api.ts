@@ -383,6 +383,12 @@ export interface DropletTags {
   lesson: string[];
 }
 
+/** One maker's models in what made a droplet, from its bills (api/src/lib/breakdown.ts, madeWithOf). */
+export interface MadeWithMaker {
+  maker: string | null; // Anthropic, Google, ElevenLabs, Meta...; null: the models no maker is listed for
+  models: string[]; // as the studio ran them: claude-opus-5-5, gemini-3.1-flash-image...
+}
+
 export interface DropletCard {
   id: string;
   title: string; // "AP Biology: ATP synthesis"
@@ -391,6 +397,8 @@ export interface DropletCard {
   excerpt: string; // the lesson's first lines, plain text
   video: DropletVideos;
   tags?: DropletTags; // absent from an API older than the tags
+  // The models that made it, by maker, the brain's first. Null: no bill to say; absent from an API older than this.
+  madeWith?: MadeWithMaker[] | null;
   // Absent from an API older than the likes and comments: the page then leaves them out.
   likeCount?: number;
   commentCount?: number;

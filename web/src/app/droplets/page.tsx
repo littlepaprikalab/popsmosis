@@ -12,6 +12,7 @@ import { timeAgo } from '@/lib/time';
 import { allTags, tagHref, tagOf } from '@/lib/tags';
 import { LikeButton, formatCount } from '@/components/LikeButton';
 import { TagList } from '@/components/TagList';
+import { MadeWith } from '@/components/MadeWith';
 import { ClipFeed } from '@/components/ClipFeed';
 import { DropletComments } from '@/components/DropletComments';
 import { ChatBubbleLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
@@ -26,8 +27,9 @@ const CARD_COMMENTS = 2;
 /**
  * The public Droplets tab (docs/PLAN.md, section 10): every finished droplet, for
  * anyone, signed in or not. A card plays its song (or its lesson) in place, shows the
- * title the studio gave it, a few lines of the lesson, its first hashtags and its newest
- * comments, which open in place to all of them; never who asked, or how they asked it.
+ * title the studio gave it, a few lines of the lesson, its first hashtags, the makers of
+ * the models that made it, and its newest comments, which open in place to all of them;
+ * never who asked, or how they asked it.
  * Its page has both videos, the whole lesson and the lyrics. `?tag=` lists only the
  * droplets tagged with it, as a hashtag search does.
  */
@@ -284,6 +286,7 @@ function Card({ droplet: d, index }: { droplet: DropletCard; index: number }) {
         <p className="text-[10px] mt-2" style={{ color: 'var(--text-muted)' }}>{timeAgo(d.createdAt)}</p>
       </Link>
       <TagList tags={allTags(d.tags)} max={CARD_TAGS} className="px-4 pb-3 -mt-1" />
+      <MadeWith makers={d.madeWith} compact className="px-4 pb-3 -mt-1" />
       <div className="px-4 pb-3 flex items-center gap-3">
         {/* An API older than likes and comments sends neither count: leave both out rather than show zeros. */}
         {d.likeCount !== undefined && (
