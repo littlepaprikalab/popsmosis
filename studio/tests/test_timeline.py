@@ -633,3 +633,66 @@ def test_what_moves_takes_the_colour_of_the_structure_it_names():
     assert marker_colour("magma", palette) == "#E4572E"  # magma rises in magma's red
     assert marker_colour("H⁺", palette) == MARKER_COLOURS["H⁺"]  # a common kind keeps its own
     assert marker_colour("sediment", palette) == marker_colour("sediment")  # no such structure: by its name
+
+
+def test_on_a_long_hold_the_songs_camera_follows_the_part_each_line_names():
+    # A whole picture held still for up to 32 s in the scorecard's songs, the camera only drifting. 3-second lines;
+    # HOLD_S 6, SHOT_MIN_S 4, FOLLOW_MAX_S 12.
+    from studio.schemas import Particles, TimelineCamera
+    from studio.steps.timeline import _follow
+
+    def beat(t0, scene, *named, spotlight=None, target=None, particles=(), line=True):
+        return {"t0": t0, "scene": scene, "line_id": f"l{t0}" if line else None, "named": list(named),
+                "labels": ["A", "B", "C"], "spotlight": spotlight, "particles": list(particles),
+                "camera": TimelineCamera(target=target, zoom=1.8 if target else 1.0)}
+
+    flow = Particles(path=["A", "B"], color="#F2C230", trail=True, label="H⁺")
+    beats = [beat(0, "hook", "A"),  # the hook holds still
+             beat(3, "overview", "A"),  # a cut: the whole picture
+             beat(6, "overview", "A"),  # still only 3 s on it
+             beat(9, "overview", "A"),  # 6 s of the whole picture: in on A
+             beat(12, "overview", "B"),  # A has had 3 s: it stays
+             beat(15, "overview", line=False),  # an instrumental gap holds the framing
+             beat(18, "overview", "B"),  # A has had 9 s: on to B
+             beat(21, "overview"),  # B has had 3 s: it stays, though nothing is named
+             beat(24, "overview", "A"),  # following since 9 s, past FOLLOW_MAX_S: the whole picture again
+             beat(27, "overview", "A", spotlight="B"),  # the whole picture for 3 s
+             beat(30, "overview", "A", spotlight="B"),  # 6 s: in on what the line is about, its spotlight
+             beat(33, "overview", "A", particles=[flow]),  # a flow is watched whole
+             beat(36, "overview", "A", target="C"),  # the direction framed it: kept
+             beat(39, "overview", "A"),
+             beat(42, "overview", "A"),
+             beat(45, "overview", "A"),  # 6 s of the whole picture since the direction's C
+             beat(48, "detail", "A"),  # a cut: the whole picture, whatever came before
+             beat(51, "hook", "A"), beat(54, "hook", "A"), beat(57, "hook", "A")]  # never on the hook
+    _follow(beats, "hook")
+    assert [(b["camera"].target, b["camera"].zoom) for b in beats] == [
+        (None, 1.0), (None, 1.0), (None, 1.0), ("A", 1.4), ("A", 1.4), ("A", 1.4), ("B", 1.4), ("B", 1.4),
+        (None, 1.0), (None, 1.0), ("B", 1.4), (None, 1.0), ("C", 1.8), (None, 1.0), (None, 1.0), ("A", 1.4),
+        (None, 1.0), (None, 1.0), (None, 1.0), (None, 1.0)]
+
+
+def test_the_song_follows_on_its_long_hold_and_the_lesson_keeps_its_direction(job):
+    data = sample_media.bundle().model_dump()
+    for lyric in data["lyrics"]:
+        if lyric["id"] == "v2-1":
+            lyric["text"] = "Only cytochrome b6f pumps them in"
+    for line_id in ("v1-2", "c1-1", "v2-1", "c2-1"):  # 4.3-second lines on the overview, the camera on all of it
+        direct(data, line_id, scene="overview", spotlight="", particles=[], also=[], glow="",
+               camera={"target": "", "zoom": 1.0})
+    write_bundle(job, data)
+    timelines = make(job)
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    assert all(timeline_problems(t, locations) == [] for t in timelines.values())
+    song = lines(timelines["song"])
+    framed = {line_id: (song[line_id].camera.target, song[line_id].camera.zoom)
+              for line_id in ("v1-2", "c1-1", "v2-1", "c2-1")}
+    # 8.6 s into the overview, v2-1 names cytochrome b6f: the camera goes in on it, and once it has had its 4.3 s,
+    # back to the whole picture for a chorus that names no part.
+    assert framed == {"v1-2": (None, 1.0), "c1-1": (None, 1.0), "v2-1": ("Cytochrome b6f", step.FOLLOW_ZOOM),
+                      "c2-1": (None, 1.0)}
+    assert song["v2-1"].camera.from_whole  # 1.4 times closer than the whole scene, not the whole art
+    directed = {d.line_id: d.camera.target or None for d in Bundle.model_validate(data).direction}
+    for beat in timelines["lesson"].beats:
+        if beat.line_id:
+            assert beat.camera.target in (None, directed[beat.line_id])

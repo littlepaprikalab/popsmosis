@@ -443,6 +443,21 @@ def test_the_camera_drifts_on_while_a_line_holds_and_lines_on_one_shot_run_on(jo
     assert Renderer._drift(renderer_module.Cam(0, 0, 1.6), renderer_module.Cam(0, 0, 1.3)) == -1.0
 
 
+def test_the_songs_following_shot_counts_from_the_whole_scene_and_keeps_the_part_in_view(job):
+    # The whole scene frames what is drawn, here closer than the whole art: a follow at 1.4 of the whole art would only
+    # have slid across (timeline._follow).
+    renderer = Renderer(job, flowing([flow_beat(0, 8, path=[], labels=FLOW)]))
+    view = renderer.layout.view
+    whole = renderer._whole("overview", view).zoom
+    assert whole > timeline_step.FOLLOW_ZOOM  # the sample's overview is a strip across the canvas
+    followed = renderer._aim("overview", "Cytochrome b6f", timeline_step.FOLLOW_ZOOM, from_whole=True)
+    assert followed.zoom == pytest.approx(whole * timeline_step.FOLLOW_ZOOM)
+    # A part too big to be that much closer is framed as close as it fits, never wider than the whole scene.
+    assert renderer._aim("overview", "Thylakoid", timeline_step.FOLLOW_ZOOM, from_whole=True).zoom == whole
+    # The direction's own zoom still counts from the whole art.
+    assert renderer._aim("overview", "Cytochrome b6f", 1.4).zoom == 1.4
+
+
 def test_a_flow_runs_on_when_another_joins_it(job):
     back = ["Cytochrome b6f", "Thylakoid"]
     joined = flow_beat(4, 8, labels=FLOW)

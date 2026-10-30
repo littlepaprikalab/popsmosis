@@ -753,9 +753,12 @@ class Renderer:
             self._scenes[scene_id] = SceneArt(self.job, self.locations.scene(scene_id))
         return self._scenes[scene_id]
 
-    def _aim(self, scene_id: str, target: str | None, zoom: float, focus: Point | None = None) -> Cam:
+    def _aim(self, scene_id: str, target: str | None, zoom: float, focus: Point | None = None,
+             from_whole: bool = False) -> Cam:
         """The camera for a beat: on its target, or on the whole scene. An upright frame cannot hold a wide picture
-        whole, so there "the whole scene" fills the frame's height and looks at `focus`, where the beat's flow is."""
+        whole, so there "the whole scene" fills the frame's height and looks at `focus`, where the beat's flow is.
+        With `from_whole` (TimelineCamera.from_whole), `zoom` counts from the whole scene's framing, and the shot is
+        never wider than it."""
         art = self.scene(scene_id)
         loc = self.locations.scene(scene_id).get(target) if target else None
         view = self.view(scene_id)
@@ -766,7 +769,11 @@ class Renderer:
             return whole
         box_w, box_h = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         fits = min((view[2] - view[0]) / (box_w * FIT_PAD), (view[3] - view[1]) / (box_h * FIT_PAD)) / _fit(view, art)
-        zoom = max(1.0, min(zoom, fits))
+        if from_whole:
+            whole = self._whole(scene_id, view).zoom
+            zoom = max(whole, min(whole * zoom, fits))
+        else:
+            zoom = max(1.0, min(zoom, fits))
         if self.portrait:  # a close-up is never wider than the upright frame's whole scene
             zoom = max(zoom, self._whole(scene_id, view).zoom)
         return clamp_cam(Cam(loc.centroid.x, loc.centroid.y, zoom), view, art)
@@ -800,7 +807,7 @@ class Renderer:
                 if self.portrait and beat.particles:
                     stops = self._path_points(beat.scene, beat.particles[0].path)
                     focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
-            target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus)
+            target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus, beat.camera.from_whole)
             same = i > 0 and beats[i - 1].scene == beat.scene
             staged = i > 0 and self.staged(beats[i - 1].scene, beat.scene)
             drift_from = beat.t0

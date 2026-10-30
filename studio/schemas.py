@@ -719,6 +719,9 @@ class TimelineCamera(Strict):
     target: str | None  # a structure on the beat's scene; None: the whole scene
     zoom: float  # 1.0 shows the whole art
     ease: Literal["inOut", "linear"] = "inOut"
+    # True: `zoom` counts from the whole scene's framing, which frames what is drawn and so is often closer than the
+    # whole art (the song's camera following a part, timeline._follow: 1.4 is that much closer than the whole scene).
+    from_whole: bool = False
 
 
 class Reveal(Strict):
