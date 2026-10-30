@@ -391,8 +391,10 @@ LOOK = ("On a plain, flat dark slate blue background, every part well inside the
         "around each part for its label.")
 # Only in a diagram: in an everyday scene it scattered molecules round round 8's sprinter and through its reservoir.
 MOLECULES = "Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, coils or clusters of atoms."
-NO_TEXT = ("No text, labels, letters, numbers or chemical symbols (no H+, no e-, no ATP) anywhere in the "
-           "picture.")
+# Round 17's river scene came back with the white lines a labelled figure hangs its labels from; the writing at their
+# ends was painted out, and the bare lines stuck out of the picture under the video's own labels.
+NO_TEXT = ("No text, labels, label lines, pointer lines, letters, numbers or chemical symbols (no H+, no e-, no "
+           "ATP) anywhere in the picture.")
 # A diagram is the still stage the video acts on: asked for a membrane "during the light reactions", Gemini drew
 # the process itself (lightning bolts, H+ in circles, water molecules, an electron path) on two tries in a row.
 ONLY_PARTS = ("Draw only the parts named above, standing still: no ions, electrons, small molecules, arrows, "
@@ -409,7 +411,9 @@ CHECK_PROMPT = """You check one illustration for a short educational video befor
 renderer adds every label and caption itself, so the picture must have none of its own.
 
 List in `text` every piece of writing you can see in the picture, exactly as written: words, letters, \
-numbers, labels, captions, legends, watermarks, even a single letter. Leave it empty when there is none.
+numbers, labels, captions, legends, watermarks, even a single letter. List too each line a label would hang \
+from: a thin pointer line or empty callout box with nothing at its end, as "label line". Leave it empty when \
+there is none.
 
 List in `misplaced` each structure below that is missing from the picture, in the wrong place, or facing \
 the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
