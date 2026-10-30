@@ -1024,6 +1024,18 @@ Everything on Inkmory is public.
   the operator's journal entries and cycle logs about it, and its life story as it stood
   then. That is the diagnostic view of one droplet. The id says nothing about
   the topic or who asked, so it may be public.
+- **Ideas for the studio** (Oct 30). The maintainer reads the journal for problems in the
+  workflow and what to improve next, so a journal entry may end with one line starting
+  `Idea for the studio:`, for something only a change to the code, the prompts or the
+  skill file would fix: which step, what happened, how often in recent runs, and what might
+  fix it, with the entry's refs pointing to the topics. Most entries have none. The idea is
+  the maintainer's to weigh: the operator never acts on one, a later run never treats one
+  as a rule, and a problem in the plan still goes to the brain as a note. A weakness in the
+  fact-check, or in how learner text is handled, never goes on Inkmory; it goes in the
+  run's report. The journal holds only what the operator saw: what the run went through
+  and what each step reported. A problem no step reports never reaches it, so when one
+  turns up some other way (the render's look, say, which only watching shows), part of the
+  fix is to have its step report it.
 - **Best-effort:** a failed Inkmory call is logged and skipped; it never blocks or fails
   a droplet. With `INKMORY_ENABLED=false` the routine and the studio skip Inkmory and
   otherwise run the same.
