@@ -1,6 +1,11 @@
 """The art and locate steps, with a stand-in brain that answers with the SVGs in studio/tests/art/."""
 
+import ast
 import copy
+import hashlib
+import inspect
+import math
+import textwrap
 import xml.etree.ElementTree as ET
 import shutil
 from pathlib import Path
@@ -609,3 +614,68 @@ def test_a_new_look_styles_the_kept_drawings_again_without_the_brain(job, monkey
 
 def test_the_illustrator_is_told_the_page_it_draws_on():
     assert svg.PAGE in art.PROMPT and 'data-role="axes"' in art.PROMPT and 'data-role="point"' in art.PROMPT
+
+
+# What the house look draws with, in studio/svg.py: its functions (as code: docstrings and comments left out) and its
+# numbers. A finished job keeps its art until the look id it was styled with (svg.LOOK) changes, so a change here that
+# changes what is drawn must come with a new LOOK, or finished jobs keep the old look. A change that draws the same (a
+# rename, a refactor) pins the new fingerprint and keeps LOOK.
+LOOK_CODE = ("style", "_style_graph", "_style_axes", "_steps", "_style_structure", "_glow", "_placed", "_segments",
+             "_prop", "_inherited", "_repaint", "_drawn", "_owner", "_moved", "_shading", "_covers_page", "_number",
+             "_mix", "rasterise", "masks", "_painted", "_prepared", "_soft_filters", "without_points", "locate",
+             "_deepest")
+LOOK_NUMBERS = ("PAGE", "LINE_WIDTH", "BAND", "AXIS_WIDTH", "AXIS_SHARE", "POINT_WIDTH", "ARROW", "GRID_STEP", "GLOW",
+                "GLOW_OF", "GLOW_BLUR", "GLOW_SPREAD", "GLOW_OPACITY", "REPAINTED", "AXIS_INK", "GRID_INK", "ROLE",
+                "NAMED")
+LOOK_PINNED = ("1", "1f669964c58c")  # LOOK 1 never shipped before this pin: no bump
+
+
+def _as_code(function) -> str:
+    tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
+    for node in ast.walk(tree):
+        body = getattr(node, "body", None)
+        if (isinstance(body, list) and body and isinstance(body[0], ast.Expr)
+                and isinstance(body[0].value, ast.Constant) and isinstance(body[0].value.value, str)):
+            node.body = body[1:] or [ast.Pass()]
+    return ast.dump(tree, annotate_fields=False, include_attributes=False)
+
+
+def test_the_look_cannot_change_without_a_new_look_id():
+    parts = [_as_code(getattr(svg, name)) for name in LOOK_CODE] + [repr(getattr(svg, name)) for name in LOOK_NUMBERS]
+    fingerprint = hashlib.sha256("\n".join(parts).encode()).hexdigest()[:12]
+    assert (svg.LOOK, fingerprint) == LOOK_PINNED, (
+        f"the house look's code or numbers changed (now {fingerprint}): if it draws differently, bump svg.LOOK so "
+        "finished jobs are styled again; either way, pin the new LOOK and fingerprint in LOOK_PINNED")
+
+
+def test_axes_moved_by_a_group_take_their_grid_with_them():
+    moved = svg_text('<g transform="translate(50 20)">', AXES_SVG, '</g>',
+                     '<g data-structure="Curve"><path d="M420 820 L1400 200" fill="none" stroke="#4FC3F7"/></g>')
+    root = styled(moved)
+    grid = list(root)[1]
+    assert grid.get("transform") == "translate(50 20)" and len(grid)  # under the same move as the axes
+    pixels = svg.rasterise(root)
+    x = int(380 + svg.GRID_STEP + 50)
+    column = pixels[300:800, x].astype(int)
+    assert (np.abs(column - PAGE).max(axis=1) > 5).mean() > 0.9  # the grid line is drawn where the axes put it
+
+
+def test_a_lines_label_is_anchored_on_the_line_not_on_a_point_marked_on_it():
+    # A point is wider than its line (its ring and glow), so the deepest place in the secant's mask was a point, and
+    # the pill drawn beside the anchor hid the very point the song sings about. The point stays in the mask.
+    secant = Structure(name="Secant line", aliases=[], sam_phrase="orange line", color_hex="#FF9500")
+    text = svg_text(AXES_SVG, '<g data-structure="Secant line">'
+                              '<line x1="570" y1="838" x2="1350" y2="245" stroke="#FF9500" stroke-width="6"/>'
+                              '<circle data-role="point" cx="650" cy="777" r="12" stroke="#FF9500"/>'
+                              '<circle data-role="point" cx="1250" cy="321" r="12" stroke="#FF9500"/></g>')
+    job_scene = sample_media.graph_bundle().scenes[1].model_copy(update={"structures": [secant]})
+    drawing = art.judge(text, job_scene)
+    found, mask = drawing.found["Secant line"], drawing.masks["Secant line"]
+    anchor = (found.label_anchor.x, found.label_anchor.y)
+    assert all(math.dist(anchor, point) > 25 for point in ((650, 777), (1250, 321)))
+    assert mask[777, 650] and mask[321, 1250] and mask[int(anchor[1]), int(anchor[0])]
+    # A structure that is only a point keeps its anchor on it.
+    dot = svg_text(AXES_SVG, '<g data-structure="Secant line"><circle data-role="point" cx="900" cy="500" r="30" '
+                             'stroke="#FF9500"/></g>')
+    alone = art.judge(dot, job_scene).found["Secant line"]
+    assert math.dist((alone.label_anchor.x, alone.label_anchor.y), (900, 500)) < 30

@@ -33,8 +33,9 @@ Each kept drawing starts with a key made from the topic and its scene, so art dr
 an earlier bundle never counts as done: if the bundle is written again, the art is too.
 Running the step again redraws every scene. A run that stopped partway (no
 locations.json yet) keeps the scenes it already drew, unless their scene changed since. So
-does a new look (svg.LOOK): art styled in another one is not done, and the step styles the
-kept drawings again, with no call to the brain.
+does a new look (svg.LOOK): art styled in another one is not done, and the step's next run,
+by hand too, styles the kept drawings again with no call to the brain; the run after that
+redraws, as before.
 An answer cut off at the output limit counts as a refused try; any other brain error
 fails the step, and the scenes already drawn are kept for the retry.
 
@@ -239,8 +240,12 @@ def judge(text: str, scene: Scene) -> Drawing:
         drawing.problems.append("the SVG nests groups too deeply; keep it to a few levels")
         return drawing
     drawing.usable = True
+    # A line's label anchor is on the line, not on a point marked on it, which is wider and would take it.
+    pointed = [n for n in names if any(el.get(svg.ROLE) == "point" for g in styled.iter() if g.get(svg.MARK) == n
+                                       for el in g.iter())]
+    lines = svg.masks(svg.without_points(styled), pointed) if pointed else {}
     for name in names:
-        found = svg.locate(all_masks[name])
+        found = svg.locate(all_masks[name], anchor_in=lines.get(name))
         if found is None:
             shown = int(all_masks[name].sum())
             drawing.problems.append(f"{name} shows only {shown} px in the art, too little to point a label at: "

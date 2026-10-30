@@ -195,15 +195,18 @@ class Found:
     area: int
 
 
-def locate(mask: np.ndarray) -> Found | None:
-    """Where a structure is, from its mask; None when too little of it shows to label."""
+def locate(mask: np.ndarray, anchor_in: np.ndarray | None = None) -> Found | None:
+    """Where a structure is, from its mask; None when too little of it shows to label. Its label anchor is found in
+    `anchor_in` instead when that holds enough of it (a line without the points marked on it, which are wider than
+    the line, so the anchor and the pill beside it would sit on a point)."""
     area = int(mask.sum())
     if area < MIN_AREA:
         return None
     ys, xs = np.nonzero(mask)
     x0, x1, y0, y1 = int(xs.min()), int(xs.max()) + 1, int(ys.min()), int(ys.max()) + 1
     cx, cy = float(xs.mean()) + 0.5, float(ys.mean()) + 0.5
-    anchor = _deepest(mask[y0:y1, x0:x1], cx - x0, cy - y0)
+    within = mask if anchor_in is None or int((anchor_in & mask).sum()) < MIN_AREA else anchor_in & mask
+    anchor = _deepest(within[y0:y1, x0:x1], cx - x0, cy - y0)
     return Found(box=Box(x0=x0, y0=y0, x1=x1, y1=y1), centroid=Point(x=round(cx, 1), y=round(cy, 1)),
                  label_anchor=Point(x=round(anchor[0] + x0, 1), y=round(anchor[1] + y0, 1)), area=area)
 
@@ -226,7 +229,8 @@ def to_text(root: ET.Element) -> str:
 
 # --- the house look ---------------------------------------------------------------------
 
-LOOK = "1"  # the look below, kept with each scene's locations: change it whenever the look changes
+LOOK = "1"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
+# test pins the look's code and numbers to it, studio/tests/test_art.py)
 PAGE = "#28374B"  # the dark slate blue behind every drawing
 ROLE = "data-role"  # what a graph's context is: "axes" on the group of its axes, "point" on a point's circle
 LINE_WIDTH = 8.0  # a graph's lines, whatever width they were drawn
@@ -372,8 +376,7 @@ def _glow(root: ET.Element, groups: list[ET.Element], parent: dict) -> None:
         for el in halo.iter():
             el.attrib.pop("id", None)
             if el is not halo:
-                el.attrib.pop(ROLE, None)
-                el.attrib.pop(MARK, None)
+                el.attrib.pop(MARK, None)  # a point's copy stays a point, so without_points() leaves out its glow too
             if _local(el.tag) in SHAPES and el.get("stroke", "none") != "none":
                 el.set("stroke-width", f"{_number(el.get('stroke-width'), 1.0) * GLOW_SPREAD:g}")
         layer.append(_placed(halo, parent.get(group), parent, root))
@@ -440,6 +443,16 @@ def _segments(el: ET.Element) -> list[tuple[float, float, float, float]]:
         return out
     except (ValueError, IndexError):
         return []
+
+
+def without_points(root: ET.Element) -> ET.Element:
+    """A copy without the points marked on its lines (data-role="point") and their glow: where a line's label
+    anchor is found (locate's anchor_in)."""
+    root = copy.deepcopy(root)
+    parent = {child: el for el in root.iter() for child in el}
+    for el in [el for el in root.iter() if el.get(ROLE) == "point"]:
+        parent[el].remove(el)
+    return root
 
 
 def _prop(el: ET.Element, key: str) -> str | None:
