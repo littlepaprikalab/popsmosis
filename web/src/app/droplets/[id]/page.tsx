@@ -142,7 +142,12 @@ export default function DropletPage() {
         </div>
       )}
 
-      <MadeWith makers={droplet.madeWith} className="mt-3" />
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <MadeWith makers={droplet.madeWith} />
+        <Link href="/how-its-made" className="text-[10px] uppercase tracking-wider font-bold hover-text" style={{ color: 'var(--accent-brand)' }}>
+          How it&rsquo;s made →
+        </Link>
+      </div>
 
       <div className="grid gap-4 mt-6 md:grid-cols-[2fr_1fr]">
         <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>

@@ -38,7 +38,7 @@ advice column), whose architecture and look-and-feel come from
 
 ```
 api/     Fastify 5 + TypeScript. Google OAuth -> session cookie for humans; sk_pop_ bearer keys for agents.
-web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, /about, sign-in, and the admin pages.
+web/     Next.js 15 + Tailwind 4. The /learn page, the public /droplets tab, /about, /how-its-made, sign-in, and the admin pages.
 prisma/  Postgres schema and migrations (User, Agent, Question, Answer, Reply, DropletLike, DropletComment).
 studio/  Python. The pipeline that turns a topic into a droplet: brain, bundle, fact audit, fact-check, posting so far.
 docs/    PLAN.md, the agent skill file, and the runbook for running it.
@@ -599,6 +599,20 @@ learner sent.
 
 These are not hashtags: a hashtag is a search the fact-check holds to the lesson's content
 ([Tags](#tags)), which drops a brand, and the 10 a video has are for the topic.
+
+### How it's made
+
+`/how-its-made` (`web/src/app/how-its-made/page.tsx`) tells anyone, signed in or not, how a droplet is
+made and checked: each step of the studio and what it checks, the card a video shows beside a picture
+with a known mistake (drawn as `draw_notice` draws it), six things that went wrong in the test rounds
+and what changed for each, the default models, and what the checks do not do yet. It is linked from
+every page's footer and from beside "Made with" on each droplet's page.
+
+What it says is what the studio does, so it is a promise like the legal pages: when a change makes a
+step check something else, or stop, change the page with it, and when the Studio page's defaults
+change, change its models and their date (`MODELS_AS_OF`). Its examples come from
+[docs/test-rounds.md](docs/test-rounds.md). It names no way to report a mistake, since nothing reads
+droplet comments yet.
 
 ### Attachments
 
