@@ -1,0 +1,10 @@
+{
+  "problems": [
+    {
+      "line_id": "b-3",
+      "rule": "lyric-style",
+      "detail": "\"Help a partner if attacked, that's all\" runs 11 syllables, over 10",
+      "repaired": false
+    }
+  ]
+}

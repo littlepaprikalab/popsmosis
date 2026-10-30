@@ -1,0 +1,139 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "What is entropy, really, if it isn't just disorder?",
+    "core_idea": "Entropy counts the ways particles and energy can be arranged; nature drifts toward states with the most ways.",
+    "why_chain": [
+      "What we observe, like gas filling a box, is a macrostate, and many exact arrangements of molecules, called microstates, can produce it.",
+      "Entropy measures how many microstates fit a macrostate, so more ways means higher entropy.",
+      "Molecules move randomly, so a system ends up in the macrostate with the most microstates simply because it is overwhelmingly likely.",
+      "Spread-out particles and energy have vastly more microstates than bunched ones, so things spread and total entropy rises: the second law."
+    ],
+    "key_terms": [
+      "entropy",
+      "macrostate",
+      "microstate",
+      "second law of thermodynamics",
+      "isolated system"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "A macrostate is the overall condition of a system that we can observe or measure, such as its temperature, pressure and volume, or a gas filling its box. A microstate is one exact arrangement of every particle's position and energy, and many different microstates can give the same macrostate. Entropy measures how many microstates fit a macrostate: the more microstates, the higher the entropy. Boltzmann's equation states this as S = k ln W, where W is the number of microstates and k is Boltzmann's constant; entropy is measured in joules per kelvin. It is a common mistake to think entropy simply means disorder or messiness. Disorder is only a loose metaphor: entropy counts microstates, which measures how widely energy and particles are spread among the arrangements available, not how messy things look. Visible messiness, like an untidy room or a shuffled deck of cards, is not what thermodynamic entropy measures.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "Rolling two dice is an everyday picture of entropy. The total you roll is like a macrostate, and each exact pair of faces is like a microstate. A total of seven can be made six ways: 1 and 6, 2 and 5, 3 and 4, 4 and 3, 5 and 2, and 6 and 1. A total of two can be made only one way, 1 and 1. So seven comes up six times as often as two, not because the dice prefer seven, but because more microstates make it. In the same way, a system ends up in the macrostate with the most microstates because it is the most likely.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "Picture a box of gas with a left half and a right half. With four gas molecules there are sixteen microstates: all four in the left half happens in only one of them, while two molecules in each half happens in six. As the number of molecules grows, evenly spread arrangements vastly outnumber bunched ones: with 100 molecules, the chance of finding all of them in the left half at any moment is less than one in a million trillion trillion. Molecules move randomly, so a gas spreads to fill its container, and a drop of food coloring spreads through water and never gathers back into a drop. This is the second law of thermodynamics: the total entropy of an isolated system, one that trades no energy or matter with its surroundings, tends to increase and never decreases. The law is statistical: for any large system a decrease is so unlikely that it is never observed.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "When heat Q flows into a system at absolute temperature T, its entropy rises by Q divided by T (ΔS = Q/T, for heat transferred reversibly at constant temperature). When a mug of hot coffee sits in a cool room, heat leaves the coffee at a higher temperature and enters the room at a lower temperature, so the room gains more entropy than the coffee loses, and total entropy rises. That is why heat flows on its own from hot to cold, never from cold to hot. A refrigerator can move heat from cold to hot only by using work, electrical energy, and it releases even more heat into the kitchen, so total entropy still rises. Entropy leads to the next topic, Gibbs free energy, which combines entropy and enthalpy to predict whether a reaction happens on its own.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think entropy simply means disorder or messiness. Entropy actually counts the microstates that fit a macrostate, so it measures how widely energy and particles are spread, not how messy things look.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A clear glass of water on a table, with a drop of red food coloring just entering the water at the top and a faint red cloud spreading below it."
+      },
+      {
+        "id": "analogy",
+        "picture": "Pairs of dice on a table: on the left, one pair showing 1 and 1, the only way to make a total of two; on the right, six pairs showing 1 and 6, 2 and 5, 3 and 4, 4 and 3, 5 and 2, and 6 and 1, the six ways to make a total of seven. Each pair of faces is a microstate and each total is a macrostate."
+      },
+      {
+        "id": "overview",
+        "picture": "A box of gas: a sealed box, the isolated system, with a dashed line down its middle marking a left half and a right half, holding a hundred gas molecules drawn as small dots spread evenly through both halves. The gas filling the whole box is the macrostate, and this exact pattern of dots is one microstate."
+      },
+      {
+        "id": "four-molecules",
+        "picture": "A close-up of the box of gas shrunk to four molecules numbered 1 to 4: sixteen small copies of the box in a grid, each one a microstate. One copy has all four molecules in the left half, four have three on the left, six have two molecules in each half, four have three on the right, and one has all four on the right."
+      },
+      {
+        "id": "coffee",
+        "picture": "A mug of hot coffee on a table in a cool room, with a thermometer in the coffee reading high and a thermometer on the room's wall reading low."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "Put one drop of food coloring into a glass of water.",
+          "Without stirring, it spreads through the whole glass.",
+          "Wait as long as you like, and it never gathers back into a drop.",
+          "The usual explanation is entropy, often called disorder.",
+          "But what is entropy, really?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Roll two dice: the total is like a macrostate, and each exact pair of faces is like a microstate.",
+          "Seven can be made six ways, but two only one way, so seven turns up six times as often.",
+          "Entropy is that kind of count: how many microstates make the same macrostate."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Now the real thing: a box of gas with a left half and a right half.",
+          "What we see, gas filling the whole box, is the macrostate.",
+          "One exact arrangement of every molecule's position and energy is a microstate."
+        ]
+      },
+      {
+        "scene": "four-molecules",
+        "lines": [
+          "Shrink the box to four molecules, and there are sixteen microstates.",
+          "Only one of them puts all four in the left half.",
+          "But six of them put two molecules in each half.",
+          "So spread evenly beats all on the left six to one, just like seven beats two on the dice."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Back in the full box, picture a hundred molecules.",
+          "What are the odds of catching them all in the left half at one moment?",
+          "Less than one in a million trillion trillion.",
+          "The molecules move randomly, so the gas ends up spread out, the macrostate with by far the most microstates.",
+          "That's the second law of thermodynamics: the total entropy of an isolated system never decreases.",
+          "An isolated system is one that trades no energy or matter with its surroundings.",
+          "Now, a common mistake is to think entropy simply means disorder.",
+          "Entropy counts microstates, so it measures how widely energy and particles are spread, not how messy things look."
+        ]
+      },
+      {
+        "scene": "coffee",
+        "lines": [
+          "Now, why does hot coffee cool down in a cool room?",
+          "When heat flows into something, its entropy rises by the heat divided by its absolute temperature.",
+          "Heat leaves the coffee at a higher temperature and enters the room at a lower one.",
+          "Dividing by the smaller temperature gives a bigger result, so the room gains more entropy than the coffee loses.",
+          "Total entropy rises, and that's why heat flows on its own from hot to cold."
+        ]
+      },
+      {
+        "scene": "hook",
+        "lines": [
+          "So entropy counts the ways particles and energy can be arranged, and nature drifts toward states with the most ways.",
+          "It isn't disorder: it's the number of microstates behind what you see, and it's why the drop never gathers back."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 30,
+    "reworded": 0
+  }
+}

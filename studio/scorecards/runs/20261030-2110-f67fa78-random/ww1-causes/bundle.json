@@ -1,0 +1,2323 @@
+{
+  "course": "World History",
+  "topic": "The causes of World War I",
+  "audience": "high school",
+  "core_idea": "A local assassination became a world war because alliances pulled great powers in, one after another.",
+  "why_chain": [
+    "Alliances tied Europe's great powers together, so a war involving one could pull in its partners.",
+    "Militarism built huge armies ready to fight, and nationalism set Serbian nationalists against Austria-Hungary.",
+    "Gavrilo Princip killed Franz Ferdinand, so Austria-Hungary, backed by Germany, declared war on Serbia.",
+    "Russia began mobilization to protect Serbia, so Germany declared war on Russia and then France.",
+    "The Schlieffen Plan sent Germany through neutral Belgium, so Britain declared war on Germany."
+  ],
+  "key_terms": [
+    "Franz Ferdinand",
+    "Gavrilo Princip",
+    "nationalism",
+    "militarism",
+    "Triple Alliance",
+    "Triple Entente",
+    "mobilization",
+    "Schlieffen Plan"
+  ],
+  "facts": [
+    {
+      "id": "f1",
+      "text": "By 1914 Europe's great powers were split into two alliances: the Triple Alliance of Germany, Austria-Hungary and Italy, and the Triple Entente of Russia, France and Britain. Alliances were promises to defend each other, meant to deter attack, but they also meant a war involving one power could pull in its partners. They worked like climbers roped together on a mountain for safety: the rope is meant to stop a fall, but if one climber slips, the rope can drag the others down. Alongside the alliances, militarism, the policy of building up armies and navies, led to an arms race, including a naval race between Britain and Germany.",
+      "source_quote": ""
+    },
+    {
+      "id": "f2",
+      "text": "Nationalism, fierce loyalty to one's own nation or people, raised tension in the Balkans. Austria-Hungary had annexed Bosnia in 1908, and it ruled many Serbs, so Serbian nationalists turned against Austria-Hungary. On June 28, 1914, Archduke Franz Ferdinand, heir to Austria-Hungary's throne, rode through Sarajevo, the capital of Bosnia, in an open car. Gavrilo Princip, a Bosnian Serb nationalist, fired two pistol shots, killing Franz Ferdinand and his wife.",
+      "source_quote": ""
+    },
+    {
+      "id": "f3",
+      "text": "Austria-Hungary blamed Serbia for the assassination. Germany promised Austria-Hungary its full support, so Austria-Hungary sent Serbia harsh demands and declared war on Serbia on July 28, 1914. Russia, which saw itself as Serbia's protector, began mobilization, calling up its army for war. Germany saw this as a threat and declared war on Russia on August 1 and on France on August 3. Facing enemies on two sides, Germany followed the Schlieffen Plan: defeat France quickly, then turn east to fight Russia before Russia was fully ready. The quickest road to Paris ran through neutral Belgium, so the German army marched into Belgium. Britain had promised to protect Belgium's neutrality, so on August 4 Britain declared war on Germany. In about a week, a war between two countries had become a war among Europe's great powers, which became the First World War.",
+      "source_quote": ""
+    },
+    {
+      "id": "f4",
+      "text": "A common mistake is to think the assassination alone caused the war. Historians call it the spark: the war spread because alliances, militarism and nationalism were already in place. Italy, the third member of the Triple Alliance, shows how alliances worked: its alliance promised help only if a partner was attacked, and Austria-Hungary had attacked first, so Italy stayed neutral in 1914 and joined the war against Austria-Hungary in 1915. The war lasted until November 1918 and killed millions of soldiers, and in towns across Europe, stone memorials list local soldiers killed in the First World War.",
+      "source_quote": ""
+    }
+  ],
+  "misconception": "A common mistake is to think Franz Ferdinand's assassination alone caused the war. Historians call it the spark: the war spread because alliances, militarism and nationalism were already in place.",
+  "scenes": [
+    {
+      "id": "hook",
+      "image_prompt": "Educational illustration, as a world history textbook would show it, of a stone war memorial in a small town square: one tall memorial of light sandstone beige stone standing in the centre of the picture on a low stepped base, its front face carved with rows of short even grooves standing for soldiers' names, with no readable letters; a round wreath of red poppies leaning against its base; a few plain town houses faint in the background. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "War memorial",
+          "aliases": [
+            "stone memorials",
+            "memorial"
+          ],
+          "sam_phrase": "beige monument",
+          "color_hex": "#D9C9A3"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "analogy",
+      "image_prompt": "Educational illustration, as a textbook draws an everyday example, of a line of mountain climbers tied to each other by one rope on a steep slope: a light brown rocky mountain slope rising from the lower left to the upper right; four climbers in cyan jackets standing in a row up the slope; at the left end, one climber in a yellow jacket off balance at the edge of a ledge, his feet slipping; one magenta climbing rope running taut from the yellow climber to each of the cyan climbers. A friendly textbook illustration of the real thing.",
+      "structures": [
+        {
+          "name": "Mountain",
+          "aliases": [
+            "mountain"
+          ],
+          "sam_phrase": "brown mountain",
+          "color_hex": "#C4A484"
+        },
+        {
+          "name": "Roped climbers",
+          "aliases": [
+            "climbers"
+          ],
+          "sam_phrase": "cyan climbers",
+          "color_hex": "#4DD0E1"
+        },
+        {
+          "name": "Slipping climber",
+          "aliases": [
+            "one climber"
+          ],
+          "sam_phrase": "yellow climber",
+          "color_hex": "#FFD54F"
+        },
+        {
+          "name": "Rope",
+          "aliases": [
+            "rope",
+            "alliances"
+          ],
+          "sam_phrase": "magenta rope",
+          "color_hex": "#EC407A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "overview",
+      "image_prompt": "Educational illustration, as a world history textbook draws a timeline of figures, of people and soldiers of 1914 standing in one row from left to right across the picture: first Franz Ferdinand in a white uniform, then Gavrilo Princip in a brown suit; then seven soldiers in a row, one for each country in the order it entered the war: Austria-Hungary's soldier in a yellow uniform, Serbia's in a red uniform, Russia's in a green uniform, Germany's in an orange uniform, France's in a purple uniform, Belgium's in a pink uniform and Britain's in a tan uniform. One magenta rope runs along the line of the seven soldiers at waist height, tied to each of them. The soldiers of Austria-Hungary and Germany each wear a light grey sash across the chest; the soldiers of Russia, France and Britain each wear a blue sash across the chest. At the far right, apart from the line and not tied to the rope, stands Italy's soldier in a lime green uniform with a light grey sash. No flags, letters or labels. A clean, friendly history textbook illustration, each figure simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Franz Ferdinand",
+          "aliases": [],
+          "sam_phrase": "white uniform",
+          "color_hex": "#F5F5F5"
+        },
+        {
+          "name": "Gavrilo Princip",
+          "aliases": [],
+          "sam_phrase": "brown suit",
+          "color_hex": "#B07A4F"
+        },
+        {
+          "name": "Austria-Hungary",
+          "aliases": [
+            "Austria"
+          ],
+          "sam_phrase": "yellow soldier",
+          "color_hex": "#FFD54F"
+        },
+        {
+          "name": "Serbia",
+          "aliases": [],
+          "sam_phrase": "red soldier",
+          "color_hex": "#EF5350"
+        },
+        {
+          "name": "Russia",
+          "aliases": [],
+          "sam_phrase": "green soldier",
+          "color_hex": "#66BB6A"
+        },
+        {
+          "name": "Germany",
+          "aliases": [],
+          "sam_phrase": "orange soldier",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "France",
+          "aliases": [],
+          "sam_phrase": "purple soldier",
+          "color_hex": "#BA68C8"
+        },
+        {
+          "name": "Belgium",
+          "aliases": [],
+          "sam_phrase": "pink soldier",
+          "color_hex": "#F48FB1"
+        },
+        {
+          "name": "Britain",
+          "aliases": [],
+          "sam_phrase": "tan soldier",
+          "color_hex": "#D2A679"
+        },
+        {
+          "name": "Italy",
+          "aliases": [],
+          "sam_phrase": "lime soldier",
+          "color_hex": "#D4E157"
+        },
+        {
+          "name": "Triple Alliance",
+          "aliases": [],
+          "sam_phrase": "grey sash",
+          "color_hex": "#CFD8DC"
+        },
+        {
+          "name": "Triple Entente",
+          "aliases": [],
+          "sam_phrase": "blue sash",
+          "color_hex": "#42A5F5"
+        },
+        {
+          "name": "Rope",
+          "aliases": [
+            "rope",
+            "alliances"
+          ],
+          "sam_phrase": "magenta rope",
+          "color_hex": "#EC407A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "sarajevo",
+      "image_prompt": "Educational illustration, as a world history textbook draws it, of a street in Sarajevo in 1914, seen from the side: an old stone street with plain buildings along the back; in the centre a teal open-top car facing right, with a small yellow flag on a short pole at its front; Franz Ferdinand seated in the back of the car in a white uniform, his wife seated beside him in a lavender dress and hat; at the curb on the right, Gavrilo Princip standing in a brown suit, holding a pistol down at his side. A clean, friendly history textbook illustration, each figure simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Franz Ferdinand",
+          "aliases": [],
+          "sam_phrase": "white uniform",
+          "color_hex": "#F5F5F5"
+        },
+        {
+          "name": "His wife",
+          "aliases": [
+            "his wife",
+            "wife"
+          ],
+          "sam_phrase": "lavender dress",
+          "color_hex": "#B39DDB"
+        },
+        {
+          "name": "Open car",
+          "aliases": [
+            "open car",
+            "car"
+          ],
+          "sam_phrase": "teal car",
+          "color_hex": "#26A69A"
+        },
+        {
+          "name": "Austria-Hungary",
+          "aliases": [
+            "Austria"
+          ],
+          "sam_phrase": "yellow flag",
+          "color_hex": "#FFD54F"
+        },
+        {
+          "name": "Gavrilo Princip",
+          "aliases": [],
+          "sam_phrase": "brown suit",
+          "color_hex": "#B07A4F"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    },
+    {
+      "id": "schlieffen-plan",
+      "image_prompt": "Educational map, as a world history textbook draws it, of western and central Europe in 1914: Britain across the sea at the upper left, tinted tan; France below it on the left, tinted purple, with Paris marked by a small yellow star in the north of France; Belgium, a small country tinted pink, between northern France and Germany; Germany in the centre, tinted orange, with the German army gathered just inside its western border as a small group of soldiers in light grey uniforms; Russia at the far right edge, tinted green. The sea and other lands left plain. No arrows, lines, letters or labels. A clean textbook schematic, each country simplified but recognisable.",
+      "structures": [
+        {
+          "name": "Britain",
+          "aliases": [],
+          "sam_phrase": "tan island",
+          "color_hex": "#D2A679"
+        },
+        {
+          "name": "France",
+          "aliases": [],
+          "sam_phrase": "purple country",
+          "color_hex": "#BA68C8"
+        },
+        {
+          "name": "Paris",
+          "aliases": [],
+          "sam_phrase": "yellow star",
+          "color_hex": "#FFEE58"
+        },
+        {
+          "name": "Belgium",
+          "aliases": [],
+          "sam_phrase": "pink country",
+          "color_hex": "#F48FB1"
+        },
+        {
+          "name": "Germany",
+          "aliases": [],
+          "sam_phrase": "orange country",
+          "color_hex": "#FFA726"
+        },
+        {
+          "name": "German army",
+          "aliases": [
+            "Schlieffen Plan"
+          ],
+          "sam_phrase": "grey soldiers",
+          "color_hex": "#B0BEC5"
+        },
+        {
+          "name": "Russia",
+          "aliases": [],
+          "sam_phrase": "green country",
+          "color_hex": "#66BB6A"
+        }
+      ],
+      "stage_of": "",
+      "axes": {
+        "x": "",
+        "y": ""
+      },
+      "to_scale": false
+    }
+  ],
+  "lesson_markdown": "# Why World War I Started\n\n**How did one assassination start a war across Europe?**\n\nIn 1914, two pistol shots in Sarajevo set off a chain of declarations of war that became the First World War. The big idea: a local assassination became a world war because alliances pulled great powers in, one after another. This lesson tells the simplified main line of the story.\n\n## Picture a roped team\n\nThink of climbers roped together on a mountain for safety. The rope is meant to stop a fall, but if one climber slips, the rope can drag the others down. In 1914 the rope was Europe's alliances, and the climbers were the great powers: when one slipped into war, the rope pulled its partners after it.\n\n## The two sides\n\n| Alliance | Members |\n|---|---|\n| Triple Alliance | Germany, Austria-Hungary, Italy |\n| Triple Entente | Russia, France, Britain |\n\n## How it happened\n\n1. **The rope: alliances.** Alliances were promises to defend each other, meant to deter attack. But they also meant a war involving one power could pull in its partners.\n2. **Climbers on the edge: militarism and nationalism.** Militarism, the policy of building up armies and navies, led to an arms race, including a naval race between Britain and Germany. Nationalism, fierce loyalty to one's own nation or people, raised tension in the Balkans. Austria-Hungary had annexed Bosnia in 1908 and ruled many Serbs, so Serbian nationalists turned against it.\n3. **The slip: Sarajevo.** On June 28, 1914, Archduke Franz Ferdinand, heir to Austria-Hungary's throne, rode through Sarajevo, the capital of Bosnia, in an open car. Gavrilo Princip, a Bosnian Serb nationalist, fired two pistol shots, killing Franz Ferdinand and his wife. Austria-Hungary blamed Serbia. With Germany's promise of full support, it sent Serbia harsh demands and declared war on Serbia on July 28, 1914.\n\n   A common mistake is to think the assassination alone caused the war. Historians call it the spark: the war spread because alliances, militarism and nationalism were already in place.\n4. **The rope pulls: mobilization.** Russia saw itself as Serbia's protector, so it began mobilization, calling up its army for war. What do you think Germany, Austria-Hungary's partner in the Triple Alliance, did next? It saw Russia's mobilization as a threat and declared war on Russia on August 1 and on France on August 3.\n5. **The last climbers: the Schlieffen Plan.** Facing enemies on two sides, Germany followed the Schlieffen Plan: defeat France quickly, then turn east to fight Russia before Russia was fully ready. The quickest road to Paris ran through neutral Belgium, so the German army marched into Belgium. Britain had promised to protect Belgium's neutrality, so on August 4 Britain declared war on Germany.\n\nIn about a week, a war between two countries had become a war among Europe's great powers, which became the First World War.\n\n## The climber the rope didn't pull\n\nItaly, the third member of the Triple Alliance, shows how alliances worked. Its alliance promised help only if a partner was attacked, and Austria-Hungary had attacked first, so Italy stayed neutral in 1914 and joined the war against Austria-Hungary in 1915.\n\nWhat comes next is the war itself, which lasted until November 1918 and killed millions of soldiers.\n\n**Check yourself:** Why did a shooting in Sarajevo end with Britain at war with Germany?\n\nCurious about any step? Ask a follow-up question.",
+  "music": {
+    "positive_styles": [
+      "Latin pop over a light, rolling dembow groove at 96 bpm, sung with a melody all the way through; a warm nylon-string guitar plucking a minor-key riff leads, soft handclaps and a shaker sit on the off-beats, and a round, unhurried bass moves underneath; a clear, warm male tenor sings the verses close and conversational, holding the ends of the lines, then opens up into a catchy sing-along chorus with light stacked harmonies; a bittersweet, reflective edge rather than party energy"
+    ],
+    "negative_styles": [
+      "long instrumental intro",
+      "explicit lyrics"
+    ],
+    "sections": [
+      "intro",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "verse",
+      "pre-chorus",
+      "chorus",
+      "bridge",
+      "chorus",
+      "outro"
+    ]
+  },
+  "lyrics": [
+    {
+      "id": "i-1",
+      "section": "intro",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "i-2",
+      "section": "intro",
+      "text": "One slip, and a summer's war begins",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v1-1",
+      "section": "verse",
+      "text": "Up on a mountain, the climbers hold",
+      "names": [
+        "mountain",
+        "climbers"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-2",
+      "section": "verse",
+      "text": "A rope for safety, that's the goal",
+      "names": [
+        "rope"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-3",
+      "section": "verse",
+      "text": "Triple Alliance on one side",
+      "names": [
+        "Triple Alliance"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-4",
+      "section": "verse",
+      "text": "Triple Entente on the other side",
+      "names": [
+        "Triple Entente"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-5",
+      "section": "verse",
+      "text": "Armies growing: that's militarism",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "v1-6",
+      "section": "verse",
+      "text": "Serbs against Austria: nationalism",
+      "names": [
+        "Austria"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-7",
+      "section": "verse",
+      "text": "Franz Ferdinand in an open car",
+      "names": [
+        "Franz Ferdinand",
+        "open car"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "v1-8",
+      "section": "verse",
+      "text": "Gavrilo Princip, the shots ring far",
+      "names": [
+        "Gavrilo Princip"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "p1-1",
+      "section": "pre-chorus",
+      "text": "The shot's a spark, not the cause alone",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p1-2",
+      "section": "pre-chorus",
+      "text": "The rope, the armies, the pride full-grown",
+      "names": [
+        "rope"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c1-1",
+      "section": "chorus",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-2",
+      "section": "chorus",
+      "text": "One rope ties them, the drag begins",
+      "names": [
+        "rope"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c1-3",
+      "section": "chorus",
+      "text": "Austria strikes and Russia calls",
+      "names": [
+        "Austria",
+        "Russia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-4",
+      "section": "chorus",
+      "text": "Germany, France, then Britain, all",
+      "names": [
+        "Germany",
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c1-5",
+      "section": "chorus",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-1",
+      "section": "verse",
+      "text": "Germany says, we've got your back",
+      "names": [
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-2",
+      "section": "verse",
+      "text": "War on Serbia, Austria attacks",
+      "names": [
+        "Serbia",
+        "Austria"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-3",
+      "section": "verse",
+      "text": "Russia stands up for Serbia's sake",
+      "names": [
+        "Russia",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-4",
+      "section": "verse",
+      "text": "Mobilization: the army wakes",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-5",
+      "section": "verse",
+      "text": "Germany's war on Russia, then France",
+      "names": [
+        "Germany",
+        "Russia",
+        "France"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-6",
+      "section": "verse",
+      "text": "Schlieffen Plan: through Belgium, fast advance",
+      "names": [
+        "Schlieffen Plan",
+        "Belgium"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-7",
+      "section": "verse",
+      "text": "Britain stands up on Belgium's side",
+      "names": [
+        "Britain",
+        "Belgium"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "v2-8",
+      "section": "verse",
+      "text": "In about a week, the war went wide",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "p2-1",
+      "section": "pre-chorus",
+      "text": "The war runs to nineteen-eighteen",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "p2-2",
+      "section": "pre-chorus",
+      "text": "Millions lost, their names in stone are seen",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c2-1",
+      "section": "chorus",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-2",
+      "section": "chorus",
+      "text": "One rope ties them, the drag begins",
+      "names": [
+        "rope"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c2-3",
+      "section": "chorus",
+      "text": "Austria strikes and Russia calls",
+      "names": [
+        "Austria",
+        "Russia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-4",
+      "section": "chorus",
+      "text": "Germany, France, then Britain, all",
+      "names": [
+        "Germany",
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c2-5",
+      "section": "chorus",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "b-1",
+      "section": "bridge",
+      "text": "Now what about Italy, the third?",
+      "names": [
+        "Italy"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-2",
+      "section": "bridge",
+      "text": "Triple Alliance, it gave its word",
+      "names": [
+        "Triple Alliance"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-3",
+      "section": "bridge",
+      "text": "Help a partner if attacked, that's all",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-4",
+      "section": "bridge",
+      "text": "But Austria struck first, so no call",
+      "names": [
+        "Austria"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-5",
+      "section": "bridge",
+      "text": "So Italy's rope never pulls tight",
+      "names": [
+        "Italy",
+        "rope"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-6",
+      "section": "bridge",
+      "text": "Nineteen-fourteen, out of the fight",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-7",
+      "section": "bridge",
+      "text": "Nineteen-fifteen, a different side",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "b-8",
+      "section": "bridge",
+      "text": "Against Austria, the rope untied",
+      "names": [
+        "Austria",
+        "rope"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "c3-1",
+      "section": "chorus",
+      "text": "One local shooting, then a world war",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-2",
+      "section": "chorus",
+      "text": "Pulled by alliances, more and more",
+      "names": [
+        "alliances"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-3",
+      "section": "chorus",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-4",
+      "section": "chorus",
+      "text": "One rope ties them, the drag begins",
+      "names": [
+        "rope"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "c3-5",
+      "section": "chorus",
+      "text": "Austria strikes and Russia calls",
+      "names": [
+        "Austria",
+        "Russia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-6",
+      "section": "chorus",
+      "text": "Germany, France, then Britain, all",
+      "names": [
+        "Germany",
+        "France",
+        "Britain"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "c3-7",
+      "section": "chorus",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-1",
+      "section": "outro",
+      "text": "One slip, and a summer's war begins",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "o-2",
+      "section": "outro",
+      "text": "The safety rope drags the climbers in",
+      "names": [
+        "rope",
+        "climbers"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "o-3",
+      "section": "outro",
+      "text": "Two shots fired, great powers pulled in",
+      "names": [],
+      "fact_id": "f3"
+    }
+  ],
+  "narration": [
+    {
+      "id": "n1",
+      "text": "In towns across Europe, stone memorials list local soldiers killed in the First World War.",
+      "names": [
+        "stone memorials"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n2",
+      "text": "That war began in 1914 with two pistol shots in one city.",
+      "names": [],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n3",
+      "text": "So how did one shooting drag Europe's great powers into war?",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n4",
+      "text": "Picture climbers roped together on a mountain for safety.",
+      "names": [
+        "climbers",
+        "mountain"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n5",
+      "text": "Europe's great powers were tied the same way, by alliances, promises to defend each other.",
+      "names": [
+        "alliances"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n6",
+      "text": "But if one climber slipped into war, the rope would pull the others after it.",
+      "names": [
+        "one climber",
+        "rope"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n7",
+      "text": "Here are the people and countries, left to right, in the order they enter the story.",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n8",
+      "text": "First, the rope: Germany and Austria-Hungary belonged to the Triple Alliance.",
+      "names": [
+        "rope",
+        "Germany",
+        "Austria-Hungary",
+        "Triple Alliance"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n9",
+      "text": "Against them, Russia, France and Britain formed the Triple Entente.",
+      "names": [
+        "Russia",
+        "France",
+        "Britain",
+        "Triple Entente"
+      ],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n10",
+      "text": "Both sides raced to build bigger armies and navies, a buildup called militarism.",
+      "names": [],
+      "fact_id": "f1"
+    },
+    {
+      "id": "n11",
+      "text": "And nationalism, fierce loyalty to one's own people, set Serbian nationalists against Austria-Hungary, which ruled many Serbs.",
+      "names": [
+        "Austria-Hungary"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n12",
+      "text": "Then came the slip.",
+      "names": [],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n13",
+      "text": "On June 28, 1914, Franz Ferdinand, heir to Austria-Hungary's throne, rode through Sarajevo in an open car.",
+      "names": [
+        "Franz Ferdinand",
+        "Austria-Hungary",
+        "open car"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n14",
+      "text": "Gavrilo Princip, a Bosnian Serb nationalist, shot and killed him and his wife.",
+      "names": [
+        "Gavrilo Princip",
+        "his wife"
+      ],
+      "fact_id": "f2"
+    },
+    {
+      "id": "n15",
+      "text": "It's a common mistake to think that shooting alone caused the war.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n16",
+      "text": "Historians call it the spark: the war spread because alliances, militarism and nationalism were already in place.",
+      "names": [
+        "alliances"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n17",
+      "text": "So Austria-Hungary blamed Serbia, and with Germany's promise of support, it declared war on Serbia on July 28.",
+      "names": [
+        "Austria-Hungary",
+        "Serbia",
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n18",
+      "text": "Now the rope pulled.",
+      "names": [
+        "rope"
+      ],
+      "fact_id": "filler"
+    },
+    {
+      "id": "n19",
+      "text": "Russia, Serbia's protector, began mobilization, calling up its army for war.",
+      "names": [
+        "Russia",
+        "Serbia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n20",
+      "text": "Germany saw a threat, so it declared war on Russia on August 1, then on France on August 3.",
+      "names": [
+        "Germany",
+        "Russia",
+        "France"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n21",
+      "text": "Germany now faced enemies on two sides, so what could it do?",
+      "names": [
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n22",
+      "text": "Its answer was the Schlieffen Plan: beat France fast, then turn on Russia before it was fully ready.",
+      "names": [
+        "Schlieffen Plan",
+        "France",
+        "Russia"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n23",
+      "text": "The quickest road to Paris ran through Belgium, a neutral country, so the German army marched in.",
+      "names": [
+        "Paris",
+        "Belgium",
+        "German army"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n24",
+      "text": "But Britain had promised to protect Belgium's neutrality, so on August 4 it declared war on Germany.",
+      "names": [
+        "Britain",
+        "Belgium",
+        "Germany"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n25",
+      "text": "In about a week, a war between two countries had become a war among Europe's great powers.",
+      "names": [],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n26",
+      "text": "Now, what about Italy, the third member of the Triple Alliance?",
+      "names": [
+        "Italy",
+        "Triple Alliance"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n27",
+      "text": "Its alliance promised help only if a partner was attacked.",
+      "names": [],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n28",
+      "text": "But Austria-Hungary had attacked first, so Italy's rope never pulled, and it stayed neutral in 1914.",
+      "names": [
+        "Austria-Hungary",
+        "Italy",
+        "rope"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n29",
+      "text": "Then in 1915, it joined the war against Austria-Hungary.",
+      "names": [
+        "Austria-Hungary"
+      ],
+      "fact_id": "f4"
+    },
+    {
+      "id": "n30",
+      "text": "So a local assassination became a world war because alliances pulled great powers in, one after another.",
+      "names": [
+        "alliances"
+      ],
+      "fact_id": "f3"
+    },
+    {
+      "id": "n31",
+      "text": "Two shots in Sarajevo went in, and a war among Europe's great powers came out.",
+      "names": [],
+      "fact_id": "f3"
+    }
+  ],
+  "direction": [
+    {
+      "line_id": "i-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "i-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Roped climbers",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Triple Alliance",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Triple Entente",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "Militarism",
+      "also": []
+    },
+    {
+      "line_id": "v1-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-7",
+      "scene": "sarajevo",
+      "camera": {
+        "target": "Franz Ferdinand",
+        "zoom": 1.6
+      },
+      "spotlight": "Franz Ferdinand",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v1-8",
+      "scene": "sarajevo",
+      "camera": {
+        "target": "Gavrilo Princip",
+        "zoom": 1.6
+      },
+      "spotlight": "Gavrilo Princip",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Gavrilo Princip",
+        "zoom": 1.6
+      },
+      "spotlight": "Gavrilo Princip",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c1-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Germany",
+        "zoom": 1.6
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "Mobilization",
+      "also": []
+    },
+    {
+      "line_id": "v2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-6",
+      "scene": "schlieffen-plan",
+      "camera": {
+        "target": "Belgium",
+        "zoom": 1.6
+      },
+      "spotlight": "German army",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-7",
+      "scene": "schlieffen-plan",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "v2-8",
+      "scene": "schlieffen-plan",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "p2-2",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c2-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-1",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Triple Alliance",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-3",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-4",
+      "scene": "overview",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-5",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-6",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "b-8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-1",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-2",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-3",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-4",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-5",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-6",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "c3-7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-1",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-2",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "o-3",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n1",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "War memorial",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n2",
+      "scene": "hook",
+      "camera": {
+        "target": "War memorial",
+        "zoom": 1.6
+      },
+      "spotlight": "War memorial",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n3",
+      "scene": "hook",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n4",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Roped climbers",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n5",
+      "scene": "analogy",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n6",
+      "scene": "analogy",
+      "camera": {
+        "target": "Slipping climber",
+        "zoom": 1.6
+      },
+      "spotlight": "Slipping climber",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n7",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n8",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Triple Alliance",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n9",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Triple Entente",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n10",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n11",
+      "scene": "overview",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n12",
+      "scene": "sarajevo",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n13",
+      "scene": "sarajevo",
+      "camera": {
+        "target": "Open car",
+        "zoom": 1.6
+      },
+      "spotlight": "Franz Ferdinand",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n14",
+      "scene": "sarajevo",
+      "camera": {
+        "target": "Gavrilo Princip",
+        "zoom": 1.6
+      },
+      "spotlight": "Gavrilo Princip",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n15",
+      "scene": "overview",
+      "camera": {
+        "target": "Gavrilo Princip",
+        "zoom": 1.6
+      },
+      "spotlight": "Gavrilo Princip",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n16",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n17",
+      "scene": "overview",
+      "camera": {
+        "target": "Austria-Hungary",
+        "zoom": 1.6
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n18",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Rope",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n19",
+      "scene": "overview",
+      "camera": {
+        "target": "Russia",
+        "zoom": 1.6
+      },
+      "spotlight": "Russia",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n20",
+      "scene": "overview",
+      "camera": {
+        "target": "Germany",
+        "zoom": 1.6
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n21",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Germany",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n22",
+      "scene": "schlieffen-plan",
+      "camera": {
+        "target": "German army",
+        "zoom": 1.6
+      },
+      "spotlight": "German army",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n23",
+      "scene": "schlieffen-plan",
+      "camera": {
+        "target": "Belgium",
+        "zoom": 1.6
+      },
+      "spotlight": "Belgium",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n24",
+      "scene": "schlieffen-plan",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Britain",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n25",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n26",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n27",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n28",
+      "scene": "overview",
+      "camera": {
+        "target": "Italy",
+        "zoom": 1.6
+      },
+      "spotlight": "Italy",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n29",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "Austria-Hungary",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n30",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    },
+    {
+      "line_id": "n31",
+      "scene": "overview",
+      "camera": {
+        "target": "",
+        "zoom": 1.0
+      },
+      "spotlight": "",
+      "particles": [],
+      "carries": "",
+      "moves": "",
+      "glow": "",
+      "caption": "",
+      "also": []
+    }
+  ],
+  "builds_up": [],
+  "spins": [],
+  "blocks": [],
+  "conversions": [],
+  "key_lines": [
+    {
+      "from_line": "i-1",
+      "text": "How did one assassination start a war across Europe?",
+      "from_narration": "n3"
+    },
+    {
+      "from_line": "v1-1",
+      "text": "Rope = alliances: one power's war pulls in partners",
+      "from_narration": "n5"
+    },
+    {
+      "from_line": "v1-5",
+      "text": "Militarism → arms race; nationalism → Serbs against Austria-Hungary",
+      "from_narration": "n10"
+    },
+    {
+      "from_line": "v1-7",
+      "text": "Gavrilo Princip kills Franz Ferdinand in Sarajevo",
+      "from_narration": "n13"
+    },
+    {
+      "from_line": "p1-1",
+      "text": "The assassination was the spark, not the only cause",
+      "from_narration": "n15"
+    },
+    {
+      "from_line": "v2-1",
+      "text": "Backed by Germany, Austria-Hungary declares war on Serbia",
+      "from_narration": "n17"
+    },
+    {
+      "from_line": "v2-3",
+      "text": "Russia's mobilization → Germany declares war on Russia, France",
+      "from_narration": "n19"
+    },
+    {
+      "from_line": "v2-6",
+      "text": "Schlieffen Plan sends the German army through neutral Belgium",
+      "from_narration": "n22"
+    },
+    {
+      "from_line": "v2-7",
+      "text": "Belgium invaded → Britain declares war on Germany",
+      "from_narration": "n24"
+    },
+    {
+      "from_line": "b-1",
+      "text": "Austria-Hungary attacked first, so Italy stayed neutral in 1914",
+      "from_narration": "n26"
+    }
+  ],
+  "tags": {
+    "song": [
+      "worldwar1",
+      "ww1",
+      "causesofww1",
+      "worldhistory",
+      "franzferdinand",
+      "alliances",
+      "latinpop",
+      "studysong",
+      "studytok"
+    ],
+    "lesson": [
+      "worldwar1",
+      "ww1",
+      "causesofww1",
+      "worldhistory",
+      "franzferdinand",
+      "schlieffenplan",
+      "explained",
+      "examprep",
+      "studytok"
+    ]
+  }
+}

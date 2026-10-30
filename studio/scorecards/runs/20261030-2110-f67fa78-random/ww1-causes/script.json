@@ -1,0 +1,144 @@
+{
+  "script": {
+    "audience": "high school",
+    "question": "How did one assassination start a war across Europe?",
+    "core_idea": "A local assassination became a world war because alliances pulled great powers in, one after another.",
+    "why_chain": [
+      "Alliances tied Europe's great powers together, so a war involving one could pull in its partners.",
+      "Militarism built huge armies ready to fight, and nationalism set Serbian nationalists against Austria-Hungary.",
+      "Gavrilo Princip killed Franz Ferdinand, so Austria-Hungary, backed by Germany, declared war on Serbia.",
+      "Russia began mobilization to protect Serbia, so Germany declared war on Russia and then France.",
+      "The Schlieffen Plan sent Germany through neutral Belgium, so Britain declared war on Germany."
+    ],
+    "key_terms": [
+      "Franz Ferdinand",
+      "Gavrilo Princip",
+      "nationalism",
+      "militarism",
+      "Triple Alliance",
+      "Triple Entente",
+      "mobilization",
+      "Schlieffen Plan"
+    ],
+    "facts": [
+      {
+        "id": "f1",
+        "text": "By 1914 Europe's great powers were split into two alliances: the Triple Alliance of Germany, Austria-Hungary and Italy, and the Triple Entente of Russia, France and Britain. Alliances were promises to defend each other, meant to deter attack, but they also meant a war involving one power could pull in its partners. They worked like climbers roped together on a mountain for safety: the rope is meant to stop a fall, but if one climber slips, the rope can drag the others down. Alongside the alliances, militarism, the policy of building up armies and navies, led to an arms race, including a naval race between Britain and Germany.",
+        "source_quote": ""
+      },
+      {
+        "id": "f2",
+        "text": "Nationalism, fierce loyalty to one's own nation or people, raised tension in the Balkans. Austria-Hungary had annexed Bosnia in 1908, and it ruled many Serbs, so Serbian nationalists turned against Austria-Hungary. On June 28, 1914, Archduke Franz Ferdinand, heir to Austria-Hungary's throne, rode through Sarajevo, the capital of Bosnia, in an open car. Gavrilo Princip, a Bosnian Serb nationalist, fired two pistol shots, killing Franz Ferdinand and his wife.",
+        "source_quote": ""
+      },
+      {
+        "id": "f3",
+        "text": "Austria-Hungary blamed Serbia for the assassination. Germany promised Austria-Hungary its full support, so Austria-Hungary sent Serbia harsh demands and declared war on Serbia on July 28, 1914. Russia, which saw itself as Serbia's protector, began mobilization, calling up its army for war. Germany saw this as a threat and declared war on Russia on August 1 and on France on August 3. Facing enemies on two sides, Germany followed the Schlieffen Plan: defeat France quickly, then turn east to fight Russia before Russia was fully ready. The quickest road to Paris ran through neutral Belgium, so the German army marched into Belgium. Britain had promised to protect Belgium's neutrality, so on August 4 Britain declared war on Germany. In about a week, a war between two countries had become a war among Europe's great powers, which became the First World War.",
+        "source_quote": ""
+      },
+      {
+        "id": "f4",
+        "text": "A common mistake is to think the assassination alone caused the war. Historians call it the spark: the war spread because alliances, militarism and nationalism were already in place. Italy, the third member of the Triple Alliance, shows how alliances worked: its alliance promised help only if a partner was attacked, and Austria-Hungary had attacked first, so Italy stayed neutral in 1914 and joined the war against Austria-Hungary in 1915. The war lasted until November 1918 and killed millions of soldiers, and in towns across Europe, stone memorials list local soldiers killed in the First World War.",
+        "source_quote": ""
+      }
+    ],
+    "misconception": "A common mistake is to think Franz Ferdinand's assassination alone caused the war. Historians call it the spark: the war spread because alliances, militarism and nationalism were already in place.",
+    "scenes": [
+      {
+        "id": "hook",
+        "picture": "A stone war memorial in a small town square, with rows of soldiers' names carved on it and a wreath of red poppies at its base."
+      },
+      {
+        "id": "analogy",
+        "picture": "A line of climbers on a steep mountain slope, tied to each other by one rope. The climber at the left end is losing his footing at the edge of a ledge, and the rope runs taut from him to the others."
+      },
+      {
+        "id": "overview",
+        "picture": "A timeline of figures standing left to right: Franz Ferdinand, Gavrilo Princip, then one soldier for each country in the order it entered the war, labeled Austria-Hungary, Serbia, Russia, Germany, France, Belgium and Britain, with one rope running along the line of soldiers. Grey sashes mark the Triple Alliance soldiers of Austria-Hungary and Germany, and blue sashes mark the Triple Entente soldiers of Russia, France and Britain. At the far right, apart from the line and not tied to the rope, stands a soldier labeled Italy in a grey sash."
+      },
+      {
+        "id": "sarajevo",
+        "picture": "A close-up of the street in Sarajevo: Franz Ferdinand in uniform and his wife ride in an open-top car, and Gavrilo Princip stands at the curb holding a pistol."
+      },
+      {
+        "id": "schlieffen-plan",
+        "picture": "A close-up map of the Schlieffen Plan: the German army gathered at Germany's western border, Belgium between Germany and northern France, Paris in France, Britain across the sea to the northwest, and Russia at the far right edge."
+      }
+    ],
+    "narration": [
+      {
+        "scene": "hook",
+        "lines": [
+          "In towns across Europe, stone memorials list local soldiers killed in the First World War.",
+          "That war began in 1914 with two pistol shots in one city.",
+          "So how did one shooting drag Europe's great powers into war?"
+        ]
+      },
+      {
+        "scene": "analogy",
+        "lines": [
+          "Picture climbers roped together on a mountain for safety.",
+          "Europe's great powers were tied the same way, by alliances, promises to defend each other.",
+          "But if one climber slipped into war, the rope would pull the others after it."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "Here, left to right, are the people and countries in the order they enter the story.",
+          "First, the rope: Germany and Austria-Hungary belonged to the Triple Alliance.",
+          "Russia, France and Britain formed the Triple Entente.",
+          "Both sides raced to build bigger armies and navies, a buildup called militarism.",
+          "And nationalism, fierce loyalty to one's own people, set Serbian nationalists against Austria-Hungary, which ruled many Serbs."
+        ]
+      },
+      {
+        "scene": "sarajevo",
+        "lines": [
+          "Then came the slip.",
+          "On June 28, 1914, Franz Ferdinand, heir to Austria-Hungary's throne, rode through Sarajevo in an open car.",
+          "Gavrilo Princip, a Bosnian Serb nationalist, shot and killed him and his wife."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "A common mistake is to think that shooting alone caused the war.",
+          "Historians call it the spark, because the war spread only since alliances, militarism and nationalism were already in place.",
+          "Austria-Hungary blamed Serbia, and with Germany's promise of support, declared war on Serbia on July 28.",
+          "Now the rope pulled.",
+          "Russia, Serbia's protector, began mobilization, calling up its army for war.",
+          "Germany saw a threat and declared war on Russia on August 1, then on France on August 3.",
+          "Germany now faced enemies on two sides, so what could it do?"
+        ]
+      },
+      {
+        "scene": "schlieffen-plan",
+        "lines": [
+          "Its answer was the Schlieffen Plan: beat France fast, then turn on Russia before it was fully ready.",
+          "The quickest road to Paris ran through Belgium, a neutral country, so the German army marched in.",
+          "Britain had promised to protect Belgium's neutrality, so on August 4 it declared war on Germany."
+        ]
+      },
+      {
+        "scene": "overview",
+        "lines": [
+          "In about a week, a war between two countries had become a war among Europe's great powers.",
+          "Now, what about Italy, the third member of the Triple Alliance?",
+          "Its alliance promised help only if a partner was attacked.",
+          "But Austria-Hungary had attacked first, so Italy's rope never pulled, and it stayed neutral in 1914.",
+          "Then in 1915, it joined the war against Austria-Hungary.",
+          "So a local assassination became a world war because alliances pulled great powers in, one after another.",
+          "Two shots in Sarajevo went in, and a war among Europe's great powers came out."
+        ]
+      }
+    ]
+  },
+  "kept": {
+    "essence": true,
+    "facts": true,
+    "narration": true,
+    "scenes_as_written": 31,
+    "reworded": 0
+  }
+}

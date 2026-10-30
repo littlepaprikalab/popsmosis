@@ -1,0 +1,255 @@
+{
+  "kept": true,
+  "before": [
+    {
+      "id": "n1",
+      "text": "When you scrape your knee, the skin cells around the scrape make new cells to fill the gap."
+    },
+    {
+      "id": "n2",
+      "text": "Each new skin cell carries the same 46 chromosomes as the cell it came from."
+    },
+    {
+      "id": "n3",
+      "text": "So how does one cell split into two, without losing a single chromosome?"
+    },
+    {
+      "id": "n4",
+      "text": "Mitosis works like sharing a recipe book between two kitchens."
+    },
+    {
+      "id": "n5",
+      "text": "Every page, a chromosome, is photocopied, and each page stays clipped to its copy, like two sister chromatids."
+    },
+    {
+      "id": "n6",
+      "text": "Then the clips come undone, and each kitchen, a new daughter cell, gets one complete, identical book."
+    },
+    {
+      "id": "n7",
+      "text": "Here is the whole path, from one cell on the left to two on the right."
+    },
+    {
+      "id": "n8",
+      "text": "The copying comes first, during interphase, before mitosis even begins."
+    },
+    {
+      "id": "n9",
+      "text": "A common mistake is to think mitosis copies the chromosomes."
+    },
+    {
+      "id": "n10",
+      "text": "In fact the DNA is already copied, so mitosis only separates the copies."
+    },
+    {
+      "id": "n11",
+      "text": "Next comes prophase, the first stage of mitosis."
+    },
+    {
+      "id": "n12",
+      "text": "The chromosomes coil up tight into visible X shapes, and the nuclear envelope breaks down."
+    },
+    {
+      "id": "n13",
+      "text": "That lets spindle fibers, growing from the two poles of the cell, reach the chromosomes."
+    },
+    {
+      "id": "n14",
+      "text": "Now zoom in on metaphase."
+    },
+    {
+      "id": "n15",
+      "text": "Spindle fibers from both poles attach to each chromosome at its centromere, where the sister chromatids join."
+    },
+    {
+      "id": "n16",
+      "text": "Then the chromosomes line up single file across the middle of the cell."
+    },
+    {
+      "id": "n17",
+      "text": "That lineup matters, because it puts one sister chromatid of every chromosome facing each pole."
+    },
+    {
+      "id": "n18",
+      "text": "So what do you think happens when the spindle fibers shorten?"
+    },
+    {
+      "id": "n19",
+      "text": "In anaphase, they pull the sister chromatids apart, toward opposite poles."
+    },
+    {
+      "id": "n20",
+      "text": "Once separated, each chromatid counts as its own chromosome."
+    },
+    {
+      "id": "n21",
+      "text": "So each pole ends up with one full set."
+    },
+    {
+      "id": "n22",
+      "text": "Back on the path, telophase follows."
+    },
+    {
+      "id": "n23",
+      "text": "A nuclear envelope forms around each set, and the chromosomes loosen up again."
+    },
+    {
+      "id": "n24",
+      "text": "Last comes cytokinesis, when the cytoplasm divides."
+    },
+    {
+      "id": "n25",
+      "text": "In an animal cell, a cleavage furrow pinches the cell in two, leaving two identical daughter cells."
+    },
+    {
+      "id": "n26",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?"
+    },
+    {
+      "id": "n27",
+      "text": "Both chromatids get pulled to the same pole."
+    },
+    {
+      "id": "n28",
+      "text": "So in a human body cell, one daughter cell gets 47 chromosomes, and the other gets 45."
+    },
+    {
+      "id": "n29",
+      "text": "Cells with the wrong number of chromosomes often fail to work properly, or die."
+    },
+    {
+      "id": "n30",
+      "text": "So the cell copies every chromosome first, then mitosis pulls the copies apart evenly, so both new cells match."
+    },
+    {
+      "id": "n31",
+      "text": "One human body cell with 46 copied chromosomes goes in, and two identical cells with 46 each come out."
+    }
+  ],
+  "after": [
+    {
+      "id": "n1",
+      "text": "When you scrape your knee, the skin cells around the scrape make new cells to fill the gap."
+    },
+    {
+      "id": "n2",
+      "text": "Each new skin cell carries the same 46 chromosomes as the cell it came from."
+    },
+    {
+      "id": "n3",
+      "text": "So how does one cell split into two, without losing a single chromosome?"
+    },
+    {
+      "id": "n4",
+      "text": "Mitosis works like sharing a recipe book between two kitchens."
+    },
+    {
+      "id": "n5",
+      "text": "Every page, a chromosome, is photocopied, and each page stays clipped to its copy, like two sister chromatids."
+    },
+    {
+      "id": "n6",
+      "text": "Then the clips come undone, and each kitchen, a new daughter cell, gets one complete, identical book."
+    },
+    {
+      "id": "n7",
+      "text": "Here is the whole path, from one cell on the left to two on the right."
+    },
+    {
+      "id": "n8",
+      "text": "The copying comes first, during interphase, before mitosis even begins."
+    },
+    {
+      "id": "n9",
+      "text": "A common mistake is to think mitosis copies the chromosomes."
+    },
+    {
+      "id": "n10",
+      "text": "In fact the DNA is already copied, so mitosis only separates the copies."
+    },
+    {
+      "id": "n11",
+      "text": "Next comes prophase, the first stage of mitosis."
+    },
+    {
+      "id": "n12",
+      "text": "The chromosomes coil up tight into visible X shapes, and the nuclear envelope breaks down."
+    },
+    {
+      "id": "n13",
+      "text": "That lets spindle fibers, growing from the two poles of the cell, reach the chromosomes."
+    },
+    {
+      "id": "n14",
+      "text": "Now zoom in on metaphase."
+    },
+    {
+      "id": "n15",
+      "text": "Spindle fibers from both poles attach to each chromosome at its centromere, where the sister chromatids join."
+    },
+    {
+      "id": "n16",
+      "text": "Then the chromosomes line up single file across the middle of the cell."
+    },
+    {
+      "id": "n17",
+      "text": "That lineup matters, because it puts one sister chromatid of every chromosome facing each pole."
+    },
+    {
+      "id": "n18",
+      "text": "Next, the spindle fibers shorten."
+    },
+    {
+      "id": "n19",
+      "text": "In anaphase, they pull the sister chromatids apart, toward opposite poles."
+    },
+    {
+      "id": "n20",
+      "text": "Once separated, each chromatid counts as its own chromosome."
+    },
+    {
+      "id": "n21",
+      "text": "So each pole ends up with one full set."
+    },
+    {
+      "id": "n22",
+      "text": "Back on the path, telophase follows."
+    },
+    {
+      "id": "n23",
+      "text": "A nuclear envelope forms around each set, and the chromosomes loosen up again."
+    },
+    {
+      "id": "n24",
+      "text": "Last comes cytokinesis, when the cytoplasm divides."
+    },
+    {
+      "id": "n25",
+      "text": "In an animal cell, a cleavage furrow pinches the cell in two, leaving two identical daughter cells."
+    },
+    {
+      "id": "n26",
+      "text": "Now, what happens if one pair of sister chromatids fails to separate in anaphase?"
+    },
+    {
+      "id": "n27",
+      "text": "Both chromatids get pulled to the same pole."
+    },
+    {
+      "id": "n28",
+      "text": "So in a human body cell, one daughter cell gets 47 chromosomes, and the other gets 45."
+    },
+    {
+      "id": "n29",
+      "text": "Cells with the wrong number of chromosomes often fail to work properly, or die."
+    },
+    {
+      "id": "n30",
+      "text": "So the cell copies every chromosome first, then mitosis pulls the copies apart evenly, so both new cells match."
+    },
+    {
+      "id": "n31",
+      "text": "One human body cell with 46 copied chromosomes goes in, and two identical cells with 46 each come out."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "first": {
+    "answers": {
+      "big_idea": "World War I began because an assassination in Sarajevo was the spark, but Europe's alliances (along with militarism and nationalism) pulled one great power after another into the war.",
+      "why": "First, Europe was divided into two alliance groups, the Triple Alliance and the Triple Entente, whose members promised to defend each other. Militarism (arms races) and nationalism (especially Serbian nationalism against Austria-Hungary in the Balkans) made tensions high. On June 28, 1914, Gavrilo Princip, a Bosnian Serb nationalist, shot Archduke Franz Ferdinand. Austria-Hungary blamed Serbia, got Germany's promise of full support, and declared war on Serbia on July 28. Russia saw itself as Serbia's protector and mobilized its army. Germany saw that as a threat and declared war on Russia (August 1) and France (August 3). Germany's Schlieffen Plan said to beat France fast and then turn on Russia, and the fastest route went through neutral Belgium. Britain had promised to protect Belgium, so it declared war on Germany on August 4. So the shooting led to Britain vs. Germany through a chain of alliance promises and war plans.",
+      "what_if": "If the alliances had stopped working, for example if Germany had not promised to back Austria-Hungary, then Austria-Hungary might not have been so bold with Serbia, and the war might have stayed a small local conflict between two countries. The lesson says alliances are the rope that pulled the other powers in, so without them Russia, France and Britain would not have been dragged in one after another. The lesson doesn't say for sure what would have happened, though, since militarism and nationalism were still there."
+    },
+    "grade": {
+      "core_idea": true,
+      "links": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "missing": []
+    },
+    "passed": true
+  }
+}

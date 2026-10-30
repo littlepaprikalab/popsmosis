@@ -1,0 +1,42 @@
+{
+  "hook": {
+    "reason": "The title line \"Roll the dice and count the ways\" is concrete, singable after one hearing, and opens and closes the chorus. It names the counting move but not the nature-drifts-to-most half, so it is only part of the core idea. The lesson opens on the learner's own question, \"What is entropy, really, if it isn't just disorder?\", and the narration opens on a drop of food coloring, a good everyday image.",
+    "score": 4
+  },
+  "frame": {
+    "reason": "Dice fit the whole idea: totals as macrostates, face pairs as microstates, \"seven comes up six times as often\" with no preference involved. They are set up in the first line of the song, return in the chorus (\"Seven on the dice, gas spread wide\") and the outro, and anchor the lesson and the narration. The bridge's fridge and the song's coffee-free gas verse sit outside the dice, but the dice still explain the likelihood logic, and they only loosely cover the Q/T section.",
+    "score": 4
+  },
+  "why_chain": {
+    "reason": "The lesson and the narration teach all four links in order, with causes: many microstates per macrostate, entropy as the count, random motion landing on the likeliest macrostate, and spreading as the second law. The explanation of why (\"not because the dice prefer seven, but because more microstates make it\") is clear. The song carries the gist well. The Q/T coffee case is an extra not in the chain, but it does not break the chain.",
+    "score": 5
+  },
+  "key_lines": {
+    "reason": "The lines mostly tell the chain, but the first, \"What is entropy, really, if it isn't just disorder?\", is a question and not a step. The fourth, \"4 molecules: all left = 1 microstate; 2 per half = 6\", is more data than step. The last, \"Fridge: cold → hot (heat) needs work; total entropy rises\", is not in the chain and has no narration sentence. There is also no final line stating the core idea. The middle lines (\"More microstates per macrostate → higher entropy\", \"Random motion → the likeliest macrostate\") are good steps.",
+    "score": 3
+  },
+  "errors": [
+    {
+      "claim": "Lesson and narration (n25-n27): \"Dividing by the smaller temperature gives a bigger result, so the room gains more entropy than the coffee loses.\" Also the lesson's one-case paragraph.",
+      "problem": "The coffee case works only if the same amount of heat Q leaves the coffee and enters the room; this is never stated, so the Q/T argument is incomplete. The reversible-constant-T caveat is also loosely applied, since the coffee's temperature changes as it cools.",
+      "correction": "Say the same heat Q leaves the coffee and enters the room, so Q/T_room is larger than Q/T_coffee, and treat it as an approximation because the coffee's temperature changes."
+    },
+    {
+      "claim": "Song v1-1/v1-2: \"Roll two dice, the total's what you see / Like a macrostate, the summary\"",
+      "problem": "Mild: the dice model is only an analogy but the song's \"Snake eyes... \" lines state it as fine. No real error; ignore.",
+      "correction": "No change needed."
+    }
+  ],
+  "accuracy": {
+    "reason": "The core physics is right: the microstate counts (1 and 6 of 16), Boltzmann's S = k ln W, and the statistical nature of the second law. The less-than-one-in-a-million-trillion-trillion figure (2^-100 ≈ 8×10^-31) is right. The main weakness is the coffee argument, which leaves out that the same Q moves between coffee and room and is loose on the constant-temperature caveat. A teacher would tighten it, but nothing a learner carries away is wrong.",
+    "score": 4
+  },
+  "singability": {
+    "reason": "The chorus is a strong chant: \"Roll the dice and count the ways\" bookends it, and gang vocals can shout it back. The verses have good call-and-answer images (\"Snake eyes, just one way to roll a two / Seven's got six ways to come through\"). Several lines run long or read like textbook sentences: \"Less than one in a million trillion trillion\" (~14 syllables), \"Entropy counts the microstates\", \"Place the particles and energy\". Rhymes like \"energy / entropy\" and \"brilliant / trillion\" are slightly forced, and the bridge reads like explanation.",
+    "score": 3
+  },
+  "lesson_clarity": {
+    "reason": "It opens on a learner question, gives the dice picture, and builds on why. It asks a prediction question (\"What do you think happens with 100 molecules...\") and answers it straight after, and it names the disorder misconception. The ending check, \"The second law is statistical, so why do you never see all the gas in a box crowd into one half?\", needs the core idea. Weaknesses: many terms (macrostate, microstate, isolated system, Boltzmann's equation, joules per kelvin, Q/T, Gibbs) for a first-time high school reader, and the coffee section and Gibbs mention could be cut.",
+    "score": 4
+  }
+}
