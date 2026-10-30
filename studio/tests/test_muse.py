@@ -367,10 +367,13 @@ def test_the_helper_is_told_what_the_lesson_says_over_the_scene():
     assert said + "- The light reactions happen in the thylakoid membrane.\nIt must show" in hook
     assert lyrics["v1-1"] not in hook
     assert said + "- ATP synthase uses the returning protons to make ATP.\nIt must show" in synthase
-    # A scene the narration never shows: what the song sings over it, in order.
-    assert said + "".join(f"- {lyrics[i]}\n" for i in ("v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1")) in overview
+    # A scene the narration never shows: what the song sings over it, in order, its chorus once.
+    assert lyrics["c1-1"] == lyrics["c2-1"] == lyrics["c3-1"]
+    assert said + "".join(f"- {lyrics[i]}\n" for i in ("v1-2", "c1-1", "v2-1", "b-1")) + "It must show" in overview
     assert hook.index("What the scene should show") < hook.index(said)
     assert "what the lesson says while it is on screen tells you" in art.CHECK_PROMPT
+    # A scene nothing is directed to is told nothing, rather than an empty heading.
+    assert "What the lesson says" not in art.check_prompt(bundle.model_copy(update={"direction": []}), bundle.scenes[0])
 
 
 def lettered(scene_id: str) -> bytes:

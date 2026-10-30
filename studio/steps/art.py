@@ -426,8 +426,8 @@ or too hard to make out, or anything scientifically wrong for what the scene sho
 
 Judge both as the kind of scene it is, against what it should show, not the whole topic: what the scene \
 leaves out is not missing. A scene may show on purpose what happens when something goes wrong (a wave \
-arriving late, a drug blocking a channel): what the lesson says while it is on screen tells you, so judge the \
-picture by that, not by how the topic usually goes. The video animates each flow itself, as dots \
+arriving late, a drug blocking a channel): what the lesson says while it is on screen tells you when it does, \
+and what it shows on purpose is not a problem. The video animates each flow itself, as dots \
 moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
 wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
 is right. Do not list matters of taste or style.
@@ -714,8 +714,9 @@ def said_over(bundle: Bundle, scene: Scene) -> list[str]:
     narration never shows it. Told only the image prompt, the helper marked a scene drawn on purpose with the
     antinoise half a wave late as wrong for the waves adding up (Oct 30), and both videos told the student so."""
     shown = {d.line_id for d in bundle.direction if d.scene == scene.id}
-    return ([n.text for n in bundle.narration if n.id in shown]
+    said = ([n.text for n in bundle.narration if n.id in shown]
             or [line.text for line in bundle.lyrics if line.id in shown])
+    return list(dict.fromkeys(said))  # a chorus sung over it three times, once
 
 
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
