@@ -475,7 +475,8 @@ def test_a_graph_is_drawn_in_the_house_look():
     point = [el for el in curve if el.get(svg.ROLE) == "point"][0]
     assert (point.get("fill"), point.get("stroke")) == (svg.PAGE, "#4FC3F7")  # a ring on the page
     [corner] = shapes(root, "Corner")  # its highlight is gone
-    assert corner.get("fill") == "#FF4D4D" and corner.get("stroke") == "#FF4D4D"
+    # Its outline a shade darker, so blocks of one structure stacked on one another stay apart.
+    assert corner.get("fill") == "#FF4D4D" and corner.get("stroke") == svg._mix("#FF4D4D", svg.EDGE_SHADE, svg.PAGE)
     # The page and the shadow are gone.
     assert not [el for el in root.iter() if el.get("width") == "100%"]
     assert not [el for el in shapes(root) if el.get("stroke") == "#000000"]
@@ -626,8 +627,8 @@ LOOK_CODE = ("style", "_style_graph", "_style_axes", "_steps", "_style_structure
              "_deepest")
 LOOK_NUMBERS = ("PAGE", "LINE_WIDTH", "BAND", "AXIS_WIDTH", "AXIS_SHARE", "POINT_WIDTH", "ARROW", "GRID_STEP", "GLOW",
                 "GLOW_OF", "GLOW_BLUR", "GLOW_SPREAD", "GLOW_OPACITY", "REPAINTED", "AXIS_INK", "GRID_INK", "ROLE",
-                "NAMED")
-LOOK_PINNED = ("1", "1f669964c58c")  # LOOK 1 never shipped before this pin: no bump
+                "NAMED", "EDGE_SHADE")
+LOOK_PINNED = ("2", "97c4fe1354a7")  # 2: a filled shape's outline a shade darker than it (EDGE_SHADE); value marks left out
 
 
 def _as_code(function) -> str:
@@ -679,3 +680,31 @@ def test_a_lines_label_is_anchored_on_the_line_not_on_a_point_marked_on_it():
                              'stroke="#FF9500"/></g>')
     alone = art.judge(dot, job_scene).found["Secant line"]
     assert math.dist((alone.label_anchor.x, alone.label_anchor.y), (900, 500)) < 30
+
+
+# --- values a chart's drawing marks for the video to write ---------------------------------------------------------
+
+
+def test_a_drawing_marks_its_values_for_the_video_and_draws_none_of_them():
+    text = svg_text(blob("Interest", "#FFC845", r=80),
+                    '<circle data-value="$1,210" data-side="above" cx="896" cy="420" r="0"/>',
+                    '<circle data-tick="Year 2" data-side="below" cx="896" cy="900" r="0"/>',
+                    '<circle data-value="$9" data-side="sideways" cx="300" cy="300" r="0"/>',  # a side it lacks: above
+                    '<g><circle data-value="$5" cx="10" cy="10" r="0"/></g>',  # in a group, which may move it
+                    '<circle data-value="$7" cx="5000" cy="10" r="0"/>')  # off the canvas
+    root = svg.check(text, [Structure(name="Interest", aliases=[], sam_phrase="gold block", color_hex="#FFC845")]).root
+    found = svg.values(root)
+    assert [(v.text, v.at.x, v.at.y, v.side, v.tick) for v in found] == [
+        ("$1,210", 896, 420, "above", False), ("Year 2", 896, 900, "below", True), ("$9", 300, 300, "above", False)]
+    styled = svg.style(root, [], graph=False)
+    assert not [el for el in styled.iter() if el.get(svg.VALUE) or el.get(svg.TICK)]
+
+
+def test_a_drawn_scenes_values_are_kept_with_its_locations(job):
+    marks = '<circle data-value="$1,331" cx="896" cy="300" r="0"/><circle data-tick="Year 3" data-side="below" ' \
+            'cx="896" cy="900" r="0"/>'
+    overview = drawing("overview").replace("</svg>", marks + "</svg>")
+    art.run(job, FakeArtist({"overview": [overview]}))
+    located = jobs.read(job / media.LOCATIONS, Locations)
+    assert [(v.text, v.tick) for v in located.scene("overview").values] == [("$1,331", False), ("Year 3", True)]
+    assert located.scene("hook").values == []

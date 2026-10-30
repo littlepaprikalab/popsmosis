@@ -98,6 +98,37 @@ where it is:
   its point each way; two points a secant joins are far enough apart that the secant
   stands clear of the curve between them.
 - Every line is at least 250 px long, so a label can point at it.
+- A bar is a plain `<rect>` in its structure's colour, standing on the horizontal axis.
+  Every bar is on one scale: work out each height from its value, so a bar twice another's
+  value is twice as tall, and the tallest fills most of the height above the axis. A
+  stacked bar is its blocks one on another, each block's height from its own value.
+
+## To scale
+
+When the request says the scene is to scale, it is a chart or figure whose sizes teach: the
+learner reads the amounts off it. Work every size out from the numbers the request and the
+facts give (a block a third as tall as another is drawn exactly a third as tall; a triangle's
+angles are its angles), all on one scale, and draw it plainly: flat shapes in their colours,
+on the page, with nothing a number would have to explain.
+
+## Values
+
+On a graph or a scene to scale, the video writes the numbers the learner reads off it, in
+its own font, where you mark them; the drawing itself still has no text. Mark each with an
+empty circle directly inside the `<svg>`, outside every group:
+
+- `<circle data-value="$1,210" data-side="above" cx="1230" cy="140" r="0"/>`: an amount
+  the voice says, just above the top of its bar, beside its point or on its block. The
+  video writes it as the voice says it, so copy it as the narration writes it ("$1,210",
+  "12 years", "6%"), always in figures: "$100" where a sentence spells out "One hundred
+  dollars".
+- `<circle data-tick="Year 2" data-side="below" cx="1230" cy="890" r="0"/>`: a tick the
+  learner reads the chart by, under each bar's place on the axis ("Year 0" to "Year 3",
+  "Age 25") or left of a level on the upright axis ("$1,000"). Written from the start.
+
+`data-side` is which side of the point the value is written on: above, below, left or
+right. Mark only numbers the facts give, at most 16, a few words each, and leave room for
+them: a value is about 40 px tall.
 
 ## SVG rules
 

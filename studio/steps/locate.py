@@ -1,7 +1,8 @@
 """Step 4: locate each structure in the art (docs/PLAN.md, section 5).
 
 With the SVG art (an admin's setting for Claude's brain) the art step already wrote the masks
-and locations.json, so there is nothing to do.
+and locations.json, so there is nothing to do. With painted art, a scene the art step drew to scale as SVG
+(art.drawn()) is located from its drawing (art.drawn_locations()), with no SAM; the others as below.
 
 With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each structure (studio/muse.py):
 
@@ -133,20 +134,29 @@ def run(job: Path, ask=brain.ask) -> str:
     if not art.is_done(job):
         raise media.StepFailed(f"no {art.painter_of(job).title} art for this bundle; run the art step first")
     media.restart(job, media.LOCATIONS)
-    scenes, left_out, boxed, dropped = [], [], [], 0
+    by_scene, left_out, boxed, dropped = {}, [], [], 0
+    drawn = [scene for scene in bundle.scenes if art.drawn(job, bundle, scene)]
+    for scene in drawn:
+        by_scene[scene.id] = art.drawn_locations(job, bundle, scene)
+        if by_scene[scene.id] is None:
+            raise media.StepFailed(f"scene {scene.id}: no SVG drawing for this bundle; run the art step again")
+        left_out += [f"{s.name} on {scene.id}" for s in scene.structures
+                     if not any(loc.name == s.name for loc in by_scene[scene.id].structures)]
+    painted = [scene for scene in bundle.scenes if scene.id not in by_scene]
     # The scenes at the same time: each waits on SAM and the helper, one structure after another.
-    found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), bundle.scenes, WORKERS)
+    found_all = ledger.parallel(lambda scene: find_and_repair(job, bundle, scene, ask), painted, WORKERS)
     repaired = []
-    for scene, (located, how, wrong, done) in zip(bundle.scenes, found_all):
+    for scene, (located, how, wrong, done) in zip(painted, found_all):
         repaired += [f"{scene.id}: {what}" for what in done]
         dropped += wrong
         if len(located) < max(1, math.ceil(len(scene.structures) / 2)):
             missing = [s.name for s in scene.structures if s.name not in located]
             raise media.StepFailed(f"scene {scene.id}: SAM 3.1 found {len(located)} of {len(scene.structures)} "
                                    f"structures; not {', '.join(missing)}")
-        scenes.append(save(job, scene, located, how))
+        by_scene[scene.id] = save(job, scene, located, how)
         left_out += [f"{s.name} on {scene.id}" for s in scene.structures if s.name not in located]
         boxed += [name for name, by in how.items() if by in ("sam-box", "helper")]
+    scenes = [by_scene[scene.id] for scene in bundle.scenes]
     locations = Locations(scenes=scenes)
     problems = locations_problems(locations, bundle)
     if problems:  # a bug here, not in the art
@@ -154,7 +164,10 @@ def run(job: Path, ask=brain.ask) -> str:
     write(job / media.LOCATIONS, locations)
     total = sum(len(s.structures) for s in bundle.scenes)
     found = sum(len(s.structures) for s in scenes)
+    in_drawings = sum(len(by_scene[scene.id].structures) for scene in drawn)
     return (f"located {found} of {total} structures with SAM 3.1"
+            + (f" and the SVG drawings ({in_drawings} on {len(drawn)} scene{'s' if len(drawn) != 1 else ''})"
+               if drawn else "")
             + (f", {len(boxed)} in the helper's box" if boxed else "")
             + (f"; dropped {dropped} match{'es' if dropped != 1 else ''} in another structure's colour"
                if dropped else "")

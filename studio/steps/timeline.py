@@ -45,6 +45,9 @@ No model calls, so it is free to run again:
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
+- The values a scene drawn to scale marks (SceneLocations.values: "$1,210" on a bar, "Year 2" under it) are written
+  as the voice says them, from the word that says the number, and stay on every later beat of the scene; a tick,
+  and an amount no line on the scene says, from the scene's first beat.
 - The video ends TAIL_S after the song or the narration does, holding its last picture.
 - Beats meet exactly: each starts where the one before it ends, from 0 to the end.
 """
@@ -78,6 +81,7 @@ from studio.schemas import (
     Timing,
     Turning,
     Word,
+    Written,
     stage_groups,
     timeline_problems,
     timing_problems,
@@ -205,6 +209,7 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
                       if t0 <= w.start < t1],
             "conversions": [c.model_copy(update={"since": max(c.since - t0, 0.0)}) for c in beat.conversions],
             "routes": [r.model_copy(update={"since": max(r.since - t0, 0.0)}) for r in beat.routes],
+            "values": [v.model_copy(update={"since": max(v.since - t0, 0.0)}) for v in beat.values],
         }))
     duration = round(t1 - t0, 3)
     beats[-1] = beats[-1].model_copy(update={"t1": duration})
@@ -410,6 +415,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     beats[-1]["t1"] = duration
     _fill_crowds(beats, bundle, located)
     _convert(beats, bundle, located)
+    _write_values(beats, locations)
     _run_all(beats, hook)
     _turn(beats, bundle, located)
     _route(beats)
@@ -525,6 +531,41 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
                        since=scene[c.structure])
             for c in bundle.conversions if c.structure in scene]
+
+
+def _write_values(beats: list[dict], locations: Locations) -> None:
+    """The drawn values each beat writes (SceneLocations.values): an amount from the word that first says it on a
+    beat of its scene, a tick (and an amount no line there says) from the scene's first beat; each stays on every later
+    beat of the scene, as a label does."""
+    marked = {s.scene: s.values for s in locations.scenes if s.values}
+    since: dict[str, list[float]] = {}
+    for scene, values in marked.items():
+        on = [b for b in beats if b["scene"] == scene]
+        if not on:
+            continue
+        words = [w for b in on for w in b["words"]]
+        since[scene] = [on[0]["t0"] if v.tick else next((w.start for w in words if says(w.word, v.text)), on[0]["t0"])
+                        for v in values]
+    for beat in beats:
+        beat["values"] = [Written(text=v.text, at=v.at, side=v.side, since=round(t, 3), tick=v.tick)
+                          for v, t in zip(marked.get(beat["scene"], []), since.get(beat["scene"], [])) if t < beat["t1"]]
+
+
+def says(word: str, value: str) -> bool:
+    """Whether a word says a value's number: the same digits, with no sign the value lacks ("$1,210" and "1,210" say
+    "$1,210"; "10%" does not say "$10")."""
+    number = next((token for token in value.split() if any(c.isdigit() for c in token)), None)
+    if number is None:
+        return False
+    word = word.strip(".,;:!?\"'()")
+
+    def digits(text: str) -> str:
+        return "".join(c for c in text if c.isdigit() or c == ".").strip(".")
+
+    def signs(text: str) -> set[str]:
+        return {c for c in text if not c.isalnum() and c not in ",."}
+
+    return digits(word) == digits(number) and signs(word) <= signs(number)
 
 
 def _within(short: Particles, long: Particles) -> bool:

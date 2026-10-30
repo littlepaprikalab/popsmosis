@@ -1166,6 +1166,24 @@ the fact-checks passed (natural selection's with 2 fixes in 2 rounds).
 Gemini heard the three songs as sung: overall 8 (natural selection, greenhouse) and 7 (compound
 interest, "cluttered with numbers").
 
+### Then: the math drawn, and its numbers written
+
+Compound interest again, from a copy of round 22's job, with its four chart scenes drawn by
+Claude as SVG (the overview's bars, the stacked bar, the two savers' curves, the credit card's
+bars) and the hook and analogy kept as Gemini painted them; the stacked bar marked `to_scale` by
+hand, since the bundle came before the field. Each drawing took one try, about $0.07, and came
+out to the facts' numbers exactly: $1,000 of principal as 550 px, the years' interest as 55, 60.5
+and 66.55 px ($100, $110, $121), simple interest's totals as 605, 660 and 715 px. No notice card:
+nothing was wrong to disclose. Two things the first render showed, both fixed: the graph look
+flattened each block's outline into its own colour, so the three years of interest ran together
+as one gold slab (now a darker outline, svg.LOOK 2); and a chart read only by its bars is half
+read. Drawn again, the drawer marked its values ("$1,210" over the year-2 bar, "Year 2" under
+it), and each amount now appears on the word that says it: "$1,100" at 76.9 s, "$1,210" at 90.8 s,
+"$1,331" at 126.6 s, "$10,290" and "$5,740" as the two savers are compared. Still to fix: the close-up
+wrote "One hundred dollars" (its sentence spells it out; the drawer now writes figures), and its
+pills crowd the thin top blocks, which is what a director's review would catch
+(docs/director-review.md).
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

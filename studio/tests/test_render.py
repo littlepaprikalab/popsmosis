@@ -1175,3 +1175,26 @@ def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, 
     (sx, sy), (wx, wy) = renderer._path_points("overview", ["Thylakoid", "Cytochrome b6f"])
     assert sy == pytest.approx(520) and wy == pytest.approx(520, abs=40)  # level with the wall, not at the top
     assert 100 <= sx <= 700 - renderer_module.SPACE_REACH  # inside the space, well past its edge
+
+
+def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
+    from studio.schemas import Written
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    beats = list(timeline.beats)
+    said = beats[on[1]].t0 + 0.5
+    value = Written(text="$1,210", at=Point(x=900, y=400), side="above", since=said)
+    for k in on[1:]:
+        beats[k] = beats[k].model_copy(update={"values": [value]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    drawn = []
+    monkeypatch.setattr(p, "draw_value", lambda canvas, text, rect, size, paper, alpha, tick, pop=0.0:
+                        drawn.append((text, rect, alpha, pop)))
+    renderer.frame(said - 0.2)  # before it is said: not yet
+    assert drawn == []
+    renderer.frame(said + 0.05)  # as it is said: fading in, popping
+    renderer.frame(beats[on[1]].t1 - 0.01)  # later: in full, settled
+    (text, rect, alpha, pop), (_, later, full, settled) = drawn
+    assert text == "$1,210" and alpha < 1.0 and pop > 0.5 and full == pytest.approx(1.0) and settled == 0.0
+    x, y = renderer.art_to_frame(beats[on[1]].t1 - 0.01, 900, 400)
+    assert later[3] < y and later[0] < x < later[2]  # above its point, across it

@@ -229,7 +229,7 @@ def test_a_later_stage_is_painted_again_whenever_its_first_stage_is(job, monkeyp
     moved = bundle.model_copy(deep=True)
     moved.scenes[1].image_prompt = "A thylakoid membrane, seen from above."
     assert art.key(moved, moved.scenes[2]) != art.key(bundle, synthase)
-    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of", "axes"})], sort_keys=True)
+    before = json.dumps([bundle.topic, hook.model_dump(exclude={"stage_of", "axes", "to_scale"})], sort_keys=True)
     assert art.key(bundle, hook) == hashlib.sha256(before.encode()).hexdigest()[:16]
 
 

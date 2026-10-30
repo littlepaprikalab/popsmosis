@@ -592,3 +592,26 @@ def test_the_hook_holds_still_whatever_its_direction_says(job, monkeypatch):
     assert lines(timelines["song"])["v1-2"].scene == "overview"
     for timeline in timelines.values():
         assert all(not b.particles for b in timeline.beats if b.scene == "overview")
+
+
+def test_a_drawn_value_is_written_as_the_voice_says_it_and_a_tick_from_the_start():
+    from types import SimpleNamespace
+
+    from studio.schemas import Point, Value, Word
+    from studio.steps.timeline import _write_values, says
+
+    assert says("$1,210", "$1,210") and says("1,210", "$1,210") and says("12", "12 years")
+    assert not says("10%", "$10") and not says("1,100", "$1,210")
+    values = [Value(text="$1,210", at=Point(x=500, y=300)), Value(text="Year 2", at=Point(x=500, y=900), side="below",
+                                                                     tick=True),
+              Value(text="$1,331", at=Point(x=700, y=250))]  # never said: written from the start
+    beats = [{"scene": "hook", "t0": 0.0, "t1": 4.0, "words": [Word(word="$1,210", start=1.0, end=1.5)]},
+             {"scene": "overview", "t0": 4.0, "t1": 8.0, "words": [Word(word="So", start=4.2, end=4.4)]},
+             {"scene": "overview", "t0": 8.0, "t1": 12.0, "words": [Word(word="reaches", start=8.5, end=9.0),
+                                                                    Word(word="$1,210", start=9.2, end=9.9)]},
+             {"scene": "overview", "t0": 12.0, "t1": 16.0, "words": []}]
+    _write_values(beats, SimpleNamespace(scenes=[SimpleNamespace(scene="overview", values=values)]))
+    assert beats[0]["values"] == []  # said on another scene: not there
+    assert [(v.text, v.since, v.tick) for v in beats[1]["values"]] == [("Year 2", 4.0, True), ("$1,331", 4.0, False)]
+    assert [(v.text, v.since) for v in beats[2]["values"]] == [("$1,210", 9.2), ("Year 2", 4.0), ("$1,331", 4.0)]
+    assert [v.text for v in beats[3]["values"]] == ["$1,210", "Year 2", "$1,331"]  # and stays on

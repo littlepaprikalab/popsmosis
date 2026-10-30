@@ -333,6 +333,34 @@ def draw_axis_name(canvas: skia.Canvas, text: str, rect: Rect, font_size: float,
     draw_text(canvas, text, x, y, f, with_alpha(AXIS_INK_DARK if light else AXIS_INK_LIGHT, alpha))
 
 
+VALUE_INK = 0xFFFFFFFF  # an amount a chart shows ("$1,210"): white, brighter than an axis's ink
+VALUE_POP = 0.3  # how much bigger an amount is written as it is said, easing back over VALUE_POP_S
+VALUE_POP_S = 0.5
+
+
+def draw_value(canvas: skia.Canvas, text: str, rect: Rect, font_size: float, paper: int, alpha: float,
+               tick: bool, pop: float = 0.0) -> None:
+    """A number on a chart (Beat.values), as a textbook prints it: plain writing ringed with the background's colour,
+    a tick in the axis names' ink, an amount in white, `pop` (0-1) of VALUE_POP bigger about its middle."""
+    if alpha <= 0.01:
+        return
+    if tick:
+        draw_axis_name(canvas, text, rect, font_size, paper, alpha)
+        return
+    canvas.save()
+    cx, cy = (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2
+    grow = 1 + VALUE_POP * pop
+    canvas.translate(cx, cy)
+    canvas.scale(grow, grow)
+    canvas.translate(-cx, -cy)
+    f = font("ExtraBold", font_size)
+    x, y = cx - text_width(f, text) / 2, cy + cap_height(f) / 2
+    canvas.drawString(text, x, y, f, skia.Paint(AntiAlias=True, Color=with_alpha(paper, alpha), StrokeWidth=AXIS_HALO,
+                                                Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
+    draw_text(canvas, text, x, y, f, with_alpha(VALUE_INK, alpha))
+    canvas.restore()
+
+
 # --- particles ------------------------------------------------------------------------------
 
 PARTICLE_R = 13.0  # the lead particle, in frame pixels

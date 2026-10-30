@@ -9,6 +9,11 @@
 A painted picture is checked by the helper, and the locate step then finds the structures in it
 with SAM 3.1 (studio/steps/locate.py), whoever painted it.
 
+A scene drawn to scale (Scene.exact(): a graph, or a chart or figure whose sizes must be right) is drawn as SVG
+whoever paints the rest, when the brain in force can draw (drawn()): round 22's compound-interest bar chart came
+back from Gemini with bars at heights no number in the lesson gave, and the helper's notice about it on screen
+beside it. Its drawing locates its structures, so the locate step takes them from it (drawn_locations()).
+
 Switching makes the art again on the next run, as switching who sings does the song.
 
 The SVG art. One brain call per scene draws it (studio/prompts/art.md), every structure in one group
@@ -120,6 +125,28 @@ def painter_of(job: Path) -> Painter:
                    redraws=True)
 
 
+def drawn(job: Path, bundle: Bundle, scene: Scene) -> bool:
+    """Whether the scene is drawn as SVG: every scene when the job's painter is svg; else a scene to scale, and every
+    stage of its process with it (the stages share one picture's framing), when the brain in force can draw."""
+    if painter(job) == "svg":
+        return True
+    if "svg" not in brain.ART_CHOICES[brain.provider()]:
+        return False
+    stage = Stage.of(bundle, scene)
+    group = stage_groups(bundle.scenes)[stage.process] if stage else [scene]
+    return any(s.exact() for s in group)
+
+
+def drawn_locations(job: Path, bundle: Bundle, scene: Scene) -> SceneLocations | None:
+    """A drawn scene's art, masks and locations from its kept drawing, with no call to the brain; None when it has
+    no drawing for the scene as the bundle now has it. For the locate step, when the other scenes are painted."""
+    text = _saved(job, bundle, scene)
+    if text is None:
+        return None
+    drawing = judge(text[len(_marker(bundle, scene)):], scene)
+    return save(job, scene, drawing) if drawing.enough(scene) else None
+
+
 def run(job: Path, ask=brain.ask) -> str:
     if painter(job) != "svg":
         return run_painted(job, ask)
@@ -152,7 +179,8 @@ def is_done(job: Path) -> bool:
     except (OSError, ValueError):
         return False
     if painter(job) != "svg":
-        return all(_painted(job, bundle, scene) for scene in bundle.scenes)
+        return all(_saved(job, bundle, scene) is not None if drawn(job, bundle, scene) else _painted(job, bundle, scene)
+                   for scene in bundle.scenes)
     return located(job) is not None and all(_saved(job, bundle, scene) is not None for scene in bundle.scenes)
 
 
@@ -212,6 +240,7 @@ class Drawing:
     masks: dict[str, np.ndarray] = field(default_factory=dict)
     found: dict[str, svg.Found] = field(default_factory=dict)
     refused: list[str] = field(default_factory=list)  # draw(): why each other try of the scene was not kept
+    values: list = field(default_factory=list)  # the numbers it marks for the video to write (svg.values())
 
     def left_out(self, scene: Scene) -> list[str]:
         return [s.name for s in scene.structures if s.name not in self.found]
@@ -241,6 +270,7 @@ def judge(text: str, scene: Scene) -> Drawing:
         drawing.problems.append("the SVG nests groups too deeply; keep it to a few levels")
         return drawing
     drawing.usable = True
+    drawing.values = svg.values(checked.root)
     # A line's label anchor is on the line, not on a point marked on it, which is wider and would take it.
     pointed = [n for n in names if any(el.get(svg.ROLE) == "point" for g in styled.iter() if g.get(svg.MARK) == n
                                        for el in g.iter())]
@@ -289,6 +319,8 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
                                + (f" (and {len(why) - 1} more problems)" if len(why) > 1 else ""))
     _kept(job, scene).write_text(marker + best.text, encoding="utf-8")
     _painting(job, scene).unlink(missing_ok=True)  # the art is SVG now, whatever painted it before
+    for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
+        old.unlink()
     best.refused = [d.problems[0] for d in drawn if d is not best and d.problems]
     return best
 
@@ -308,7 +340,7 @@ def save(job: Path, scene: Scene, drawing: Drawing) -> SceneLocations:
         structures.append(Location(name=s.name, mask=media.mask_path(scene.id, s.name), box=found.box,
                                    centroid=found.centroid, label_anchor=found.label_anchor, found_by="svg"))
     return SceneLocations(scene=scene.id, art=media.art_path(scene.id), width=media.ART_WIDTH,
-                          height=media.ART_HEIGHT, structures=structures, look=svg.LOOK)
+                          height=media.ART_HEIGHT, structures=structures, look=svg.LOOK, values=drawing.values)
 
 
 def key(bundle: Bundle, scene: Scene) -> str:
@@ -324,9 +356,9 @@ def key(bundle: Bundle, scene: Scene) -> str:
 
 
 def _dump(scene: Scene) -> dict:
-    # Without an empty stage_of or axes: a scene that is no stage and no graph keeps the key it had before either
-    # existed, so finished jobs are not painted again.
-    return scene.model_dump(exclude={name for name in ("stage_of", "axes") if not getattr(scene, name)})
+    # Without an empty stage_of or axes, or a false to_scale: a scene that is no stage, no graph and not to scale
+    # keeps the key it had before they existed, so finished jobs are not painted again.
+    return scene.model_dump(exclude={name for name in ("stage_of", "axes", "to_scale") if not getattr(scene, name)})
 
 
 @dataclass
@@ -366,6 +398,14 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
         parts.append(f'Axes: this scene is a graph. Draw its two axes as two plain <line>s in one <g {svg.ROLE}="axes">, '
                      "outside every structure's group, with nothing written on or beside them: the video writes "
                      f'{named}. Draw the rest as "Graphs" in your instructions says.')
+    if scene.exact():  # drawn as SVG for its sizes (drawn()): the numbers they are worked out from
+        parts.append(("" if scene.axes else 'To scale: this scene\'s sizes must be right, as "To scale" in your '
+                      "instructions says. ") + "The lesson's facts, for the numbers the sizes come from:\n"
+                     + "\n".join(f"- {f.text}" for f in bundle.facts))
+        said = _said_over(bundle, scene)
+        if said:  # the values the video writes are the ones the voice says, written as it writes them
+            parts.append('What the voice says over this scene, for its values ("Values" in your instructions):\n'
+                         + "\n".join(f"- {line}" for line in said))
     others = [o for o in bundle.scenes if o.id != scene.id]
     if others:
         parts.append("The video's other scenes, drawn separately; draw shared structures the same way:\n" + "\n".join(
@@ -377,6 +417,12 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
                      + "\nDraw the whole scene again with these fixed, and answer with the SVG only."
                      + (f"\n<last_drawing>\n{previous.text}\n</last_drawing>" if previous.text else ""))
     return "\n\n".join(parts)
+
+
+def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
+    """The narration's sentences that play over the scene, in order."""
+    over = {d.line_id for d in bundle.direction if d.scene == scene.id}
+    return [n.text for n in bundle.narration if n.id in over]
 
 
 # --- the painted art: Gemini 3.1 Flash Image or Muse Image -------------------------------------
@@ -482,17 +528,29 @@ def run_painted(job: Path, ask) -> str:
     resume = not is_done(job)
     media.restart(job, media.LOCATIONS)  # the locate step makes it from these pictures
     (job / "art").mkdir(exist_ok=True)
-    stages = {scene.id: stage for scene in bundle.scenes if (stage := Stage.of(bundle, scene))}
-    again = {scene.id for scene in bundle.scenes if not (resume and _painted(job, bundle, scene))}
+    to_draw = [scene for scene in bundle.scenes if drawn(job, bundle, scene)]  # to scale: the brain's SVG
+    drawn_ids = {scene.id for scene in to_draw}
+    to_paint = [scene for scene in bundle.scenes if scene.id not in drawn_ids]
+    stages = {scene.id: stage for scene in to_paint if (stage := Stage.of(bundle, scene))}
+    again = {scene.id for scene in to_paint if not (resume and _painted(job, bundle, scene))}
     # A later stage is redrawn from its first: painted again whenever that one is.
     again |= {sid for sid, stage in stages.items() if stage.first.id in again}
-    todo = [scene for scene in bundle.scenes if scene.id in again]
-    kept = len(bundle.scenes) - len(todo)
+    todo = [scene for scene in to_paint if scene.id in again]
+    kept = len(to_paint) - len(todo)
     first = [scene for scene in todo if scene.id not in stages or stages[scene.id].number == 1]
     later = [scene for scene in todo if scene not in first]
-    # The scenes at the same time, then each process's later stages, redrawn from its first stage's picture.
-    # One that fails fails the step once the others are saved.
-    results = ledger.parallel(lambda scene: paint(job, bundle, scene, ask), first, WORKERS)
+
+    def make(scene: Scene):
+        if scene.id not in drawn_ids:
+            return paint(job, bundle, scene, ask)
+        drawing = draw(job, bundle, scene, ask, resume)
+        save(job, scene, drawing)  # the locate step takes its locations from the drawing kept (drawn_locations())
+        return drawing
+
+    # The scenes at the same time, those drawn as SVG with them, then each process's later stages, redrawn from its
+    # first stage's picture. One that fails fails the step once the others are saved.
+    made = ledger.parallel(make, to_draw + first, WORKERS)
+    drawings, results = made[:len(to_draw)], made[len(to_draw):]
     results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
                                later, WORKERS)
     todo = first + later
@@ -500,11 +558,21 @@ def run_painted(job: Path, ask) -> str:
     left = [f"{scene.id}: {p}" for scene, (best, _) in zip(todo, results)
             for p in best.check.misplaced + best.check.unnamed + best.check.wrong]
     refused = [f"{scene.id}: {why}" for scene, (best, _) in zip(todo, results) for why in best.refused]
-    return (f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
-            f"tr{'ies' if tries != 1 else 'y'}"
-            + (f", kept {kept} painted before" if kept else "")
-            + refusals(refused, "picture")
-            + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
+    lines = []
+    if painted:
+        lines.append(f"painted {painted} scene{'s' if painted != 1 else ''} with {by.title} in {tries} "
+                     f"tr{'ies' if tries != 1 else 'y'}" + (f", kept {kept} painted before" if kept else "")
+                     + refusals(refused, "picture") + (f"; the helper still saw: {'; '.join(left)}" if left else ""))
+    elif kept or not to_draw:
+        lines.append(f"kept the {kept} scene{'s' if kept != 1 else ''} {by.title} painted before")
+    if to_draw:
+        left_out = [f"{name} on {scene.id}" for scene, drawing in zip(to_draw, drawings) for name in drawing.left_out(scene)]
+        lines.append(f"drew {len(to_draw)} scene{'s' if len(to_draw) != 1 else ''} to scale as SVG ("
+                     + ", ".join(scene.id for scene in to_draw) + ")"
+                     + refusals([f"{scene.id}: {why}" for scene, drawing in zip(to_draw, drawings)
+                                 for why in drawing.refused], "drawing")
+                     + (f"; left out {', '.join(left_out)}" if left_out else ""))
+    return "; ".join(lines)
 
 
 def refusals(refused: list[str], kind: str) -> str:

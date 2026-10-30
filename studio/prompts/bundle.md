@@ -264,6 +264,12 @@ together they go from what the learner already knows to the parts they are learn
   for the axes as two plain lines, says where they meet (at the bottom left; at the
   middle, crossing, for a graph with negative values), and asks for nothing written on
   them.
+- `to_scale`: true for a scene the learner reads amounts off: a chart, a stacked bar, a
+  number line, a shape with given sides or angles. Code then has it drawn exactly, its sizes
+  worked out from your numbers, where a painter guesses them (round 22's compound-interest
+  bars came back at heights no fact gave), so its `image_prompt` gives each size as a
+  number or as a share of another ("a gold block a third as tall as the blue one"). A graph
+  (a scene with `axes`) is drawn so whatever this says. False for every other scene.
 - A structure keeps one name and one colour in every scene and both videos. Pick distinct,
   bright mid-tone colours that stand out on the art's dark slate blue background; never
   navy, slate, dark grey or near black, which disappear into it. Only an analogy part

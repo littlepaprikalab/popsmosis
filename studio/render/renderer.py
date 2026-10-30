@@ -137,6 +137,8 @@ ROCK_HZ = 1.2
 ROCK_COVER = 0.03
 CUT_BLUR = 0.8  # a reacting part's edge, in art pixels: soft, so the mask's steps do not show
 AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
+VALUE_GAP = 8.0  # frame pixels between a value's point and its writing (Beat.values)
+VALUE_FONT, TICK_FONT = 1.0, 0.85  # an amount's writing and a tick's, as shares of the label font
 DRAWN_INK = 15  # how far (the largest RGB channel) a drawn pixel is from the background, as _drawn_box has it
 
 Point = tuple[float, float]
@@ -1049,8 +1051,9 @@ class Renderer:
         same_axes = plan.fade_from is not None and (self.timeline.axes.get(plan.fade_from)
                                                     == self.timeline.axes.get(beat.scene))
         axis_rects = self._axis_names(canvas, beat.scene, cam, view, bounds, 1.0 if same_axes else fade)
-        # Labels keep clear of the arrows, of every reaction pill the scene shows and of the axis names, sampled as
-        # points.
+        axis_rects += self._values(canvas, beat, cam, view, t, fade)
+        # Labels keep clear of the arrows, of every reaction pill the scene shows and of the axis names and values,
+        # sampled as points.
         pill_points = [(px, py) for x0, y0, x1, y1 in [*places.values(), *axis_rects]
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
@@ -1186,6 +1189,27 @@ class Renderer:
             rect = (x0 + shift_x, y0 + shift_y, x1 + shift_x, y1 + shift_y)
             if alpha > 0.01:
                 p.draw_axis_name(canvas, names.x if side == "x" else names.y, rect, font, art.paper, alpha)
+                rects.append(rect)
+        return rects
+
+    def _values(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float, alpha: float) -> list[Rect]:
+        """The numbers a drawn chart shows (Beat.values), each beside its point on its side, fading in from its
+        `since`, an amount popping as it is said. Returns where they landed, for the labels to keep clear of."""
+        if not beat.values:
+            return []
+        art = self.scene(beat.scene)
+        scale, dx, dy = to_frame(cam, view, art)
+        rects = []
+        for v in beat.values:
+            shown = alpha * p.ease((t - v.since) / LABEL_IN_S)
+            size = self.layout.label_font * (TICK_FONT if v.tick else VALUE_FONT)
+            w, h, g = p.text_width(p.font("Bold" if v.tick else "ExtraBold", size), v.text), size * 1.2, VALUE_GAP
+            x, y = v.at.x * scale + dx, v.at.y * scale + dy
+            rect = {"above": (x - w / 2, y - g - h, x + w / 2, y - g), "below": (x - w / 2, y + g, x + w / 2, y + g + h),
+                    "left": (x - g - w, y - h / 2, x - g, y + h / 2), "right": (x + g, y - h / 2, x + g + w, y + h / 2)}[v.side]
+            if shown > 0.01:
+                pop = 0.0 if v.tick else 1 - p.ease((t - v.since) / p.VALUE_POP_S)
+                p.draw_value(canvas, v.text, rect, size, art.paper, shown, v.tick, pop)
                 rects.append(rect)
         return rects
 

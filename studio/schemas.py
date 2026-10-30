@@ -85,6 +85,16 @@ class Scene(Strict):
     # "quantity". Both "" in a bundle written before Oct 30.
     axes: Axes = Field(default_factory=_no_axes, description='On a graph, what each axis measures, written at its end; '
                                                              '"" for both on any other scene')
+    # A painter guesses sizes: round 22's compound-interest bar chart came back with its bars at heights the lesson's
+    # numbers never gave. A scene to scale (and every graph) is drawn by the brain as SVG, its sizes worked out from
+    # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30.
+    to_scale: bool = Field(default_factory=bool, description="True for a chart, graph or figure whose sizes must be right "
+                                                             "(bars of given heights, a stacked bar, a number line, a shape "
+                                                             "with given sides or angles); false for any other scene")
+
+    def exact(self) -> bool:
+        """Drawn to scale: marked so, or a graph."""
+        return self.to_scale or bool(self.axes)
 
 
 def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
@@ -537,6 +547,17 @@ class Location(Strict):
     found_by: Literal["svg", "sam", "sam-box", "helper"]
 
 
+class Value(Strict):
+    """A number a scene drawn to scale shows (a bar's amount, an axis's tick, "$1,210", "Year 2"), where its SVG drawing
+    marks it. The art has no writing, so the renderer writes it, in the house font: an amount once the voice says it,
+    a tick from the scene's first frame."""
+
+    text: str
+    at: Point  # art pixels: the point it is written beside
+    side: Literal["above", "below", "left", "right"] = "above"  # which side of the point
+    tick: bool = False  # read off the axis, not said: on from the scene's first frame
+
+
 class SceneLocations(Strict):
     scene: str
     art: JobPath  # media.art_path(scene)
@@ -548,6 +569,7 @@ class SceneLocations(Strict):
     # The house look the SVG art was styled in (svg.LOOK): when it changes, the art step styles the kept drawing
     # again, with no call to the brain. "" for painted art, and for SVG art made before the look was code's.
     look: str = ""
+    values: list[Value] = []  # the numbers its SVG drawing marks (svg.values()); [] for painted art
 
     @model_validator(mode="after")
     def _consistent(self) -> SceneLocations:
@@ -751,6 +773,17 @@ class Route(Strict):
         return _hex_color(value)
 
 
+class Written(Strict):
+    """A drawn value (SceneLocations.values) as one beat shows it: written from `since` on, and on every later beat of
+    its scene."""
+
+    text: str
+    at: Point  # art pixels
+    side: Literal["above", "below", "left", "right"] = "above"
+    since: float = 0.0  # when it is first written: as the voice says it, or as the scene first shows (a tick)
+    tick: bool = False  # an axis's tick, written as the axis names are; an amount stands out, and pops as it is said
+
+
 class Converting(Strict):
     """A conversion (Bundle.conversions) as one beat shows it: written beside the structure where it happens."""
 
@@ -775,6 +808,7 @@ class Beat(Strict):
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before
     conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
     routes: list[Route] = []  # the paths drawn as arrows on this beat; [] in a timeline made before
+    values: list[Written] = []  # the drawn values written on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     key_line: str = ""  # written above the diagram (Bundle.key_lines; the core idea on the last chorus); "" for none
     caption: str | None

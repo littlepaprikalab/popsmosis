@@ -224,8 +224,9 @@ already written.
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
    `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
-   `stage_of` and `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
-   axes' ends; "" elsewhere). One fixed colour per structure for the whole job. A process whose parts move
+   `stage_of`, `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
+   axes' ends; "" elsewhere) and `to_scale` (a chart or figure the learner reads amounts off,
+   drawn as SVG; below). One fixed colour per structure for the whole job. A process whose parts move
    or change shape from stage to stage (mitosis, the phases of the Moon) takes a scene per
    stage, 2 to 5 of them, each with `stage_of` naming the process, all opening with the same
    framing sentence; then up to 8 scenes in all.
@@ -432,6 +433,22 @@ as its own named group. Rasterising the SVG gives the art, and rasterising one g
 time gives each structure's mask, so step 4 is not needed. It looks plainer than Muse
 Image, but it writes the same files, so everything downstream is built and tested against
 it unchanged. Switching the painter makes a job's art again on its next run.
+
+**To scale, whoever paints.** A scene the learner reads amounts off (a graph, or a scene with `to_scale`: a
+chart, a stacked bar, a number line, a shape with given angles) is drawn by Claude's brain as SVG even when
+Gemini or Muse Image paints the rest, its sizes worked out from the scene's and the facts' numbers. Round 22's
+compound-interest bar chart came back from Gemini with bars at heights no fact gave, and the helper's notice
+about it on screen beside it. The art step draws those scenes and paints the others; step 4 locates the drawn
+ones from their drawings and the painted ones with SAM 3.1. On Muse's brain, which draws no SVG, they are painted.
+
+**Values on a chart.** The art has no writing, but a chart is read by its numbers. The drawer marks each one with an
+empty circle directly in the `<svg>` (`data-value="$1,210"` above a bar, `data-tick="Year 2"` under its place on the
+axis; `svg.values()`), copying the amount as the narration writes it, and the marks are kept with the scene's
+locations (`SceneLocations.values`), never drawn. The timeline writes an amount from the word that says it on a beat
+of its scene ("…the balance reaches $1,210": the year-2 bar's "$1,210" pops on as the voice says it), and a tick, or
+an amount no line there says, from the scene's first beat; each stays on, as a label does (`Beat.values`). The
+renderer writes them in the house font, ringed with the page's colour like the axis names, and the labels keep clear
+of them.
 
 The brain decides what a scene draws and where; code decides how it looks (`svg.style()`),
 the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
