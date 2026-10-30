@@ -769,6 +769,7 @@ class Beat(Strict):
     # Every structure revealed on this scene so far, this beat's reveals included: a
     # label shows from its reveal's t and stays on every later beat of the scene.
     labels: list[str]
+    named: list[str] = []  # the structures this line says, whether or not first here; [] in a timeline made before
     particles: list[Particles]
     crowds: list[Crowd] = []  # the spaces on this scene filling up or emptying; [] in a timeline made before
     turning: list[Turning] = []  # the parts on this scene that turn; [] in a timeline made before

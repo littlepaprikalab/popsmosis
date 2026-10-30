@@ -1110,3 +1110,26 @@ def test_a_cut_to_a_close_up_pushes_in_on_its_part_and_a_cut_back_pulls_out_of_i
     out = renderer.plans[2]
     assert out.start.zoom > out.target.zoom * 1.3 and 850 <= out.start.cx <= 950
     assert renderer.plans[1].push_at is None  # the overview, cut back out of, does not push in
+
+
+def test_past_four_labels_those_of_parts_the_line_is_not_about_rest(job):
+    # Round 21's digestion overview showed seven labels at once, and the one the voice meant was lost among them.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    many = ["Thylakoid", "Cytochrome b6f", "Stroma", "Lumen", "Photosystem II"]
+    beats = list(timeline.beats)
+    for k in on:
+        beats[k] = beats[k].model_copy(update={"labels": many, "named": [], "particles": [], "spotlight": None,
+                                               "camera": TimelineCamera(target=None, zoom=1.0)})
+    first, second = on[0], on[1]
+    beats[second] = beats[second].model_copy(update={"named": ["Thylakoid"], "spotlight": "Lumen"})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    rest = renderer_module.LABEL_REST
+    settled = renderer._resting(second, beats[second].t1)
+    assert settled["Thylakoid"] == 1.0 and settled["Lumen"] == 1.0  # said on the line; spotlit
+    assert all(settled[n] == pytest.approx(rest) for n in ("Cytochrome b6f", "Stroma", "Photosystem II"))
+    assert renderer._resting(second, beats[second].t0)["Thylakoid"] == pytest.approx(rest)  # eases up as it starts
+    assert renderer._resting(on[2], beats[on[2]].t1)["Thylakoid"] == 1.0  # still in play on the line after
+    few = beats[first].model_copy(update={"labels": many[:4]})
+    calm = Renderer(job, timeline.model_copy(update={"beats": [*beats[:first], few, *beats[first + 1:]]}))
+    assert set(calm._resting(first, few.t1).values()) == {1.0}  # four or fewer: every label in full

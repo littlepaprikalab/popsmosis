@@ -364,7 +364,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         reveals = [Reveal(name=name, t=cursor) for name in heard
                    if name in located.get(scene, set()) and name not in labels]
         labels += [r.name for r in reveals]
-        for name, index in sorted(scene_names.heard([w.word for w in words]).items(), key=lambda e: e[1]):
+        said = scene_names.heard([w.word for w in words])
+        for name, index in sorted(said.items(), key=lambda e: e[1]):
             if name not in labels:
                 labels.append(name)
                 reveals.append(Reveal(name=name, t=min(max(words[index].start, cursor), t1)))
@@ -388,7 +389,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
         opened.add(scene)
 
         beats.append({"t0": cursor, "t1": t1, "scene": scene, "camera": TimelineCamera(target=target, zoom=zoom),
-                      "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels), "particles": particles,
+                      "reveal": reveals, "spotlight": spotlight, "glow": glow, "labels": list(labels),
+                      "named": sorted(said, key=said.get), "particles": particles,
                       "caption": None, "line_id": timed_line.line_id, "line": texts.get(timed_line.line_id, ""),
                       "words": words})
         captions.append((direction.caption.strip() or None) if direction else None)

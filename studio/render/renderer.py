@@ -33,6 +33,12 @@ EDGE_BLUR = 3.0  # sigma of a ghost's edge, in art pixels
 SPOT_BLUR = 1.2  # a spotlight's edge stays crisp, so the bright structure keeps its outline
 REVEAL_S = 0.4  # ghost to full
 LABEL_IN_S = 0.35
+# Past LABELS_CALM labels on screen, those of parts the line is not about rest at LABEL_REST: round 21's digestion
+# overview showed seven labels, two reaction pills and a five-row legend at once, and a 7th grader could not tell
+# which part the voice meant. A part is in play while this line or the one before names it, it is spotlit or framed,
+# or particles travel to it; a label eases between rest and full as a line starts.
+LABELS_CALM = 4
+LABEL_REST = 0.4
 SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
 SPACE_REACH = 55.0  # art pixels: a path's stop in a space sits this far past its neighbour's edge
 LANE_GAP = 46.0  # art pixels between two things travelling the same stops side by side
@@ -928,10 +934,36 @@ class Renderer:
         if keep:
             self._background = (key, self.surface.makeImageSnapshot())
 
+    def _in_play(self, i: int) -> set[str] | None:
+        """The parts beat i is about (LABELS_CALM); None when every label shows in full."""
+        beat = self.timeline.beats[i]
+        if len(beat.labels) <= LABELS_CALM:
+            return None
+        before = self.timeline.beats[i - 1] if i else None
+        named = set(beat.named) | (set(before.named) if before and before.scene == beat.scene else set())
+        travelled = {stop for flow in beat.particles for stop in flow.path}
+        return named | travelled | {beat.spotlight, beat.camera.target, beat.glow} - {None}
+
+    def _resting(self, i: int, t: float) -> dict[str, float]:
+        """Each label's strength on beat i at t: 1.0 in play, LABEL_REST at rest, easing from the beat before's."""
+        beat = self.timeline.beats[i]
+
+        def strength(k: int) -> dict[str, float]:
+            play = self._in_play(k)
+            return {n: 1.0 if play is None or n in play else LABEL_REST for n in self.timeline.beats[k].labels}
+
+        now = strength(i)
+        if not i or self.timeline.beats[i - 1].scene != beat.scene:
+            return now
+        was = strength(i - 1)
+        x = p.ease((t - beat.t0) / LABEL_IN_S)
+        return {n: was.get(n, v) + (v - was.get(n, v)) * x for n, v in now.items()}
+
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
                 spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float,
-                avoid: list[Point] = ()) -> list[Rect]:
-        """Draws the labels; returns where each pill landed, for what is drawn after them to keep clear."""
+                avoid: list[Point] = (), strength: dict[str, float] | None = None) -> list[Rect]:
+        """Draws the labels, each at its strength (1.0 when not given); returns where each pill landed, for what is
+        drawn after them to keep clear."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
         scale, dx, dy = to_frame(cam, view, art)
@@ -941,7 +973,8 @@ class Renderer:
             if loc is None:
                 continue
             ax, ay = loc.label_anchor.x * scale + dx, loc.label_anchor.y * scale + dy
-            alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(ax, ay, view)
+            alpha = (p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(ax, ay, view)
+                     * (strength or {}).get(name, 1.0))
             if alpha > 0.01:
                 box = (loc.box.x0 * scale + dx, loc.box.y0 * scale + dy, loc.box.x1 * scale + dx, loc.box.y1 * scale + dy)
                 big = self._is_space(scene_id, loc)
@@ -1020,7 +1053,8 @@ class Renderer:
         pill_points = [(px, py) for x0, y0, x1, y1 in [*places.values(), *axis_rects]
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
-        self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points)
+        self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
+                     self._resting(i, t))
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places)
         if legend_rect:
