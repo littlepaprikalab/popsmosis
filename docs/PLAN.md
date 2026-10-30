@@ -162,7 +162,8 @@ ask(role, prompt, schema=None, images=(), *, system=None, label=None) -> dict   
 passed the facts `bundle.json` has, a fact-check once it has passed) and runs every step
 after it, so running it again retries a failed step (section 11). Before each step until
 the lesson is posted it claims the topic again (`POST /api/questions/:id/claim`), which
-renews the queue's lease. Every run appends to
+renews the queue's lease, and again every 5 minutes while the step runs: a bundle can take
+20 minutes or more, longer than the lease. Every run appends to
 `runs.jsonl` and prints one line: `DONE`, `FAILED <step>: <reason>` or
 `STOPPED <step>: <reason>` (the topic was deleted, answered, given up or taken: nothing
 to retry). Files are written whole or not at all, only one run of a job goes at a time,

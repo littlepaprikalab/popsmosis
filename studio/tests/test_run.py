@@ -1,4 +1,6 @@
 import json
+import os
+import time
 
 import pytest
 
@@ -723,3 +725,138 @@ def test_each_step_keeps_the_line_it_ended_on_and_a_failed_one_its_reason(jobs_r
     assert record["reason"] == "503 UNAVAILABLE: down"
     # No media step has run, so the summary is the one paragraph for the cycle log.
     assert "\n" not in operator_run.summary("q1")
+
+
+# --- a long step, and the lesson in the background ---------------------------------------------
+
+
+def slow_bundle(seconds, then=None):
+    """A FakeBrain whose bundle call takes `seconds` (a bundle can take 20 minutes or more), calling `then` halfway."""
+    brain_ = FakeBrain()
+
+    def ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        if schema is Bundle:
+            time.sleep(seconds / 2)
+            if then:
+                then()
+            time.sleep(seconds / 2)
+        return brain_(role, prompt, schema, images, system=system, label=label)
+    return ask
+
+
+def test_a_step_longer_than_the_lease_claims_its_topic_again_while_it_runs(jobs_root, monkeypatch):
+    monkeypatch.setattr(operator_run, "RENEW_S", 0.05)
+    api = FakeApi()
+    assert operator_run.run("q1", api=api, ask=slow_bundle(0.5))[0] == "DONE"
+    names = api.names()
+    # The bundle's claim and report, then its renewals, then the audit's claim and report.
+    bundle = [i for i, name in enumerate(names) if name == "report_progress"][1]
+    audit = names.index("report_progress", bundle + 1)
+    assert names[bundle + 1:audit].count("claim") >= 1 + 4
+    # Only while a step runs: the renewals end with it, and none outlives the run.
+    calls = len(api.calls)
+    time.sleep(0.2)
+    assert len(api.calls) == calls and names[-1] == "post_answer"
+
+
+def test_renewals_end_once_the_api_refuses_the_claim_for_good(jobs_root, monkeypatch, capsys):
+    monkeypatch.setattr(operator_run, "RENEW_S", 0.05)
+    api = FakeApi()
+    taken = {}
+
+    def take():  # another agent takes the topic while the bundle is being written
+        api.errors["claim"] = ApiError(409, "CONFLICT", "Another agent holds the claim on this question")
+        taken["at"] = len(api.calls)
+
+    assert operator_run.run("q1", api=api, ask=slow_bundle(0.6, take))[:2] == ("STOPPED", "audit")
+    # One refused renewal, and the audit's claim, which stops the run: no more renewals after the refusal.
+    assert api.names()[taken["at"]:].count("claim") == 2
+    assert "claim: no longer renewed during the step: Another agent holds the claim" in capsys.readouterr().err
+
+
+def test_a_renewal_that_fails_is_said_once_and_tried_again(jobs_root, monkeypatch, capsys):
+    monkeypatch.setattr(operator_run, "RENEW_S", 0.05)
+    api = FakeApi()
+
+    def down_then_up():  # the API down for a few renewals while the bundle is being written, then back
+        api.errors["claim"] = ApiError(503, "UNAVAILABLE", "try again")
+        time.sleep(0.2)
+        del api.errors["claim"]
+
+    assert operator_run.run("q1", api=api, ask=slow_bundle(0.6, down_then_up))[0] == "DONE"
+    assert capsys.readouterr().err.count("claim: a renewal during the step failed") == 1
+
+
+def test_background_detaches_the_run_and_wait_gives_its_outcome_line(jobs_root, monkeypatch):
+    # The run it starts is a real `python -m studio run`: with no API to read the settings from, it stops at once,
+    # before it claims anything, so runs.jsonl never has its outcome: wait reads the line it printed.
+    monkeypatch.setenv("STUDIO_JOBS_DIR", str(jobs_root))
+    monkeypatch.delenv("POPSMOSIS_API_URL", raising=False)
+    monkeypatch.delenv("POPSMOSIS_API_KEY", raising=False)
+    result, step, reason = operator_run.background("q1", note="keep labels out")
+    assert (result, step) == ("STARTED", "run"), reason
+    assert operator_run.waits_on_lesson("q1")
+    assert operator_run.background("q1")[0] in ("STOPPED", "STARTED")  # never two at once
+    assert operator_run.wait("q1", minutes=0.5, poll_s=0.1) == (
+        "STOPPED", "run", "the API refused the key: POPSMOSIS_API_URL and POPSMOSIS_API_KEY must both be set")
+
+
+def test_background_refuses_a_topic_whose_run_is_still_going(jobs_root):
+    job = jobs_root / "q1"
+    job.mkdir()
+    with operator_run.only_run(job):  # a run of it started by hand, in the foreground
+        result, _, reason = operator_run.background("q1")
+    assert result == "STOPPED" and "still going" in reason
+    assert not (job / operator_run.BACKGROUND).exists()
+
+
+def test_wait_says_running_while_the_lesson_is_being_made(jobs_root):
+    job = jobs_root / "q1"
+    job.mkdir()
+    jobs.write(job / operator_run.BACKGROUND, {"pid": os.getpid(), "runs": 0})
+    jobs.write(job / "run.current.json", {"started": "x", "step": "bundle", "steps": []})
+    assert operator_run.wait("q1", minutes=0)[:2] == ("RUNNING", "bundle")
+
+
+def test_a_background_lesson_killed_in_a_step_is_a_failed_run_of_it_and_can_be_given_up(jobs_root):
+    api = FakeApi()
+    job = jobs_root / "q1"
+    job.mkdir()
+    jobs.write(job / operator_run.BACKGROUND, {"pid": 2 ** 22 + 7, "runs": 0})  # no such process: it is gone
+    (job / operator_run.OUTCOME).write_text("")  # killed before it printed its line
+    jobs.write(job / "run.current.json", {"started": "x", "step": "bundle", "steps": []})
+    result, step, reason = operator_run.wait("q1", minutes=0)
+    assert (result, step) == ("FAILED", "bundle") and "interrupted" in reason
+    (job / "run.current.json").unlink(missing_ok=True)
+    jobs.write(job / operator_run.BACKGROUND, {"pid": 2 ** 22 + 7, "runs": 1})  # a second one, dead with no trace
+    result, step, reason = operator_run.wait("q1", minutes=0)
+    assert (result, step) == ("FAILED", "run") and "without an outcome" in reason
+    assert operator_run.mark_failed("q1", api=api)[0] == "DONE"
+    assert "without an outcome" in api.calls[-1][2]
+
+
+def test_wait_is_for_whichever_of_the_lesson_and_the_videos_went_to_the_background_last(jobs_root):
+    from studio import videos
+
+    job = jobs_root / "q1"
+    job.mkdir()
+    assert not operator_run.waits_on_lesson("q1")  # nothing in the background: the videos' wait says so
+    jobs.write(job / operator_run.BACKGROUND, {"pid": 1, "runs": 0})
+    assert operator_run.waits_on_lesson("q1")
+    jobs.write(job / videos.BACKGROUND, {"pid": 1, "runs": 0})
+    os.utime(job / operator_run.BACKGROUND, ns=(1, 1))  # the lesson's, long before
+    assert not operator_run.waits_on_lesson("q1")
+
+
+def test_the_command_line_starts_the_lesson_in_the_background_and_waits_on_it(jobs_root, monkeypatch, capsys):
+    from studio.__main__ import main
+
+    got = {}
+    monkeypatch.setattr(operator_run, "background", lambda question, note="": got.update(question=question, note=note)
+                        or ("STARTED", "run", "the lesson, in the background"))
+    assert main(["run", "q1", "--note", "keep labels out", "--background"]) == 0
+    assert got == {"question": "q1", "note": "keep labels out"}
+    monkeypatch.setattr(operator_run, "waits_on_lesson", lambda question: True)
+    monkeypatch.setattr(operator_run, "wait", lambda question, minutes=None: ("RUNNING", "bundle", "still going"))
+    assert main(["wait", "q1"]) == 4
+    assert capsys.readouterr().out.splitlines()[-1] == "RUNNING bundle: still going"

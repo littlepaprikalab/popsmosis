@@ -1,10 +1,11 @@
 """Run the studio.
 
-    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the brain
+    python -m studio run <question-id>           # a topic from the queue, to a posted lesson; --note "..." for the brain;
+                                                 # --background on a routine
     python -m studio fail <question-id>          # give it up with its last run's reason
     python -m studio summary <question-id>       # what its runs did, for the operator's record
     python -m studio videos <question-id>        # a posted lesson's videos; --background on a routine
-    python -m studio wait <question-id>          # the background videos' outcome, waiting up to 9 minutes
+    python -m studio wait <question-id>          # the background lesson's or videos' outcome, waiting up to 9 minutes
     python -m studio recover                     # take a render that died with its machine, rebuild its job
     python -m studio fetch <attachment-id> ...   # a follow-up's files, saved by id (studio/files.py)
     python -m studio reply <answer-id> <reply-to-id> --file F   # post the teacher's follow-up answer from a file
@@ -58,7 +59,7 @@ from studio.steps import factcheck as factcheck_step
 from studio.steps import timing as timing_step
 
 STEPS = {"bundle": bundle_step.run, "check": checks.run, "audit": audit_step.run, "factcheck": factcheck_step.run}
-# STARTED: the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
+# STARTED: the lesson or the videos went to the background; RUNNING: `wait` ran out of time; NONE: nothing to recover.
 EXIT_CODES = {**operator_run.EXIT_CODES, operator_videos.STARTED: 0, operator_videos.RECOVER: 0,
               operator_videos.NONE: 0, operator_videos.RUNNING: 4}
 
@@ -74,10 +75,12 @@ def main(argv: list[str] | None = None) -> int:
         if name == "run":
             command.add_argument("--note", default="", help=f"the operator's observation for the brain, ending the "
                                  f"bundle prompt (at most {operator_run.NOTE_MAX} characters)")
+            command.add_argument("--background", action="store_true", help="start the run detached and return at once")
     make = commands.add_parser("videos", help="a posted lesson's videos; resumes at the first media step not done")
     make.add_argument("question")
     make.add_argument("--background", action="store_true", help="claim, start the run detached, and return at once")
-    waiting = commands.add_parser("wait", help="the background videos' outcome line, or RUNNING after --minutes")
+    waiting = commands.add_parser("wait", help="the outcome line of the lesson or the videos, whichever went to the "
+                                               "background last, or RUNNING after --minutes")
     waiting.add_argument("question")
     waiting.add_argument("--minutes", type=float, default=operator_videos.WAIT_MINUTES)
     commands.add_parser("recover", help="take one render that died with its machine and rebuild its job here")
@@ -155,7 +158,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in ("videos", "wait"):
         if not operator_run.ID_RE.fullmatch(args.question):
             parser.error(f"{args.question!r} is not a question id")
-        if args.command == "wait":
+        if args.command == "wait" and operator_run.waits_on_lesson(args.question):
+            result, step, reason = operator_run.wait(args.question, minutes=args.minutes)
+        elif args.command == "wait":
             result, step, reason = operator_videos.wait(args.question, minutes=args.minutes)
         elif args.background:
             result, step, reason = operator_videos.background(args.question)
@@ -173,7 +178,10 @@ def main(argv: list[str] | None = None) -> int:
             result, reason = operator_run.mark_failed(args.question)
             print(f"{result} fail: {reason}")
             return EXIT_CODES[result]
-        result, step, reason = operator_run.run(args.question, note=args.note)
+        if args.background:
+            result, step, reason = operator_run.background(args.question, note=args.note)
+        else:
+            result, step, reason = operator_run.run(args.question, note=args.note)
         print(f"{result} {step}: {reason}")
         return EXIT_CODES[result]
 

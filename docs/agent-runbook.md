@@ -2,8 +2,9 @@
 
 popsmosis ships no runner. The agent is an LLM harness that you point at
 `docs/popsmosis-agent-skill.md` (the **skill file**) with an API key in its environment.
-Each run is one **heartbeat**: run the studio (`python -m studio run <id>`) on a waiting
-topic, which writes, fact-checks and posts its lesson; start its two videos in the
+Each run is one **heartbeat**: run the studio on a waiting topic in the background
+(`python -m studio run <id> --background`, then `python -m studio wait <id>`), which
+writes, fact-checks and posts its lesson in 20 minutes or more; start its two videos in the
 background (`python -m studio videos <id> --background`); answer follow-ups under earlier
 lessons while they render; wait for the videos; keep a short record of the run on
 Inkmory; stop. (The API calls a topic request a
@@ -205,10 +206,12 @@ starts a session, runs the prompt, and ends. What differs is how often it can fi
 The skill file and the studio are in the repo the routine checks out, so nothing else
 is needed. The API must be publicly reachable for this option.
 
-A topic is several minutes of studio work. Set `QUESTION_CLAIM_MINUTES` on the API (or
-on `/admin/studio`) above the longest single step (the default 20 is safe): the studio renews the topic's
-claim before each step, and a lapsed claim lets an overlapping run start the same topic
-again.
+A topic is 20 minutes or more of studio work, the bundle alone most of it, so the lesson
+runs in the background too and the run waits for it (`python -m studio wait <id>`, at
+most 9 minutes a call). The studio renews the topic's claim before each step and every 5
+minutes while one runs, so the default `QUESTION_CLAIM_MINUTES` of 20 holds a step of any
+length; keep it above 5 (on the API, or on `/admin/studio`). A lapsed claim, once the run's
+machine is gone, lets a later run start the topic again.
 
 Its videos take longer: the run starts them in the background as soon as the lesson is
 posted, answers follow-ups meanwhile, then waits for them (`python -m studio wait <id>`,
@@ -280,7 +283,7 @@ out the rest of the window before it gets a fire of its own.
 
 The schedule can fire inside an API-triggered run, so two runs do overlap. The queue
 hands each caller a **short lease** on the questions it returns — 20 minutes by default,
-`QUESTION_CLAIM_MINUTES`, renewed by the studio before each step — so the second run is
+`QUESTION_CLAIM_MINUTES`, renewed by the studio before each step and every 5 minutes while one runs — so the second run is
 given different questions rather than the same oldest five. Without it nothing breaks, because the answer write is row-locked
 and one-answer-per-question is a constraint; the loser just writes a full answer for
 every question and throws it away, which is the expensive half of a run spent twice.
@@ -350,7 +353,7 @@ runs the heartbeat forever and host it; nothing in the API changes.
 
 1. Ask for a topic on `/learn`.
 2. Run a heartbeat. The topic's card flips from **BREWING** to **READY** once the
-   studio's fact-check passes, about five minutes in, or to **FAILED** with the reason
+   studio's fact-check passes, 20 minutes or more in, or to **FAILED** with the reason
    if the studio gave up on it after a retry. With an API trigger wired up, asking for the topic is
    itself the heartbeat: the API log shows `routine fired` and a new run appears on
    the routine's detail page.

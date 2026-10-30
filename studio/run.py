@@ -17,8 +17,15 @@ changes no rule; docs/popsmosis-agent-skill.md says when to pass one).
 
 `run` starts at the first step that is not done, so running it again after a
 failure retries the step that failed. Before each step but the post it claims the
-topic again (POST /api/questions/:id/claim), which renews the queue's lease, so a
-slow step or a retry keeps it out of an overlapping run's queue.
+topic again (POST /api/questions/:id/claim), which renews the queue's lease, and
+again every RENEW_S while the step runs, so a slow step (a bundle can take 20
+minutes or more, longer than the lease) or a retry keeps it out of an overlapping
+run's queue, while a run that dies lets the lease lapse.
+
+A lesson takes 20 minutes or more, and on the routine one command may take 10 at
+most: `run <id> --background` starts the run detached from the command and returns
+at once, and `python -m studio wait <id>` waits up to 9 minutes for its outcome line
+(the same line `run` prints), or says RUNNING when it is still going.
 
 The brain (studio/brain.py) is the one an admin picked for the topic on /learn, else the
 default brain set on /admin/studio, both as the claim says; never the environment, which
@@ -52,7 +59,9 @@ import contextlib
 import fcntl
 import json
 import re
+import subprocess
 import sys
+import threading
 import time
 import traceback
 from pathlib import Path
@@ -88,6 +97,13 @@ STUDY_GUIDE_MAX_CHARS = 50_000
 # A line of the question that starts "Style:" (or "Song style:") is the style the learner wants the song in.
 STYLE_LINE = re.compile(r"^[ \t]*(?:song[ \t]+)?style[ \t]*:(.*)$", re.IGNORECASE | re.MULTILINE)
 BRAIN_FILE = "brain.json"  # {"brain": a key of brain.CHOICES, "effort": Claude's}: the brain the claim said
+# How often a step claims its topic again while it runs: well inside the API's lease (QUESTION_CLAIM_MINUTES, 20 by
+# default), which a bundle of 20 minutes or more outlasts when the claim before each step is all that renews it.
+RENEW_S = 300.0
+BACKGROUND = "run.background.json"  # {pid, runs}: the detached run of `run --background`, and runs.jsonl's length then
+OUTCOME = "run.outcome"  # its outcome line, as `run` prints it
+LOG = "run.log"  # what it says as it goes
+OUTCOME_LINE = re.compile(r"(DONE|FAILED|STOPPED) (\S+): (.*)")
 
 
 class Stop(Exception):
@@ -287,10 +303,11 @@ def _run(job: Path, question_id: str, api: Api | None, ask, check_brain: bool = 
                     use_brain(job, question, check_brain)
                 if step != "post":  # the post makes the answer, which the videos' reports go on
                     report_progress(reporter, job, api, {step: step_clock})
-                if step == "bundle":
-                    reason = make_bundle(job, api, question, ask, note=note)
-                else:
-                    reason = STEP_RUNNERS[step](job, api, question, ask)
+                with renewing(api, question_id) if step != "post" else contextlib.nullcontext():
+                    if step == "bundle":
+                        reason = make_bundle(job, api, question, ask, note=note)
+                    else:
+                        reason = STEP_RUNNERS[step](job, api, question, ask)
             result = DONE
         except Stop as e:
             result, reason = STOPPED, str(e)
@@ -331,6 +348,39 @@ def claim(api: Api, question_id: str) -> dict:
         raise (Stop if result == STOPPED else StepFailed)(f"claim: {reason}") from e
 
 
+@contextlib.contextmanager
+def renewing(api: Api, question_id: str):
+    """Claim the topic again every RENEW_S while the block runs, on a thread of its own, so a step longer than the
+    API's lease keeps the topic out of an overlapping run's queue. Only the lease: the settings and the brain a
+    claim carries are taken before each step, never in the middle of one. Best effort: a renewal that fails is said
+    once and tried again at the next; one the API refuses for good (the topic gone, answered, given up or taken)
+    ends them, and the next step's claim stops the run."""
+    stop, every = threading.Event(), RENEW_S
+
+    def renew() -> None:
+        said = False
+        while not stop.wait(every):
+            try:
+                api.claim(question_id)
+            except ApiError as e:
+                result, reason = api_outcome(e)
+                if result == STOPPED:
+                    print(f"claim: no longer renewed during the step: {reason}", file=sys.stderr)
+                    return
+                if not said:
+                    print(f"claim: a renewal during the step failed, tried again every {every / 60:g} min: {e}",
+                          file=sys.stderr)
+                    said = True
+
+    thread = threading.Thread(target=renew, name=f"renew {question_id}", daemon=True)
+    thread.start()
+    try:
+        yield
+    finally:
+        stop.set()
+        thread.join()
+
+
 def report_progress(reporter: ledger.Reporter, job: Path, api: Api, running: dict[str, float],
                     failed: tuple[str, ...] = (), ending: tuple[str, float] | None = None) -> None:
     """Tell the page where the lesson is (studio/ledger.py's progress()), and whether the videos come after it.
@@ -353,6 +403,95 @@ def api_outcome(e: ApiError) -> tuple[str, str]:
     if e.status in (401, 403) or e.code == "NOT_CONFIGURED":
         return STOPPED, f"the API refused the key: {e}"
     return FAILED, str(e)
+
+
+# --- in the background, for a routine ------------------------------------------------------
+
+
+def background(question_id: str, note: str = "") -> tuple[str, str, str]:
+    """Start `run` detached from this command, and return at once; `wait` gives its outcome line."""
+    from studio.videos import REPO, STARTED, _alive  # it imports this module
+
+    job = job_dir(question_id)
+    job.mkdir(parents=True, exist_ok=True)
+    if _alive(_background_pid(job)):
+        return STOPPED, "run", "this topic's lesson is already being made in the background; wait for it"
+    with only_run(job) as mine:
+        if not mine:
+            return STOPPED, "run", "a run of this topic started earlier is still going; it posts the lesson when it finishes"
+    command = [sys.executable, "-m", "studio", "run", question_id, *(["--note", note] if note else [])]
+    with (job / OUTCOME).open("w", encoding="utf-8") as outcome, (job / LOG).open("a", encoding="utf-8") as log:
+        # A session of its own, so the tool that started it can end its command without ending the run.
+        process = subprocess.Popen(command, cwd=REPO, stdin=subprocess.DEVNULL, stdout=outcome, stderr=log,
+                                   start_new_session=True)
+    jobs.write(job / BACKGROUND, {"pid": process.pid, "runs": len(read_jsonl(job / "runs.jsonl"))})
+    return STARTED, "run", (f"the lesson, in the background; `python -m studio wait {question_id}` gives its outcome "
+                            f"(log: {job / LOG})")
+
+
+def _background_pid(job: Path) -> int | None:
+    try:
+        return int(json.loads((job / BACKGROUND).read_text(encoding="utf-8"))["pid"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def waits_on_lesson(question_id: str) -> bool:
+    """Whether `wait` is for the lesson: its run went to the background after the videos' did, or theirs never."""
+    from studio.videos import BACKGROUND as VIDEOS  # it imports this module
+
+    job = job_dir(question_id)
+    lesson, videos = job / BACKGROUND, job / VIDEOS
+    return lesson.exists() and (not videos.exists() or lesson.stat().st_mtime_ns >= videos.stat().st_mtime_ns)
+
+
+def wait(question_id: str, minutes: float | None = None, poll_s: float = 5.0) -> tuple[str, str, str]:
+    """The background lesson's outcome line once its run ends, or RUNNING after `minutes` (the videos'
+    WAIT_MINUTES, under the 10 minutes one tool command may take)."""
+    from studio.videos import RUNNING, WAIT_MINUTES, _alive  # it imports this module
+
+    job = job_dir(question_id)
+    try:
+        started = json.loads((job / BACKGROUND).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return STOPPED, "run", "no lesson was started in the background for this topic here"
+    clock = time.monotonic()
+    deadline = clock + (WAIT_MINUTES if minutes is None else minutes) * 60
+    while True:
+        if not _alive(started.get("pid")):
+            with only_run(job) as mine:
+                if mine:  # else a run started by hand holds the job: wait for it too
+                    return _ended(job, started)
+        if time.monotonic() >= deadline:
+            try:
+                step = json.loads((job / "run.current.json").read_text(encoding="utf-8")).get("step", "run")
+            except (OSError, ValueError):
+                step = "run"
+            return RUNNING, step, (f"still going after {(time.monotonic() - clock) / 60:.0f} min; "
+                                   f"run `python -m studio wait {question_id}` again")
+        time.sleep(poll_s)
+
+
+def _ended(job: Path, started: dict) -> tuple[str, str, str]:
+    """How a background run that has ended went: the line it printed, else what runs.jsonl has of it."""
+    try:
+        lines = (job / OUTCOME).read_text(encoding="utf-8").strip().splitlines()
+    except OSError:
+        lines = []
+    found = OUTCOME_LINE.fullmatch(lines[-1]) if lines else None
+    if found:  # every outcome, a stop before the topic was claimed included, which runs.jsonl never has
+        return found.group(1), found.group(2), found.group(3)
+    record_interrupted(job)  # killed in a step: a failed run of that step
+    ours = [r for r in read_jsonl(job / "runs.jsonl")[started.get("runs", 0):] if r.get("part") != "videos"]
+    if ours:
+        return ours[-1]["result"], ours[-1]["step"], ours[-1]["reason"]
+    # It died before it could say anything (an import that failed, say): record it, so the retry and `fail`
+    # treat it like any other failed run.
+    reason = f"the background run ended without an outcome; see {job / LOG}"
+    with (job / "runs.jsonl").open("a", encoding="utf-8") as log:
+        log.write(json.dumps({"started": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "seconds": None, "result": FAILED,
+                              "step": "run", "reason": reason, "steps": []}) + "\n")
+    return FAILED, "run", reason
 
 
 # --- the steps ------------------------------------------------------------------

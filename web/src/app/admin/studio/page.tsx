@@ -60,7 +60,7 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
   {
     id: 'leases', title: 'Leases and renders', note: 'How long the API waits on the teacher. A change applies to the next request.',
     knobs: {
-      QUESTION_CLAIM_MINUTES: { label: 'How long a run holds a topic', unit: 'minutes', note: 'The queue leases a topic to one run for this long, so two runs never make the same one. The studio renews it before each step: keep it above the longest step.' },
+      QUESTION_CLAIM_MINUTES: { label: 'How long a run holds a topic', unit: 'minutes', note: 'The queue leases a topic to one run for this long, so two runs never make the same one. The studio renews it before each step and every 5 minutes while one runs: keep it above 5.' },
       VIDEO_STALE_MINUTES: { label: 'How long a render may go quiet', unit: 'minutes', note: 'A render that has not reported for this long has died with its machine: the page says it failed, and a later run recovers it.' },
       LESSON_HOLD_MINUTES: { label: 'How long LEARN holds a lesson for its videos', unit: 'minutes', note: 'After the lesson is posted, its card shows the bill filling in until the videos are done or this passes. 0 never waits.' },
       VIDEO_MAX_ATTEMPTS: { label: 'Attempts at a droplet’s videos', unit: 'attempts', note: 'The first render, then each recovery of one that died with its machine. A recovery pays for the song and the art again.' },
