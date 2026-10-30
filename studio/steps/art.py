@@ -46,7 +46,8 @@ Live tests (docs/test-rounds.md) found the plain request right 8 times in 12 whe
 earlier prompt, with hex codes, a list of shapes and one biology style for every subject,
 was right once in 6. The helper looks at each
 picture for text, for a structure missing or out of place, and for anything else wrong,
-told what kind of scene it is (an analogy is meant not to show the topic's own parts). The
+told what kind of scene it is (an analogy is meant not to show the topic's own parts) and what
+the lesson says while it is on screen (a scene may show on purpose what goes wrong). The
 renderer draws every label, so text in a picture is painted out by code where the helper boxes
 it (unwrite(), studio/repair.py), and the picture is checked again. A picture with text still in
 it or a structure missing or out of place is asked for again with what was wrong, up to
@@ -424,7 +425,9 @@ List in `wrong` anything else that would mislead a learner, each in a few words:
 or too hard to make out, or anything scientifically wrong for what the scene should show.
 
 Judge both as the kind of scene it is, against what it should show, not the whole topic: what the scene \
-leaves out is not missing. The video animates each flow itself, as dots \
+leaves out is not missing. A scene may show on purpose what happens when something goes wrong (a wave \
+arriving late, a drug blocking a channel): what the lesson says while it is on screen tells you when it does, \
+and what it shows on purpose is not a problem. The video animates each flow itself, as dots \
 moving between the structures, so a flow or arrow the picture leaves out is not a problem; one drawn the \
 wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
 is right. Do not list matters of taste or style.
@@ -697,11 +700,23 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
     stage = Stage.of(bundle, scene)
     kind = (STAGE.format(number=stage.number, count=stage.count, process=stage.process) if stage
             else SCENE_KINDS.get(scene.id, DETAIL))
+    said = said_over(bundle, scene)
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
             + f"\nWhat the scene should show: {scene.image_prompt}"
             + (f"\n{AXES} They are asked for, and are no part to find." if scene.axes else "")
+            + ("\nWhat the lesson says while it is on screen:\n" + "\n".join(f"- {t}" for t in said) if said else "")
             + "\nIt must show each of these:\n" + "\n".join(lines))
+
+
+def said_over(bundle: Bundle, scene: Scene) -> list[str]:
+    """The narration the lesson video reads over the scene, in order; the lyrics the song sings over it when the
+    narration never shows it. Told only the image prompt, the helper marked a scene drawn on purpose with the
+    antinoise half a wave late as wrong for the waves adding up (Oct 30), and both videos told the student so."""
+    shown = {d.line_id for d in bundle.direction if d.scene == scene.id}
+    said = ([n.text for n in bundle.narration if n.id in shown]
+            or [line.text for line in bundle.lyrics if line.id in shown])
+    return list(dict.fromkeys(said))  # a chorus sung over it three times, once
 
 
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:

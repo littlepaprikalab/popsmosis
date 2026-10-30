@@ -356,6 +356,26 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert told.index("The scene is") < told.index("What the scene should show")
 
 
+def test_the_helper_is_told_what_the_lesson_says_over_the_scene():
+    # Oct 30: told only the image prompt, the helper marked a scene drawn on purpose with the antinoise half a
+    # wave late as wrong for the waves adding up, and both videos showed the student that note.
+    bundle = sample_media.bundle()
+    lyrics = {line.id: line.text for line in bundle.lyrics}
+    hook, overview, synthase = (art.check_prompt(bundle, scene) for scene in bundle.scenes)
+    said = "\nWhat the lesson says while it is on screen:\n"
+    # The narration over it, not the lyric the song sings over the same scene.
+    assert said + "- The light reactions happen in the thylakoid membrane.\nIt must show" in hook
+    assert lyrics["v1-1"] not in hook
+    assert said + "- ATP synthase uses the returning protons to make ATP.\nIt must show" in synthase
+    # A scene the narration never shows: what the song sings over it, in order, its chorus once.
+    assert lyrics["c1-1"] == lyrics["c2-1"] == lyrics["c3-1"]
+    assert said + "".join(f"- {lyrics[i]}\n" for i in ("v1-2", "c1-1", "v2-1", "b-1")) + "It must show" in overview
+    assert hook.index("What the scene should show") < hook.index(said)
+    assert "what the lesson says while it is on screen tells you" in art.CHECK_PROMPT
+    # A scene nothing is directed to is told nothing, rather than an empty heading.
+    assert "What the lesson says" not in art.check_prompt(bundle.model_copy(update={"direction": []}), bundle.scenes[0])
+
+
 def lettered(scene_id: str) -> bytes:
     """A sample scene's picture with a dark T painted on its white background, as a label would be."""
     pixels = sample_media_image_bytes(painting(scene_id))
