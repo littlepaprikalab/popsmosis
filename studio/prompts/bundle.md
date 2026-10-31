@@ -525,8 +525,9 @@ no times: code adds them from the audio.
   thing written the same way on every line: a molecule or ion as a textbook prints it
   ("H⁺", "e⁻", "O₂", "Ca²⁺", "glucose"); anything else named in a plain word ("price",
   "letter", "taxes"), so the fact-check sees what it is. It is what really travels that
-  path. "" with no particles, for a nerve signal or light, and on the analogy scene (its
-  water stands for the protons, so "H₂O" would mislead). When you cannot say what would
+  path (protons through ATP synthase, electrons along the chain, the price up to
+  equilibrium). "" with no particles, for a nerve signal or light, and on the analogy scene
+  (its water stands for the protons, so "H₂O" would mislead). When you cannot say what would
   travel a route, the facts do not give it: leave it out. The fact-check holds each motion
   to the facts (an unmarked one as "something", except on the hook and the analogy).
 - `moves`: "crosses" when it passes through one wall, membrane or carrier, the crossing
