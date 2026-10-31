@@ -51,23 +51,6 @@ class UpsideDown(Strict):
     upside_down: list[str]
 
 
-class Written(Strict):
-    """One line of writing in a picture and the box round it, as fractions of the art's width and height: a
-    label the art check found wrong, for the video to flag (art.label_flags())."""
-
-    text: str
-    left: float
-    top: float
-    right: float
-    bottom: float
-
-
-class Writing(Strict):
-    """The helper's answer: the lines of writing it was asked for, where each is in the picture."""
-
-    writing: list[Written]
-
-
 def read_rgb(path: Path) -> np.ndarray:
     return skia.Image.open(str(path)).toarray(colorType=skia.kRGBA_8888_ColorType)[..., :3].copy()
 

@@ -882,6 +882,14 @@ class Beat(Strict):
     words: list[Word]  # its words, in video time
 
 
+class Flag(Strict):
+    """A label the art check found wrong in a painted picture (art.flags()): the box round it, in art pixels, and
+    the sticky note the video puts beside it, for the student."""
+
+    box: Box
+    note: str
+
+
 class Timeline(Strict):
     """timeline_song.json, timeline_lesson.json: everything the renderer draws, and when (step 7).
 
@@ -908,9 +916,9 @@ class Timeline(Strict):
     # The scenes whose painted picture labels its own parts (art.self_labelled()): the renderer draws no labels or
     # axis names over them, only over a drawing (the brain's SVG).
     self_labelled: list[str] = []
-    # Each label the art check found wrong in a painted picture, by scene, as the box round it in art pixels: flagged
-    # on the picture, while the scene's notices say what is wrong.
-    flags: dict[str, list[Box]] = {}
+    # Each label the art check found wrong in a painted picture, by scene: flagged on the picture, a ring round it and
+    # a sticky note beside it saying what is true.
+    flags: dict[str, list[Flag]] = {}
     # Each graph's axis names, by scene (Scene.axes): written at the ends of the axes found in its picture.
     axes: dict[str, Axes] = {}
 

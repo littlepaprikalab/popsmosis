@@ -19,8 +19,9 @@ Each scene's prompt is three parts, joined with spaces (studio/steps/art.py, pai
    labelled with what it measures.
 
 The picture labels its own parts, and the video draws no labels over it (it still labels a scene Claude draws
-as SVG). The checker lists each wrong label; the picture is kept, the video flags each wrong label on it, and the
-notice card beside it says what is wrong.
+as SVG). The checker lists each wrong label; the picture is kept, a second look confirms each one and writes a
+short sticky note for it ("Should read: thylakoid space"), and the video rings the label and sticks the note beside
+it, where it covers the least of the picture.
 
 Until Oct 31 a style line came last: a plain, flat dark slate blue background, space round each part for the
 video's labels, smooth rounded proteins, only the parts named, and no text, labels, letters or numbers. The

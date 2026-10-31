@@ -409,6 +409,15 @@ class SceneArt:
             self._drawn = (far > DRAWN_INK) | covered
         return self._axes
 
+    def ink_share(self, box: tuple[float, float, float, float]) -> float:
+        """How much of an art-pixel box has something drawn in it, as drawn_share() has it, but what lies off the art
+        counts as bare: a post-it may sit in the frame beside the picture."""
+        self.axis_lines()
+        x0, y0 = max(int(box[0]), 0), max(int(box[1]), 0)
+        x1, y1 = min(int(math.ceil(box[2])), self.width), min(int(math.ceil(box[3])), self.height)
+        whole = max((box[2] - box[0]) * (box[3] - box[1]), 1.0)
+        return float(self._drawn[y0:y1, x0:x1].sum()) / whole if x1 > x0 and y1 > y0 else 0.0
+
     def drawn_share(self, box: tuple[float, float, float, float]) -> float:
         """How much of an art-pixel box has something drawn in it: 1 over the picture, 0 over bare background, and
         1 off the art, where nothing can be read."""
@@ -489,6 +498,38 @@ def to_frame(cam: Cam, view: Rect, art: SceneArt) -> tuple[float, float, float]:
     """The scale and offset that map art pixels onto the frame."""
     scale = _fit(view, art) * cam.zoom
     return scale, (view[0] + view[2]) / 2 - cam.cx * scale, (view[1] + view[3]) / 2 - cam.cy * scale
+
+
+# A post-it sits this far (frame pixels) from the ring of the label it is about, or, where every spot that near
+# covers the picture, further out, with a line back to the ring.
+POSTIT_GAP = 14.0
+POSTIT_REACH = (POSTIT_GAP, 90.0, 180.0)
+
+
+def _within(rect: Rect, bounds: Rect) -> Rect:
+    """The rect moved, not resized, to lie inside bounds where it fits."""
+    x0, y0, x1, y1 = rect
+    shift_x = max(bounds[0] - x0, 0) - max(x1 - bounds[2], 0)
+    shift_y = max(bounds[1] - y0, 0) - max(y1 - bounds[3], 0)
+    return x0 + shift_x, y0 + shift_y, x1 + shift_x, y1 + shift_y
+
+
+def _overlap(a: Rect, b: Rect) -> float:
+    """How much of rect a overlaps rect b, as a share of a."""
+    w = min(a[2], b[2]) - max(a[0], b[0])
+    h = min(a[3], b[3]) - max(a[1], b[1])
+    return w * h / max((a[2] - a[0]) * (a[3] - a[1]), 1.0) if w > 0 and h > 0 else 0.0
+
+
+def _gap(a: Rect, b: Rect) -> float:
+    """How far apart two rects are: 0 where they touch or overlap."""
+    return math.hypot(max(b[0] - a[2], a[0] - b[2], 0), max(b[1] - a[3], a[1] - b[3], 0))
+
+
+def _nearest(a: Rect, b: Rect) -> Point:
+    """The point of rect a nearest rect b."""
+    bx, by = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    return min(max(bx, a[0]), a[2]), min(max(by, a[1]), a[3])
 
 
 def _inside(q: Point, box) -> bool:
@@ -771,6 +812,7 @@ class Renderer:
         self._scene_values: dict[str, list] = {}  # per scene, every value it writes in the video (_value_points)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
+        self._postits: dict[str, list[Point]] = {}  # per scene, the middle of each flag's post-it, in art pixels
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
@@ -1079,16 +1121,64 @@ class Renderer:
             rects.append((lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2))
         return rects
 
-    def _flags(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, alpha: float) -> None:
-        """A flag on each label the art check found wrong in the scene's painted picture (Timeline.flags), from the
-        scene's first frame, framed with the picture; the notice card beside it says what is wrong."""
-        scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
+    def _flags(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, bounds: Rect, alpha: float) -> None:
+        """Each label the art check found wrong in the scene's painted picture (Timeline.flags), from the scene's first
+        frame: an amber ring round it, framed with the picture, and a post-it saying what is true, where it covers
+        the least of the picture and its labels (_place_postits()), joined to the ring by a line when it sits away
+        from it. A post-it keeps its size as the camera moves, and stays inside the picture's bounds."""
+        art = self.scene(scene_id)
+        if scene_id not in self._postits:
+            self._postits[scene_id] = self._place_postits(scene_id, view, bounds)
+        scale, dx, dy = to_frame(cam, view, art)
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
-        for box in self.timeline.flags[scene_id]:
-            p.draw_flag(canvas, (box.x0 * scale + dx, box.y0 * scale + dy, box.x1 * scale + dx, box.y1 * scale + dy),
-                        alpha)
+        for flag, (cx, cy) in zip(self.timeline.flags[scene_id], self._postits[scene_id]):
+            box = flag.box
+            label = (box.x0 * scale + dx, box.y0 * scale + dy, box.x1 * scale + dx, box.y1 * scale + dy)
+            p.draw_flag(canvas, label, alpha)
+            w, h = p.postit_size(flag.note)
+            note = _within((cx * scale + dx - w / 2, cy * scale + dy - h / 2, cx * scale + dx + w / 2,
+                            cy * scale + dy + h / 2), bounds)
+            ring = p.flag_ring(label)
+            if _gap(note, ring) > POSTIT_GAP + 1:
+                p.draw_postit_line(canvas, _nearest(note, ring), _nearest(ring, note), alpha)
+            p.draw_postit(canvas, note, flag.note, alpha)
         canvas.restore()
+
+    def _place_postits(self, scene_id: str, view: Rect, bounds: Rect) -> list[Point]:
+        """Where each flag's post-it sits, as its middle in art pixels: of the spots beside its label's ring (each
+        side and corner, then further out), the one that covers the least of the picture (its parts and its own
+        labels, ink_share()), no other post-it and no other flagged label, the nearest of those alike. Chosen once,
+        with the scene framed whole, so a post-it never jumps."""
+        art = self.scene(scene_id)
+        scale, dx, dy = to_frame(self._whole(scene_id, view), view, art)
+        flags = self.timeline.flags[scene_id]
+        rings = [p.flag_ring((f.box.x0 * scale + dx, f.box.y0 * scale + dy, f.box.x1 * scale + dx,
+                              f.box.y1 * scale + dy)) for f in flags]
+        placed: list[Rect] = []
+        spots = []
+        for flag, ring in zip(flags, rings):
+            w, h = p.postit_size(flag.note)
+            x0, y0, x1, y1 = ring
+            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+            best = None
+            for k, gap in enumerate(POSTIT_REACH):
+                for mx, my in ((x1 + gap + w / 2, cy), (x0 - gap - w / 2, cy), (cx, y0 - gap - h / 2),
+                               (cx, y1 + gap + h / 2), (x1 + gap + w / 2, y0 - gap - h / 2),
+                               (x0 - gap - w / 2, y0 - gap - h / 2), (x1 + gap + w / 2, y1 + gap + h / 2),
+                               (x0 - gap - w / 2, y1 + gap + h / 2)):
+                    rect = _within((mx - w / 2, my - h / 2, mx + w / 2, my + h / 2), bounds)
+                    covered = art.ink_share(((rect[0] - dx) / scale, (rect[1] - dy) / scale, (rect[2] - dx) / scale,
+                                             (rect[3] - dy) / scale))
+                    clash = sum(_overlap(rect, other) for other in placed + rings)
+                    score = (round(covered + clash, 2), k, math.dist(((rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2),
+                                                                     (cx, cy)))
+                    if best is None or score < best[0]:
+                        best = (score, rect)
+            rect = best[1]
+            placed.append(rect)
+            spots.append((((rect[0] + rect[2]) / 2 - dx) / scale, ((rect[1] + rect[3]) / 2 - dy) / scale))
+        return spots
 
     def _draw_beat(self, canvas: skia.Canvas, t: float) -> None:
         layout = self.layout
@@ -1127,8 +1217,6 @@ class Renderer:
             self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
-        if beat.scene in self.timeline.flags:
-            self._flags(canvas, beat.scene, cam, view, fade)
 
         caption_alpha = 0.0
         if beat.caption:
@@ -1171,6 +1259,8 @@ class Renderer:
         if beat.scene not in self.timeline.self_labelled:  # a painted picture labels its own parts
             self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
                          strength)
+        if beat.scene in self.timeline.flags:
+            self._flags(canvas, beat.scene, cam, view, bounds, fade)
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places, strength)
         if legend_rect:

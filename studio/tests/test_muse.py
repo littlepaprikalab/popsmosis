@@ -120,7 +120,7 @@ class FakeHelper:
     def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=()):
         self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check
         self.boxes = boxes or {}  # structure -> a Spot dict
-        self.writing = writing or {}  # scene -> the Written dicts the helper boxes round its wrong labels
+        self.writing = writing or {}  # scene -> the LabelFlag dicts the helper confirms, boxes and notes
         self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
         self.unconfirmed = set(unconfirmed)  # notes the brain, asked to confirm them, finds wrong
         self.asked: list[tuple[str, str]] = []
@@ -139,9 +139,9 @@ class FakeHelper:
             tries = sum(1 for lab, _ in self.asked if lab.startswith(f"art check {scene}"))
             answers = self.checks.get(scene, [{}])
             return {"labels": [], "misplaced": [], "wrong": [], **answers[min(tries, len(answers)) - 1]}
-        if schema is repair.Writing:
+        if schema is art.LabelFlags:
             assert system == art.FLAGS_PROMPT and prompt.startswith("A check found these labels wrong:\n- ")
-            return {"writing": self.writing.get(label.split()[2], [])}
+            return {"flags": self.writing.get(label.split()[2], [])}
         if schema is locate.LabelCheck:
             assert system == locate.LABELS_PROMPT and "The names pinned on it: " in prompt
             return {"wrong": [{"name": name, "on": "something else"} for name in self.wrong.get(label.split()[2], [])]}
@@ -394,9 +394,10 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert told.index("The scene is") < told.index("What the scene should show")
 
 
-# Where the helper finds a wrong label: a box as fractions of the art, round art pixels (840, 140)-(960, 210).
-LABEL_BOX = {"text": "PSI", "left": 840 / media.ART_WIDTH, "top": 140 / media.ART_HEIGHT,
-             "right": 960 / media.ART_WIDTH, "bottom": 210 / media.ART_HEIGHT}
+# Where the helper finds a wrong label, and its post-it: a box as fractions of the art, round art pixels
+# (840, 140)-(960, 210).
+LABEL_BOX = {"text": "PSI", "note": "This is cytochrome b6f", "left": 840 / media.ART_WIDTH,
+             "top": 140 / media.ART_HEIGHT, "right": 960 / media.ART_WIDTH, "bottom": 210 / media.ART_HEIGHT}
 
 
 def test_a_wrong_label_is_kept_and_flagged_where_the_helper_finds_it(job, monkeypatch):
@@ -412,8 +413,9 @@ def test_a_wrong_label_is_kept_and_flagged_where_the_helper_finds_it(job, monkey
     made = json.loads((job / "art" / "overview.json").read_text())
     assert made["labelled"] is True and made["flags"] == [LABEL_BOX]
     bundle = checks.load(job / "bundle.json")
-    [box] = art.flags(job, bundle)["overview"]
-    assert (box.x0, box.y0, box.x1, box.y1) == pytest.approx((840, 140, 960, 210))  # in art pixels
+    [flag] = art.flags(job, bundle)["overview"]
+    assert (flag.box.x0, flag.box.y0, flag.box.x1, flag.box.y1) == pytest.approx((840, 140, 960, 210))  # art pixels
+    assert flag.note == "This is cytochrome b6f"
     assert list(art.flags(job, bundle)) == ["overview"] and art.notices(job, bundle) == {"overview": [note]}
     assert sorted(art.self_labelled(job, bundle)) == ["hook", "overview", "synthase"]
 
@@ -422,7 +424,7 @@ def test_a_wrong_label_is_kept_and_flagged_where_the_helper_finds_it(job, monkey
     assert "flags" not in json.loads((job / "art" / "overview.json").read_text()) and art.flags(job, bundle) == {}
 
     def no_boxes(role, prompt, schema=None, images=(), **kwargs):
-        if schema is repair.Writing:
+        if schema is art.LabelFlags:
             raise brain.BrainError("the helper did not answer")
         return helper(role, prompt, schema, images, **kwargs)
 
@@ -893,7 +895,7 @@ def test_a_coarse_mask_is_stretched_over_its_box_and_clipped_to_the_art():
 
 
 def test_the_helpers_prompts_read_cleanly_and_its_answers_fit_both_providers():
-    for schema in (art.ArtCheck, locate.Spot, repair.Writing):
+    for schema in (art.ArtCheck, locate.Spot, art.LabelFlags):
         brain.strict_schema(schema)  # raises on a keyword one provider would refuse
     for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.FLAGS_PROMPT, art.LABELS):
         assert "\\" not in prompt and "  " not in prompt
@@ -934,7 +936,8 @@ def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_besid
     assert lesson.notices == ({"overview": [note]} if any(b.scene == "overview" for b in lesson.beats) else {})
     shown = sorted({b.scene for b in song.beats})
     assert sorted(song.self_labelled) == shown and list(song.flags) == ["overview"]
-    assert (song.flags["overview"][0].x0, song.flags["overview"][0].y1) == pytest.approx((840, 210))
+    assert (song.flags["overview"][0].box.x0, song.flags["overview"][0].box.y1) == pytest.approx((840, 210))
+    assert song.flags["overview"][0].note == "This is cytochrome b6f"
     hook_path = job / media.timeline_path(media.HOOK)
     amber = p.rgb("#F59E0B")
     hook = jobs.read(hook_path, Timeline)  # the sample's first chorus and the verse line before it
@@ -957,8 +960,10 @@ def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_besid
         """Where the frame at t differs from the one the timeline as it is draws: what it adds or leaves out."""
         return np.abs(Renderer(job, timeline).frame(t)[..., :3].astype(int) - framed[..., :3]).sum(axis=2) > 30
 
-    # Unflagged, the frame loses the amber ring and sign in their dark edge; labelled by the video, it gains its
-    # label pills.
+    # Unflagged, the frame loses the amber ring in its dark edge and the yellow post-it; labelled by the video, it
+    # gains its label pills.
     flag = drawn(song.model_copy(update={"flags": {}}))
-    assert (np.abs(framed[flag][..., [2, 1, 0]].astype(int) - amber).sum(axis=1) < 40).sum() > 500
+    shown = framed[flag][..., [2, 1, 0]].astype(int)
+    assert (np.abs(shown - amber).sum(axis=1) < 40).sum() > 500
+    assert (np.abs(shown - p.rgb("#FFE27A")).sum(axis=1) < 30).sum() > 5000
     assert drawn(song.model_copy(update={"self_labelled": []})).sum() > 1000

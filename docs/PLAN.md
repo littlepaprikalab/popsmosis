@@ -395,8 +395,8 @@ Earth has seasons..."), each structure's colour by name, and a last line asking 
 to be labelled (`art.LABELS`: "Clearly label nonobvious structures. No title, legend, key or caption, and no colour
 names in the labels.").
 The picture labels its own parts and the video draws no labels over it, only over a drawing; a label
-the art check finds wrong is kept, flagged on the picture and explained
-in the notice card beside it. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a
+the art check finds wrong is kept, ringed on the picture, with a sticky note beside it
+saying what is true. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a
 plain dark slate blue background, room for labels, smooth rounded proteins, no text, and the
 video labelled the picture. The pictures came back better without it, and the painter's own
 labels were worth keeping even where one was wrong.) The picture is a still stage: the request

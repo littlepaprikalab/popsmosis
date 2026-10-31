@@ -67,8 +67,8 @@ place, and for anything else wrong, told what kind of scene it is (an analogy is
 show the topic's own parts). A picture with a structure missing or out of place is asked for
 again with what was wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not
 repainted (round 8: a second picture painted for those was no better 9 times in 11). A wrong label
-is kept: the helper boxes it (label_flags()), the video flags it on the picture (flags()), and the
-check's note on it goes beside the picture with the others (notices()). After the last try the
+is kept: the helper looks at it again, and if it agrees, boxes it and writes a sticky note saying what
+is true (label_flags()); the video rings the label and sticks the note beside it (flags()). After the last try the
 scene keeps the picture with the fewest structures out of place, then the fewest other problems.
 
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
@@ -100,7 +100,7 @@ from pydantic import Field
 
 from studio import brain, checks, gemini, jobs, knobs, ledger, media, muse, repair, svg
 from studio.jobs import read, write
-from studio.schemas import (Axes, Box, Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems,
+from studio.schemas import (Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, locations_problems,
                              stage_groups)
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
@@ -783,27 +783,47 @@ def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], a
 # A second look before a label is flagged on screen: on Oct 31 the check listed labels it called "correct" or
 # "acceptable" among the wrong ones, 4 of 5 on two pictures; boxing each one, the helper leaves those out.
 FLAGS_PROMPT = """A check listed the labels below as wrong in an illustration, and the video will flag each one \
-you give on the picture as a mistake. Look at each in the picture. Give it only if it is wrong: on or pointing at \
-the wrong part, naming something the picture does not show, or misspelled or garbled. Leave out one that is \
-right, roughly right or acceptable, whatever the check said, and one you cannot find. For each you give, the line \
-of writing it is: `text` as it reads there, and a tight box round it as fractions of the picture's width and \
-height, from its top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down."""
+you give on the picture as a mistake, with a sticky note beside it. Look at each in the picture. Give it only if \
+it is wrong: on or pointing at the wrong part, naming something the picture does not show, or misspelled or \
+garbled. Leave out one that is right, roughly right or acceptable, whatever the check said, and one you cannot \
+find. For each you give: `text`, the line of writing as it reads there; `note`, the sticky note for the student, \
+under 8 words, saying what is true ("Should read: thylakoid space", "This is cytochrome b6f"); and a tight box \
+round the writing as fractions of the picture's width and height, from its top-left corner: `left` and `right` \
+from 0 to 1 across, `top` and `bottom` from 0 to 1 down."""
+
+
+class LabelFlag(Strict):
+    """A wrong label in a picture: the writing, the sticky note the video puts beside it, and the box round it, as
+    fractions of the art's width and height."""
+
+    text: str
+    note: str
+    left: float
+    top: float
+    right: float
+    bottom: float
+
+
+class LabelFlags(Strict):
+    """The helper's answer: the wrong labels it confirms, each with its note and where it is."""
+
+    flags: list[LabelFlag]
 
 
 def label_flags(job: Path, scene: Scene, labels: list[str], ask) -> list[dict]:
     """Where each label the check found wrong is in the scene's kept picture, as the helper boxes it (fractions of
-    the art, as repair.Written), for the video to flag it there (flags()); the helper leaves out one it finds right
-    on a second look (FLAGS_PROMPT). When the call fails none is flagged: the notes beside the picture still say
-    what is wrong."""
+    the art), with the sticky note the video puts beside it, for the video to flag it there (flags()); the helper
+    leaves out one it finds right on a second look (FLAGS_PROMPT). When the call fails none is flagged: the notes
+    beside the picture still say what is wrong."""
     listed = "\n".join(f"- {label}" for label in labels)
     try:
-        found = repair.Writing(**ask("helper", f"A check found these labels wrong:\n{listed}", repair.Writing,
-                                     [job / media.art_path(scene.id)], system=FLAGS_PROMPT,
-                                     label=f"art flags {scene.id}"))
+        found = LabelFlags(**ask("helper", f"A check found these labels wrong:\n{listed}", LabelFlags,
+                                 [job / media.art_path(scene.id)], system=FLAGS_PROMPT, label=f"art flags {scene.id}"))
     except Exception as e:  # a flag points the student at a mistake the notes already disclose
         print(f"art: {scene.id}: the wrong labels could not be found: {type(e).__name__}: {e}", file=sys.stderr)
         return []
-    return [w.model_dump() for w in found.writing if 0 <= w.left < w.right <= 1 and 0 <= w.top < w.bottom <= 1]
+    return [f.model_dump() for f in found.flags
+            if 0 <= f.left < f.right <= 1 and 0 <= f.top < f.bottom <= 1 and f.note.strip()]
 
 
 def fit(picture: bytes) -> np.ndarray:
@@ -934,20 +954,21 @@ def self_labelled(job: Path, bundle: Bundle) -> list[str]:
     return [scene.id for scene in bundle.scenes if ((_made(job, bundle, scene) or {}).get("labelled") is True)]
 
 
-def flags(job: Path, bundle: Bundle) -> dict[str, list[Box]]:
-    """Each label the check found wrong in a painted picture, by scene, as the box round it in art pixels
-    (label_flags()): the video flags each one on the picture, and the notes beside it say what is wrong."""
+def flags(job: Path, bundle: Bundle) -> dict[str, list[Flag]]:
+    """Each label the check found wrong in a painted picture, by scene, as the box round it in art pixels and its
+    sticky note (label_flags()): the video flags each one on the picture with its note beside it."""
     found = {}
     for scene in bundle.scenes:
-        boxes = []
+        made = []
         for flag in (_made(job, bundle, scene) or {}).get("flags") or []:
             try:
-                boxes.append(Box(x0=flag["left"] * media.ART_WIDTH, y0=flag["top"] * media.ART_HEIGHT,
-                                 x1=flag["right"] * media.ART_WIDTH, y1=flag["bottom"] * media.ART_HEIGHT))
+                made.append(Flag(note=flag["note"], box=Box(
+                    x0=flag["left"] * media.ART_WIDTH, y0=flag["top"] * media.ART_HEIGHT,
+                    x1=flag["right"] * media.ART_WIDTH, y1=flag["bottom"] * media.ART_HEIGHT)))
             except (KeyError, TypeError, ValueError):  # a record written by hand, or an empty box
                 continue
-        if boxes:
-            found[scene.id] = boxes
+        if made:
+            found[scene.id] = made
     return found
 
 
