@@ -70,14 +70,16 @@ Tell it as one path, each sentence following from the one before:
    learner always knows where they are. Go to a close-up for the step it shows, and come back
    to the overview after it ("Back in the nephron..."). A story in time goes in the order it
    happened, each event with its year and why it led to the next.
-4. **A predict question** once, mid-way, answered in the next sentence: "What do you think
-   all that weight does to the layers underneath?"
-5. **The misconception**, once, right where the wrong idea would form: named as a common
-   mistake, then the right idea and why. Never before the learner has met what it is about.
-6. **A case** (2 to 5 sentences): the idea at work in one example the facts give, worked
+4. **The prediction and the misconception**, once, right where the wrong idea would form,
+   never before the learner has met what it is about: ask the listener to guess, with a
+   question the common mistake answers wrong ("So if the forces are equal, does the gas push
+   the rocket as hard as the rocket pushes the gas? Most people say no."), then answer it:
+   the mistake named as a common one, why it fails, the right idea. Committing to a guess and
+   seeing it fail is what changes a wrong idea.
+5. **A case** (2 to 5 sentences): the idea at work in one example the facts give, worked
    step by step, cause before effect, opened as what it is ("Now, what happens when blood
    sugar runs too high?"). It comes after the path, never in the middle of it.
-7. **The end**: the core idea in the words of `core_idea`, then the question answered in one
+6. **The end**: the core idea in the words of `core_idea`, then the question answered in one
    sentence; for a process, what goes in and what comes out.
 
 Every sentence:

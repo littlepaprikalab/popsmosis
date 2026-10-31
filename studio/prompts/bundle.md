@@ -96,9 +96,11 @@ Then:
   gates open because the sodium rushing in changes the charge beside them"), each following
   from the one before. The lesson and the narration are built on these links, not on a list
   of parts. The facts state every link.
-- `key_terms`: at most 8, the terms the course or exam uses ("photosystem II", "ATP
-  synthase", "proton gradient"). Any other technical name is said at most once, in passing,
-  or left out: each extra name pushes out the idea.
+- `key_terms`: at most 8 (5 for a younger audience), the terms the course or exam uses
+  ("photosystem II", "ATP synthase", "proton gradient"). Every other technical name is left
+  out of the lesson, the narration and the song, said in plain words instead ("a carrier
+  in the membrane", not "plastoquinone"): a first-time learner holds a handful of new names,
+  and each extra one pushes out the idea.
 - `misconception`: the most common misunderstanding at this level and its correction, in
   one or two sentences. The facts must state the correction, and that the mistake is a
   common one ("A common mistake is to think the two forces cancel"): the lesson, the song
@@ -121,7 +123,9 @@ them too wherever they picture what it sings; its own pictures come after its ly
   structure of its own (the "water wheel" for the rotor), in the colour of the structure it
   stands for, so the viewer sees which matches which. A line that says one of its names
   plays over it; other lines can still use the analogy, in other words than its parts'
-  names.
+  names. Name each part for the everyday thing ("Huge table", "Water wheel"), never with
+  the real thing's name as a name or alias: that name belongs to the real thing's own
+  structure, and said in a line it would reveal the wrong one.
 - A failure the bridge sings can have a detail scene (a song picture when the lesson shows
   none): the same view as another scene with the blocker drawn in as a structure and the
   stopped flow left out (the video shows it stopping).
@@ -235,40 +239,51 @@ Structures:
 `lesson_markdown` is the text droplet, shown as soon as it passes the fact-check: one short
 lesson that leaves the learner understanding the topic, not just knowing a fact about it.
 
-- **Open with a question, then the big picture.** A short question the learner can't answer
-  yet but wants to ("Where does the oxygen you breathe come from?"), then one or two
-  sentences on what the thing is, why it matters, and the core idea in plain words.
+- **Open with a puzzle, then the big picture.** A short question the learner can't answer
+  yet but wants to, best a surprising fact from the facts turned into a puzzle, and best of
+  all one the common misconception gets wrong ("Hunger had caused riots before without
+  toppling a king. So what was different in 1789?"), then one or two sentences on what the
+  thing is, why it matters, and the core idea in plain words.
 - **Teach the why, not the parts list.** Build the body on `why_chain`: each step says what
-  happens and why it has to, so the steps follow from each other. Numbered steps for a
-  process, a small table to compare, in GitHub-flavored markdown. Keep to `key_terms`; any
-  other name at most once.
+  happens and why it has to, so the steps follow from each other: causes, not a chronicle,
+  with a date or a detail only where a step needs it. Numbered steps for a
+  process, a small table to compare, in GitHub-flavored markdown. Use no technical name
+  outside `key_terms`.
 - **Carry the analogy through.** Set it up once, near the top, saying in words what each
   part stands for (never by a colour or a place: the lesson has no picture), then call each
   step by its part of the analogy as it is taught ("Copy first: every page gets its
   photocopy").
-- **One predict question** mid-way, answered in the next sentence ("What do you think
-  happens to the protons piling up in the lumen?"), where the steps just taught let the
-  learner work it out, and before anything gives the answer away: never about a fact they
-  have not met, never what the sentence before just said.
+- **Make them predict where the misconception would answer wrong.** Once, right where the
+  wrong idea would form, ask one question the learner can answer with a guess, chosen so the
+  common mistake gives the wrong answer ("So if the forces are equal, does the rocket push
+  the gas as hard as the gas pushes the rocket?"), before anything gives the answer away.
+  Answer it in the next sentences: that is where the misconception is corrected (below).
+  Committing to a guess and seeing it fail is what changes a wrong idea.
 - **Link to what they know**: where the facts give it, one sentence inside the step it
   explains.
-- **Correct the misconception where it would form**: name it as a common mistake once,
-  right after the step it is about, saying why it is wrong (in numbered steps, an indented
-  paragraph inside that step); a mistake about the whole idea goes right after the big
-  picture. Never before they have met what it is about, never in a section of its own.
+- **Correct the misconception where it would form**, as the answer to the prediction: name
+  the wrong guess as a common mistake once, say why it fails, and give the right idea (in
+  numbered steps, an indented paragraph inside the step it is about); a mistake about the
+  whole idea goes right after the big picture. Never before they have met what it is
+  about, never in a section of its own.
 - **Make it vivid**: explain with the analogy, a concrete example and why it matters to the
   learner, all from the facts.
-- **One path, then the end.** After the last step, at most one case (one example the facts
-  give, cause before effect, in a short paragraph) and at most one sentence on what comes
-  next in the course, then the check. No fun facts or side details that don't help explain
-  the idea: the song's surprise and bridge appear only where they explain a step.
-- **End with a check on the essence**: one short "why" or "what happens if" question only a
-  learner who understood the core idea can answer ("Why does ATP synthase stop when a
-  herbicide stops electrons leaving photosystem II?"), then an invitation to ask a
-  follow-up.
+- **One path, then the end.** The lesson is the question and the big picture, the steps
+  (with the predict question and the misconception inside them), at most one case (one
+  example the facts give, cause before effect, in a short paragraph), then the check.
+  Nothing else: no section on what comes next, history, other uses, drugs, extra numbers
+  or a second case, no fun facts, and no table unless it compares the things the core idea
+  is about. The facts carry more than the lesson needs (the song's surprise, its bridge,
+  what comes next in the course): leave those to the song and the narration. A first-time
+  learner who finishes it should hold one idea, not a dozen.
+- **End on the essence, then a check on it**: the core idea once more in one plain sentence,
+  then one short "why" or "what happens if" question about a situation the lesson has not
+  shown, which only a learner who understood the core idea can answer ("Why does ATP
+  synthase stop when a herbicide stops electrons leaving photosystem II?"), then an
+  invitation to ask a follow-up.
 - Write for a learner at that level meeting the topic for the first time, unless the
   request says they know more, and say when
-  something is simplified. Most lessons fit in 250-600 words; never over 5000 characters.
+  something is simplified. Most lessons fit in 300-500 words; never over 5000 characters.
   No personal data.
 
 The fact-checker reads each sentence, list item, heading and table row on its own: each
@@ -334,12 +349,23 @@ explanation left to the narration.
 - `music.sections`: intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus, bridge,
   chorus, outro.
 - `lyrics`: every line as sung, in order, section by section, so the chorus appears three
-  times. A line is 6 to 9 syllables, room to hold a note (rapped, up to about 14). Each
+  times. A line is 5 to 8 syllables, never over 9, room to hold a note (rapped, up to about
+  14). Each
   verse has 8 lines: the song fills its length with the chorus coming back, not longer
   verses.
 
 ### How it sounds
 
+- **Write it like a pop songwriter.** Decide the title line and the chorus first, then write
+  the verses toward them. Plain everyday words, present tense, sung to "you" or as "we",
+  so the listener is inside the story. End lines on short words with open vowels where the
+  note is held ("high", "go", "day", "light"). Each line carries one idea and at most one
+  term; let the narration carry the rest.
+- **Never a caption.** No line is a label or a definition: no "Term: what it is", no "X =
+  Y" or "X's the Y", no run of terms, no figure with its unit (one number as a hook, at
+  most, in the whole song). Not "Law of demand: some switch, some can't pay", but "Price
+  goes up, and the buyers walk away"; not "Tray of cookies: what the sellers make", but
+  "Fresh from the oven, all the cookies they bake".
 - **A song, not sentences.** A lyric is the idea turned into something the listener sees,
   feels and sings back, not a sentence with the facts cut into lines. A line can be a
   fragment, a call, a question, a list, a word sung twice. Keep the small words that carry
@@ -398,18 +424,19 @@ In this order, each section a run of lines with its own `section` value:
   real things ("Open the gates, let sodium in", "Split the water, catch the light"), never
   pronouns standing in for them ("Pump them in, they spin it out" names nothing). It is the
   hook, the song's name and a line of the chorus.
-- **Verse**, 8 lines: the frame first, then the first half of the story in order, one step
-  a line or a couplet, with the surprise in it.
+- **Verse**, 8 lines, four couplets: the frame first, then the first half of the story in
+  order, a couplet a step (the first line shows it happening, the second lands what follows),
+  with the surprise in it.
 - **Pre-chorus**, 2 lines: bust the misconception with a fact, singing the right idea and
   the mistake only as what it is not ("the oxygen you breathe came from water, not CO2"),
   never a filler like "that isn't true".
-- **Chorus**, 4 or 5 lines: `core_idea` as a chant, opening and ending on the title line.
-  It sums up the whole idea, the steps in order for a process, each line built like the one
-  before so the rhythm repeats ("Open the gates, let sodium in / Flip the charge and the
-  spike begins"), and names what goes in and every main product ("ATP and NADPH, that's the
-  deal"), or, for an idea that is not a process, its cause and its result. Word for word the
-  same each time, each repeat with its own ids; a learner can sing it back after two
-  hearings.
+- **Chorus**, 4 lines: `core_idea` as a chant, opening and ending on the title line. The
+  two lines between are the whole idea in brief, each built like the one before so the
+  rhythm repeats ("Open the gates, let sodium in / Flip the charge and the spike begins"):
+  for a process, what goes in and what comes out ("Light and water in / ATP and NADPH
+  out"); for any other idea, its cause and its result. Short words, nothing to stumble on.
+  Word for word the same each time, each repeat with its own ids; a learner can sing it
+  back after two hearings.
 - **Verse**, 8 lines: the second half of the story, ending with what it makes and where
   that goes next.
 - **Pre-chorus**, 2 lines: link to what comes next in the course, as the facts give it.
@@ -485,9 +512,11 @@ it names every structure the scenes draw. Plain spoken language at the audience'
 short sentences, no markdown, no lists, nothing in parentheses, never more than one new name
 in a sentence, keeping to `key_terms`.
 
-Open on the hook. Use the analogy on its scene for two or three sentences. Ask the listener
-one question mid-way and answer it in the next sentence. Correct the misconception once,
-right where the wrong idea would form, never before the learner has met what it is about. A
+Open on the hook. Use the analogy on its scene for two or three sentences. Once, right where
+the wrong idea would form (never before the learner has met what it is about), ask the
+listener to guess, with a question the common mistake answers wrong, and answer it in the
+next sentences by correcting the misconception: the mistake named as a common one, why it
+fails, the right idea. A
 topic told in time goes in the order it happened, with each event's year. End on the core
 idea in the words of `core_idea`, then, for a process, what goes in and what comes out, or,
 for any other idea, its cause and its result, and why it matters. Only something really
@@ -605,9 +634,9 @@ fact-check holds each to the facts. [] when there is none.
 ## On screen
 
 The lyrics fly past faster than a learner can take them in, so both videos write the step
-being taught above the diagram and hold it. `key_lines` are those steps, 3 to 10, in song
-order: the `why_chain` walked through the song, every link on at least one, each where the
-song starts singing it. The lesson video shows the same lines.
+being taught above the diagram and hold it. `key_lines` are those steps, in song
+order: the question, then the `why_chain` walked through the song, a key line for each link
+(two for a long one), each where the song starts singing it. The lesson video shows the same lines.
 
 - `from_line`: the lyric line it appears on. It stays until the next, across scene changes,
   so put one where the song moves on to a new step, not on every line.
@@ -619,9 +648,11 @@ song starts singing it. The lesson video shows the same lines.
   thing or one place on each side. When something moves, the places go either side of the
   arrow and what moves in brackets: "Secretion: blood → tubule (K⁺, H⁺, drugs)". When an
   arrow could be read two ways, say it in words.
-- The first can sit on the first sung line and ask the question the song answers ("How does
-  a leaf turn light into fuel?"). The analogy's can say what stands for what ("Turnstile =
-  ATP synthase"). The bridge's says what fails and why.
+- The first sits on the first sung line and asks the question the song answers ("How does
+  a leaf turn light into fuel?"): it is how the video shows the question. Every other key
+  line is a link of `why_chain`, in its order, as cause → effect, and the last is its last
+  link. Never a label, a slogan, an analogy's mapping ("Turnstile = ATP synthase") or the
+  bridge's case: read alone, in order, they tell the why chain.
 - `from_narration`: the narration sentence where the narrator starts on that step, in the
   narration's order, never two on one sentence; "" where the narration has no place for it.
 - None on the last chorus or the narration's last sentence: the videos show `core_idea`
