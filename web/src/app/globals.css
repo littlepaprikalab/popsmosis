@@ -14,7 +14,8 @@
   /* Brand aqua: active tab, primary buttons. --accent-brand-text is the text on it. */
   --accent-brand: #4CC9F0;
   --accent-brand-text: #06202B;
-  /* The wordmark chip: one color in both themes, so the mark never changes. */
+  /* The wordmark chip: one color in both themes, so the mark never changes. The Watch a droplet
+     button uses it too, so white text on it reads in the dark theme. */
   --brand-chip: #0B7499;
   --accent-red: #FF3B30;
   --accent-green: #30D158;

@@ -379,7 +379,7 @@ export default function HowItsMadePage() {
         <p className="font-bold" style={{ color: 'var(--text-primary)' }}>See it for yourself.</p>
         <div className="flex flex-wrap gap-2 shrink-0">
           <Link href="/droplets" className="inline-flex items-center gap-1.5 px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
-            style={{ background: 'var(--accent-brand)', color: 'var(--btn-filled-text)' }}>
+            style={{ background: 'var(--brand-chip)', color: 'var(--btn-filled-text)' }}>
             <PlayIcon aria-hidden="true" className="w-3.5 h-3.5" />Watch a droplet
           </Link>
           <Link href="/learn" className="inline-block px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-colors hover-border"
