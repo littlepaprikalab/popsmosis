@@ -343,6 +343,19 @@ Check in the Supabase console:
    If it connects, the API will. After the deploy, `/api/health` should answer `ok` and the
    API log should show no certificate error. Should it fail anyway, adding `?sslmode=no-verify`
    to `DATABASE_URL` puts the old behaviour back while you look.
+
+   **"self-signed certificate in certificate chain"** on every query, with `/api/health`
+   answering 503, means the API has no CA that signed Supabase's certificate. The first lines
+   of the API's log at boot say which case it is:
+   - `[prisma] DATABASE_CA_CERT is not set...`: the variable is missing on popsmosis-api, or
+     empty. Set it and redeploy.
+   - `[prisma] the database's certificate is checked against DATABASE_CA_CERT: <name>`: the
+     certificate set is not the one Supabase signs with. Download it again from the same page
+     and check `<name>` is Supabase's.
+   - `DATABASE_CA_CERT: certificate 1 cannot be read`, and the API does not start: the text in
+     the variable is not a whole certificate. Paste the file's full contents, BEGIN and END
+     lines included, or upload it as a Render Secret File and set the variable to its path
+     (`/etc/secrets/<file name>`).
 5. **Enforce SSL**, on the same page: on, so the database refuses connections without TLS.
 6. **The keys.** Project Settings > API Keys: popsmosis uses the secret key on the API alone
    (`SUPABASE_SERVICE_ROLE_KEY`). The publishable (anon) key is in neither the web app nor

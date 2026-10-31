@@ -9,30 +9,77 @@
  * certificate a public CA signed needs nothing. `sslmode=no-verify` in DATABASE_URL turns the check off, and the API
  * says so at boot: for a move between providers, never to keep.
  *
+ * The boot log names the CA the certificate is checked against, or warns that a Supabase database has none, since
+ * every way of getting the CA wrong ends in the same error on each query: "self-signed certificate in certificate
+ * chain".
+ *
  * The URL's own TLS parameters (sslmode, sslrootcert...) are read here and taken out of the string handed to the
  * driver, since node-postgres lets them override this setting wholesale.
  */
 import { readFileSync } from 'fs';
+import { X509Certificate } from 'crypto';
 
 export type DatabaseTls = {
   connectionString: string;
   ssl?: { rejectUnauthorized: boolean; ca?: string };
   warning?: string; // said once at boot
+  note?: string; // said once at boot: what the database's certificate is checked against
 };
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]', 'db']);
 const TLS_PARAMS = ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'ssl', 'uselibpqcompat', 'sslaccept'];
+const PEM_BLOCK = /-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----/g;
 
-function caFrom(value: string | undefined): string | undefined {
+type Ca = { pem: string; names: string };
+
+function caNames(certs: X509Certificate[]): string {
+  return certs
+    .map((c) => {
+      const name = /(?:^|\n)CN=([^\n]+)/.exec(c.subject)?.[1] ?? c.subject.replace(/\n/g, ', ');
+      return `${name}, valid until ${new Date(c.validTo).toISOString().slice(0, 10)}`;
+    })
+    .join('; ');
+}
+
+/**
+ * The certificates in a PEM text, read and written out again. Node passes over a CA it cannot read without a word,
+ * then refuses the database just as with no CA at all. A PEM pasted where its line breaks became spaces, or the two
+ * characters `\n`, is one such, so its base64 is read whatever the spacing; anything still unreadable stops the boot.
+ */
+function caFromPem(text: string, from: string): Ca {
+  const blocks = [...text.replace(/\\n/g, '\n').matchAll(PEM_BLOCK)];
+  if (!blocks.length) throw new Error(`${from} has no complete PEM certificate (-----BEGIN CERTIFICATE----- to -----END CERTIFICATE-----)`);
+  const certs = blocks.map(([, body], i) => {
+    try {
+      return new X509Certificate(Buffer.from(body.replace(/\s+/g, ''), 'base64'));
+    } catch {
+      throw new Error(`${from}: certificate ${i + 1} cannot be read (what lies between its BEGIN and END lines is not a certificate)`);
+    }
+  });
+  return { pem: certs.map((c) => c.toString()).join(''), names: caNames(certs) };
+}
+
+function caFrom(value: string | undefined, from: string): Ca | undefined {
   const raw = value?.trim();
   if (!raw) return undefined;
-  if (raw.includes('-----BEGIN CERTIFICATE-----')) return `${raw.replace(/\\n/g, '\n').trim()}\n`;
+  if (raw.includes('-----BEGIN CERTIFICATE-----')) return caFromPem(raw, from);
+  let file: Buffer;
   try {
-    return readFileSync(raw, 'utf8');
+    file = readFileSync(raw);
   } catch (err) {
-    throw new Error(`DATABASE_CA_CERT is neither a PEM certificate nor a file that can be read: ${(err as Error).message}`);
+    throw new Error(`${from} is neither a PEM certificate nor a file that can be read: ${(err as Error).message}`);
+  }
+  const text = file.toString('utf8');
+  if (text.includes('-----BEGIN')) return caFromPem(text, `${from} (${raw})`);
+  try {
+    const cert = new X509Certificate(file); // a DER file, as some downloads are
+    return { pem: cert.toString(), names: caNames([cert]) };
+  } catch {
+    throw new Error(`${from} (${raw}) holds neither a PEM nor a DER certificate`);
   }
 }
+
+const isSupabase = (host: string) => /(^|\.)supabase\.(com|co)$/.test(host);
 
 /** The connection string for the driver, and how to check the server's certificate. */
 export function databaseTls(url: string, env: NodeJS.ProcessEnv = process.env): DatabaseTls {
@@ -59,6 +106,25 @@ export function databaseTls(url: string, env: NodeJS.ProcessEnv = process.env): 
       warning: 'DATABASE_URL has sslmode=no-verify: the database\'s TLS certificate is not checked. Set DATABASE_CA_CERT and remove it.',
     };
   }
-  const ca = caFrom(env.DATABASE_CA_CERT) ?? caFrom(rootcert);
-  return { connectionString, ssl: { rejectUnauthorized: true, ...(ca ? { ca } : {}) } };
+  const fromEnv = caFrom(env.DATABASE_CA_CERT, 'DATABASE_CA_CERT');
+  const ca = fromEnv ?? caFrom(rootcert, 'sslrootcert in DATABASE_URL');
+  if (ca) {
+    return {
+      connectionString,
+      ssl: { rejectUnauthorized: true, ca: ca.pem },
+      note: `the database's certificate is checked against ${fromEnv ? 'DATABASE_CA_CERT' : 'sslrootcert'}: ${ca.names}`,
+    };
+  }
+  return {
+    connectionString,
+    ssl: { rejectUnauthorized: true },
+    ...(isSupabase(parsed.hostname)
+      ? {
+          warning:
+            'DATABASE_CA_CERT is not set. Node does not trust the CA Supabase signs its databases with, so every query ' +
+            'will fail with "self-signed certificate in certificate chain". Set it to the certificate from Supabase > ' +
+            'Project Settings > Database > SSL Configuration (docs/DEPLOY.md, section 8).',
+        }
+      : { note: "the database's certificate is checked against Node's own CAs (DATABASE_CA_CERT is not set)" }),
+  };
 }
