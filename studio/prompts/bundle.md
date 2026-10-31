@@ -172,13 +172,17 @@ together they go from what the learner already knows to the parts they are learn
 
 - `image_prompt` asks an illustrator for the scene the way a teacher asks for a standard
   textbook diagram, in a few plain sentences. Start with "Educational textbook illustration
-  of" the subject and "clean scientific style", then say what it shows and how it is
-  oriented: "Educational textbook illustration of a thylakoid membrane in cross-section,
-  clean scientific style: the membrane across the middle, the stroma above, the lumen
-  below, four protein complexes passing through it..." or "Educational textbook
-  illustration of the Sun and Earth oriented to show why Earth has seasons, clean
-  scientific style: the Sun on the left, Earth on the right with its axis tilted 23.5
-  degrees toward the Sun, and parallel rays of sunlight reaching it." Never name a
+  of" the subject and its style: "clean scientific style" for a science scene (biology,
+  anatomy, chemistry, physics, astronomy, Earth science), "clean textbook style" for any
+  other (history, literature, languages, economics, and every hook and analogy). Then say
+  what it shows and how it is oriented: "Educational textbook illustration of a thylakoid
+  membrane in cross-section, clean scientific style: the membrane across the middle, the
+  stroma above, the lumen below, four protein complexes passing through it...",
+  "Educational textbook illustration of the Sun and Earth oriented to show why Earth has
+  seasons, clean scientific style: the Sun on the left, Earth on the right with its axis
+  tilted 23.5 degrees toward the Sun, and parallel rays of sunlight reaching it." or
+  "Educational textbook illustration of a living room, clean textbook style: a person with
+  a cold on a sofa at the left, tissues on a table in the centre..." Never name a
   textbook, a publisher or an artist: the fact-check strikes a name like that from every
   picture's request, a round spent for nothing. The illustrator knows what the standard
   diagrams look like, and is best at drawing one it knows.
