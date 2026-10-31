@@ -60,33 +60,6 @@ def test_a_mushroom_turns_over_about_its_stalk_and_its_old_place_is_filled_from_
     assert (pixels[new] == GREEN).all()
 
 
-INK = (30, 30, 30)
-
-
-def test_writing_is_painted_out_where_it_is_boxed_and_the_part_beside_it_stays():
-    h, w = 200, 400
-    rows = np.linspace(0.0, 1.0, h)[:, None, None]  # a soft wash, light yellow to light blue down the picture
-    pixels = np.broadcast_to((1 - rows) * np.array([240, 230, 160]) + rows * np.array([190, 225, 245]),
-                             (h, w, 3)).round().astype(np.uint8).copy()
-    wash = pixels.copy()
-    ys, xs = np.ogrid[:h, :w]
-    disc = (xs - 300) ** 2 + (ys - 100) ** 2 <= 40 ** 2  # a part, wider than any stroke, beside the writing
-    pixels[disc] = GREEN
-    letters = np.zeros((h, w), bool)
-    letters[60:63, 196:226] = letters[60:90, 210:213] = True  # a T
-    letters[60:116, 232:235] = letters[113:116, 232:246] = True  # an L, running on below its box
-    pixels[letters] = INK
-    painted = pixels.copy()
-    box = repair.Written(text="TL", left=194 / w, top=58 / h, right=248 / w, bottom=92 / h)
-    assert repair.unwrite(pixels, [box]) == 1
-    assert np.abs(pixels[letters].astype(int) - wash[letters].astype(int)).max() <= 6  # the wash, all of both letters
-    assert (pixels[disc] == GREEN).all()
-    near = np.zeros((h, w), bool)
-    near[40:130, 180:280] = True  # the box, grown, and the L's foot
-    assert (pixels[~near] == painted[~near]).all()  # nothing else touched
-    assert repair.unwrite(pixels, [repair.Written(text="", left=0, top=0, right=1, bottom=1)]) == 0  # not a line
-
-
 def scene_job(tmp_path, misplaced, builds_up=()):
     job = sample_media.write_job(tmp_path / "sample", art=True)
     bundle = sample_media.bundle().model_copy(update={"builds_up": [BuildUp(carries="H⁺", region=r) for r in builds_up]})
@@ -96,13 +69,14 @@ def scene_job(tmp_path, misplaced, builds_up=()):
     mask[:, 600:1200] = mushroom(media.ART_HEIGHT, 600, s=media.ART_HEIGHT / 100)
     pixels[mask] = GREEN
     (job / media.art_path(scene.id)).write_bytes(svg.png(pixels))
-    (job / "art" / f"{scene.id}.json").write_text(json.dumps({"check": {"text": [], "misplaced": misplaced, "wrong": []}}))
+    (job / "art" / f"{scene.id}.json").write_text(json.dumps({"check": {"labels": [], "misplaced": misplaced, "wrong": []}}))
     return job, bundle, scene, {"ATP synthase": (mask, svg.locate(mask))}
 
 
 class Helper:
-    def __init__(self, upside_down, after):
+    def __init__(self, upside_down, after, labels=()):
         self.upside_down, self.after, self.asked = upside_down, after, []
+        self.labels = list(labels)  # the wrong labels the check finds after the flip
 
     def __call__(self, role, prompt, schema, images, *, system, label):
         self.asked.append(label)
@@ -111,7 +85,7 @@ class Helper:
 
     def check(self, job, bundle, scene):
         self.asked.append("check")
-        return ArtCheck(text=[], misplaced=self.after, wrong=[])
+        return ArtCheck(labels=self.labels, misplaced=self.after, wrong=[])
 
 
 def test_a_part_found_upside_down_is_turned_over_when_the_check_then_finds_it_right(tmp_path):
@@ -130,6 +104,15 @@ def test_a_part_found_upside_down_is_turned_over_when_the_check_then_finds_it_ri
 def test_a_flip_the_check_finds_no_better_is_undone(tmp_path):
     job, bundle, scene, located = scene_job(tmp_path, ["ATP synthase head above the membrane"])
     helper = Helper(["ATP synthase"], after=["ATP synthase head below the membrane"])
+    before = (job / media.art_path(scene.id)).read_bytes()
+    assert repair.repair(job, bundle, scene, located, helper, helper.check) == []
+    assert (job / media.art_path(scene.id)).read_bytes() == before
+
+
+def test_a_flip_that_turns_a_label_over_with_its_part_is_undone(tmp_path):
+    # The picture labels its own parts: a label inside the part's mask is turned upside down with it.
+    job, bundle, scene, located = scene_job(tmp_path, ["ATP synthase head above the membrane"])
+    helper = Helper(["ATP synthase"], after=[], labels=["'ATP synthase' upside down"])
     before = (job / media.art_path(scene.id)).read_bytes()
     assert repair.repair(job, bundle, scene, located, helper, helper.check) == []
     assert (job / media.art_path(scene.id)).read_bytes() == before

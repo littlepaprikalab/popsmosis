@@ -58,6 +58,9 @@ No model calls, so it is free to run again:
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
+- A painted picture labels its own parts (art.self_labelled()): the renderer draws no labels or axis names over
+  it, only over a drawing, and flags on it each label the art check found wrong (art.flags()). The labels above
+  still say what is named by when, for the spotlight, the camera and the particles.
 - The values a scene drawn to scale marks (SceneLocations.values: "$1,210" on a bar, "Year 2" under it) are written
   as the voice says them, from the word that says the number, and stay on every later beat of the scene; a tick,
   and an amount no line on the scene says, from the scene's first beat.
@@ -149,7 +152,7 @@ def run(job: Path, ask=None) -> str:
         raise StepFailed("the timings do not match the bundle: " + "; ".join(problems))
 
     timelines = {}
-    notices = art.notices(job, bundle)
+    notices, flags, self_labelled = art.notices(job, bundle), art.flags(job, bundle), art.self_labelled(job, bundle)
     for video in media.videos(job):
         try:
             timeline = build(video, bundle, timed, locations)
@@ -157,6 +160,9 @@ def run(job: Path, ask=None) -> str:
             timeline.notices = {scene: notes for scene, notes in notices.items() if scene in shown}
             # Every picture here is AI-made, painted or drawn: each is tagged so, mistakes found or not.
             timeline.ai_pictures = [scene.id for scene in bundle.scenes if scene.id in shown]
+            # A painted picture labels its own parts, and its wrong labels are flagged on it.
+            timeline.self_labelled = [scene for scene in self_labelled if scene in shown]
+            timeline.flags = {scene: boxes for scene, boxes in flags.items() if scene in shown}
         except ValidationError as e:
             raise StepFailed(f"the {video} timeline does not validate: {e}") from e
         problems = timeline_problems(timeline, locations)

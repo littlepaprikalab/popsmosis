@@ -12,18 +12,17 @@ drew ATP synthase upside down four times in a row, whatever the request said).
   that is clear of other structures and matches what borders the part, else with each row carried across
   from the part's left edge to its right. Both suit a diagram in bands, a membrane in cross-section, where
   what lies beside a part is what lies behind it. The art check looks again, and the flip is kept only if
-  fewer structures are out of place and no writing appeared.
-- unwrite: writing the painter put in a picture (labels, symbols) is painted out where the helper boxes
-  it: in each box, what is thinner than a letter's stroke and darker or lighter than what lies round it is
-  filled in smoothly from its edges. A part is wider than a stroke, so it stays. The art step does this as
-  soon as a check finds writing (studio/steps/art.py), before anything is painted again.
+  fewer structures are out of place and no more labels are wrong (the picture labels its own parts, and a
+  label inside the part turns over with it).
+
+Until Oct 31 a third repair, unwrite, painted out the writing in a picture, for the video's own labels; a
+picture now labels its own parts (studio/steps/art.py).
 
 What it repairs is added to art/<scene>.json under "repaired".
 """
 
 from __future__ import annotations
 
-import math
 from collections import deque
 from pathlib import Path
 
@@ -39,22 +38,6 @@ SPECK_APART = 20.0  # how far (Lab, lightness counted half) a speck's colour is 
 NEAR_OTHERS = 6  # art pixels kept clear round every other structure: a speck touching one is left alone
 EDGE = 3  # art pixels: a speck this near the space's edge is the edge's own shading, left alone
 WAIST_BAND = 0.2  # the narrowest row is looked for between this far down the part and as far up from its foot
-# Writing painted out (unwrite). A box is grown by WRITING_PAD of its height on every side, as the helper's
-# boxes are a little loose or off; a stroke is anything in it narrower than STROKE_MAX art pixels and at least
-# STROKE_APART darker or lighter (0-255) than what lies round it, grown by STROKE_EDGE for its soft edge, and
-# filled by FILL_STEPS rounds of each pixel taking the average of its four neighbours.
-WRITING_PAD = 0.35
-STROKE_MAX = 13
-STROKE_APART = 12.0
-STROKE_EDGE = 3
-FILL_STEPS = 400
-
-WRITING_PROMPT = """You find the writing in an illustration, so that code can paint it out. List in \
-`writing` every piece of writing you can see: each word, label, number, chemical symbol or single letter, \
-one entry per line of writing, with a tight box around it as fractions of the picture's width and height, \
-from its top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down. \
-Leave the list empty when the picture has no writing."""
-
 FLIP_PROMPT = """You look at one illustration for an educational video, where a check found these \
 structures out of place. Name, in `upside_down`, each structure below that is drawn upside down: its \
 top where its bottom should be (a mushroom-shaped protein with its cap on the wrong side of its \
@@ -69,7 +52,8 @@ class UpsideDown(Strict):
 
 
 class Written(Strict):
-    """One line of writing in a picture and the box round it, as fractions of the art's width and height."""
+    """One line of writing in a picture and the box round it, as fractions of the art's width and height: a
+    label the art check found wrong, for the video to flag (art.label_flags())."""
 
     text: str
     left: float
@@ -79,7 +63,7 @@ class Written(Strict):
 
 
 class Writing(Strict):
-    """The helper's answer: the writing in a picture, where it is."""
+    """The helper's answer: the lines of writing it was asked for, where each is in the picture."""
 
     writing: list[Written]
 
@@ -160,104 +144,6 @@ def clear_space(pixels: np.ndarray, space: np.ndarray, others: list[np.ndarray])
         pixels[speck] = np.median(pixels[y0:y1, x0:x1][ring], axis=0).astype(np.uint8)
         cleared += 1
     return cleared
-
-
-def _extreme(values: np.ndarray, size: int, op) -> np.ndarray:
-    """Each pixel's largest (op=np.max) or smallest (op=np.min) value in the size x size square round it."""
-    padded = np.pad(values, size // 2, mode="edge")
-    rows = op(np.lib.stride_tricks.sliding_window_view(padded, size, axis=0), axis=-1)
-    return op(np.lib.stride_tricks.sliding_window_view(rows, size, axis=1), axis=-1)
-
-
-def strokes(pixels: np.ndarray) -> np.ndarray:
-    """Where `pixels` (RGB) has strokes: lines narrower than STROKE_MAX, darker or lighter than what lies round
-    them by STROKE_APART, as letters are. Closing the lightness (its largest then smallest round each pixel)
-    fills dark strokes in; opening it takes light ones out; what either changes is a stroke."""
-    light = pixels.astype(np.float32) @ np.array([0.299, 0.587, 0.114], np.float32)
-    closed = _extreme(_extreme(light, STROKE_MAX, np.max), STROKE_MAX, np.min)
-    opened = _extreme(_extreme(light, STROKE_MAX, np.min), STROKE_MAX, np.max)
-    return (closed - light > STROKE_APART) | (light - opened > STROKE_APART)
-
-
-def fill(pixels: np.ndarray, hole: np.ndarray) -> None:
-    """Paint over `hole` smoothly from its edges: it starts as the colour round it, then each pixel in it takes
-    the average of its four neighbours, FILL_STEPS times. `pixels` (RGB) is changed in place."""
-    ys, xs = np.nonzero(hole)
-    if not len(ys):
-        return
-    h, w = hole.shape
-    y0, y1, x0, x1 = max(ys.min() - 2, 0), min(ys.max() + 3, h), max(xs.min() - 2, 0), min(xs.max() + 3, w)
-    # One pixel more all round, a copy of the edge, so a hole at the picture's edge has neighbours too.
-    region = np.pad(pixels[y0:y1, x0:x1].astype(np.float32), ((1, 1), (1, 1), (0, 0)), mode="edge")
-    inside = np.pad(hole[y0:y1, x0:x1], 1)
-    region[inside] = np.median(region[_grow(inside, 2) & ~inside], axis=0)
-    for _ in range(FILL_STEPS):
-        around = (np.roll(region, 1, 0) + np.roll(region, -1, 0) + np.roll(region, 1, 1) + np.roll(region, -1, 1)) / 4
-        region[inside] = around[inside]
-    pixels[y0:y1, x0:x1] = region[1:-1, 1:-1].round().clip(0, 255).astype(np.uint8)
-
-
-def _whole(seed: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    """The parts of `mask` that `seed` touches, whole (both bool, of one shape)."""
-    out = seed & mask
-    while True:
-        grown = _grow(out, 1) & mask
-        if (grown == out).all():
-            return out
-        out = grown
-
-
-def _merged(rects: list[tuple[int, int, int, int]], gap: int) -> list[tuple[int, int, int, int]]:
-    """Rects (y0, y1, x0, x1) that overlap or come within `gap` of each other, merged into one."""
-    rects = list(rects)
-    merged = True
-    while merged:
-        merged = False
-        for i in range(len(rects)):
-            for j in range(i + 1, len(rects)):
-                (a0, a1, b0, b1), (c0, c1, d0, d1) = rects[i], rects[j]
-                if a0 - gap < c1 and c0 - gap < a1 and b0 - gap < d1 and d0 - gap < b1:
-                    rects[i] = (min(a0, c0), max(a1, c1), min(b0, d0), max(b1, d1))
-                    del rects[j]
-                    merged = True
-                    break
-            if merged:
-                break
-    return rects
-
-
-def unwrite(pixels: np.ndarray, writing: list[Written]) -> int:
-    """Paint out the strokes in each line of writing's box, grown by WRITING_PAD of its height; return how many
-    lines had strokes to paint out. `pixels` (RGB) is changed in place.
-
-    Every box's strokes are found first, each stroke whole even where it runs past its box, and then painted
-    out once for each group of boxes near each other: a hole that stopped partway down a letter, at the edge of
-    one box, would be filled grey from the rest of the letter, a smudge the next box no longer sees as a stroke."""
-    h, w = pixels.shape[:2]
-    hole = np.zeros((h, w), bool)
-    areas = []
-    for spot in writing:
-        left, right = sorted(min(1.0, max(0.0, v)) for v in (spot.left, spot.right))
-        top, bottom = sorted(min(1.0, max(0.0, v)) for v in (spot.top, spot.bottom))
-        pad = (bottom - top) * h * WRITING_PAD
-        x0, x1 = max(math.floor(left * w - pad), 0), min(math.ceil(right * w + pad), w)
-        y0, y1 = max(math.floor(top * h - pad), 0), min(math.ceil(bottom * h + pad), h)
-        if x1 - x0 < 2 or y1 - y0 < 2 or (x1 - x0) * (y1 - y0) > 0.25 * w * h:
-            continue  # a sliver, or much of the picture: no line of writing, and no telling strokes from parts
-        # Judged with what lies just past the box, so a stroke that reaches its edge is still seen as thin.
-        a0, a1, b0, b1 = max(y0 - STROKE_MAX, 0), min(y1 + STROKE_MAX, h), max(x0 - STROKE_MAX, 0), min(x1 + STROKE_MAX, w)
-        found = strokes(pixels[a0:a1, b0:b1])
-        seed = np.zeros_like(found)
-        seed[y0 - a0:y1 - a0, x0 - b0:x1 - b0] = True
-        whole = _whole(seed, found)
-        if whole.any():
-            hole[a0:a1, b0:b1] |= whole
-            areas.append((a0, a1, b0, b1))
-    for a0, a1, b0, b1 in _merged(areas, 2 * STROKE_EDGE + 2):
-        group = np.zeros((h, w), bool)
-        group[a0:a1, b0:b1] = hole[a0:a1, b0:b1]
-        fill(pixels, _grow(group, STROKE_EDGE))
-    return len(areas)
 
 
 def waist(mask: np.ndarray) -> int:
@@ -352,7 +238,9 @@ def repair(job: Path, bundle: Bundle, scene: Scene, located: dict[str, tuple[np.
             saved = path.read_bytes()
             path.write_bytes(svg.png(trial))
             after = check(job, bundle, scene)
-            if not after.text and len(after.misplaced) < before:
+            # A flip that turns a painted label over with its part comes back with that label wrong: no better.
+            labels = len((made.get("check") or {}).get("labels") or [])
+            if len(after.misplaced) < before and len(after.labels) <= labels:
                 pixels = trial
                 for name, new in masks.items():
                     found = svg.locate(new)

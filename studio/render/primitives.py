@@ -898,15 +898,7 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
     canvas.drawRect(skia.Rect.MakeLTRB(x0, top, x0 + bar, top + height), skia.Paint(Color=with_alpha(NOTICE_ACCENT, alpha)))
     canvas.restore()
     x, y = x0 + bar + pad, top + pad
-    # The warning sign: an amber triangle with a dark "!".
-    path = skia.Path()
-    path.moveTo(x + sign / 2, y)
-    path.lineTo(x + sign, y + sign * 0.9)
-    path.lineTo(x, y + sign * 0.9)
-    path.close()
-    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
-    bang = font("ExtraBold", sign * 0.62)
-    draw_text(canvas, "!", x + sign / 2 - text_width(bang, "!") / 2, y + sign * 0.78, bang, with_alpha(INK, alpha))
+    warning_sign(canvas, x, y, sign, alpha)
     draw_text(canvas, NOTICE_TITLE, x + sign + 12, y + sign * 0.5 + cap_height(title) / 2, title, with_alpha(INK, alpha))
     y += sign + 12
     for line in lead:
@@ -917,6 +909,43 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
         y += line_h
         draw_text(canvas, text, x + indent, y - line_h * 0.3, f, with_alpha(color, alpha))
     return top + height
+
+
+def warning_sign(canvas: skia.Canvas, x: float, y: float, size: float, alpha: float, edge: float = 0.0) -> None:
+    """The warning sign, its top-left corner at (x, y): an amber triangle with a dark "!", in a dark edge this
+    wide where it sits on a picture."""
+    path = skia.Path()
+    path.moveTo(x + size / 2, y)
+    path.lineTo(x + size, y + size * 0.9)
+    path.lineTo(x, y + size * 0.9)
+    path.close()
+    if edge:
+        canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha), StrokeWidth=2 * edge,
+                                         Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
+    bang = font("ExtraBold", size * 0.62)
+    draw_text(canvas, "!", x + size / 2 - text_width(bang, "!") / 2, y + size * 0.78, bang, with_alpha(INK, alpha))
+
+
+FLAG_PAD = 6.0  # frame pixels between a flagged label and the ring round it
+FLAG_RING = 4.0  # the ring's amber stroke, inside a dark edge FLAG_EDGE wider each side, so it reads on any picture
+FLAG_EDGE = 2.0
+FLAG_SIGN = 30.0  # the warning sign on the ring's top-left corner
+
+
+def draw_flag(canvas: skia.Canvas, rect: Rect, alpha: float) -> None:
+    """A label the art check found wrong in a painted picture, flagged where it is: an amber ring round it and
+    the notice card's warning sign on the ring's top-left corner."""
+    if alpha <= 0.01:
+        return
+    x0, y0, x1, y1 = rect
+    ring = rounded((x0 - FLAG_PAD, y0 - FLAG_PAD, x1 + FLAG_PAD, y1 + FLAG_PAD), 10)
+    canvas.drawRRect(ring, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha * 0.8),
+                                      StrokeWidth=FLAG_RING + 2 * FLAG_EDGE, Style=skia.Paint.kStroke_Style))
+    canvas.drawRRect(ring, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha), StrokeWidth=FLAG_RING,
+                                      Style=skia.Paint.kStroke_Style))
+    warning_sign(canvas, x0 - FLAG_PAD - FLAG_SIGN / 2, y0 - FLAG_PAD - FLAG_SIGN * 0.6, FLAG_SIGN, alpha,
+                 edge=FLAG_EDGE)
 
 
 def ai_tag_rect(x0: float, bottom: float, font_size: float) -> Rect:

@@ -53,7 +53,7 @@ def disc(x: int, y: int, r: int) -> np.ndarray:
     return (xs - x) ** 2 + (ys - y) ** 2 <= r * r
 
 
-SLATE = (40, 55, 75)  # the dark slate blue art.STYLE asks Muse Image to paint behind the diagram
+SLATE = (40, 55, 75)  # the dark slate blue Muse Image was asked to paint behind the diagram until Oct 31
 
 
 def painting(scene_id: str, paper=(255, 255, 255)) -> bytes:
@@ -118,9 +118,9 @@ class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
     def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=()):
-        self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check, painted out ones included
+        self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check
         self.boxes = boxes or {}  # structure -> a Spot dict
-        self.writing = writing or {}  # scene -> the Written dicts the helper boxes, each time it is asked
+        self.writing = writing or {}  # scene -> the Written dicts the helper boxes round its wrong labels
         self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
         self.unconfirmed = set(unconfirmed)  # notes the brain, asked to confirm them, finds wrong
         self.asked: list[tuple[str, str]] = []
@@ -138,9 +138,9 @@ class FakeHelper:
             scene = label.split()[2]
             tries = sum(1 for lab, _ in self.asked if lab.startswith(f"art check {scene}"))
             answers = self.checks.get(scene, [{}])
-            return {"text": [], "misplaced": [], "wrong": [], **answers[min(tries, len(answers)) - 1]}
+            return {"labels": [], "misplaced": [], "wrong": [], **answers[min(tries, len(answers)) - 1]}
         if schema is repair.Writing:
-            assert system == repair.WRITING_PROMPT and prompt.startswith("A check saw this writing: ")
+            assert system == art.FLAGS_PROMPT and prompt.startswith("A check found these labels wrong:\n- ")
             return {"writing": self.writing.get(label.split()[2], [])}
         if schema is locate.LabelCheck:
             assert system == locate.LABELS_PROMPT and "The names pinned on it: " in prompt
@@ -170,15 +170,16 @@ def test_muse_image_paints_each_scene_and_the_helper_checks_it(job, monkeypatch)
 
     prompt = dict(fake.painted)["art overview"]
     bundle = sample_media.bundle()
-    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.STYLE)
+    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.LABELS)
     assert "Colours: Thylakoid green, Cytochrome b6f orange." in prompt  # names, which the model reads
-    assert "#" not in prompt and "away from the edges" not in prompt.replace(art.STYLE, "")
+    assert "#" not in prompt and "slate blue" not in prompt  # no hex codes, and no style line
 
     for scene in bundle.scenes:
         pixels = sample_media_image(job / media.art_path(scene.id))
         assert pixels.shape == (media.ART_HEIGHT, media.ART_WIDTH, 3)
         made = json.loads((job / "art" / f"{scene.id}.json").read_text())
         assert made["key"] == art.key(bundle, scene) and made["model"] == muse.IMAGE_MODEL and made["try"] == 1
+        assert made["labelled"] is True and "flags" not in made  # it names its own parts, none of them wrongly
     assert not (job / media.LOCATIONS).exists() and not list((job / "art").glob("*.try*.png"))
     assert art.is_done(job) and not locate.is_done(job)
 
@@ -324,36 +325,36 @@ def test_a_picture_on_a_dark_background_is_fitted_on_that_colour():
     assert fitted[512, 896, 0] > 150
 
 
-def test_a_picture_with_writing_or_mistakes_is_asked_for_again_with_what_was_wrong(job, monkeypatch):
+def test_a_part_out_of_place_is_asked_for_again_and_a_wrong_label_kept(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"hook": [{"text": ["ATP", "H+"]}, {}],
+    helper = FakeHelper({"hook": [{"labels": ["'ATP' points at the leaf"]}, {}],
                          "synthase": [{"misplaced": ["head in the lumen"]}, {}]})
     result = art.run(job, helper)
     # The step's line names each picture refused and why, so the operator's summary can tell what came back wrong.
-    assert result == ("painted 3 scenes with Muse Image in 5 tries; 2 pictures refused: hook: writing in it ('ATP', 'H+'); "
-                      "synthase: head in the lumen")
+    assert result == ("painted 3 scenes with Muse Image in 4 tries; 1 picture refused: synthase: head in the lumen; "
+                      "the helper still saw: hook: 'ATP' points at the leaf")
     hook = [prompt for label, prompt in fake.painted if label.split()[1] == "hook"]
     synthase = [prompt for label, prompt in fake.painted if label.split()[1] == "synthase"]
-    assert len(hook) == len(synthase) == 2
-    assert "refused" not in hook[0]
-    assert "it has writing in it ('ATP', 'H+'); it must have none" in hook[1]
-    assert "head in the lumen" in synthase[1] and "writing" not in synthase[1]
-    made = json.loads((job / "art" / "hook.json").read_text())
+    assert len(hook) == 1 and len(synthase) == 2  # a wrong label is no reason to paint again
+    assert "refused" not in synthase[0] and "head in the lumen" in synthase[1]
+    made = json.loads((job / "art" / "synthase.json").read_text())
     assert made["try"] == 2
     # What each try was refused for is kept, not only the next prompt's quote of it.
-    assert made["tries"] == [{"try": 1, "text": ["ATP", "H+"], "misplaced": [], "unnamed": [], "wrong": [], "notes": []},
-                             {"try": 2, "text": [], "misplaced": [], "unnamed": [], "wrong": [], "notes": []}]
-    assert sorted(p.name for p in (job / "art").glob("hook.try*.png")) == ["hook.try1.png"]
+    assert made["tries"] == [{"try": 1, "labels": [], "misplaced": ["head in the lumen"], "wrong": [], "notes": []},
+                             {"try": 2, "labels": [], "misplaced": [], "wrong": [], "notes": []}]
+    assert sorted(p.name for p in (job / "art").glob("synthase.try*.png")) == ["synthase.try1.png"]
 
 
-def test_after_the_last_try_the_scene_keeps_its_best_picture_without_writing(job, monkeypatch):
+def test_after_the_last_try_the_scene_keeps_its_best_picture(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"overview": [{"misplaced": ["no b6f"]}, {"text": ["ATP"]}],
+    helper = FakeHelper({"overview": [{"misplaced": ["no b6f", "no PSII"]}, {"misplaced": ["no b6f"],
+                                                                            "labels": ["'PSII' on the b6f"]}],
                          "synthase": [{"misplaced": ["stalk missing"], "wrong": ["lumpy head"]},
                                       {"misplaced": ["stalk missing"]}]})
     result = art.run(job, helper)
-    assert result.endswith("; the helper still saw: overview: no b6f; synthase: stalk missing")
-    assert json.loads((job / "art" / "overview.json").read_text())["try"] == 1  # the other has writing
+    assert result.endswith("; the helper still saw: overview: no b6f; overview: 'PSII' on the b6f; "
+                           "synthase: stalk missing")
+    assert json.loads((job / "art" / "overview.json").read_text())["try"] == 2  # fewer out of place, a wrong label
     assert json.loads((job / "art" / "synthase.json").read_text())["try"] == 2  # as misplaced, less else wrong
     assert len(fake.painted) == 5  # two pictures a scene at most
 
@@ -368,14 +369,17 @@ def test_a_picture_with_only_lesser_faults_is_kept_and_they_are_recorded(job, mo
     assert json.loads((job / "art" / "overview.json").read_text())["check"]["wrong"] == ["Calvin cycle arrows broken"]
 
 
-def test_an_everyday_scene_is_asked_for_without_molecules():
-    # In round 8 the style line's "proteins and molecules" scattered molecules round a sprinter.
+def test_every_scene_is_asked_to_label_its_structures_and_for_no_look():
+    # Oct 31: without the style line (a flat dark slate blue background, rounded proteins, only the parts named, no
+    # text) the pictures came back better, and the operator's labels line, last, got them labelled.
     bundle = sample_media.bundle()
-    hook, overview = (art.paint_prompt(bundle, scene) for scene in bundle.scenes[:2])
-    analogy = art.paint_prompt(bundle, bundle.scenes[1].model_copy(update={"id": "analogy"}))
-    assert hook.endswith(art.EVERYDAY_STYLE) and analogy.endswith(art.EVERYDAY_STYLE)
-    assert art.MOLECULES not in hook + analogy
-    assert overview.endswith(art.STYLE) and art.MOLECULES in overview
+    prompts = [art.paint_prompt(bundle, scene) for scene in bundle.scenes]
+    prompts.append(art.paint_prompt(bundle, bundle.scenes[1].model_copy(update={"id": "analogy"})))
+    for prompt in prompts:
+        assert prompt.endswith(" Colours: " + prompt.split(" Colours: ")[1].split(". ")[0] + ". " + art.LABELS)
+        assert not any(old in prompt for old in ("slate blue", "No text", "Proteins and molecules", "Draw only"))
+    refused = art.paint_prompt(bundle, bundle.scenes[1], ["no b6f"])
+    assert refused.endswith("refused: no b6f. Make it again with these fixed. " + art.LABELS)
 
 
 def test_the_helper_is_told_what_kind_of_scene_it_checks():
@@ -390,59 +394,52 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert told.index("The scene is") < told.index("What the scene should show")
 
 
-def lettered(scene_id: str) -> bytes:
-    """A sample scene's picture with a dark T painted on its white background, as a label would be."""
-    pixels = sample_media_image_bytes(painting(scene_id))
-    pixels[150:154, 850:950] = pixels[150:200, 898:902] = (30, 30, 30)
-    return svg.png(pixels)
+# Where the helper finds a wrong label: a box as fractions of the art, round art pixels (840, 140)-(960, 210).
+LABEL_BOX = {"text": "PSI", "left": 840 / media.ART_WIDTH, "top": 140 / media.ART_HEIGHT,
+             "right": 960 / media.ART_WIDTH, "bottom": 210 / media.ART_HEIGHT}
 
 
-def sample_media_image_bytes(data: bytes) -> np.ndarray:
-    import skia
-
-    return skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy(data)).toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
-
-
-T_BOX = {"text": "T", "left": 840 / media.ART_WIDTH, "top": 140 / media.ART_HEIGHT,
-         "right": 960 / media.ART_WIDTH, "bottom": 210 / media.ART_HEIGHT}
-
-
-def test_writing_in_a_picture_is_painted_out_and_the_picture_kept(job, monkeypatch):
-    fake = FakeMuse({"overview": [lettered("overview")]}).install(monkeypatch)
-    helper = FakeHelper({"overview": [{"text": ["T"]}, {}]}, writing={"overview": [T_BOX]})
-    assert art.run(job, helper) == "painted 3 scenes with Muse Image in 3 tries"
+def test_a_wrong_label_is_kept_and_flagged_where_the_helper_finds_it(job, monkeypatch):
+    fake = FakeMuse().install(monkeypatch)
+    note = "The label 'PSI' is on the cytochrome complex; photosystem I is not in this picture."
+    helper = FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]},
+                        writing={"overview": [LABEL_BOX]})
+    assert art.run(job, helper) == ("painted 3 scenes with Muse Image in 3 tries; "
+                                    "the helper still saw: overview: 'PSI' points at the cytochrome complex")
     assert [label for label, _ in fake.painted if label.split()[1] == "overview"] == ["art overview"]  # not again
     assert [label for label in helper.labels() if "overview" in label] == [
-        "art check overview", "art writing overview", "art check overview unwritten"]
+        "art check overview", "art notes overview", "art flags overview"]
     made = json.loads((job / "art" / "overview.json").read_text())
-    assert made["try"] == 1 and made["tries"][0]["painted_out"] == ["T"] and made["check"]["text"] == []
-    pixels = sample_media_image(job / media.art_path("overview"))
-    assert pixels[152, 900].min() > 240 and pixels[180, 900].min() > 240  # the T, gone to the white round it
-    thylakoid = tuple(bytes.fromhex(sample_media.bundle().scenes[1].structures[0].color_hex[1:]))
-    assert tuple(pixels[500, 500]) == thylakoid  # the part, untouched
-    assert "overview" not in art.notices(job, checks.load(job / "bundle.json"))  # nothing for the video to say
+    assert made["labelled"] is True and made["flags"] == [LABEL_BOX]
+    bundle = checks.load(job / "bundle.json")
+    [box] = art.flags(job, bundle)["overview"]
+    assert (box.x0, box.y0, box.x1, box.y1) == pytest.approx((840, 140, 960, 210))  # in art pixels
+    assert list(art.flags(job, bundle)) == ["overview"] and art.notices(job, bundle) == {"overview": [note]}
+    assert sorted(art.self_labelled(job, bundle)) == ["hook", "overview", "synthase"]
 
+    # A wrong label the helper cannot find, or a call that fails, is not flagged; the picture and its note stand.
+    art.run(job, FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]}))
+    assert "flags" not in json.loads((job / "art" / "overview.json").read_text()) and art.flags(job, bundle) == {}
 
-def test_writing_left_after_two_rounds_is_painted_again_and_never_said_on_screen(job, monkeypatch):
-    # The helper keeps seeing writing: painted out twice a picture, then the scene painted again; after the last
-    # try the picture with the least wrong is kept, with no note: the video's own labels sit on it anyway.
-    fake = FakeMuse({"overview": [lettered("overview")]}).install(monkeypatch)
-    helper = FakeHelper({"overview": [{"text": ["T"]}]}, writing={"overview": [T_BOX]})
-    art.run(job, helper)
-    assert [label for label in helper.labels() if label.startswith("art writing overview")] == [
-        "art writing overview", "art writing overview round 2", "art writing overview try 2",
-        "art writing overview try 2 round 2"]
-    assert len([label for label, _ in fake.painted if label.split()[1] == "overview"]) == 2
+    def no_boxes(role, prompt, schema=None, images=(), **kwargs):
+        if schema is repair.Writing:
+            raise brain.BrainError("the helper did not answer")
+        return helper(role, prompt, schema, images, **kwargs)
+
+    art.run(job, no_boxes)
     made = json.loads((job / "art" / "overview.json").read_text())
-    assert made["try"] in (1, 2) and made["check"]["notes"] == []
-    assert "overview" not in art.notices(job, checks.load(job / "bundle.json"))
+    assert "flags" not in made and made["check"]["notes"] == [note]
 
-    # A helper that finds no writing to box leaves the picture as it was, and the scene is painted again.
-    fake.painted.clear()
-    helper = FakeHelper({"overview": [{"text": ["T"]}, {}]})
-    art.run(job, helper)
-    assert [label for label, _ in fake.painted if label.split()[1] == "overview"] == ["art overview", "art overview try 2"]
-    assert "art check overview unwritten" not in helper.labels()
+
+def test_a_picture_painted_before_it_labelled_itself_is_labelled_by_the_video(job, monkeypatch):
+    # Its writing was painted out for the video's labels, and its record says nothing of labels.
+    FakeMuse().install(monkeypatch)
+    art.run(job, FakeHelper())
+    record = job / "art" / "hook.json"
+    made = json.loads(record.read_text())
+    del made["labelled"]
+    jobs.write(record, made)
+    assert sorted(art.self_labelled(job, checks.load(job / "bundle.json"))) == ["overview", "synthase"]
 
 
 def test_a_declined_prompt_is_a_refused_try(job, monkeypatch):
@@ -898,7 +895,7 @@ def test_a_coarse_mask_is_stretched_over_its_box_and_clipped_to_the_art():
 def test_the_helpers_prompts_read_cleanly_and_its_answers_fit_both_providers():
     for schema in (art.ArtCheck, locate.Spot, repair.Writing):
         brain.strict_schema(schema)  # raises on a keyword one provider would refuse
-    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, repair.WRITING_PROMPT, art.STYLE):
+    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.FLAGS_PROMPT, art.LABELS):
         assert "\\" not in prompt and "  " not in prompt
 
 
@@ -915,25 +912,29 @@ def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
     assert muse.paint(tmp_path, "art hook", "a leaf") == picture() and len(tries) == 2
 
 
-def test_writing_painted_out_reaches_the_videos_as_a_clean_picture_with_only_its_science_notes(job, monkeypatch):
-    # Across the steps: the picture's writing is painted out in the art step, before locate reads it; the re-check's
-    # note for the student reaches both timelines as a notice, and the writing never does; the upright hook cut
-    # puts that card above the picture, which keeps the frame's width, and the wide song puts it at the right.
+def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_beside_it(job, monkeypatch):
+    # Across the steps: the painted picture labels its own parts, so the video draws none over it; the label the
+    # check found wrong is flagged on the picture, and its note for the student reaches both timelines as a notice.
+    # The upright hook cut puts that card above the picture, which keeps the frame's width, and the wide song puts
+    # it at the right.
     from studio.render import primitives as p
     from studio.render.renderer import NOTICE_GAP, NOTICE_W, Renderer
     from studio.steps import timeline as timeline_step
 
-    note = "Cytochrome b6f sits on the membrane here; in truth it spans it."
-    FakeMuse({"overview": [lettered("overview")]}).install(monkeypatch)
-    helper = FakeHelper({"overview": [{"text": ["T"]}, {"notes": [note]}]}, writing={"overview": [T_BOX]})
+    note = "The label 'PSI' is on the cytochrome complex; photosystem I is not in this picture."
+    FakeMuse().install(monkeypatch)
+    helper = FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]},
+                        writing={"overview": [LABEL_BOX]})
     art.run(job, helper)
-    assert sample_media_image(job / media.art_path("overview"))[152, 900].min() > 240  # gone before locate runs
     locate.run(job, helper)
     timeline_step.run(job)
     song = jobs.read(job / media.timeline_path("song"), Timeline)
     lesson = jobs.read(job / media.timeline_path("lesson"), Timeline)
     assert song.notices == {"overview": [note]}
     assert lesson.notices == ({"overview": [note]} if any(b.scene == "overview" for b in lesson.beats) else {})
+    shown = sorted({b.scene for b in song.beats})
+    assert sorted(song.self_labelled) == shown and list(song.flags) == ["overview"]
+    assert (song.flags["overview"][0].x0, song.flags["overview"][0].y1) == pytest.approx((840, 210))
     hook_path = job / media.timeline_path(media.HOOK)
     amber = p.rgb("#F59E0B")
     hook = jobs.read(hook_path, Timeline)  # the sample's first chorus and the verse line before it
@@ -945,7 +946,19 @@ def test_writing_painted_out_reaches_the_videos_as_a_clean_picture_with_only_its
     b, g, r, _ = frame[round(upright.layout.title_h + NOTICE_GAP + 40), round(upright.layout.margin + 3)]
     assert np.allclose((r, g, b), amber, atol=12)
     wide = Renderer(job, song)
-    beat = next(b for b in song.beats if b.scene == "overview")
+    beat = next(b for b in song.beats if b.scene == "overview" and b.labels)
+    t = (beat.t0 + beat.t1) / 2
     edge = wide.layout.width - NOTICE_W
-    b, g, r, _ = wide.frame((beat.t0 + beat.t1) / 2)[round(wide.view("overview")[1] + wide.layout.margin + 48), edge + 3]
+    framed = wide.frame(t).copy()
+    b, g, r, _ = framed[round(wide.view("overview")[1] + wide.layout.margin + 48), edge + 3]
     assert np.allclose((r, g, b), amber, atol=12)
+
+    def drawn(timeline: Timeline) -> np.ndarray:
+        """Where the frame at t differs from the one the timeline as it is draws: what it adds or leaves out."""
+        return np.abs(Renderer(job, timeline).frame(t)[..., :3].astype(int) - framed[..., :3]).sum(axis=2) > 30
+
+    # Unflagged, the frame loses the amber ring and sign in their dark edge; labelled by the video, it gains its
+    # label pills.
+    flag = drawn(song.model_copy(update={"flags": {}}))
+    assert (np.abs(framed[flag][..., [2, 1, 0]].astype(int) - amber).sum(axis=1) < 40).sum() > 500
+    assert drawn(song.model_copy(update={"self_labelled": []})).sum() > 1000

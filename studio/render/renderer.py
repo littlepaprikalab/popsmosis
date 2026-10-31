@@ -1079,6 +1079,17 @@ class Renderer:
             rects.append((lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2))
         return rects
 
+    def _flags(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, alpha: float) -> None:
+        """A flag on each label the art check found wrong in the scene's painted picture (Timeline.flags), from the
+        scene's first frame, framed with the picture; the notice card beside it says what is wrong."""
+        scale, dx, dy = to_frame(cam, view, self.scene(scene_id))
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
+        for box in self.timeline.flags[scene_id]:
+            p.draw_flag(canvas, (box.x0 * scale + dx, box.y0 * scale + dy, box.x1 * scale + dx, box.y1 * scale + dy),
+                        alpha)
+        canvas.restore()
+
     def _draw_beat(self, canvas: skia.Canvas, t: float) -> None:
         layout = self.layout
         i = self.beat_index(t)
@@ -1116,6 +1127,8 @@ class Renderer:
             self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
+        if beat.scene in self.timeline.flags:
+            self._flags(canvas, beat.scene, cam, view, fade)
 
         caption_alpha = 0.0
         if beat.caption:
@@ -1155,8 +1168,9 @@ class Renderer:
                        for px in [x0 + k * (x1 - x0) / 12 for k in range(13)]
                        for py in (y0, (y0 + y1) / 2, y1)]
         strength = self._resting(i, t)
-        self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
-                     strength)
+        if beat.scene not in self.timeline.self_labelled:  # a painted picture labels its own parts
+            self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
+                         strength)
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places, strength)
         if legend_rect:
@@ -1251,12 +1265,12 @@ class Renderer:
     def _axis_names(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                     alpha: float) -> list[Rect]:
         """A graph's axis names (Timeline.axes), written at its axes' ends from the scene's first frame, since the
-        picture has no writing. Each takes the spot beside its end that, framed whole, stays in the frame over the
+        picture has no writing; none on a painted picture, which labels its own axes (Timeline.self_labelled). Each takes the spot beside its end that, framed whole, stays in the frame over the
         least of the picture, chosen once so it never jumps. Where the camera leaves its end out (a close-up, the
         upright frame's sides), it stays at the frame's edge on that side, so the graph still reads: what "up" and
         "across" measure. Returns where they landed."""
         names = self.timeline.axes.get(scene_id)
-        if not names:
+        if not names or scene_id in self.timeline.self_labelled:
             return []
         art = self.scene(scene_id)
         font = self.layout.label_font

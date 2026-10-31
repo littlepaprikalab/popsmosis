@@ -1,24 +1,29 @@
 # Image prompts (Muse Image)
 
-How the studio builds each picture's prompt, and each round-8 scene's prompt as a first try sends it now
-(copy-paste ready; a repaint adds the checker's complaints). The pictures are in each job's `art/` folder,
-which git ignores; docs/test-rounds.md (round 8) describes them. This is a snapshot from Oct 28: the code
-(studio/steps/art.py, studio/prompts/bundle.md) wins where they differ.
+How the studio builds each picture's prompt, and each round-8 scene's prompt as a first try sent it on Oct 28.
+The round-8 prompts below end in the style line the studio dropped on Oct 31, and have no labels line: today's
+prompt for the same scene is its request, its colours and its labels line, with nothing after. The pictures are in
+each job's `art/` folder, which git ignores; docs/test-rounds.md (round 8) describes them. The code
+(studio/steps/art.py, studio/prompts/bundle.md) wins where this differs.
 
 ## How a prompt is put together
 
-Each scene's prompt is three parts, joined with spaces (studio/steps/art.py, muse_prompt()):
+Each scene's prompt is three parts, joined with spaces (studio/steps/art.py, paint_prompt()):
 
 1. **The scene's request**, written by the brain (Claude) in the lesson plan, as a teacher asks for a textbook
    diagram: the kind of diagram, where everything is (never what it does), then the look for that kind of subject.
 2. **The colours**: `Colours: <part> <colour name>, ...`, each labelled part's colour by name (never a hex code).
-3. **The style line**. A diagram's:
+3. **The labels line**: `Clearly label nonobvious structures.` ("Clearly label the structures" labelled
+   everything in sight.) A graph also has its axes asked for (before this line), each
+   labelled with what it measures.
 
-   > On a plain, flat dark slate blue background, every part well inside the frame, with clear space around each part for its label. Proteins and molecules are smooth, rounded, softly shaded shapes, never ribbons, coils or clusters of atoms. No text, labels, letters or numbers anywhere in the picture.
+The picture labels its own parts, and the video draws no labels over it (it still labels a scene Claude draws
+as SVG). The checker lists each wrong label; the picture is kept, the video flags each wrong label on it, and the
+notice card beside it says what is wrong.
 
-   The hook's and the analogy's, which leaves the molecules out (they scattered molecules round a sprinter):
-
-   > On a plain, flat dark slate blue background, every part well inside the frame, with clear space around each part for its label. No text, labels, letters or numbers anywhere in the picture.
+Until Oct 31 a style line came last: a plain, flat dark slate blue background, space round each part for the
+video's labels, smooth rounded proteins, only the parts named, and no text, labels, letters or numbers. The
+pictures came back better without it.
 
 On a repaint, a sentence goes between 2 and 3: `The last picture of this scene was refused: <what the checker
 found>. Make it again with these fixed.`

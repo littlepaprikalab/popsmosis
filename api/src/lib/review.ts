@@ -24,8 +24,9 @@ const ART_FILE_RE = /^(?:[A-Za-z0-9][A-Za-z0-9._-]*\/)?art\/[A-Za-z0-9][A-Za-z0-
 
 // Fact-check lines that are kept or dropped, never corrected: not counted as said (studio/steps/factcheck.py).
 const KEPT_OR_DROPPED = ['tag', 'motion', 'avoid'];
-// What the art checker reports on a picture (ArtCheck, studio/steps/art.py).
-const ART_FINDINGS = ['text', 'misplaced', 'unnamed', 'wrong', 'notes'] as const;
+// What the art checker reports on a picture (ArtCheck, studio/steps/art.py). `text` and `unnamed` are in checks made
+// before Oct 31, when a picture was to have no labels of its own; `labels` (wrong ones) in those made since.
+const ART_FINDINGS = ['labels', 'text', 'misplaced', 'unnamed', 'wrong', 'notes'] as const;
 
 type Json = Record<string, unknown>;
 const isObject = (v: unknown): v is Json => typeof v === 'object' && v !== null && !Array.isArray(v);

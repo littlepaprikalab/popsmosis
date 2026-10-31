@@ -18,8 +18,8 @@ order, so whatever is drawn on top of a structure is left out of its mask.
 The house look. The brain decides what a scene draws and where; code decides how it looks, the same in every
 scene of every droplet: drawn one scene to a call, the brain's own styling drifted (one plan's graphs came back
 with axes in three greys and lines 16 to 22 px wide), and gradients, shadows and highlights were over half of
-each drawing's tokens. Every drawing goes on PAGE, the dark slate blue the painted art is asked for and the
-bundle's colours are picked to stand out on. A graph (a scene with axes, Scene.axes) also has its lines drawn
+each drawing's tokens. Every drawing goes on PAGE, the dark slate blue the painted art was asked for until Oct 31
+and the bundle's colours are picked to stand out on. A graph (a scene with axes, Scene.axes) also has its lines drawn
 flat at one weight with a soft glow of their own colour, its axes (the brain marks them <g data-role="axes">)
 pale with arrowheads over a faint grid, and its points (<circle data-role="point">) as rings. The art step keeps
 the drawing as the brain made it and styles it before it is rasterised, so a new look is a new LOOK and no new

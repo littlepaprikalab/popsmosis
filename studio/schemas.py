@@ -905,6 +905,12 @@ class Timeline(Strict):
     # The scenes whose picture a model made, each tagged as AI-generated: every scene, as the studio makes its
     # art (Muse Image paints it, or the brain draws it as SVG); a picture from anywhere else would be left out.
     ai_pictures: list[str] = []
+    # The scenes whose painted picture labels its own parts (art.self_labelled()): the renderer draws no labels or
+    # axis names over them, only over a drawing (the brain's SVG).
+    self_labelled: list[str] = []
+    # Each label the art check found wrong in a painted picture, by scene, as the box round it in art pixels: flagged
+    # on the picture, while the scene's notices say what is wrong.
+    flags: dict[str, list[Box]] = {}
     # Each graph's axis names, by scene (Scene.axes): written at the ends of the axes found in its picture.
     axes: dict[str, Axes] = {}
 
