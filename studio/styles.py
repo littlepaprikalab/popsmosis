@@ -17,6 +17,9 @@ CASH_IN_THE_CARRIER = ("Hip-hop pop, upbeat 100 bpm groove, confident female rap
                        "punchy 808s and bright synth hook, tight quantized drum programming with crisp kick-snare "
                        "hits and precise vocal layering, clear diction")
 
+SPLIT_THE_WATER = ("bright pop with hip-hop verses, rapped verses, big sing-along chorus, clear female vocal, "
+                   "shimmering synths, claps, 104 bpm, clear diction")
+
 SONG_STYLES = (
     "bright teen pop with melodic sung verses, female lead vocal, stacked harmonies on a big sing-along chorus, "
     "finger snaps, glossy synths, punchy drums, 104 bpm",
@@ -40,7 +43,7 @@ SONG_STYLES = (
 # Styles the owner liked, kept by name too, so one can be asked for outright (`plan --style cash-in-the-carrier`
 # writes it out as the learner's style). Each says clear diction itself, so the studio does not ask for it twice
 # (audio.with_diction). docs/reference-songs.md has the lyric each was made for.
-REFERENCE_STYLES = {"cash-in-the-carrier": CASH_IN_THE_CARRIER}
+REFERENCE_STYLES = {"cash-in-the-carrier": CASH_IN_THE_CARRIER, "split-the-water": SPLIT_THE_WATER}
 
 
 def style_for(job_name: str) -> str:
