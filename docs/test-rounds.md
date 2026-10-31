@@ -1184,6 +1184,45 @@ wrote "One hundred dollars" (its sentence spells it out; the drawer now writes f
 pills crowd the thin top blocks, which is what a director's review would catch
 (docs/director-review.md).
 
+## In-session tests, Oct 31: the fact-check, the songwriter and title lines
+
+No API calls: subagents stood in for every model call (CLAUDE.md), on the 12 scorecard topics' droplets written
+in-session on the day's prompts.
+
+**The fact-check is not degrading the songs.** Each droplet's round-1 call, built by the code
+(`check_bundle`) and answered by a subagent on `prompts/factcheck.md`, failed 22 of about 1,500 lines and 3 of
+228 song couplets (the audit step was skipped: the facts as the brain wrote them). Its fixes were mostly right
+("Spanish verbs come in two moods" is wrong: there is the imperative too; "The secret's shared with only us" became
+"The suitors miss what's plain to us", rhyme kept). Two findings:
+
+- Four droplets wrote "Most people say yes", copied from the script prompt's example, and the checker softened each
+  to "Many people": the example now says "Many people", and why.
+- Its fix to the sodium pump's chorus, "Open a gate, the rush begins / Sodium out, potassium in", flipped the
+  title line to "Potassium out, sodium in", so the chorus no longer ended on its first line.
+
+**The songwriter** (`prompts/songwriter.md`), on those 3 couplets and 6 the scorecard judge had flagged, the old
+prompt against a new one carrying the song brief's craft and an appeal, judged blind by a Sonnet subagent: every
+rewrite of both true, the new one preferred 3 to 1 (5 ties), singing 3.67 to 3.44 of 5. The checker was right on 7
+of 9; on the two it was wrong about, the new one did better: it defended "The gas is light, it shoots out quick",
+the facts' own words, where the old one sang "Hot gas at high pressure shoots out quick". Both flipped the sodium
+pump's title line until the new prompt said never to change one and to rewrite the line beside it ("Gates let it
+rush, the pump still spins": the title line kept, though "spins" is no picture of that pump). Shipped, with the
+appeal.
+
+**Title lines**, the intro and chorus written from each topic's script, judged blind against the hook anchors:
+
+| Wording | Title line, mean | Preferred | Weak (3 or lower) |
+|---|---|---|---|
+| The examples as they are ("Open the gates, let sodium in", "Split the water, catch the light") | 3.92 / 4.17 | 7 / 8 of 12 | 2 / 1 |
+| Examples from three subjects ("The Moon pulls, the oceans rise", "Buy on credit, watch the banks fall") and "a stranger can guess the topic" | 3.50 | 4 | 6 |
+| "Split the water…", "Pull the sea, then let it go", "Print the page, spread the word" | 4.00 | 4 | 2 |
+
+The first row is one set of title lines judged twice: 3.92 and 4.17, so about 0.2 is the judge's own noise. The
+statement-shaped example ("The Moon pulls…") was copied as a shape ("The catalyst lowers the hump"); commands come
+out as chants ("Ring the tone, then bring the bowl"). Neither change helped, so the examples stay as they were. On
+its own topic an example is copied word for word (the light reactions sang "Split the water, catch the light" in
+both arms that had it): it teaches the shape everywhere else.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
