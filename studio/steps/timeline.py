@@ -32,8 +32,8 @@ No model calls, so it is free to run again:
   that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
   it stays on every later beat of the scene.
 - A graph part's meaning (Bundle.meanings) is written under the name its drawing placed, once in the video: from
-  when the part first shows named (as it is revealed, or from its scene's first line when the video never names it
-  there) to the end of the line after, MEANING_MIN_S at least. Then only the name stays.
+  when the part is first named, to the end of the line after, MEANING_MIN_S at least. Then only the name stays. A
+  part the video never names has none: shown from a graph's first frame, four of them came on at once (Oct 31).
 - A path particles travel on a scene is drawn as arrows from stop to stop from when they first set off, and
   the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
@@ -588,8 +588,8 @@ MEANING_MIN_S = 4.0  # a meaning stays at least this long: two quick song lines 
 
 def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
     """The graph parts' meanings each beat writes (Bundle.meanings), under the name the part's drawing placed
-    (Value.label): once in the video, from when the part first shows named (its reveal, or its scene's first beat
-    when the video never names it there) to the end of the beat after, if that beat is on the same scene."""
+    (Value.label): once in the video, from when the part is first named on a graph (its reveal) to the end of the
+    beat after, if that beat is on the same scene."""
     named = {s.scene: {v.text for v in s.values if v.label} for s in locations.scenes}
     revealed: dict[str, dict[str, float]] = {}
     for beat in beats:
@@ -601,9 +601,9 @@ def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
             if m.structure in windows or m.structure not in named.get(beat["scene"], set()):
                 continue
             at = revealed.get(beat["scene"], {}).get(m.structure)
-            if at is not None and at >= beat["t1"]:
-                continue  # a ghost until it is named, later
-            since = beat["t0"] if at is None else max(at, beat["t0"])
+            if at is None or at >= beat["t1"]:
+                continue  # never named here, or named later
+            since = max(at, beat["t0"])
             after = beats[i + 1] if i + 1 < len(beats) and beats[i + 1]["scene"] == beat["scene"] else beat
             windows[m.structure] = (beat["scene"], since, max(after["t1"], since + MEANING_MIN_S), m.text)
     for beat in beats:

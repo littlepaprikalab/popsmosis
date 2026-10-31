@@ -291,7 +291,7 @@ class Bundle(Strict):
     # A bundle written before Oct 29 has none.
     conversions: list[Conversion] = Field(default_factory=list,
                                           description="What turns into what, and where; [] for none")
-    # What each part of a graph says, written under its name the first time the part shows ("lower price → people
+    # What each part of a graph says, written under its name the first time the part is named ("lower price → people
     # buy more" under "Demand curve"): reading a curve's meaning off its slope is the hard part of a graph for a
     # learner new to them (the owner, Oct 31). A bundle written before Oct 31 has none.
     meanings: list[Meaning] = Field(default_factory=list,
@@ -922,7 +922,7 @@ class Written(Strict):
 
 class Gloss(Strict):
     """A graph part's meaning (Bundle.meanings) as the beats show it: written under the part's name from `since` to
-    `until`, the first time the part shows in the video."""
+    `until`, the first time the part is named in the video."""
 
     structure: str  # with a name its drawing placed (Value.label) on the beat's scene
     text: str  # "lower price → people buy more"

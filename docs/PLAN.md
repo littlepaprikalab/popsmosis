@@ -511,7 +511,7 @@ draws only the graph: no figures or scenery round it, which have scenes of their
 marks where each structure's name goes (`<circle data-label="demand curve" ...>`), and the video
 writes it there in the structure's colour as the structure is revealed, as a textbook prints a
 curve's name, with no pill (pills on a graph covered its lines and its axis names). Under it, the
-first time the part shows, the video writes what it means (`Bundle.meanings`, "lower price → people
+first time the part is named, the video writes what it means (`Bundle.meanings`, "lower price → people
 buy more"), fact-checked like a motion, for two lines; then the name stays alone. The whole-scene
 framing makes room for these names, and a graph's arrow has its word beside it ("price rises")
 rather than in the corner key, which diagrams keep. The drawing is kept as the brain made it and styled

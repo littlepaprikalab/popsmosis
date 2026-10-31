@@ -642,8 +642,8 @@ fact-check holds each to the facts. [] when there is none.
   price → people buy more"}, {"structure": "Supply curve", "text": "higher price → sellers
   offer more"}, {"structure": "Shortage", "text": "buyers want more than sellers have"}]`, one
   per part of a scene with `axes`, at most 40 characters, never the part's own name. The
-  video writes it under the name the first time the part shows, for two lines, then only the
-  name stays. [] for a droplet with no graph.
+  video writes it under the name the first time the part is named, for two lines, then only
+  the name stays. [] for a droplet with no graph.
 
 ## On screen
 

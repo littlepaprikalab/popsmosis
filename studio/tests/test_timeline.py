@@ -728,7 +728,7 @@ def test_the_song_follows_on_its_long_hold_and_the_lesson_keeps_its_direction(jo
             assert beat.camera.target in (None, directed[beat.line_id])
 
 
-def test_a_graph_parts_meaning_is_written_once_from_when_it_first_shows_named():
+def test_a_graph_parts_meaning_is_written_once_from_when_it_is_first_named():
     from types import SimpleNamespace
     from studio.schemas import Meaning, Point, Reveal, Value
     from studio.steps.timeline import MEANING_MIN_S, _mean
@@ -747,11 +747,10 @@ def test_a_graph_parts_meaning_is_written_once_from_when_it_first_shows_named():
              beat("graph", 9.0, 12.0, ("Gap", 10.0)), beat("close", 12.0, 20.0, ("Demand curve", 12.5))]
     _mean(beats, bundle, locations)
     got = [[(m.structure, m.since, m.until) for m in b["meanings"]] for b in beats]
-    # Supply curve, never named on the graph: from its first frame to the end of the line after. Demand curve, named on
-    # the second line: from then to the end of the third. The gap, named on the last line there: MEANING_MIN_S at least.
-    # Not again on the close-up, though it is named there.
-    assert got[0] == [("Supply curve", 0.0, 6.0)]
-    assert got[1] == [("Supply curve", 0.0, 6.0), ("Demand curve", 4.0, 9.0)]
+    # Demand curve, named on the second line: from then to the end of the third. The gap, named on the last line there:
+    # MEANING_MIN_S at least. Not again on the close-up, though it is named there. Supply curve, never named: none.
+    assert got[0] == []
+    assert got[1] == [("Demand curve", 4.0, 9.0)]
     assert got[2] == [("Demand curve", 4.0, 9.0)]
     assert got[3] == [("Gap", 10.0, 10.0 + MEANING_MIN_S)]
     assert got[4] == []
