@@ -327,7 +327,8 @@ export type ArtSettings = { claude: Painter; meta: Painter };
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 // The brain that writes a topic no admin sent to a brain of its own, and Claude's effort when it is Claude's.
 export type BrainSettings = { default: Brain; effort: Effort };
-// Who sings the song: ElevenLabs' Eleven Music or Lyria on the Gemini API. The narration is ElevenLabs' either way.
+// Who makes the audio, the song and the narration together: ElevenLabs (Eleven Music and its voices) or Gemini (Lyria and
+// Gemini's text-to-speech). Named `song` from before the narration followed it.
 export type SongProvider = 'elevenlabs' | 'gemini';
 export type SongSettings = { provider: SongProvider };
 /** The most one topic may cost in model calls, its lesson, videos and retries together, in dollars; 0 for no ceiling. */

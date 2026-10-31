@@ -37,10 +37,11 @@ const BRAIN_NOTES: Record<Brain, string> = {
   'muse-spark': '$1.25 / $4.25 per million tokens, on the Meta key (MODEL_API_KEY): about a quarter of Wonder’s price.',
 };
 
-// Who sings the song (studio/steps/audio.py). The narration and the exam question are ElevenLabs' either way.
+// Who makes the audio, the song and the narration together (studio/steps/audio.py): one switch moves a droplet off a
+// service whose quota has run out.
 const SINGERS: Record<SongProvider, { label: string; note: string }> = {
-  elevenlabs: { label: 'ElevenLabs Eleven Music', note: 'Sings each section to its planned length, so the words line up with the video closely. In ElevenLabs credits, on the ElevenLabs key (ELEVENLABS_API_KEY) the narration uses anyway.' },
-  gemini: { label: 'Gemini Lyria 3.5', note: '$0.08 a song, on the Gemini key (GEMINI_API_KEY). Sings the whole song from one prompt and keeps to the planned timing only roughly; the studio finds each line in it. A song Lyria will not sing (it blocks some grave topics, the Holocaust among them) is made by Eleven Music instead.' },
+  elevenlabs: { label: 'ElevenLabs: Eleven Music and an ElevenLabs voice', note: 'Eleven Music sings each section to its planned length, so the words line up with the video closely, and the voice says when it read each word. In ElevenLabs credits, on the ElevenLabs key (ELEVENLABS_API_KEY).' },
+  gemini: { label: 'Google: Lyria 3.5 and Gemini 3.8 Flash TTS', note: 'On the Gemini key (GEMINI_API_KEY), with no ElevenLabs call: $0.08 a song, and about 4 cents a narration ($9 a million audio tokens, 25 a second; $18 from 2027). Lyria keeps to the planned timing only roughly and neither says when each word is heard, so the studio finds them with its aligner. A song Lyria will not sing (it blocks some grave topics, the Holocaust among them) is made by Eleven Music instead, which needs ElevenLabs.' },
 };
 const singerOf = (provider: string) => SINGERS[provider as SongProvider] ?? { label: provider, note: '' };
 
@@ -81,7 +82,8 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
     id: 'studio', title: 'The teacher’s machine', note: 'The studio reads these as it starts each run and from every claim, over its own environment: a change applies from the next run. Not set here, the variable on the teacher’s machine decides, else the default.',
     knobs: {
       STUDIO_VIDEOS: { label: 'Videos', note: 'on makes the song and the lesson video. lesson leaves the song out from the start: a lesson written while it is set has no lyrics or music to write or fact-check, and gets only the narrated lesson video, with no hook clip and no Eleven Music or Lyria spend; it stays songless if the knob changes later. A lesson already written with its song keeps it checked, and any video not yet made is the lesson’s alone. off makes text-only droplets: no video claim, no media steps, no recovery.' },
-      ELEVENLABS_VOICE_ID: { label: 'The narration’s voice', note: 'Any ElevenLabs voice id, on the ElevenLabs key. A droplet already narrated keeps its voice.' },
+      ELEVENLABS_VOICE_ID: { label: 'The narration’s voice, when ElevenLabs reads', note: 'Any ElevenLabs voice id, on the ElevenLabs key. A droplet already narrated keeps its voice.' },
+      GEMINI_TTS_VOICE: { label: 'The narration’s voice, when Gemini reads', note: 'One of Gemini’s prebuilt voices, by name: Sadaltager (knowledgeable), Sulafat (warm), Charon (informative), Kore (firm) and more. A droplet already narrated keeps its voice.', suggest: ['Sadaltager', 'Sulafat', 'Charon', 'Kore'] },
       GEMINI_SONG_MODEL: { label: 'The Lyria model, when Lyria sings', note: 'lyria-3.5 sings full songs ($0.08 a song); lyria-3-clip-preview makes 30-second clips ($0.04).', suggest: ['lyria-3.5', 'lyria-3-clip-preview'] },
       ELEVENLABS_USD_PER_1K_CREDITS: { label: 'What 1,000 ElevenLabs credits cost', unit: 'USD', note: 'On your plan, e.g. 0.30, so a droplet’s bill shows its ElevenLabs lines in dollars as well as credits. Unset: credits only.' },
       STUDIO_CLAUDE_DRAWS: { label: 'What Claude draws as SVG, whatever paints the rest', note: 'math: every chart and graph, and every picture of a math lesson but its hook and analogy, since a painter cannot count (Muse Image painted six fraction bars as seven). charts: charts and graphs only. brain: only Claude’s brain draws its charts; a Muse topic has them painted. On a Muse topic Claude Opus 5.5 draws them, on the Anthropic key, about 7¢ a picture; without that key they are painted.' },
@@ -164,7 +166,7 @@ export default function AdminStudioPage() {
   };
   const pickSinger = (provider: SongProvider) => {
     if (settings?.song.provider === provider) return;
-    save('song', { song: { provider } }, `${singerOf(provider).label} sings from the next droplet's videos.`);
+    save('song', { song: { provider } }, `${singerOf(provider).label} make the audio from the next droplet's videos.`);
   };
   const saveCeiling = (event: FormEvent) => {
     event.preventDefault();
@@ -272,12 +274,13 @@ export default function AdminStudioPage() {
 
         <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
           data-testid="song">
-          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Song</h3>
+          <h3 className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--accent-purple)' }}>Song and narration</h3>
           <p className="text-[11px] mt-1 mb-3" style={{ color: 'var(--text-muted)' }}>
-            Who sings each droplet&rsquo;s song, whatever the brain. The narration and the exam question are ElevenLabs&rsquo;
-            either way. A droplet whose song another singer made has it made again the next time its videos run.
+            Who makes each droplet&rsquo;s song and reads its narration, whatever the brain. When one service&rsquo;s
+            quota runs out, switch to the other: it makes all the audio. A droplet whose song the other service made has
+            its song made again the next time its videos run; a narration already read is kept.
           </p>
-          <div className="space-y-2" role="radiogroup" aria-label="Who sings the song">
+          <div className="space-y-2" role="radiogroup" aria-label="Who makes the song and the narration">
             {settings.choices.song.provider.map((provider) => (
               <Choice key={provider} on={settings.song.provider === provider} disabled={saving !== null}
                 label={singerOf(provider).label} note={singerOf(provider).note}

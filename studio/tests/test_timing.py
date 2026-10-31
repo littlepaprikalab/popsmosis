@@ -159,7 +159,7 @@ def test_a_gemini_song_is_aligned_across_the_whole_song(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     monkeypatch.setattr(audio, "send", FakeGemini())
-    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)
     monkeypatch.setattr(audio, "duration", lambda path: 41.0)  # longer than the 30.1s planned
     job = tmp_path / "sample"
     job.mkdir()
@@ -201,7 +201,7 @@ def test_a_line_lyria_left_out_is_not_sung_and_the_rest_are_aligned_without_it(t
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     monkeypatch.setattr(audio, "send", FakeGemini())
-    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)
     monkeypatch.setattr(audio, "duration", lambda path: 30.0)
     job = tmp_path / "sample"
     job.mkdir()
@@ -517,3 +517,60 @@ def test_the_lesson_alone_times_only_the_narration(tmp_path, monkeypatch):
     assert not (job / media.timing_path("song")).exists() and not (job / timing.REPORT).exists()
     knobs.use({"knobs": {}})
     assert not timing.is_done(job)
+
+
+# --- a Gemini narration: no timings of its own, so the aligner times it -------------------------
+
+
+@pytest.fixture
+def read_by_gemini(tmp_path, monkeypatch):
+    """The sample job with its narration read by Gemini (fake audio), which says nothing of when."""
+    from studio.tests.test_audio import sing
+
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setattr(audio, "send", FakeGemini())
+    monkeypatch.setattr(audio, "duration", lambda path: 30.1)
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)
+    job = tmp_path / "sample"
+    job.mkdir()
+    jobs.write(job / "bundle.json", sample_media.bundle())
+    sing(job, "gemini")
+    audio.run(job)
+    return job
+
+
+def test_a_gemini_narration_is_aligned_over_the_whole_narration(read_by_gemini):
+    calls = []
+    timed, report = timing.speech_timing(read_by_gemini, "narration", align=even_aligner(calls, pitch=0.3),
+                                         audio=np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    ids = [n.id for n in sample_media.bundle().narration]
+    assert timing_problems(timed, ids) == []
+    (heard, words), = calls  # one pass over the whole narration, every word in order
+    assert heard == int(30.1 * timing.SAMPLE_RATE)
+    assert words == [spoken(w) for n in sample_media.bundle().narration for w, _, _ in words_of(n.text)]
+    assert [row["line_id"] for row in report["lines"]] == ids and report["unsure"] == []
+    assert timing.speech_mismatch("narration", report) is None
+
+
+def test_the_step_aligns_a_gemini_narration_and_logs_the_aligner(read_by_gemini, monkeypatch):
+    monkeypatch.setattr(timing, "separate_vocals", lambda job: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "_speech_audio", lambda path: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([], pitch=0.3))
+    summary = timing.run(read_by_gemini)
+    assert "narration 2 lines, aligned (0 unsure)" in summary
+    assert timing.is_done(read_by_gemini)
+    assert json.loads((read_by_gemini / timing.speech_report("narration")).read_text())["unsure"] == []
+    local = [json.loads(row) for row in (read_by_gemini / "calls.jsonl").read_text().splitlines()]
+    assert ("narration alignment", "local", "mms-fa", 0.0) in [(r["label"], r["role"], r["model"], r["cost_usd"])
+                                                            for r in local]
+
+
+def test_a_narration_the_aligner_cannot_hear_fails_the_step_and_is_read_again(read_by_gemini, monkeypatch):
+    """Gemini cut the text short or read something else: the narration goes, and the retry reads it again."""
+    monkeypatch.setattr(timing, "_speech_audio", lambda path: np.zeros((1, int(30.1 * timing.SAMPLE_RATE))))
+    monkeypatch.setattr(timing, "mms_aligner", lambda: even_aligner([], pitch=0.3, score=0.1))
+    with pytest.raises(media.StepFailed, match=r"the narration does not read its lines: the aligner could not hear 2 "
+                                               r"of its 2 .*; the narration is deleted, so the retry reads it again"):
+        timing.run(read_by_gemini)
+    assert not (read_by_gemini / media.audio_path("narration")).exists()
+    assert (read_by_gemini / media.audio_path("song")).exists() and not audio.is_done(read_by_gemini)

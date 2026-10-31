@@ -514,14 +514,15 @@ test.describe('studio settings', () => {
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { brain: { default: 'claude', effort: 'high' } } });
   });
 
-  test('an admin picks who sings the song, and the teacher reads it with its key', async ({ page, context, request }) => {
+  test('an admin picks who makes the song and the narration, and the teacher reads it with its key', async ({ page, context, request }) => {
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
     const song = page.getByTestId('song');
-    await expect(song.getByRole('radio', { name: /ElevenLabs Eleven Music/ })).toHaveAttribute('aria-checked', 'true');
-    await song.getByRole('radio', { name: /Gemini Lyria 3.5/ }).click();
-    await expect(song.getByRole('radio', { name: /Gemini Lyria 3.5/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(song.getByRole('radio', { name: /^ElevenLabs: Eleven Music and an ElevenLabs voice/ })).toHaveAttribute('aria-checked', 'true');
+    await song.getByRole('radio', { name: /^Google: Lyria 3.5 and Gemini 3.8 Flash TTS/ }).click();
+    await expect(song.getByRole('radio', { name: /^Google: Lyria 3.5 and Gemini 3.8 Flash TTS/ })).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByText('Google: Lyria 3.5 and Gemini 3.8 Flash TTS make the audio from the next droplet\'s videos.')).toBeVisible();
     const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
     expect((await teacher.json()).song).toEqual({ provider: 'gemini' });
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });

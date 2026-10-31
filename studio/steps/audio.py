@@ -4,12 +4,16 @@
                                   section, or Lyria on the Gemini API, from one prompt
     audio/song.plan.json          what was asked for, which lines each section sings, who made it
     audio/narration.mp3           text-to-speech, the narration sentences in order
-    audio/narration.chars.json    what was read, where each line sits in it, and the
-                                  character timings the TTS returned (step 6 turns them
-                                  into words without an aligner)
+    audio/narration.chars.json    what was read, where each line sits in it, who read it, and
+                                  from ElevenLabs the character timings it returned (step 6
+                                  turns them into words without an aligner; a Gemini
+                                  narration has none, and step 6 aligns it)
 
-Who makes the song is an admin's setting on /admin/studio, as the claim said (the job's
-settings.json, song_provider()): elevenlabs (the default) or gemini. The singer takes the
+Who makes the audio is an admin's setting on /admin/studio, as the claim said (the job's
+settings.json, song_provider()): elevenlabs (the default) or gemini. It picks the song's singer
+and the narration's voice together, so one switch moves a droplet off a service whose quota has
+run out: ElevenLabs sings with Eleven Music and reads with its text-to-speech; Gemini sings with
+Lyria and reads with Gemini 3.8 Flash TTS (gemini_tts_model()). The singer takes the
 time the lines need: Eleven Music makes each section a chunk of the length asked for, so
 each is asked for as long as its lines take to sing (line_ms), and step 6 looks for each
 section's lines where it was planned. Lyria is given the style and the lyrics and no
@@ -17,8 +21,8 @@ length or timings at all, so its plan says the sections are not pinned and step 
 for its lines across the whole song, leaving out any its own text of the song says it did
 not sing. A song Lyria will not sing (it blocks the prompt, or
 stops for safety: it blocked the Holocaust's lyrics) is made by Eleven Music instead, and
-its plan says so. The narration is always ElevenLabs text-to-speech, whose character
-timings step 6 turns into words.
+its plan says so. A narration already made stays, whoever read it: switching the setting makes
+only the song again.
 
 While STUDIO_VIDEOS is `lesson` (studio/media.py, lesson_only()) there is no song: only
 the narration is made, and only its key is needed.
@@ -29,19 +33,21 @@ a retry asks only for what is missing. Every call costs credits, so a file that 
 there is never asked for again, unless the bundle's lines have changed since it was made,
 or for the song, who sings it (its .json says what it was made from and by whom). To redo one by hand, delete its
 .mp3. A busy or failing server (429, 5xx) is retried three times; a timeout is not, since
-the server may still be making it. Needs ELEVENLABS_API_KEY, and GEMINI_API_KEY for a
-Gemini song; ELEVENLABS_VOICE_ID picks another voice and GEMINI_SONG_MODEL another Lyria model, on
-/admin/studio or in the environment (studio/knobs.py).
+the server may still be making it. Needs ELEVENLABS_API_KEY for ElevenLabs, GEMINI_API_KEY for
+Gemini; ELEVENLABS_VOICE_ID and GEMINI_TTS_VOICE pick another voice and GEMINI_SONG_MODEL another
+Lyria model, on /admin/studio or in the environment (studio/knobs.py).
 
 What it spent. Each call that comes back made is logged to calls.jsonl (studio/ledger.py),
-with its model, its time and its price: a Lyria song at its model's price per song; an
-ElevenLabs call in the credits its character-cost header says, in dollars too when
-ELEVENLABS_USD_PER_1K_CREDITS gives the plan's price of 1,000 credits.
+with its model, its time and its price: a Lyria song at its model's price per song; a Gemini
+narration at its tokens' price (gemini_speech_cost()); an ElevenLabs call in the credits its
+character-cost header says, in dollars too when ELEVENLABS_USD_PER_1K_CREDITS gives the plan's
+price of 1,000 credits.
 """
 
 from __future__ import annotations
 
 import base64
+import datetime
 import json
 import os
 import subprocess
@@ -64,9 +70,17 @@ SONG_PROVIDERS = ("elevenlabs", "gemini")
 MUSIC_MODEL = "music_v2_5"
 GEMINI_SONG_MODEL = "lyria-3.5"  # Lyria's full-length songs, sung from lyrics given in the prompt
 SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this rate
+SPEECH_BITRATE = "128k"  # a Gemini narration, as ElevenLabs' mp3_44100_128
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "Xb7hH8MSUJpSbSDYk0k2"  # Alice: a clear, engaging British educator
+GEMINI_TTS_MODEL = "gemini-3.8-flash-tts"  # on the Interactions API (ai.google.dev/gemini-api/docs/speech-generation)
+DEFAULT_GEMINI_VOICE = "Sadaltager"  # one of Gemini's prebuilt voices: "Knowledgeable"
+# How the narration is read: Gemini reads the text as written and takes its delivery from a style kept apart from it.
+GEMINI_TTS_STYLE = "a warm, clear teacher explaining to a student, at an easy, steady pace"
+# USD per million tokens, text in and audio out, from each date (Gemini API pricing); 25 audio tokens a second.
+GEMINI_TTS_PRICES = ((datetime.date(2027, 1, 1), 1.00, 18.00), (datetime.date.min, 0.50, 9.00))
+AUDIO_TOKENS_PER_S = 25
 # How long a line takes to sing: its syllables at a singing pace, and a rest. Round 17's Lyria, told no length,
 # sang lines of about 8 syllables at 4.1 a second and took about 3 s a line with the rests between them; held to one
 # bar a line (2.2 s at 110 bpm), every line came out at the speed of speech, sung or rapped.
@@ -139,8 +153,8 @@ def run(job: Path, ask=brain.ask) -> str:
     def make(kind: str) -> str:
         if kind == "song":
             return f"song ({_make_song(job, bundle, provider)})"
-        _make_speech(job, kind, speech_lines(bundle, kind))
-        return kind
+        _make_speech(job, kind, speech_lines(bundle, kind), provider)
+        return f"{kind} ({provider})"
 
     # Both at once: the song takes longest, and the voice is made while it is. One that
     # fails fails the step after the others are saved, so a retry makes only what is missing.
@@ -175,16 +189,17 @@ def _current(job: Path, bundle: Bundle, kind: str) -> bool:
 
 
 def song_provider(job: Path) -> str:
-    """Who makes the song: the admin's setting on /admin/studio as the job's last claim said, else elevenlabs."""
+    """Who makes the audio, the song and the narration: the admin's setting on /admin/studio as the job's last
+    claim said, else elevenlabs."""
     song = jobs.studio_settings(job).get("song")
     return (song.get("provider") if isinstance(song, dict) else None) or "elevenlabs"
 
 
 def _check_keys(todo: list[str], provider: str) -> None:
     needed = []
-    if any(kind != "song" or provider == "elevenlabs" for kind in todo):
+    if todo and provider == "elevenlabs":
         needed.append("ELEVENLABS_API_KEY")
-    if "song" in todo and provider == "gemini":
+    if todo and provider == "gemini":
         needed.append("GEMINI_API_KEY")
     missing = [name for name in needed if not os.environ.get(name)]
     if missing:
@@ -374,26 +389,27 @@ def _mime(inline: dict) -> str:
     return str(inline.get("mimeType") or inline.get("mime_type") or "")
 
 
-def as_mp3(audio: bytes, mime_type: str) -> bytes:
-    """Lyria's song as a constant-bitrate MP3, whatever it sent (an MP3 of any kind, a WAV).
+def as_mp3(audio: bytes, mime_type: str, kind: str = "song") -> bytes:
+    """Gemini's song or narration as a constant-bitrate MP3, whatever it sent (an MP3 of any kind, a WAV).
 
-    Every later step reads audio/song.mp3's length from its header (ffprobe), and a
+    Every later step reads an audio file's length from its header (ffprobe), and a
     variable-bitrate MP3 without one reads as the wrong length; the upload calls it
-    audio/mpeg. So the song is always encoded again, once, from a file to a file, so
+    audio/mpeg. So it is always encoded again, once, from a file to a file, so
     ffmpeg can seek the input and write the output's length header.
     """
-    with tempfile.TemporaryDirectory(prefix="popsmosis-song-") as tmp:
-        source, out = Path(tmp) / "lyria", Path(tmp) / "song.mp3"
+    with tempfile.TemporaryDirectory(prefix=f"popsmosis-{kind}-") as tmp:
+        source, out = Path(tmp) / "gemini", Path(tmp) / f"{kind}.mp3"
         source.write_bytes(audio)
         try:
             subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-vn", "-codec:a", "libmp3lame",
-                            "-b:a", SONG_BITRATE, str(out)], capture_output=True, check=True, timeout=300)
+                            "-b:a", SONG_BITRATE if kind == "song" else SPEECH_BITRATE, str(out)],
+                           capture_output=True, check=True, timeout=300)
             return out.read_bytes()
         except subprocess.CalledProcessError as e:
             detail = e.stderr.decode("utf-8", "replace").strip()[:200]
         except (OSError, subprocess.TimeoutExpired) as e:
             detail = str(e)
-    raise media.StepFailed(f"cannot keep Gemini's song ({mime_type or 'no type given'}) as an MP3: {detail}")
+    raise media.StepFailed(f"cannot keep Gemini's {kind} ({mime_type or 'no type given'}) as an MP3: {detail}")
 
 
 # --- the narration -------------------------------------------------------------------------
@@ -410,12 +426,23 @@ def voice_id() -> str:
     return knobs.env("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
 
 
-def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
+def gemini_voice() -> str:
+    return knobs.env("GEMINI_TTS_VOICE").strip() or DEFAULT_GEMINI_VOICE
+
+
+def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]], provider: str = "elevenlabs") -> None:
     text, spans = join_lines(lines)
     if len(text) > TTS_MAX_CHARS:
         raise media.StepFailed(f"the {kind} is {len(text)} characters; one text-to-speech call takes {TTS_MAX_CHARS}")
-    voice = voice_id()
     ledger.check_ceiling(job)
+    if provider == "gemini":
+        _make_gemini_speech(job, kind, lines, text, spans)
+    else:
+        _make_eleven_speech(job, kind, lines, text, spans)
+
+
+def _make_eleven_speech(job: Path, kind: str, lines: list[tuple[str, str]], text: str, spans: list[dict]) -> None:
+    voice = voice_id()
     started = time.monotonic()
     status, headers, answer = _eleven("POST", f"/v1/text-to-speech/{voice}/with-timestamps?output_format=mp3_44100_128",
                                       {"text": text, "model_id": TTS_MODEL})
@@ -433,10 +460,85 @@ def _make_speech(job: Path, kind: str, lines: list[tuple[str, str]]) -> None:
         raise media.StepFailed(f"text-to-speech sent back something unreadable for the {kind}: {e}") from e
     # The timings first, then the audio: the audio file is what says this kind is made.
     jobs.write(job / plan_path(kind), {
-        "source": lines, "text": text, "lines": spans, "voice_id": voice, "model_id": TTS_MODEL,
-        "alignment": alignment, "headers": _kept(headers),
+        "source": lines, "text": text, "lines": spans, "provider": "elevenlabs", "voice_id": voice,
+        "model_id": TTS_MODEL, "alignment": alignment, "headers": _kept(headers),
     })
     _write_bytes(job / media.audio_path(kind), audio)
+
+
+# Gemini's text-to-speech: the whole narration in one call, as ElevenLabs reads it, but with no timings: step 6
+# finds each word in it with the aligner it runs on songs.
+
+def _make_gemini_speech(job: Path, kind: str, lines: list[tuple[str, str]], text: str, spans: list[dict]) -> None:
+    voice, model = gemini_voice(), GEMINI_TTS_MODEL
+    body = {
+        "model": model,
+        "input": [{"type": "user_input", "content": [{
+            "type": "text", "text": text, "annotations": [{"type": "speech_metadata", "style": GEMINI_TTS_STYLE}],
+        }]}],
+        "response_format": {"type": "audio"},
+        "generation_config": {"speech_config": [{"voice": voice}]},
+        "store": False,  # nothing to come back to: Google keeps no copy of the interaction
+    }
+    started = time.monotonic()
+    status, headers, answer = _gemini("/interactions", body)
+    if status != 200:
+        raise media.StepFailed(f"Gemini's text-to-speech refused the {kind}: {status} {_error(answer)}")
+    audio, mime_type, said = read_gemini_speech(answer, kind)
+    audio = as_mp3(audio, mime_type, kind)
+    _log(job, kind, model, started, gemini_speech_cost(said.get("usage"), duration_of(audio)))
+    # The plan first, then the audio: the audio file is what says this kind is made.
+    jobs.write(job / plan_path(kind), {
+        "source": lines, "text": text, "lines": spans, "provider": "gemini", "voice": voice, "model_id": model,
+        "mime_type": mime_type, **said, "headers": _kept(headers),
+    })
+    _write_bytes(job / media.audio_path(kind), audio)
+
+
+def read_gemini_speech(answer: bytes, kind: str = "narration") -> tuple[bytes, str, dict]:
+    """The speech out of an Interactions API answer: its audio (the last audio the model's steps hold), the audio's
+    type (a WAV unless asked otherwise), and its id, status and usage."""
+    try:
+        data = json.loads(answer)
+        if not isinstance(data, dict):
+            raise ValueError("not a JSON object")
+    except ValueError as e:
+        raise media.StepFailed(f"Gemini sent back something unreadable for the {kind}: {e}") from e
+    status = data.get("status")
+    if status not in (None, "completed"):
+        raise media.StepFailed(f"Gemini's text-to-speech did not finish the {kind} (status: {status})")
+    sounds = [item for step in data.get("steps") or [] if isinstance(step, dict) and step.get("type") == "model_output"
+              for item in step.get("content") or [] if isinstance(item, dict) and item.get("type") == "audio"]
+    if not sounds:
+        raise media.StepFailed(f"Gemini sent back no {kind}")
+    try:
+        audio = base64.b64decode(sounds[-1]["data"], validate=True)
+    except (KeyError, ValueError, TypeError) as e:
+        raise media.StepFailed(f"Gemini's {kind} is not readable audio data: {e}") from e
+    if not audio:
+        raise media.StepFailed(f"Gemini sent back an empty {kind}")
+    return audio, _mime(sounds[-1]) or "audio/wav", {
+        "interaction_id": data.get("id"), "status": status, "usage": data.get("usage"),
+    }
+
+
+def gemini_speech_cost(usage: dict | None, seconds: float | None, today: datetime.date | None = None) -> float | None:
+    """What a Gemini narration cost: its text in and its audio out at the prices of the day (GEMINI_TTS_PRICES).
+    The audio out is the answer's own count, else its length at 25 tokens a second; None when neither is known."""
+    usage = usage if isinstance(usage, dict) else {}
+
+    def count(key: str) -> float | None:
+        value = usage.get(key)
+        return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and value >= 0 else None
+
+    tokens_out = count("total_output_tokens")
+    if tokens_out is None and seconds is not None:
+        tokens_out = seconds * AUDIO_TOKENS_PER_S
+    if tokens_out is None:
+        return None
+    day = today or datetime.date.today()
+    _, price_in, price_out = next(price for price in GEMINI_TTS_PRICES if day >= price[0])
+    return round(((count("total_input_tokens") or 0) * price_in + tokens_out * price_out) / 1_000_000, 6)
 
 
 def join_lines(lines: list[tuple[str, str]]) -> tuple[str, list[dict]]:
@@ -572,6 +674,17 @@ def _write_bytes(path: Path, data: bytes) -> None:
     partial = path.with_name(f".{path.name}.partial")
     partial.write_bytes(data)
     os.replace(partial, path)
+
+
+def duration_of(audio: bytes) -> float | None:
+    """The length of audio held in memory, or None when it cannot be read: only the bill needs it."""
+    with tempfile.NamedTemporaryFile(prefix="popsmosis-audio-", suffix=".mp3") as f:
+        f.write(audio)
+        f.flush()
+        try:
+            return duration(Path(f.name))
+        except media.StepFailed:
+            return None
 
 
 def duration(path: Path) -> float:

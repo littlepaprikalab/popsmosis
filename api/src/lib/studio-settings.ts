@@ -7,8 +7,9 @@
  * `brain`: the brain that writes and fact-checks a topic no admin sent to a brain of its own (lib/brains.ts), and
  * how hard Claude thinks when it is Claude's (studio/brain.py).
  *
- * `song`: who sings the song (studio/steps/audio.py): ElevenLabs' Eleven Music, or Lyria 3.5 on the Gemini API.
- * The narration and the exam question are ElevenLabs' either way.
+ * `song`: who makes the audio (studio/steps/audio.py), the song and the narration together, so one switch moves the
+ * studio off a service whose quota has run out: ElevenLabs (Eleven Music and its text-to-speech), or Gemini (Lyria 3.5
+ * and Gemini 3.8 Flash TTS). It keeps its old name, `song`, so the setting stored before the narration followed it holds.
  *
  * `art`: who paints the droplet's pictures, by the provider of the brain that wrote the lesson. Whoever paints,
  * SAM 3.1 on Meta's API finds each structure in the picture (studio/steps/locate.py), except in the brain's own

@@ -4,7 +4,10 @@
                                   forced aligner finds the exact lyrics in them, one
                                   section at a time (across the whole song at once when
                                   its sections are not pinned: a Gemini song)
-    timing/narration_words.json   from the character timings the TTS returned (step 5)
+    timing/narration_words.json   from the character timings ElevenLabs returned (step 5), or
+                                  for a Gemini narration, which has none, the MMS aligner
+                                  over the whole narration (no Demucs: there is no music)
+    timing/narration_report.json  for an aligned narration, how sure the aligner was of each line
     timing/song_report.json       how sure the aligner was of each line, the lines it was unsure
                                   of that it heard again alone between their neighbours, and
                                   chorus drift
@@ -30,8 +33,13 @@ the lyrics, whatever it does sing: the step fails, and the song is deleted so th
 makes it again rather than timing the same song. Lines marked not sung are left out of the
 count: the videos never show them.
 
+The narration as read: a Gemini narration is held to its lines as the song is to its lyrics. When the
+aligner cannot hear more than MISMATCH_SHARE of them, the voice did not read what was written (it
+skipped or cut short the text), so the step fails and the narration is deleted, and the retry reads it
+again.
+
 The lesson alone (STUDIO_VIDEOS=lesson, studio/media.py's lesson_only()): there is no song,
-so only the narration is timed, and neither Demucs nor the aligner runs.
+so only the narration is timed, and Demucs never runs (the aligner only for a Gemini narration).
 
 torch, torchaudio and demucs are imported only when the song is aligned, so the rest
 of the studio (and its tests) load without them. Both models run on this machine, so
@@ -59,6 +67,13 @@ from studio.schemas import TOLERANCE_S, Bundle, TimedLine, Timing, Word, timing_
 from studio.steps import audio as audio_step
 
 REPORT = "timing/song_report.json"
+
+
+def speech_report(kind: str) -> str:
+    """How sure the aligner was of an aligned narration's lines: timing/narration_report.json."""
+    return f"timing/{kind}_report.json"
+
+
 VOCALS = "audio/song.vocals.wav"
 DRIFT_S = 0.5
 MARGIN_S = 2.0  # how far past its planned ends each section's window reaches
@@ -107,17 +122,27 @@ def run(job: Path, ask=brain.ask) -> str:
         raise media.StepFailed("the audio step has not made every audio file from this bundle yet")
     with_song = "song" in media.timed(job)
     # Not done until each is written again; the cached vocals are kept.
-    media.restart(job, *(media.timing_path(kind) for kind in media.timed(job)), *([REPORT] if with_song else []))
+    media.restart(job, *(media.timing_path(kind) for kind in media.timed(job)), *([REPORT] if with_song else []),
+                  *(speech_report(kind) for kind in audio_step.SPEECH))
     parts = []
     for kind in audio_step.SPEECH:
         try:
-            timing = speech_timing(job, kind)
+            timing, report = speech_timing(job, kind)
         except (ValueError, KeyError, IndexError) as e:
             raise media.StepFailed(f"the {kind}'s character timings do not fit its lines: {e}") from e
         _check(timing, [i for i, _ in audio_step.speech_lines(bundle, kind)], kind)
         (job / "timing").mkdir(exist_ok=True)
+        if report is not None:
+            jobs.write(job / speech_report(kind), report)
+            mismatch = speech_mismatch(kind, report)
+            if mismatch:
+                # Read again on the retry (the audio step makes only what is missing), never timed as it is.
+                (job / media.audio_path(kind)).unlink(missing_ok=True)
+                raise media.StepFailed(f"{mismatch}; the {kind} is deleted, so the retry reads it again",
+                                       code=f"the {kind} did not read its lines")
         jobs.write(job / media.timing_path(kind), timing)
-        parts.append(f"{kind} {len(timing.lines)} lines")
+        parts.append(f"{kind} {len(timing.lines)} lines" + (f", aligned ({len(report['unsure'])} unsure)"
+                                                            if report is not None else ""))
     if not with_song:
         return "no song (the lesson video alone); " + ", ".join(parts)
     try:
@@ -217,13 +242,50 @@ def spoken(word: str) -> str:
     return re.sub(r"[^a-z']", "", plain)
 
 
-# --- the narration: the TTS character timings ---------------------------------------------
+# --- the narration: the TTS character timings, or the aligner -------------------------------
 
 
-def speech_timing(job: Path, kind: str) -> Timing:
+def speech_timing(job: Path, kind: str, align: Aligner | None = None, audio=None) -> tuple[Timing, dict | None]:
+    """The narration's Timing, and for one aligned here its report (None from character timings). `align` and
+    `audio` stand in for MMS and the decoded narration in tests."""
     made = json.loads((job / audio_step.plan_path(kind)).read_text(encoding="utf-8"))
-    return timing_from_chars(kind, made["text"], made["lines"], made["alignment"],
-                             audio_step.duration(job / media.audio_path(kind)))
+    length = audio_step.duration(job / media.audio_path(kind))
+    if "alignment" in made:  # ElevenLabs said when it read each character
+        return timing_from_chars(kind, made["text"], made["lines"], made["alignment"], length), None
+    texts = {line_id: text for line_id, text in made["source"]}
+    line_ids = [line_id for line_id, _ in made["source"]]
+    try:
+        with cpu_turn(job):
+            aligning = None if align else time.monotonic()
+            if audio is None:
+                audio = _speech_audio(job / media.audio_path(kind))
+            aligned = _align_lines(audio, align or mms_aligner(), texts, line_ids, 0.0, length, 0.0, length)
+            if aligning is not None:
+                _log_local(job, f"{kind} alignment", MMS_MODEL, aligning)
+    except (ValueError, RuntimeError) as e:  # too little audio for its words, or an aligner that could not fit them
+        raise media.StepFailed(f"the {kind} could not be aligned: {e}") from e
+    timing = Timing(audio=media.audio_path(kind), duration=round(length, 3), lines=[line for line, _ in aligned])
+    rows = [{"line_id": line.line_id, "text": texts[line.line_id], "seconds": round(line.end - line.start, 3),
+             "score": score} for line, score in aligned]
+    return timing, {"lines": rows,
+                    "unsure": [r["line_id"] for r in rows if r["score"] is not None and r["score"] < LOW_SCORE]}
+
+
+def speech_mismatch(kind: str, report: dict) -> str | None:
+    """Why an aligned narration is not its lines (more than MISMATCH_SHARE of them unheard), or None."""
+    scored = [row for row in report.get("lines", []) if row.get("score") is not None]
+    if not scored or len(report["unsure"]) <= MISMATCH_SHARE * len(scored):
+        return None
+    unsure = report["unsure"]
+    return (f"the {kind} does not read its lines: the aligner could not hear {len(unsure)} of its {len(scored)} "
+            f"({', '.join(unsure[:8])}{', ...' if len(unsure) > 8 else ''})")
+
+
+def _speech_audio(path: Path):
+    """A narration at the aligner's 16 kHz mono, as a (1, samples) tensor."""
+    import torch
+
+    return torch.from_numpy(_decode(path, SAMPLE_RATE, 1))
 
 
 def timing_from_chars(kind: str, text: str, spans: list[dict], alignment: dict, length: float) -> Timing:
