@@ -21,6 +21,10 @@ export function Footer() {
           ABOUT
         </Link>
         <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>|</span>
+        <Link href="/how-its-made" className="hover-text transition-colors" style={{ color: 'var(--text-muted)' }}>
+          HOW IT&rsquo;S MADE
+        </Link>
+        <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>|</span>
         <Link href="/privacy" className="hover-text transition-colors" style={{ color: 'var(--text-muted)' }}>
           PRIVACY
         </Link>
