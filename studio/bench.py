@@ -145,7 +145,7 @@ class Brain:
                                 "corrected": ""} for line in json.loads(prompt)["lines"]]}
         if schema is art.ArtCheck:
             wait("art check", self.scale)
-            return {"text": [], "misplaced": [], "wrong": []}
+            return {"labels": [], "misplaced": [], "wrong": []}
         raise AssertionError(f"the bench has no stand-in for {label!r}")
 
 

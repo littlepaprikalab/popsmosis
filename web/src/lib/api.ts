@@ -264,7 +264,8 @@ export interface FactcheckCorrection {
 
 /** What the art checker reports on a picture: each kind of finding, a few words each. */
 export interface ArtFindings {
-  text: string[]; // writing in the picture
+  labels: string[]; // a label the picture got wrong, flagged on it in the video
+  text: string[]; // writing in the picture (checks made before Oct 31, when a picture was to have none)
   misplaced: string[]; // a structure missing, out of place or facing the wrong way
   unnamed: string[]; // a small round thing that is no listed structure
   wrong: string[]; // anything else wrong for the scene

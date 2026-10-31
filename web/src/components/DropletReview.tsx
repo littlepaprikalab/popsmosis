@@ -6,6 +6,7 @@ import { api, type ArtFindings, type ArtSceneReview, type DropletReview as Revie
 /** How each kind of the art checker's finding reads on the page. */
 const FINDINGS: { key: keyof ArtFindings; label: string }[] = [
   { key: 'notes', label: 'teaches something false' },
+  { key: 'labels', label: 'label wrong' },
   { key: 'misplaced', label: 'missing or out of place' },
   { key: 'unnamed', label: 'unnamed thing' },
   { key: 'text', label: 'writing in it' },

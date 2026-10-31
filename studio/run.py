@@ -752,8 +752,8 @@ def summary(question_id: str) -> str:
 
 
 def inside_steps(runs: list[dict]) -> str:
-    """What the media steps said as they ended, the last time each passed: a picture refused for the text in
-    it, a structure left out, a song line the aligner was unsure of or that drifted. Their failures are in
+    """What the media steps said as they ended, the last time each passed: a picture refused for a part out of
+    place, a label the helper saw wrong, a structure left out, a song line the aligner was unsure of or that drifted. Their failures are in
     the first paragraph; these are the problems a step lived with."""
     said: dict[str, str] = {}
     for r in runs:
@@ -775,7 +775,7 @@ PROVIDER_WORDS = re.compile(r"(declined the picture|refused the picture|refused 
 
 
 def unquoted(text: str) -> str:
-    """A step's line without what it quotes (the writing found in a picture) or a provider's own words, for Inkmory:
+    """A step's line without what it quotes (a label found wrong in a picture) or a provider's own words, for Inkmory:
     each is cut short on the way, so a quote can arrive with no end, and runs to the end of the line then."""
     return " ".join(QUOTED.sub("…", PROVIDER_WORDS.sub(r"\1", text)).split())
 

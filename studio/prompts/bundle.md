@@ -194,8 +194,8 @@ together they go from what the learner already knows to the parts they are learn
   is, never for what it does, and never for a moment in a process ("a thylakoid membrane
   during the light reactions" came back with lightning, ions and symbols drawn in): nothing pumped, flowing, carried, meeting or turning into
   something, no arrows from one part to another, no streams or crowds of ions. The video
-  shows each of those as dots moving between the parts (`particles`, under Direction) and
-  labels everything. A picture asked to show ions pumped up, crowding a space, flowing
+  shows each of those as dots moving between the parts (`particles`, under Direction). A
+  picture asked to show ions pumped up, crowding a space, flowing
   back down and oxygen turning into water came back cluttered with dots and tangled
   arrows; the same layout without them came back clean. A stage that textbooks draw as a
   shape of its own is that shape, where it happens (the Krebs cycle as a ring of arrows in
@@ -255,9 +255,8 @@ together they go from what the learner already knows to the parts they are learn
     thing ("the globe's northern half tinted orange, its southern half tinted pink, the
     continents showing through"), never a solid paint that hides what it is.
   - Leave out anything the lesson does not need. Never ask for text, labels, letters or
-    numbers in the art: the renderer draws every label. The art step adds the background
-    (a plain dark slate blue), clear space for the labels, and keeps the structures away
-    from the edges of the frame.
+    numbers in the request: the art step asks for each structure to be labelled with its
+    `name`, and the renderer labels a scene drawn as SVG.
 - `structures` are the parts that scene reveals and labels, and every scene has at least
   one. For an abstract topic they are the parts of its diagram: the sections of a bar, the
   branches of a tree, the regions of a chart. `name` is the label as it should read on

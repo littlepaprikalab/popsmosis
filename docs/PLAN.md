@@ -402,9 +402,15 @@ cytochrome b6f pumps).
 The prompt is short: the scene's `image_prompt`, which asks for it
 the way a teacher asks for a standard textbook diagram of its subject ("Educational
 diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
-Earth has seasons..."), each structure's colour by name, and the style line (`art.STYLE`: a
-plain dark slate blue background, room for labels, smooth rounded proteins, no text; the
-hook and the analogy leave the proteins out). The picture is a still stage: the request
+Earth has seasons..."), each structure's colour by name, and a last line asking for the structures
+to be labelled (`art.LABELS`: "Clearly label nonobvious structures. No title, legend, key or caption, and no colour
+names in the labels.").
+The picture labels its own parts and the video draws no labels over it, only over a drawing; a label
+the art check finds wrong is kept, ringed on the picture, with a sticky note beside it
+saying what is true. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a
+plain dark slate blue background, room for labels, smooth rounded proteins, no text, and the
+video labelled the picture. The pictures came back better without it, and the painter's own
+labels were worth keeping even where one was wrong.) The picture is a still stage: the request
 says where everything is and which way it faces, never what it does, and the video draws
 every flow as moving dots (round 8: the same layouts without their actions came back
 clean, [test-rounds.md](test-rounds.md)). The kind of diagram is the scene's: a cell biology figure in the Campbell/OpenStax manner, an
@@ -493,8 +499,8 @@ The brain decides what a scene draws and where; code decides how it looks (`svg.
 the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
 drifted (one plan's graphs came back with axes in three greys and lines 16 to 22 px wide),
 and its gradients, shadows and highlights were over half of each drawing's tokens. Every
-drawing goes on the house page, the dark slate blue the painted art is asked for and the
-bundle's colours are picked for. A graph (a scene with `axes`) also has its lines drawn flat
+drawing goes on the house page, the dark slate blue the painted art was asked for until Oct 31
+and the bundle's colours are picked for. A graph (a scene with `axes`) also has its lines drawn flat
 at one weight with a soft glow of their own colour, its axes (which the brain marks
 `<g data-role="axes">`) pale with arrowheads over a faint grid, and its points (marked
 `data-role="point"`) as rings, a line's label anchored on the line rather than on a point
@@ -830,9 +836,10 @@ video in under 5 minutes per layout.
 ## 8. Quality rules (also the QA checklist)
 
 - One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
-  coding) on a plain dark slate blue background, the SVG art's graphs in the house look. Never anime, personified characters,
+  coding), the SVG art's graphs in the house look on its dark slate blue page. Never anime, personified characters,
   clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
-- No text baked into the art; the renderer draws all text.
+- A painted picture carries its own labels, a wrong one flagged on it; the renderer draws every other text,
+  and every label on a drawing.
 - A fixed colour per structure across all scenes and both videos.
 - Labels sit on the right structure, never clipped, never overlapping.
 - Build the diagram piece by piece; each structure appears when it is first named.

@@ -898,15 +898,7 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
     canvas.drawRect(skia.Rect.MakeLTRB(x0, top, x0 + bar, top + height), skia.Paint(Color=with_alpha(NOTICE_ACCENT, alpha)))
     canvas.restore()
     x, y = x0 + bar + pad, top + pad
-    # The warning sign: an amber triangle with a dark "!".
-    path = skia.Path()
-    path.moveTo(x + sign / 2, y)
-    path.lineTo(x + sign, y + sign * 0.9)
-    path.lineTo(x, y + sign * 0.9)
-    path.close()
-    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
-    bang = font("ExtraBold", sign * 0.62)
-    draw_text(canvas, "!", x + sign / 2 - text_width(bang, "!") / 2, y + sign * 0.78, bang, with_alpha(INK, alpha))
+    warning_sign(canvas, x, y, sign, alpha)
     draw_text(canvas, NOTICE_TITLE, x + sign + 12, y + sign * 0.5 + cap_height(title) / 2, title, with_alpha(INK, alpha))
     y += sign + 12
     for line in lead:
@@ -917,6 +909,93 @@ def draw_notice(canvas: skia.Canvas, x0: float, top: float, x1: float, notes: li
         y += line_h
         draw_text(canvas, text, x + indent, y - line_h * 0.3, f, with_alpha(color, alpha))
     return top + height
+
+
+def warning_sign(canvas: skia.Canvas, x: float, y: float, size: float, alpha: float, edge: float = 0.0) -> None:
+    """The warning sign, its top-left corner at (x, y): an amber triangle with a dark "!", in a dark edge this
+    wide where it sits on a picture."""
+    path = skia.Path()
+    path.moveTo(x + size / 2, y)
+    path.lineTo(x + size, y + size * 0.9)
+    path.lineTo(x, y + size * 0.9)
+    path.close()
+    if edge:
+        canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha), StrokeWidth=2 * edge,
+                                         Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
+    bang = font("ExtraBold", size * 0.62)
+    draw_text(canvas, "!", x + size / 2 - text_width(bang, "!") / 2, y + size * 0.78, bang, with_alpha(INK, alpha))
+
+
+FLAG_PAD = 6.0  # frame pixels between a flagged label and the ring round it
+FLAG_RING = 4.0  # the ring's amber stroke, inside a dark edge FLAG_EDGE wider each side, so it reads on any picture
+FLAG_EDGE = 2.0
+
+
+def flag_ring(rect: Rect) -> Rect:
+    """The ring round a flagged label's box (frame pixels), as draw_flag draws it."""
+    x0, y0, x1, y1 = rect
+    return x0 - FLAG_PAD, y0 - FLAG_PAD, x1 + FLAG_PAD, y1 + FLAG_PAD
+
+
+def draw_flag(canvas: skia.Canvas, rect: Rect, alpha: float) -> None:
+    """A label the art check found wrong in a painted picture, ringed in amber where it is; its post-it says why."""
+    if alpha <= 0.01:
+        return
+    ring = rounded(flag_ring(rect), 10)
+    canvas.drawRRect(ring, skia.Paint(AntiAlias=True, Color=with_alpha(INK, alpha * 0.8),
+                                      StrokeWidth=FLAG_RING + 2 * FLAG_EDGE, Style=skia.Paint.kStroke_Style))
+    canvas.drawRRect(ring, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha), StrokeWidth=FLAG_RING,
+                                      Style=skia.Paint.kStroke_Style))
+
+
+POSTIT_FILL = 0xFFFFE27A  # a sticky note's yellow
+POSTIT_GLUE = 0xFFF5D25A  # the strip along its top, a shade darker, where it sticks
+POSTIT_FONT = 21.0
+POSTIT_PAD = 14.0
+POSTIT_TEXT_W = 210.0  # the widest a line of its note runs, frame pixels
+POSTIT_TILT = -2.0  # degrees: stuck on by hand
+POSTIT_LINES = 4
+
+
+def postit_size(note: str, font_size: float = POSTIT_FONT) -> tuple[float, float]:
+    """How wide and tall a post-it with this note is, in frame pixels."""
+    f = font("SemiBold", font_size)
+    lines = wrap(note, f, POSTIT_TEXT_W)[:POSTIT_LINES] or [""]
+    width = max(text_width(f, line) for line in lines)
+    return max(width, 3 * font_size) + 2 * POSTIT_PAD, len(lines) * font_size * 1.3 + 2 * POSTIT_PAD + 6
+
+
+def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_size: float = POSTIT_FONT) -> None:
+    """A sticky note with the note on it, filling `rect` (frame pixels), tilted a little about its middle, with a
+    soft shadow and the darker strip it sticks by along its top. A note past POSTIT_LINES lines is cut short."""
+    if alpha <= 0.01:
+        return
+    x0, y0, x1, y1 = rect
+    f = font("SemiBold", font_size)
+    lines = wrap(note, f, POSTIT_TEXT_W)
+    if len(lines) > POSTIT_LINES:
+        lines = lines[:POSTIT_LINES]
+        lines[-1] = lines[-1].rstrip(" .,;:") + "…"
+    canvas.save()
+    canvas.rotate(POSTIT_TILT, (x0 + x1) / 2, (y0 + y1) / 2)
+    body = rounded(rect, 3)
+    shadow(canvas, body, alpha * 0.9, blur=10, dy=5)
+    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_FILL, alpha)))
+    canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y0 + 6), skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_GLUE, alpha)))
+    line_h = font_size * 1.3
+    for k, line in enumerate(lines):
+        draw_text(canvas, line, x0 + POSTIT_PAD, y0 + 6 + POSTIT_PAD + (k + 0.78) * line_h, f, with_alpha(INK, alpha))
+    canvas.restore()
+
+
+def draw_postit_line(canvas: skia.Canvas, start: tuple[float, float], end: tuple[float, float], alpha: float) -> None:
+    """The line from a post-it to the ring of the label it is about, where the post-it sits away from it."""
+    if alpha <= 0.01:
+        return
+    for color, width in ((with_alpha(INK, alpha * 0.8), 4.5), (with_alpha(NOTICE_ACCENT, alpha), 2.5)):
+        canvas.drawLine(*start, *end, skia.Paint(AntiAlias=True, Color=color, StrokeWidth=width,
+                                                 StrokeCap=skia.Paint.kRound_Cap))
 
 
 def ai_tag_rect(x0: float, bottom: float, font_size: float) -> Rect:

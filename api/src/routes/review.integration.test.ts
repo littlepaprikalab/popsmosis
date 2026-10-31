@@ -35,7 +35,7 @@ const CHECKS = { problems: [
 const ART = { scenes: [
   {
     scene: 'strep-case', file: 'a1/art/strep-case.png', model: 'muse-image-1.0', kept: 2,
-    check: { text: [], misplaced: [], unnamed: [], wrong: ['throat outside the head'], notes: [] },
+    check: { labels: ["'Tonsil' points at the uvula"], misplaced: [], wrong: ['throat outside the head'], notes: [] },
     tries: [
       { try: 1, declined: 'Muse Image declined the picture' },
       { try: 2, text: [], misplaced: [], unnamed: [], wrong: ['throat outside the head'], notes: [] },
@@ -137,7 +137,8 @@ d('an admin reviews a droplet', () => {
     // No storage on this API: nothing to show the pictures from, so no address for them.
     expect(body.art.scenes[0]).toMatchObject({
       scene: 'strep-case', imageUrl: null, model: 'muse-image-1.0', kept: 2,
-      check: { wrong: ['throat outside the head'], text: [], notes: [] },
+      // A check made since Oct 31 has wrong labels and no `text`, which reads as none, as in one made before.
+      check: { labels: ["'Tonsil' points at the uvula"], wrong: ['throat outside the head'], text: [], notes: [] },
       tries: [{ try: 1, declined: 'Muse Image declined the picture' }, { try: 2, declined: null, wrong: ['throat outside the head'] }],
     });
     expect(body.art.scenes[1]).toMatchObject({ scene: 'chart', model: null, check: null, tries: [] });

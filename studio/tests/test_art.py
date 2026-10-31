@@ -15,7 +15,7 @@ import pytest
 import skia
 
 from studio import jobs, media, svg
-from studio.schemas import Bundle, Locations, Structure, locations_problems
+from studio.schemas import Axes, Bundle, Locations, Structure, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
 from studio.tests.sample import bundle_data
@@ -407,7 +407,11 @@ def test_the_illustrator_is_told_who_the_video_is_for():
 def test_a_graph_is_asked_for_with_plain_axes_outside_every_structure():
     bundle = sample_media.graph_bundle()
     hook, graph = bundle.scenes[:2]
-    assert art.AXES in art.paint_prompt(bundle, graph) and art.AXES not in art.paint_prompt(bundle, hook)
+    # Painted, it labels its own axes, as it labels its parts; drawn, the video writes their names.
+    axes = 'Its axes are two plain, thin lines, the horizontal one labelled "Quantity" and the vertical one labelled "Price".'
+    assert axes in art.paint_prompt(bundle, graph) and "Its axes" not in art.paint_prompt(bundle, hook)
+    assert art.paint_prompt(bundle, graph).endswith(axes + " " + art.LABELS)
+    assert art.axes_line(Axes(x="Time", y="")) == 'Its axes are two plain, thin lines, the horizontal one labelled "Time".'
     asked = art.user_prompt(bundle, graph)
     assert ('Axes: this scene is a graph. Draw its two axes as two plain <line>s in one <g data-role="axes">, outside '
             "every structure's group, with nothing written on or beside them: the video writes \"Quantity\" at the right "
@@ -415,8 +419,8 @@ def test_a_graph_is_asked_for_with_plain_axes_outside_every_structure():
             "instructions says.") in asked
     assert "Axes:" not in art.user_prompt(bundle, hook)
     # The helper checking the painting is told the axes were asked for, so it never counts them as stray lines.
-    assert f"{art.AXES} They are asked for" in art.check_prompt(bundle, graph)
-    assert art.AXES not in art.check_prompt(bundle, hook)
+    assert f"{axes} They are asked for" in art.check_prompt(bundle, graph)
+    assert "Its axes" not in art.check_prompt(bundle, hook)
 
 
 # --- the house look ----------------------------------------------------------------------------
