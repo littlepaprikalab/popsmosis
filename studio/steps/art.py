@@ -9,10 +9,20 @@
 A painted picture is checked by the helper, and the locate step then finds the structures in it
 with SAM 3.1 (studio/steps/locate.py), whoever painted it.
 
-A scene drawn to scale (Scene.exact(): a graph, or a chart or figure whose sizes must be right) is drawn as SVG
-whoever paints the rest, when the brain in force can draw (drawn()): round 22's compound-interest bar chart came
-back from Gemini with bars at heights no number in the lesson gave, and the helper's notice about it on screen
-beside it. Its drawing locates its structures, so the locate step takes them from it (drawn_locations()).
+A scene drawn to scale (exact(): a graph, or a chart or figure whose sizes must be right) is drawn as SVG by Claude
+whoever paints the rest (drawn()): round 22's compound-interest bar chart came back from Gemini with bars at heights
+no number in the lesson gave, and the helper's notice about it on screen beside it. Its drawing locates its
+structures, so the locate step takes them from it (drawn_locations()). Which scenes Claude draws is an admin's knob,
+STUDIO_CLAUDE_DRAWS on /admin/studio (claude_draws()):
+
+    math     the default: every graph and scene to scale, and every picture of a math lesson (math_lesson()) but its
+             hook and analogy, whatever the brain. Muse Image painted a fractions lesson's six bars as seven, and
+             thirds it was asked to group in twos ungrouped, which the helper passed (Oct 30)
+    charts   every graph and scene to scale, whatever the brain
+    brain    only Claude's brain draws its graphs and scenes to scale; Muse's brain has them painted, as before Oct 30
+
+On Claude's brain the brain draws them; on Muse's, the drawer does (brain.py: Claude Opus 5.5 at high effort), on
+the Anthropic key, so a Muse droplet's math costs about what a Claude one's charts do.
 
 Switching makes the art again on the next run, as switching who sings does the song.
 
@@ -73,6 +83,7 @@ import colorsys
 import hashlib
 import json
 import math
+import re
 import shutil
 import sys
 from dataclasses import dataclass, field
@@ -85,7 +96,7 @@ import skia
 
 from pydantic import Field
 
-from studio import brain, checks, gemini, jobs, ledger, media, muse, repair, svg
+from studio import brain, checks, gemini, jobs, knobs, ledger, media, muse, repair, svg
 from studio.jobs import read, write
 from studio.schemas import Bundle, Location, Locations, Scene, SceneLocations, Strict, locations_problems, stage_groups
 
@@ -95,6 +106,14 @@ MAX_TRIES = 3  # SVG drawings a scene may take
 # the second had not, and every one costs a picture and a check.
 MAX_PAINTS = 2
 REFUSAL_CHARS = 120  # how much of a refused try's problem the step's line keeps
+# Which scenes Claude draws as SVG whatever paints the rest (claude_draws()): the knob's choices, its default first.
+# The API offers the same (api/src/lib/knobs.ts).
+CLAUDE_DRAWS = "STUDIO_CLAUDE_DRAWS"
+DRAWS_CHOICES = ("math", "charts", "brain")
+# A math lesson, by its course or topic (math_lesson()): the subjects, and what a lesson in another course is still
+# math for ("fractions" in a cooking class).
+MATH = re.compile(r"\b(math|maths|mathematics|arithmetic|algebra|geometry|trigonometry|pre-?calculus|calculus|"
+                  r"statistics|probability|fractions?|decimals?|percent(?:s|ages?)?)\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -126,16 +145,34 @@ def painter_of(job: Path) -> Painter:
 
 
 def drawn(job: Path, bundle: Bundle, scene: Scene) -> bool:
-    """Whether the scene is drawn as SVG: every scene when the job's painter is svg; else a scene to scale, and every
-    stage of its process with it (the stages share one picture's framing), when the brain in force can draw, unless
-    the scene, or a stage of its process, already has a painting for the scene as the bundle now has it: painted
-    before charts were drawn (a job under way when this came in), or instead of a drawing that failed. A job keeps
-    the art it has, rather than paying to draw again what is there."""
+    """Whether the scene is drawn as SVG: every scene when the job's painter is svg; else a scene to scale (exact()),
+    and every stage of its process with it (the stages share one picture's framing), when Claude draws it on this
+    brain (claude_draws()), unless the scene, or a stage of its process, already has a painting for the scene as the
+    bundle now has it: painted before charts were drawn (a job under way when this came in), or instead of a drawing
+    that failed. A job keeps the art it has, rather than paying to draw again what is there."""
     if painter(job) == "svg":
         return True
     group = _stages(bundle, scene)
-    return _to_scale(group) and "svg" in brain.ART_CHOICES[brain.provider()] and not any(
-        _painting_for(job, bundle, s) for s in group)
+    can_draw = brain.provider() == "claude" or claude_draws() != "brain"
+    return _to_scale(bundle, group) and can_draw and not any(_painting_for(job, bundle, s) for s in group)
+
+
+def claude_draws() -> str:
+    """The knob's choice of what Claude draws as SVG (CLAUDE_DRAWS): one of DRAWS_CHOICES, the first unless set."""
+    value = knobs.env(CLAUDE_DRAWS).strip().lower()
+    return value if value in DRAWS_CHOICES else DRAWS_CHOICES[0]
+
+
+def math_lesson(bundle: Bundle) -> bool:
+    """Whether its course or topic is math: "6th grade math", "AP Statistics", "dividing fractions"."""
+    return bool(MATH.search(f"{bundle.course} {bundle.topic}"))
+
+
+def exact(bundle: Bundle, scene: Scene) -> bool:
+    """Whether the scene's sizes and counts must be right: a graph, or marked to scale (Scene.exact()), or, with the
+    knob at math, any picture of a math lesson but its hook and analogy. Drawn as SVG, it is drawn to scale from the
+    facts' numbers."""
+    return scene.exact() or (claude_draws() == "math" and scene.id not in EVERYDAY and math_lesson(bundle))
 
 
 def _stages(bundle: Bundle, scene: Scene) -> list[Scene]:
@@ -144,9 +181,9 @@ def _stages(bundle: Bundle, scene: Scene) -> list[Scene]:
     return stage_groups(bundle.scenes)[stage.process] if stage else [scene]
 
 
-def _to_scale(group: list[Scene]) -> bool:
+def _to_scale(bundle: Bundle, group: list[Scene]) -> bool:
     # The hook and the analogy are everyday pictures: marked to scale by mistake, they are still painted.
-    return any(s.axes or (s.to_scale and s.id not in EVERYDAY) for s in group)
+    return any(s.axes or (exact(bundle, s) and s.id not in EVERYDAY) for s in group)
 
 
 def _painting_for(job: Path, bundle: Bundle, scene: Scene) -> bool:
@@ -307,8 +344,13 @@ def judge(text: str, scene: Scene) -> Drawing:
     return drawing
 
 
+def drawer() -> str:
+    """Who draws the SVG: Claude's brain itself, else Claude as the drawer (brain.py), whatever Muse's brain is."""
+    return "brain" if brain.provider() == "claude" else "drawer"
+
+
 def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
-    """The scene's drawing: the saved one when resuming, else the brain's best of MAX_TRIES."""
+    """The scene's drawing: the saved one when resuming, else Claude's best of MAX_TRIES."""
     marker = _marker(bundle, scene)
     text = _saved(job, bundle, scene) if resume else None
     if text is not None:
@@ -321,7 +363,7 @@ def draw(job: Path, bundle: Bundle, scene: Scene, ask, resume: bool) -> Drawing:
     best, previous, drawn = None, None, []
     for n in range(1, MAX_TRIES + 1):
         try:
-            answer = ask("brain", user_prompt(bundle, scene, previous), system=PROMPT,
+            answer = ask(drawer(), user_prompt(bundle, scene, previous), system=PROMPT,
                          label=f"art {scene.id}" + (f" try {n}" if n > 1 else ""))
             drawing = judge(svg.extract(answer["text"]), scene)
         except brain.Truncated:
@@ -419,7 +461,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
         parts.append(f'Axes: this scene is a graph. Draw its two axes as two plain <line>s in one <g {svg.ROLE}="axes">, '
                      "outside every structure's group, with nothing written on or beside them: the video writes "
                      f'{named}. Draw the rest as "Graphs" in your instructions says.')
-    if scene.exact():  # drawn as SVG for its sizes (drawn()): the numbers they are worked out from
+    if exact(bundle, scene):  # drawn as SVG for its sizes (drawn()): the numbers they are worked out from
         parts.append(("" if scene.axes else 'To scale: this scene\'s sizes must be right, as "To scale" in your '
                       "instructions says. ") + "The lesson's facts, for the numbers the sizes come from:\n"
                      + "\n".join(f"- {f.text}" for f in bundle.facts))
@@ -551,9 +593,9 @@ def run_painted(job: Path, ask) -> str:
     (job / "art").mkdir(exist_ok=True)
     if not resume:  # a run from scratch draws what is to scale, whatever painted it before
         for scene in bundle.scenes:
-            if _to_scale(_stages(bundle, scene)) and _painting_for(job, bundle, scene):
+            if _to_scale(bundle, _stages(bundle, scene)) and _painting_for(job, bundle, scene):
                 _painting(job, scene).unlink()
-    to_draw = [scene for scene in bundle.scenes if drawn(job, bundle, scene)]  # to scale: the brain's SVG
+    to_draw = [scene for scene in bundle.scenes if drawn(job, bundle, scene)]  # to scale: Claude's SVG
     drawn_ids = {scene.id for scene in to_draw}
     to_paint = [scene for scene in bundle.scenes if scene.id not in drawn_ids]
     stages = {scene.id: stage for scene in to_paint if (stage := Stage.of(bundle, scene))}
@@ -607,7 +649,8 @@ def run_painted(job: Path, ask) -> str:
         lines.append(f"kept the {kept} scene{'s' if kept != 1 else ''} {by.title} painted before")
     if to_draw:
         left_out = [f"{name} on {scene.id}" for scene, drawing in drawings for name in drawing.left_out(scene)]
-        lines.append(f"drew {len(to_draw)} scene{'s' if len(to_draw) != 1 else ''} to scale as SVG ("
+        lines.append(f"drew {len(to_draw)} scene{'s' if len(to_draw) != 1 else ''} to scale as SVG"
+                     + (" with Claude" if drawer() == "drawer" else "") + " ("
                      + ", ".join(scene.id for scene in to_draw) + ")"
                      + refusals([f"{scene.id}: {why}" for scene, drawing in drawings for why in drawing.refused],
                                 "drawing")

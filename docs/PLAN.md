@@ -448,11 +448,16 @@ Image, but it writes the same files, so everything downstream is built and teste
 it unchanged. Switching the painter makes a job's art again on its next run.
 
 **To scale, whoever paints.** A scene the learner reads amounts off (a graph, or a scene with `to_scale`: a
-chart, a stacked bar, a number line, a shape with given angles) is drawn by Claude's brain as SVG even when
+chart, a stacked bar, a number line, a shape with given angles) is drawn by Claude as SVG even when
 Gemini or Muse Image paints the rest, its sizes worked out from the scene's and the facts' numbers. Round 22's
 compound-interest bar chart came back from Gemini with bars at heights no fact gave, and the helper's notice
-about it on screen beside it. The art step draws those scenes and paints the others; step 4 locates the drawn
-ones from their drawings and the painted ones with SAM 3.1. On Muse's brain, which draws no SVG, they are painted.
+about it on screen beside it. So is every picture of a math lesson (by its course or topic) but its hook and
+analogy: on Oct 30 Muse Image painted a fractions lesson's six bars as seven, and left unpaired the thirds it was
+asked to group in twos, which the helper passed. The art step draws those scenes and paints the others; step 4
+locates the drawn ones from their drawings and the painted ones with SAM 3.1. On Claude's brain the brain draws
+them; on Muse's, Claude Opus 5.5 at high effort does, on the Anthropic key. An admin's knob, `STUDIO_CLAUDE_DRAWS`
+on `/admin/studio`, says which: `math` (the default) for both, `charts` for the charts alone, `brain` for neither
+on Muse's brain, which then has them painted, as before.
 A scene whose drawing cannot be used (no usable SVG in its tries, or the brain failing) is painted instead, its
 record saying why, rather than failing the droplet; so are the other stages of its process, which share one
 framing. A scene that already has a painting for the bundle as it stands (a job under way when charts began to be

@@ -55,6 +55,8 @@ export const KNOBS = {
     rule: 'a Lyria model id: lowercase letters, digits, dots and hyphens',
   },
   ELEVENLABS_USD_PER_1K_CREDITS: { where: 'studio', kind: 'number', default: null, min: 0, max: 100 },
+  // Which scenes Claude draws as SVG whatever paints the rest (studio/steps/art.py, claude_draws()).
+  STUDIO_CLAUDE_DRAWS: { where: 'studio', kind: 'choice', default: 'math', choices: ['math', 'charts', 'brain'] },
 } as const satisfies Record<string, Spec>;
 
 export type KnobName = keyof typeof KNOBS;

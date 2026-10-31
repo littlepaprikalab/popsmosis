@@ -49,6 +49,24 @@ def test_the_helper_is_sonnet_at_low_effort_without_a_fallback():
     assert "fallbacks" not in request and "betas" not in request and "system" not in request
 
 
+def test_the_drawer_is_claude_opus_at_high_whatever_the_brain(monkeypatch):
+    # It draws a Muse brain's charts and math as SVG (studio/steps/art.py): a painter cannot count.
+    asked = []
+    monkeypatch.setattr(brain, "_ask_claude", lambda role, *a: asked.append(role) or ["<svg/>"])
+    monkeypatch.setattr(brain, "_ask_meta", lambda role, *a: pytest.fail(f"{role} went to Meta"))
+    with brain.chosen("muse-wonder", "low"):
+        assert brain.ask("drawer", "Draw.", label="art overview") == {"text": "<svg/>"}
+        request = brain.claude_request("drawer", "Draw.", None, [], None)
+    assert asked == ["drawer"]
+    assert request["model"] == "claude-opus-5-5" and request["output_config"] == {"effort": "high"}
+    assert request["max_tokens"] == brain.CLAUDE["brain"]["max_tokens"] and "fallbacks" not in request
+
+
+def test_the_drawer_without_an_anthropic_key_says_so(monkeypatch):
+    with brain.chosen("muse-spark"), pytest.raises(brain.BrainError, match=r"Claude, drawing a scene as SVG, needs"):
+        brain.ask("drawer", "Draw.")
+
+
 def test_the_brains_effort_is_the_one_set_on_the_studio_page(monkeypatch):
     with brain.chosen("claude", "medium"):
         request = brain.claude_request("brain", "Write.", None, [], None)

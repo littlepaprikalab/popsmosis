@@ -528,7 +528,7 @@ test.describe('studio settings', () => {
   });
 
   test('an admin sets a knob instead of its environment variable: the API\'s at once, the studio\'s for the teacher', async ({ page, context, request }) => {
-    const knobs = { POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: null, STUDIO_VIDEOS: null };
+    const knobs = { POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: null, STUDIO_VIDEOS: null, STUDIO_CLAUDE_DRAWS: null };
     await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { knobs } }); // none set, whatever an earlier run left
     await signIn(context, S.users.ada);
     await page.goto('/admin/studio');
@@ -554,8 +554,14 @@ test.describe('studio settings', () => {
     await expect(videos.getByRole('radio', { checked: true })).toHaveCount(0);
     await videos.getByRole('radio', { name: 'off' }).click();
     await expect(videos.getByRole('radio', { name: 'off' })).toHaveAttribute('aria-checked', 'true');
+    // What Claude draws as SVG whatever the brain: a painter cannot count.
+    const draws = page.getByTestId('knob-STUDIO_CLAUDE_DRAWS');
+    await expect(draws.getByRole('radio')).toHaveText(['math', 'charts', 'brain']);
+    await expect(draws.getByTestId('knob-facts')).toContainText('default: math');
+    await draws.getByRole('radio', { name: 'charts' }).click();
+    await expect(draws.getByRole('radio', { name: 'charts' })).toHaveAttribute('aria-checked', 'true');
     const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
-    expect((await teacher.json()).knobs).toEqual({ STUDIO_VIDEOS: 'off' });
+    expect((await teacher.json()).knobs).toEqual({ STUDIO_VIDEOS: 'off', STUDIO_CLAUDE_DRAWS: 'charts' });
 
     // Cleared, each is the environment's again.
     await page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS').getByRole('button', { name: 'Clear' }).click();
@@ -563,6 +569,8 @@ test.describe('studio settings', () => {
     await expect(page.getByTestId('knob-POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS').getByRole('textbox')).toHaveValue('');
     await videos.getByRole('button', { name: 'Clear' }).click();
     await expect(videos.getByTestId('knob-source')).toHaveText('Not set here');
+    await draws.getByRole('button', { name: 'Clear' }).click();
+    await expect(draws.getByTestId('knob-source')).toHaveText('Not set here');
     const after = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
     expect((await after.json()).knobs).toEqual({});
   });

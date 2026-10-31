@@ -84,6 +84,7 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
       ELEVENLABS_VOICE_ID: { label: 'The narration’s voice', note: 'Any ElevenLabs voice id, on the ElevenLabs key. A droplet already narrated keeps its voice.' },
       GEMINI_SONG_MODEL: { label: 'The Lyria model, when Lyria sings', note: 'lyria-3.5 sings full songs ($0.08 a song); lyria-3-clip-preview makes 30-second clips ($0.04).', suggest: ['lyria-3.5', 'lyria-3-clip-preview'] },
       ELEVENLABS_USD_PER_1K_CREDITS: { label: 'What 1,000 ElevenLabs credits cost', unit: 'USD', note: 'On your plan, e.g. 0.30, so a droplet’s bill shows its ElevenLabs lines in dollars as well as credits. Unset: credits only.' },
+      STUDIO_CLAUDE_DRAWS: { label: 'What Claude draws as SVG, whatever paints the rest', note: 'math: every chart and graph, and every picture of a math lesson but its hook and analogy, since a painter cannot count (Muse Image painted six fraction bars as seven). charts: charts and graphs only. brain: only Claude’s brain draws its charts; a Muse topic has them painted. On a Muse topic Claude Opus 5.5 draws them, on the Anthropic key, about 7¢ a picture; without that key they are painted.' },
     },
   },
 ];
@@ -351,7 +352,8 @@ export default function AdminStudioPage() {
       <p className="text-[11px] mt-6" style={{ color: 'var(--text-muted)' }}>
         The teacher&rsquo;s machine needs the key of the painter picked here. Without it, the teacher stops before making
         the videos and reports which key is missing. A droplet whose pictures another painter made has them made again
-        the next time its videos run.
+        the next time its videos run. Charts, graphs and a math lesson&rsquo;s pictures are drawn by Claude as SVG
+        whoever paints the rest, as the knob <a href="#knobs" className="underline">What Claude draws</a> says.
       </p>
 
       <div id="knobs" className="mt-10 mb-4 scroll-mt-20">

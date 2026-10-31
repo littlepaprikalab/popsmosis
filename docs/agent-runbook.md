@@ -50,9 +50,10 @@ The runner needs these in its environment:
 | `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria when it sings: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
 | `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
+| `STUDIO_CLAUDE_DRAWS` | optional: what Claude draws as SVG whoever paints the rest. `math` (default): charts, graphs and a math lesson's pictures; `charts`: charts and graphs; `brain`: only on Claude's brain. On a Muse topic it draws them on `POPSMOSIS_ANTHROPIC_API_KEY` |
 
-`ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL` and `STUDIO_VIDEOS`
-are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
+`ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL`, `STUDIO_VIDEOS` and
+`STUDIO_CLAUDE_DRAWS` are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
 one here from the next run (README, [Knobs](../README.md#knobs)).
 
 The brain, the singer and the painters are not set here. Which brain writes the lessons,

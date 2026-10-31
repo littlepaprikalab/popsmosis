@@ -278,7 +278,7 @@ what each does.
 | `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR`, `ATTACHMENT_MB_PER_USER_PER_DAY`, `ATTACHMENT_MB_HELD_PER_USER` | the API's limits on what learners may ask for | from the next request |
 | `QUESTION_CLAIM_MINUTES`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
 | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
-| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
+| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS`, `STUDIO_CLAUDE_DRAWS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
 
 Each API instance keeps the knobs in memory, so the code that reads them stays as fast as an
 environment variable: the instance that takes a change has it at once, and another reads it
