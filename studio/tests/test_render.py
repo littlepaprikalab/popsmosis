@@ -1340,6 +1340,27 @@ def test_a_meaning_is_written_under_its_name_while_it_is_on(job, monkeypatch):
     assert [text for text, *_ in drawn] == ["Thylakoid"]
 
 
+def test_a_meaning_the_frame_leaves_out_never_takes_its_name_with_it(job, monkeypatch):
+    # In a close-up, "Quantity supplied" under the axis vanished while its meaning, further down, was off the picture.
+    from studio.schemas import Gloss, Value
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [k for k, b in enumerate(timeline.beats) if b.scene == "overview" and "Thylakoid" in b.labels]
+    beats = list(timeline.beats)
+    first = beats[on[-1]]
+    gloss = Gloss(structure="Thylakoid", text="where light is caught", since=first.t0, until=first.t1)
+    beats[on[-1]] = first.model_copy(update={"meanings": [gloss]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    view = renderer.view("overview")
+    monkeypatch.setattr(renderer, "_meaning_rect", lambda text, rect, side: ((rect[0], view[3] + 10, rect[2], view[3] + 40), 20.0))
+    monkeypatch.setattr(renderer.locations.scene("overview"), "values",
+                        [Value(text="Thylakoid", at=Point(x=600, y=500), side="right", label=True)])
+    drawn = []
+    monkeypatch.setattr(p, "draw_name", lambda canvas, text, rect, size, paper, color, alpha, weight="ExtraBold":
+                        drawn.append(text))
+    renderer.frame(first.t0 + 1.0)
+    assert drawn == ["Thylakoid"]
+
+
 def test_a_graphs_arrow_has_its_word_beside_it_and_no_key(job, monkeypatch):
     from studio.schemas import Axes
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)

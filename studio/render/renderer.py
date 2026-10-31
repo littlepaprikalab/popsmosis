@@ -1173,13 +1173,16 @@ class Renderer:
                 on = (p.ease((t - gloss.since) / LABEL_IN_S) * p.ease((gloss.until - t) / MEANING_OUT_S)
                       if gloss else 0.0)
                 under, small = self._meaning_rect(gloss.text, rect, baked[name].side) if on > 0.01 else (None, 0.0)
-                inset = min(min(r[0] - view[0], r[1] - bounds[1], view[2] - r[2], view[3] - r[3])
-                            for r in (rect, under) if r)
-                alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * min(1.0, max(inset, 0.0) / VALUE_EDGE)
+
+                def inside(r: Rect) -> float:
+                    inset = min(r[0] - view[0], r[1] - bounds[1], view[2] - r[2], view[3] - r[3])
+                    return min(1.0, max(inset, 0.0) / VALUE_EDGE)
+
+                alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * inside(rect)
                 if alpha > 0.01:
                     p.draw_name(canvas, name, rect, size, art.paper, self.timeline.palette[name], alpha)
                     drawn = [rect]
-                    shown = alpha * on
+                    shown = alpha * on * (inside(under) if under else 0.0)  # a close-up may leave it out, not the name
                     if shown > 0.01:
                         p.draw_name(canvas, gloss.text, under, small, art.paper, self.timeline.palette[name], shown,
                                     weight="SemiBold")
