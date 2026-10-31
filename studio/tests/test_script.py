@@ -83,3 +83,11 @@ def test_without_a_script_the_bundle_is_written_as_before(tmp_path):
         assert "<script>" not in ask.asked[1][1]
         assert bundle.core_idea == bundle_data()["core_idea"]
         assert json.loads((tmp_path / script.RECORD).read_text())["why"]
+
+
+def test_the_script_writer_hears_there_is_no_song_only_when_there_is_none():
+    with_song = script.system_prompt(bundle_step.PROMPT)
+    assert "No song for this droplet" not in with_song  # with the song on, as it always was
+    without = script.system_prompt(bundle_step.LESSON_ONLY_PROMPT)
+    assert "## No song for this droplet" in without and "there is no songwriter" in without
+    assert "## The plan without the song" not in without  # the plan's rules are the bundle writer's

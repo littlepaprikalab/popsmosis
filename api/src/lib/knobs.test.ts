@@ -49,6 +49,7 @@ describe('parseKnobs', () => {
     expect(parseKnobs({ ELEVENLABS_USD_PER_1K_CREDITS: 0.3, ELEVENLABS_VOICE_ID: 'Xb7hH8MSUJpSbSDYk0k2' }).knobs)
       .toEqual({ ELEVENLABS_USD_PER_1K_CREDITS: 0.3, ELEVENLABS_VOICE_ID: 'Xb7hH8MSUJpSbSDYk0k2' });
     expect(parseKnobs({ GEMINI_SONG_MODEL: null }).knobs).toEqual({ GEMINI_SONG_MODEL: null });
+    expect(parseKnobs({ STUDIO_VIDEOS: 'lesson' }).knobs).toEqual({ STUDIO_VIDEOS: 'lesson' });
     for (const draws of ['math', 'charts', 'brain']) {
       expect(parseKnobs({ STUDIO_CLAUDE_DRAWS: draws }).knobs).toEqual({ STUDIO_CLAUDE_DRAWS: draws });
     }
@@ -59,7 +60,7 @@ describe('parseKnobs', () => {
     expect(parseKnobs({ QUESTION_CLAIM_MINUTES: '30' }).error).toBe('knobs.QUESTION_CLAIM_MINUTES must be a whole number from 1 to 1440');
     expect(parseKnobs({ VIDEO_MAX_ATTEMPTS: 2.5 }).error).toBe('knobs.VIDEO_MAX_ATTEMPTS must be a whole number from 1 to 10');
     expect(parseKnobs({ ELEVENLABS_USD_PER_1K_CREDITS: -1 }).error).toBe('knobs.ELEVENLABS_USD_PER_1K_CREDITS must be a number from 0 to 100');
-    expect(parseKnobs({ STUDIO_VIDEOS: 'no' }).error).toBe('knobs.STUDIO_VIDEOS must be one of on, off');
+    expect(parseKnobs({ STUDIO_VIDEOS: 'no' }).error).toBe('knobs.STUDIO_VIDEOS must be one of on, lesson, off');
     expect(parseKnobs({ STUDIO_CLAUDE_DRAWS: 'everything' }).error)
       .toBe('knobs.STUDIO_CLAUDE_DRAWS must be one of math, charts, brain');
     expect(parseKnobs({ ELEVENLABS_VOICE_ID: 'Alice the voice' }).error)

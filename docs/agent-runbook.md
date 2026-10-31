@@ -49,7 +49,7 @@ The runner needs these in its environment:
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
 | `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria when it sings: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
-| `STUDIO_VIDEOS` | optional: `off` makes text-only droplets (no claim, no media steps, no recovery) |
+| `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (a lesson written while it is set has no lyrics to write or fact-check; the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
 | `STUDIO_CLAUDE_DRAWS` | optional: what Claude draws as SVG whoever paints the rest. `math` (default): charts, graphs and a math lesson's pictures; `charts`: charts and graphs; `brain`: only on Claude's brain. On a Muse topic it draws them on `POPSMOSIS_ANTHROPIC_API_KEY` |
 
 `ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL`, `STUDIO_VIDEOS` and

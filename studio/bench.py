@@ -39,7 +39,7 @@ from studio import brain, checks, jobs, media, muse, svg
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.render import bench as render_bench
-from studio.schemas import Bundle, FactAudit, FactCheck
+from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle
 from studio.steps import art, audio, timing
 from studio.tests.test_run import FakeApi
 
@@ -88,6 +88,18 @@ def wait(what: str, scale: float) -> None:
 # --- the droplet ----------------------------------------------------------------------------------
 
 
+def lesson_answer(bundle: Bundle) -> dict:
+    """A bundle as the brain answers a LessonBundle (STUDIO_VIDEOS=lesson): no music or lyrics, no direction for a
+    lyric, the key lines the narration has a place for, the lesson video's tags alone."""
+    data = bundle.model_dump(mode="json", exclude={"music", "lyrics"})
+    sung = {line.id for line in bundle.lyrics}
+    data["direction"] = [d for d in data["direction"] if d["line_id"] not in sung]
+    data["key_lines"] = [{"text": k["text"], "from_narration": k["from_narration"]}
+                         for k in data["key_lines"] if k["from_narration"]]
+    data["tags"] = {"lesson": data["tags"]["lesson"]}
+    return data
+
+
 def bench_bundle() -> Bundle:
     """The render benchmark's song (ten sections of seven lines), with an overview of six structures and a
     narration of about three minutes, so the art, locate, timing and render have a live droplet's work."""
@@ -120,6 +132,9 @@ class Brain:
         if schema is Bundle:
             wait("bundle", self.scale)
             return bench_bundle().model_dump(mode="json")
+        if schema is LessonBundle:  # STUDIO_VIDEOS=lesson: the same droplet with no song
+            wait("bundle", self.scale)
+            return lesson_answer(bench_bundle())
         if schema is FactAudit:
             wait("audit", self.scale)
             return {"facts": [{"id": fact["id"], "basis": "course knowledge", "quote": "", "verdict": "CORRECT",

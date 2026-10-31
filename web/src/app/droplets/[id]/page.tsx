@@ -164,7 +164,7 @@ export default function DropletPage() {
       )}
 
       <p className="text-[10px] mt-6" style={{ color: 'var(--text-muted)', lineHeight: 1.6 }} data-testid="ai-notice">
-        Made by AI: the lesson, the diagrams, the voice and the song. Every line passed an AI fact-check before it was
+        Made by AI: the lesson, the diagrams{droplet.video.songVideoUrl ? ', the voice and the song' : ' and the voice'}. Every line passed an AI fact-check before it was
         posted, but AI can still be wrong, so check anything important.{' '}
         <Link href="/learn" className="underline hover-text">Ask for your own topic</Link>.
       </p>

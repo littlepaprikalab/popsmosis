@@ -255,7 +255,7 @@ test.describe('videos on /learn', () => {
     await bill.locator('summary').click();
     await expect(step('Fact-check')).toHaveAttribute('data-status', 'done');
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'running');
-    await expect(step('Song and voice')).toHaveAttribute('data-status', 'running');
+    await expect(step('Make the audio')).toHaveAttribute('data-status', 'running');
 
     // Folded, the card reads as the lesson.
     await card.getByRole('button', { name: 'Collapse card' }).click();
@@ -268,7 +268,7 @@ test.describe('videos on /learn', () => {
     })).status()).toBe(204);
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'done', { timeout: 25_000 });
     await expect(step('Find the labels')).toHaveAttribute('data-status', 'done');
-    await expect(step('Song and voice')).toHaveAttribute('data-status', 'running');
+    await expect(step('Make the audio')).toHaveAttribute('data-status', 'running');
 
     // Done: the videos appear above the lesson, and the bill shows its totals.
     expect((await bot.video(answerId, { status: 'READY', attempt: 1, songVideoUrl: SONG, lessonVideoUrl: LESSON })).status()).toBe(200);
@@ -367,7 +367,7 @@ test.describe('videos on /learn', () => {
 
     await bill.locator('summary').click();
     await expect(bill.getByTestId('breakdown-step')).toHaveCount(10);
-    const audio = bill.getByTestId('breakdown-step').filter({ hasText: 'Song and voice' });
+    const audio = bill.getByTestId('breakdown-step').filter({ hasText: 'Make the audio' });
     await expect(audio).toContainText('lyria-3.5');
     await expect(audio).toContainText('$0.08');
     const table = bill.locator('table'); // the phone's copy of the bill is hidden at this width

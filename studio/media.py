@@ -27,6 +27,13 @@ locations.json itself, so locate has nothing left to do. Painted art, Gemini 3.1
 Image's or Muse Image's, is pictures only: locate writes the masks and locations.json
 from SAM 3.1.
 
+The lesson alone. While STUDIO_VIDEOS is `lesson` (an admin's knob on /admin/studio,
+studio/knobs.py) no song is made: audio, timing, timeline, render and upload make and
+send only the narration and the lesson video, and no hook cut, which is the song's. A
+bundle written then has no song to make (Bundle.sung), so its job stays the lesson's alone
+whatever the knob says later. videos() and timed() say which a job makes; VIDEOS and TIMED
+name them all.
+
 A step is a module studio/steps/<name>.py, for each name in MEDIA_STEPS, with
 
     run(job: Path, ask=brain.ask) -> str    do the step; return one line saying what it did;
@@ -45,12 +52,14 @@ from __future__ import annotations
 
 import hashlib
 import importlib
+import json
 import re
 from pathlib import Path
 from types import ModuleType
 
 import numpy as np
 
+from studio import knobs
 from studio.schemas import SAFE_PATH  # every path built here passes SAFE_PATH
 
 MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
@@ -62,6 +71,36 @@ ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
 
 LOCATIONS = "locations.json"
+LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
+
+
+def lesson_only(job: Path | None = None) -> bool:
+    """Whether the videos are the lesson's alone: STUDIO_VIDEOS is `lesson`, on /admin/studio or in the environment,
+    or the job's bundle has no song to make (written while it was)."""
+    return knobs.env("STUDIO_VIDEOS").strip().lower() == LESSON_ONLY or (job is not None and not sung(job))
+
+
+def sung(job: Path) -> bool:
+    """Whether the job's bundle has a song (Bundle.sung): read as JSON, not as a Bundle, since the steps ask often.
+    True when there is no bundle to read: the knob alone decides."""
+    try:
+        bundle = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return True
+    if not isinstance(bundle, dict):
+        return True
+    music = bundle.get("music") if isinstance(bundle.get("music"), dict) else {}
+    return bool(bundle.get("lyrics") or music.get("positive_styles") or music.get("negative_styles"))
+
+
+def videos(job: Path | None = None) -> tuple[str, ...]:
+    """The videos a job makes: the song and the lesson, or the lesson alone (lesson_only())."""
+    return ("lesson",) if lesson_only(job) else VIDEOS
+
+
+def timed(job: Path | None = None) -> tuple[str, ...]:
+    """The audio files a job makes and times: the song and the narration, or the narration alone."""
+    return ("narration",) if lesson_only(job) else TIMED
 
 
 class StepFailed(Exception):

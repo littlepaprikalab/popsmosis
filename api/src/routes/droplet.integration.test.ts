@@ -169,6 +169,12 @@ d('droplet endpoints', () => {
       lyrics: [{ section: 'chorus', text: 'Protons flow and ATP grows' }],
     });
     expect(threads[0].answer.context).not.toHaveProperty('scenes');
+
+    // Its videos READY with no song (STUDIO_VIDEOS=lesson): the learner never heard the lyrics, so the teacher is not
+    // given them to quote.
+    await prisma.answer.update({ where: { id: answerId }, data: { videoStatus: 'READY', lessonVideoUrl: 'https://x/lesson.mp4' } });
+    const lessonOnly = (await app.inject({ method: 'GET', url: '/api/replies/queue', headers: asAgent(keyA) })).json().data;
+    expect(lessonOnly[0].answer.context).toMatchObject({ coreIdea: BUNDLE.core_idea, lyrics: [] });
   });
 
   it('keeps the video status: its own answers only, URLs kept between updates, a reason on failure', async () => {

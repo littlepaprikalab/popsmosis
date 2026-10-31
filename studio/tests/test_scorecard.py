@@ -332,3 +332,11 @@ def test_compare_or_resume_of_a_run_not_there_says_so(tmp_path, monkeypatch, cap
     assert cli.main(["scorecard", "compare", "nope-a", "nope-b"]) == 2
     assert cli.main(["scorecard", "run", "--resume", "nope"]) == 2
     assert "no run nope" in capsys.readouterr().err
+
+
+def test_the_scorecard_will_not_run_on_droplets_with_no_song(monkeypatch, capsys):
+    """Its rubric judges the song, which STUDIO_VIDEOS=lesson does not write: refused before anything is paid."""
+    monkeypatch.setenv("STUDIO_VIDEOS", "lesson")
+    monkeypatch.setattr(scorecard, "run", lambda *a, **k: pytest.fail("nothing runs"))
+    assert cli.main(["scorecard", "run", "--topics", "derivative"]) == 2
+    assert "STUDIO_VIDEOS is lesson" in capsys.readouterr().err

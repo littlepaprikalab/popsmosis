@@ -260,6 +260,29 @@ d('the Droplets tab', () => {
     expect(await ids('/api/droplets?tag=poppunk&tag=kept')).toEqual([old]);
   });
 
+  it('drops the song\'s tags from a droplet made with the lesson video alone', async () => {
+    const patchVideo = (id: string, payload: object) => app.inject({
+      method: 'PATCH', url: `/api/answers/${id}/video`, headers: { authorization: `Bearer ${agentKey}` }, payload,
+    });
+    const ids = async (url: string) => (await get(url)).json().data.map((x: { id: string }) => x.id);
+    // As the lesson's post stored them, before anyone knew no song would follow (STUDIO_VIDEOS=lesson).
+    const posted = { videoStatus: 'RENDERING', songTags: ['studysong', 'poppunk'], lessonTags: ['osmosis', 'explained'] };
+    const lessonOnly = await droplet(10, posted);
+    expect((await patchVideo(lessonOnly, { status: 'READY', lessonVideoUrl: LESSON })).statusCode).toBe(200);
+    expect(await prisma.answer.findUnique({ where: { id: lessonOnly }, select: { songTags: true, lessonTags: true } }))
+      .toEqual({ songTags: [], lessonTags: ['osmosis', 'explained'] });
+    expect((await get(`/api/droplets/${lessonOnly}`)).json().tags).toEqual({ song: [], lesson: ['osmosis', 'explained'] });
+    expect(await ids('/api/droplets?tag=poppunk')).toEqual([]);
+    expect(await ids('/api/droplets?tag=explained')).toEqual([lessonOnly]);
+
+    // With its song, sent now or before, a droplet keeps them.
+    const sung = await droplet(20, posted);
+    expect((await patchVideo(sung, { status: 'READY', songVideoUrl: SONG, lessonVideoUrl: LESSON })).statusCode).toBe(200);
+    const sungEarlier = await droplet(30, { ...posted, songVideoUrl: SONG });
+    expect((await patchVideo(sungEarlier, { status: 'READY', lessonVideoUrl: LESSON })).statusCode).toBe(200);
+    expect(await ids('/api/droplets?tag=poppunk')).toEqual([sung, sungEarlier]);
+  });
+
   it('shows one droplet with its lesson and lyrics, and 404s anything not on the tab', async () => {
     const id = await droplet(10);
     const one = await get(`/api/droplets/${id}`);
@@ -267,6 +290,12 @@ d('the Droplets tab', () => {
     expect(one.json()).toMatchObject({
       id, title: 'AP Biology: ATP synthase', content: 'Lesson 10: **ATP synthase** spins.',
       lyrics: [{ section: 'chorus', text: 'Spin the rotor, make the ATP' }],
+    });
+
+    // Made with the lesson video alone (STUDIO_VIDEOS=lesson): no song, so no lyrics.
+    const lessonOnly = await droplet(7, { videoStatus: 'READY', lessonVideoUrl: LESSON });
+    expect((await get(`/api/droplets/${lessonOnly}`)).json()).toMatchObject({
+      video: { songVideoUrl: null, lessonVideoUrl: LESSON }, lyrics: [],
     });
 
     const rendering = await droplet(5, { videoStatus: 'RENDERING', songVideoUrl: SONG });

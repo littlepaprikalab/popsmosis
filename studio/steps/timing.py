@@ -30,6 +30,9 @@ the lyrics, whatever it does sing: the step fails, and the song is deleted so th
 makes it again rather than timing the same song. Lines marked not sung are left out of the
 count: the videos never show them.
 
+The lesson alone (STUDIO_VIDEOS=lesson, studio/media.py's lesson_only()): there is no song,
+so only the narration is timed, and neither Demucs nor the aligner runs.
+
 torch, torchaudio and demucs are imported only when the song is aligned, so the rest
 of the studio (and its tests) load without them. Both models run on this machine, so
 calls.jsonl logs them with their time and no cost (studio/ledger.py).
@@ -101,9 +104,10 @@ Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
 def run(job: Path, ask=brain.ask) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     if not audio_step.is_done(job):
-        raise media.StepFailed("the audio step has not made both audio files from this bundle yet")
-    # Not done until both are written again; the cached vocals are kept.
-    media.restart(job, *(media.timing_path(kind) for kind in media.TIMED), REPORT)
+        raise media.StepFailed("the audio step has not made every audio file from this bundle yet")
+    with_song = "song" in media.timed(job)
+    # Not done until each is written again; the cached vocals are kept.
+    media.restart(job, *(media.timing_path(kind) for kind in media.timed(job)), *([REPORT] if with_song else []))
     parts = []
     for kind in audio_step.SPEECH:
         try:
@@ -114,6 +118,8 @@ def run(job: Path, ask=brain.ask) -> str:
         (job / "timing").mkdir(exist_ok=True)
         jobs.write(job / media.timing_path(kind), timing)
         parts.append(f"{kind} {len(timing.lines)} lines")
+    if not with_song:
+        return "no song (the lesson video alone); " + ", ".join(parts)
     try:
         with cpu_turn(job):
             timing, report = song_timing(job, bundle)
@@ -137,9 +143,9 @@ def is_done(job: Path) -> bool:
         bundle = jobs.read(job / "bundle.json", Bundle)
         expected = {"song": [line.id for line in bundle.lyrics],
                     "narration": [i for i, _ in audio_step.speech_lines(bundle, "narration")]}
-        for kind, ids in expected.items():
+        for kind in media.timed(job):
             path = job / media.timing_path(kind)
-            if timing_problems(jobs.read(path, Timing), ids):
+            if timing_problems(jobs.read(path, Timing), expected[kind]):
                 return False
             if path.stat().st_mtime < (job / media.audio_path(kind)).stat().st_mtime:
                 return False  # the audio was made again after it was timed

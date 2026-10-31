@@ -11,6 +11,7 @@ if (!process.env.DATABASE_URL) {
 }
 const tls = databaseTls(process.env.DATABASE_URL);
 if (tls.warning) console.warn(`[prisma] ${tls.warning}`);
+if (tls.note) console.log(`[prisma] ${tls.note}`);
 
 const adapter = new PrismaPg({
   connectionString: tls.connectionString,

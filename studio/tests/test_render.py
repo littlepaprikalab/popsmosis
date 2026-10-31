@@ -14,7 +14,7 @@ import pytest
 
 skia = pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
 
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio.render import primitives as p
 from studio.render.encode import EncodeError, audio_filter, encode, encode_all, poster_time, ranges, write_poster
 from studio.render.layouts import LAYOUTS
@@ -1391,3 +1391,10 @@ def test_labels_keep_clear_of_a_value_before_it_is_said_and_one_said_before_the_
     renderer.frame(t)
     [(text, alpha, pop)] = drawn
     assert text == "$1,000" and alpha == pytest.approx(1.0, abs=0.02) and pop == 0.0  # on, settled: not said now
+
+
+def test_the_lesson_alone_renders_no_song_and_no_hook_cut(tmp_path):
+    (tmp_path / media.timeline_path(media.HOOK)).write_text("{}")  # left from a run that made the song
+    assert render_step.videos(tmp_path) == [("song", "h"), ("lesson", "h"), (media.HOOK, media.HOOK_LAYOUT)]
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    assert render_step.videos(tmp_path) == [("lesson", "h")]

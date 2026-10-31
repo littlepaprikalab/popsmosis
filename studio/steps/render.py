@@ -4,6 +4,8 @@
     out/song_h.jpg, out/lesson_h.jpg    a poster frame for each
     out/hook_v.mp4, out/hook_v.jpg      the hook cut, 1080x1920, when the song has one (timeline_hook.json)
 
+The lesson alone (STUDIO_VIDEOS=lesson, studio/media.py's lesson_only()): only out/lesson_h.mp4 and its poster.
+
 The drawing is in studio/render/: renderer.py draws a frame at a time, encode.py
 splits the frames across processes and adds the audio. The videos are made at once on
 one set of workers (encode_all()), each the same file it would be made alone, and each
@@ -24,9 +26,10 @@ LAYOUT = "h"  # the song and lesson videos; the hook cut is upright (media.HOOK_
 
 
 def videos(job: Path) -> list[tuple[str, str]]:
-    """What this job renders, each video with its layout: the song and the lesson, and the hook cut when there is one."""
-    made = [(video, LAYOUT) for video in media.VIDEOS]
-    if (job / media.timeline_path(media.HOOK)).exists():
+    """What this job renders, each video with its layout: the song and the lesson, and the hook cut when there is one;
+    or the lesson alone."""
+    made = [(video, LAYOUT) for video in media.videos(job)]
+    if "song" in media.videos(job) and (job / media.timeline_path(media.HOOK)).exists():
         made.append((media.HOOK, media.HOOK_LAYOUT))
     return made
 

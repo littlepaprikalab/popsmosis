@@ -270,7 +270,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                 </div>
                 <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="awaiting-videos">
                   <span className="inline-block w-1.5 h-1.5 mt-[5px] shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
-                  The lesson is written and checked. The teacher is making its song and lesson videos; the lesson shows here with them.
+                  The lesson is written and checked. The teacher is making its videos; the lesson shows here with them.
                 </p>
                 <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} defaultOpen />
               </div>
