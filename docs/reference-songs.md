@@ -2,7 +2,8 @@
 
 Lyrics the owner holds up as what a Popsmosis song can be, kept with the style each was sung in. A style here is
 kept by name in `studio/styles.py` (`REFERENCE_STYLES`): `python -m studio plan "<topic>" --style <name>` asks for
-it as the learner's style. None is in the rotation a droplet gets when the learner asks for no style.
+it as the learner's style. Cash in the Carrier's is also in the rotation a droplet gets when the learner asks for
+no style (the owner, Oct 31).
 
 ## Cash in the Carrier (`cash-in-the-carrier`)
 

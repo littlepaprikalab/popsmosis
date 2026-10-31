@@ -169,5 +169,6 @@ def test_a_reference_style_is_asked_for_by_name_and_never_rotated():
     from studio import styles
     for name, style in styles.REFERENCE_STYLES.items():
         assert styles.named(name) == style == styles.named(f"  {name.upper()} ")
-        assert "diction" in style and style not in styles.SONG_STYLES  # said once, by the style itself
+        assert "diction" in style  # said once, by the style itself
+    assert styles.CASH_IN_THE_CARRIER in styles.SONG_STYLES  # the owner's favourite, in the rotation too
     assert styles.named("pop-punk, fast") == "pop-punk, fast"  # anything else, as the learner said it

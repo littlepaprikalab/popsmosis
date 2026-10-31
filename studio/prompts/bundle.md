@@ -316,8 +316,9 @@ explanation left to the narration.
   vocal with a low, dark, raspy edge, holding the ends of the verse lines, rising into a big
   sing-along chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a
   warm Rhodes", "an 808 that slides", "gang vocals on the hook") beat adjectives ("catchy",
-  "educational"). The verses are sung with a melody; rap only when the learner asks for it,
-  since rapped lesson lines come back recited.
+  "educational"). The verses are sung with a melody, unless the learner asks for rap or the
+  rotation's style has rapped verses: rap them then, every line a lyric with its rhyme and
+  beat, never a sentence of the lesson recited.
   - **A style the learner asked for**, on its own line or anywhere in their words
     ("Style: pop-punk", "make the song K-pop"), is your brief: keep everything they asked
     for (the genre, voices, instruments, mood, tempo, their own vivid words), turn vague
