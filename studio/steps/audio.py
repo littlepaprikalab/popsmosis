@@ -269,9 +269,23 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
 
 
 # Eleven Music: one chunk per section, each exactly as long as asked, and each asked for the song's own style and
-# avoid list as the bundle writes them, nothing added: how the verses and the chorus are sung is the style's to say
-# ("rapped verses, rising into a big sing-along chorus"). Until Oct 29 code added "clear rapped verse" to the verses
-# and "sung melodic vocal, not rapped" to the rest, after a song told one style for every section rapped throughout.
+# avoid list as the bundle writes them, with only the diction clause added (with_diction): how the verses and the
+# chorus are sung is the style's to say ("rapped verses, rising into a big sing-along chorus"). Until Oct 29 code
+# added "clear rapped verse" to the verses and "sung melodic vocal, not rapped" to the rest, after a song told one
+# style for every section rapped throughout.
+
+# Every song asks once for clear diction, the owner's rule since Oct 31: on Lyria, which is given no timings, songs
+# came back with lines step 6 could not hear (30 of 47 in one supply-and-demand song, which was sung again). Once,
+# and only where the style does not ask already: until round 17 every instruction asked for diction and none for
+# music, and the songs came back recited.
+DICTION = "clear diction, every word easy to hear"
+
+
+def with_diction(styles: list[str]) -> list[str]:
+    """The song's styles with DICTION added, unless one of them already asks for diction; none stay none."""
+    if not styles or any("diction" in style.lower() for style in styles):
+        return list(styles)
+    return [*styles, DICTION]
 
 
 def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
@@ -280,7 +294,7 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     chunks = [{
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
-        "positive_styles": list(bundle.music.positive_styles),
+        "positive_styles": with_diction(bundle.music.positive_styles),
         "negative_styles": list(bundle.music.negative_styles),
         "context_adherence": "high",
     } for part in planned]
@@ -323,7 +337,7 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     music = bundle.music
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
-        head.append(f"Style: {', '.join(style.rstrip(' .') for style in music.positive_styles)}.")
+        head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
     if music.negative_styles:
         head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
     head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")

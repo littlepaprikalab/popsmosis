@@ -344,8 +344,9 @@ explanation left to the narration.
   - Name the tempo once, as "<n> bpm", from 80 to 160. Never name an artist, band or song:
     the music generator refuses them.
 - `music.negative_styles`: short things to avoid, a list: always "long instrumental intro"
-  and "explicit lyrics", and anything the learner said they did not want. Nothing about
-  diction: a singer told to make every word clear sings like someone reading.
+  and "explicit lyrics", and anything the learner said they did not want. Leave diction out
+  of both lists: the studio asks every song for clear diction once, itself, and a singer
+  asked again and again sings like someone reading.
 - `music.sections`: intro, verse, pre-chorus, chorus, verse, pre-chorus, chorus, bridge,
   chorus, outro.
 - `lyrics`: every line as sung, in order, section by section, so the chorus appears three

@@ -385,18 +385,24 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
 
 
-def test_every_section_is_asked_for_the_songs_own_style_with_nothing_added():
+def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once():
     from studio.steps import audio
 
     data = bundle_data()
     data["music"]["positive_styles"] = ["Pop with clear rapped verses, rising into a sung chorus; 100 bpm."]
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
-    assert all(c["positive_styles"] == bundle.music.positive_styles for c in plan["chunks"])
+    assert all(c["positive_styles"] == [*bundle.music.positive_styles, audio.DICTION] for c in plan["chunks"])
     assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
     prompt, _ = audio.song_prompt(bundle)
-    assert "never rapped" not in prompt and prompt.startswith(f"Style: {bundle.music.positive_styles[0]}\n")
+    style = bundle.music.positive_styles[0].rstrip(".")
+    assert "never rapped" not in prompt and prompt.startswith(f"Style: {style}, {audio.DICTION}.\n")
     assert ".." not in prompt  # the description's own full stop is the sentence's
+    # A style that asks for diction already is not asked again.
+    data["music"]["positive_styles"] = ["Pop with crisp diction on the verses; 100 bpm"]
+    plan, _ = audio.composition_plan(Bundle.model_validate(data))
+    assert all(c["positive_styles"] == ["Pop with crisp diction on the verses; 100 bpm"] for c in plan["chunks"])
+    assert audio.song_prompt(Bundle.model_validate(data))[0].count("diction") == 1
 
 
 def test_lines_that_hold_still_are_not_a_problem():
