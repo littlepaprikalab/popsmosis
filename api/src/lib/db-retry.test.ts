@@ -15,6 +15,29 @@ describe('isTransientDbError', () => {
     expect(isTransientDbError(new Error('read ECONNRESET'))).toBe(true);
     expect(isTransientDbError({ message: 'Invalid invocation', cause: { code: 'P1017' } })).toBe(true);
   });
+  // The shapes Prisma 7 gives over adapter-pg, as Render logged them, for a query and for a raw query.
+  const refused = (reason: string) => ({
+    code: 'P1011',
+    message: `\nInvalid \`prisma.setting.findUnique()\` invocation:\n\n\nError opening a TLS connection: ${reason}`,
+    meta: { modelName: 'Setting', driverAdapterError: { name: 'DriverAdapterError', cause: { kind: 'TlsConnectionError', reason } } },
+  });
+  it('never retries a database certificate the pool refuses, which fails the same way every time', () => {
+    for (const reason of [
+      'self-signed certificate in certificate chain',
+      'unable to get local issuer certificate',
+      'certificate has expired',
+      "Hostname/IP does not match certificate's altnames: Host: db.example.com. is not in the cert's altnames: DNS:other.example.com",
+    ]) expect(isTransientDbError(refused(reason))).toBe(false);
+    expect(isTransientDbError({
+      code: 'P2010',
+      message: 'Invalid `prisma.$queryRaw()` invocation:\n\n\nRaw query failed. Code: `N/A`. Message: `Error opening a TLS connection: self-signed certificate in certificate chain`',
+    })).toBe(false);
+    expect(isTransientDbError({ message: 'Invalid invocation', cause: refused('self-signed certificate in certificate chain') })).toBe(false);
+  });
+  it('still retries a TLS handshake the network cut short', () => {
+    expect(isTransientDbError(refused('Client network socket disconnected before secure TLS connection was established'))).toBe(true);
+    expect(isTransientDbError({ code: 'P1011', message: 'Error opening a TLS connection: read ECONNRESET' })).toBe(true);
+  });
   it('never retries logical errors', () => {
     expect(isTransientDbError({ code: 'P2002', message: 'Unique constraint failed' })).toBe(false);
     expect(isTransientDbError({ code: 'P2025', message: 'Record not found' })).toBe(false);
@@ -26,6 +49,11 @@ describe('isTransientDbError', () => {
 
 describe('withDbRetry', () => {
   const noSleep = async () => {};
+  const refusedCertificate = {
+    code: 'P1011',
+    message: 'Error opening a TLS connection: self-signed certificate in certificate chain',
+    meta: { driverAdapterError: { cause: { kind: 'TlsConnectionError', reason: 'self-signed certificate in certificate chain' } } },
+  };
 
   it('returns on first success without retrying', async () => {
     const op = vi.fn().mockResolvedValue(42);
@@ -47,6 +75,12 @@ describe('withDbRetry', () => {
     const op = vi.fn().mockRejectedValue({ code: 'P2024', message: 'pool timeout' });
     await expect(withDbRetry(op, { sleep: noSleep })).rejects.toMatchObject({ code: 'P2024' });
     expect(op).toHaveBeenCalledTimes(MAX_ATTEMPTS);
+  });
+
+  it('tries a refused database certificate once', async () => {
+    const op = vi.fn().mockRejectedValue(refusedCertificate);
+    await expect(withDbRetry(op, { sleep: noSleep })).rejects.toBe(refusedCertificate);
+    expect(op).toHaveBeenCalledTimes(1);
   });
 
   it('does not retry logical errors', async () => {

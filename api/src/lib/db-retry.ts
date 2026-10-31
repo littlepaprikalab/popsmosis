@@ -2,7 +2,8 @@
  * Retry policy for transient database failures (pooler dropped an idle
  * connection, connection reset, serialization failure). Copied in spirit from
  * sparks: retry a handful of times with a short backoff, never on logical
- * errors (unique violations, not found, validation).
+ * errors (unique violations, not found, validation) nor on a database
+ * certificate the pool refuses.
  */
 
 import { AsyncLocalStorage } from 'async_hooks';
@@ -39,8 +40,23 @@ const TRANSIENT_MESSAGES = [
   'epipe',
 ];
 
+/**
+ * The pool refused the database's certificate: no CA for it, another CA, expired, or another host's name
+ * (lib/db-tls.ts). Prisma reports it as P1011 (P2010 from a raw query), as it does a TLS handshake the network cut
+ * short, but it fails the same way on every try: a retry only triples the handshakes against the pooler and adds the
+ * backoff to each failing request. A handshake cut short names no certificate, and is still retried.
+ */
+function refusesCertificate(err: object): boolean {
+  const e = err as { code?: unknown; message?: unknown; meta?: { driverAdapterError?: { cause?: { kind?: unknown; reason?: unknown } } } };
+  const cause = e.meta?.driverAdapterError?.cause;
+  const message = String(e.message ?? '').toLowerCase();
+  const tls = e.code === 'P1011' || cause?.kind === 'TlsConnectionError' || message.includes('error opening a tls connection');
+  return tls && `${message} ${String(cause?.reason ?? '').toLowerCase()}`.includes('certificate');
+}
+
 export function isTransientDbError(err: unknown): boolean {
   if (!err || typeof err !== 'object') return false;
+  if (refusesCertificate(err)) return false;
   const code = (err as { code?: unknown }).code;
   if (typeof code === 'string' && TRANSIENT_CODES.has(code)) return true;
   // pg's own errors carry the Postgres SQLSTATE: 57P01 admin shutdown, 08xxx connection errors, 40001 serialization, 40P01 deadlock.

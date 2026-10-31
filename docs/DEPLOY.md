@@ -339,23 +339,38 @@ Check in the Supabase console:
    pooler's certificate as Supabase's own guide connects to it, with `sslmode=verify-full`
    ([Connecting with PSQL](https://supabase.com/docs/guides/database/psql)), so try that first
    from your machine with the file you downloaded:
-   `psql "sslmode=verify-full sslrootcert=<the .crt> host=aws-0-<region>.pooler.supabase.com port=5432 dbname=postgres user=postgres.<ref>"`.
+   `psql "sslmode=verify-full sslrootcert=<the .crt> host=<the pooler host in DATABASE_URL, aws-0-… or aws-1-<region>.pooler.supabase.com> port=5432 dbname=postgres user=postgres.<ref>"`.
    If it connects, the API will. After the deploy, `/api/health` should answer `ok` and the
    API log should show no certificate error. Should it fail anyway, adding `?sslmode=no-verify`
    to `DATABASE_URL` puts the old behaviour back while you look.
 
+   On Render, the simplest is a Secret File on popsmosis-api (Environment > Secret Files), say
+   `supabase-ca.crt` holding the downloaded file's contents, and `DATABASE_CA_CERT` set to
+   its full path, `/etc/secrets/supabase-ca.crt`. The API reads only the variable: a Secret
+   File no variable names is not read. A bare file name is not found either, since the API
+   runs from `api/`, not the app's root where Render also puts the file.
+
    **"self-signed certificate in certificate chain"** on every query, with `/api/health`
-   answering 503, means the API has no CA that signed Supabase's certificate. The first lines
-   of the API's log at boot say which case it is:
+   answering 503, means the API has no CA that signed Supabase's certificate. A build that
+   passes proves nothing here: its migrations go through Prisma's own engine, which connects
+   with `sslmode=verify-full` without checking the certificate. The first lines of the API's
+   log at boot say which case it is:
    - `[prisma] DATABASE_CA_CERT is not set...`: the variable is missing on popsmosis-api, or
-     empty. Set it and redeploy.
+     empty, perhaps with a Secret File it does not name. Set it and redeploy.
    - `[prisma] the database's certificate is checked against DATABASE_CA_CERT: <name>`: the
      certificate set is not the one Supabase signs with. Download it again from the same page
      and check `<name>` is Supabase's.
    - `DATABASE_CA_CERT: certificate 1 cannot be read`, and the API does not start: the text in
      the variable is not a whole certificate. Paste the file's full contents, BEGIN and END
      lines included, or upload it as a Render Secret File and set the variable to its path
-     (`/etc/secrets/<file name>`).
+     (`/etc/secrets/<file name>`). `holds neither a PEM nor a DER certificate` is the same for
+     a file, an empty one included.
+
+   `npm --workspace api run db:check-tls` checks the certificate as the API does, with the
+   `DATABASE_URL` and `DATABASE_CA_CERT` it is given (the repo's `.env`, the command line, or
+   the Render Shell of popsmosis-api), and lists the certificates the pooler sends: when it
+   fails, it says which CA the chain needs. It sends no password before the certificate is
+   checked.
 5. **Enforce SSL**, on the same page: on, so the database refuses connections without TLS.
 6. **The keys.** Project Settings > API Keys: popsmosis uses the secret key on the API alone
    (`SUPABASE_SERVICE_ROLE_KEY`). The publishable (anon) key is in neither the web app nor

@@ -52,12 +52,15 @@ describe('databaseTls', () => {
     const dir = tmp();
     writeFileSync(join(dir, 'notes.txt'), 'not a certificate');
     expect(() => databaseTls(SUPABASE, { DATABASE_CA_CERT: join(dir, 'notes.txt') })).toThrow(/neither a PEM nor a DER/);
+    // A Secret File saved empty: the API took it for no CA and refused the database on every query.
+    writeFileSync(join(dir, 'empty.crt'), '');
+    expect(() => databaseTls(SUPABASE, { DATABASE_CA_CERT: join(dir, 'empty.crt') })).toThrow(/neither a PEM nor a DER/);
   });
 
   it('warns at boot when a Supabase database has no CA to be checked against', () => {
     const tls = databaseTls(SUPABASE, {});
     expect(tls.ssl).toEqual({ rejectUnauthorized: true });
-    expect(tls.warning).toMatch(/DATABASE_CA_CERT is not set.*self-signed certificate in certificate chain/);
+    expect(tls.warning).toMatch(/DATABASE_CA_CERT is not set.*self-signed certificate in certificate chain.*\/etc\/secrets\//);
     // A database elsewhere may have a certificate a public CA signed, which needs none.
     const other = databaseTls('postgresql://u:p@db.example.com:5432/app', {});
     expect(other.ssl).toEqual({ rejectUnauthorized: true });

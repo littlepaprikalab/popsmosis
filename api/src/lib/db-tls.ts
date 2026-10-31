@@ -123,7 +123,8 @@ export function databaseTls(url: string, env: NodeJS.ProcessEnv = process.env): 
           warning:
             'DATABASE_CA_CERT is not set. Node does not trust the CA Supabase signs its databases with, so every query ' +
             'will fail with "self-signed certificate in certificate chain". Set it to the certificate from Supabase > ' +
-            'Project Settings > Database > SSL Configuration (docs/DEPLOY.md, section 8).',
+            'Project Settings > Database > SSL Configuration, or to the full path of a Render Secret File holding it ' +
+            '(/etc/secrets/<file name>): a Secret File alone is not read (docs/DEPLOY.md, section 8).',
         }
       : { note: "the database's certificate is checked against Node's own CAs (DATABASE_CA_CERT is not set)" }),
   };

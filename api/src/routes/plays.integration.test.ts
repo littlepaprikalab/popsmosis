@@ -278,7 +278,9 @@ d('play counts', () => {
     it('answers 204, not a 500, when the droplet is deleted while its count is made', async () => {
       const id = await droplet();
       const { Client } = await import('pg');
-      const other = new Client({ connectionString: process.env.DATABASE_URL });
+      const { databaseTls } = await import('../lib/db-tls.js');
+      const tls = databaseTls(process.env.DATABASE_URL!); // as the API's own pool, so the suite also runs over TLS
+      const other = new Client({ connectionString: tls.connectionString, ssl: tls.ssl });
       await other.connect();
       try {
         // Deleted in a transaction not yet committed: the count's insert sees the droplet, then waits on its row.
