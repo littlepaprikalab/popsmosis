@@ -101,6 +101,34 @@ none ("the penthouses pay none"); highs and lows also sit where there is no deri
 the tangent line lies flat, they're caught"); Spanish keeps *que* with one subject after doubt
 ("with only one subject, there's no que at all").
 
+### Again, after the day's song changes
+
+Run again in the session after the title examples ("Cash in the carriers"), the intro and chorus loosened, and
+the exam-review rule for rapped verses (none of the 12 topics draws a rapped style, so that rule went untested
+here), judged by Opus beside the same baseline droplets:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Earlier on Oct 31 | 12 of 12 | 4.45 | 3.73 | 9 / 15 |
+| After the song changes | 12 of 12 | 4.52 | 3.69 | 6 / 13 |
+
+Within the noise of one run, nothing went down. The hook, new against baseline, went from 4.50 / 4.50 to
+4.75 / 4.17, but the same baseline droplets' hook moved by a third of a point between the two judgings, so read
+that as a hint. Accuracy went from 4.42 to 4.67. Read through:
+
+- **Every intro now opens on a line that leads to the title**, most of them a question or a scene: "No time, no
+  distance, still a speed?", "Nine out of ten, is it skill or luck?", "Trays piled high or a line out the door".
+  None opened on the title line, which the brief still allows.
+- **11 of the 12 choruses run 5 lines**, title, three lines, title, as Split the Water's does. The brief allows 4
+  or 5; the 5 has become the habit.
+- **The title example bends on its own topic:** the light reactions sang "Split the water, cash the light", the
+  example turned to its money frame, where the run before sang it word for word.
+- **The errors are song lines and key lines** the fact-check is there for: "The queen's whole court? Just six
+  percent" (the whole royal court), "you weigh less than before" (mass), "Till gravity pulls, you carry on" (no
+  gravity in space until something switches it on), an eclipse sung as if every full moon had one, a key line
+  saying the new moon has "no lit half", and classical conditioning's frame making the learned response a choice
+  ("reaching for the umbrella").
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
