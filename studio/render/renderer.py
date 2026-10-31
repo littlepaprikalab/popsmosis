@@ -1092,8 +1092,8 @@ class Renderer:
         canvas.restore()
         if again:
             self._background = (key, self.surface.makeImageSnapshot())
-        elif keep:
-            self._last_background = (key, (scale, dx, dy))
+        elif keep:  # the copy kept was the frame before's, as it always was: never one from an earlier rest
+            self._last_background, self._background = (key, (scale, dx, dy)), None
 
     def _in_play(self, i: int) -> set[str] | None:
         """The parts beat i is about (LABELS_CALM); None when every label shows in full."""
