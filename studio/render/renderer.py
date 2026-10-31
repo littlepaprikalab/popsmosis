@@ -1265,8 +1265,9 @@ class Renderer:
     def _axis_names(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                     alpha: float) -> list[Rect]:
         """A graph's axis names (Timeline.axes), written at its axes' ends from the scene's first frame, since the
-        picture has no writing; none on a painted picture, which labels its own axes (Timeline.self_labelled). Each takes the spot beside its end that, framed whole, stays in the frame over the
-        least of the picture, chosen once so it never jumps. Where the camera leaves its end out (a close-up, the
+        picture has no writing; none on a painted picture, which labels its own axes (Timeline.self_labelled). Each
+        takes the spot beside its end that, framed whole, stays in the frame over the least of the picture, chosen
+        once so it never jumps. Where the camera leaves its end out (a close-up, the
         upright frame's sides), it stays at the frame's edge on that side, so the graph still reads: what "up" and
         "across" measure. Returns where they landed."""
         names = self.timeline.axes.get(scene_id)

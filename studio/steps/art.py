@@ -74,7 +74,8 @@ scene keeps the picture with the fewest structures out of place, then the fewest
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
 art/<scene>.json, last: the key (as above), the model, the prompt, that it labels its own parts,
 where its wrong labels are, the helper's check of the kept picture and what was wrong with each
-try, so the picture counts as done only for this bundle. A refused picture is kept as art/<scene>.try<n>.png. Removes locations.json: the locate step makes it from these
+try, so the picture counts as done only for this bundle. A refused picture is kept as art/<scene>.try<n>.png.
+Removes locations.json: the locate step makes it from these
 pictures. Resuming and redrawing work as for the SVG art.
 """
 

@@ -393,7 +393,8 @@ the way a teacher asks for a standard textbook diagram of its subject ("Educatio
 diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
 Earth has seasons..."), each structure's colour by name, and a last line asking for the structures
 to be labelled (`art.LABELS`: "Clearly label nonobvious structures.").
-The picture labels its own parts and the video draws no labels over it, only over a drawing; a label the art check finds wrong is kept, flagged on the picture and explained
+The picture labels its own parts and the video draws no labels over it, only over a drawing; a label
+the art check finds wrong is kept, flagged on the picture and explained
 in the notice card beside it. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a
 plain dark slate blue background, room for labels, smooth rounded proteins, no text, and the
 video labelled the picture. The pictures came back better without it, and the painter's own
