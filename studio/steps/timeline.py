@@ -14,10 +14,12 @@ No model calls, so it is free to run again:
   a row. Longer names win, so "motor cortex" is not also read as "cortex".
 - A spotlight or camera target that is not located on its scene, or not revealed there
   yet, falls back to no spotlight and the camera on the whole scene, as checks.py does.
-- Both videos open on the hook scene, and the song video on its hook line: a song whose
-  singing starts later than INTRO_MAX_S (Lyria now and then plays a 10-second intro
-  however it is asked) is played from INTRO_KEEP_S before its first sung word, fading in,
-  so the hook is sung within the first two seconds (PLAN section 8).
+- The lesson video opens on the hook scene. The song opens on the scene its first line plays over, a picture of
+  its own (Scene.song_only) or a lesson scene that fits: made to open on the hook, scorecard run 20261030-2110's
+  mitosis song sang "Copy each chromosome, split the pair" over a scraped knee. And it opens on its hook line:
+  a song whose singing starts later than INTRO_MAX_S (Lyria now and then plays a 10-second intro however it is
+  asked) is played from INTRO_KEEP_S before its first sung word, fading in, so the hook is sung within the first
+  two seconds (PLAN section 8).
 - The particles are marked with what they carry, as a textbook prints it ("H+" -> "H⁺",
   notation()), each kind in its own colour (marker_colour()), so a proton reads apart
   from an electron and from the ions painted in the picture; a kind the pictures draw as a
@@ -44,8 +46,9 @@ No model calls, so it is free to run again:
   the whole scene: near enough to see the part, wide enough to keep where it sits. The shot stays at least
   SHOT_MIN_S, so the camera moves with the phrases rather than every word; then it goes on to the next part named,
   and back to the whole picture when a line names none, or once it has followed for FOLLOW_MAX_S. Not on the
-  hook, nor on a line the direction framed itself or where something moves: a flow is watched whole. The same
-  pictures, with movement: the song needs no art of its own.
+  hook, nor on a line the direction framed itself or where something moves: a flow is watched whole. A long hold
+  is still a picture the song's lines are about: the bundle gives the song pictures of its own where the lesson's
+  do not fit what it sings (Scene.song_only), and the camera moves over those too.
 - A part that turns (Bundle.spins) eases up to SPIN_SPEED while particles flow into or
   through it, and eases to a stop when they stop; how far round it is runs on from beat
   to beat, so it never jumps.
@@ -363,14 +366,15 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     opened: set[str] = set()  # scenes whose first line has played
 
     def gap(t0: float, t1: float, after: dict | None) -> None:
-        scene = after["scene"] if after else hook
+        scene = after["scene"] if after else opening
         camera = after["camera"] if after else TimelineCamera(target=None, zoom=1.0, from_whole=True)
         beats.append({"t0": t0, "t1": t1, "scene": scene, "camera": camera, "reveal": [], "spotlight": None,
                       "labels": list(revealed.get(scene, [])), "particles": [], "caption": None, "line_id": None,
                       "line": "", "words": []})
         captions.append(None)
 
-    scenes = _scenes(sung, directions, set(located), hook, voice.duration)
+    scenes = _scenes(sung, directions, set(located), hook, voice.duration, opens_on_hook=video != "song")
+    opening = scenes[0] if scenes else hook
     first = sung[0].start if sung else voice.duration
     cursor = 0.0
     if first >= GAP_S:
@@ -460,16 +464,17 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
                     key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
 
 
-def _scenes(sung: list, directions: dict, located: set[str], hook: str, end: float) -> list[str]:
-    """Each line's scene: its direction's, or the one before where that is not drawn, the first line's the hook (both
-    videos open on it). A run of lines on one scene shorter than SCENE_MIN_S keeps the scene before it: round 18's
-    kidney song cut to a picture for a single two-second line six times, and each was gone before the eye found
-    anything in it."""
+def _scenes(sung: list, directions: dict, located: set[str], hook: str, end: float,
+            opens_on_hook: bool = True) -> list[str]:
+    """Each line's scene: its direction's, or the one before where that is not drawn, the first line's the hook when
+    the video opens on it (the lesson's) or its own is not drawn. A run of lines on one scene shorter than
+    SCENE_MIN_S keeps the scene before it: round 18's kidney song cut to a picture for a single two-second line six
+    times, and each was gone before the eye found anything in it."""
     scenes: list[str] = []
     for line in sung:
         direction = directions.get(line.line_id)
         scene = direction.scene if direction else (scenes[-1] if scenes else hook)
-        if not scenes:
+        if not scenes and (opens_on_hook or scene not in located):
             scene = hook
         elif scene not in located:
             scene = scenes[-1]

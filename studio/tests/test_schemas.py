@@ -28,7 +28,8 @@ def test_schema_uses_only_what_both_providers_accept(model):
 def test_bundle_fields_are_in_the_order_the_model_writes_them():
     assert list(strict_schema(Bundle)["properties"]) == [
         "course", "topic", "audience", "core_idea", "why_chain", "key_terms", "facts", "misconception",
-        "scenes", "lesson_markdown", "music", "lyrics", "narration", "direction", "builds_up", "spins", "blocks", "conversions", "key_lines", "tags",
+        "scenes", "lesson_markdown", "music", "lyrics", "song_scenes", "narration", "direction", "builds_up", "spins",
+        "blocks", "conversions", "key_lines", "tags",
     ]
     facts = strict_schema(Bundle)["properties"]["facts"]["items"]
     assert list(facts["properties"]) == ["id", "text", "source_quote"]
@@ -143,6 +144,39 @@ def test_a_bundle_written_with_an_exam_question_still_loads_without_it():
     assert "frq" not in Bundle.model_validate(data).model_dump()
 
 
+def song_scene(scene_id: str, **changes) -> dict:
+    return {"id": scene_id, "image_prompt": "Protons through ATP synthase.", **changes,
+            "structures": [{"name": "ATP synthase", "aliases": [], "sam_phrase": "the atp synthase",
+                            "color_hex": "#3366CC"}]}
+
+
+def test_the_songs_own_pictures_join_the_scenes_marked_as_the_songs_and_are_never_written_out():
+    data = bundle_data()
+    data["song_scenes"] = [song_scene("chorus", stage_of="light reactions")]
+    bundle = Bundle.model_validate(data)
+    assert [(s.id, s.song_only) for s in bundle.scenes] == [
+        ("hook", False), ("overview", False), ("synthase", False), ("chorus", True)]
+    assert bundle.scenes[-1].stage_of == ""  # never a stage: the video would fade the lesson's stages into it
+    assert bundle.song_scenes == [] and "song_scenes" not in bundle.model_dump()
+    assert Bundle.model_validate_json(bundle.model_dump_json()) == bundle  # bundle.json reads back
+    assert "song_only" not in strict_schema(Bundle)["properties"]["scenes"]["items"]["properties"]  # code's to say
+    assert not Bundle.model_validate(bundle_data()).scenes[0].song_only  # a bundle from before
+
+
+def test_the_song_may_have_3_pictures_of_its_own_beside_the_lessons_7():
+    data = bundle_data()
+    data["scenes"] += [{**song_scene(f"detail-{i}"), "image_prompt": "A cell."} for i in range(4)]  # 7 for the lesson
+    data["song_scenes"] = [song_scene(f"song-{i}") for i in range(3)]
+    assert len(Bundle.model_validate(data).scenes) == 10
+    data["song_scenes"].append(song_scene("song-3"))
+    with pytest.raises(ValidationError, match="4 scenes for the song alone, not at most 3"):
+        Bundle.model_validate(data)
+    data["song_scenes"].pop()
+    data["scenes"].append(song_scene("detail-4"))
+    with pytest.raises(ValidationError, match="8 scenes besides the song's own, not 3-7"):
+        Bundle.model_validate(data)
+
+
 def test_a_process_in_stages_may_take_up_to_8_scenes():
     from studio.schemas import stage_groups
 
@@ -163,7 +197,8 @@ def test_a_process_in_stages_may_take_up_to_8_scenes():
 def test_the_lesson_video_alone_is_asked_for_the_bundle_without_its_song():
     """STUDIO_VIDEOS=lesson: the brain's schema is Bundle's, in its order, less the song."""
     lesson, full = strict_schema(LessonBundle), strict_schema(Bundle)
-    assert list(lesson["properties"]) == [name for name in full["properties"] if name not in ("music", "lyrics")]
+    assert list(lesson["properties"]) == [name for name in full["properties"]
+                                          if name not in ("music", "lyrics", "song_scenes")]
     assert list(lesson["properties"]["key_lines"]["items"]["properties"]) == ["text", "from_narration"]
     assert list(lesson["properties"]["tags"]["properties"]) == ["lesson"]
     for name in ("facts", "scenes", "narration", "direction"):

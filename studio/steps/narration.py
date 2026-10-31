@@ -50,7 +50,7 @@ def payload(bundle: Bundle) -> dict:
         "why_chain": bundle.why_chain, "misconception": bundle.misconception,
         "facts": [{"id": f.id, "text": f.text} for f in bundle.facts],
         "scenes": [{"id": s.id, "parts": [{"name": x.name, "also": x.aliases} for x in s.structures]}
-                   for s in bundle.scenes],
+                   for s in bundle.scenes if not s.song_only],  # the song's own pictures are no narration's
         "narration": [{"id": n.id, "scene": scenes.get(n.id, ""), "text": n.text, "names": n.names,
                        "fact": n.fact_id} for n in bundle.narration],
     }

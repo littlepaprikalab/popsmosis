@@ -18,9 +18,10 @@ for word: one narration item a sentence, in its order, with the ids it gives, ea
 over the scene its passage names. Everything else is yours, by this brief: the pictures'
 requests and structures, the direction, the lesson text and the song. The lesson text, the
 song and the key lines tell the same story as the script, in the same order, with the same
-analogy, and the first key line asks the script's `question`. You may add a scene the song
-needs (what a failure looks like, for the bridge) after the script's. Where this brief's
-rules for the narration ask for something the script does differently, the script stands.
+analogy, and the first key line asks the script's `question`. The song may have pictures of
+its own besides the script's scenes (`song_scenes`, under "The song's pictures"). Where this
+brief's rules for the narration ask for something the script does differently, the script
+stands.
 
 ## The audience
 
@@ -126,7 +127,9 @@ Then:
 ## Scenes and structures
 
 Write 3 to 7 scenes in the order the videos use them (up to 8 for a process shown in
-stages, below). Each scene is one diagram, and
+stages, below): the lesson's, which the song plays too wherever they picture what it sings.
+The song's own pictures come after its lyrics (`song_scenes`, under "The song's pictures"),
+and every rule here holds for them too. Each scene is one diagram, and
 together they go from what the learner already knows to the parts they are learning:
 
 - The hook first (id "hook"). Where it can, it shows where the topic turns up in the
@@ -141,7 +144,8 @@ together they go from what the learner already knows to the parts they are learn
   viewer sees which part matches which. A line that says one of its names plays over the
   analogy scene; other lines can still use the analogy in other words.
 - When the bridge sings what happens when something fails, a detail scene can show
-  it: the same view as another scene with that one change drawn in (what blocks it as a
+  it (one of the song's own when the lesson shows no failure): the same view as another
+  scene with that one change drawn in (what blocks it as a
   structure of its own, the flow that stopped left out: the video shows it stopping).
 - When the topic is a process whose parts move or change shape from one stage to the
   next (mitosis, the phases of the Moon), each stage the lesson teaches is a scene of its
@@ -571,7 +575,8 @@ catchy lines.
   says one again in a new way carries it too.
 - A line does not have to name a structure. When it names one the viewer should see, the
   structure's label appears the first time it is sung, so use the `name` or an alias of
-  a structure drawn in the scene that line plays over, exactly as written. Group words
+  a structure drawn in the scene that line plays over, exactly as written: one of the
+  lesson's scenes, or a picture of the song's own (below). Group words
   count too: if the chorus sings "limbic system", a scene must draw the limbic system as
   a structure, and the chorus plays over that scene.
 - `names` lists every structure name or alias the line says, exactly as it appears in the
@@ -581,6 +586,41 @@ catchy lines.
   when most do nothing) never is.
 - Ids are short and unique across lyrics and narration: "v1-1" to "v1-8", "c1-1", "v2-1",
   "c2-1", "b-1", "c3-1" and so on.
+
+### The song's pictures
+
+The lesson's scenes are drawn for the narration. A lyric sung over a picture of something
+else leaves the viewer searching the screen for what they hear: songs made to play over the
+lesson's pictures alone sang "Roll the dice and count the ways" over a glass of water, "Copy
+each chromosome, split the pair" over a scraped knee, and their choruses three times over an
+overview drawn for the narration's steps. So once the lyrics are written, give each section
+the picture of what it sings:
+
+- Go through the song a section at a time. Where one of the lesson's scenes draws what a
+  section sings, it plays there: the analogy under lines that sing the frame, the overview
+  under a chorus that sums up the path the way the overview lays it out, the failure scene
+  under the bridge. A picture the learner has seen in both videos is one they know, so the
+  lesson's scenes come first.
+- Where none does, draw the song a picture of its own in `song_scenes`: at most 3, each for
+  a section or a run of them, never for one line. The usual ones:
+  - The intro and the outro: the title line's picture, the big move it names, on the real
+    things ("Split the water, catch the light": a thylakoid membrane with photosystem II in
+    it and sunlight reaching it), when the hook, the analogy and the overview picture
+    something else. The song opens on its first line's scene, not on the hook.
+  - The chorus, sung three times: the whole idea the way the chorus chants it, every part it
+    names laid out in the order it sings them, when the overview lays them out another way
+    or leaves some out.
+  - The bridge: the break it sings and the parts its effects reach, when the lesson draws no
+    such failure.
+- A song picture is a scene like the lesson's: every rule under "Scenes and structures" holds
+  for it, and a structure keeps the name and colour it has in the lesson's scenes. It draws
+  the topic's real things, as a textbook would picture what the lines sing; the everyday
+  pictures are the hook's and the analogy's, which the song may play. Its `structures` are
+  the parts its lines name, its `stage_of` is "", and its id is short and new ("title",
+  "chorus", "bridge-detail").
+- The lesson video never plays a song picture: every narration sentence plays over the
+  lesson's scenes. A song picture no lyric plays over is left out.
+- `song_scenes` is [] when the lesson's scenes picture every section.
 
 ## The narration
 
@@ -611,10 +651,12 @@ order, keyed by `line_id`:
 
 - `scene`: the scene on screen while the line plays. It draws every structure in the
   line's `names`. The chorus is sung three times, each time over a scene that draws what
-  it names, usually the overview. Stay on a scene for several lines and cut when the
-  content moves on; in the song, keep a section on one scene where you can. A picture on
+  it names, usually the overview or the song's own picture of the chorus. Stay on a scene
+  for several lines and cut when the content moves on; in the song, keep a section on one
+  scene where you can. A picture on
   screen for one sung line (two seconds) is gone before the viewer finds anything in it,
-  so the video holds the scene before it over a run that short. Both videos open on the hook.
+  so the video holds the scene before it over a run that short. The lesson video opens on
+  the hook; the song opens on its first line's scene, the picture of its title line.
 - `camera`: `target` is the structure to frame ("" for the whole scene); `zoom` is 1.0
   for the whole scene and about 1.6 to 2.0 for a close-up (how to move it: "Plan the motion
   like an animator", below).

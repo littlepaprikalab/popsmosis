@@ -28,6 +28,46 @@ def test_the_sample_bundle_is_clean():
     assert found == [] and bundle == Bundle.model_validate(bundle_data())
 
 
+def song_picture(scene_id):
+    return {"id": scene_id, "image_prompt": "ATP synthase turning.", "structures": [
+        {"name": "ATP synthase", "aliases": [], "sam_phrase": "the atp synthase", "color_hex": "#3366CC"}]}
+
+
+def test_the_songs_own_picture_stays_the_songs_and_one_no_line_plays_over_is_left_out():
+    def change(d):
+        d["song_scenes"] = [song_picture("chorus"), song_picture("unplayed")]
+        for line_id in ("c1-1", "c2-1", "c3-1"):
+            direction(d, line_id)["scene"] = "chorus"
+
+    bundle, found, _ = review(change)
+    assert [(s.id, s.song_only) for s in bundle.scenes][-1] == ("chorus", True)
+    assert found == [("scene:unplayed", "song-scene", True)]
+    assert checks.review(bundle)[1].problems == []  # settled: a second look finds nothing
+
+
+def test_a_narration_sentence_never_plays_over_the_songs_own_picture():
+    def narrated(d):
+        d["song_scenes"] = [song_picture("chorus")]
+        direction(d, "c1-1")["scene"] = "chorus"
+        direction(d, "n2")["scene"] = "chorus"
+
+    # With room in the lesson, the picture is the lesson's too, and the sentence keeps it.
+    bundle, found, _ = review(narrated)
+    assert [(s.id, s.song_only) for s in bundle.scenes][-1] == ("chorus", False)
+    assert found == [("scene:chorus", "song-scene", True)]
+    assert {d.line_id: d.scene for d in bundle.direction}["n2"] == "chorus"
+
+    # With the lesson's 7 scenes drawn, the sentence plays over the scene the narration was on.
+    def full(d):
+        narrated(d)
+        d["scenes"] += [{**song_picture(f"detail-{i}"), "image_prompt": "A cell."} for i in range(4)]
+
+    bundle, found, _ = review(full)
+    assert [(s.id, s.song_only) for s in bundle.scenes][-1] == ("chorus", True)
+    assert ("n2", "song-scene", True) in found
+    assert {d.line_id: d.scene for d in bundle.direction}["n2"] == "overview"
+
+
 def test_a_spotlight_waits_until_its_structure_is_named_on_that_scene():
     def change(d):
         for line_id in ("v1-1", "v1-2", "c1-1"):  # v1-1 names the thylakoid on the overview

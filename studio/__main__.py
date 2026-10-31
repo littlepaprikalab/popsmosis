@@ -276,7 +276,7 @@ def print_job(job: Path, brief: bool = False) -> None:
             print(_wrap(f"{fact.id}  {fact.text}", indent=4) + "\n")
         print("## Scenes\n")
         for scene in bundle.scenes:
-            print(_wrap(f"{scene.id}: " + ", ".join(
+            print(_wrap(f"{scene.id}{' (the song alone)' if scene.song_only else ''}: " + ", ".join(
                 s.name + (f" ({'/'.join(s.aliases)})" if s.aliases else "") for s in scene.structures), indent=4))
         print("\n## Lyrics\n")
         if not bundle.sung:
