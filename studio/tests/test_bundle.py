@@ -163,3 +163,11 @@ def test_the_lesson_alone_brief_cuts_the_song_and_survives_a_renamed_heading():
     assert bundle_step.without_song(renamed) == renamed + bundle_step.NO_SONG
     # The grave-topic rule the song section carried is said again for the plan.
     assert 'never particles: dots marked\n  "people" or "trains"' in bundle_step.NO_SONG
+
+
+def test_a_reference_style_is_asked_for_by_name_and_never_rotated():
+    from studio import styles
+    for name, style in styles.REFERENCE_STYLES.items():
+        assert styles.named(name) == style == styles.named(f"  {name.upper()} ")
+        assert "diction" in style and style not in styles.SONG_STYLES  # said once, by the style itself
+    assert styles.named("pop-punk, fast") == "pop-punk, fast"  # anything else, as the learner said it

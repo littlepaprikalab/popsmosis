@@ -30,5 +30,20 @@ SONG_STYLES = (
 )
 
 
+# Styles the owner liked, kept by name and never in the rotation above: a rapped one only when asked for (`plan
+# --style cash-in-the-carrier` writes it out as the learner's style). Each says clear diction itself, so the studio
+# does not ask for it twice (audio.with_diction). docs/reference-songs.md has the lyric each was made for.
+REFERENCE_STYLES = {
+    "cash-in-the-carrier": "Hip-hop pop, upbeat 100 bpm groove, confident female rap verses with a catchy sung "
+                           "chorus, punchy 808s and bright synth hook, tight quantized drum programming with crisp "
+                           "kick-snare hits and precise vocal layering, clear diction",
+}
+
+
 def style_for(job_name: str) -> str:
     return SONG_STYLES[zlib.crc32(job_name.encode("utf-8")) % len(SONG_STYLES)]
+
+
+def named(style: str) -> str:
+    """A reference style by its name (REFERENCE_STYLES), written out; any other style as it was given."""
+    return REFERENCE_STYLES.get(style.strip().lower(), style)
