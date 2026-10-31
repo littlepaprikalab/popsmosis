@@ -626,8 +626,14 @@ def _check_names(line: dict, canon: dict[str, str], scene: str, drawn: set[str],
         else:
             kept.append(name)
             named.add(structure)
+    # A word the line says but does not list is added only when its scene draws that part: the video reveals it
+    # there whatever the list says. Elsewhere it is a word, not a pointer: the song carrying its frame ("Charged-up
+    # batteries, out they ride" over the overview, where only the analogy draws "Batteries"), or the topic's own
+    # word ("rocket") said over a scene that draws the rocket's parts. Added and then flagged as not in the scene,
+    # such words were 141 of 142 not-in-scene problems in a 12-topic simulation on Oct 31; the brain had listed the
+    # one real slip itself.
     for structure, word in said(line["text"], canon).items():
-        if structure not in named:
+        if structure not in named and structure in drawn:
             problems.append(Problem(line_id=line["id"], rule="unlisted-name", repaired=True,
                                     detail=f'says "{word}" but does not list it; added'))
             kept.append(word)

@@ -127,6 +127,18 @@ def test_a_name_the_scene_does_not_draw_is_left_for_the_prompt():
     assert report.problems[0].detail == 'names ATP synthase, which scene "overview" does not draw'
 
 
+def test_a_word_for_a_part_off_screen_is_a_word_not_a_name():
+    # The line says "ATP synthase" over a scene that does not draw it, and does not list it: a word, as a song
+    # carrying its frame says one. Listed, the same line is a real slip (the test above).
+    def change(d):
+        direction(d, "n2").update(scene="overview")
+        line(d, "n2").update(names=[])
+
+    bundle, found, _ = review(change)
+    assert found == []
+    assert next(n for n in bundle.narration if n.id == "n2").names == []
+
+
 def test_names_are_held_to_what_the_line_says():
     def change(d):
         line(d, "v1-1").update(names=[])  # says "thylakoid" without listing it
