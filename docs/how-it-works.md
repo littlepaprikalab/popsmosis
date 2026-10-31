@@ -4,8 +4,14 @@ A droplet goes through three phases: its text is written and checked, the lesson
 made. Each step writes a file in the droplet's folder (`jobs/<id>/`) and counts as done once that file is there, so
 running again after a failure starts at the step that failed. The details are in `docs/PLAN.md`; this is the map.
 
-Who does each step: **code** (no model, no cost), **the brain** (Claude Opus, the costly calls), **a helper**
-(Claude Sonnet, small checks), or **another model** (Muse Image, SAM, Lyria, Gemini's voice, Demucs, MMS).
+Who does each step: **code** (no model, no cost), **the brain** (the costly calls), **a helper** (small checks),
+or **another model** (a painter, SAM, Lyria, Gemini's voice, Demucs, MMS). The brain is Claude Opus by default; an
+admin can switch it to Meta's Muse Wonder or Muse Spark (`/admin/studio`, or a topic's own on `/learn`), and the
+helper switches with it (Claude Sonnet for Claude, Muse Spark for Muse). Every brain call below goes to the brain in
+force for the topic: the script and the bundle are two calls, then the audit, the narration edit, a lesson rewrite,
+the fact-check and the songwriter. Two stay Claude whatever the brain: the SVG drawer (Claude Opus) and the
+scorecard's judge (Claude Sonnet). Prompt changes tested in a session run on Claude subagents, so they say how a
+prompt works on Claude's brain, not on Muse's.
 
 ## Phase 1: the text (about 15 minutes, about $2)
 
@@ -41,9 +47,9 @@ Who does each step: **code** (no model, no cost), **the brain** (Claude Opus, th
 Two branches run side by side, then the rest in order (`videos.py`):
 
 - **Pictures**
-  - **Art** (`steps/art.py`): each scene painted by **Muse Image** (`steps/art.py` builds the prompt), or drawn
-    as SVG by **the brain** (`prompts/art.md`) for a graph or a chart to scale: on a light page, each curve's
-    name placed by the drawing. A **helper** looks at each painting for wrong labels; what it finds is shown
+  - **Art** (`steps/art.py`): each scene painted by **the painter** (Gemini's image model for Claude's brain,
+    Muse Image for Muse's, by default; an admin can change it), or drawn as SVG by **Claude Opus**
+    (`prompts/art.md`) for a graph or a chart to scale: on a light page, each curve's name placed by the drawing. A **helper** looks at each painting for wrong labels; what it finds is shown
     beside the picture, never hidden.
   - **Locate** (`steps/locate.py`): **SAM** finds each part in a painting, so the camera and the labels know
     where it is. A drawing needs none: its parts are its own.
