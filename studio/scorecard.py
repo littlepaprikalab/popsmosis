@@ -221,7 +221,7 @@ def droplet_text(bundle: Bundle, request: Request) -> str:
     if not bundle.key_lines:
         parts.append("(none)")
     if bundle.meanings:  # a droplet with no graph has none, and prints as it did before them
-        parts += ["", "## Meanings (each written under a graph part's name the first time it is named)",
+        parts += ["", "## Meanings (each written under a graph part's name once it is named)",
                   *[f"- {m.structure}: {m.text}" for m in bundle.meanings]]
     parts += ["", "## Narration (the lesson video's voice-over)", *[f"{n.id}: {n.text}" for n in bundle.narration]]
     if request.study_guide:

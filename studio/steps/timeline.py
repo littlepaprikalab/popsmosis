@@ -31,9 +31,9 @@ No model calls, so it is free to run again:
 - A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
   that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
   it stays on every later beat of the scene.
-- A graph part's meaning (Bundle.meanings) is written under the name its drawing placed, once in the video: from
-  when the part is first named, to the end of the line after, MEANING_MIN_S at least. Then only the name stays. A
-  part the video never names has none: shown from a graph's first frame, four of them came on at once (Oct 31).
+- A graph part's meaning (Bundle.meanings) is written under the name its drawing placed from when the part is
+  first named on, wherever and as long as the name is written. A part not named yet has none: shown from a graph's
+  first frame, four of them came on at once (Oct 31).
 - A path particles travel on a scene is drawn as arrows from stop to stop from when they first set off, and
   the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
@@ -583,33 +583,23 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             for c in bundle.conversions if c.structure in scene]
 
 
-MEANING_MIN_S = 4.0  # a meaning stays at least this long: two quick song lines are too short to read it
-
-
 def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
     """The graph parts' meanings each beat writes (Bundle.meanings), under the name the part's drawing placed
-    (Value.label): once in the video, from when the part is first named on a graph (its reveal) to the end of the
-    beat after, if that beat is on the same scene."""
+    (Value.label): from when the part is first named on a graph (its first reveal there) on, wherever its name is
+    written, as long as it is: part of its label, as a textbook's caption is (the owner, Oct 31). A part not named
+    yet has none, so a graph the video shows before naming its parts does not open with every meaning at once."""
     named = {s.scene: {v.text for v in s.values if v.label} for s in locations.scenes}
-    revealed: dict[str, dict[str, float]] = {}
+    meant = {m.structure: m.text for m in bundle.meanings}
+    first: dict[str, float] = {}  # structure -> when it is first named on a graph
     for beat in beats:
         for r in beat["reveal"]:
-            revealed.setdefault(beat["scene"], {}).setdefault(r.name, r.t)
-    windows: dict[str, tuple[str, float, float, str]] = {}  # structure -> (scene, since, until, text)
-    for i, beat in enumerate(beats):
-        for m in bundle.meanings:
-            if m.structure in windows or m.structure not in named.get(beat["scene"], set()):
-                continue
-            at = revealed.get(beat["scene"], {}).get(m.structure)
-            if at is None or at >= beat["t1"]:
-                continue  # never named here, or named later
-            since = max(at, beat["t0"])
-            after = beats[i + 1] if i + 1 < len(beats) and beats[i + 1]["scene"] == beat["scene"] else beat
-            windows[m.structure] = (beat["scene"], since, max(after["t1"], since + MEANING_MIN_S), m.text)
+            if r.name in meant and r.name in named.get(beat["scene"], set()) and r.name not in first:
+                first[r.name] = max(r.t, beat["t0"])
+    end = beats[-1]["t1"] if beats else 0.0
     for beat in beats:
-        beat["meanings"] = [Gloss(structure=name, text=text, since=round(since, 3), until=round(until, 3))
-                            for name, (scene, since, until, text) in windows.items()
-                            if scene == beat["scene"] and since < beat["t1"] and until > beat["t0"]]
+        beat["meanings"] = [Gloss(structure=name, text=meant[name], since=round(first[name], 3), until=round(end, 3))
+                            for name in meant if name in first and first[name] < beat["t1"]
+                            and name in named.get(beat["scene"], set())]
 
 
 def _write_values(beats: list[dict], locations: Locations) -> None:

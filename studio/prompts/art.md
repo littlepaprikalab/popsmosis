@@ -116,7 +116,7 @@ with an empty circle directly inside the `<svg>`, outside every group:
   off the top); for a bar, just above it; for a marked point, beside it.
 - Leave it room on that side: the name is about 40 px tall and about 20 px wide a letter,
   and it must cross no line, no other name and no value, and stay well inside the frame.
-- The first time a part is named, the video also writes what it means in a smaller line under
+- Once a part is named, the video also writes what it means in a smaller line under
   its name (above the name, for a name written above its point), lined up with the name's
   left end for a name on the right, its right end for one on the left: up to about 420 px
   wide and 35 px tall. Leave that room clear of lines and other names too.

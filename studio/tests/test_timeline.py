@@ -728,14 +728,15 @@ def test_the_song_follows_on_its_long_hold_and_the_lesson_keeps_its_direction(jo
             assert beat.camera.target in (None, directed[beat.line_id])
 
 
-def test_a_graph_parts_meaning_is_written_once_from_when_it_is_first_named():
+def test_a_graph_parts_meaning_stays_with_its_name_from_when_it_is_first_named():
     from types import SimpleNamespace
     from studio.schemas import Meaning, Point, Reveal, Value
-    from studio.steps.timeline import MEANING_MIN_S, _mean
+    from studio.steps.timeline import _mean
 
     names = [Value(text=n, at=Point(x=500, y=300), label=True) for n in ("Demand curve", "Supply curve", "Gap")]
     locations = SimpleNamespace(scenes=[SimpleNamespace(scene="graph", values=names),
-                                        SimpleNamespace(scene="close", values=names[:1])])
+                                        SimpleNamespace(scene="close", values=names[:1]),
+                                        SimpleNamespace(scene="hook", values=[])])
     bundle = SimpleNamespace(meanings=[Meaning(structure="Demand curve", text="lower price → people buy more"),
                                        Meaning(structure="Supply curve", text="higher price → sellers offer more"),
                                        Meaning(structure="Gap", text="buyers want more than sellers have")])
@@ -744,13 +745,13 @@ def test_a_graph_parts_meaning_is_written_once_from_when_it_is_first_named():
         return {"scene": scene, "t0": t0, "t1": t1, "reveal": [Reveal(name=n, t=at) for n, at in reveal]}
 
     beats = [beat("graph", 0.0, 3.0), beat("graph", 3.0, 6.0, ("Demand curve", 4.0)), beat("graph", 6.0, 9.0),
-             beat("graph", 9.0, 12.0, ("Gap", 10.0)), beat("close", 12.0, 20.0, ("Demand curve", 12.5))]
+             beat("hook", 9.0, 12.0), beat("graph", 12.0, 15.0, ("Gap", 13.0)), beat("close", 15.0, 20.0)]
     _mean(beats, bundle, locations)
     got = [[(m.structure, m.since, m.until) for m in b["meanings"]] for b in beats]
-    # Demand curve, named on the second line: from then to the end of the third. The gap, named on the last line there:
-    # MEANING_MIN_S at least. Not again on the close-up, though it is named there. Supply curve, never named: none.
+    # Demand curve, named on the second line, keeps its meaning from then to the video's end wherever its name is
+    # written, the close-up too; the gap from its own naming. Supply curve, never named: none. The hook has no names.
     assert got[0] == []
-    assert got[1] == [("Demand curve", 4.0, 9.0)]
-    assert got[2] == [("Demand curve", 4.0, 9.0)]
-    assert got[3] == [("Gap", 10.0, 10.0 + MEANING_MIN_S)]
-    assert got[4] == []
+    assert got[1] == got[2] == [("Demand curve", 4.0, 20.0)]
+    assert got[3] == []
+    assert got[4] == [("Demand curve", 4.0, 20.0), ("Gap", 13.0, 20.0)]
+    assert got[5] == [("Demand curve", 4.0, 20.0)]

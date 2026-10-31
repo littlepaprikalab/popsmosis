@@ -19,6 +19,19 @@ bill the owner's accounts. They run only with `STUDIO_LIVE=1` (`STUDIO_LIVE_AUDI
 audio ones). Never set those unless the user asks for a live check in this conversation;
 `python -m pytest studio` on its own makes no paid calls, whatever keys the environment has.
 
+## Test drawings run in the session too, never on the API key
+
+When you make or remake a job's videos in a session, the art step never draws on the API. A subagent
+draws each SVG scene from `art.PROMPT` and `art.user_prompt(bundle, scene, previous)`. Judge its
+answer with `art.judge`, fixing only what it refuses (at most `art.MAX_TRIES` tries). Then save it as
+the scene's kept drawing (`art._marker(bundle, scene)` and the SVG, at `art._kept(job, scene)`), so the
+step finds it done. Anything else the brain would write for the job is a subagent too.
+
+Run the media steps after that with every API key unset, so a step that would still call out fails
+instead of billing. Paint, music or a voice on the API (Muse Image, Gemini) only when the user asks
+for it in this conversation, with its price said first. This is the owner's standing decision
+(Oct 31), after a redraw billed $0.76 of drawer calls.
+
 ## The scorecard runs in the session, never on the API key
 
 Always run the scorecard ([docs/scorecard.md](docs/scorecard.md)) in the Claude Code session,
