@@ -105,9 +105,24 @@ const VIDEO_STEP: Step = {
   text: 'Code puts it all together, frame by frame: the pictures, labels, captions, and the notes about mistakes.',
 };
 
-// A note the art check wrote on a real picture, round 16's mitosis hook (docs/test-rounds.md).
-const NOTE = 'The purple new cells sit in the deeper skin as a loose row; in truth, dividing cells lie in the base of '
-  + 'the top layer, just under the scrape.';
+// Two frames of the lesson video of a test droplet on mitosis, made on Oct 30 for this page (Claude Opus 5.5 writing,
+// Muse Image painting, Claude Sonnet 5.5 checking the pictures, Gemini reading the narration): the overview at 94 s,
+// with the card for what the art check found wrong in it, and the hook at 8 s, where it found nothing, with the tag.
+const FRAMES = {
+  card: {
+    src: '/how-its-made/mitosis-metaphase-frame.webp', width: 1600, height: 900,
+    alt: 'A frame from a lesson video on mitosis. The camera is close on the metaphase cell, labeled Metaphase plate, '
+      + 'as the narrator says: Next comes metaphase: the fibers line every chromosome up across the middle of the '
+      + 'cell, on the metaphase plate. At the right, a white card headed AI-generated picture says: A check found these '
+      + 'mistakes: The metaphase cell shows no spindle poles; in truth spindle fibers run from a pole at each end to '
+      + 'the chromosomes.',
+  },
+  tag: {
+    src: '/how-its-made/mitosis-hook-frame.webp', width: 960, height: 640,
+    alt: 'The bottom left of a frame from the same video: a scraped knee, labeled Scraped knee, with a small '
+      + 'AI-generated picture tag in the corner.',
+  },
+};
 
 interface Hard { title: string; happened: string; changed: string }
 
@@ -269,8 +284,8 @@ export default function HowItsMadePage() {
 
       <section aria-labelledby="notice-title" className="mb-12">
         <SectionTitle id="notice-title">When a picture is wrong, the video tells you</SectionTitle>
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-          <div className="flex flex-col gap-3 text-sm leading-relaxed lg:flex-1" style={{ color: 'var(--text-secondary)' }}>
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-3 text-sm leading-relaxed max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
             <p>
               AI pictures are the weakest part of a droplet, and painting a picture again often doesn&rsquo;t fix it.
               For some kinds of mistakes, a second try was no better 9 times out of 11.
@@ -286,14 +301,19 @@ export default function HowItsMadePage() {
               for mitosis, gets the tag but never a card. It can&rsquo;t teach the topic wrong.
             </p>
           </div>
-          <figure className="lg:w-[22rem] lg:shrink-0">
-            <div className="rounded-lg p-4 sm:p-5 flex flex-col gap-4" style={{ background: '#28374B' }}>
-              <NoticeCard notes={[NOTE]} />
-              <div><AiTag /></div>
-            </div>
+          <figure>
+            <Frame frame={FRAMES.card} />
             <figcaption className="text-xs leading-relaxed mt-2" style={{ color: 'var(--text-muted)' }}>
-              This is how the card looks in a video. The note is a real one the check wrote while we tested a lesson
-              on mitosis. Below it is the tag on every other picture.
+              A real frame from the lesson video of a test droplet on mitosis. The picture check found that the
+              metaphase cell has no spindle poles, so the card at the right says so while the picture is on screen.
+            </figcaption>
+          </figure>
+          <figure className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+            <div className="sm:w-64 sm:shrink-0"><Frame frame={FRAMES.tag} /></div>
+            <figcaption className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+              The bottom left of another frame from the same video. The check found nothing wrong in this picture,
+              so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a card. Every AI
+              picture gets one or the other.
             </figcaption>
           </figure>
         </div>
@@ -493,40 +513,10 @@ function KindChip({ kind }: { kind: Kind }) {
   );
 }
 
-/** The card the video draws beside a picture with a known mistake (draw_notice in studio/render/primitives.py), in
- *  its own colours, which are the video's in either theme. */
-function NoticeCard({ notes }: { notes: string[] }) {
+function Frame({ frame }: { frame: { src: string; width: number; height: number; alt: string } }) {
   return (
-    <div className="rounded-xl overflow-hidden flex" style={{ background: '#FFFFFF', boxShadow: '0 4px 12px rgba(0,0,0,0.35)' }}>
-      <span aria-hidden className="w-1.5 shrink-0" style={{ background: '#F59E0B' }} />
-      <div className="p-4 min-w-0">
-        <p className="flex items-center gap-2 font-extrabold text-sm" style={{ color: '#0F172A' }}>
-          <svg aria-hidden viewBox="0 0 20 18" className="w-4 h-4 shrink-0">
-            <path d="M10 0 20 18H0Z" fill="#F59E0B" />
-            <text x="10" y="15.5" textAnchor="middle" fontSize="12" fontWeight="800" fill="#0F172A">!</text>
-          </svg>
-          AI-generated picture
-        </p>
-        <p className="text-xs font-semibold mt-2" style={{ color: '#475569' }}>A check found these mistakes:</p>
-        <ul className="mt-1 flex flex-col gap-1">
-          {notes.map((note) => (
-            <li key={note} className="text-xs font-semibold leading-relaxed flex gap-2" style={{ color: '#0F172A' }}>
-              <span aria-hidden>•</span><span>{note}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-/** The tag the video draws on every other AI picture (draw_ai_tag in studio/render/primitives.py). */
-function AiTag() {
-  return (
-    <span className="inline-block rounded-full text-[11px] font-semibold px-2.5 py-1"
-      style={{ background: 'rgba(15,23,42,0.72)', color: 'rgba(255,255,255,0.92)' }}>
-      AI-generated picture
-    </span>
+    <img src={frame.src} alt={frame.alt} width={frame.width} height={frame.height} loading="lazy"
+      className="block w-full h-auto rounded-lg" style={{ border: '1px solid var(--border)' }} />
   );
 }
 

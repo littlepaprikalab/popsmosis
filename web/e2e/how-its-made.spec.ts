@@ -37,8 +37,14 @@ test.describe('the How it’s made page', () => {
     await expect(page).toHaveURL(/#notice-title$/);
     await expect(page.getByRole('heading', { level: 2, name: 'When a picture is wrong, the video tells you' })).toBeInViewport();
     await expect(page.getByRole('list', { name: 'Sound' }).getByRole('listitem')).toHaveCount(1);
-    // The card as the video draws it, with the note's lead in the renderer's words.
-    await expect(page.getByText('A check found these mistakes:')).toBeVisible();
+    // Real frames of a video: the card for a mistake the check found, and the tag on a picture it found none in.
+    const frames = page.locator('section[aria-labelledby="notice-title"] img');
+    await expect(frames).toHaveCount(2);
+    await expect(frames.first()).toHaveAttribute('alt', /A check found these mistakes: The metaphase cell shows no spindle poles/);
+    await expect(frames.last()).toHaveAttribute('alt', /AI-generated picture tag/);
+    await frames.last().scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => [...document.querySelectorAll('section[aria-labelledby="notice-title"] img')]
+      .every((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0));
     await expect(page.getByRole('article')).toHaveCount(6);
     await expect(page.getByRole('list', { name: 'The models' }).getByRole('listitem')).toHaveCount(7);
   });
