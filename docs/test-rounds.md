@@ -1225,6 +1225,27 @@ the third row's, which tested within the judge's noise of the first. On
 its own topic an example is copied word for word (the light reactions sang "Split the water, catch the light" in
 both arms that had it): it teaches the shape everywhere else.
 
+Then the chorus example, which had been "Open the gates, let sodium in / Flip the charge and the spike begins", each
+arm against the old brief (judged by Sonnet, then by Opus from the fifth test on):
+
+| Title examples, chorus example | New | Old brief | Preferred new | Weak, new / old |
+|---|---|---|---|---|
+| Split, Pull, Print; "Moon overhead, the sea climbs high / Moon moves on, the sand runs dry" (Sonnet) | 3.67 | 4.08 | 2 of 12 (1 tie) | 6 / 2 |
+| Split, Pull, Print; "Spot the germ, lock it tight / Call the cells, win the fight" (Opus) | 4.17 | 4.67 | 5 of 12 | 1 / 0 |
+| Split, Pull, "Cash in the carriers"; "Pull the sea, then let it go / High tide, low tide, to and fro" (Opus, against the old brief written afresh) | 4.00 | 4.17 | 5 of 12 | 4 / 1 |
+
+The old brief's lead was mostly one lucky draw: written again, its title lines scored 4.17 where its first set had
+scored 4.67, so a brief's own runs differ by about half a point on 12 topics, more than the judge's 0.2. These tests
+cannot tell apart briefs closer than that. The last row, the owner's picks, is within that of the old brief and ships:
+the title examples "Split the water, catch the light", "Pull the sea, then let it go" and "Cash in the carriers" (a
+phrase that is also the science, from the owner's favourite song), and a chorus example that opens on a title example
+and answers it, as the old one did. The Moon chorus, the one example that was not a command, did worst: statement
+examples are copied as statements. Its writer sang "Split the water, bank the sun" on the light reactions, rather
+than copy the example.
+
+The owner also loosened the song's shape (Oct 31): the intro need not open on the title line, as a song that always
+starts on its title is predictable, and the chorus may run 5 lines, as Split the Water's does (docs/reference-songs.md).
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

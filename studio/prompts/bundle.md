@@ -425,8 +425,8 @@ explanation left to the narration.
 
 The title line is the hook and the song's name: 3 to 7 words naming the big move as concrete
 actions on real things ("Split the water, catch the light", "Pull the sea, then let it go",
-"Print the page, spread the word"), never pronouns standing in for them ("Pump them in,
-they spin it out" names nothing). The chorus opens and ends on it.
+"Cash in the carriers"), never pronouns standing in for them ("Pump them in, they spin it
+out" names nothing). The chorus opens and ends on it.
 
 In this order, each section a run of lines with its own `section` value:
 
@@ -442,8 +442,8 @@ In this order, each section a run of lines with its own `section` value:
   never a filler like "that isn't true".
 - **Chorus**, 4 or 5 lines: `core_idea` as a chant, opening and ending on the title line.
   The two or three lines between are the whole idea in brief, each built like the one
-  before so the rhythm repeats ("Moon overhead, the sea climbs high / Moon moves on, the
-  sand runs dry"): for a process, what goes in and what comes out ("Light and water in /
+  before so the rhythm repeats ("Pull the sea, then let it go / High tide, low tide, to and
+  fro"): for a process, what goes in and what comes out ("Light and water in /
   ATP and NADPH out"); for any other idea, its cause and its result. Short words, nothing to stumble on.
   Word for word the same each time, each repeat with its own ids; a learner can sing it
   back after two hearings.
