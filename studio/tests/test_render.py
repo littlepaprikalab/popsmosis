@@ -905,7 +905,7 @@ def test_a_picture_with_mistakes_found_moves_over_for_a_card_that_discloses_them
     assert staged.view("hook") == staged.view("overview") and plain.view("hook")[2] == width
 
 
-def test_a_notice_card_sits_below_the_key_band_and_upright_above_the_picture(job):
+def test_a_notice_card_sits_beside_the_picture_and_upright_above_it(job):
     beat = flow_beat(0, 4, path=[], labels=["Thylakoid"], reveal=[Reveal(name="Thylakoid", t=0.0)])
     notices = {"overview": ["Cytochrome b6f should sit across the membrane, not on it."]}
     keyed = flowing([beat.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"})])
@@ -913,8 +913,8 @@ def test_a_notice_card_sits_below_the_key_band_and_upright_above_the_picture(job
     wide = Renderer(job, keyed.model_copy(update={"notices": notices}))
     view = wide.view("overview")
     edge, top = view[2], view[1] + wide.layout.margin + 8
-    assert view[1] == wide.layout.key_h
-    # The card's amber side starts below the key band, which no longer hides the card's top.
+    assert view[1] == 0 and view[3] == wide.layout.height - wide.layout.band_h - wide.layout.key_h
+    # The card's amber side runs down beside the picture, from its top.
     assert np.allclose(pixel(wide.frame(2.0), edge + 3, top + 40), amber, atol=12)
     assert not np.allclose(pixel(wide.frame(2.0), edge + 3, top - 12), amber, atol=12)
     # Upright, the card goes across the frame above the picture, which keeps the frame's whole width.
@@ -1003,21 +1003,30 @@ def test_key_terms_are_found_whole_ignoring_case_longest_first():
     assert p.key_term_spans("synthases", ["synthase"]) == []  # whole words only
 
 
-def test_a_song_with_key_lines_shows_them_in_a_band_over_the_picture(job):
+def test_a_song_with_key_lines_shows_them_in_a_band_right_above_the_lyrics(job):
+    # Read with the line sung, not across the frame from it: at the top, a learner reading the lyrics missed it.
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     beats = [b.model_copy(update={"key_line": "Light pumps H⁺ into the lumen"}) for b in timeline.beats]
     keyed = Renderer(job, timeline.model_copy(update={"beats": beats, "key_terms": ["lumen"]}))
     plain = Renderer(job, timeline)
-    assert keyed.view("overview")[1] == plain.view("overview")[1] + keyed.layout.key_h > 0
-    frame = keyed.frame(14.0)
-    band = frame[:keyed.layout.key_h, :, :3]
+    layout = keyed.layout
+    assert keyed.view("overview")[1] == plain.view("overview")[1]
+    assert keyed.view("overview")[3] == plain.view("overview")[3] - layout.key_h == layout.height - layout.band_h - layout.key_h
     amber = p.rgb("#FCD34D")
-    assert ((band[..., 2] == amber[0]) & (band[..., 1] == amber[1]) & (band[..., 0] == amber[2])).sum() > 50
-    assert (band[..., :] > 200).all(axis=-1).sum() > 500  # white text
+
+    def amber_and_white(rows):
+        return (((rows[..., 2] == amber[0]) & (rows[..., 1] == amber[1]) & (rows[..., 0] == amber[2])).sum(),
+                (rows[..., :] > 200).all(axis=-1).sum())
+
+    frame = keyed.frame(14.0)[:, :, :3]
+    yellow, white = amber_and_white(frame[layout.height - layout.band_h - layout.key_h:layout.height - layout.band_h])
+    assert yellow > 50 and white > 500  # the key term in amber, the rest in white
+    assert amber_and_white(frame[:layout.key_h])[0] == 0  # nothing of it left at the top
     upright = Renderer(job, keyed.timeline.model_copy(update={"title": "the light reactions"}), "v")
-    assert upright.view("overview")[1] == upright.layout.title_h  # in the title band, which keeps its height
-    top = upright.frame(14.0)[:upright.layout.title_h, :, :3]
-    assert ((top[..., 2] == amber[0]) & (top[..., 1] == amber[1]) & (top[..., 0] == amber[2])).sum() > 50
+    tall = upright.layout
+    assert upright.view("overview")[1] == tall.title_h and upright.view("overview")[3] == tall.height - tall.band_h - tall.key_h
+    rows = upright.frame(14.0)[tall.height - tall.band_h - tall.key_h:tall.height - tall.band_h, :, :3]
+    assert amber_and_white(rows)[0] > 50
 
 
 def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):

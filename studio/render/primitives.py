@@ -830,25 +830,10 @@ def draw_key_line(canvas: skia.Canvas, rect: Rect, text: str, terms: list[str], 
 
 
 def draw_key_band(canvas: skia.Canvas, rect: Rect, text: str, terms: list[str], font_size: float, alpha: float) -> None:
-    """The band along the top of a wide frame that holds the scene's key line, on the title band's slate."""
+    """The band just above the lyric band that holds the scene's key line, on the title band's slate."""
     x0, y0, x1, y1 = rect
     canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
     draw_key_line(canvas, (x0, y0 + 6, x1, y1 - 6), text, terms, font_size, alpha)
-
-
-def draw_title_key(canvas: skia.Canvas, rect: Rect, title: str, text: str, terms: list[str], title_font: float,
-                   font_size: float, alpha: float, foot: float = 14) -> None:
-    """An upright frame's title band with a key line: the topic small on top, the scene's key line below it, above
-    the band's bottom `foot` px (where the brand sits in its corner)."""
-    x0, y0, x1, y1 = rect
-    canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
-    kicker_h = 0.0
-    if title:
-        f = font("Bold", title_font * 0.55)
-        row = wrap(title, f, (x1 - x0) - 2 * KEY_PAD)[0]
-        kicker_h = title_font * 0.55 * 1.9
-        draw_text(canvas, row, (x0 + x1) / 2 - text_width(f, row) / 2, y0 + kicker_h * 0.72, f, KICKER)
-    draw_key_line(canvas, (x0, y0 + kicker_h, x1, y1 - foot), text, terms, font_size, alpha)
 
 
 KEY_PAD = 60  # frame px a key line keeps from each side

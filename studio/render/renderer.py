@@ -836,11 +836,11 @@ class Renderer:
         self._postits: dict[str, list[tuple[int, float]]] = {}  # per scene, each flag's post-it side and reach
 
     def view(self, scene_id: str) -> Rect:
-        """Where the scene's picture goes on the frame: above the lyric band, and left of the notice card when it
-        has one, or in an upright frame below it."""
+        """Where the scene's picture goes on the frame: above the key band and the lyric band, and left of the
+        notice card when it has one, or in an upright frame below it."""
         x0, y0, x1, y1 = self.layout.view
         if self.keyed:
-            y0 += self.layout.key_h
+            y1 -= self.layout.key_h
         if scene_id not in self._beside:
             return (x0, y0, x1, y1)
         return (x0, y0 + self._card_h, x1, y1) if self.portrait else (x0, y0, x1 - NOTICE_W, y1)
@@ -1313,20 +1313,19 @@ class Renderer:
             canvas.drawImage(card, x, y, skia.SamplingOptions(), skia.Paint(Alphaf=alpha))
         p.draw_band(canvas, (0, layout.height - layout.band_h, layout.width, layout.height),
                     self._band_words(self._band_beat(i, t)), t, layout.band_font, lines=layout.band_lines)
-        # The key line fades in and out with its run, and stays put through it while the lyrics go by below.
+        # The key line fades in and out with its run, and stays put through it while the lyrics go by below. It sits
+        # right on top of the lyric band, so the eye reads the step and the line sung together: at the top of the
+        # frame, a learner reading the lyrics never saw it (the owner, Oct 31).
         key_alpha = p.ease((t - plan.key_in) / KEY_FADE_S) * p.ease((plan.key_out - t) / KEY_FADE_S)
-        if layout.title_h and self.keyed:
-            p.draw_title_key(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, beat.key_line,
-                             self.timeline.key_terms, layout.title_font, layout.key_font, key_alpha,
-                             foot=self.brand[1] + BRAND_GAP + 4)
-        elif layout.title_h:
+        if layout.title_h:
             p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font)
+        key_top = layout.height - layout.band_h - (layout.key_h if self.keyed else 0)
         if self.keyed and layout.key_h:
-            p.draw_key_band(canvas, (0, layout.title_h, layout.width, layout.title_h + layout.key_h), beat.key_line,
+            p.draw_key_band(canvas, (0, key_top, layout.width, layout.height - layout.band_h), beat.key_line,
                             self.timeline.key_terms, layout.key_font, key_alpha)
         # The brand, in the same place on every frame: the bottom right corner of the title band where there is one,
         # else of the picture, across from the tag.
-        corner = layout.title_h - BRAND_GAP if layout.title_h else layout.height - layout.band_h - layout.margin
+        corner = layout.title_h - BRAND_GAP if layout.title_h else key_top - layout.margin
         p.draw_brand(canvas, layout.width - layout.margin - self.brand[0], corner - self.brand[1], layout.brand_font)
 
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
