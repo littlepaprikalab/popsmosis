@@ -12,7 +12,7 @@ no fact-check, art or audio. Each droplet is then scored three ways:
 
 - **Checks:** the problems the code checks leave for the prompt, by rule.
 - **Learner test:** whether a first-time learner got the core idea and the why chain's links.
-- **Judge:** Claude Sonnet 5.5 reads the droplet against a written rubric
+- **Judge:** Claude Opus 5.5 (Claude Sonnet 5.5 until Oct 31) reads the droplet against a written rubric
   (`studio/prompts/rubric.md`). It scores hook, frame, why chain, key lines, accuracy,
   singability and lesson clarity from 1 to 5, gives a reason for each, and lists the claims it
   would correct.

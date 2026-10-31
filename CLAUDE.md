@@ -50,7 +50,8 @@ How to run it, for each topic in `studio/scorecards/topics.json`:
   against `Script` / `Bundle` and fixes only what fails validation, never for quality.
 - **The checks:** run the bundle step's code checks on its answer, as `bundle.run` does
   (`script.follow`, `checks.review`, then the problem functions it adds). Free.
-- **The judge:** one Sonnet subagent grades the droplet as `scorecard.droplet_text` prints it,
+- **The judge:** one Opus subagent (the session's model, the owner's choice on Oct 31; it was Sonnet before,
+  and runs are compared only on one judge) grades the droplet as `scorecard.droplet_text` prints it,
   against `studio/prompts/rubric.md`, blind beside the latest real run's droplet for the same
   topic (labelled X and Y at random), and says which it prefers.
 - **Read the droplets yourself** as well, lesson, song and narration, and report what you

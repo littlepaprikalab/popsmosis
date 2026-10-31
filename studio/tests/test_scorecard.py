@@ -106,7 +106,8 @@ def test_the_judge_is_the_same_claude_model_whatever_the_brain(monkeypatch):
         brain.ask("judge", "grade this")
     assert seen == ["judge"]
     request = brain.claude_request("judge", "grade this", scorecard.Judgement, (), "the rubric")
-    assert request["model"] == brain.CLAUDE["judge"]["model"] != brain.CHOICES["claude"]["model"]
+    # Opus, the stronger reader, since Oct 31 (the owner): Claude's brain is graded by its own model.
+    assert request["model"] == brain.CLAUDE["judge"]["model"] == "claude-opus-5-5"
     assert request["output_config"]["effort"] == brain.CLAUDE["judge"]["effort"]
     assert "fallbacks" not in request
 
