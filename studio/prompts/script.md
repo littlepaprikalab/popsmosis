@@ -73,8 +73,9 @@ Tell it as one path, each sentence following from the one before:
 4. **The prediction and the misconception**, once, right where the wrong idea would form,
    never before the learner has met what it is about: ask the listener to guess, with a
    question the common mistake answers wrong ("So if the forces are equal, does the gas push
-   the rocket as hard as the rocket pushes the gas? Most people say no."), then answer it:
-   the mistake named as a common one, why it fails, the right idea. Committing to a guess and
+   the rocket as hard as the rocket pushes the gas? Many people say no."), then answer it:
+   the mistake named as a common one, why it fails, the right idea. Never "most people": the
+   facts call a mistake common, they never count who makes it. Committing to a guess and
    seeing it fail is what changes a wrong idea.
 5. **A case** (2 to 5 sentences): the idea at work in one example the facts give, worked
    step by step, cause before effect, opened as what it is ("Now, what happens when blood
