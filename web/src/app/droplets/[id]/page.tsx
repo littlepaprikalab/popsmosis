@@ -31,6 +31,7 @@ export default function DropletPage() {
   const [confirmHide, setConfirmHide] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [commentsFolded, setCommentsFolded] = useState(false);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -138,7 +139,12 @@ export default function DropletPage() {
         <div className="mt-3 flex items-center gap-3" data-testid="droplet-engagement">
           <LikeButton dropletId={droplet.id} liked={!!droplet.liked} likeCount={droplet.likeCount} size="md" />
           <a href="#comments" className="inline-flex items-center gap-1.5 text-sm hover-text" style={{ color: 'var(--text-secondary)' }}
-            onClick={(e) => { e.preventDefault(); document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>
+            onClick={(e) => {
+              e.preventDefault();
+              // Asking for the comments opens them, if they were folded away.
+              setCommentsFolded(false);
+              document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}>
             <ChatBubbleLeftIcon className="w-5 h-5" aria-hidden />
             {formatCount(commentCount)} {commentCount === 1 ? 'comment' : 'comments'}
           </a>
@@ -194,7 +200,8 @@ export default function DropletPage() {
       </div>
 
       {droplet.commentCount !== undefined && (
-        <DropletComments dropletId={droplet.id} count={commentCount} setCount={setCommentCount} initial={droplet.comments} />
+        <DropletComments dropletId={droplet.id} count={commentCount} setCount={setCommentCount} initial={droplet.comments}
+          fold={{ collapsed: commentsFolded, setCollapsed: setCommentsFolded }} />
       )}
 
       <p className="text-[10px] mt-6" style={{ color: 'var(--text-muted)', lineHeight: 1.6 }} data-testid="ai-notice">
