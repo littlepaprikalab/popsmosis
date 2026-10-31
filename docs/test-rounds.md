@@ -1219,7 +1219,9 @@ appeal.
 
 The first row is one set of title lines judged twice: 3.92 and 4.17, so about 0.2 is the judge's own noise. The
 statement-shaped example ("The Moon pulls…") was copied as a shape ("The catalyst lowers the hump"); commands come
-out as chants ("Ring the tone, then bring the bowl"). Neither change helped, so the examples stay as they were. On
+out as chants ("Ring the tone, then bring the bowl"). Neither change helped. The owner then dropped "Open the gates,
+let sodium in" (it reads like a sentence, and sings sodium the way the pump does not move it), so the examples are
+the third row's, which tested within the judge's noise of the first. On
 its own topic an example is copied word for word (the light reactions sang "Split the water, catch the light" in
 both arms that had it): it teaches the shape everywhere else.
 
