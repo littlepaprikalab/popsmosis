@@ -5,7 +5,7 @@ made. Each step writes a file in the droplet's folder (`jobs/<id>/`) and counts 
 running again after a failure starts at the step that failed. The details are in `docs/PLAN.md`; this is the map.
 
 Who does each step: **code** (no model, no cost), **the brain** (the costly calls), **a helper** (small checks),
-or **another model** (a painter, SAM, Lyria, Gemini's voice, Demucs, MMS). The brain is Claude Opus by default; an
+or **another model** (a painter, SAM, Eleven Music, an ElevenLabs voice, Demucs, MMS). The brain is Claude Opus by default; an
 admin can switch it to Meta's Muse Wonder or Muse Spark (`/admin/studio`, or a topic's own on `/learn`), and the
 helper switches with it (Claude Sonnet for Claude, Muse Spark for Muse). Every brain call below goes to the brain in
 force for the topic: the script and the bundle are two calls, then the audit, the narration edit, a lesson rewrite,
@@ -49,13 +49,16 @@ Two branches run side by side, then the rest in order (`videos.py`):
 - **Pictures**
   - **Art** (`steps/art.py`): each scene painted by **the painter** (Gemini's image model for Claude's brain,
     Muse Image for Muse's, by default; an admin can change it), or drawn as SVG by **Claude Opus**
-    (`prompts/art.md`) for a graph or a chart to scale: on a light page, each curve's name placed by the drawing. A **helper** looks at each painting for wrong labels; what it finds is shown
+    (`prompts/art.md`) for a graph, a chart to scale or a math lesson's picture, whoever the brain: on a light
+    page, each curve's name placed by the drawing. A painting labels its own parts. A **helper** looks at each
+    painting for wrong labels and parts missing or out of place; what it finds is shown
     beside the picture, never hidden.
-  - **Locate** (`steps/locate.py`): **SAM** finds each part in a painting, so the camera and the labels know
-    where it is. A drawing needs none: its parts are its own.
+  - **Locate** (`steps/locate.py`): **SAM** finds each part in a painting, so the camera and the spotlight
+    know where it is. A drawing needs none: its parts are its own.
 - **Sound**
-  - **Audio** (`steps/audio.py`): the song by **Lyria** (or ElevenLabs when it has credits), the narration read
-    by **Gemini's voice**. The studio asks every song for clear diction once.
+  - **Audio** (`steps/audio.py`): the song by **Eleven Music**, the narration read by an **ElevenLabs voice**, by
+    default; an admin can switch both to Gemini (Lyria sings, Gemini's voice reads), and a song Lyria will not
+    sing goes to Eleven Music. The studio asks every song for clear diction once.
   - **Timing** (`steps/timing.py`): **Demucs** takes the vocals out of the song, and **MMS** finds when each
     word is sung or said. A song that did not sing its lyrics, or a narration not read as written, is made again.
 - **Timeline** (code, instant; `steps/timeline.py`): for every moment, which scene shows, where the camera goes,
