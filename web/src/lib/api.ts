@@ -241,6 +241,64 @@ export interface Breakdown {
   complete: boolean; // every call priced
 }
 
+/** One line the fact-check judged: a sentence of the lesson or the narration, a couplet, a key line, a tag... */
+export interface FactcheckLine {
+  kind: string; // lesson, narration, lyric, keyline, scene, caption, title, style, tag, motion, avoid
+  id: string;
+  text: string; // a couplet's two lines joined by "\n"
+  verdict: string | null; // SUPPORTED, FILLER or UNSUPPORTED
+  source: string; // the fact it rests on, or "course knowledge"
+  round: number | null;
+  problem: string;
+}
+
+/** What the fact-check changed, and why. */
+export interface FactcheckCorrection {
+  round: number | null;
+  kind: string;
+  ids: string[];
+  before: string;
+  after: string;
+  problem: string;
+}
+
+/** What the art checker reports on a picture: each kind of finding, a few words each. */
+export interface ArtFindings {
+  text: string[]; // writing in the picture
+  misplaced: string[]; // a structure missing, out of place or facing the wrong way
+  unnamed: string[]; // a small round thing that is no listed structure
+  wrong: string[]; // anything else wrong for the scene
+  notes: string[]; // what would teach something false, written for the student
+}
+
+/** One scene's picture, as the art checker saw it. */
+export interface ArtSceneReview {
+  scene: string;
+  imageUrl: string | null; // the kept picture, served to admins; null when it is not in storage or the API cannot read it
+  model: string | null; // who painted it; null: drawn by the brain, and not looked at
+  kept: number | null; // the try kept
+  check: ArtFindings | null;
+  tries: (ArtFindings & { try: number | null; declined: string | null; redrawFailed: string | null })[];
+}
+
+/**
+ * What the studio's checks found in a droplet, for an admin (GET /api/answers/:id/review): the fact-check, the code
+ * checks on the bundle and the art checker's look at each picture. Null parts: made before they were sent.
+ */
+export interface DropletReview {
+  id: string;
+  factcheck: {
+    status: string;
+    reason: string;
+    rounds: number | null;
+    counts: { supported: number; filler: number; unsupported: number };
+    lines: FactcheckLine[];
+    corrections: FactcheckCorrection[];
+  } | null;
+  checks: { problems: { lineId: string; rule: string; detail: string; repaired: boolean }[] } | null;
+  art: { scenes: ArtSceneReview[] } | null;
+}
+
 /** A step the studio is running now. */
 export interface RunningStep {
   step: string;
@@ -552,6 +610,9 @@ export const api = {
   // An admin having looked at a droplet that waits for review: true lists it on the Droplets tab (unless hidden).
   setDropletApproved: (answerId: string, approved: boolean) =>
     request<{ id: string; awaitingReview: boolean }>(`/answers/${answerId}`, { method: 'PATCH', body: JSON.stringify({ approved }) }),
+
+  // Admin: what the studio's checks found in a droplet, under its lesson on /learn
+  getDropletReview: (answerId: string) => request<DropletReview>(`/answers/${encodeURIComponent(answerId)}/review`),
 
   // Admin: droplets ranked by how many of one video's plays finished (api/src/routes/plays.ts)
   // withTotals: every droplet's totals too, for the drop-off chart; they sum every count, so the page asks once.

@@ -66,7 +66,7 @@ import time
 import traceback
 from pathlib import Path
 
-from studio import brain, checks, jobs, knobs, ledger
+from studio import brain, checks, jobs, knobs, ledger, review
 from studio.api import Api, ApiError
 from studio.ledger import call_row  # noqa: F401  (python -m studio imports it from here)
 from studio.media import StepFailed  # the media steps raise it too
@@ -621,6 +621,10 @@ def post_lesson(job: Path, api: Api, question: dict | None, ask) -> str:
     breakdown = ledger.try_breakdown(job, "lesson")
     if breakdown:
         body["breakdown"] = breakdown
+    # What the code checks found in the bundle, for an admin's review of the droplet (studio/review.py).
+    found = review.code_checks(job)
+    if found is not None:
+        body["checks"] = found
     try:
         answer = api.post_answer(job.name, body)
     except ApiError as e:

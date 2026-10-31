@@ -404,10 +404,10 @@ that, never renewed, so these responses never set a cookie (they send `Vary: Coo
 | GET | `/api/agents/me` | confirm the key |
 | GET | `/api/questions/queue?limit=N` | topics with no lesson yet, oldest first, each leased to the caller for `QUESTION_CLAIM_MINUTES` |
 | POST | `/api/questions/:id/claim` | take or renew the lease on one topic and read it, with the `brain` an admin picked for it (`null`: the teacher's own); 409 if answered, failed, or leased to another agent |
-| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
+| POST | `/api/questions/:id/answer` | the lesson: `{ content, model?, bundle?, factcheck?, breakdown?, checks? }`; the two JSON objects go together and `factcheck.status` must be `passed`; `breakdown` is the steps so far ([Bill of materials](#bill-of-materials)); `checks`, with the bundle, is what the code checks found in it, for an admin's review ([Review](#review)); 409 once there is one, with `answerId` when it is the caller's own, and 409 unless the caller holds the topic's claim (the queue or `/claim`) |
 | POST | `/api/questions/:id/fail` | give a topic up: `{ reason }`; it leaves the queue and its card shows the reason; the last claimer only |
 | PUT | `/api/questions/:id/progress` | where the studio is while it writes the lesson: `{ running: [{ step, seconds }], failed?, breakdown?, videos? }` ([While a droplet is made](#while-a-droplet-is-made)); 204; 409 unless the caller holds the claim and there is no lesson yet |
-| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab (with review on, once an admin approves it), and may carry the media steps' `breakdown`. With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
+| PATCH | `/api/answers/:id/video` | own answers: `{ status: RENDERING\|READY\|FAILED, songVideoUrl?, lessonVideoUrl?, songPosterUrl?, lessonPosterUrl?, error?, attempt?, breakdown?, artChecks? }`; a URL left out is kept, so the two videos can report separately; READY lists it on the Droplets tab (with review on, once an admin approves it), and may carry the media steps' `breakdown` and the art checker's look at each picture, `artChecks` ([Review](#review)). With `attempt`, 409 unless that attempt still holds the render. Once storage is set up, each URL must be one of this droplet's own files in the public bucket, under `<R2_PUBLIC_URL>/<answerId>/` (a production API without storage takes none). READY is final: 409 for any change after it |
 | POST | `/api/answers/:id/upload-url` | own answers: `{ bucket: droplets\|studio, file }`; `{ uploadUrl, headers, path, publicUrl }`: a signed R2 URL to PUT the file to with `headers` (its Content-Type, which is signed into the URL so R2 takes no other, and for `droplets` a long Cache-Control), and for `droplets` where anyone will read it. While `SUPABASE_URL` is still set, the video PATCH also takes this droplet's own files in the old Supabase bucket, which the API moves to R2 within the hour. The public bucket takes `.mp4`, `.jpg`, `.jpeg`, `.png` and `.webp` only; 409 once the videos are READY; 503 until storage is set up (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_PUBLIC_URL`) |
 | POST | `/api/answers/:id/video/claim` | own answers: `{ attempt? }`; without one, start an attempt at the videos (never started, given up, or quiet past `VIDEO_STALE_MINUTES`; at most `VIDEO_MAX_ATTEMPTS`, default 2), marking them RENDERING; with the caller's attempt, renew it. Returns `{ answerId, questionId, attempt, status, brain, bundle, factcheck }` (`brain`: the topic's, as on the claim); 409 when another run holds them, they are READY, or the attempts are used up |
 | GET | `/api/videos/queue?limit=N` | own droplets whose render went quiet past `VIDEO_STALE_MINUTES` (its machine died), oldest first, each claimed as its next attempt, as the claim returns them |
@@ -572,6 +572,31 @@ cannot be read, is too big (16 KB) or holds a number JSON has no word for is lef
 the request rather than sent for the API to refuse. A render recovered on another machine counts only that
 machine's tries, since the first machine's records died with it.
 
+### Review
+
+Under the bill, an admin's `/learn` has a second fold, **Review**: what the studio's own checks found in the droplet,
+for the admin who approves it (with review on, `/admin/studio`) or looks it over. Nobody else sees it: not the learner who
+asked for the topic, and not the Droplets tab. It is fetched only when opened (`GET /api/answers/:id/review`,
+`api/src/lib/review.ts`), and has three parts:
+
+- **Fact-check**: how many lines it judged supported, filler and unsupported, in how many rounds, what it fixed
+  (before and after, and why), and every line it judged. Saved with every lesson since the fact-check began.
+- **Code checks**: what `studio/checks.py` found in the bundle that only a better bundle could fix (a line naming a
+  part its scene does not draw, a run of lines with nothing moving), and how many it repaired itself. The studio
+  sends `checks.json` with the lesson (`checks`).
+- **Pictures**: each scene's kept picture beside what the art checker said about it (writing in it, a part missing
+  or out of place, an unnamed thing, anything else wrong, a note that would teach something false), which try was
+  kept, and why each earlier try was painted again or declined. The studio sends each scene's `art/<scene>.json`
+  with READY (`artChecks`), with where the picture went in the private bucket; the API reads the picture out of
+  the bucket for the page (`GET /api/answers/:id/review/art/:scene`), so the page's Content-Security-Policy still
+  loads pictures only from this site and the public media domain. A drawn scene was not looked at.
+
+The checks miss things, the pictures' science most of all ([test rounds](docs/test-rounds.md), open gap 2): the
+panel says so, and the pictures are there to be looked at. Like the bill, neither part the studio sends is ever the
+reason a post or an upload fails (`studio/review.py`): one that cannot be read, or is more than the API takes
+(64 KB of code checks, 128 KB of art checks), is left out, and the review says it has none. A droplet made before
+these were sent has the fact-check alone.
+
 ### Made with
 
 Every droplet on the Droplets tab says which models made it, read from its bill: its card
@@ -662,6 +687,8 @@ small database better. Agents cannot send files.
 | GET | `/api/users?q=` | list users |
 | PATCH | `/api/users/:id` | `{ role: 'ADMIN' \| 'USER' }`; never yourself or the last admin |
 | PATCH | `/api/answers/:id` | `{ hidden?, approved? }`: take a droplet off the Droplets tab, or put it back; approve one that waits for review (`false` sends it back to wait); the lesson stays on `/learn` |
+| GET | `/api/answers/:id/review` | what the studio's checks found in the droplet ([Review](#review)): `{ id, factcheck, checks, art }`, each null when it was not sent |
+| GET | `/api/answers/:id/review/art/:scene` | a scene's kept picture, read out of the private bucket: a PNG; 404 when the droplet has none in storage, 503 until storage is set up |
 | PUT | `/api/announcement` | `{ message, tone? }`: put up the message under the nav, in place of any before it ([Announcement](#announcement)); `message` 1–500 characters of plain text, `tone` `info` (the default) or `warning`. `{ announcement }` |
 | DELETE | `/api/announcement` | take it down; `{ announcement: null }` |
 | GET | `/api/plays` | droplets ranked by how many of one video's plays finished, best first: `?video=song\|lesson\|hook` (song), `?min=` the fewest starts to be ranked (1), `?limit=` (50, at most 200). `{ video, min, data: [{ id, title, course, topic, hidden, createdAt, plays: { started, reached25, reached50, reached75, finished, shared, downloaded, finishRate } }], fewer }`, `fewer` the droplets with plays but under `min`. With `?totals=1`, `totals: { song, lesson, hook }` too: each video's counts over every droplet, whatever `min` (the page's drop-off curve, asked for once; it sums every row, about 90 ms at 300,000 droplets), left out when it cannot be read. The PLAYS page, `/admin/plays` |

@@ -165,10 +165,11 @@ class Api:
                   song_video_url: str | None = None, lesson_video_url: str | None = None,
                   song_poster_url: str | None = None, lesson_poster_url: str | None = None,
                   hook_video_url: str | None = None, hook_poster_url: str | None = None,
-                  breakdown: dict | None = None) -> dict:
+                  breakdown: dict | None = None, art_checks: dict | None = None) -> dict:
         """RENDERING, READY or FAILED (with error). A URL left as None keeps the one already saved.
         With the attempt this run holds, 409 unless it is still the render's current attempt.
-        breakdown, with READY: the media steps' time, cost and models (studio/ledger.py)."""
+        breakdown, with READY: the media steps' time, cost and models (studio/ledger.py); art_checks, with READY:
+        the art checker's look at each picture, for an admin's review (studio/review.py)."""
         body: dict = {"status": status}
         if attempt is not None:
             body["attempt"] = attempt
@@ -181,6 +182,8 @@ class Api:
             body["error"] = error
         if breakdown is not None:
             body["breakdown"] = breakdown
+        if art_checks is not None:
+            body["artChecks"] = art_checks
         return self.request("PATCH", f"/api/answers/{answer_id}/video", body)
 
     def put_file(self, upload_url: str, data: bytes, headers: dict[str, str]) -> None:

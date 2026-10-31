@@ -258,6 +258,16 @@ export function signUpload(config: StorageConfig, bucket: Bucket, answerId: stri
   };
 }
 
+// --- Reading a private file -------------------------------------------------------------------------------------------
+
+// The API reads it at once (an admin's look at a droplet's art, routes/answers.ts), so a minute is plenty.
+export const READ_URL_SECONDS = 60;
+
+/** A URL to GET one file of an answer's folder in a bucket, for the API to read it on an admin's behalf. */
+export function signRead(config: StorageConfig, bucket: Bucket, answerId: string, file: string, now: Date = new Date()): string {
+  return presign(config, 'GET', `/${bucket}/${answerId}/${file}`, {}, {}, READ_URL_SECONDS, now);
+}
+
 // --- The check at boot ------------------------------------------------------------------------------------------------
 
 // R2 answers an S3 error as XML: <Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist.</Message>

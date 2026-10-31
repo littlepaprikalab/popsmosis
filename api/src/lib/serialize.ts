@@ -30,8 +30,9 @@ export const answerInclude = {
   replies: { include: replyInclude, orderBy: { createdAt: 'asc' as const } },
 } as const;
 
-// Tens of KB each, and a page of cards needs neither: the reply queue reads the bundle on its own.
-export const answerOmit = { bundle: true, factcheck: true } as const;
+// Tens of KB each, and a page of cards needs none of them: the reply queue reads the bundle on its own, and an admin
+// reads the checks one droplet at a time (GET /api/answers/:id/review).
+export const answerOmit = { bundle: true, factcheck: true, checks: true, artChecks: true } as const;
 
 export const questionInclude = {
   user: { select: userSelect },
