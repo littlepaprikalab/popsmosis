@@ -253,9 +253,9 @@ export default function HowItsMadePage() {
           </Pledge>
         </ul>
         <p className="text-sm leading-relaxed mt-4 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
-          Our checks are AI too, so they can still miss things. That&rsquo;s why we show you what they find, test the
-          checks themselves, and let you point out a mistake in a droplet&rsquo;s comments, where the next learner
-          will see it.
+          Our checks are AI too, so even the fact check can be wrong. We do our best to catch what it misses: we show
+          you what the checks find, test the checks themselves, and let you point out a mistake in a droplet&rsquo;s
+          comments, where the next learner will see it.
         </p>
       </header>
 
@@ -388,7 +388,7 @@ export default function HowItsMadePage() {
         </ul>
         <p className="text-sm leading-relaxed mt-6 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
           <span className="font-bold" style={{ color: 'var(--text-primary)' }}>Spotted a mistake?</span> Say so in the
-          droplet&rsquo;s comments, so the next learner sees it too.
+          droplet&rsquo;s comments, so the next learner sees it too. Thank you for helping.
         </p>
       </section>
 
