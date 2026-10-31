@@ -3,9 +3,9 @@ import random
 
 from studio import checks
 from studio.jobs import read, write
-from studio.schemas import Bundle, CheckReport, Problem, Request
+from studio.schemas import Bundle, CheckReport, LessonBundle, Problem, Request, bundle_of
 from studio.steps import bundle as bundle_step
-from studio.tests.sample import bundle_data
+from studio.tests.sample import bundle_data, lesson_bundle_data
 
 
 def review(change):
@@ -478,3 +478,22 @@ def test_a_second_flow_keeps_how_it_moves_and_a_chorus_is_held_to_what_moves_not
         d.update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
     choruses[-1]["moves"] = "crosses"  # drawn otherwise, moving the same: no chorus moves differently
     assert not [p for p in checks.motion_problems(Bundle.model_validate(data)) if "moves differently" in p.detail]
+
+
+def test_a_bundle_with_no_song_is_checked_as_the_lesson_alone():
+    """STUDIO_VIDEOS=lesson: no tempo is written into its empty music, nothing about a song is recorded, and its key
+    lines keep to the narration, in its order, one to a sentence."""
+    keys = [{"text": "H⁺ flow spins ATP synthase → ATP", "from_narration": "n2"},
+            {"text": "A second on the same sentence", "from_narration": "n2"},
+            {"text": "Nowhere to stand", "from_narration": "n9"},
+            {"text": "Light splits water → O₂ + H⁺ + e⁻", "from_narration": "n1"}]
+    bundle = bundle_of(LessonBundle.model_validate(lesson_bundle_data(keys)).model_dump())
+    reviewed, report = checks.review(bundle)
+    assert reviewed.music.positive_styles == [] and not reviewed.sung
+    assert [(k.from_narration, k.text) for k in reviewed.key_lines] == [
+        ("n1", "Light splits water → O₂ + H⁺ + e⁻"), ("n2", "H⁺ flow spins ATP synthase → ATP")]
+    dropped = [p for p in report.problems if p.rule == "key-line"]
+    assert [p.line_id for p in dropped] == ["n2", "n9"] and all(p.repaired for p in dropped)
+    assert not any(p.rule == "tempo" for p in report.problems)
+    assert checks.song_length_problems(reviewed) == checks.song_shape_problems(reviewed) == []
+    assert checks.style_problems(reviewed, "k-pop, 140 bpm") == [] and checks.motion_problems(reviewed) == []

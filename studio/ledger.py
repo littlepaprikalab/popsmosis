@@ -63,6 +63,13 @@ TOOLS = {
     "timing": ("demucs", "torchaudio", "torch", "ffmpeg"),  # Demucs, the MMS aligner, ffmpeg decoding the song
     "render": ("skia-python", "ffmpeg"),  # draws the frames, encodes the videos (studio/render/)
 }
+SONG_TOOLS = {"timing"}  # steps whose tools work on the song alone: none run for the lesson video alone
+
+
+def tools(step: str, job: Path | None = None) -> tuple[str, ...]:
+    """What the step ran on besides its models (TOOLS). The lesson alone (STUDIO_VIDEOS=lesson, or a bundle with no
+    song) times the voice from its character timings, with no song to separate or align."""
+    return () if step in SONG_TOOLS and media.lesson_only(job) else TOOLS.get(step, ())
 # How a call logged before calls were tagged with their step is told apart: by its label.
 LABEL_STEPS = {"bundle": "bundle", "factcheck": "factcheck", "art": "art",
                "song": "audio", "narration": "audio", "frq": "audio"}
@@ -275,7 +282,7 @@ def breakdown(job: Path, part: str, running: tuple[str, float] | None = None) ->
         cost = round(sum(m["costUsd"] for m in models if m["costUsd"] is not None), 6)
         steps.append({"step": name, **timed.get(name, {"seconds": None, "tries": 0}),
                       "costUsd": cost, "models": models,
-                      "tools": [{"name": tool, "version": version(tool)} for tool in TOOLS.get(name, ())]})
+                      "tools": [{"name": tool, "version": version(tool)} for tool in tools(name, job)]})
     seconds = [_run_seconds(r) for r in runs]
     return {"steps": steps, "seconds": round(sum(s for s in seconds if s is not None), 1) if runs else None}
 

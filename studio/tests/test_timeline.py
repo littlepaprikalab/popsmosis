@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from studio import jobs, media
+from studio import jobs, knobs, media
 from studio.media import StepFailed
 from studio.schemas import AudioClip, Bundle, Locations, TimedLine, Timeline, Timing, timeline_problems
 from studio.steps import timeline as step
@@ -634,6 +634,22 @@ def test_what_moves_takes_the_colour_of_the_structure_it_names():
     assert marker_colour("magma", palette) == "#E4572E"  # magma rises in magma's red
     assert marker_colour("H⁺", palette) == MARKER_COLOURS["H⁺"]  # a common kind keeps its own
     assert marker_colour("sediment", palette) == marker_colour("sediment")  # no such structure: by its name
+
+
+def test_the_lesson_alone_has_only_the_lesson_timeline_and_no_hook_cut(job):
+    """STUDIO_VIDEOS=lesson: the song is never timed, and a hook cut left from a run that made the song goes."""
+    for path in (media.timing_path("song"), media.timeline_path("song")):
+        (job / path).unlink()
+    (job / media.timeline_path(media.HOOK)).write_text("{}")
+    knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
+    line = step.run(job)
+    assert line.startswith("lesson ") and "song" not in line and "hook" not in line
+    assert step.is_done(job)
+    lesson = jobs.read(job / media.timeline_path("lesson"), Timeline)
+    assert timeline_problems(lesson, jobs.read(job / media.LOCATIONS, Locations)) == []
+    assert not (job / media.timeline_path("song")).exists() and not (job / media.timeline_path(media.HOOK)).exists()
+    knobs.use({"knobs": {}})
+    assert not step.is_done(job)  # both videos again: the song is not timed
 
 
 def test_on_a_long_hold_the_songs_camera_follows_the_part_each_line_names():

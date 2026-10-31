@@ -40,6 +40,8 @@ python -m studio scorecard compare <earlier-run> <new-run>        # two runs sid
 ```
 
 - It needs `POPSMOSIS_ANTHROPIC_API_KEY`. Without it, it stops before spending anything.
+- It refuses to run while `STUDIO_VIDEOS` is `lesson`: those droplets have no song, and the rubric
+  judges one. Its scores are for the droplet with its song.
 - `--budget 40` (the default): no topic starts once the run has spent that much.
 - `--brain muse-spark` (or `muse-wonder`) and `--effort` run it on another brain.
 - `--resume <run>` finishes a run that stopped (a container restart), redoing only what is missing.

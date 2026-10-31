@@ -83,3 +83,15 @@ def bundle_data() -> dict:
             "lesson": ["#photosynthesis", "#lightreactions", "#apbio", "#explained"],
         },
     })
+
+
+def lesson_bundle_data(key_lines: list[dict] | None = None) -> dict:
+    """The sample as a LessonBundle answer (STUDIO_VIDEOS=lesson): no music, no lyrics or their direction, key lines
+    on the narration, the lesson video's tags alone."""
+    data = bundle_data()
+    sung = {line["id"] for line in data.pop("lyrics")}
+    del data["music"]
+    data["direction"] = [d for d in data["direction"] if d["line_id"] not in sung]
+    data["tags"] = {"lesson": data["tags"]["lesson"]}
+    data["key_lines"] = key_lines or []
+    return data

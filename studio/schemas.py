@@ -15,7 +15,7 @@ import re
 import unicodedata
 from typing import Annotated, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, create_model, field_validator, model_validator
 
 FILLER = "filler"
 Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
@@ -308,10 +308,54 @@ class Bundle(Strict):
             raise ValueError("; ".join(problems))
         return self
 
+    @property
+    def sung(self) -> bool:
+        """Whether the droplet has a song. One written for the lesson video alone (STUDIO_VIDEOS=lesson,
+        LessonBundle) has no lyrics and no music, and nothing after the bundle sings or checks one."""
+        return bool(self.lyrics or self.music.positive_styles or self.music.negative_styles)
+
 
 def sung_sections(lyrics: list[Lyric]) -> list[str]:
     """The sections as the lyrics run: a section each time the next line's differs."""
     return [line.section for i, line in enumerate(lyrics) if i == 0 or line.section != lyrics[i - 1].section]
+
+
+# --- The lesson video alone (STUDIO_VIDEOS=lesson) -----------------------------
+# The brain is asked for the bundle without the song: no `music`, no `lyrics`, key lines placed on the narration and
+# the lesson video's tags alone (studio/steps/bundle.py). bundle_of() makes its answer the Bundle every later step
+# reads, with the song left empty (Bundle.sung).
+
+
+class NarratedKeyLine(Strict):
+    text: str = Field(description='The step being taught, in at most 10 words: "Light splits water → O₂ + H⁺ + e⁻"')
+    from_narration: str = Field(description="The id of the narration sentence it appears on")
+
+
+class LessonTags(Strict):
+    lesson: Annotated[list[str], AfterValidator(clean_tags)] = Field(
+        default_factory=list, description="The lesson video's hashtags, most useful first")
+
+
+SONG_FIELDS = ("music", "lyrics")
+LessonBundle = create_model(
+    "LessonBundle", __base__=Strict, __doc__="The bundle for the lesson video alone: Bundle without its song.",
+    **{name: (field.annotation, field) for name, field in Bundle.model_fields.items()
+       if name not in (*SONG_FIELDS, "key_lines", "tags")},
+    key_lines=(list[NarratedKeyLine], Field(default_factory=list, description="The why chain written on screen in "
+                                                                              "the lesson video, in narration order")),
+    tags=(LessonTags, Field(default_factory=LessonTags)),
+)
+
+
+def bundle_of(lesson: dict) -> Bundle:
+    """A LessonBundle's answer as a Bundle: no music, no lyrics, no song tags, its key lines on the narration alone."""
+    return Bundle.model_validate({
+        **lesson,
+        "music": {"positive_styles": [], "negative_styles": [], "sections": []},
+        "lyrics": [],
+        "key_lines": [{"from_line": "", **key} for key in lesson.get("key_lines", [])],
+        "tags": {"song": [], **lesson.get("tags", {})},
+    })
 
 
 def bundle_problems(bundle: Bundle) -> list[str]:
@@ -358,7 +402,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
         if d.scene not in scene_ids:
             problems.append(f"direction for {d.line_id} names unknown scene {d.scene!r}")
 
-    if not bundle.lyrics or not bundle.narration:
+    if (not bundle.lyrics and bundle.sung) or not bundle.narration:  # no song at all: no lyrics (LessonBundle)
         problems.append("lyrics and narration must not be empty")
     if not bundle.lesson_markdown.strip():
         problems.append("lesson_markdown is empty")

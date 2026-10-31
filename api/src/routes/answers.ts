@@ -116,6 +116,9 @@ export default async function answerRoutes(app: FastifyInstance) {
     // (/admin/studio), the droplet waits off the Droplets tab from the moment it is READY until an admin approves it.
     const tags = status === 'READY' ? await tagsToCopy(id) : null;
     const awaitingReview = status === 'READY' && (await reviewRequired());
+    // Made with the lesson video alone (STUDIO_VIDEOS=lesson): there is no song, so the song's tags, copied from the
+    // bundle when the lesson was posted, would label it and find it in a search for a song it does not have.
+    const songless = status === 'READY' && !(songVideoUrl ?? answer.songVideoUrl);
 
     // One conditional write, so the attempt check and the update cannot be split by another run. READY is final: a
     // droplet on the public tab keeps the videos it was listed with, whoever holds the key (a re-render is a new
@@ -139,6 +142,7 @@ export default async function answerRoutes(app: FastifyInstance) {
         ...(artChecks !== undefined && { artChecks: artChecks as Prisma.InputJsonObject }),
         ...(awaitingReview && { awaitingReviewSince: new Date() }),
         ...tags,
+        ...(songless && { songTags: [] }),
       },
     });
     await prisma.agent.update({ where: { id: request.agent!.id }, data: { lastSeenAt: new Date() } });

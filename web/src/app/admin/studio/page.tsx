@@ -80,7 +80,7 @@ const KNOB_SECTIONS: { id: string; title: string; note: string; knobs: Record<st
   {
     id: 'studio', title: 'The teacher’s machine', note: 'The studio reads these as it starts each run and from every claim, over its own environment: a change applies from the next run. Not set here, the variable on the teacher’s machine decides, else the default.',
     knobs: {
-      STUDIO_VIDEOS: { label: 'Videos', note: 'off makes text-only droplets: no video claim, no media steps, no recovery.' },
+      STUDIO_VIDEOS: { label: 'Videos', note: 'on makes the song and the lesson video. lesson leaves the song out from the start: a lesson written while it is set has no lyrics or music to write or fact-check, and gets only the narrated lesson video, with no hook clip and no Eleven Music or Lyria spend; it stays songless if the knob changes later. A lesson already written with its song keeps it checked, and any video not yet made is the lesson’s alone. off makes text-only droplets: no video claim, no media steps, no recovery.' },
       ELEVENLABS_VOICE_ID: { label: 'The narration’s voice', note: 'Any ElevenLabs voice id, on the ElevenLabs key. A droplet already narrated keeps its voice.' },
       GEMINI_SONG_MODEL: { label: 'The Lyria model, when Lyria sings', note: 'lyria-3.5 sings full songs ($0.08 a song); lyria-3-clip-preview makes 30-second clips ($0.04).', suggest: ['lyria-3.5', 'lyria-3-clip-preview'] },
       ELEVENLABS_USD_PER_1K_CREDITS: { label: 'What 1,000 ElevenLabs credits cost', unit: 'USD', note: 'On your plan, e.g. 0.30, so a droplet’s bill shows its ElevenLabs lines in dollars as well as credits. Unset: credits only.' },

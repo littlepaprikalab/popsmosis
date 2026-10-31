@@ -62,8 +62,8 @@ export default async function replyRoutes(app: FastifyInstance) {
           answer: {
             id: serialized.id, content: serialized.content, createdAt: serialized.createdAt,
             // The droplet as the studio planned it, without the scenes and camera directions; null for a
-            // lesson posted without a bundle.
-            context: followUpContext(a.bundle),
+            // lesson posted without a bundle. No lyrics once its videos are READY with no song.
+            context: followUpContext(a.bundle, !(a.videoStatus === 'READY' && !a.songVideoUrl)),
           },
           thread: a.replies.map(serializeReplyForAgent),
           // The reply the agent must respond to: the newest human reply.

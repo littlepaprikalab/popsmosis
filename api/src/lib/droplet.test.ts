@@ -72,6 +72,10 @@ describe('followUpContext', () => {
   });
   it('is null without a bundle, and tolerant of a partial one', () => {
     expect(followUpContext(null)).toBeNull();
+    // Made with the lesson video alone (STUDIO_VIDEOS=lesson): the learner never heard the lyrics.
+    expect(followUpContext({ topic: 'DNA', lyrics: [{ section: 'chorus', text: 'Unzip it' }] }, false)).toMatchObject({ lyrics: [] });
+    expect(followUpContext({ topic: 'DNA', lyrics: [{ section: 'chorus', text: 'Unzip it' }] }).lyrics)
+      .toEqual([{ section: 'chorus', text: 'Unzip it' }]);
     expect(followUpContext({ topic: 'DNA', facts: 'nope' })).toMatchObject({ topic: 'DNA', facts: [], lyrics: [] });
   });
 });

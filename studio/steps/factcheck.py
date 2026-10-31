@@ -191,9 +191,10 @@ def _pairs(run: list) -> list[list]:
 
 
 def key_lines(bundle: Bundle) -> list[Line]:
-    """What the song writes above its diagram: the key lines, and the core idea over the last chorus."""
+    """What the song writes above its diagram: the key lines, and the core idea over the last chorus. With no song
+    (the lesson video alone) a key line is known by its narration sentence instead."""
     lines = [Line(KEY, "core_idea", bundle.core_idea)] if bundle.core_idea.strip() else []
-    return lines + [Line(KEY, k.from_line, k.text) for k in bundle.key_lines if k.text.strip()]
+    return lines + [Line(KEY, k.from_line or k.from_narration, k.text) for k in bundle.key_lines if k.text.strip()]
 
 
 def motion_text(carries: str, particles: list[str], blocked: bool = False) -> str:
