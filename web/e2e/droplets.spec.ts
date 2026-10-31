@@ -64,6 +64,52 @@ test.describe('the Droplets tab, signed out', () => {
     expect(played).toBeGreaterThan(0);
   });
 
+  test('the lesson and the lyrics each fold from the chevron at the top of their card or at its foot', async ({ page }) => {
+    await page.goto(`/droplets/${S.droplet}`);
+    const lesson = page.getByTestId('lesson-card');
+    const lyrics = page.getByTestId('lyrics-card');
+    const text = lesson.locator('.md strong', { hasText: 'gradient' });
+    const words = lyrics.getByText('Spin the rotor, make the ATP');
+
+    // Both start open.
+    await expect(text).toBeVisible();
+    await expect(words).toBeVisible();
+
+    // The chevron at the top folds a card down to its title, and leaves the other card open.
+    await lesson.getByRole('button', { name: 'Collapse card' }).click();
+    await expect(text).toBeHidden();
+    await expect(lesson.getByRole('heading', { name: 'Lesson' })).toBeVisible();
+    await expect(words).toBeVisible();
+    // ...and opens it again.
+    await lesson.getByRole('button', { name: 'Expand card' }).click();
+    await expect(text).toBeVisible();
+
+    // The chevron at the foot folds it too, with no scroll back up to the title.
+    await lyrics.getByRole('button', { name: 'Collapse', exact: true }).click();
+    await expect(words).toBeHidden();
+    await expect(lyrics.getByRole('heading', { name: 'Lyrics' })).toBeVisible();
+    await lyrics.getByRole('button', { name: 'Expand card' }).click();
+    await expect(words).toBeVisible();
+  });
+
+  test('folding a long card from its foot brings its title back on screen, with the focus on its chevron', async ({ page }) => {
+    // A phone: the lesson is taller than the screen, with more than a screen of page below it, so
+    // the fold alone would slide the comments up under the reader and leave the title far above.
+    await page.setViewportSize({ width: 390, height: 500 });
+    await page.goto(`/droplets/${S.droplet}`);
+    const lesson = page.getByTestId('lesson-card');
+    const title = lesson.getByRole('heading', { name: 'Lesson' });
+    await expect(lesson.locator('.md strong', { hasText: 'gradient' })).toBeVisible();
+
+    // From the keyboard: the chevron at the foot is about to be hidden, so the focus must move.
+    await lesson.getByRole('button', { name: 'Collapse', exact: true }).focus();
+    await expect(title).not.toBeInViewport();
+    await page.keyboard.press('Enter');
+
+    await expect(lesson.getByRole('button', { name: 'Expand card' })).toBeFocused();
+    await expect(title).toBeInViewport();
+  });
+
   test('one card plays at a time: starting another pauses the first', async ({ page }) => {
     await page.goto('/droplets');
     const cards = page.getByTestId('droplet-card');

@@ -17,6 +17,9 @@ import { DropletComments } from '@/components/DropletComments';
 import { MadeWith } from '@/components/MadeWith';
 import { ChatBubbleLeftIcon } from '@heroicons/react/24/outline';
 import { CONTENT_LICENSE } from '@/lib/legal';
+import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
+
+const CARD_STYLE = { background: 'var(--bg-secondary)', border: '1px solid var(--border)' };
 
 /** One droplet on the public tab: both videos, the models that made it, the lesson and the song's words. */
 export default function DropletPage() {
@@ -149,18 +152,44 @@ export default function DropletPage() {
         </Link>
       </div>
 
+      {/* Each card folds from its header's chevron or the one at its foot, so a long lesson closes
+          without scrolling back up. Both sit at the top of their row: a folded card stays small. */}
       <div className="grid gap-4 mt-6 md:grid-cols-[2fr_1fr]">
-        <section className="rounded-lg p-4" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-          <h2 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: 'var(--accent-blue)' }}>Lesson</h2>
-          <div className="md text-sm" style={{ color: 'var(--text-primary)' }}>
-            <Markdown>{droplet.content}</Markdown>
-          </div>
-        </section>
+        <CollapsibleCard
+          testId="lesson-card"
+          className="self-start"
+          style={CARD_STYLE}
+          headerClassName="px-4 pt-4 pb-3"
+          header={() => <h2 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-blue)' }}>Lesson</h2>}
+        >
+          {(collapse) => (
+            <>
+              <div className="md text-sm" style={{ color: 'var(--text-primary)' }}>
+                <Markdown>{droplet.content}</Markdown>
+              </div>
+              <div className="flex justify-end mt-3">
+                <CollapseButton onClick={collapse} />
+              </div>
+            </>
+          )}
+        </CollapsibleCard>
         {droplet.lyrics.length > 0 && (
-          <section className="rounded-lg p-4 self-start" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-            <h2 className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: 'var(--accent-red)' }}>Lyrics</h2>
-            <Lyrics lyrics={droplet.lyrics} />
-          </section>
+          <CollapsibleCard
+            testId="lyrics-card"
+            className="self-start"
+            style={CARD_STYLE}
+            headerClassName="px-4 pt-4 pb-3"
+            header={() => <h2 className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>Lyrics</h2>}
+          >
+            {(collapse) => (
+              <>
+                <Lyrics lyrics={droplet.lyrics} />
+                <div className="flex justify-end mt-3">
+                  <CollapseButton onClick={collapse} />
+                </div>
+              </>
+            )}
+          </CollapsibleCard>
         )}
       </div>
 
