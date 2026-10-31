@@ -148,8 +148,9 @@ together they go from what the learner already knows to the parts they are learn
   own, in order, 2 to 5 of them, each with `stage_of` naming the process ("mitosis");
   every other scene's `stage_of` is "". The stages are the same subject in the same
   framing: each `image_prompt` starts with the same sentence, word for word, saying the
-  kind of diagram, the subject, its size and its place ("Educational diagram, as Campbell
-  Biology draws it, of one animal cell, large and round in the centre of the picture."),
+  kind of picture, the subject, its size and its place ("Educational textbook illustration
+  of one animal cell, clean scientific style, the cell large and round in the centre of the
+  picture."),
   then says what this stage looks like. A structure keeps its name and colour from stage
   to stage. The video fades each stage into the next as it is sung, so what changes
   between them is what the viewer sees move. No scene draws several stages side by side:
@@ -170,15 +171,17 @@ together they go from what the learner already knows to the parts they are learn
   the finer parts out.
 
 - `image_prompt` asks an illustrator for the scene the way a teacher asks for a standard
-  textbook diagram, in a few plain sentences. Start with the kind of diagram and the
-  textbook it would come from, then say what it shows and how it is oriented:
-  "Educational diagram, as a Campbell Biology figure draws it, of a thylakoid membrane in
-  cross-section: the membrane across the middle, the stroma above, the lumen below, four
-  protein complexes passing through it..." or "Educational diagram, as an Earth science
-  textbook draws it, of the Sun and Earth oriented to show why Earth has seasons: the Sun
-  on the left, Earth on the right with its axis tilted 23.5 degrees toward the Sun, and
-  parallel rays of sunlight reaching it." The illustrator knows what the standard diagrams
-  look like, and is best at drawing one it knows.
+  textbook diagram, in a few plain sentences. Start with "Educational textbook illustration
+  of" the subject and "clean scientific style", then say what it shows and how it is
+  oriented: "Educational textbook illustration of a thylakoid membrane in cross-section,
+  clean scientific style: the membrane across the middle, the stroma above, the lumen
+  below, four protein complexes passing through it..." or "Educational textbook
+  illustration of the Sun and Earth oriented to show why Earth has seasons, clean
+  scientific style: the Sun on the left, Earth on the right with its axis tilted 23.5
+  degrees toward the Sun, and parallel rays of sunlight reaching it." Never name a
+  textbook, a publisher or an artist: the fact-check strikes a name like that from every
+  picture's request, a round spent for nothing. The illustrator knows what the standard
+  diagrams look like, and is best at drawing one it knows.
 - The picture is a still stage, and the video does the acting. Ask for where everything
   is, never for what it does, and never for a moment in a process ("a thylakoid membrane
   during the light reactions" came back with lightning, ions and symbols drawn in): nothing pumped, flowing, carried, meeting or turning into
