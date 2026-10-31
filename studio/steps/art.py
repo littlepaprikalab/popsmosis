@@ -519,9 +519,10 @@ labels its own parts; the video adds no labels to it.
 
 List in `labels` each label in the picture that is wrong, quoting it as written, then what is wrong in a few \
 words: on or pointing at the wrong part, naming something the scene does not show, or misspelled or garbled \
-("'Photosystem I' points at the cytochrome complex"). A part with no label is not a wrong label. The picture \
-is kept with its labels: the video flags each wrong one on the picture. Leave it empty when every label is \
-right or the picture has none.
+("'Photosystem I' points at the cytochrome complex"). The picture is kept with its labels, and the video flags \
+each label listed here on the picture as a mistake, so list only those that are wrong: never one that is right, \
+roughly right or acceptable, a part with no label, or a label whose line merely ends a little off its part. \
+Leave it empty when every label is right or the picture has none.
 
 List in `misplaced` each structure below that is missing from the picture, in the wrong place, or facing \
 the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
@@ -779,16 +780,21 @@ def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], a
     return [n for n in notes if " ".join(n.split()) in kept]
 
 
-FLAGS_PROMPT = """You find labels in an illustration, so that the video can flag each one on the picture. For \
-each label below, give the line of writing it is in the picture: `text` as it reads there, and a tight box round \
-it as fractions of the picture's width and height, from its top-left corner: `left` and `right` from 0 to 1 \
-across, `top` and `bottom` from 0 to 1 down. Leave out a label you cannot find."""
+# A second look before a label is flagged on screen: on Oct 31 the check listed labels it called "correct" or
+# "acceptable" among the wrong ones, 4 of 5 on two pictures; boxing each one, the helper leaves those out.
+FLAGS_PROMPT = """A check listed the labels below as wrong in an illustration, and the video will flag each one \
+you give on the picture as a mistake. Look at each in the picture. Give it only if it is wrong: on or pointing at \
+the wrong part, naming something the picture does not show, or misspelled or garbled. Leave out one that is \
+right, roughly right or acceptable, whatever the check said, and one you cannot find. For each you give, the line \
+of writing it is: `text` as it reads there, and a tight box round it as fractions of the picture's width and \
+height, from its top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down."""
 
 
 def label_flags(job: Path, scene: Scene, labels: list[str], ask) -> list[dict]:
     """Where each label the check found wrong is in the scene's kept picture, as the helper boxes it (fractions of
-    the art, as repair.Written), for the video to flag it there (flags()). When the call fails none is flagged: the
-    notes beside the picture still say what is wrong."""
+    the art, as repair.Written), for the video to flag it there (flags()); the helper leaves out one it finds right
+    on a second look (FLAGS_PROMPT). When the call fails none is flagged: the notes beside the picture still say
+    what is wrong."""
     listed = "\n".join(f"- {label}" for label in labels)
     try:
         found = repair.Writing(**ask("helper", f"A check found these labels wrong:\n{listed}", repair.Writing,
