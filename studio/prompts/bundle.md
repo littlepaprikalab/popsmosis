@@ -123,9 +123,11 @@ them too wherever they picture what it sings; its own pictures come after its ly
   structure of its own (the "water wheel" for the rotor), in the colour of the structure it
   stands for, so the viewer sees which matches which. A line that says one of its names
   plays over it; other lines can still use the analogy, in other words than its parts'
-  names. Name each part for the everyday thing ("Huge table", "Water wheel"), never with
-  the real thing's name as a name or alias: that name belongs to the real thing's own
-  structure, and said in a line it would reveal the wrong one.
+  names. Name each part for the everyday thing, specifically ("Tray of cookies", "Water
+  wheel"), never with the real thing's name as a name or alias: that name belongs to the
+  real thing's own structure, and said in a line it would reveal the wrong one. The song
+  carries the frame on other scenes in its own words ("the cookies ran out"), which then
+  reveal nothing.
 - A failure the bridge sings can have a detail scene (a song picture when the lesson shows
   none): the same view as another scene with the blocker drawn in as a structure and the
   stopped flow left out (the video shows it stopping).
@@ -207,6 +209,13 @@ Structures:
   `name` is the label as it reads on screen; `aliases` are other words the lines use for it
   ("medulla" for "medulla oblongata"). Each name and alias means only that structure: a
   common word ("healthy", "cell") would reveal it every time it is said.
+- Code reveals a structure on any line that says its `name` or an alias, whatever the
+  line meant, and records a problem when that line plays over a scene that does not draw
+  it. So name each structure with words the lines say only where it is drawn: a word the
+  whole video keeps saying (the topic's own subject, "rocket", "coin", "Moon", or the
+  frame's "batteries", "raised hands") names nothing on a scene that is not on screen
+  for most of the lines saying it. Give such a part a label of its own, two or three
+  words for what it is in that picture ("Rocket on the pad", "Coin in a hand").
 - `sam_phrase`: how a segmentation model finds it: the colour `color_hex` gives and one
   plain everyday noun for what it looks like, two or three words ("orange lobe", "yellow
   flashlight"). No scientific names, extra adjectives, positions or negations.
