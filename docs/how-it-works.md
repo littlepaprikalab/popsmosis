@@ -10,7 +10,7 @@ admin can switch it to Meta's Muse Wonder or Muse Spark (`/admin/studio`, or a t
 helper switches with it (Claude Sonnet for Claude, Muse Spark for Muse). Every brain call below goes to the brain in
 force for the topic: the script and the bundle are two calls, then the audit, the narration edit, a lesson rewrite,
 the fact-check and the songwriter. Two stay Claude whatever the brain: the SVG drawer (Claude Opus) and the
-scorecard's judge (Claude Sonnet). Prompt changes tested in a session run on Claude subagents, so they say how a
+scorecard's judge (Claude Opus). Prompt changes tested in a session run on Claude subagents, so they say how a
 prompt works on Claude's brain, not on Muse's.
 
 ## Phase 1: the text (about 15 minutes, about $2)

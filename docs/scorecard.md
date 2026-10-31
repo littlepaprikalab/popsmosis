@@ -76,6 +76,31 @@ shows how much scores move on their own.
 Runs are comparable only on the same rubric and judge; `compare` says when they differ. Changing
 the topic list is fine, but `compare` uses only the topics both runs have.
 
+## In-session run, Oct 31
+
+The first run in a session (no API money): the 12 topics' bundles written by subagents on that day's
+prompts (the trimmed brief, meanings, the graph rules), the code checks run, the learner test and the
+narration edit skipped. Each droplet was judged blind beside the latest real run's droplet for
+its topic (`20261030-0015-f9b2d85`, the "baseline" below).
+
+| Judge | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Claude Sonnet 5.5 | 12 of 12 | 4.21 | 3.58 | |
+| Claude Opus 5.5 | 12 of 12 | 4.45 | 3.73 | 9 / 15 |
+
+Opus scores both arms about 0.2 higher than Sonnet and sees the same gap, so runs judged by one
+are not compared with runs judged by the other. By criterion, on Opus (new / baseline): hook
+4.50 / 4.50, frame 4.67 / 3.67, why chain 4.42 / 3.92, key lines 4.17 / 3.00, accuracy 4.42 /
+4.08, singability 4.08 / 3.00, lesson clarity 4.92 / 3.92. The hook did not move; the gains are
+in the key lines, the singing and the lesson.
+
+Opus's errors in the new droplets are fine points the fact-check is there to catch: the wedding in
+*Romeo and Juliet* happens offstage ("We see the wedding"); a lunar eclipse is red for at most
+about an hour and three quarters, not "a few hours"; the clergy and nobles paid little tax, not
+none ("the penthouses pay none"); highs and lows also sit where there is no derivative ("Where
+the tangent line lies flat, they're caught"); Spanish keeps *que* with one subject after doubt
+("with only one subject, there's no que at all").
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
