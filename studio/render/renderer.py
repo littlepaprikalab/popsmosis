@@ -45,6 +45,9 @@ SPACE_REACH = 55.0  # art pixels: a path's stop in a space sits this far past it
 ACROSS_SHARE = 0.5  # ...and, beside an upright wall, at least this share of the way on to the space's middle
 LANE_GAP = 46.0  # art pixels between two things travelling the same stops side by side
 SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
+SPACE_FILL = 0.25  # and fills at least this share of its box: a curve across a chart has a big box but is no space
+LINE_RATIO = 12.0  # a structure this many times longer than it is wide is a line: its label hangs from one end
+LINE_END = 0.12  # how far in from that end, as a share of its length: on the line, clear of its tip
 SPOT_S = 0.6
 MOVE_S = 1.8  # a camera move between two stations
 SETTLE_S = 2.5  # the drift after a cut, so every shot opens moving
@@ -217,6 +220,7 @@ class SceneArt:
         self._axes: tuple[axes.Line, axes.Line] | None = None
         self._drawn: np.ndarray | None = None
         self._cells: dict[str, np.ndarray] = {}
+        self._shapes: dict[str, tuple[float, tuple[float, float] | None]] = {}
         for s in located.structures:
             mask_file = job / s.mask
             if not mask_file.exists():
@@ -234,6 +238,40 @@ class SceneArt:
         if located.structures:
             self.centre = (sum(s.centroid.x for s in located.structures) / len(located.structures),
                            sum(s.centroid.y for s in located.structures) / len(located.structures))
+
+    def _shape(self, name: str) -> tuple[float, tuple[float, float] | None]:
+        """How much of its box the structure fills, and for a line (a curve on a chart, an arrow's shaft) the point
+        its label hangs from: near one end, as a textbook labels a curve, and not where it crosses the others."""
+        if name not in self._shapes:
+            ys, xs = np.nonzero(_read(self._mask_files[name], skia.kGray_8_ColorType) > 127)
+            if len(xs) < 2:
+                self._shapes[name] = (1.0, None)
+                return self._shapes[name]
+            fill = len(xs) / ((np.ptp(xs) + 1) * (np.ptp(ys) + 1))
+            pts = np.stack([xs, ys], axis=1).astype(float)
+            mid = pts.mean(axis=0)
+            _, _, axes_ = np.linalg.svd(pts - mid, full_matrices=False)
+            along = (pts - mid) @ axes_[0]
+            length = float(np.ptp(along))
+            end = None
+            if length > LINE_RATIO * len(xs) / max(length, 1.0):  # long and thin: its width is area / length
+                lo, hi = float(along.min()), float(along.max())
+                ends = [pts[(along >= hi - LINE_END * length) & (along <= hi - LINE_END * length / 3)].mean(axis=0),
+                        pts[(along <= lo + LINE_END * length) & (along >= lo + LINE_END * length / 3)].mean(axis=0)]
+                dx, dy = abs(axes_[0][0]), abs(axes_[0][1])
+                if min(dx, dy) > 0.35:  # sloped: its upper end, where a chart labels its curves
+                    pick = min(ends, key=lambda e: e[1])
+                else:  # level or upright: the end away from the picture's middle (a price line's end at its axis)
+                    pick = max(ends, key=lambda e: math.dist(e, self.centre))
+                end = (float(pick[0]), float(pick[1]))
+            self._shapes[name] = (float(fill), end)
+        return self._shapes[name]
+
+    def fill(self, name: str) -> float:
+        return self._shape(name)[0]
+
+    def line_end(self, name: str) -> tuple[float, float] | None:
+        return self._shape(name)[1]
 
     def _surface(self, alpha_only: bool = False) -> skia.Surface:
         kind = skia.kAlpha_8_ColorType if alpha_only else skia.kBGRA_8888_ColorType
@@ -1021,7 +1059,9 @@ class Renderer:
             loc = located.get(name)
             if loc is None:
                 continue
-            ax, ay = loc.label_anchor.x * scale + dx, loc.label_anchor.y * scale + dy
+            at = art.line_end(name) if name in art.masks else None
+            ax, ay = ((at[0], at[1]) if at else (loc.label_anchor.x, loc.label_anchor.y))
+            ax, ay = ax * scale + dx, ay * scale + dy
             alpha = (p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(ax, ay, view)
                      * (strength or {}).get(name, 1.0))
             if alpha > 0.01:
@@ -1527,7 +1567,8 @@ class Renderer:
         """A space (the stroma, a lumen): a box covering much of its picture, or spanning most of its width."""
         art = self.scene(scene_id)
         wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
-        return wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
+        big = wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
+        return big and (loc.name not in art.masks or art.fill(loc.name) >= SPACE_FILL)
 
     def _path_stops(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[Point, object]]:
         """Where particles stop along a path, in art pixels, each with the structure it is in: a structure's label

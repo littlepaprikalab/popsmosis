@@ -363,7 +363,7 @@ def bundle_problems(bundle: Bundle) -> list[str]:
     problems = []
     if not 3 <= len(bundle.facts) <= 4:
         problems.append(f"{len(bundle.facts)} facts, not 3-4")
-    most = 8 if any(s.stage_of for s in bundle.scenes) else 6  # a process's stages take a scene each
+    most = 8 if any(s.stage_of for s in bundle.scenes) else 7  # a process's stages take a scene each
     if not 3 <= len(bundle.scenes) <= most:
         problems.append(f"{len(bundle.scenes)} scenes, not 3-{most}")
     for kind, ids in (

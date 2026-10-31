@@ -149,14 +149,14 @@ def test_a_process_in_stages_may_take_up_to_8_scenes():
     data = bundle_data()
     stages = [{"id": f"stage-{i}", "image_prompt": "A cell.", "stage_of": "mitosis",
                "structures": [{"name": "Thylakoid", "aliases": [], "sam_phrase": "the thylakoid",
-                               "color_hex": "#2E8B57"}]} for i in range(4)]
+                               "color_hex": "#2E8B57"}]} for i in range(5)]
     data["scenes"] += stages
-    bundle = Bundle.model_validate(data)  # 7 scenes
-    assert [s.id for s in stage_groups(bundle.scenes)["mitosis"]] == ["stage-0", "stage-1", "stage-2", "stage-3"]
+    bundle = Bundle.model_validate(data)  # 8 scenes
+    assert [s.id for s in stage_groups(bundle.scenes)["mitosis"]] == ["stage-0", "stage-1", "stage-2", "stage-3", "stage-4"]
     assert bundle.scenes[0].stage_of == ""
     for stage in stages:
         stage["stage_of"] = ""
-    with pytest.raises(ValidationError, match="7 scenes, not 3-6"):
+    with pytest.raises(ValidationError, match="8 scenes, not 3-7"):
         Bundle.model_validate(data)
 
 

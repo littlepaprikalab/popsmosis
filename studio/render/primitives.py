@@ -79,6 +79,17 @@ def darken(hex_color: str, contrast: float = 5.0) -> str:
     return f"#{round(r * f):02X}{round(g * f):02X}{round(b * f):02X}"
 
 
+OUTLINE_CONTRAST = 1.8  # a pill's outline against its white fill: a near-white colour (frost, snow, ice) needs darkening
+
+
+def outline(hex_color: str) -> str:
+    """The colour as it is when it shows on white, else darkened until it does."""
+    r, g, b = rgb(hex_color)
+    if 1.05 / (_luminance(r, g, b) + 0.05) >= OUTLINE_CONTRAST:
+        return hex_color
+    return darken(hex_color, OUTLINE_CONTRAST)
+
+
 # --- text ---------------------------------------------------------------------------------
 
 
@@ -286,7 +297,7 @@ def draw_label(canvas: skia.Canvas, lb: Label, font_size: float) -> None:
     pop = 0.85 + 0.15 * ease_out(lb.alpha)  # pills grow into place as they appear
     w, h = w * pop, h * pop
     rect = (lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2)
-    color = argb(lb.color, lb.alpha)
+    color = argb(outline(lb.color), lb.alpha)
     ink = argb(darken(lb.color), lb.alpha)  # the leader and dot sit on the structure, so they are darker
     ax, ay = lb.anchor
     # A pill against its structure, or inside its space, needs no line; one the placement pass pushed away keeps it.

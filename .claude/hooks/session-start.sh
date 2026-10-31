@@ -44,16 +44,30 @@ fi
 
 # 3. The models the song's timing loads (Demucs, the MMS forced aligner; about 1.5 GB), so a
 #    render never stops to download them. They land in the torch cache the container keeps.
-if [ ! -f "$STAMPS/models" ]; then
-  if python - >/dev/null 2>&1 <<'PY'
-import importlib.util
+#    A download cut short leaves a truncated file under its final name, which torch then reuses and
+#    fails to read ("failed finding central directory"). So each checkpoint is checked as a zip
+#    after the fetch, and a bad one is deleted and fetched once more before the stamp is written.
+fetch_models() {
+  python - >/dev/null 2>&1 <<'PY'
+import importlib.util, pathlib, sys, zipfile
 if importlib.util.find_spec("demucs") and importlib.util.find_spec("torchaudio"):
-    from demucs.pretrained import get_model
-    get_model("htdemucs")
-    from torchaudio.pipelines import MMS_FA
-    MMS_FA.get_model(with_star=True)
+    failed = False
+    try:
+        from demucs.pretrained import get_model
+        get_model("htdemucs")
+        from torchaudio.pipelines import MMS_FA
+        MMS_FA.get_model(with_star=True)
+    except Exception:
+        failed = True
+    bad = [f for f in (pathlib.Path.home() / ".cache/torch/hub/checkpoints").glob("*.pt")
+           if not zipfile.is_zipfile(f)]
+    for f in bad:
+        f.unlink()
+    sys.exit(1 if bad or failed else 0)
 PY
-  then touch "$STAMPS/models"
+}
+if [ ! -f "$STAMPS/models" ]; then
+  if fetch_models || fetch_models; then touch "$STAMPS/models"
   else log "could not fetch the timing models; the first song timing will download them"
   fi
 fi
