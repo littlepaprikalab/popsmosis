@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
+import functools
 import json
 import re
 import statistics
@@ -117,6 +118,13 @@ Aligner = Callable[[object, list[str]], list[tuple[float, float, float]]]
 
 
 def run(job: Path, ask=brain.ask) -> str:
+    try:
+        return _run(job)
+    finally:
+        _mms.cache_clear()  # the aligner's 1.2 GB is the step's alone, not the worker's for good
+
+
+def _run(job: Path) -> str:
     bundle = jobs.read(job / "bundle.json", Bundle)
     if not audio_step.is_done(job):
         raise media.StepFailed("the audio step has not made every audio file from this bundle yet")
@@ -618,15 +626,28 @@ def _decode(path: Path, rate: int, channels: int):
     return np.frombuffer(raw, dtype=np.float32).reshape(-1, channels).T.copy()
 
 
-def mms_aligner() -> Aligner:
-    """MMS forced alignment (torchaudio.pipelines.MMS_FA), with a <star> at each end of the
-    window to soak up the neighbouring sections' lines that the margins let in."""
-    import torch
+@functools.cache
+def _mms():
+    """MMS's model, tokenizer and aligner, loaded once for the step: a Gemini narration and the song share them (each
+    loaded its own, 9 s once the file is cached). run() lets them go when it is done."""
     from torchaudio.pipelines import MMS_FA
 
     model = MMS_FA.get_model(with_star=True)
     model.eval()
-    tokenizer, aligner = MMS_FA.get_tokenizer(), MMS_FA.get_aligner()
+    return model, MMS_FA.get_tokenizer(), MMS_FA.get_aligner()
+
+
+def mms_aligner() -> Aligner:
+    """MMS forced alignment (torchaudio.pipelines.MMS_FA), with a <star> at each end of the
+    window to soak up the neighbouring sections' lines that the margins let in.
+
+    Each window is heard afresh, and that is the point: a line the aligner was unsure of, heard again alone between
+    its neighbours, sounds different to it from the same stretch in a longer hearing. Reading every window from one
+    hearing of the whole song (Oct 31) was a third faster, and re-timed none of the 20 lines that hearing them alone
+    had re-timed better: unsure lines went from 22 to 27, and 60 words moved over a tenth of a second."""
+    import torch
+
+    model, tokenizer, aligner = _mms()
 
     def align(window, words: list[str]) -> list[tuple[float, float, float]]:
         with torch.inference_mode():
