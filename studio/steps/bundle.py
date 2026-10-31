@@ -22,7 +22,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from studio import brain, checks, media
-from studio.steps import learner, narration, script as script_step
+from studio.steps import audit, learner, narration, script as script_step
 from studio.jobs import read, write
 from studio.schemas import Bundle, LessonBundle, Request, bundle_of
 from studio.styles import style_for
@@ -103,6 +103,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
         (job / stale).unlink(missing_ok=True)
     prompt = user_prompt(request, style_for(job.name), sung)
     script = script_step.write_script(prompt, brief, ask, request.images, job)
+    early = audit.begin(request, script, ask)  # the facts audited beside the bundle call (studio/steps/audit.py)
     try:
         answer = ask("brain", prompt + ("\n\n" + script_step.as_prompt(script) if script else ""),
                      Bundle if sung else LessonBundle, request.images, system=system, label="bundle")
@@ -127,7 +128,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
                         + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
-    return bundle
+    return audit.settle(job, bundle, early)
 
 
 def _lesson_only(answer: dict) -> Bundle:

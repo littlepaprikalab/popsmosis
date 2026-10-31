@@ -408,3 +408,43 @@ def test_a_job_fact_checked_before_the_audit_existed_is_audited_and_checked_agai
     assert operator_run.run("q1", api=FakeApi(), ask=ask)[2] == "the lesson was already posted"
     assert ask.labels == []
 
+
+
+# --- begun beside the bundle call ---------------------------------------------------------------------------------
+
+def _early_job(tmp_path, script_changes=None, rule=lambda text: {"verdict": "CORRECT"}):
+    from studio.tests.test_script import asking, script_data, unchanged_narration
+    write(tmp_path / "request.json", Request(topic="the light reactions", course="AP Bio"))
+    told = []
+
+    def audit_answer(prompt):
+        told.append(json.loads(prompt))
+        return judge(told[-1], rule)
+
+    ask = asking({"script": script_data(**(script_changes or {})), "bundle": bundle_data(),
+                  "narration edit": unchanged_narration, "fact audit": audit_answer, "fact audit again": audit_answer})
+    bundle = bundle_step.run(tmp_path, ask=ask)
+    return bundle, ask, told
+
+
+def test_the_audit_begun_beside_the_bundle_call_is_kept_and_its_step_finds_itself_done(tmp_path):
+    bundle, ask, told = _early_job(tmp_path)
+    labels = [label for label, _, _ in ask.asked]
+    assert labels.count("fact audit") == 1 and labels.index("script") < labels.index("fact audit")
+    assert audit.is_done(tmp_path)  # the audit step has nothing left to do
+    report = read(tmp_path / "audit.json", AuditReport)
+    assert report.status == "passed" and [f.id for f in report.facts] == [f.id for f in bundle.facts]
+    assert any(f.cited_by for f in report.facts)  # the lines citing each fact, from the bundle once written
+    # Told the course and topic as the learner asked them: the bundle is not written yet.
+    assert (told[0]["course"], told[0]["topic"]) == ("AP Bio", "the light reactions")
+
+
+def test_an_early_audit_is_dropped_when_the_bundle_did_not_keep_the_scripts_facts(tmp_path):
+    other = [{"id": "s1", "text": "A fact the bundle does not have.", "source_quote": ""}]
+    _early_job(tmp_path, {"facts": other})
+    assert not (tmp_path / "audit.json").exists() and not audit.is_done(tmp_path)  # its step audits as before
+
+
+def test_an_early_audit_that_did_not_pass_is_left_to_its_step(tmp_path):
+    _early_job(tmp_path, rule=lambda text: {"verdict": "WRONG", "problem": "wrong", "corrected": ""})
+    assert not (tmp_path / "audit.json").exists() and not audit.is_done(tmp_path)

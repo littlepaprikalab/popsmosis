@@ -48,12 +48,14 @@ aligner each take every core, and two at once took 8 times as long each.
   had re-timed better: unsure lines went from 22 to 27, and 60 words moved over a tenth of a second. A line heard
   alone sounds different to the model, which is the re-check's whole point. Rejected.
 
+- **The fact audit beside the bundle call** (`audit.begin` and `audit.settle`): the audit needs only the facts,
+  which the script writes before the bundle call, and the bundle keeps them (`script.follow`). The bundle step
+  begins it on the script's facts and keeps it when the bundle did; its step then finds itself done. The same
+  calls at no extra cost, its 1–2 min hidden in the bundle call's 10. Shipped.
+
 ## Not yet tried
 
 - **The aligner at 8-bit** (dynamic quantization of the MMS model on the CPU): about 2 times faster on the
   narration's ~2 min if its word timings hold. Free to test on a job's narration, old against new word times.
 - **A GPU for the studio worker**: Demucs and the aligner in seconds rather than minutes. A cost and hosting
   decision, not a code change.
-- **Auditing the facts beside the bundle call**: the audit needs only the script's facts, and the fact-check
-  already catches a line written from a fact the audit corrects (`written_from`). Same calls and cost, started
-  sooner; not decided.

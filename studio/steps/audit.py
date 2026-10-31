@@ -32,14 +32,24 @@ corrected, each corrected one with what it said before (`was`), and the lines wr
 One call when every fact passes, two when one was corrected or skipped. Writes audit.json. When a fact is
 corrected, bundle.json is rewritten with it and the writer's version is kept as bundle.draft.json. Any
 factcheck.json is removed: it judged the lines against the facts before this audit.
+
+Begun early. The audit needs only the facts, which the script writes before the bundle call, and the bundle keeps
+the script's facts (script.follow). So the bundle step begins it on the script's facts (begin()) beside the bundle
+call, about 10 minutes, and settles it once the bundle is written (settle()): audit.json as run() writes it, so this
+step finds itself done. The same calls, at no extra cost, a step's wait sooner. The auditor is told the course and
+topic as the learner asked them, the bundle not yet written. When the bundle did not keep the script's facts, or the
+early audit did not pass or did not finish, it is dropped and this step audits as before (Oct 31).
 """
 
 from __future__ import annotations
 
 import json
+import sys
+from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 
-from studio import brain, checks
+from studio import brain, checks, ledger
 from studio.jobs import read, write
 from studio.schemas import (FILLER, AuditedFact, AuditReport, Bundle, FactAudit, FactCorrection, FactJudgement,
                             Request)
@@ -82,16 +92,34 @@ def is_done(job: Path) -> bool:
 def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bundle]:
     """Judge every fact, correct the wrong ones once and judge the corrections; return the report and the bundle
     with its facts as corrected (as it was, when the audit fails)."""
-    texts = {f.id: f.text for f in bundle.facts}
-    quotes = {f.id: f.source_quote for f in bundle.facts}
-    cited = cited_by(bundle)
+    audited = audit_facts({"course": bundle.course, "topic": bundle.topic, "audience": bundle.audience},
+                          bundle.facts, study_guide, ask)
+    return finish(audited, bundle)
+
+
+@dataclass
+class Audited:
+    """The facts judged, before they meet the bundle: the report (no lines cite a fact yet), and each fact's text
+    and quote as corrected."""
+
+    facts: list  # the facts as they were given
+    report: AuditReport
+    texts: dict[str, str]
+    quotes: dict[str, str]
+
+
+def audit_facts(about: dict[str, str], given: list, study_guide: str, ask) -> Audited:
+    """Judge every fact, correct the wrong ones once and judge the corrections. about: the course, topic and
+    audience the auditor is told."""
+    texts = {f.id: f.text for f in given}
+    quotes = {f.id: f.source_quote for f in given}
     verdicts: dict[str, tuple[FactJudgement, int]] = {}  # the last verdict on each fact's text as it now reads
     corrections: list[FactCorrection] = []
     failures: list[str] = []
     pending, calls = list(texts), 0
     while pending and calls < MAX_CALLS and not failures:
         calls += 1
-        answer = ask_auditor(bundle, {i: texts[i] for i in pending}, quotes, study_guide, ask, calls)
+        answer = ask_auditor(about, {i: texts[i] for i in pending}, quotes, study_guide, ask, calls)
         again = []
         for fact_id in pending:
             judgement = answer.get(fact_id)
@@ -112,8 +140,7 @@ def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bu
                 failures.append(f"fact {fact_id} is wrong and the audit gave no correction: {judgement.problem}")
             else:
                 corrections.append(FactCorrection(id=fact_id, before=texts[fact_id], after=after,
-                                                  problem=judgement.problem, basis=judgement.basis,
-                                                  cited_by=cited.get(fact_id, [])))
+                                                  problem=judgement.problem, basis=judgement.basis, cited_by=[]))
                 texts[fact_id] = after
                 # The writer's quote was for the wrong version: the correction keeps only a quote the audit found
                 # in the guide for it.
@@ -129,24 +156,77 @@ def audit_bundle(bundle: Bundle, study_guide: str, ask) -> tuple[AuditReport, Bu
         judgement, call = verdicts.get(fact_id, (None, 0))
         facts.append(AuditedFact(id=fact_id, text=text, verdict=judgement.verdict if judgement else None,
                                  basis=judgement.basis if judgement else "", quote=judgement.quote if judgement else "",
-                                 problem=judgement.problem if judgement else "", call=call,
-                                 cited_by=cited.get(fact_id, [])))
+                                 problem=judgement.problem if judgement else "", call=call, cited_by=[]))
     report = AuditReport(status="failed" if failures else "passed", reason="; ".join(failures),
                          judged_against="study guide" if study_guide.strip() else "course knowledge",
-                         audience=bundle.audience, calls=calls, facts=facts, corrections=corrections)
-    if failures or not corrections:
+                         audience=about["audience"], calls=calls, facts=facts, corrections=corrections)
+    return Audited(list(given), report, texts, quotes)
+
+
+def finish(audited: Audited, bundle: Bundle) -> tuple[AuditReport, Bundle]:
+    """The report with the lines that cite each fact (cited_by), and the bundle with its facts as corrected (as it
+    was, when the audit failed or corrected none)."""
+    cited = cited_by(bundle)
+    report = audited.report.model_copy(update={
+        "facts": [f.model_copy(update={"cited_by": cited.get(f.id, [])}) for f in audited.report.facts],
+        "corrections": [c.model_copy(update={"cited_by": cited.get(c.id, [])}) for c in audited.report.corrections]})
+    if report.status == "failed" or not report.corrections:
         return report, bundle
     data = bundle.model_dump()
     for fact in data["facts"]:
-        fact["text"], fact["source_quote"] = texts[fact["id"]], quotes[fact["id"]]
+        fact["text"], fact["source_quote"] = audited.texts[fact["id"]], audited.quotes[fact["id"]]
     return report, Bundle.model_validate(data)
 
 
-def ask_auditor(bundle: Bundle, facts: dict[str, str], quotes: dict[str, str], study_guide: str, ask,
+def begin(request: Request, script, ask) -> Future | None:
+    """The audit of the script's facts, begun beside the bundle call, its calls on the bill of the step that began
+    it; None with no script."""
+    if script is None:
+        return None
+    step = ledger.current_step()
+    about = {"course": request.course, "topic": request.topic, "audience": script.audience}
+
+    def audit() -> Audited:
+        with ledger.at_step(step):
+            return audit_facts(about, script.facts, request.study_guide, ask)
+
+    pool = ThreadPoolExecutor(1, thread_name_prefix="audit")
+    try:
+        return pool.submit(audit)
+    finally:
+        pool.shutdown(wait=False)
+
+
+def settle(job: Path, bundle: Bundle, early: Future | None) -> Bundle:
+    """The early audit kept, when it passed the facts the bundle has: audit.json written and the bundle's facts
+    corrected, as run() does; the bundle as it is, and the audit left to its step, otherwise."""
+    if early is None:
+        return bundle
+    try:
+        audited = early.result()
+    except Exception as e:  # the step audits as before
+        print(f"audit: the early audit did not finish, so the audit step runs: {e}", file=sys.stderr)
+        return bundle
+    if [(f.id, f.text) for f in audited.facts] != [(f.id, f.text) for f in bundle.facts]:
+        print("audit: the bundle did not keep the script's facts, so the audit step runs", file=sys.stderr)
+        return bundle
+    if audited.report.status != "passed":
+        return bundle  # the step audits again, as a retry would
+    report, corrected = finish(audited, bundle)
+    write(job / "audit.json", report)
+    if corrected != bundle:
+        draft = job / "bundle.draft.json"
+        if not draft.exists():
+            draft.write_text((job / "bundle.json").read_text(encoding="utf-8"), encoding="utf-8")
+        write(job / "bundle.json", corrected)
+    return corrected
+
+
+def ask_auditor(about: dict[str, str], facts: dict[str, str], quotes: dict[str, str], study_guide: str, ask,
                 call: int) -> dict[str, FactJudgement]:
     """One call: the facts, judged each on its own. It never sees the lines written from them, the planner's
-    conversation, or which of them were corrected."""
-    payload: dict = {"course": bundle.course, "topic": bundle.topic, "audience": bundle.audience,
+    conversation, or which of them were corrected. about: the course, topic and audience."""
+    payload: dict = {"course": about["course"], "topic": about["topic"], "audience": about["audience"],
                      "facts": [{"id": i, "text": text, **({"source_quote": quotes[i]} if quotes.get(i) else {})}
                                for i, text in facts.items()]}
     if study_guide.strip():
