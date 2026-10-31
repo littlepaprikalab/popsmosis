@@ -420,8 +420,10 @@ def key(bundle: Bundle, scene: Scene) -> str:
 
 def _dump(scene: Scene) -> dict:
     # Without an empty stage_of or axes, or a false to_scale: a scene that is no stage, no graph and not to scale
-    # keeps the key it had before they existed, so finished jobs are not painted again.
-    return scene.model_dump(exclude={name for name in ("stage_of", "axes", "to_scale") if not getattr(scene, name)})
+    # keeps the key it had before they existed, so finished jobs are not painted again. Never with song_only, which
+    # says which video plays the picture, not what it shows: a song's scene the lesson takes too keeps its painting.
+    return scene.model_dump(exclude={"song_only"} | {name for name in ("stage_of", "axes", "to_scale")
+                                                     if not getattr(scene, name)})
 
 
 @dataclass
@@ -483,9 +485,9 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
 
 
 def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
-    """The narration's sentences that play over the scene, in order."""
+    """The narration's sentences that play over the scene, in order; for the song's own scene, its sung lines."""
     over = {d.line_id for d in bundle.direction if d.scene == scene.id}
-    return [n.text for n in bundle.narration if n.id in over]
+    return [line.text for line in (bundle.lyrics if scene.song_only else bundle.narration) if line.id in over]
 
 
 # --- the painted art: Gemini 3.1 Flash Image or Muse Image -------------------------------------
@@ -886,6 +888,8 @@ SCENE_KINDS = {
     "overview": "the overview: the whole system at once, each part in its place.",
 }
 DETAIL = "a close-up of one part of the topic."
+# The song's own picture (Scene.song_only), drawn for what its lines sing rather than for the lesson's narration.
+SONG = "a picture for the song video: the topic's own parts as the song's lines sing them."
 STAGE = ("stage {number} of {count} of {process}: the same subject as its other stages, at the same size and in "
          "the same place, showing what this stage shows.")
 # Before a later stage's own prompt, when it is redrawn from the first stage's picture (/v1/images/edits).
@@ -897,7 +901,7 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
     lines = [f"- {s.name}: {s.sam_phrase}" for s in scene.structures]
     stage = Stage.of(bundle, scene)
     kind = (STAGE.format(number=stage.number, count=stage.count, process=stage.process) if stage
-            else SCENE_KINDS.get(scene.id, DETAIL))
+            else SONG if scene.song_only else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
             + f"\nWhat the scene should show: {scene.image_prompt}"

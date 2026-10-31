@@ -129,12 +129,23 @@ def test_a_structure_the_art_could_not_locate_is_never_revealed_or_spotlit(job):
     assert all("Cytochrome b6f" not in b.labels for b in timelines["song"].beats)
 
 
-def test_both_videos_open_on_the_hook_even_when_the_direction_does_not(job):
+def test_the_lesson_opens_on_the_hook_even_when_the_direction_does_not_and_the_song_on_its_first_lines_scene(job):
     data = bundle_data()  # the plain sample: every line over the overview
     write_bundle(job, data)
-    for timeline in make(job).values():
-        assert timeline.beats[0].scene == "hook"
-        assert timeline.beats[1].scene != "hook"
+    timelines = make(job)
+    assert timelines["lesson"].beats[0].scene == "hook" and timelines["lesson"].beats[1].scene != "hook"
+    # The song's title line is the answer, not the lesson's question: it opens on the picture its first line sings.
+    assert {b.scene for b in timelines["song"].beats} == {"overview"}
+
+
+def test_the_song_opens_on_the_hook_when_its_first_lines_scene_is_not_drawn(job):
+    data = bundle_data()
+    direct(data, "v1-1", scene="synthase")
+    write_bundle(job, data)
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    jobs.write(job / media.LOCATIONS, Locations(scenes=[s for s in locations.scenes if s.scene != "synthase"]))
+    timelines = make(job)
+    assert timelines["song"].beats[0].scene == "hook"
 
 
 def test_at_most_one_caption_per_section_held_for_four_seconds(job):
@@ -370,7 +381,8 @@ def test_a_line_the_song_never_sings_has_no_beat_and_the_intro_is_cut_to_the_fir
     assert "v1-1" not in [beat.line_id for beat in timeline.beats]
     skip = round(at - step.INTRO_KEEP_S, 3)
     assert timeline.audio[0] == AudioClip(path="audio/song.mp3", at=0, start=skip, fade_in=step.INTRO_FADE_S)
-    assert timeline.beats[0].line_id == "v1-2" and timeline.beats[0].scene == step.hook_scene(bundle)
+    # The song opens on its first sung line's scene (the overview), not on its unsung first line's (the hook).
+    assert timeline.beats[0].line_id == "v1-2" and timeline.beats[0].scene == "overview"
     assert timeline.beats[0].words[0].start == pytest.approx(step.INTRO_KEEP_S)
     assert timeline_problems(timeline, jobs.read(job / media.LOCATIONS, Locations)) == []
 

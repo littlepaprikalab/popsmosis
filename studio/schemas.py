@@ -16,6 +16,7 @@ import unicodedata
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, create_model, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 FILLER = "filler"
 Section = Literal["intro", "verse", "pre-chorus", "chorus", "bridge", "outro"]
@@ -27,6 +28,7 @@ DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the st
 BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
 TAG_MAX_CHARS = 40  # a longer one is dropped, since cutting it short would make a word nobody searches for
+SONG_SCENES_MAX = 3  # the song's own pictures (Scene.song_only) it keeps (studio/checks.py), beside the lesson's
 
 
 class Strict(BaseModel):
@@ -91,6 +93,10 @@ class Scene(Strict):
     to_scale: bool = Field(default_factory=bool, description="True for a chart, graph or figure whose sizes must be right "
                                                              "(bars of given heights, a stacked bar, a number line, a shape "
                                                              "with given sides or angles); false for any other scene")
+    # One of the song's own pictures (Bundle.song_scenes), which the lesson never plays; the song may still play any
+    # lesson scene that fits. Not the brain's to write: it writes them in a list of their own, after the lyrics.
+    # False in a bundle written before Oct 31.
+    song_only: SkipJsonSchema[bool] = Field(default_factory=bool)
 
     def exact(self) -> bool:
         """Drawn to scale: marked so, or a graph."""
@@ -260,6 +266,13 @@ class Bundle(Strict):
     lesson_markdown: str
     music: Music
     lyrics: list[Lyric]
+    # The song's own pictures, written after its lyrics so they are drawn from what the lines sing. The lesson's scenes
+    # are drawn for its narration, and a song made to play over them alone sang "Copy each chromosome, split the pair"
+    # over a scraped knee and its chorus three times over the lesson's overview (scorecard run 20261030-2110). Read
+    # in, they join `scenes`, marked song_only, so every later step finds every picture there; never written out.
+    song_scenes: list[Scene] = Field(default_factory=list, exclude=True,
+                                     description="The song's own pictures, each drawn for what the lines it plays "
+                                                 "under sing, where no scene above pictures it; [] for none")
     narration: list[Narration]
     direction: list[Direction]
     # What piles up where as the lesson goes (a gradient), filled and emptied by the marked particles.
@@ -297,6 +310,32 @@ class Bundle(Strict):
                                  for d in data["direction"]]
         return data
 
+    @model_validator(mode="before")
+    @classmethod
+    def _song_scenes_join(cls, data):
+        # The song's own pictures go among the scenes, marked as the song's (song_scenes), and none is a stage: the
+        # video cross-fades a process's stages in scene order, and would fade the lesson's last stage into the song's.
+        # A part they draw again keeps the colour (and so the look SAM finds it by) it has where it was drawn first:
+        # written after the lyrics, far from the scenes, a song's picture that drifted a shade would refuse the bundle
+        # ("has two colours"), a whole bundle call again.
+        if not isinstance(data, dict) or not data.get("song_scenes"):
+            return data
+        scenes, own = [_plain(s) for s in data.get("scenes", [])], [_plain(s) for s in data["song_scenes"]]
+        if not all(isinstance(s, dict) and isinstance(s.get("structures", []), list) for s in [*scenes, *own]):
+            return data  # not scenes: the validation says why
+        own = [dict(scene) for scene in own]  # the answer as given stays as it was
+        first: dict = {}  # each part as it is first drawn
+        for scene in [*scenes, *own]:
+            for part in map(_plain, scene.get("structures", [])):
+                if isinstance(part, dict):
+                    first.setdefault(part.get("name"), part)
+        for scene in own:
+            parts = [_plain(part) for part in scene.get("structures", [])]
+            scene["structures"] = [_coloured_as(part, first.get(part.get("name"), part)) if isinstance(part, dict)
+                                   else part for part in parts]
+            scene.update(song_only=True, stage_of="")
+        return {**data, "scenes": [*scenes, *own], "song_scenes": []}
+
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:
         # The song is timed and sung from the lyrics' own sections (studio/steps/audio.py); music.sections
@@ -313,6 +352,18 @@ class Bundle(Strict):
         """Whether the droplet has a song. One written for the lesson video alone (STUDIO_VIDEOS=lesson,
         LessonBundle) has no lyrics and no music, and nothing after the bundle sings or checks one."""
         return bool(self.lyrics or self.music.positive_styles or self.music.negative_styles)
+
+
+def _plain(value):
+    return value.model_dump() if isinstance(value, BaseModel) else value
+
+
+def _coloured_as(part: dict, first: dict) -> dict:
+    """A part as a song's picture draws it, in the colour it was first drawn in, and with the look SAM finds it by,
+    which names that colour ("orange lobe"), when its colour differs."""
+    if str(part.get("color_hex", "")).upper() == str(first.get("color_hex", "")).upper():
+        return part
+    return {**part, "color_hex": first.get("color_hex"), "sam_phrase": first.get("sam_phrase", part.get("sam_phrase"))}
 
 
 def sung_sections(lyrics: list[Lyric]) -> list[str]:
@@ -336,7 +387,7 @@ class LessonTags(Strict):
         default_factory=list, description="The lesson video's hashtags, most useful first")
 
 
-SONG_FIELDS = ("music", "lyrics")
+SONG_FIELDS = ("music", "lyrics", "song_scenes")
 LessonBundle = create_model(
     "LessonBundle", __base__=Strict, __doc__="The bundle for the lesson video alone: Bundle without its song.",
     **{name: (field.annotation, field) for name, field in Bundle.model_fields.items()
@@ -358,14 +409,21 @@ def bundle_of(lesson: dict) -> Bundle:
     })
 
 
+def lesson_scenes_max(staged: bool) -> int:
+    """The most scenes the lesson may have (the song's own beside them): a process's stages take a scene each."""
+    return 8 if staged else 7
+
+
 def bundle_problems(bundle: Bundle) -> list[str]:
     """What downstream steps rely on but the schema cannot say."""
     problems = []
     if not 3 <= len(bundle.facts) <= 4:
         problems.append(f"{len(bundle.facts)} facts, not 3-4")
-    most = 8 if any(s.stage_of for s in bundle.scenes) else 7  # a process's stages take a scene each
-    if not 3 <= len(bundle.scenes) <= most:
-        problems.append(f"{len(bundle.scenes)} scenes, not 3-{most}")
+    lesson = [s for s in bundle.scenes if not s.song_only]
+    most = lesson_scenes_max(any(s.stage_of for s in lesson))
+    if not 3 <= len(lesson) <= most:
+        own = " besides the song's own" if len(lesson) < len(bundle.scenes) else ""
+        problems.append(f"{len(lesson)} scenes{own}, not 3-{most}")
     for kind, ids in (
         ("fact", [f.id for f in bundle.facts]),
         ("scene", [s.id for s in bundle.scenes]),
@@ -415,7 +473,7 @@ class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style", "axes"]
+                  "tempo", "song-style", "axes", "song-scene"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 

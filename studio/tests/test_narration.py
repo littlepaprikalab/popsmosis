@@ -77,3 +77,10 @@ def test_a_sentence_the_editor_draws_out_past_the_longest_keeps_the_writers_word
     out = narration.edit(b, answering([{"id": second.id, "text": second.text}, {"id": first.id, "text": longer}]))
     assert [n.id for n in out.narration] == [second.id, first.id]  # still moved
     assert out.narration[1].text == first.text  # but in its own words
+
+
+def test_the_editor_never_sees_the_songs_own_pictures():
+    data = bundle_data()
+    data["song_scenes"] = [{"id": "chorus", "image_prompt": "ATP synthase.", "structures": [
+        {"name": "ATP synthase", "aliases": [], "sam_phrase": "the atp synthase", "color_hex": "#3366CC"}]}]
+    assert [s["id"] for s in narration.payload(Bundle.model_validate(data))["scenes"]] == ["hook", "overview", "synthase"]

@@ -157,6 +157,7 @@ def test_the_lesson_alone_brief_cuts_the_song_and_survives_a_renamed_heading():
     rather than break the import of every step in every mode."""
     assert "## The song\n" in bundle_step.PROMPT and "## The narration\n" in bundle_step.PROMPT  # else nothing is cut
     assert "## The song\n" not in bundle_step.LESSON_ONLY_PROMPT
+    assert "### The song's pictures" in bundle_step.PROMPT and "### The song's pictures" not in bundle_step.LESSON_ONLY_PROMPT
     assert len(bundle_step.LESSON_ONLY_PROMPT) < 0.8 * len(bundle_step.PROMPT)
     renamed = "Intro\n\n## Songs\n\nSing.\n\n## Narration\n\nSay.\n"
     assert bundle_step.without_song(renamed) == renamed + bundle_step.NO_SONG

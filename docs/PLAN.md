@@ -219,8 +219,8 @@ already written.
 1. `course`, `topic`, `audience` ("high school" unless the learner's request names
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
    (`id`, `text`, `source_quote` when a study guide was given), `misconception`.
-2. `scenes[3-6]`: the hook (where it can, the topic in the learner's world), overview,
-   one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
+2. `scenes[3-7]`: the lesson's, which the song plays too where they picture what it sings:
+   the hook (where it can, the topic in the learner's world), overview, one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
    in the colours of what they stand for) and a detail showing what happens when a part
    fails. Each has `id`,
    `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
@@ -251,6 +251,17 @@ already written.
    story again. A line need not name a structure; one that does
    uses its `name` or one of its `aliases`, because hearing that word is what reveals the
    structure on screen.
+   Then `song_scenes[0-3]`: the song's own pictures, written after the lyrics so each is drawn
+   for what the lines it plays under sing (the title line's picture, the chorus's, the bridge's
+   failure), where no lesson scene pictures it. They have the scenes' fields and join `scenes`,
+   marked `song_only` (code's, not the brain's), so every later step finds every picture there.
+   The lesson never plays one; the code checks make one the narration plays over the lesson's
+   too while the lesson has room, keep the 3 the song plays longest, and leave out one no line
+   plays over, and a part one draws again keeps the colour it was first drawn in: repairs, not
+   refusals, since a refused bundle is a whole bundle call again. Before Oct 31 the song
+   had only the lesson's pictures: none of the 36 songs in the six scorecard runs had one of its
+   own, 28 of them sang 25 or more of their 47 to 58 lines over one lesson scene, and every one
+   opened on the lesson's hook ("Copy each chromosome, split the pair" over a scraped knee).
 6. `narration[]`: sentences, 2–3 minutes in all, tagged like the lyrics. It explains
    what the song only names: every fact, step by step, and every structure drawn.
 7. `direction[]`: for every lyric line and narration sentence, by id: `scene`, `camera`
@@ -675,8 +686,9 @@ reveal is labelled, and a spotlight or camera target waits for its reveal; a lab
 shown stays on that scene; zoom is at least 1; every name has a colour. Paths are ones the
 API's upload takes, built by `studio/media.py`, which turns model-written scene ids and
 structure names into safe, distinct file names.
-`timeline_problems()` adds that every name is located on its scene's art. Both videos
-open on the hook: the timeline step makes the first beat the hook scene.
+`timeline_problems()` adds that every name is located on its scene's art. The lesson video
+opens on the hook: the timeline step makes its first beat the hook scene. The song opens on its
+first line's scene, a picture of its title line (the hook only when that is not located).
 
 ## 7. The renderer
 

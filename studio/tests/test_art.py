@@ -720,3 +720,15 @@ def test_a_value_mark_anywhere_else_is_ignored_and_one_without_a_point_is_left_o
     styled = svg.style(root, [], graph=False)
     assert not [el for el in styled.iter() if el.get(svg.VALUE) or el.get(svg.TICK)]
     assert svg.masks(styled, ["Interest"])["Interest"].sum() > 50_000  # the bar marked by mistake is still drawn
+
+
+def test_a_song_picture_drawn_to_scale_is_given_the_lines_sung_over_it():
+    data = bundle_data()
+    data["song_scenes"] = [{"id": "chorus", "image_prompt": "A bar chart.", "to_scale": True, "structures": [
+        {"name": "ATP synthase", "aliases": [], "sam_phrase": "the atp synthase", "color_hex": "#3366CC"}]}]
+    for d in data["direction"]:
+        if d["line_id"].startswith("c"):
+            d["scene"] = "chorus"
+    bundle = Bundle.model_validate(data)
+    assert art._said_over(bundle, bundle.scenes[-1]) == ["Protons flow and ATP grows"] * 3
+    assert art._said_over(bundle, bundle.scenes[2]) == ["ATP synthase uses the returning protons to make ATP."]

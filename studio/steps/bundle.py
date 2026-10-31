@@ -38,7 +38,7 @@ This droplet is made without its song: the text lesson and the narrated lesson v
 so there is no songwriter and no song video. Where this brief gives the song a job, the
 narration and the lesson do it: the narration opens on the hook, and the surprising detail and
 what a failure looks like go in the narration and the lesson where they fit. Write no scene
-for the song alone.
+for the song alone: the schema has no `song_scenes`.
 
 ## The plan without the song
 
