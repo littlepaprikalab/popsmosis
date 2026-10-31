@@ -356,9 +356,8 @@ explanation left to the narration.
   chorus, outro.
 - `lyrics`: every line as sung, in order, section by section, so the chorus appears three
   times. A line is 5 to 8 syllables, never over 9, room to hold a note (rapped, up to about
-  14). Each
-  verse has 8 lines: the song fills its length with the chorus coming back, not longer
-  verses.
+  16). Each verse has 8 lines: the song fills its length with the chorus coming back, not
+  longer verses.
 
 ### How it sounds
 
@@ -369,7 +368,7 @@ explanation left to the narration.
   term; let the narration carry the rest.
 - **Never a caption.** No line is a label or a definition: no "Term: what it is", no "X =
   Y" or "X's the Y", no run of terms, no figure with its unit (one number as a hook, at
-  most, in the whole song). Not "Law of demand: some switch, some can't pay", but "Price
+  most, in a sung song; rapped verses, below). Not "Law of demand: some switch, some can't pay", but "Price
   goes up, and the buyers walk away"; not "Tray of cookies: what the sellers make", but
   "Fresh from the oven, all the cookies they bake".
 - **A song, not sentences.** A lyric is the idea turned into something the listener sees,
@@ -416,6 +415,15 @@ explanation left to the narration.
 - **Repetition** is what sticks: the title line, the chorus, a key idea said again in new
   words. Where it fits, tie the idea to the listener's own world (the burn in their legs
   after a sprint).
+- **Rapped verses review for the exam.** When the verses are rapped, they carry what the
+  course asks, the way a review rap does: the counts, numbers and names in order, each line
+  one step of the story with its rhyme ("Three CO2 in, one sugar out, that's the trade"), up
+  to about 16 syllables. There a run of terms with their numbers is a line ("Nine ATP, six
+  NADPH, for every G3P made"), and the bridge may count it up instead of a failure case: the
+  course's arithmetic, a step a line. More of the facts' detail fits than in a sung song, but
+  every line is still a lyric, never a sentence of the lesson recited. The chorus stays sung:
+  the title line, the core idea, short words, no numbers. For a younger audience, keep the
+  counts to the few its course asks.
 - **Terms as they are sung**: the course's real terms, written as a singer says them: "NAD
   plus", not "NAD+"; "sodium", not "Na+"; "CO2" and "two ATP" are fine. The music generator
   refuses a word it takes for an artist's name ("phosphate" has been refused): use another

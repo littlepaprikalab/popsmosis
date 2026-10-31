@@ -14,7 +14,8 @@ twisted / The energy's in the carriers"), the story in order from the cytoplasm 
 that carry what the exam asks: the counts, the numbers and the yield worked out in the bridge. Every claim and
 number in it checks out. Our brief, as it stood on Oct 31, would have kept out most of what makes it work (one
 number at most, no run of terms, rapped lines to about 14 syllables, 3 to 5 ideas): an exam-review rap is a job of
-its own.
+its own. Since Oct 31 the brief has it: rapped verses review for the exam, up to about 16 syllables
+(docs/test-rounds.md).
 
 Style: Hip-hop pop, upbeat 100 bpm groove, confident female rap verses with a catchy sung chorus, punchy 808s and
 bright synth hook, tight quantized drum programming with crisp kick-snare hits and precise vocal layering (stored

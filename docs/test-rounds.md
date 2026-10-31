@@ -1246,6 +1246,24 @@ than copy the example.
 The owner also loosened the song's shape (Oct 31): the intro need not open on the title line, as a song that always
 starts on its title is predictable, and the chorus may run 5 lines, as Split the Water's does (docs/reference-songs.md).
 
+**Rapped verses that review for the exam**, after the owner's favourite, Cash in the Carrier (docs/reference-songs.md):
+five AP topics (cellular respiration, the light reactions, the sodium pump, supply and demand, the derivative) sung
+in its style, rapped verses and a sung chorus, by the brief as it was and by one with a rule that rapped verses
+carry the course's counts, numbers and names in order, judged blind by Opus:
+
+| | Exam value | Singability | Accuracy | Preferred |
+|---|---|---|---|---|
+| The brief as it was | 3.4 | 4.4 | 5.0 (no errors) | 1 of 5 |
+| Rapped verses review for the exam, up to about 16 syllables | 4.4 | 3.4 | 4.6 (3 errors) | 4 of 5 |
+
+The review rap sang what the exam asks ("Three sodium inside lock into the pump's pockets tight", "Sodium's ten times
+thicker outside, potassium thirty times in", "Inside's minus seventy"), where the brief as it was never gave the pump's
+3 to 2. Its lines ran long (median 15 syllables, 11 of 80 over 16), and its errors were overreach: "Each hop powers a
+pump" (only three complexes pump), "Same chain" for the chloroplast's and the mitochondrion's. Held to 14 syllables
+against 16, judged by Opus told that a rapped bar at 100 bpm carries 16 or more, the two tied: preferred 3 to 2,
+singability 4.0 each, exam value 4.0 and 4.2. Told that, the judge scored the 16-syllable songs' singing 4.0, where it
+had scored it 3.4: what it had marked down was length, not flow. Shipped at 16, as the owner asked (rap is fast).
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

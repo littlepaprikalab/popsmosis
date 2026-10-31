@@ -264,6 +264,18 @@ def test_a_lyric_one_syllable_over_passes_and_two_over_is_recorded():
     assert lyric(" ".join(["la"] * 12)) == ["lyric-style"]
 
 
+def test_a_rapped_line_carries_up_to_about_16_syllables():
+    def lyric(text):
+        def change(data):
+            data["music"]["positive_styles"] = ["Hip-hop pop with confident rap verses and a catchy sung chorus, 100 bpm"]
+            data["lyrics"][0]["text"] = text
+        _, found, _ = review(change)
+        return [rule for line, rule, _ in found if line == "v1-1" and rule == "lyric-style"]
+
+    assert lyric(" ".join(["la"] * 17)) == []  # a review rap's bar, one over
+    assert lyric(" ".join(["la"] * 18)) == ["lyric-style"]
+
+
 def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
     def change(data):
         data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"
