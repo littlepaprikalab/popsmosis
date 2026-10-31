@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import dynamic from 'next/dynamic';
 import type { Components } from 'react-markdown';
 
@@ -49,9 +50,11 @@ const Markdown = dynamic(async () => {
     import('remark-gfm'),
   ]);
   const remarkPlugins = [remarkGfm];
-  return function Markdown({ children }: { children: string }) {
+  // Memoized on the text: a card folding or a count changing re-renders the page around a lesson, and
+  // parsing the same markdown again each time would be wasted work.
+  return memo(function Markdown({ children }: { children: string }) {
     return <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>{children}</ReactMarkdown>;
-  };
+  });
 }, {
   loading: () => <span />,
 });

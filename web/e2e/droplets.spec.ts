@@ -64,6 +64,52 @@ test.describe('the Droplets tab, signed out', () => {
     expect(played).toBeGreaterThan(0);
   });
 
+  test('the lesson and the lyrics each fold from the chevron at the top of their card or at its foot', async ({ page }) => {
+    await page.goto(`/droplets/${S.droplet}`);
+    const lesson = page.getByTestId('lesson-card');
+    const lyrics = page.getByTestId('lyrics-card');
+    const text = lesson.locator('.md strong', { hasText: 'gradient' });
+    const words = lyrics.getByText('Spin the rotor, make the ATP');
+
+    // Both start open.
+    await expect(text).toBeVisible();
+    await expect(words).toBeVisible();
+
+    // The chevron at the top folds a card down to its title, and leaves the other card open.
+    await lesson.getByRole('button', { name: 'Collapse card' }).click();
+    await expect(text).toBeHidden();
+    await expect(lesson.getByRole('heading', { name: 'Lesson' })).toBeVisible();
+    await expect(words).toBeVisible();
+    // ...and opens it again.
+    await lesson.getByRole('button', { name: 'Expand card' }).click();
+    await expect(text).toBeVisible();
+
+    // The chevron at the foot folds it too, with no scroll back up to the title.
+    await lyrics.getByRole('button', { name: 'Collapse', exact: true }).click();
+    await expect(words).toBeHidden();
+    await expect(lyrics.getByRole('heading', { name: 'Lyrics' })).toBeVisible();
+    await lyrics.getByRole('button', { name: 'Expand card' }).click();
+    await expect(words).toBeVisible();
+  });
+
+  test('folding a long card from its foot brings its title back on screen, with the focus on its chevron', async ({ page }) => {
+    // A phone: the lesson is taller than the screen, with more than a screen of page below it, so
+    // the fold alone would slide the comments up under the reader and leave the title far above.
+    await page.setViewportSize({ width: 390, height: 500 });
+    await page.goto(`/droplets/${S.droplet}`);
+    const lesson = page.getByTestId('lesson-card');
+    const title = lesson.getByRole('heading', { name: 'Lesson' });
+    await expect(lesson.locator('.md strong', { hasText: 'gradient' })).toBeVisible();
+
+    // From the keyboard: the chevron at the foot is about to be hidden, so the focus must move.
+    await lesson.getByRole('button', { name: 'Collapse', exact: true }).focus();
+    await expect(title).not.toBeInViewport();
+    await page.keyboard.press('Enter');
+
+    await expect(lesson.getByRole('button', { name: 'Expand card' })).toBeFocused();
+    await expect(title).toBeInViewport();
+  });
+
   test('one card plays at a time: starting another pauses the first', async ({ page }) => {
     await page.goto('/droplets');
     const cards = page.getByTestId('droplet-card');
@@ -677,6 +723,72 @@ test.describe('likes and comments on the Droplets tab', () => {
     await expect(section.getByTestId('comment-count')).toHaveText(String(before));
     await page.reload();
     await expect(section.getByTestId('comment')).toHaveCount(before);
+  });
+
+  test('a long comment shows three lines and Read more, at the width it has; the comments fold, and their link opens them', async ({ page, context, request }) => {
+    const stamp = `E2E ${Date.now()}`;
+    const long = `${stamp} long: ${'the gradient part finally made sense once the chorus came back around, '.repeat(6).trim()}`;
+    // Two lines on a desktop, past three on a narrow phone.
+    const medium = `${stamp} medium: ${'the rotor line stuck with me. '.repeat(4).trim()}`;
+    try {
+      await signIn(context, S.users.ben);
+      await page.goto(`/droplets/${S.droplet}`);
+      const section = page.getByTestId('droplet-comments');
+      const box = page.getByRole('textbox', { name: 'Add a comment' });
+      const ada = section.getByTestId('comment').filter({ hasText: 'The chorus is the only way' });
+      await expect(ada).toBeVisible();
+      // A short comment shows whole, with nothing to open.
+      await expect(ada.getByRole('button', { name: 'Read more' })).toHaveCount(0);
+
+      // Posted long, it shows three lines, and the way to the rest at the end of the third, at once.
+      for (const words of [medium, long]) {
+        await box.fill(words);
+        await section.getByRole('button', { name: 'Comment', exact: true }).click();
+        await expect(box).toHaveValue('');
+      }
+      const mine = section.getByTestId('comment').filter({ hasText: `${stamp} long` });
+      const words = mine.getByTestId('comment-text');
+      const more = mine.getByRole('button', { name: 'Read more' });
+      await expect(more).toBeVisible();
+      const clamped = (await words.boundingBox())!;
+      const link = (await more.boundingBox())!;
+      // On its last line, at the right: no line of its own.
+      expect(link.y + link.height).toBeCloseTo(clamped.y + clamped.height, -1);
+      expect(link.x + link.width).toBeCloseTo(clamped.x + clamped.width, -1);
+      await more.click();
+      const less = mine.getByRole('button', { name: 'Show less' });
+      await expect(less).toHaveAttribute('aria-expanded', 'true');
+      expect((await words.boundingBox())!.height).toBeGreaterThan(clamped.height + 20);
+      await less.click();
+      await expect(more).toBeVisible();
+      expect((await words.boundingBox())!.height).toBeCloseTo(clamped.height, 0);
+
+      // Long is measured at the width there is: the medium one fits on a wide screen, runs long on a
+      // narrow phone, and fits again when the screen is wide again.
+      const mid = section.getByTestId('comment').filter({ hasText: `${stamp} medium` });
+      await expect(mid.getByRole('button', { name: 'Read more' })).toHaveCount(0);
+      await page.setViewportSize({ width: 320, height: 720 });
+      await expect(mid.getByRole('button', { name: 'Read more' })).toBeVisible();
+      await page.setViewportSize({ width: 1280, height: 720 });
+      await expect(mid.getByRole('button', { name: 'Read more' })).toHaveCount(0);
+
+      // The comments fold from the chevron in their header, like the lesson...
+      await section.getByRole('button', { name: 'Collapse card' }).click();
+      await expect(ada).toBeHidden();
+      await expect(section.getByTestId('comment-count')).toBeVisible();
+      // ...and the count beside the like button opens them again.
+      await page.getByTestId('droplet-engagement').getByRole('link', { name: /comments?$/ }).click();
+      await expect(ada).toBeVisible();
+      await expect(section).toBeInViewport();
+      // The chevron at their foot folds them too.
+      await section.getByRole('button', { name: 'Collapse', exact: true }).click();
+      await expect(ada).toBeHidden();
+    } finally {
+      const listed = await (await request.get(apiUrl(`/api/droplets/${S.droplet}/comments?limit=50`), { headers: cookieOf(S.users.ben) })).json();
+      for (const c of listed.data as { id: string; content: string; mine: boolean }[]) {
+        if (c.mine && c.content.startsWith(stamp)) await request.delete(apiUrl(`/api/droplets/${S.droplet}/comments/${c.id}`), { headers: asWriter(S.users.ben) });
+      }
+    }
   });
 
   test('markup in a comment is shown as text, and nothing in it runs', async ({ page, context }) => {

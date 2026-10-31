@@ -64,6 +64,12 @@ interface Props {
   /** Body padding. Defaults to 'px-4 pb-4'. */
   bodyClassName?: string;
   defaultCollapsed?: boolean;
+  /** Set to hold the folded state outside, e.g. so a link elsewhere on the page can open the card. */
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  id?: string;
+  /** The id of the card's heading: the card is then a section, a landmark named by it. */
+  labelledBy?: string;
   testId?: string;
 }
 
@@ -82,12 +88,36 @@ export function CollapsibleCard({
   headerClassName,
   bodyClassName,
   defaultCollapsed = false,
+  collapsed: held,
+  onCollapsedChange,
+  id,
+  labelledBy,
   testId,
 }: Props) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [own, setOwn] = useState(defaultCollapsed);
+  const collapsed = held ?? own;
+  const setCollapsed = (next: boolean) => {
+    if (held === undefined) setOwn(next);
+    onCollapsedChange?.(next);
+  };
+  const cardRef = useRef<HTMLElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const collapse = () => setCollapsed(true);
-  const toggle = () => setCollapsed((c) => !c);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const toggle = () => setCollapsed(!collapsed);
+
+  // Folding from inside the body, the chevron at its foot: by then a long card's header can be far
+  // above the screen, and what is below would slide up in its place, losing the reader. So bring the
+  // header back near the top of the screen first, only if it is off-screen, and hand focus to its
+  // chevron: the button just pressed is about to be hidden.
+  const collapse = () => {
+    const card = cardRef.current;
+    if (card) {
+      const gap = parseFloat(getComputedStyle(card).scrollMarginTop) || 0;
+      if (card.getBoundingClientRect().top < gap) card.scrollIntoView({ block: 'start' });
+      if (card.contains(document.activeElement)) toggleRef.current?.focus({ preventScroll: true });
+    }
+    setCollapsed(true);
+  };
 
   // A click that ends a selection in the header is the reader copying the text,
   // not asking to fold the card. Scoped to this header: a leftover selection
@@ -98,8 +128,11 @@ export function CollapsibleCard({
     toggle();
   };
 
+  const Root = labelledBy ? 'section' : 'div';
   return (
-    <div className={`rounded-lg overflow-hidden ${className ?? ''}`} style={style} data-testid={testId}>
+    // scroll-mt-20: room above the card, clear of the nav, when it is scrolled back to (as #comments has).
+    <Root ref={cardRef as React.RefObject<HTMLDivElement>} id={id} aria-labelledby={labelledBy}
+      className={`rounded-lg overflow-hidden scroll-mt-20 ${className ?? ''}`} style={style} data-testid={testId}>
       {/* Header — always visible. Anywhere in it toggles the body, and the
           chevron is the real button, so the header text is still selectable
           and screen readers read it as text rather than as a control's name. */}
@@ -110,6 +143,7 @@ export function CollapsibleCard({
       >
         <div className="min-w-0 flex-1">{header(collapsed)}</div>
         <button
+          ref={toggleRef}
           type="button"
           onClick={(e) => { e.stopPropagation(); toggle(); }}
           aria-expanded={!collapsed}
@@ -137,6 +171,6 @@ export function CollapsibleCard({
           </div>
         </div>
       </div>
-    </div>
+    </Root>
   );
 }

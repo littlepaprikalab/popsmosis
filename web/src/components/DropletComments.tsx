@@ -1,6 +1,6 @@
 'use client';
 
-import { Dispatch, SetStateAction, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Dispatch, SetStateAction, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { api, ApiError, DropletComment, DropletCommentPage } from '@/lib/api';
@@ -11,6 +11,7 @@ import { useToast } from './Toast';
 import { ConfirmDialog } from './ConfirmDialog';
 import { UserAvatar } from './UserAvatar';
 import { formatCount } from './LikeButton';
+import { CollapsibleCard, CollapseButton } from './CollapsibleCard';
 
 export const COMMENT_MAX_LENGTH = 1000; // api/src/lib/engagement.ts
 
@@ -21,6 +22,62 @@ function newIdempotencyKey(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 }
 
+// One ResizeObserver for every comment on the page, however many pages of them are loaded.
+const sizeWatchers = new WeakMap<Element, () => void>();
+let sizeObserver: ResizeObserver | null = null;
+function watchSize(el: Element, onResize: () => void): () => void {
+  if (typeof ResizeObserver === 'undefined') return () => {};
+  sizeObserver ??= new ResizeObserver((entries) => { for (const e of entries) sizeWatchers.get(e.target)?.(); });
+  sizeWatchers.set(el, onResize);
+  sizeObserver.observe(el);
+  return () => { sizeObserver?.unobserve(el); sizeWatchers.delete(el); };
+}
+
+/**
+ * A comment's words, three lines of them until the reader asks for the rest, with "Read more" at
+ * the end of the third line. It shows only when the three lines actually cut the comment off,
+ * measured at the width it has: the same comment can fit on a desktop and run long on a phone, or
+ * after the phone turns.
+ *
+ * The link floats right, below a spacer two lines tall, so it lands at the end of the third line and
+ * the text wraps around it, the clamp's "…" just before it. The clamped box is always exactly three
+ * lines, as the link is there only when the text runs past them, so the spacer has a fixed height.
+ */
+function CommentText({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const textId = useId();
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  // Measured before paint, so a long comment never shows without its "Read more" first. Adding the
+  // link only makes the text longer, so a measure taken with it there gives the same answer.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || open) return;
+    const measure = () => setLong(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    return watchSize(el, measure);
+  }, [open]);
+  const link = (label: string, className: string) => (
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={textId}
+      className={`underline underline-offset-2 select-none hover-text ${className}`} style={{ color: 'var(--text-muted)' }}>
+      {label}
+    </button>
+  );
+  return (
+    <p ref={ref} id={textId} className={`text-sm leading-5 whitespace-pre-wrap break-words ${open ? '' : 'line-clamp-3'}`}
+      style={{ color: 'var(--text-primary)' }} data-testid="comment-text">
+      {long && !open && (
+        <>
+          <span aria-hidden className="float-right h-10" />
+          {link('Read more', 'float-right clear-both ml-1.5')}
+        </>
+      )}
+      {text}
+      {open && <>{' '}{link('Show less', '')}</>}
+    </p>
+  );
+}
+
 interface Props {
   dropletId: string;
   count: number;
@@ -28,13 +85,16 @@ interface Props {
   initial?: DropletCommentPage; // the newest comments, read with the droplet: no second request to show them
   // On a card on the list: only the newest `preview`, folded, until the card opens them all in place.
   card?: { preview: number; open: boolean; setOpen: (open: boolean) => void };
+  // On a droplet's page the comments are a card that folds; held by the page so its "N comments"
+  // link can open it again.
+  fold?: { collapsed: boolean; setCollapsed: (collapsed: boolean) => void };
 }
 
 /**
  * The public comments under a droplet, newest first. Anyone can read them; a signed-in
  * person can add one and delete their own, and an admin can delete any.
  */
-export function DropletComments({ dropletId, count, setCount, initial, card }: Props) {
+export function DropletComments({ dropletId, count, setCount, initial, card, fold }: Props) {
   const { user } = useAuth();
   const { showToast } = useToast();
   const pathname = usePathname();
@@ -176,29 +236,21 @@ export function DropletComments({ dropletId, count, setCount, initial, card }: P
   const headingId = `${ids}-heading`;
   const boxId = `${ids}-box`;
 
-  return (
-    <section id={card ? undefined : 'comments'} ref={region} tabIndex={card ? -1 : undefined}
-      className={card ? 'px-4 pb-4 outline-none' : 'rounded-lg p-4 mt-6 scroll-mt-20'}
-      style={card ? undefined : { background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
-      data-testid={card ? 'card-comments-panel' : 'droplet-comments'}
-      aria-labelledby={card ? undefined : headingId}>
-      <ConfirmDialog
-        open={!!pendingDelete}
-        title="Delete comment"
-        message={pendingDelete && !pendingDelete.mine ? 'Delete this comment? It is someone else’s; it goes for everyone.' : 'Delete your comment? It goes for everyone.'}
-        confirmLabel="Delete"
-        variant="danger"
-        onConfirm={() => { if (pendingDelete) remove(pendingDelete); setPendingDelete(null); }}
-        onCancel={() => setPendingDelete(null)}
-      />
+  // Outside the folding card: a fixed dialog inside it would fold away with it.
+  const dialog = (
+    <ConfirmDialog
+      open={!!pendingDelete}
+      title="Delete comment"
+      message={pendingDelete && !pendingDelete.mine ? 'Delete this comment? It is someone else’s; it goes for everyone.' : 'Delete your comment? It goes for everyone.'}
+      confirmLabel="Delete"
+      variant="danger"
+      onConfirm={() => { if (pendingDelete) remove(pendingDelete); setPendingDelete(null); }}
+      onCancel={() => setPendingDelete(null)}
+    />
+  );
 
-      {/* On a card its count is already beside the like button. */}
-      {!card && (
-        <h2 id={headingId} className="text-xs uppercase tracking-wider font-bold mb-3" style={{ color: 'var(--accent-green)' }}>
-          Comments <span style={{ color: 'var(--text-muted)' }} data-testid="comment-count">{formatCount(count)}</span>
-        </h2>
-      )}
-
+  const thread = (
+    <>
       {user ? (
         <div className={card ? 'mb-3' : 'mb-4'}>
           <label htmlFor={boxId} className="sr-only">Add a comment</label>
@@ -265,30 +317,69 @@ export function DropletComments({ dropletId, count, setCount, initial, card }: P
                     </button>
                   )}
                 </div>
-                <p className="text-sm whitespace-pre-wrap break-words" style={{ color: 'var(--text-primary)' }}>{c.content}</p>
+                <CommentText text={c.content} />
               </div>
             </li>
           ))}
         </ul>
       )}
+    </>
+  );
 
-      {((cursor && state === 'ready') || card) && (
-        <div className={card ? 'flex items-center justify-between gap-2 mt-3' : 'text-center mt-4'}>
-          {cursor && state === 'ready' && (
-            <button type="button" onClick={loadMore} disabled={loadingMore}
-              className="px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider"
-              style={{ color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }}>
-              {loadingMore ? 'Loading…' : 'Older comments'}
-            </button>
-          )}
-          {card && (
-            <button type="button" onClick={() => toggle(false)}
-              className="ml-auto text-xs hover-text" style={{ color: 'var(--text-muted)' }}>
-              Hide comments
-            </button>
-          )}
+  const older = cursor && state === 'ready' && (
+    <button type="button" onClick={loadMore} disabled={loadingMore}
+      className="px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider"
+      style={{ color: 'var(--accent-blue)', border: '1px solid var(--accent-blue)' }}>
+      {loadingMore ? 'Loading…' : 'Older comments'}
+    </button>
+  );
+
+  if (card) {
+    return (
+      <section ref={region} tabIndex={-1} className="px-4 pb-4 outline-none" data-testid="card-comments-panel">
+        {dialog}
+        {thread}
+        <div className="flex items-center justify-between gap-2 mt-3">
+          {older}
+          <button type="button" onClick={() => toggle(false)}
+            className="ml-auto text-xs hover-text" style={{ color: 'var(--text-muted)' }}>
+            Hide comments
+          </button>
         </div>
-      )}
-    </section>
+      </section>
+    );
+  }
+
+  // On the droplet's page: a card that folds from the chevron in its header or at its foot, like the
+  // lesson and the lyrics above it.
+  return (
+    <>
+      {dialog}
+      <CollapsibleCard
+        id="comments"
+        labelledBy={headingId}
+        testId="droplet-comments"
+        className="mt-6"
+        style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}
+        headerClassName="px-4 pt-4 pb-3"
+        collapsed={fold?.collapsed}
+        onCollapsedChange={fold?.setCollapsed}
+        header={() => (
+          <h2 id={headingId} className="text-xs uppercase tracking-wider font-bold" style={{ color: 'var(--accent-green)' }}>
+            Comments <span style={{ color: 'var(--text-muted)' }} data-testid="comment-count">{formatCount(count)}</span>
+          </h2>
+        )}
+      >
+        {(collapse) => (
+          <>
+            {thread}
+            {older && <div className="text-center mt-4">{older}</div>}
+            <div className="flex justify-end mt-3">
+              <CollapseButton onClick={collapse} />
+            </div>
+          </>
+        )}
+      </CollapsibleCard>
+    </>
   );
 }
