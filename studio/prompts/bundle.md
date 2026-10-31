@@ -209,7 +209,10 @@ Structures:
   common word ("healthy", "cell") would reveal it every time it is said.
 - `sam_phrase`: how a segmentation model finds it: the colour `color_hex` gives and one
   plain everyday noun for what it looks like, two or three words ("orange lobe", "yellow
-  flashlight"). No scientific names, extra adjectives, positions or negations.
+  flashlight"). No scientific names, extra adjectives, positions or negations. A person is
+  found whole, by the colour they wear: "man in red", "woman in pink", "friar in green",
+  never their clothes ("red tunic"): the part is what the phrase finds, and a tunic leaves
+  the face, the hands and the legs out of it, so only the clothes light up.
 - `color_hex` (#RRGGBB): a structure keeps one name and one colour in every scene and both
   videos. Distinct, bright mid-tones that stand out on the art's dark slate blue, never
   navy, slate, dark grey or near black. Only an analogy part shares a colour, with the
