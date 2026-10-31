@@ -423,24 +423,28 @@ explanation left to the narration.
 
 ### The parts
 
+The title line is the hook and the song's name: 3 to 7 words naming the big move as concrete
+actions on real things ("Split the water, catch the light", "Pull the sea, then let it go",
+"Print the page, spread the word"), never pronouns standing in for them ("Pump them in,
+they spin it out" names nothing). The chorus opens and ends on it.
+
 In this order, each section a run of lines with its own `section` value:
 
-- **Intro**, 2 lines: the whole idea in a catchy phrase, sung from the first second. Its
-  first line is the title line: 3 to 7 words naming the big move as concrete actions on
-  real things ("Split the water, catch the light", "Pull the sea, then let it go", "Print the
-  page, spread the word"), never pronouns standing in for them ("Pump them in, they spin it
-  out" names nothing). It is the hook, the song's name and a line of the chorus.
+- **Intro**, 2 lines: the idea in a catchy phrase, sung from the first second. It may open
+  on the title line, but most songs are better opening on a line that leads to it, so the
+  chorus lands it ("Light comes in, water splits / O2 out, and the cash is lit", before
+  "Split the water, catch the light").
 - **Verse**, 8 lines, four couplets: the frame first, then the first half of the story in
   order, a couplet a step (the first line shows it happening, the second lands what follows),
   with the surprise in it.
 - **Pre-chorus**, 2 lines: bust the misconception with a fact, singing the right idea and
   the mistake only as what it is not ("the oxygen you breathe came from water, not CO2"),
   never a filler like "that isn't true".
-- **Chorus**, 4 lines: `core_idea` as a chant, opening and ending on the title line. The
-  two lines between are the whole idea in brief, each built like the one before so the
-  rhythm repeats ("Moon overhead, the sea climbs high / Moon moves on, the sand runs dry"):
-  for a process, what goes in and what comes out ("Light and water in / ATP and NADPH
-  out"); for any other idea, its cause and its result. Short words, nothing to stumble on.
+- **Chorus**, 4 or 5 lines: `core_idea` as a chant, opening and ending on the title line.
+  The two or three lines between are the whole idea in brief, each built like the one
+  before so the rhythm repeats ("Moon overhead, the sea climbs high / Moon moves on, the
+  sand runs dry"): for a process, what goes in and what comes out ("Light and water in /
+  ATP and NADPH out"); for any other idea, its cause and its result. Short words, nothing to stumble on.
   Word for word the same each time, each repeat with its own ids; a learner can sing it
   back after two hearings.
 - **Verse**, 8 lines: the second half of the story, ending with what it makes and where

@@ -18,8 +18,8 @@ should be done. Use 4 and 2 for what falls between the anchors.
 
 ## hook
 
-What grabs the learner and sticks: the song's title line (the intro's first line, which also opens and
-closes the chorus), and how the song, the lesson and the narration open.
+What grabs the learner and sticks: the song's title line (the line the chorus opens and
+closes on), and how the song, the lesson and the narration open.
 
 - 5: The title line is a few words of concrete actions on real things that name the big move ("Split the
   water, catch the light"); you could sing it back after one hearing, and it is the core idea in
