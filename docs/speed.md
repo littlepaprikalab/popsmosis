@@ -10,7 +10,7 @@ was decided, so a later change starts from the numbers rather than again from gu
 | Script call | ~2 min | Opus, high effort: about 12k output tokens with its thinking |
 | **Bundle call** | **~10 min** | about 67k output tokens with its thinking: half the whole pipeline |
 | Fact-check | ~3–6 min | one call over ~130 lines, up to 3 rounds |
-| Audio, then timing | ~5–6 min | narration alignment ~2 min (MMS over a Gemini narration), Demucs ~1.5 min, song alignment ~1 min |
+| Audio, then timing | ~4 min | Demucs ~1.5 min, song alignment ~1 min, narration alignment ~40 s (MMS over a Gemini narration) |
 | Art, then locate | ~3–5 min | beside audio and timing, so rarely the wait |
 | Render | ~3–5 min | the three videos on one set of workers |
 
@@ -53,9 +53,13 @@ aligner each take every core, and two at once took 8 times as long each.
   begins it on the script's facts and keeps it when the bundle did; its step then finds itself done. The same
   calls at no extra cost, its 1–2 min hidden in the bundle call's 10. Shipped.
 
+- **The aligner at 8 bits** (dynamic quantization of MMS's linear layers): on three Gemini narrations it timed
+  every word as the full model did (none moved over 40 ms) and aligned in 26–28 s against 34–35 s, but loading
+  and quantizing take 7 s against 3, so the step gains about 5 s. On their three songs it moved 19 to 46 words
+  over a tenth of a second and left more lines unsure in two. Not shipped: 5 s is not worth a second model in
+  memory. (The narration's ~2 min measured before was other jobs on the same machine, not the aligner.)
+
 ## Not yet tried
 
-- **The aligner at 8-bit** (dynamic quantization of the MMS model on the CPU): about 2 times faster on the
-  narration's ~2 min if its word timings hold. Free to test on a job's narration, old against new word times.
 - **A GPU for the studio worker**: Demucs and the aligner in seconds rather than minutes. A cost and hosting
   decision, not a code change.
