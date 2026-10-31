@@ -1301,6 +1301,22 @@ def test_a_name_the_drawing_placed_is_written_there_in_its_colour_and_no_pill(jo
     assert rect[0] > 300 * scale + dx and abs((rect[1] + rect[3]) / 2 - (250 * scale + dy)) < 1  # right of its point
 
 
+def test_a_name_the_video_never_says_on_its_scene_is_written_from_the_first_frame(job, monkeypatch):
+    # Drawn in full and nameless, a graph's four lines left the learner to guess which was the old supply curve.
+    from studio.schemas import Value
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = [b.model_copy(update={"labels": [n for n in b.labels if n != "Cytochrome b6f"]}) for b in timeline.beats]
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    renderer.revealed["overview"].pop("Cytochrome b6f", None)  # never named on the overview
+    monkeypatch.setattr(renderer.locations.scene("overview"), "values",
+                        [Value(text="Cytochrome b6f", at=Point(x=900, y=500), side="right", label=True)])
+    names = []
+    monkeypatch.setattr(p, "draw_name", lambda canvas, text, rect, size, paper, color, alpha: names.append((text, alpha)))
+    first = next(b for b in beats if b.scene == "overview")
+    renderer.frame(first.t0 + 0.05)
+    assert names and names[0][0] == "Cytochrome b6f" and names[0][1] == pytest.approx(1.0, abs=0.05)
+
+
 def test_a_name_is_written_darker_than_its_line_on_a_light_page():
     import skia
     color = "#FFD23F"

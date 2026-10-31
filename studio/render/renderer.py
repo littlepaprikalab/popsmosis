@@ -1128,13 +1128,15 @@ class Renderer:
         """Draws the labels, each at its strength (1.0 when not given); returns where each pill landed, for what is
         drawn after them to keep clear. A name the drawing placed (Value.label, a graph's) is written there in its
         structure's colour, as a textbook prints a curve's name, with no pill, and never rests: it is part of the
-        graph, and the pills keep clear of it."""
+        graph, and the pills keep clear of it. It is written as its structure is revealed, or from the scene's first
+        frame when this video never names the structure there: drawn in full and nameless, a graph's four lines on
+        Oct 31 left the learner to guess which was the old supply and which the new."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
         scale, dx, dy = to_frame(cam, view, art)
         baked = {v.text: v for v in located.values if v.label}
         labels, rects = [], []
-        for name in names:
+        for name in [*names, *(n for n in baked if n not in names and n not in reveals)]:
             loc = located.get(name)
             if loc is None:
                 continue
