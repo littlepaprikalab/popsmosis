@@ -500,6 +500,13 @@ def to_frame(cam: Cam, view: Rect, art: SceneArt) -> tuple[float, float, float]:
     return scale, (view[0] + view[2]) / 2 - cam.cx * scale, (view[1] + view[3]) / 2 - cam.cy * scale
 
 
+def fills(view: Rect, picture: Rect) -> bool:
+    """Whether the picture, where the frame shows it, covers the whole view with a pixel to spare, so paper cleared
+    under it would be painted over everywhere: the art is opaque (SceneArt), and so is every wash composed over it."""
+    return (picture[0] <= view[0] - 1 and picture[1] <= view[1] - 1
+            and picture[2] >= view[2] + 1 and picture[3] >= view[3] + 1)
+
+
 # A post-it sits this far (frame pixels) from the ring of the label it is about, or, where every spot that near
 # covers the picture, further out, with a line back to the ring: beside it, below, above, then at a corner.
 POSTIT_GAP = 14.0
@@ -816,6 +823,8 @@ class Renderer:
         self.pixels = np.zeros((height, width, 4), np.uint8)
         self.surface = skia.Surface(self.pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
         self._background: tuple[tuple, skia.Image] | None = None
+        # The background drawn last and where its picture went, (key, (scale, dx, dy)): kept once it comes twice running.
+        self._last_background: tuple[tuple, tuple[float, float, float]] | None = None
         self._cards: dict[str, tuple[skia.Image, float, float]] = {}  # each scene's notice card, drawn once
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
         self._travelling: dict[tuple[str, str], bool] = {}  # (scene, what travels) -> drawn as hand-off arrows
@@ -1057,23 +1066,34 @@ class Renderer:
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,
                          ghosts: dict[str, float], spots: dict[str, float], keep: bool = True) -> None:
         """The scene's picture, framed by the camera, over the whole frame. Kept for the next frame unless
-        `keep` is False (a stage fading into the next: two pictures, each drawn in part)."""
+        `keep` is False (a stage fading into the next: two pictures, each drawn in part).
+
+        A moving camera makes a new background every frame, so one is kept (a copy of the whole frame) only when
+        it comes twice running, and drawn the second time just as the first, so the frames are the same as when
+        every one was kept. Where the picture fills its view, the paper is cleared only around the view."""
         art = self.scene(scene_id)
         washes, composed = art.compose(ghosts, spots)
         key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
         if keep and self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
             return
+        again = keep and self._last_background is not None and self._last_background[0] == key
+        scale, dx, dy = self._last_background[1] if again else to_frame(cam, view, art)
+        canvas.save()
+        if keep and fills(view, (dx, dy, dx + art.width * scale, dy + art.height * scale)):
+            canvas.clipRect(skia.Rect.MakeLTRB(*view), skia.ClipOp.kDifference)  # the title and band strips
         canvas.clear(art.paper)
-        scale, dx, dy = to_frame(cam, view, art)
+        canvas.restore()
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
         canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
         canvas.restore()
-        if keep:
+        if again:
             self._background = (key, self.surface.makeImageSnapshot())
+        elif keep:
+            self._last_background = (key, (scale, dx, dy))
 
     def _in_play(self, i: int) -> set[str] | None:
         """The parts beat i is about (LABELS_CALM); None when every label shows in full."""
