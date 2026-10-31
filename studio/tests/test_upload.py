@@ -491,14 +491,15 @@ def test_a_painted_pictures_check_goes_with_ready_and_one_left_over_from_another
     overview = next(s for s in bundle.scenes if s.id == "overview")
     check = {"text": [], "misplaced": [], "unnamed": [], "wrong": ["the membrane is drawn flat"], "notes": []}
     tries = [{"try": 1, "declined": "the picture was filtered"}, {"try": 2, **check}]
-    jobs.write(job / media.check_path("overview"), {"key": art.key(bundle, overview), "model": art.painter_of(job).model,
+    # Painted by Muse Image, whatever brain is in force where the upload runs (here Claude's, whose painter is Gemini).
+    jobs.write(job / media.check_path("overview"), {"key": art.key(bundle, overview), "model": "muse-image-1.0",
                                                      "prompt": "Educational diagram", "try": 2, "check": check, "tries": tries})
-    jobs.write(job / media.check_path("hook"), {"key": "an older bundle's", "model": art.painter_of(job).model,
+    jobs.write(job / media.check_path("hook"), {"key": "an older bundle's", "model": "muse-image-1.0",
                                                  "try": 1, "check": check, "tries": []})
     jobs.write(job / "videos.json", {"answerId": "ans1", "attempt": 3})
     upload.run(job, api=api_for(server))
     scenes = {s["scene"]: s for s in server.patches()[0]["artChecks"]["scenes"]}
-    assert scenes["overview"] == {"scene": "overview", "model": art.painter_of(job).model, "kept": 2, "check": check,
+    assert scenes["overview"] == {"scene": "overview", "model": "muse-image-1.0", "kept": 2, "check": check,
                                   "tries": tries, "file": "a3/art/overview.png"}
     assert scenes["hook"]["model"] is None and scenes["hook"]["check"] is None  # not this bundle's picture
     assert "prompt" not in scenes["overview"]

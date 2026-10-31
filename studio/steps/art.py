@@ -882,14 +882,18 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
 
 def review(job: Path) -> list[dict]:
     """What the checker found in each scene's kept picture and in every try before it, for an admin's review of the
-    droplet (studio/review.py): from art/<scene>.json, while it is the job's painter's picture of the scene as the
-    bundle now has it. A drawn scene was not looked at: its model and check are None."""
+    droplet (studio/review.py): from art/<scene>.json, while it is a picture of the scene as the bundle now has it.
+    Whoever painted it, whatever brain is in force now: a drawing removes the record and a painting the drawing, so
+    a record with the scene's key is the picture's. A drawn scene was not looked at: its model and check are None."""
     bundle = read(job / "bundle.json", Bundle)
     scenes = []
     for scene in bundle.scenes:
         entry: dict = {"scene": scene.id, "model": None, "kept": None, "check": None, "tries": []}
-        if _painted(job, bundle, scene):
+        try:
             made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            made = None
+        if isinstance(made, dict) and made.get("key") == key(bundle, scene) and (job / media.art_path(scene.id)).exists():
             entry.update(model=made.get("model"), kept=made.get("try"), check=made.get("check"), tries=made.get("tries") or [])
         scenes.append(entry)
     return scenes

@@ -19,6 +19,59 @@ const VERDICT_COLORS: Record<string, string> = {
 };
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+type Piece = { text: string; change: 'same' | 'removed' | 'added' };
+
+/**
+ * A fix as one passage, the words it took out and put in marked: a correction to a scene's prompt changes three
+ * words of a hundred, which two whole passages bury. A longest-common-subsequence diff by word, small enough for a
+ * fact-check's passages (a few hundred words at most).
+ */
+export function wordDiff(before: string, after: string): Piece[] {
+  // Words with the space after them, compared without it.
+  const a = before.match(/\S+\s*/g) ?? [];
+  const b = after.match(/\S+\s*/g) ?? [];
+  const same = (x: string, y: string) => x.trim() === y.trim();
+  const lcs: number[][] = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) lcs[i][j] = same(a[i], b[j]) ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+  }
+  // Each stretch of changes reads as what it took out, then what it put in.
+  const pieces: Piece[] = [];
+  let removed = '';
+  let added = '';
+  const flush = () => {
+    if (removed) pieces.push({ text: removed, change: 'removed' });
+    if (added) pieces.push({ text: added, change: 'added' });
+    removed = '';
+    added = '';
+  };
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    if (i < a.length && j < b.length && same(a[i], b[j])) {
+      flush();
+      const last = pieces[pieces.length - 1];
+      if (last?.change === 'same') last.text += b[j];
+      else pieces.push({ text: b[j], change: 'same' });
+      i++;
+      j++;
+    } else if (j < b.length && (i === a.length || lcs[i][j + 1] >= lcs[i + 1][j])) added += b[j++];
+    else removed += a[i++];
+  }
+  flush();
+  return pieces;
+}
+
+function Fix({ before, after }: { before: string; after: string }) {
+  return (
+    <p className="pl-3 break-words" style={{ color: 'var(--text-muted)' }}>
+      {wordDiff(shown(before), shown(after)).map((piece, i) => piece.change === 'same' ? <span key={i}>{piece.text}</span>
+        : piece.change === 'removed' ? <del key={i} style={{ color: 'var(--accent-red)' }}>{piece.text}</del>
+          : <ins key={i} className="no-underline font-semibold" style={{ color: 'var(--accent-green)' }}>{piece.text}</ins>)}
+    </p>
+  );
+}
 const findingsOf = (f: ArtFindings) => FINDINGS.flatMap(({ key, label }) => f[key].map((text) => ({ label, text })));
 const shown = (text: string) => text.replace(/\n/g, ' / '); // a couplet on one line
 
@@ -52,8 +105,7 @@ function FactcheckSection({ factcheck }: { factcheck: Review['factcheck'] }) {
               <p style={{ color: 'var(--text-secondary)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>round {c.round ?? '?'} · {c.kind} {c.ids.join(', ')}:</span> {c.problem}
               </p>
-              <p className="pl-3 break-words" style={{ color: 'var(--accent-red)' }}><span aria-hidden="true">− </span><span className="sr-only">Before: </span>{shown(c.before)}</p>
-              <p className="pl-3 break-words" style={{ color: 'var(--accent-green)' }}><span aria-hidden="true">+ </span><span className="sr-only">After: </span>{shown(c.after)}</p>
+              <Fix before={c.before} after={c.after} />
             </li>
           ))}
         </ul>
@@ -143,7 +195,7 @@ function Scene({ scene }: { scene: ArtSceneReview }) {
             {refused.map((t, i) => {
               const why = t.declined ? `declined by the painter: ${t.declined}`
                 : t.redrawFailed ? `redraw failed, painted afresh: ${t.redrawFailed}`
-                  : findingsOf(t).map((f) => `${f.label}: ${f.text}`).join('; ') || 'refused';
+                  : findingsOf(t).map((f) => `${f.label}: ${f.text.replace(/\.$/, '')}`).join('; ') || 'refused';
               return <li key={i} className="break-words">Try {t.try ?? '?'} {t.declined ? '' : 'repainted, '}{why}</li>;
             })}
           </ul>

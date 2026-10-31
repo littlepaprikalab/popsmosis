@@ -707,7 +707,9 @@ test.describe('an admin reviews a droplet', () => {
     await review.getByText('Review', { exact: true }).click();
     await expect(review).toContainText('passed in 2 rounds · 1 supported · 0 filler · 0 unsupported');
     await expect(review.getByTestId('review-corrections')).toContainText('Names a brand.');
-    await expect(review.getByTestId('review-corrections')).toContainText('as a textbook figure');
+    // The fix reads as one passage, the words it took out and put in marked.
+    await expect(review.getByTestId('review-corrections').locator('del')).toHaveText('Campbell Biology');
+    await expect(review.getByTestId('review-corrections').locator('ins')).toHaveText('textbook');
     await expect(review.getByTestId('review-checks')).toContainText('names bacterium, which scene "analogy" does not draw');
     const scene = review.getByTestId('review-scene');
     await expect(scene).toContainText('strep-case');
