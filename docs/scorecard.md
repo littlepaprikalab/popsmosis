@@ -2,8 +2,9 @@
 
 The scorecard tells you whether a change made droplets better overall, not just on the one
 topic you were looking at. It is not a test: nothing runs it automatically, it has no pass or
-fail, and every run spends real money (about $20). Run it by hand when one of the reasons below
-applies.
+fail. We run it in a Claude Code session with subagents standing in for the model calls, so a
+run costs session usage, not API money (`CLAUDE.md` says how). Run it when one of the reasons
+below applies.
 
 It runs a fixed set of 12 topics (`studio/scorecards/topics.json`) through the bundle step only:
 the brain writes each bundle, the learner test reads its lesson, and the code checks run. There is
@@ -26,9 +27,14 @@ The real pipeline (`run`, `plan`, `videos`) never calls the scorecard or its jud
 - After several small changes that were each tried on only a few topics: together they can
   move the others.
 
-To try a change cheaply first, run a few topics (about $1.50 each); then run all 12 before merging.
+To try a change quickly first, run a few topics; then run all 12 before merging.
 
 ## How to run it
+
+**We run the scorecard in a Claude Code session, with subagents standing in for every model
+call, never with the API key.** `CLAUDE.md` ("The scorecard runs in the session") says how.
+The command below is kept for reference only: it bills the owner's Anthropic account.
+
 
 In a Claude Code session, ask: "Run the scorecard and compare it with the latest run in
 `studio/scorecards/runs`, then commit the run." Or run it yourself:

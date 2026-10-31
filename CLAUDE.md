@@ -19,15 +19,33 @@ bill the owner's accounts. They run only with `STUDIO_LIVE=1` (`STUDIO_LIVE_AUDI
 audio ones). Never set those unless the user asks for a live check in this conversation;
 `python -m pytest studio` on its own makes no paid calls, whatever keys the environment has.
 
-## The scorecard spends money too
+## The scorecard runs in the session, never on the API key
 
-`python -m studio scorecard run` ([docs/scorecard.md](docs/scorecard.md)) makes real Anthropic
-calls: about $20 for all 12 topics, about $1.50 a topic. Never run it, not even for a few topics
-or a `--rejudge`, unless the user approves that run in this conversation.
+Always run the scorecard ([docs/scorecard.md](docs/scorecard.md)) in the Claude Code session,
+with subagents standing in for every model call. Never run `python -m studio scorecard run`,
+not even for a few topics or a `--rejudge`: it calls the Anthropic API on the owner's key
+(about $20 for all 12 topics). This is the owner's standing decision.
 
-When a change you make could move its scores, offer a run once, with its cost, and wait for
-the answer. That means a change to the bundle prompt (`studio/prompts/bundle.md`), the
-rubric, the code checks (`studio/checks.py`), the learner test (`studio/steps/learner.py`),
-the bundle step, or the brain, its model or its effort (`studio/brain.py`).
-`scorecard compare` against the latest run in `studio/scorecards/runs/` is free. Commit a
-run's folder once it ends.
+How to run it, for each topic in `studio/scorecards/topics.json`:
+
+- **The brain:** one subagent (on the session's model, as the brain is Opus) writes the script,
+  then the bundle, as two separate answers. Give it the prompts the code builds:
+  `script.system_prompt(brief)` and the brief itself (`studio/prompts/bundle.md`), the user
+  prompt `bundle.user_prompt(topic.as_request(), style_for(topic.id))` (with
+  `script.as_prompt(script)` after it for the bundle), and the schemas from
+  `brain.strict_schema(Script)` and `brain.strict_schema(Bundle)`. It validates each answer
+  against `Script` / `Bundle` and fixes only what fails validation, never for quality.
+- **The checks:** run the bundle step's code checks on its answer, as `bundle.run` does
+  (`script.follow`, `checks.review`, then the problem functions it adds). Free.
+- **The judge:** one Sonnet subagent grades the droplet as `scorecard.droplet_text` prints it,
+  against `studio/prompts/rubric.md`, blind beside the latest real run's droplet for the same
+  topic (labelled X and Y at random), and says which it prefers.
+- **Read the droplets yourself** as well, lesson, song and narration, and report what you
+  found with quotes, not only the scores.
+
+It costs no API money but a lot of session usage (about 24 subagents, 40 minutes), so when a
+change you make could move its scores, offer a run once and wait for the answer. That means a
+change to the bundle prompt (`studio/prompts/bundle.md`), the script prompt
+(`studio/prompts/script.md`), the rubric, the code checks (`studio/checks.py`), the learner
+test (`studio/steps/learner.py`), the bundle step, or the brain, its model or its effort
+(`studio/brain.py`). The learner test and the narration edit are skipped; say so.
