@@ -28,7 +28,7 @@ DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the st
 BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
 TAG_MAX_CHARS = 40  # a longer one is dropped, since cutting it short would make a word nobody searches for
-SONG_SCENES_MAX = 3  # the song's own pictures (Scene.song_only), beside the lesson's scenes it may play too
+SONG_SCENES_MAX = 3  # the song's own pictures (Scene.song_only) it keeps (studio/checks.py), beside the lesson's
 
 
 class Strict(BaseModel):
@@ -315,11 +315,26 @@ class Bundle(Strict):
     def _song_scenes_join(cls, data):
         # The song's own pictures go among the scenes, marked as the song's (song_scenes), and none is a stage: the
         # video cross-fades a process's stages in scene order, and would fade the lesson's last stage into the song's.
+        # A part they draw again keeps the colour (and so the look SAM finds it by) it has where it was drawn first:
+        # written after the lyrics, far from the scenes, a song's picture that drifted a shade would refuse the bundle
+        # ("has two colours"), a whole bundle call again.
         if not isinstance(data, dict) or not data.get("song_scenes"):
             return data
-        mark = {"song_only": True, "stage_of": ""}
-        own = [{**s, **mark} if isinstance(s, dict) else s.model_copy(update=mark) for s in data["song_scenes"]]
-        return {**data, "scenes": [*data.get("scenes", []), *own], "song_scenes": []}
+        scenes, own = [_plain(s) for s in data.get("scenes", [])], [_plain(s) for s in data["song_scenes"]]
+        if not all(isinstance(s, dict) and isinstance(s.get("structures", []), list) for s in [*scenes, *own]):
+            return data  # not scenes: the validation says why
+        own = [dict(scene) for scene in own]  # the answer as given stays as it was
+        first: dict = {}  # each part as it is first drawn
+        for scene in [*scenes, *own]:
+            for part in map(_plain, scene.get("structures", [])):
+                if isinstance(part, dict):
+                    first.setdefault(part.get("name"), part)
+        for scene in own:
+            parts = [_plain(part) for part in scene.get("structures", [])]
+            scene["structures"] = [_coloured_as(part, first.get(part.get("name"), part)) if isinstance(part, dict)
+                                   else part for part in parts]
+            scene.update(song_only=True, stage_of="")
+        return {**data, "scenes": [*scenes, *own], "song_scenes": []}
 
     @model_validator(mode="after")
     def _consistent(self) -> Bundle:
@@ -337,6 +352,18 @@ class Bundle(Strict):
         """Whether the droplet has a song. One written for the lesson video alone (STUDIO_VIDEOS=lesson,
         LessonBundle) has no lyrics and no music, and nothing after the bundle sings or checks one."""
         return bool(self.lyrics or self.music.positive_styles or self.music.negative_styles)
+
+
+def _plain(value):
+    return value.model_dump() if isinstance(value, BaseModel) else value
+
+
+def _coloured_as(part: dict, first: dict) -> dict:
+    """A part as a song's picture draws it, in the colour it was first drawn in, and with the look SAM finds it by,
+    which names that colour ("orange lobe"), when its colour differs."""
+    if str(part.get("color_hex", "")).upper() == str(first.get("color_hex", "")).upper():
+        return part
+    return {**part, "color_hex": first.get("color_hex"), "sam_phrase": first.get("sam_phrase", part.get("sam_phrase"))}
 
 
 def sung_sections(lyrics: list[Lyric]) -> list[str]:
@@ -397,8 +424,6 @@ def bundle_problems(bundle: Bundle) -> list[str]:
     if not 3 <= len(lesson) <= most:
         own = " besides the song's own" if len(lesson) < len(bundle.scenes) else ""
         problems.append(f"{len(lesson)} scenes{own}, not 3-{most}")
-    if len(bundle.scenes) - len(lesson) > SONG_SCENES_MAX:
-        problems.append(f"{len(bundle.scenes) - len(lesson)} scenes for the song alone, not at most {SONG_SCENES_MAX}")
     for kind, ids in (
         ("fact", [f.id for f in bundle.facts]),
         ("scene", [s.id for s in bundle.scenes]),

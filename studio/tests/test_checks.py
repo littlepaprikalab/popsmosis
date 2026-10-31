@@ -45,6 +45,19 @@ def test_the_songs_own_picture_stays_the_songs_and_one_no_line_plays_over_is_lef
     assert checks.review(bundle)[1].problems == []  # settled: a second look finds nothing
 
 
+def test_the_song_keeps_the_3_pictures_of_its_own_it_plays_longest():
+    def change(d):
+        d["song_scenes"] = [song_picture(f"song-{i}") for i in range(4)]
+        sung = ["v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"]
+        for line_id, scene in zip(sung, ["song-0", "song-1", "song-1", "song-2", "song-2", "song-3", "song-3"]):
+            direction(d, line_id)["scene"] = scene
+
+    bundle, found, _ = review(change)
+    assert [s.id for s in bundle.scenes if s.song_only] == ["song-1", "song-2", "song-3"]
+    assert found == [("scene:song-0", "song-scene", True)]
+    assert {d.line_id: d.scene for d in bundle.direction}["v1-1"] == "hook"  # the scene before the song's first
+
+
 def test_a_narration_sentence_never_plays_over_the_songs_own_picture():
     def narrated(d):
         d["song_scenes"] = [song_picture("chorus")]

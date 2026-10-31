@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from pydantic import BaseModel, Field, ValidationError
 
@@ -163,18 +165,25 @@ def test_the_songs_own_pictures_join_the_scenes_marked_as_the_songs_and_are_neve
     assert not Bundle.model_validate(bundle_data()).scenes[0].song_only  # a bundle from before
 
 
-def test_the_song_may_have_3_pictures_of_its_own_beside_the_lessons_7():
+def test_the_songs_pictures_count_apart_from_the_lessons_7():
     data = bundle_data()
     data["scenes"] += [{**song_scene(f"detail-{i}"), "image_prompt": "A cell."} for i in range(4)]  # 7 for the lesson
-    data["song_scenes"] = [song_scene(f"song-{i}") for i in range(3)]
-    assert len(Bundle.model_validate(data).scenes) == 10
-    data["song_scenes"].append(song_scene("song-3"))
-    with pytest.raises(ValidationError, match="4 scenes for the song alone, not at most 3"):
-        Bundle.model_validate(data)
-    data["song_scenes"].pop()
+    data["song_scenes"] = [song_scene(f"song-{i}") for i in range(4)]  # one over the song's 3: the checks keep 3
+    assert len(Bundle.model_validate(data).scenes) == 11
     data["scenes"].append(song_scene("detail-4"))
     with pytest.raises(ValidationError, match="8 scenes besides the song's own, not 3-7"):
         Bundle.model_validate(data)
+
+
+def test_a_part_the_songs_picture_draws_again_keeps_the_colour_it_was_first_drawn_in():
+    data = bundle_data()
+    data["song_scenes"] = [song_scene("chorus")]
+    data["song_scenes"][0]["structures"][0].update(color_hex="#3366CD", sam_phrase="a bluish mushroom")
+    given = json.dumps(data, sort_keys=True)
+    bundle = Bundle.model_validate(data)  # not refused for "ATP synthase has two colours"
+    part = bundle.scenes[-1].structures[0]
+    assert (part.color_hex, part.sam_phrase) == ("#3366CC", "the atp synthase")
+    assert json.dumps(data, sort_keys=True) == given  # the answer as the brain gave it is left as it was
 
 
 def test_a_process_in_stages_may_take_up_to_8_scenes():

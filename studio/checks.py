@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 from studio.jobs import write
-from studio.schemas import BPM_TAG, Bundle, CheckReport, Problem, lesson_scenes_max
+from studio.schemas import BPM_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Problem, lesson_scenes_max
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
 ALSO_MAX = 1  # second flows on one line: two things moving at once is as much as a learner can follow
@@ -74,36 +75,45 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
 def _settle_song_scenes(data: dict) -> list[Problem]:
     """The song's own scenes (Scene.song_only) as the direction plays them. The lesson never plays one: a narration
     sentence over one makes it the lesson's too, while the lesson has room for another scene, or else plays over the
-    scene before it. One no line plays over is left out, a picture painted for nothing (a bundle with no song plays
-    none of them)."""
+    scene before it. The song keeps at most SONG_SCENES_MAX, the ones it plays longest: a line over another plays
+    over the song's scene before it. One no line plays over is left out, a picture painted for nothing (a bundle with
+    no song plays none of them). Repairs, not refusals: a bundle refused is a whole bundle call again."""
     problems = []
     narration = {n["id"] for n in data["narration"]}
     lesson = [s for s in data["scenes"] if not s["song_only"]]
     most = lesson_scenes_max(any(s["stage_of"] for s in lesson))
     for scene in data["scenes"]:
         narrated = [d for d in data["direction"] if d["line_id"] in narration and d["scene"] == scene["id"]]
-        if not (scene["song_only"] and narrated):
-            continue
-        if len(lesson) < most:
+        if scene["song_only"] and narrated and len(lesson) < most:
             scene["song_only"] = False
             lesson.append(scene)
             problems.append(Problem(line_id=f"scene:{scene['id']}", rule="song-scene", repaired=True,
                                     detail=f'scene "{scene["id"]}" is for the song alone, but the narration plays '
                                            "over it; the lesson's too"))
-    song = {s["id"] for s in data["scenes"] if s["song_only"]}
-    before = lesson[0]["id"] if lesson else ""
-    for d in data["direction"]:
-        if d["line_id"] not in narration:
-            continue
-        if d["scene"] not in song:
-            before = d["scene"]
-        else:
-            problems.append(Problem(line_id=d["line_id"], rule="song-scene", repaired=True,
-                                    detail=f'plays over "{d["scene"]}", a scene for the song alone; over '
-                                           f'"{before}" instead'))
+    sung = Counter(d["scene"] for d in data["direction"] if d["line_id"] not in narration)
+    song = [s["id"] for s in data["scenes"] if s["song_only"]]
+    kept = set(sorted(song, key=lambda scene: -sung[scene])[:SONG_SCENES_MAX])  # stable: ties keep the first
+    for scene in song:
+        if scene not in kept and sung[scene]:
+            problems.append(Problem(line_id=f"scene:{scene}", rule="song-scene", repaired=True,
+                                    detail=f'scene "{scene}" is one more than the song\'s {SONG_SCENES_MAX} of its '
+                                           "own; its lines play over the scene before them"))
+    lesson_ids = [s["id"] for s in lesson]
+    for video, allowed in (("lesson", set(lesson_ids)), ("song", set(lesson_ids) | kept)):
+        before = lesson_ids[0] if lesson_ids else ""
+        for d in data["direction"]:
+            if (d["line_id"] in narration) != (video == "lesson"):
+                continue
+            if d["scene"] in allowed or d["scene"] not in song:
+                before = d["scene"]
+                continue
+            if video == "lesson":
+                problems.append(Problem(line_id=d["line_id"], rule="song-scene", repaired=True,
+                                        detail=f'plays over "{d["scene"]}", a scene for the song alone; over '
+                                               f'"{before}" instead'))
             d["scene"] = before
     played = {d["scene"] for d in data["direction"]}
-    for scene in [s for s in data["scenes"] if s["song_only"] and s["id"] not in played]:
+    for scene in [s for s in data["scenes"] if s["song_only"] and s["id"] not in played and sung[s["id"]] == 0]:
         problems.append(Problem(line_id=f"scene:{scene['id']}", rule="song-scene", repaired=True,
                                 detail=f'scene "{scene["id"]}" is for the song alone, but no line plays over it; '
                                        "left out"))

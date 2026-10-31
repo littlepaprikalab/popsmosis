@@ -87,7 +87,7 @@ class FakeMuse:
                 raise self.redraw_error
         self.painted.append((label, prompt))
         tries = sum(1 for lab, _ in self.painted if lab.split()[1] == scene)
-        answers = self.pictures.get(scene, [painting(scene)])
+        answers = self.pictures[scene] if scene in self.pictures else [painting(scene)]
         answer = answers[min(tries, len(answers)) - 1]
         if isinstance(answer, Exception):
             raise answer
@@ -531,6 +531,42 @@ def test_sam_finds_every_structure_and_locate_writes_the_masks_and_locations(job
     assert locate.is_done(job) and art.is_done(job)
     for video in media.VIDEOS:  # what the timeline and renderer read fits
         assert timeline_problems(jobs.read(job / media.timeline_path(video), Timeline), locations) == []
+
+
+def test_the_songs_own_picture_is_painted_located_and_played_by_the_song_alone(job, monkeypatch, tmp_path):
+    """Across the seams: a song's picture from the bundle through the art, the locate step, both timelines and a
+    frame of the song video."""
+    from studio.render.encode import write_poster
+    from studio.steps import timeline
+
+    data = sample_media.bundle().model_dump()
+    data["song_scenes"] = [{"id": "chorus", "image_prompt": "ATP synthase in the membrane, up close.", "structures": [
+        {"name": "ATP synthase", "aliases": [], "sam_phrase": "the atp synthase", "color_hex": "#3366CC"}]}]
+    for d in data["direction"]:
+        if d["line_id"].startswith("c"):  # the chorus, three times
+            d["scene"] = "chorus"
+    bundle, report = checks.review(Bundle.model_validate(data))
+    assert report.problems == [] and bundle.scenes[-1].song_only
+    jobs.write(job / "bundle.json", bundle)
+    pixels = np.full((media.ART_HEIGHT, media.ART_WIDTH, 3), 255, np.uint8)
+    pixels[disc(*SPOTS["ATP synthase"])] = (0x33, 0x66, 0xCC)
+    fake = FakeMuse(pictures={"chorus": [svg.png(pixels)]}).install(monkeypatch)
+    helper = FakeHelper()
+    art.run(job, helper)
+    assert sorted(label for label, _ in fake.painted) == ["art chorus", "art hook", "art overview", "art synthase"]
+    assert any(f"The scene is {art.SONG}" in prompt for _, prompt in helper.asked)
+    assert locate.run(job, FakeHelper()) == "located 5 of 5 structures with SAM 3.1"
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    assert locations_problems(locations, bundle) == []
+
+    timeline.run(job)
+    song, lesson = (jobs.read(job / media.timeline_path(video), Timeline) for video in ("song", "lesson"))
+    assert {b.line_id for b in song.beats if b.scene == "chorus"} == {"c1-1", "c2-1", "c3-1"}
+    assert "chorus" not in {b.scene for b in lesson.beats} and "chorus" in song.ai_pictures
+    assert timeline_problems(song, locations) == [] and timeline_problems(lesson, locations) == []
+    poster = tmp_path / "song.jpg"
+    at = write_poster(job, song, poster)
+    assert poster.stat().st_size > 0 and 0 <= at <= song.duration
 
 
 class TogetherMuse(FakeMuse):

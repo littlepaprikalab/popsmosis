@@ -256,7 +256,9 @@ already written.
    failure), where no lesson scene pictures it. They have the scenes' fields and join `scenes`,
    marked `song_only` (code's, not the brain's), so every later step finds every picture there.
    The lesson never plays one; the code checks make one the narration plays over the lesson's
-   too while the lesson has room, and leave out one no line plays over. Before Oct 31 the song
+   too while the lesson has room, keep the 3 the song plays longest, and leave out one no line
+   plays over, and a part one draws again keeps the colour it was first drawn in: repairs, not
+   refusals, since a refused bundle is a whole bundle call again. Before Oct 31 the song
    had only the lesson's pictures: none of the 36 songs in the six scorecard runs had one of its
    own, 28 of them sang 25 or more of their 47 to 58 lines over one lesson scene, and every one
    opened on the lesson's hook ("Copy each chromosome, split the pair" over a scraped knee).
