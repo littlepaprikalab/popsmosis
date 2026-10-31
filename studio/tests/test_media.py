@@ -183,3 +183,18 @@ def test_a_bundle_written_with_no_song_keeps_its_job_the_lessons_alone_whatever_
     assert media.lesson_only(tmp_path)  # the knob still takes the song out of one written with it
     knobs.use({"knobs": {}})
     assert not media.lesson_only(tmp_path / "no-such-job")  # no bundle to read: the knob decides
+
+
+def test_a_bundle_file_that_is_not_an_object_leaves_the_knob_to_decide(tmp_path):
+    for text in ("null", "[]", "not json"):
+        (tmp_path / "bundle.json").write_text(text)
+        assert media.sung(tmp_path) and not media.lesson_only(tmp_path)
+
+
+def test_the_bench_stands_in_for_the_lesson_alone_too():
+    from studio import bench
+
+    answer = bench.lesson_answer(bench.bench_bundle())
+    assert set(answer) == set(LessonBundle.model_fields)
+    bundle = bundle_of(LessonBundle.model_validate(answer).model_dump())
+    assert not bundle.sung and len(bundle.direction) == len(bundle.narration)

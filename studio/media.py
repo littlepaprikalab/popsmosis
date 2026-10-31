@@ -87,8 +87,9 @@ def sung(job: Path) -> bool:
         bundle = json.loads((job / "bundle.json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return True
-    music = bundle.get("music") if isinstance(bundle, dict) else None
-    music = music if isinstance(music, dict) else {}
+    if not isinstance(bundle, dict):
+        return True
+    music = bundle.get("music") if isinstance(bundle.get("music"), dict) else {}
     return bool(bundle.get("lyrics") or music.get("positive_styles") or music.get("negative_styles"))
 
 
