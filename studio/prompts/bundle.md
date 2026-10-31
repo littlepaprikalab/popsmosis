@@ -76,8 +76,9 @@ cannot fix fails the droplet. So:
   "the chain pumps protons"). Never invent figures, dates, names or quotes; leave out what
   you are unsure of.
 - With a study guide, teach what it covers, in its terms, and give each fact a
-  `source_quote`: a short passage copied word for word from the guide that supports it; with none, `source_quote` is "". A
-  guide can be wrong: where it says what the field does not, the facts follow the field.
+  `source_quote`: a short passage copied word for word from the guide that supports it;
+  with none, `source_quote` is "". A guide can be wrong: where it says what the field does
+  not, the facts follow the field.
 
 Then:
 
@@ -119,7 +120,8 @@ them too wherever they picture what it sings; its own pictures come after its ly
   it explains: the everyday object, each of its parts that stands for a structure a
   structure of its own (the "water wheel" for the rotor), in the colour of the structure it
   stands for, so the viewer sees which matches which. A line that says one of its names
-  plays over it.
+  plays over it; other lines can still use the analogy, in other words than its parts'
+  names.
 - A failure the bridge sings can have a detail scene (a song picture when the lesson shows
   none): the same view as another scene with the blocker drawn in as a structure and the
   stopped flow left out (the video shows it stopping).
@@ -134,9 +136,9 @@ them too wherever they picture what it sings; its own pictures come after its ly
   side: they come back wrong. The stages are the overview, and the chorus plays over the
   stage that draws what it names.
 - Things crossing between two side-by-side spaces, one way and the other (reabsorption and
-  secretion; oxygen in, carbon dioxide out): a detail scene with the two spaces wide apart and
-  the wall between them, each a structure, so one crossing moves left to right and the other
-  right to left. An overview where the two are woven together cannot show direction.
+  secretion; oxygen in, carbon dioxide out): a detail scene with the two spaces wide apart
+  and the wall between them, each a structure, so one crossing moves left to right and the
+  other right to left. An overview where the two are woven together cannot show direction.
 - In a story about people (a war, a revolution, a reform), each person it turns on is a
   figure of their own, its structure named for them, in the scene where they act; never one
   figure for several people.
@@ -166,10 +168,11 @@ sentences. The illustrator draws best the diagrams it already knows:
   intermembrane space above it tinted blue, the matrix below it tinted pink"), then each
   part in its region, how it sits and which way it faces. Where the layout is left out, the
   illustrator invents one, often wrong (the Krebs cycle in the cytoplasm). It draws a thing
-  the way up it is usually pictured whatever you say about its head, so when the scene needs
-  it the other way up, say it hangs upside down and where its cap is ("ATP synthase as a
-  mushroom hanging upside down from the membrane, its round cap below it in the matrix").
-  Put every part inside what holds it (a mitochondrion inside its cell, not beside it). Say only what is true and what the scene needs.
+  the way up it is usually pictured whatever you say about its head, so when the scene
+  needs it the other way up, say it hangs upside down and where its cap is ("ATP synthase
+  as a mushroom hanging upside down from the membrane, its round cap below it in the
+  matrix"). Put every part inside what holds it (a mitochondrion inside its cell, not
+  beside it). Say only what is true and what the scene needs.
 - End with the look for its kind, in these words:
   - a cell or molecular process: "a clean, modern biology textbook illustration:
     semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient
@@ -222,9 +225,10 @@ Structures:
   axes as two plain lines meeting at the bottom left (crossing in the middle for negative
   values), with nothing written on them.
 - `to_scale`: true for a scene the learner reads amounts off (a chart, a stacked bar, a
-  number line, a shape with given sides or angles): code draws it exactly from your numbers,
-  so its `image_prompt` gives each size as a number or a share of another ("a gold block a
-  third as tall as the blue one"). A graph (a scene with `axes`) is drawn so whatever this says. False for every other scene.
+  number line, a shape with given sides or angles): code draws it exactly from your
+  numbers, so its `image_prompt` gives each size as a number or a share of another ("a gold
+  block a third as tall as the blue one"). A graph (a scene with `axes`) is drawn so
+  whatever this says. False for every other scene.
 
 ## The lesson
 
@@ -238,9 +242,10 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   happens and why it has to, so the steps follow from each other. Numbered steps for a
   process, a small table to compare, in GitHub-flavored markdown. Keep to `key_terms`; any
   other name at most once.
-- **Carry the analogy through.** Set it up once, near the top, saying in words what each part
-  stands for (never by a colour or a place: the lesson has no picture), then call each step
-  by its part of the analogy as it is taught ("Copy first: every page gets its photocopy").
+- **Carry the analogy through.** Set it up once, near the top, saying in words what each
+  part stands for (never by a colour or a place: the lesson has no picture), then call each
+  step by its part of the analogy as it is taught ("Copy first: every page gets its
+  photocopy").
 - **One predict question** mid-way, answered in the next sentence ("What do you think
   happens to the protons piling up in the lumen?"), where the steps just taught let the
   learner work it out, and before anything gives the answer away: never about a fact they
@@ -248,15 +253,15 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
 - **Link to what they know**: where the facts give it, one sentence inside the step it
   explains.
 - **Correct the misconception where it would form**: name it as a common mistake once,
-  right after the step it is about, saying why it is wrong (in numbered steps, an indented paragraph inside that step);
-  a mistake about the whole idea goes right after the big picture. Never before they have
-  met what it is about, never in a section of its own.
+  right after the step it is about, saying why it is wrong (in numbered steps, an indented
+  paragraph inside that step); a mistake about the whole idea goes right after the big
+  picture. Never before they have met what it is about, never in a section of its own.
 - **Make it vivid**: explain with the analogy, a concrete example and why it matters to the
   learner, all from the facts.
 - **One path, then the end.** After the last step, at most one case (one example the facts
   give, cause before effect, in a short paragraph) and at most one sentence on what comes
-  next in the course, then the check. No fun facts or side details that don't help explain the
-  idea: the song's surprise and bridge appear only where they explain a step.
+  next in the course, then the check. No fun facts or side details that don't help explain
+  the idea: the song's surprise and bridge appear only where they explain a step.
 - **End with a check on the essence**: one short "why" or "what happens if" question only a
   learner who understood the core idea can answer ("Why does ATP synthase stop when a
   herbicide stops electrons leaving photosystem II?"), then an invitation to ask a
@@ -387,11 +392,11 @@ explanation left to the narration.
 
 In this order, each section a run of lines with its own `section` value:
 
-- **Intro**, 2 lines: the whole idea in a catchy phrase, sung from the first second. Its first line is the title line: 3 to 7
-  words naming the big move as concrete actions on real things ("Open the gates, let sodium
-  in", "Split the water, catch the light"), never pronouns standing in for them ("Pump them
-  in, they spin it out" names nothing). It is the hook, the song's name and a line of the
-  chorus.
+- **Intro**, 2 lines: the whole idea in a catchy phrase, sung from the first second. Its
+  first line is the title line: 3 to 7 words naming the big move as concrete actions on
+  real things ("Open the gates, let sodium in", "Split the water, catch the light"), never
+  pronouns standing in for them ("Pump them in, they spin it out" names nothing). It is the
+  hook, the song's name and a line of the chorus.
 - **Verse**, 8 lines: the frame first, then the first half of the story in order, one step
   a line or a couplet, with the surprise in it.
 - **Pre-chorus**, 2 lines: bust the misconception with a fact, singing the right idea and
@@ -428,11 +433,11 @@ lines.
 - `fact_id`: the fact a line teaches, or "filler" for one that teaches nothing (a call-out,
   pure attitude). Most lines carry one of the song's ideas; a line that says one again in a
   new way carries it too.
-- A line need not name a structure. When it names one, its label appears the first time it
-  is sung, so use the `name` or an alias exactly as written, of a structure drawn in the
-  scene the line plays over (one of the lesson's or a song picture). Group words count: a
-  chorus that sings "limbic system" plays over a scene that draws the limbic system as a
-  structure.
+- A line need not name a structure. When it names one the viewer should see, its label
+  appears the first time it is sung, so use the `name` or an alias exactly as written, of a
+  structure drawn in the scene the line plays over (one of the lesson's or a song picture).
+  Group words count: a chorus that sings "limbic system" plays over a scene that draws the
+  limbic system as a structure.
 - `names`: every structure name or alias the line says, exactly as in the line, or [].
 - A rhyme makes a line sound true, so a lyric is as true as a sentence of the lesson: never
   a claim that sounds right and is not ("every mutation does harm", when most do nothing).
@@ -566,8 +571,9 @@ Plan the motion like an animator:
 - **A cycle of forms is change, not travel** (the rock cycle, the water cycle, a life
   cycle, the states of matter): the forms are the structures, and no dot marked with the
   thing itself ("rock", "water") travels between them. The spotlight moves from the form a
-  line starts from to the form it becomes, and the key line names the process. Particles only for what really is carried
-  (sediment washed to the sea, vapour rising to the clouds).
+  line starts from to the form it becomes, and the key line names the process. Particles
+  only for what really is carried (sediment washed to the sea, vapour rising to the
+  clouds).
 - **In history, only what was carried moves**: goods, grain, money, letters. Never land,
   power, loyalty, votes or ideas, and never people or armies, which are drawn: the camera
   following the army from its figure to the city is the march.
