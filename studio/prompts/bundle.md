@@ -366,7 +366,8 @@ explanation left to the narration.
   cut a name short ("the Krebs" for the Krebs cycle).
 - **A story that moves**: follow one thing through the steps (an electron, a signal, a ray
   of sunlight), each line causing the next, with verbs that move and a reason to move
-  ("crowded outside, the sodium wants in").
+  ("crowded outside, the sodium wants in"). Things the listener can picture and count beat
+  abstract words.
 - **Sung to the listener, never directions**: no narrating the picture or the camera ("zoom
   inside to the chloroplast", "now look at the membrane"), no announcing a section.
 - **One frame, all the way through**: set up the droplet's frame in the first lines of verse
