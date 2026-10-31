@@ -125,7 +125,7 @@ Then:
 
 ## Scenes and structures
 
-Write 3 to 6 scenes in the order the videos use them (up to 8 for a process shown in
+Write 3 to 7 scenes in the order the videos use them (up to 8 for a process shown in
 stages, below). Each scene is one diagram, and
 together they go from what the learner already knows to the parts they are learning:
 
