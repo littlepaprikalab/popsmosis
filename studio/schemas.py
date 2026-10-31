@@ -86,7 +86,7 @@ class Scene(Strict):
     axes: Axes = Field(default_factory=_no_axes, description='On a graph, what each axis measures, written at its end; '
                                                              '"" for both on any other scene')
     # A painter guesses sizes: round 22's compound-interest bar chart came back with its bars at heights the lesson's
-    # numbers never gave. A scene to scale (and every graph) is drawn by the brain as SVG, its sizes worked out from
+    # numbers never gave. A scene to scale (and every graph) is drawn by Claude as SVG, its sizes worked out from
     # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30.
     to_scale: bool = Field(default_factory=bool, description="True for a chart, graph or figure whose sizes must be right "
                                                              "(bars of given heights, a stacked bar, a number line, a shape "

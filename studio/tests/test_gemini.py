@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from studio import brain, gemini, jobs, ledger, media, svg
+from studio import brain, gemini, jobs, knobs, ledger, media, svg
 from studio.schemas import Axes, Bundle, Locations, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
@@ -177,16 +177,17 @@ def test_on_muses_brain_the_admin_can_have_gemini_paint(job, monkeypatch):
 
 
 class FakeDrawer:
-    """The brain drawing a scene to scale as SVG (studio/tests/art/), and the helper for the painted ones."""
+    """Claude drawing a scene to scale as SVG (studio/tests/art/), and the helper for the painted ones."""
 
     def __init__(self, helper):
-        self.helper, self.drawn = helper, []
+        self.helper, self.drawn, self.roles = helper, [], []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         if system != art.PROMPT:
             return self.helper(role, prompt, schema, images, system=system, label=label)
-        assert role == "brain" and schema is None and not images
+        assert role in ("brain", "drawer") and schema is None and not images
         self.drawn.append((label, prompt))
+        self.roles.append(role)
         drawing = (Path(__file__).resolve().parent / "art" / f"{label.split()[1]}.svg").read_text(encoding="utf-8")
         return {"text": drawing}
 
@@ -230,15 +231,19 @@ def test_a_scene_to_scale_is_drawn_as_svg_and_the_others_painted(job, monkeypatc
     assert [label for label, _ in ask.drawn] == ["art overview"]
 
 
-def test_a_graph_is_drawn_to_scale_and_on_muses_brain_painted():
+def test_a_graph_is_drawn_to_scale_on_any_brain_unless_the_knob_leaves_it_to_the_brain(monkeypatch):
+    monkeypatch.delenv(art.CLAUDE_DRAWS, raising=False)
     bundle = sample_media.bundle()
     graph = bundle.scenes[1].model_copy(update={"axes": Axes(x="Year", y="Balance")})
     assert graph.exact() and not bundle.scenes[1].exact()
     bundle = bundle.model_copy(update={"scenes": [bundle.scenes[0], graph, bundle.scenes[2]]})
     job = Path("unused")
     assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, True, False]
-    with brain.chosen("muse-spark"):  # Muse's brain draws no SVG: its painter paints the graph too
+    with brain.chosen("muse-spark"):  # Claude draws it for Muse's brain
+        assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, True, False]
+        knobs.use({"knobs": {art.CLAUDE_DRAWS: "brain"}})  # as before Oct 30: Muse's painter paints the graph too
         assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, False, False]
+    assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, True, False]  # Claude's brain draws its own
 
 
 def test_a_scene_to_scale_with_no_usable_drawing_is_painted_instead_and_located_by_sam(job, monkeypatch):
@@ -279,13 +284,77 @@ def test_an_everyday_scene_marked_to_scale_is_still_painted(job):
     assert not art.drawn(job, bundle, bundle.scenes[0])
 
 
+def math_lesson(job, course="6th grade math"):
+    bundle = sample_media.bundle().model_copy(update={"course": course})
+    jobs.write(job / "bundle.json", bundle)
+    return bundle
+
+
+def test_a_math_lessons_pictures_but_its_hook_are_drawn_by_claude_on_muses_brain(job, monkeypatch):
+    # Oct 30: Muse Image painted a fractions lesson's six bars as seven, and thirds it was asked to group in twos
+    # ungrouped, and the helper passed both.
+    monkeypatch.delenv(art.CLAUDE_DRAWS, raising=False)
+    monkeypatch.setattr(brain, "_chosen", "muse-wonder")
+    bundle = math_lesson(job)
+    painter = FakeMuse().install(monkeypatch)
+    ask = FakeDrawer(FakeHelper())
+    assert art.run(job, ask) == ("painted 1 scene with Muse Image in 1 try; "
+                                 "drew 2 scenes to scale as SVG with Claude (overview, synthase)")
+    assert [label for label, _ in painter.painted] == ["art hook"]  # an everyday picture, painted
+    assert ask.roles == ["drawer", "drawer"]  # Claude, not the Muse brain
+    for _, prompt in ask.drawn:  # to scale, from the facts' numbers
+        assert "To scale: this scene's sizes must be right" in prompt
+        assert all(f"- {fact.text}" in prompt for fact in bundle.facts)
+    assert art.is_done(job)
+    locate.run(job, ask)
+    found = {s.scene: {loc.found_by for loc in s.structures} for s in jobs.read(job / media.LOCATIONS, Locations).scenes}
+    assert found == {"hook": {"sam"}, "overview": {"svg"}, "synthase": {"svg"}}
+
+
+def test_the_knob_at_charts_or_brain_has_a_math_lessons_pictures_painted(job, monkeypatch):
+    bundle = math_lesson(job)
+    for brain_name in ("claude", "muse-spark"):
+        for knob in ("charts", "brain"):
+            knobs.use({"knobs": {art.CLAUDE_DRAWS: knob}})
+            with brain.chosen(brain_name):
+                assert not any(art.drawn(job, bundle, s) for s in bundle.scenes)
+                assert not any(art.exact(bundle, s) for s in bundle.scenes)
+    knobs.use({"knobs": {art.CLAUDE_DRAWS: "math"}})
+    with brain.chosen("claude"):  # Claude's brain draws them too, rather than Gemini painting them
+        assert [art.drawn(job, bundle, s) for s in bundle.scenes] == [False, True, True]
+        assert [art.exact(bundle, s) for s in bundle.scenes] == [False, True, True]  # the hook is no figure
+    assert not any(art.drawn(job, sample_media.bundle(), s) for s in bundle.scenes)  # biology: painted
+
+
+def test_the_knob_says_what_claude_draws_and_anything_else_is_its_default(monkeypatch):
+    monkeypatch.delenv(art.CLAUDE_DRAWS, raising=False)
+    assert art.claude_draws() == "math"
+    monkeypatch.setenv(art.CLAUDE_DRAWS, " Charts ")
+    assert art.claude_draws() == "charts"
+    knobs.use({"knobs": {art.CLAUDE_DRAWS: "brain"}})  # the page's wins over the environment
+    assert art.claude_draws() == "brain"
+    knobs.use({"knobs": {art.CLAUDE_DRAWS: "everything"}})
+    assert art.claude_draws() == "math"
+
+
+def test_a_math_lesson_is_known_by_its_course_or_topic():
+    bundle = sample_media.bundle()
+    math = [("6th grade math", "dividing by a fraction"), ("AP Statistics", "what a p-value means"),
+            ("Algebra 1", "what slope means"), ("AP Calculus AB", "the derivative"), ("", "adding fractions"),
+            ("Personal Finance", "what a percentage rate means")]
+    other = [("AP Biology", "the light reactions"), ("Chemistry", "fractional distillation"),
+             ("8th grade Earth science", "why there are two high tides a day"), ("Personal Finance", "compound interest")]
+    assert all(art.math_lesson(bundle.model_copy(update={"course": c, "topic": t})) for c, t in math)
+    assert not any(art.math_lesson(bundle.model_copy(update={"course": c, "topic": t})) for c, t in other)
+
+
 def test_a_chart_painted_before_charts_were_drawn_is_kept_and_a_painter_switch_repaints_it(job, monkeypatch):
     # A job under way when charts began to be drawn keeps its painted chart, rather than paying to draw it again.
     bundle = to_scale(job)
     painter, sam = FakeGemini().install(monkeypatch), FakeMuse().install(monkeypatch)
     ask = FakeDrawer(FakeHelper())
     with monkeypatch.context() as m:
-        m.setattr(art, "_to_scale", lambda group: False)  # as the art step painted it before
+        m.setattr(art, "_to_scale", lambda bundle, group: False)  # as the art step painted it before
         art.run(job, ask)
     overview = bundle.scenes[1]
     assert not art.drawn(job, bundle, overview) and art.is_done(job) and ask.drawn == []
