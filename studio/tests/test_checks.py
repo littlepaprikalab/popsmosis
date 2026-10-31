@@ -245,6 +245,25 @@ def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
     assert meaning(("Thylakoid", "one"), ("thylakoid", "two"))[1] == left_out  # one a part
 
 
+def test_syllables_are_counted_as_sung():
+    from studio.checks import syllables
+    # A silent "-ed" is no syllable, but a sung one is; a contraction is one word, not a word and a lone letter.
+    assert [syllables(w) for w in ("learned", "used", "wanted", "needed", "hundred", "troubled")] == [1, 1, 2, 2, 2, 2]
+    assert [syllables(w) for w in ("it's", "you're", "don't", "they're")] == [1, 1, 1, 1]
+    assert syllables("Acquisition, now it's learned by heart") == 9  # was counted 11, and flagged
+
+
+def test_a_lyric_one_syllable_over_passes_and_two_over_is_recorded():
+    def lyric(text):
+        def change(data):
+            data["lyrics"][0]["text"] = text
+        _, found, _ = review(change)
+        return [rule for line, rule, _ in found if line == "v1-1" and rule == "lyric-style"]
+
+    assert lyric(" ".join(["la"] * 11)) == []  # one over the cap: a singer takes it in stride
+    assert lyric(" ".join(["la"] * 12)) == ["lyric-style"]
+
+
 def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
     def change(data):
         data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"

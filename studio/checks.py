@@ -170,11 +170,21 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
     data["blocks"] = kept
 
 
+def _silent_ed(word: str) -> bool:
+    """Whether a word's final "-ed" is silent: "learned", "used", but not after t or d ("wanted", "needed"), nor after
+    a consonant and an l or r ("troubled", "hundred"), where the e is sung."""
+    if len(word) < 4 or not word.endswith("ed"):
+        return False
+    before, earlier = word[-3], word[-4]
+    return before not in "td" and not (before in "lr" and earlier not in "aeiouy")
+
+
 def syllables(line: str) -> int:
     """A rough count of a line's syllables, enough to tell a line too full to sing: vowel groups in each word, a
-    silent final e aside; a term in capitals or with no vowel ("ATP", "b6f") said letter by letter."""
+    silent final e and a silent "-ed" aside ("learned", "used", but not "wanted", "hundred" or "troubled"), a
+    contraction one word ("it's", "you're"); a term in capitals or with no vowel ("ATP", "b6f") said letter by letter."""
     count = 0
-    for word in re.findall(r"[^\W_]+", line):
+    for word in re.findall(r"[^\W_]+(?:['’][^\W_]+)*", line):  # "it's" one word: a lone "s" is no syllable
         if (len(word) > 1 and word.isupper()) or not re.search(r"[aeiouy]", word, re.IGNORECASE):
             count += len(word)
             continue
@@ -182,14 +192,18 @@ def syllables(line: str) -> int:
         groups = len(re.findall(r"[aeiouy]+", lower))
         if groups > 1 and lower.endswith("e") and not lower.endswith(("le", "ee")):
             groups -= 1
+        elif groups > 1 and _silent_ed(lower):
+            groups -= 1
         count += max(1, groups)
     return count
 
 
 # A sung line is 6 to 9 syllables, so the singer has room to hold a note: round 17's lines of 12 and 13 came back
 # at 5 to 6 syllables a second, the speed of speech, sung or rapped. A rapped line, when the learner asks for rap,
-# can carry more.
+# can carry more. A line one over is let through: a singer takes one extra in stride, and the rough count is often
+# one high itself. Only a line LYRIC_SLACK + 1 or more over is too full to sing (the owner, Oct 31).
 LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
+LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
 # A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
@@ -208,7 +222,7 @@ def _check_lyric_style(data: dict, problems: list) -> None:
     for line in data["lyrics"]:
         text = line["text"]
         why = ("narrates the picture instead of being sung" if DIRECTION_LINE.match(text) else
-               f"runs {syllables(text)} syllables, over {most}" if syllables(text) > most else "")
+               f"runs {syllables(text)} syllables, over {most}" if syllables(text) > most + LYRIC_SLACK else "")
         if why:
             problems.append(Problem(line_id=line["id"], rule="lyric-style", repaired=False,
                                     detail=f'"{text}" {why}'))
