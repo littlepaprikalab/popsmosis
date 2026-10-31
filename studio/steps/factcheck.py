@@ -240,6 +240,12 @@ def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> st
     return f"At {structure}, {' and '.join(inputs)} is turned into {' and '.join(outputs)}"
 
 
+def meaning_text(structure: str, text: str) -> str:
+    """What the video writes under a graph part's name: "On the graph, Demand curve means: lower price → people buy
+    more"."""
+    return f"On the graph, {structure} means: {text}"
+
+
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving (is_checked), and what the video shows piling up and turning."""
     return [Line(MOTION, d.line_id, _motion(bundle, d)) for d in bundle.direction
@@ -249,7 +255,8 @@ def motion_lines(bundle: Bundle) -> list[Line]:
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
         Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
         Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
-        for i, c in enumerate(bundle.conversions, 1)]
+        for i, c in enumerate(bundle.conversions, 1)] + [
+        Line(MOTION, f"means-{i}", meaning_text(m.structure, m.text)) for i, m in enumerate(bundle.meanings, 1)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -413,6 +420,7 @@ def check_bundle(
         data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
         data["conversions"] = [c for c in data["conversions"]
                                if conversion_text(c["structure"], c["inputs"], c["outputs"]) in passed_motions]
+        data["meanings"] = [m for m in data["meanings"] if meaning_text(m["structure"], m["text"]) in passed_motions]
         bundle = Bundle.model_validate(data)
     # A key line still not passed after the last round is taken off the screen, as one with no correction is.
     unpassed = {(KEY, c.text): "" for c in checked if c.kind == KEY and c.verdict not in PASSING}

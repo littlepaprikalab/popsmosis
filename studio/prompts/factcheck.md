@@ -190,6 +190,11 @@ and e⁻") is the video writing that conversion beside the structure: SUPPORTED 
 structure makes those outputs from those inputs (every one of them, and nothing the facts do not say),
 UNSUPPORTED otherwise.
 
+A motion that says a part of a graph "means" something ("On the graph, Demand curve means: lower price →
+people buy more") is the video writing that line under the part's name: SUPPORTED when the facts say that part
+shows that (the arrow as "leads to"), in plain words a learner reads off the graph, UNSUPPORTED when it says
+what the part does not show, or the wrong way round.
+
 A motion is never FILLER.
 
 ## Public text

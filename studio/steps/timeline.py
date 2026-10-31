@@ -31,6 +31,9 @@ No model calls, so it is free to run again:
 - A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
   that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
   it stays on every later beat of the scene.
+- A graph part's meaning (Bundle.meanings) is written under the name its drawing placed, once in the video: from
+  when the part first shows named (as it is revealed, or from its scene's first line when the video never names it
+  there) to the end of the line after, MEANING_MIN_S at least. Then only the name stays.
 - A path particles travel on a scene is drawn as arrows from stop to stop from when they first set off, and
   the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
@@ -93,6 +96,7 @@ from studio.schemas import (
     Bundle,
     Converting,
     Crowd,
+    Gloss,
     Locations,
     Particles,
     Reveal,
@@ -243,6 +247,8 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
             # A value said before the cut is on from its first frame, settled: not fading in, nor popping, as if said
             # then.
             "values": [v.model_copy(update={"since": round(v.since - t0, 3)}) for v in beat.values],
+            "meanings": [m.model_copy(update={"since": round(m.since - t0, 3), "until": round(m.until - t0, 3)})
+                         for m in beat.meanings],
         }))
     duration = round(t1 - t0, 3)
     beats[-1] = beats[-1].model_copy(update={"t1": duration})
@@ -455,6 +461,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _fill_crowds(beats, bundle, located)
     _convert(beats, bundle, located)
     _write_values(beats, locations)
+    _mean(beats, bundle, locations)
     _run_all(beats, hook)
     _turn(beats, bundle, located)
     _route(beats)
@@ -574,6 +581,35 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             Converting(structure=c.structure, text=f"{' + '.join(c.inputs)} → {' + '.join(c.outputs)}",
                        since=scene[c.structure])
             for c in bundle.conversions if c.structure in scene]
+
+
+MEANING_MIN_S = 4.0  # a meaning stays at least this long: two quick song lines are too short to read it
+
+
+def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
+    """The graph parts' meanings each beat writes (Bundle.meanings), under the name the part's drawing placed
+    (Value.label): once in the video, from when the part first shows named (its reveal, or its scene's first beat
+    when the video never names it there) to the end of the beat after, if that beat is on the same scene."""
+    named = {s.scene: {v.text for v in s.values if v.label} for s in locations.scenes}
+    revealed: dict[str, dict[str, float]] = {}
+    for beat in beats:
+        for r in beat["reveal"]:
+            revealed.setdefault(beat["scene"], {}).setdefault(r.name, r.t)
+    windows: dict[str, tuple[str, float, float, str]] = {}  # structure -> (scene, since, until, text)
+    for i, beat in enumerate(beats):
+        for m in bundle.meanings:
+            if m.structure in windows or m.structure not in named.get(beat["scene"], set()):
+                continue
+            at = revealed.get(beat["scene"], {}).get(m.structure)
+            if at is not None and at >= beat["t1"]:
+                continue  # a ghost until it is named, later
+            since = beat["t0"] if at is None else max(at, beat["t0"])
+            after = beats[i + 1] if i + 1 < len(beats) and beats[i + 1]["scene"] == beat["scene"] else beat
+            windows[m.structure] = (beat["scene"], since, max(after["t1"], since + MEANING_MIN_S), m.text)
+    for beat in beats:
+        beat["meanings"] = [Gloss(structure=name, text=text, since=round(since, 3), until=round(until, 3))
+                            for name, (scene, since, until, text) in windows.items()
+                            if scene == beat["scene"] and since < beat["t1"] and until > beat["t0"]]
 
 
 def _write_values(beats: list[dict], locations: Locations) -> None:

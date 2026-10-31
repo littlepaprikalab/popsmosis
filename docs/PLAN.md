@@ -510,7 +510,11 @@ is about). A line keeps its dash and its fading, a band its width, and a shape i
 draws only the graph: no figures or scenery round it, which have scenes of their own. The drawing
 marks where each structure's name goes (`<circle data-label="demand curve" ...>`), and the video
 writes it there in the structure's colour as the structure is revealed, as a textbook prints a
-curve's name, with no pill (pills on a graph covered its lines and its axis names). The drawing is kept as the brain made it and styled
+curve's name, with no pill (pills on a graph covered its lines and its axis names). Under it, the
+first time the part shows, the video writes what it means (`Bundle.meanings`, "lower price → people
+buy more"), fact-checked like a motion, for two lines; then the name stays alone. The whole-scene
+framing makes room for these names, and a graph's arrow has its word beside it ("price rises")
+rather than in the corner key, which diagrams keep. The drawing is kept as the brain made it and styled
 before it is rasterised, so a new look (`svg.LOOK`, kept with each scene's locations) is no
 new drawing: the art step styles the kept drawings again, with no call to the brain. Styling
 takes under a millisecond, and the glow about a fifth of a second to rasterise, once a scene.

@@ -226,6 +226,25 @@ def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
     assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
 
 
+def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
+    def meaning(*pairs, graph=True):
+        def change(data):
+            if graph:
+                scene = next(s for s in data["scenes"] if s["id"] == "overview")
+                scene["axes"] = {"x": "Time", "y": "Rate"}
+            data["meanings"] = [{"structure": s, "text": text} for s, text in pairs]
+        bundle, found, _ = review(change)
+        return [(m.structure, m.text) for m in bundle.meanings], [f for f in found if f[1] == "meanings"]
+
+    assert meaning(("thylakoid", "  more  light → faster ")) == ([("Thylakoid", "more light → faster")], [])
+    left_out = [("meanings", "meanings", True)]
+    assert meaning(("the rotor", "spins")) == ([], left_out)  # no such structure
+    assert meaning(("Thylakoid", "more light → faster"), graph=False) == ([], left_out)  # no graph draws it
+    assert meaning(("Thylakoid", "x" * 41)) == ([], left_out)  # too long for one line under its name
+    assert meaning(("Thylakoid", "")) == ([], left_out)
+    assert meaning(("Thylakoid", "one"), ("thylakoid", "two"))[1] == left_out  # one a part
+
+
 def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
     def change(data):
         data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"

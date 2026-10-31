@@ -405,6 +405,20 @@ def test_what_builds_up_is_checked_too_and_left_out_when_it_fails():
     assert [m.text for m in dropped_motions(report)] == ["e⁻ builds up in Cytochrome b6f"]
 
 
+def test_a_graph_parts_meaning_is_checked_and_left_out_when_it_fails():
+    def meaning(data):
+        data["meanings"] = [{"structure": "Thylakoid", "text": "more light → faster"},
+                            {"structure": "Cytochrome b6f", "text": "more light → slower"}]
+
+    wrong = "On the graph, Cytochrome b6f means: more light → slower"
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == wrong else supported(text))
+    report, checked = check_bundle(bundle(meaning), "", fake)
+    sent = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:means")]
+    assert sent == [("motion:means-1", "On the graph, Thylakoid means: more light → faster"), ("motion:means-2", wrong)]
+    assert report.status == "passed" and [m.structure for m in checked.meanings] == ["Thylakoid"]
+    assert [m.text for m in dropped_motions(report)] == [wrong]
+
+
 def test_what_turns_is_checked_with_what_drives_it():
     def spinning(data):
         moving(data)

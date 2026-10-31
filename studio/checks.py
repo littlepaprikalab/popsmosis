@@ -66,6 +66,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
     _check_conversions(data, canon, problems)
+    _check_meanings(data, canon, problems)
     _check_lyric_style(data, problems)
     _check_key_lines(data, problems)
     problems += _check_tempo(bundle, data["music"])
@@ -452,6 +453,27 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
 
 
 CONVERT_MAX = 4  # species on one side of a conversion
+MEANING_MAX = 40  # characters of a graph part's meaning: one short line under its name ("lower price → people buy more")
+
+
+def _check_meanings(data: dict, canon: dict[str, str], problems: list) -> None:
+    """Each meaning names a part of a graph (a structure on a scene with axes), as its name, in one short line. One
+    part has one meaning; any other is left out, and the video writes only the part's name."""
+    graphed = {canon.get(fold(s["name"])) for scene in data["scenes"]
+               if any(" ".join(scene["axes"][side].split()) for side in ("x", "y")) for s in scene["structures"]}
+    kept, seen = [], set()
+    for meaning in data["meanings"]:
+        name, text = canon.get(fold(meaning["structure"])), " ".join(meaning["text"].split())
+        why = ("names no structure" if not name else "is not a part of a graph" if name not in graphed else
+               "repeats a part's meaning" if name in seen else "is empty" if not text else
+               f"is over {MEANING_MAX} characters" if len(text) > MEANING_MAX else "")
+        if why:
+            problems.append(Problem(line_id="meanings", rule="meanings", repaired=True,
+                                    detail=f"{meaning['structure']}'s meaning {text!r} {why}; left out"))
+            continue
+        seen.add(name)
+        kept.append({"structure": name, "text": text})
+    data["meanings"] = kept
 
 
 def _check_conversions(data: dict, canon: dict[str, str], problems: list) -> None:

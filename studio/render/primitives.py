@@ -378,12 +378,13 @@ NAME_CONTRAST = 4.5  # a name written in its structure's colour, against a light
 
 
 def draw_name(canvas: skia.Canvas, text: str, rect: Rect, font_size: float, paper: int, color: str,
-              alpha: float) -> None:
+              alpha: float, weight: str = "ExtraBold") -> None:
     """A structure's name where a graph's drawing placed it (Value.label), as a textbook prints a curve's name beside
-    it: plain writing in the structure's colour, darkened to read on a light page, ringed with the background's."""
+    it: plain writing in the structure's colour, darkened to read on a light page, ringed with the background's. Its
+    meaning (Beat.meanings) is written so too, lighter."""
     if alpha <= 0.01:
         return
-    f = font("ExtraBold", font_size)
+    f = font(weight, font_size)
     x = (rect[0] + rect[2]) / 2 - text_width(f, text) / 2
     y = (rect[1] + rect[3]) / 2 + cap_height(f) / 2
     canvas.drawString(text, x, y, f, skia.Paint(AntiAlias=True, Color=with_alpha(paper, alpha), StrokeWidth=AXIS_HALO,

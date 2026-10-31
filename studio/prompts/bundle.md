@@ -569,7 +569,9 @@ no times: code adds them from the audio.
   equilibrium). "" with no particles, for a nerve signal or light, and on the analogy scene
   (its water stands for the protons, so "H₂O" would mislead). When you cannot say what would
   travel a route, the facts do not give it: leave it out. The fact-check holds each motion
-  to the facts (an unmarked one as "something", except on the hook and the analogy).
+  to the facts (an unmarked one as "something", except on the hook and the analogy). On a
+  graph, it is the quantity an axis measures, written as the axis is ("price"): the video
+  writes "price rises" beside an arrow up that axis.
 - `moves`: "crosses" when it passes through one wall, membrane or carrier, the crossing
   being what the line teaches (O₂ across the alveolus's wall, H⁺ through ATP synthase);
   "travels" when it goes a long way along several parts, the path being what the line
@@ -635,6 +637,13 @@ fact-check holds each to the facts. [] when there is none.
   into Y" at a part of the diagram has one for it. Only substances other than the structure
   itself: never a structure's own name as what it makes ("rock → magma" beside Magma), nor a
   cycle's forms turning into each other.
+- `meanings`: what each part of a graph says, in plain words a learner reads off it, as a
+  textbook writes it under a curve's name: `[{"structure": "Demand curve", "text": "lower
+  price → people buy more"}, {"structure": "Supply curve", "text": "higher price → sellers
+  offer more"}, {"structure": "Shortage", "text": "buyers want more than sellers have"}]`, one
+  per part of a scene with `axes`, at most 40 characters, never the part's own name. The
+  video writes it under the name the first time the part shows, for two lines, then only the
+  name stays. [] for a droplet with no graph.
 
 ## On screen
 

@@ -1317,6 +1317,60 @@ def test_a_name_the_video_never_says_on_its_scene_is_written_from_the_first_fram
     assert names and names[0][0] == "Cytochrome b6f" and names[0][1] == pytest.approx(1.0, abs=0.05)
 
 
+def test_a_meaning_is_written_under_its_name_while_it_is_on(job, monkeypatch):
+    from studio.schemas import Gloss, Value
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [k for k, b in enumerate(timeline.beats) if b.scene == "overview" and "Thylakoid" in b.labels]
+    beats = list(timeline.beats)
+    first = beats[on[-1]]
+    gloss = Gloss(structure="Thylakoid", text="where light is caught", since=first.t0, until=first.t0 + 2.0)
+    beats[on[-1]] = first.model_copy(update={"meanings": [gloss]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    monkeypatch.setattr(renderer.locations.scene("overview"), "values",
+                        [Value(text="Thylakoid", at=Point(x=600, y=500), side="right", label=True)])
+    drawn = []
+    monkeypatch.setattr(p, "draw_name", lambda canvas, text, rect, size, paper, color, alpha, weight="ExtraBold":
+                        drawn.append((text, rect, size, alpha)))
+    renderer.frame(first.t0 + 1.0)  # on
+    [(name, rect, size, _), (meaning, under, small, alpha)] = drawn
+    assert (name, meaning) == ("Thylakoid", "where light is caught") and small < size and alpha > 0.9
+    assert under[0] == pytest.approx(rect[0]) and under[1] == pytest.approx(rect[3])  # under it, from its left end
+    drawn.clear()
+    renderer.frame(first.t0 + 3.0)  # over: the name alone
+    assert [text for text, *_ in drawn] == ["Thylakoid"]
+
+
+def test_a_graphs_arrow_has_its_word_beside_it_and_no_key(job, monkeypatch):
+    from studio.schemas import Axes
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    graph = timeline.model_copy(update={"axes": {"overview": Axes(x="Quantity", y="Price")}})
+    renderer = Renderer(job, graph)
+    assert renderer._arrow_word("overview", "price", (10, 100), (12, 20)) == "price rises"  # up the price axis
+    assert renderer._arrow_word("overview", "Price", (10, 20), (12, 100)) == "Price falls"
+    assert renderer._arrow_word("overview", "quantity", (100, 10), (20, 12)) == "quantity falls"
+    assert renderer._arrow_word("overview", "price", (10, 10), (100, 12)) == "price"  # across: says no way
+    assert renderer._arrow_word("overview", "buyers", (10, 100), (12, 20)) == "buyers"  # no axis's quantity
+    beat = next(b for b in timeline.beats if b.scene == "overview" and b.particles)
+    with_word = beat.model_copy(update={"particles": [f.model_copy(update={"label": "price"}) for f in beat.particles]})
+    assert Renderer(job, timeline)._legend(with_word, with_word.t1)  # a diagram keeps its key
+    assert renderer._legend(with_word, with_word.t1) == []  # a graph has none
+
+
+def test_the_whole_scene_makes_room_for_the_names_its_drawing_placed(job, monkeypatch):
+    # A graph's names under its axis fell below the picture, under the bands, when the camera framed the lines alone.
+    from studio.schemas import Value
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    renderer = Renderer(job, timeline)
+    view = renderer.view("overview")
+    art = renderer.scene("overview")
+    before = renderer._written_box("overview", view)
+    low = art.content[3] + 5
+    monkeypatch.setattr(renderer.locations.scene("overview"), "values",
+                        [Value(text="Quantity supplied", at=Point(x=800, y=low), side="below", label=True)])
+    after = renderer._written_box("overview", view)
+    assert before == art.content and after[3] > low + 30 and after[:3] == before[:3]
+
+
 def test_a_name_is_written_darker_than_its_line_on_a_light_page():
     import skia
     color = "#FFD23F"

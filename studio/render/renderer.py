@@ -158,6 +158,9 @@ AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
 VALUE_GAP = 8.0  # frame pixels between a value's point and its writing (Beat.values)
 VALUE_FONT, TICK_FONT = 1.0, 0.85  # an amount's writing and a tick's, as shares of the label font
 NAME_FONT = 1.1  # a name a graph's drawing placed (Value.label), as a share of the label font
+MEANING_FONT = 0.8  # its meaning written under it (Beat.meanings), as a share of the label font
+MEANING_OUT_S = 0.6  # a meaning fading out, as only the name stays
+ARROW_WORD_FONT, ARROW_WORD_GAP = 0.9, 14.0  # a graph arrow's word beside it: a share of the label font; frame pixels
 VALUE_EDGE = 6.0  # frame pixels: a value this near the edge of where it may be written fades out, as a camera move
 # takes it off; a tick at rest just under its axis, low in the picture, stays clear
 DRAWN_INK = 15  # how far (the largest RGB channel) a drawn pixel is from the background, as _drawn_box has it
@@ -905,12 +908,32 @@ class Renderer:
         Art rarely fills its canvas (a membrane is a strip across it), so this frames
         what is drawn rather than the canvas, up to WHOLE_MAX_ZOOM."""
         art = self.scene(scene_id)
-        x0, y0, x1, y1 = art.content
+        x0, y0, x1, y1 = self._written_box(scene_id, view)
         zoom = min((view[2] - view[0]) / ((x1 - x0) * WHOLE_PAD), (view[3] - view[1]) / ((y1 - y0) * WHOLE_PAD))
         if self.portrait:  # what is drawn fills the frame's height; its sides run off, and the camera follows the flow
             zoom = (view[3] - view[1]) / ((y1 - y0) * PORTRAIT_PAD)
         zoom = max(1.0, min(zoom / _fit(view, art), PORTRAIT_MAX_ZOOM if self.portrait else WHOLE_MAX_ZOOM))
         return clamp_cam(Cam((x0 + x1) / 2, (y0 + y1) / 2, zoom), view, art)
+
+    def _written_box(self, scene_id: str, view: Rect) -> tuple[float, float, float, float]:
+        """What is drawn on the scene (SceneArt.content), grown to hold what the video writes on it where its drawing
+        placed it: each name with its meaning, each tick and each value, as big as they are with the art fitted to the
+        view (bigger, in art pixels, than in any closer framing). A graph's names under its axis fell below the
+        picture, under the bands, when the camera framed the lines alone (Oct 31)."""
+        art = self.scene(scene_id)
+        x0, y0, x1, y1 = art.content
+        scale = _fit(view, art)
+        located = self.locations.scene(scene_id)
+        glosses = {m.structure: m.text for b in self.timeline.beats if b.scene == scene_id for m in b.meanings}
+        for v in located.values:
+            rect, _ = self._value_rect(v, scale, 0.0, 0.0)
+            rects = [rect]
+            if v.label and v.text in glosses:
+                rects.append(self._meaning_rect(glosses[v.text], rect, v.side)[0])
+            for r in rects:
+                x0, y0 = min(x0, max(r[0] / scale, 0.0)), min(y0, max(r[1] / scale, 0.0))
+                x1, y1 = max(x1, min(r[2] / scale, art.width)), max(y1, min(r[3] / scale, art.height))
+        return x0, y0, x1, y1
 
     def _plan(self) -> list[BeatPlan]:
         plans: list[BeatPlan] = []
@@ -1124,13 +1147,15 @@ class Renderer:
 
     def _labels(self, canvas: skia.Canvas, scene_id: str, names: list[str], reveals: dict[str, float],
                 spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float,
-                avoid: list[Point] = (), strength: dict[str, float] | None = None) -> list[Rect]:
+                avoid: list[Point] = (), strength: dict[str, float] | None = None,
+                meanings: dict | None = None) -> list[Rect]:
         """Draws the labels, each at its strength (1.0 when not given); returns where each pill landed, for what is
         drawn after them to keep clear. A name the drawing placed (Value.label, a graph's) is written there in its
         structure's colour, as a textbook prints a curve's name, with no pill, and never rests: it is part of the
         graph, and the pills keep clear of it. It is written as its structure is revealed, or from the scene's first
         frame when this video never names the structure there: drawn in full and nameless, a graph's four lines on
-        Oct 31 left the learner to guess which was the old supply and which the new."""
+        Oct 31 left the learner to guess which was the old supply and which the new. A placed name with a meaning on
+        (`meanings`, Beat.meanings) has it written beside it, smaller, on the side away from its point."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
         scale, dx, dy = to_frame(cam, view, art)
@@ -1141,14 +1166,28 @@ class Renderer:
             if loc is None:
                 continue
             if name in baked:
+                # Never cut off by the frame's edge or the bands: one the camera leaves out is not written, and one
+                # near the edge fades as it nears it, as a value does.
                 rect, size = self._value_rect(baked[name], scale, dx, dy)
-                cx, cy = (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2
-                alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(cx, cy, view)
+                gloss = (meanings or {}).get(name)
+                on = (p.ease((t - gloss.since) / LABEL_IN_S) * p.ease((gloss.until - t) / MEANING_OUT_S)
+                      if gloss else 0.0)
+                under, small = self._meaning_rect(gloss.text, rect, baked[name].side) if on > 0.01 else (None, 0.0)
+                inset = min(min(r[0] - view[0], r[1] - bounds[1], view[2] - r[2], view[3] - r[3])
+                            for r in (rect, under) if r)
+                alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * min(1.0, max(inset, 0.0) / VALUE_EDGE)
                 if alpha > 0.01:
                     p.draw_name(canvas, name, rect, size, art.paper, self.timeline.palette[name], alpha)
-                    rects.append(rect)
-                    avoid = [*avoid, *((rect[0] + k * (rect[2] - rect[0]) / 8, y) for k in range(9)
-                                       for y in (rect[1], (rect[1] + rect[3]) / 2, rect[3]))]
+                    drawn = [rect]
+                    shown = alpha * on
+                    if shown > 0.01:
+                        p.draw_name(canvas, gloss.text, under, small, art.paper, self.timeline.palette[name], shown,
+                                    weight="SemiBold")
+                        drawn.append(under)
+                    for r in drawn:
+                        rects.append(r)
+                        avoid = [*avoid, *((r[0] + k * (r[2] - r[0]) / 8, y) for k in range(9)
+                                           for y in (r[1], (r[1] + r[3]) / 2, r[3]))]
                 continue
             at = art.line_end(name) if name in art.masks else None
             ax, ay = ((at[0], at[1]) if at else (loc.label_anchor.x, loc.label_anchor.y))
@@ -1307,7 +1346,7 @@ class Renderer:
         strength = self._resting(i, t)
         if beat.scene not in self.timeline.self_labelled:  # a painted picture labels its own parts
             self._labels(canvas, beat.scene, beat.labels, reveals, spots, cam, view, bounds, t, arrows + pill_points,
-                         strength)
+                         strength, {m.structure: m for m in beat.meanings})
         if beat.scene in self.timeline.flags:
             self._flags(canvas, beat.scene, cam, view, bounds, fade)
         if beat.conversions:
@@ -1447,6 +1486,17 @@ class Renderer:
                 p.draw_axis_name(canvas, names.x if side == "x" else names.y, rect, font, art.paper, alpha)
                 rects.append(rect)
         return rects
+
+    def _meaning_rect(self, text: str, name: Rect, side: str) -> tuple[Rect, float]:
+        """Where a placed name's meaning is written, and its font size: under the name, lined up with it on the side
+        away from its point (above it for a name above its point), so the name stays put as the meaning comes and
+        goes."""
+        size = self.layout.label_font * MEANING_FONT
+        w, h = p.text_width(p.font("SemiBold", size), text), size * 1.25
+        x0, y0, x1, y1 = name
+        left = {"right": x0, "left": x1 - w}.get(side, (x0 + x1) / 2 - w / 2)
+        top = y0 - h if side == "above" else y1
+        return (left, top, left + w, top + h), size
 
     def _value_rect(self, v, scale: float, dx: float, dy: float) -> tuple[Rect, float]:
         """Where a value (or a name the drawing placed) is written (frame pixels), beside its point on its side, and
@@ -1929,17 +1979,19 @@ class Renderer:
         """The key to what moves on the scene: (colour, kind, alpha) for each kind of particle its flows and spaces have
         shown so far whose particles cannot carry their own name (a word, not a symbol printed on them: p.carried), in
         the order they first appeared, each fading in as its particles set off. Nothing that moves carries a word, so
-        the words are read here, still, in one corner."""
+        the words are read here, still, in one corner. Not on a graph, whose arrow has its word beside it
+        (_draw_handoffs): a key in the corner saying "price" read as a button, far from the arrow it named."""
         kinds: dict[str, tuple[str, str, float]] = {}
+        graph = self._graph(beat.scene)
 
         def add(label: str, color: str, alpha: float) -> None:
             if label and not p.carried(label) and label not in kinds:
                 kinds[label] = (color, label, alpha)
 
-        for route in sorted(beat.routes, key=lambda r: r.since):
+        for route in sorted(beat.routes, key=lambda r: r.since) if not graph else ():
             set_off = (self.run_of(self.beat_index(route.since), route.path, route.label) or (route.since,))[0]
             add(route.label, route.color, p.ease((t - set_off) / LABEL_IN_S))
-        for flow in beat.particles:
+        for flow in beat.particles if not graph else ():
             add(flow.label, flow.color, p.ease((t - beat.t0) / LABEL_IN_S))
         for crowd in beat.crowds:
             if max(crowd.start, crowd.end) > 0:  # an empty space shows no dots to name
@@ -2077,6 +2129,39 @@ class Renderer:
             else:
                 strength = 1.0
             p.draw_handoff(canvas, on_frame(tail), on_frame(tip), flow.color, alpha * strength, grown, pulse)
+        if arrows and flow.label and self._graph(scene_id):  # its word beside it, still, as a textbook annotates a shift
+            tail, tip = on_frame(arrows[0][0]), on_frame(arrows[0][1])
+            word = self._arrow_word(scene_id, flow.label, tail, tip)
+            size = self.layout.label_font * ARROW_WORD_FONT
+            w, h = p.text_width(p.font("Bold", size), word), size * 1.2
+            length = math.hypot(tip[0] - tail[0], tip[1] - tail[1]) or 1.0
+            nx, ny = -(tip[1] - tail[1]) / length, (tip[0] - tail[0]) / length  # to the right of the way it goes
+            mx, my = (tail[0] + tip[0]) / 2, (tail[1] + tip[1]) / 2
+            if abs(nx) >= abs(ny):
+                left = mx + ARROW_WORD_GAP if nx > 0 else mx - ARROW_WORD_GAP - w
+                rect = (left, my - h / 2, left + w, my + h / 2)
+            else:
+                top = my + ARROW_WORD_GAP if ny > 0 else my - ARROW_WORD_GAP - h
+                rect = (mx - w / 2, top, mx + w / 2, top + h)
+            first = p.ease(elapsed / HANDOFF_GROW_S)
+            p.draw_name(canvas, word, rect, size, self.scene(scene_id).paper, flow.color, alpha * first, weight="Bold")
+
+    def _graph(self, scene_id: str) -> bool:
+        """Whether the scene is a graph (Timeline.axes)."""
+        return bool(self.timeline.axes.get(scene_id))
+
+    def _arrow_word(self, scene_id: str, label: str, tail: Point, tip: Point) -> str:
+        """What a graph's arrow has written beside it: what it carries ("price"), and, when that is what an axis
+        measures and the arrow runs along that axis, which way it goes: "price rises" up the price axis, "quantity
+        falls" leftward along the quantity axis."""
+        axes = self.timeline.axes.get(scene_id)
+        dx, dy = tip[0] - tail[0], tip[1] - tail[1]
+        said = " ".join(label.split()).casefold()
+        if axes and said == " ".join(axes.y.split()).casefold() and abs(dy) > abs(dx):
+            return f"{label} {'rises' if dy < 0 else 'falls'}"
+        if axes and said == " ".join(axes.x.split()).casefold() and abs(dx) > abs(dy):
+            return f"{label} {'rises' if dx > 0 else 'falls'}"
+        return label
 
     def _band_beat(self, i: int, t: float):
         """The beat whose line the band shows at t: beat i's own, or in the song, late in an
