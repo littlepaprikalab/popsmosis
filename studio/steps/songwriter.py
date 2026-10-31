@@ -7,6 +7,13 @@ wrong and the checker's own true version, and writes each couplet again to be tr
 lines as it had, each about as long as the line it replaces, rhyming where it rhymed, in the song's voice and
 frame.
 
+It may also say the checker was wrong (an image read too literally, a simplification fair for the audience):
+an appeal, with the reason, beside its rewrite. The next round of the fact-check reads the couplet as it was
+written again, with the reason; upheld, the couplet is sung as written, and lost, the rewrite goes in and is checked
+like any other. It needs a round to hear it and one to check the rewrite, so an appeal made too late is not heard
+(studio/steps/factcheck.py). On the 12 scorecard droplets of Oct 31, the songwriter rightly defended "The gas is
+light, it shoots out quick", the facts' own words, which a rewrite had made into "Hot gas at high pressure".
+
 The fact-check then judges the rewrite like any changed line. Each couplet goes to the songwriter once: if its
 rewrite fails too, the checker's correction of it is used, as before there was a songwriter. A rewrite is kept
 only where code can stand behind its shape (the same number of lines, none empty, none far longer or shorter
@@ -33,9 +40,9 @@ WORDS_MAX = 12  # a rewritten line's most words, unless the line it replaces had
 SYLLABLES_OFF = 3  # how far a rewritten line may stray from the one it replaces, or 30% of it if more
 
 
-def rewrite(bundle: Bundle, failing: list[tuple], ask, round_no: int) -> dict[str, str]:
+def rewrite(bundle: Bundle, failing: list[tuple], ask, round_no: int) -> tuple[dict[str, str], dict[str, str]]:
     """failing: (couplet, the checker's verdict on it) for each couplet to rewrite, the couplet a fact-check Line.
-    Return each rewrite kept, by the couplet's id, its lines joined by "\\n"."""
+    Return each rewrite kept, by the couplet's id, its lines joined by "\\n"; and each appeal, the reason, by id."""
     payload = {
         "course": bundle.course, "topic": bundle.topic, "audience": bundle.audience,
         "song_style": ", ".join(bundle.music.positive_styles), "bpm": bundle.music.bpm,
@@ -50,17 +57,20 @@ def rewrite(bundle: Bundle, failing: list[tuple], ask, round_no: int) -> dict[st
     try:
         answer = ask("brain", json.dumps(payload, ensure_ascii=False, indent=1), LyricRewrite, system=PROMPT,
                      label=f"lyric rewrite round {round_no}")
-        written = {c.id: c.lines for c in LyricRewrite.model_validate(answer).couplets}
+        returned = LyricRewrite.model_validate(answer).couplets
     except (brain.BrainError, ValidationError) as e:  # the checker's versions stand in
         print(f"factcheck: the songwriter's call failed, so the checker's corrections are used: {e}", file=sys.stderr)
-        return {}
+        return {}, {}
+    written = {c.id: c.lines for c in returned}
+    asked = {couplet.id for couplet, _ in failing}
+    appeals = {c.id: " ".join(c.appeal.split()) for c in returned if c.id in asked and c.appeal.strip()}
     canon = checks.canonical_names([scene.model_dump() for scene in bundle.scenes])
     kept = {}
     for couplet, _ in failing:
         lines = [" ".join(line.split()) for line in written.get(couplet.id, [])]
         if fits(couplet.text.split("\n"), lines, canon) and "\n".join(lines) != couplet.text:
             kept[couplet.id] = "\n".join(lines)
-    return kept
+    return kept, appeals
 
 
 def true_version(check: Check, lines: int) -> list[str]:

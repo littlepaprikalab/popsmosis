@@ -33,8 +33,8 @@ class FakeChecker:
     """Stands in for brain.ask: judges each line with `rule(text)` (a couplet line by line), records every
     payload. Asked to rewrite, it answers `song(couplets)`, by default with none, so the checker's fix is used."""
 
-    def __init__(self, rule, song=None):
-        self.rule, self.song = rule, song
+    def __init__(self, rule, song=None, appealed=None):
+        self.rule, self.song, self.appealed = rule, song, appealed  # appealed: the rule for a line sent with an appeal
         self.payloads, self.songs = [], []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -48,7 +48,7 @@ class FakeChecker:
         self.payloads.append(payload)
         checks = []
         for line in payload["lines"]:
-            verdict = judge(self.rule, line["text"])
+            verdict = judge(self.appealed if self.appealed and line.get("appeal") else self.rule, line["text"])
             if verdict is None:
                 continue  # the checker skipped this line
             name, source, corrected = verdict

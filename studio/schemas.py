@@ -591,6 +591,20 @@ class Correction(Strict):
 class RewrittenCouplet(Strict):
     id: str
     lines: list[str] = Field(description="The couplet rewritten, a line for each line it had, in order")
+    appeal: str = Field(default_factory=str,
+                        description='"" unless the checker is wrong about the couplet as it was: why no student who '
+                                    'sings it would believe its problem, in one sentence')
+
+
+class Appeal(Strict):
+    """A couplet the songwriter said the checker was wrong about (RewrittenCouplet.appeal), and what the checker made of
+    it on a second look: upheld, it is sung as it was written."""
+
+    round: int  # the round that heard it
+    ids: list[str]
+    text: str  # the couplet as it was written, its lines joined by "\n"
+    reason: str
+    upheld: bool
 
 
 class LyricRewrite(Strict):
@@ -607,6 +621,8 @@ class FactCheckReport(Strict):
     rounds: int
     lines: list[CheckedLine]
     corrections: list[Correction]
+    # The songwriter's appeals, kept out of factcheck.json as Correction.by is: songwriter.json lists them.
+    appeals: list[Appeal] = Field(default_factory=list, exclude=True)
 
 
 # --- Job input ----------------------------------------------------------------

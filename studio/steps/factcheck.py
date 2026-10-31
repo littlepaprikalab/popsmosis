@@ -57,7 +57,7 @@ from pydantic import ValidationError
 
 from studio import brain, checks
 from studio.jobs import read, write
-from studio.schemas import (AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
+from studio.schemas import (Appeal, AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
 from studio.sentences import replace_sentences, split_sentences
 from studio.steps import songwriter
@@ -115,11 +115,12 @@ def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckRepo
 
 
 def write_songwriter(job: Path, report: FactCheckReport) -> None:
-    """songwriter.json: the corrections the songwriter wrote, which factcheck.json leaves unmarked (Correction.by);
-    none, and the file goes."""
+    """songwriter.json: the corrections the songwriter wrote, which factcheck.json leaves unmarked (Correction.by),
+    and its appeals, upheld or not; none of either, and the file goes."""
     sung = [c.model_dump(exclude={"kind", "by"}) for c in report.corrections if c.by == "songwriter"]
-    if sung:
-        write(job / SONGWRITER, {"corrections": sung})
+    appeals = [a.model_dump() for a in report.appeals]
+    if sung or appeals:
+        write(job / SONGWRITER, {"corrections": sung, **({"appeals": appeals} if appeals else {})})
     else:
         (job / SONGWRITER).unlink(missing_ok=True)
 
@@ -316,6 +317,10 @@ def check_bundle(
     # The couplets sent to the songwriter (each goes once), with the checker's correction of each as it was then:
     # what stands in when the songwriter's rewrite fails and the checker has no usable correction of that.
     to_songwriter: dict[str, str] = {}
+    # The couplets the songwriter said the checker was wrong about, by key: its reason, and its rewrite for when the
+    # appeal is lost. The next round hears each one: the couplet as written, sent again with the reason.
+    appealing: dict[str, tuple[str, str]] = {}
+    appeals: list[Appeal] = []
     reason = ""
     rounds = 0
     for round_no in range(1, max_rounds + 1):
@@ -329,7 +334,8 @@ def check_bundle(
         if not pending:
             break
         rounds = round_no
-        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from)
+        heard = {line.key: appealing[line.key][0] for line in pending if line.key in appealing}
+        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from, heard)
         for line in pending:
             check = checks.get(line.key)
             # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
@@ -338,6 +344,13 @@ def check_bundle(
             if check and (check.verdict != "SUPPORTED" or line.kind in NO_SOURCE or cites(check.source, facts)
                           or (line.kind == LYRIC and COURSE_KNOWLEDGE in check.source.lower())):
                 verdicts[(line.kind, line.text)] = (check, round_no)
+        for line in pending:
+            if line.key in heard:
+                upheld = _verdict(verdicts, line) in PASSING
+                appeals.append(Appeal(round=round_no, ids=list(line.members or (line.id,)), text=line.text,
+                                      reason=heard[line.key], upheld=upheld))
+                if upheld:
+                    del appealing[line.key]  # sung as it was written
         # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
         wrong = [line for line in pending
                  if line.kind not in KEPT_OR_DROPPED and _verdict(verdicts, line) == "UNSUPPORTED"]
@@ -354,14 +367,25 @@ def check_bundle(
             break
         fresh = [(line, verdicts[(line.kind, line.text)][0]) for line in wrong
                  if line.kind == LYRIC and line.id not in to_songwriter]
-        written = songwriter.rewrite(bundle, fresh, ask, round_no) if fresh else {}
+        written, said = songwriter.rewrite(bundle, fresh, ask, round_no) if fresh else ({}, {})
         to_songwriter |= {line.id: corrected(line, check) for line, check in fresh}
+        # An appeal is heard next round, and its rewrite, if it is lost, checked the round after: one too late is not.
+        late = round_no + 2 > max_rounds
 
         fixes: dict[tuple[str, str], str] = {}
         made: list[Correction] = []
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
-            after, by = (written[line.id], "songwriter") if line.id in written else (corrected(line, check), "checker")
+            if line.id in said and not late:
+                appealing[line.key] = (said[line.id], written.get(line.id, ""))
+                del verdicts[(line.kind, line.text)]  # so the next round reads it again, with the reason
+                continue
+            if line.key in appealing:  # its appeal was heard and lost: the rewrite the songwriter wrote beside it
+                rewritten = appealing.pop(line.key)[1]
+                after, by = (rewritten, "songwriter") if rewritten else (corrected(line, check), "checker")
+            else:
+                after, by = ((written[line.id], "songwriter") if line.id in written
+                             else (corrected(line, check), "checker"))
             if not after and line.kind == LYRIC and to_songwriter.get(line.id, line.text) != line.text:
                 after = to_songwriter[line.id]  # the songwriter's rewrite failed with no fix: the checker's first
             if line.kind == KEY and not after:
@@ -433,12 +457,12 @@ def check_bundle(
         ) + (f"; and {len(failing) - 3} more" if len(failing) > 3 else "")
     status = "failed" if reason else "passed"
     return FactCheckReport(status=status, reason=reason, rounds=rounds, lines=checked,
-                           corrections=corrections), bundle
+                           corrections=corrections, appeals=appeals), bundle
 
 
 def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], study_guide: str, ask,
                 round_no: int, context: dict[str, str] | None = None, was: dict[str, str] | None = None,
-                written_from: dict[str, str] | None = None) -> dict[str, Check]:
+                written_from: dict[str, str] | None = None, appeals: dict[str, str] | None = None) -> dict[str, Check]:
     previous: dict[str, str] = {}
     if round_no > 1:
         # A re-check sends lines without their neighbours, so each brings the one before it.
@@ -446,7 +470,7 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
             same = [line for line in lines if line.kind == kind]
             for before, line in zip(same, same[1:]):
                 previous.setdefault(line.key, before.text)
-    was, written_from = was or {}, written_from or {}
+    was, written_from, appeals = was or {}, written_from or {}, appeals or {}
     payload: dict = {"facts": [{"id": i, "text": text, **({"was": was[i]} if i in was else {})}
                                for i, text in facts.items()]}
     if study_guide:
@@ -455,7 +479,8 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
         payload["about"] = context  # for the tags and the lyrics: every other line is judged by the facts alone
     payload["lines"] = [
         {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {}),
-         **({"written_from": written_from[line.key]} if line.key in written_from else {})}
+         **({"written_from": written_from[line.key]} if line.key in written_from else {}),
+         **({"appeal": appeals[line.key]} if line.key in appeals else {})}
         for line in pending
     ]
     answer = ask("brain", json.dumps(payload, ensure_ascii=False, indent=1), FactCheck, system=PROMPT,

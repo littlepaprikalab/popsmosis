@@ -23,7 +23,8 @@ You get JSON with:
   by rules of their own (Lyrics, Tags, Motions and Public text, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only. A line may carry `written_from`: the id of a
-  corrected fact it was written from, before the correction (Corrected facts, below).
+  corrected fact it was written from, before the correction (Corrected facts, below). A
+  couplet you failed may come back as it was, with `appeal` (Lyrics, below).
 - `about`, only when there are lyrics or tags: the lesson's `course`, `topic` and
   `audience`, and the song's `song_style`. It is there for the lyrics and the tags alone;
   it never makes any other line supported.
@@ -127,6 +128,13 @@ its own: would a student who sings it come away believing something false?
 What this prompt says above about figures of speech, attitude, cases and `corrected` holds
 for couplets too, with this question in place of the facts' words: an image in a couplet
 is UNSUPPORTED when the point it makes is false, not because the facts do not make it.
+
+A couplet you failed may come back as it was written, with `appeal`: the songwriter, who
+hears the whole song, says why no student who sings it would believe what you found. Judge
+it again with that in mind, fairly both ways. When the songwriter is right (a fair
+simplification for the audience, an image read too literally, a claim the facts do make,
+read as a listener reads a song), it is SUPPORTED or FILLER. When a student would still come
+away believing something false, it stays UNSUPPORTED, and your `problem` answers the appeal.
 
 ## Tags
 
