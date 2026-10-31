@@ -13,8 +13,9 @@ Each scene's prompt is three parts, joined with spaces (studio/steps/art.py, pai
 1. **The scene's request**, written by the brain (Claude) in the lesson plan, as a teacher asks for a textbook
    diagram: the kind of diagram, where everything is (never what it does), then the look for that kind of subject.
 2. **The colours**: `Colours: <part> <colour name>, ...`, each labelled part's colour by name (never a hex code).
-3. **The labels line**: `Clearly label nonobvious structures.` ("Clearly label the structures" labelled
-   everything in sight.) A graph also has its axes asked for (before this line), each
+3. **The labels line**: `Clearly label nonobvious structures. No title, legend, key or caption, and no colour
+   names in the labels.` ("Clearly label the structures" labelled everything in sight; without the second
+   sentence the API's pictures came back as slides, with a title, a legend and colour names in the labels.) A graph also has its axes asked for (before this line), each
    labelled with what it measures.
 
 The picture labels its own parts, and the video draws no labels over it (it still labels a scene Claude draws

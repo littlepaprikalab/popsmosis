@@ -392,7 +392,8 @@ The prompt is short: the scene's `image_prompt`, which asks for it
 the way a teacher asks for a standard textbook diagram of its subject ("Educational
 diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
 Earth has seasons..."), each structure's colour by name, and a last line asking for the structures
-to be labelled (`art.LABELS`: "Clearly label nonobvious structures.").
+to be labelled (`art.LABELS`: "Clearly label nonobvious structures. No title, legend, key or caption, and no colour
+names in the labels.").
 The picture labels its own parts and the video draws no labels over it, only over a drawing; a label
 the art check finds wrong is kept, flagged on the picture and explained
 in the notice card beside it. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a

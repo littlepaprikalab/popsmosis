@@ -507,8 +507,10 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 # line that replaced it is the operator's, word for word, as tried by hand on two overviews: "Clearly label
 # the structures" brought the sodium-potassium pump back with a real bilayer, both channels through it and every
 # label on its part, but labelled everything in sight; asking for the nonobvious ones only kept Pavlov's panels to
-# the labels they need.
-LABELS = "Clearly label nonobvious structures."
+# the labels they need. Through the API (not the app the operator tried it in), Muse Image then made a slide of
+# every picture, 8 times in 8 at either size: a title, a legend or colour key, and the Colours line's names written
+# into the labels ("Sodium-Potassium Pump (Orange)"). The second sentence stopped all three, 2 times in 2.
+LABELS = "Clearly label nonobvious structures. No title, legend, key or caption, and no colour names in the labels."
 EVERYDAY = ("hook", "analogy")
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
