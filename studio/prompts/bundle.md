@@ -426,10 +426,9 @@ In this order, each section a run of lines with its own `section` value:
 
 - **Intro**, 2 lines: the whole idea in a catchy phrase, sung from the first second. Its
   first line is the title line: 3 to 7 words naming the big move as concrete actions on
-  real things, so a stranger who hears only it can guess the topic ("Split the water, catch
-  the light", "The Moon pulls, the oceans rise", "Buy on credit, watch the banks fall"), never
-  pronouns in their place ("Pump them in, they spin it out" names nothing). It is the hook,
-  the song's name and a line of the chorus.
+  real things ("Open the gates, let sodium in", "Split the water, catch the light"), never
+  pronouns standing in for them ("Pump them in, they spin it out" names nothing). It is the
+  hook, the song's name and a line of the chorus.
 - **Verse**, 8 lines, four couplets: the frame first, then the first half of the story in
   order, a couplet a step (the first line shows it happening, the second lands what follows),
   with the surprise in it.
