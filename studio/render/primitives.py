@@ -338,13 +338,14 @@ def draw_axis_name(canvas: skia.Canvas, text: str, rect: Rect, font_size: float,
     f = font("Bold", font_size)
     x = (rect[0] + rect[2]) / 2 - text_width(f, text) / 2
     y = (rect[1] + rect[3]) / 2 + cap_height(f) / 2
-    light = _luminance(skia.ColorGetR(paper), skia.ColorGetG(paper), skia.ColorGetB(paper)) > 0.4
+    light = _light(paper)
     canvas.drawString(text, x, y, f, skia.Paint(AntiAlias=True, Color=with_alpha(paper, alpha), StrokeWidth=AXIS_HALO,
                                                 Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
     draw_text(canvas, text, x, y, f, with_alpha(AXIS_INK_DARK if light else AXIS_INK_LIGHT, alpha))
 
 
-VALUE_INK = 0xFFFFFFFF  # an amount a chart shows ("$1,210"): white, brighter than an axis's ink
+VALUE_INK, VALUE_INK_DARK = 0xFFFFFFFF, 0xFF0F172A  # an amount a chart shows ("$1,210"), on a dark background and on
+# a light one: a shade stronger than an axis's ink either way
 VALUE_POP = 0.3  # how much bigger an amount is written as it is said, easing back over VALUE_POP_S
 VALUE_POP_S = 0.5
 
@@ -352,7 +353,8 @@ VALUE_POP_S = 0.5
 def draw_value(canvas: skia.Canvas, text: str, rect: Rect, font_size: float, paper: int, alpha: float,
                tick: bool, pop: float = 0.0) -> None:
     """A number on a chart (Beat.values), as a textbook prints it: plain writing ringed with the background's colour,
-    a tick in the axis names' ink, an amount in white, `pop` (0-1) of VALUE_POP bigger about its middle."""
+    a tick in the axis names' ink, an amount in white (near black on a light page), `pop` (0-1) of VALUE_POP bigger
+    about its middle."""
     if alpha <= 0.01:
         return
     if tick:
@@ -368,8 +370,29 @@ def draw_value(canvas: skia.Canvas, text: str, rect: Rect, font_size: float, pap
     x, y = cx - text_width(f, text) / 2, cy + cap_height(f) / 2
     canvas.drawString(text, x, y, f, skia.Paint(AntiAlias=True, Color=with_alpha(paper, alpha), StrokeWidth=AXIS_HALO,
                                                 Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
-    draw_text(canvas, text, x, y, f, with_alpha(VALUE_INK, alpha))
+    draw_text(canvas, text, x, y, f, with_alpha(VALUE_INK_DARK if _light(paper) else VALUE_INK, alpha))
     canvas.restore()
+
+
+NAME_CONTRAST = 4.5  # a name written in its structure's colour, against a light page: WCAG's for text
+
+
+def draw_name(canvas: skia.Canvas, text: str, rect: Rect, font_size: float, paper: int, color: str,
+              alpha: float) -> None:
+    """A structure's name where a graph's drawing placed it (Value.label), as a textbook prints a curve's name beside
+    it: plain writing in the structure's colour, darkened to read on a light page, ringed with the background's."""
+    if alpha <= 0.01:
+        return
+    f = font("ExtraBold", font_size)
+    x = (rect[0] + rect[2]) / 2 - text_width(f, text) / 2
+    y = (rect[1] + rect[3]) / 2 + cap_height(f) / 2
+    canvas.drawString(text, x, y, f, skia.Paint(AntiAlias=True, Color=with_alpha(paper, alpha), StrokeWidth=AXIS_HALO,
+                                                Style=skia.Paint.kStroke_Style, StrokeJoin=skia.Paint.kRound_Join))
+    draw_text(canvas, text, x, y, f, argb(darken(color, NAME_CONTRAST) if _light(paper) else color, alpha))
+
+
+def _light(paper: int) -> bool:
+    return _luminance(skia.ColorGetR(paper), skia.ColorGetG(paper), skia.ColorGetB(paper)) > 0.4
 
 
 # --- particles ------------------------------------------------------------------------------

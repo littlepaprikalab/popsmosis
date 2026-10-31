@@ -499,15 +499,18 @@ The brain decides what a scene draws and where; code decides how it looks (`svg.
 the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
 drifted (one plan's graphs came back with axes in three greys and lines 16 to 22 px wide),
 and its gradients, shadows and highlights were over half of each drawing's tokens. Every
-drawing goes on the house page, the dark slate blue the painted art was asked for until Oct 31
-and the bundle's colours are picked for. A graph (a scene with `axes`) also has its lines drawn flat
-at one weight with a soft glow of their own colour, its axes (which the brain marks
-`<g data-role="axes">`) pale with arrowheads over a faint grid, and its points (marked
-`data-role="point"`) as rings, a line's label anchored on the line rather than on a point
-(wider, so it took the anchor, and the pill beside it hid the point the song is about). A
-line keeps its dash and its fading, a band its width, and a shape its mask. The glow is one layer under every structure, one blur however many there
-are, and each structure's copy in it is part of that structure's mask, so a line's ghost and
-its spotlight take its glow with it. The drawing is kept as the brain made it and styled
+drawing goes on the house page, warm white paper as a textbook's is (look 4, Oct 31: the dark slate
+blue of looks 1 to 3, with a glow and a grid, made the graphs look like a dashboard beside the light
+painted pictures in the same video). A graph (a scene with `axes`) also has its lines drawn flat
+at one weight, in its structures' colours darkened where they would not read on the paper
+(`svg.readable()`), its axes (which the brain marks `<g data-role="axes">`) dark with arrowheads and
+no grid, and its points (marked `data-role="point"`) as rings, a line's label anchored on the line
+rather than on a point (wider, so it took the anchor, and the pill beside it hid the point the song
+is about). A line keeps its dash and its fading, a band its width, and a shape its mask. A graph
+draws only the graph: no figures or scenery round it, which have scenes of their own. The drawing
+marks where each structure's name goes (`<circle data-label="demand curve" ...>`), and the video
+writes it there in the structure's colour as the structure is revealed, as a textbook prints a
+curve's name, with no pill (pills on a graph covered its lines and its axis names). The drawing is kept as the brain made it and styled
 before it is rasterised, so a new look (`svg.LOOK`, kept with each scene's locations) is no
 new drawing: the art step styles the kept drawings again, with no call to the brain. Styling
 takes under a millisecond, and the glow about a fifth of a second to rasterise, once a scene.
@@ -836,7 +839,7 @@ video in under 5 minutes per layout.
 ## 8. Quality rules (also the QA checklist)
 
 - One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
-  coding), the SVG art's graphs in the house look on its dark slate blue page. Never anime, personified characters,
+  coding), the SVG art's graphs in the house look, on paper as a textbook's are. Never anime, personified characters,
   clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
 - A painted picture carries its own labels, a wrong one flagged on it; the renderer draws every other text,
   and every label on a drawing.

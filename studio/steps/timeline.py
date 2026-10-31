@@ -580,7 +580,8 @@ def _write_values(beats: list[dict], locations: Locations) -> None:
     """The drawn values each beat writes (SceneLocations.values): an amount from the word that first says it on a
     beat of its scene, a tick (and an amount no line there says) from the scene's first beat; each stays on every later
     beat of the scene, as a label does."""
-    marked = {s.scene: s.values for s in locations.scenes if s.values}
+    # A structure's name (Value.label) is no value: the renderer writes it with its structure, as a label.
+    marked = {s.scene: [v for v in s.values if not v.label] for s in locations.scenes if any(not v.label for v in s.values)}
     since: dict[str, list[float]] = {}
     for scene, values in marked.items():
         on = [b for b in beats if b["scene"] == scene]

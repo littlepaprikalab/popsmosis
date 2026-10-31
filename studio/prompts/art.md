@@ -4,7 +4,7 @@ scientifically accurate.
 
 The video is built on your drawing: the renderer reveals each structure when it is first
 named, washes the others pale to spotlight one, zooms the camera onto it, and draws a
-label beside it. Code finds every structure through the
+label beside it (on a graph, the name you place, below). Code finds every structure through the
 group you put it in, so the grouping matters as much as the picture.
 
 ## What you get
@@ -17,8 +17,8 @@ structure drawn in several scenes looks the same in each.
 ## The canvas
 
 - `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1792 1024">`, a wide 16:9-ish frame.
-- Code paints the page behind your drawing dark slate blue (#28374B). Draw no background
-  rectangle, border or frame.
+- Code paints the page behind your drawing warm white paper (#FAF8F3), as a textbook page is.
+  Draw no background rectangle, border or frame.
 - Keep every structure well inside the frame: at least 120 px from the left and right
   edges and 80 px from the top and bottom. The video also crops a tall vertical version
   from the middle, so put the important structures near the centre, and fill roughly the
@@ -27,16 +27,16 @@ structure drawn in several scenes looks the same in each.
 ## Style
 
 A textbook illustration in the style of OpenStax or Campbell Biology: shaded vector
-art, soft gradients, clean darker outlines, on the dark slate page. A graph is drawn
-plainer, and code styles it (below, "Graphs").
+art, soft gradients, clean darker outlines, on the paper. A graph is drawn plainer, and
+code styles it (below, "Graphs").
 
 - Shade each structure with a linear or radial gradient from a lighter tint of its
   colour to a darker shade, with its exact colour as the middle stop. Outline it with a
   darker shade of the same hue (stroke-width 2 to 5).
 - Context that is not one of the listed structures (cytoplasm, a membrane's other
-  layers, water, surrounding tissue) is drawn in muted slate greys and blues a little
-  lighter than the page, never white or black, so the listed structures stand out.
-- No drop shadows: they do not show on the dark page.
+  layers, water, surrounding tissue) is drawn in pale, muted greys and blues a little
+  darker than the page, never black, so the listed structures stand out.
+- No drop shadows.
 - Get the anatomy right: shapes, proportions, positions and counts as a textbook shows
   them. Simplify detail, never correctness.
 - An analogy scene (id "analogy") draws an everyday object in place of the real thing,
@@ -80,10 +80,11 @@ them.
 
 ## Graphs
 
-When the request names the scene's axes, the scene is a graph, and code gives it the
-house look: every line at one weight with a soft glow of its colour, the axes pale with
-arrowheads over a faint grid, every marked point a ring. So draw only what is there and
-where it is:
+When the request names the scene's axes, the scene is a graph, and code gives it a
+textbook's look: every line at one weight in its colour, the axes dark with arrowheads,
+no grid, every marked point a ring. So draw only what is there and where it is, and
+nothing else: no people, objects, buildings or scenery around the graph, even where the
+request mentions them. The video shows those in their own scenes.
 
 - The axes: two plain `<line>` elements in one `<g data-role="axes">`, outside every
   structure's group, meeting where the request says. No ticks, arrowheads, grid, numbers
@@ -97,11 +98,24 @@ where it is:
   touches where the curve bends visibly away from it on both sides and runs well past
   its point each way; two points a secant joins are far enough apart that the secant
   stands clear of the curve between them.
-- Every line is at least 250 px long, so a label can point at it.
+- Every line is at least 250 px long, so its name fits beside it.
 - A bar is a plain `<rect>` in its structure's colour, standing on the horizontal axis.
   Every bar is on one scale: work out each height from its value, so a bar twice another's
   value is twice as tall, and the tallest fills most of the height above the axis. A
   stacked bar is its blocks one on another, each block's height from its own value.
+
+## Names on a graph
+
+On a graph, the video writes each structure's name where you mark it, in the structure's
+colour, as a textbook prints the name of each curve beside it. Mark one for each structure,
+with an empty circle directly inside the `<svg>`, outside every group:
+
+- `<circle data-label="demand curve" data-side="right" cx="1450" cy="760" r="0"/>`: the
+  structure's name copied exactly from the list, at the point it is written beside. For a
+  line, a point just past its end (right of a curve's right end, above a line that rises
+  off the top); for a bar, just above it; for a marked point, beside it.
+- Leave it room on that side: the name is about 40 px tall and about 20 px wide a letter,
+  and it must cross no line, no other name and no value, and stay well inside the frame.
 
 ## To scale
 

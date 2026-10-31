@@ -331,7 +331,7 @@ def judge(text: str, scene: Scene) -> Drawing:
         drawing.problems.append("the SVG nests groups too deeply; keep it to a few levels")
         return drawing
     drawing.usable = True
-    drawing.values = svg.values(checked.root)
+    drawing.values = svg.values(checked.root, [s.name for s in scene.structures])
     # A line's label anchor is on the line, not on a point marked on it, which is wider and would take it.
     pointed = [n for n in names if any(el.get(svg.ROLE) == "point" for g in styled.iter() if g.get(svg.MARK) == n
                                        for el in g.iter())]

@@ -37,9 +37,10 @@ LABEL_IN_S = 0.35
 # Past LABELS_CALM labels on screen, those of parts the line is not about rest at LABEL_REST, and their reaction
 # pills with them: round 21's digestion overview showed seven labels, two reaction pills and a five-row legend at
 # once, and a 7th grader could not tell which part the voice meant. A part is in play while this line or the one before names it, it is spotlit or framed,
-# or particles travel to it; a label eases between rest and full as a line starts.
+# or particles travel to it; a label eases between rest and full as a line starts. At rest a label is gone: grey
+# pills at 0.4 still crowded the picture, and read as switched off rather than as quieter (the owner, Oct 31).
 LABELS_CALM = 4
-LABEL_REST = 0.4
+LABEL_REST = 0.0
 SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
 SPACE_REACH = 55.0  # art pixels: a path's stop in a space sits this far past its neighbour's edge
 ACROSS_SHARE = 0.5  # ...and, beside an upright wall, at least this share of the way on to the space's middle
@@ -156,6 +157,7 @@ CUT_BLUR = 0.8  # a reacting part's edge, in art pixels: soft, so the mask's ste
 AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
 VALUE_GAP = 8.0  # frame pixels between a value's point and its writing (Beat.values)
 VALUE_FONT, TICK_FONT = 1.0, 0.85  # an amount's writing and a tick's, as shares of the label font
+NAME_FONT = 1.1  # a name a graph's drawing placed (Value.label), as a share of the label font
 VALUE_EDGE = 6.0  # frame pixels: a value this near the edge of where it may be written fades out, as a camera move
 # takes it off; a tick at rest just under its axis, low in the picture, stays clear
 DRAWN_INK = 15  # how far (the largest RGB channel) a drawn pixel is from the background, as _drawn_box has it
@@ -1124,14 +1126,27 @@ class Renderer:
                 spots: dict[str, float], cam: Cam, view: Rect, bounds: Rect, t: float,
                 avoid: list[Point] = (), strength: dict[str, float] | None = None) -> list[Rect]:
         """Draws the labels, each at its strength (1.0 when not given); returns where each pill landed, for what is
-        drawn after them to keep clear."""
+        drawn after them to keep clear. A name the drawing placed (Value.label, a graph's) is written there in its
+        structure's colour, as a textbook prints a curve's name, with no pill, and never rests: it is part of the
+        graph, and the pills keep clear of it."""
         art = self.scene(scene_id)
         located = self.locations.scene(scene_id)
         scale, dx, dy = to_frame(cam, view, art)
-        labels = []
+        baked = {v.text: v for v in located.values if v.label}
+        labels, rects = [], []
         for name in names:
             loc = located.get(name)
             if loc is None:
+                continue
+            if name in baked:
+                rect, size = self._value_rect(baked[name], scale, dx, dy)
+                cx, cy = (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2
+                alpha = p.ease((t - reveals.get(name, -1e9)) / LABEL_IN_S) * edge_fade(cx, cy, view)
+                if alpha > 0.01:
+                    p.draw_name(canvas, name, rect, size, art.paper, self.timeline.palette[name], alpha)
+                    rects.append(rect)
+                    avoid = [*avoid, *((rect[0] + k * (rect[2] - rect[0]) / 8, y) for k in range(9)
+                                       for y in (rect[1], (rect[1] + rect[3]) / 2, rect[3]))]
                 continue
             at = art.line_end(name) if name in art.masks else None
             ax, ay = ((at[0], at[1]) if at else (loc.label_anchor.x, loc.label_anchor.y))
@@ -1147,7 +1162,6 @@ class Renderer:
         p.place_labels(labels, bounds, centre, self.layout.label_font, avoid)
         for lb in sorted(labels, key=lambda lb: lb.emphasis):  # the spotlit one on top
             p.draw_label(canvas, lb, self.layout.label_font)
-        rects = []
         for lb in labels:
             w, h = lb.size(self.layout.label_font)
             rects.append((lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2))
@@ -1433,8 +1447,10 @@ class Renderer:
         return rects
 
     def _value_rect(self, v, scale: float, dx: float, dy: float) -> tuple[Rect, float]:
-        """Where a value is written (frame pixels), beside its point on its side, and its font size."""
-        size = self.layout.label_font * (TICK_FONT if v.tick else VALUE_FONT)
+        """Where a value (or a name the drawing placed) is written (frame pixels), beside its point on its side, and
+        its font size."""
+        name = getattr(v, "label", False)  # a Value the drawing placed a name with; a beat's Written is a number
+        size = self.layout.label_font * (TICK_FONT if v.tick else NAME_FONT if name else VALUE_FONT)
         w, h, g = p.text_width(p.font("Bold" if v.tick else "ExtraBold", size), v.text), size * 1.2, VALUE_GAP
         x, y = v.at.x * scale + dx, v.at.y * scale + dy
         rect = {"above": (x - w / 2, y - g - h, x + w / 2, y - g), "below": (x - w / 2, y + g, x + w / 2, y + g + h),

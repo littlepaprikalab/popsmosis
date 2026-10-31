@@ -214,8 +214,8 @@ Structures:
   never their clothes ("red tunic"): the part is what the phrase finds, and a tunic leaves
   the face, the hands and the legs out of it, so only the clothes light up.
 - `color_hex` (#RRGGBB): a structure keeps one name and one colour in every scene and both
-  videos. Distinct, bright mid-tones that stand out on the art's dark slate blue, never
-  navy, slate, dark grey or near black. Only an analogy part shares a colour, with the
+  videos. Distinct, saturated mid-tones, never pastels, near white, navy, slate, dark grey
+  or near black. Only an analogy part shares a colour, with the
   structure it stands for.
 - Structures in a scene never overlap: a group (the limbic system) and its parts (amygdala,
   hippocampus) are never both structures in one scene. When the core idea is about groups,
@@ -230,7 +230,8 @@ Structures:
   lacks. The video writes them from the scene's first frame. An axis is never a structure: a
   common word like "price" would reveal it on every line. The `image_prompt` asks for the
   axes as two plain lines meeting at the bottom left (crossing in the middle for negative
-  values), with nothing written on them.
+  values), with nothing written on them, and draws only the graph: its axes, lines, bars
+  and points, no people, objects or scenery. Those belong in a scene of their own.
 - `to_scale`: true for a scene the learner reads amounts off (a chart, a stacked bar, a
   number line, a shape with given sides or angles): code draws it exactly from your
   numbers, so its `image_prompt` gives each size as a number or a share of another ("a gold

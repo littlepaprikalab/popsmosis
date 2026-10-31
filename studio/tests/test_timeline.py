@@ -617,7 +617,8 @@ def test_a_drawn_value_is_written_as_the_voice_says_it_and_a_tick_from_the_start
     assert not says("10%", "$10") and not says("1,100", "$1,210")
     values = [Value(text="$1,210", at=Point(x=500, y=300)), Value(text="Year 2", at=Point(x=500, y=900), side="below",
                                                                      tick=True),
-              Value(text="$1,331", at=Point(x=700, y=250))]  # never said: written from the start
+              Value(text="$1,331", at=Point(x=700, y=250)),  # never said: written from the start
+              Value(text="Thylakoid", at=Point(x=300, y=250), label=True)]  # a name: the renderer's, with its label
     beats = [{"scene": "hook", "t0": 0.0, "t1": 4.0, "words": [Word(word="$1,210", start=1.0, end=1.5)]},
              {"scene": "overview", "t0": 4.0, "t1": 8.0, "words": [Word(word="So", start=4.2, end=4.4)]},
              {"scene": "overview", "t0": 8.0, "t1": 12.0, "words": [Word(word="reaches", start=8.5, end=9.0),

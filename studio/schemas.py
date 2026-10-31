@@ -674,6 +674,9 @@ class Value(Strict):
     at: Point  # art pixels: the point it is written beside
     side: Literal["above", "below", "left", "right"] = "above"  # which side of the point
     tick: bool = False  # read off the axis, not said: on from the scene's first frame
+    # A structure's name (text), placed by the drawing as a textbook prints a curve's name beside it: written in the
+    # structure's colour as the structure is revealed, in place of the pill the renderer draws other labels in.
+    label: bool = False
 
 
 class SceneLocations(Strict):

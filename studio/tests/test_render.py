@@ -1279,6 +1279,41 @@ def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, 
     assert 100 <= sx <= 700 - renderer_module.SPACE_REACH  # inside the space, well past its edge
 
 
+def test_a_name_the_drawing_placed_is_written_there_in_its_colour_and_no_pill(job, monkeypatch):
+    # A graph's curve is named beside it, as a textbook prints it: pills on a graph covered its lines and its axes.
+    from studio.schemas import Value
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    renderer = Renderer(job, timeline)
+    located = renderer.locations.scene("overview")
+    monkeypatch.setattr(located, "values", [Value(text="Thylakoid", at=Point(x=300, y=250), side="right", label=True)])
+    on = [b for b in timeline.beats if b.scene == "overview" and "Thylakoid" in b.labels]
+    names, pills = [], []
+    monkeypatch.setattr(p, "draw_name", lambda canvas, text, rect, size, paper, color, alpha:
+                        names.append((text, rect, color, alpha)))
+    monkeypatch.setattr(p, "draw_label", lambda canvas, lb, font: pills.append(lb.name))
+    renderer.frame(on[-1].t1 - 0.01)
+    [(text, rect, color, alpha)] = names
+    assert text == "Thylakoid" and color == timeline.palette["Thylakoid"] and alpha == pytest.approx(1.0)
+    assert "Thylakoid" not in pills
+    scale, dx, dy = renderer_module.to_frame(renderer.plans[timeline.beats.index(on[-1])].cam(
+        on[-1].t1 - 0.01, renderer.view("overview"), renderer.scene("overview")), renderer.view("overview"),
+        renderer.scene("overview"))
+    assert rect[0] > 300 * scale + dx and abs((rect[1] + rect[3]) / 2 - (250 * scale + dy)) < 1  # right of its point
+
+
+def test_a_name_is_written_darker_than_its_line_on_a_light_page():
+    import skia
+    color = "#FFD23F"
+    surface = skia.Surface(400, 100)
+    canvas = surface.getCanvas()
+    paper = skia.Color(0xFA, 0xF8, 0xF3)
+    canvas.clear(paper)
+    p.draw_name(canvas, "Supply", (20, 20, 380, 80), 48, paper, color, 1.0)
+    pixels = surface.makeImageSnapshot().toarray()[:, :, :3].astype(int)
+    darkest = pixels[pixels.sum(axis=2).argmin() // 400, pixels.sum(axis=2).argmin() % 400]
+    assert darkest.sum() < sum(p.rgb(color)) - 150  # darkened to read, not the pale yellow of the line
+
+
 def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
     from studio.schemas import Written
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
