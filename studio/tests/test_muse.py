@@ -170,7 +170,7 @@ def test_muse_image_paints_each_scene_and_the_helper_checks_it(job, monkeypatch)
 
     prompt = dict(fake.painted)["art overview"]
     bundle = sample_media.bundle()
-    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.LABELS)
+    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.labels_line(bundle.scenes[1]))
     assert "Colours: Thylakoid green, Cytochrome b6f orange." in prompt  # names, which the model reads
     assert "#" not in prompt and "slate blue" not in prompt  # no hex codes, and no style line
 
@@ -374,13 +374,14 @@ def test_every_scene_is_asked_to_label_its_structures_and_for_no_look():
     # Oct 31: without the style line (a flat dark slate blue background, rounded proteins, only the parts named, no
     # text) the pictures came back better, and the operator's labels line, last, got them labelled.
     bundle = sample_media.bundle()
-    prompts = [art.paint_prompt(bundle, scene) for scene in bundle.scenes]
-    prompts.append(art.paint_prompt(bundle, bundle.scenes[1].model_copy(update={"id": "analogy"})))
-    for prompt in prompts:
-        assert prompt.endswith(" Colours: " + prompt.split(" Colours: ")[1].split(". ")[0] + ". " + art.LABELS)
+    scenes = [*bundle.scenes, bundle.scenes[1].model_copy(update={"id": "analogy"})]
+    for scene in scenes:
+        prompt = art.paint_prompt(bundle, scene)
+        colours = prompt.split(" Colours: ")[1].split(". ")[0]
+        assert prompt.endswith(" Colours: " + colours + ". " + art.labels_line(scene))
         assert not any(old in prompt for old in ("slate blue", "No text", "Proteins and molecules", "Draw only"))
     refused = art.paint_prompt(bundle, bundle.scenes[1], ["no b6f"])
-    assert refused.endswith("refused: no b6f. Make it again with these fixed. " + art.LABELS)
+    assert refused.endswith("refused: no b6f. Make it again with these fixed. " + art.labels_line(bundle.scenes[1]))
 
 
 def test_the_helper_is_told_what_kind_of_scene_it_checks():
@@ -938,7 +939,7 @@ def test_a_coarse_mask_is_stretched_over_its_box_and_clipped_to_the_art():
 def test_the_helpers_prompts_read_cleanly_and_its_answers_fit_both_providers():
     for schema in (art.ArtCheck, locate.Spot, art.LabelFlags):
         brain.strict_schema(schema)  # raises on a keyword one provider would refuse
-    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.FLAGS_PROMPT, art.LABELS):
+    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.FLAGS_PROMPT, *map(art.labels_line, sample_media.bundle().scenes)):
         assert "\\" not in prompt and "  " not in prompt
 
 

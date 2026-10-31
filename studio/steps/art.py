@@ -57,7 +57,7 @@ fails the step, and the scenes already drawn are kept for the retry.
 The painted art. One picture per scene, from Gemini or Muse Image, the scenes painted at the
 same time, from a short prompt (paint_prompt()): the scene's image_prompt, which asks for it the
 way a teacher asks for a standard textbook diagram, each structure's colour by name, and a line asking
-it to label the structures (LABELS). Live tests (docs/test-rounds.md) found the plain
+it to label the structures (labels_line()). Live tests (docs/test-rounds.md) found the plain
 request right 8 times in 12 where the earlier prompt, with hex codes, a list of shapes and one
 biology style for every subject, was right once in 6; on Oct 31 the pictures came back better
 again without the style line every prompt ended in (a flat dark slate blue background, no text).
@@ -512,7 +512,13 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 # the labels they need. Through the API (not the app the operator tried it in), Muse Image then made a slide of
 # every picture, 8 times in 8 at either size: a title, a legend or colour key, and the Colours line's names written
 # into the labels ("Sodium-Potassium Pump (Orange)"). The second sentence stopped all three, 2 times in 2.
-LABELS = "Clearly label nonobvious structures. No title, legend, key or caption, and no colour names in the labels."
+# On Oct 31 "nonobvious" held for a diagram (a membrane came back labelled with its pump, channels, ATP and both
+# spaces) and failed for a real scene, where every object has a name a student would not know: a boat came back
+# labelled "oarlock" and "thwart", a living room "Wall Vent" and "Wall Outlet" twice, a theatre "Fly System". So a
+# science diagram keeps the operator's line, and any other scene labels its parts and nothing else (labels_line()).
+NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
+LABELS = f"Clearly label nonobvious structures. {NO_SLIDE}"
+SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
 EVERYDAY = ("hook", "analogy")
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
@@ -847,8 +853,9 @@ def fit(picture: bytes) -> np.ndarray:
 
 def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
-    image model reads names), a graph's axes, and last LABELS: the picture labels its own parts. Short on purpose:
-    every extra line was a chance to miss. Nothing about the look (LABELS says why). A later stage `redrawn` from
+    image model reads names), a graph's axes, and last what to label (labels_line()): the picture labels its own
+    parts. Short on purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE
+    says why). A later stage `redrawn` from
     its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
     parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
@@ -859,8 +866,19 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
-    parts.append(LABELS)
+    parts.append(labels_line(scene))
     return " ".join(parts)
+
+
+def labels_line(scene: Scene) -> str:
+    """What the picture labels. A science diagram, its nonobvious structures (LABELS), which there are the parts a
+    textbook figure labels; any other scene, its own parts by the lesson's names and nothing else, since everything
+    in a room or on a boat has a name a student would not know."""
+    if SCIENCE_STYLE in scene.image_prompt.lower():
+        return LABELS
+    names = ", ".join(s.name for s in scene.structures)
+    return (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, furniture "
+            f"or background objects. {NO_SLIDE}")
 
 
 def axes_line(axes: Axes) -> str:

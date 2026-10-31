@@ -410,7 +410,7 @@ def test_a_graph_is_asked_for_with_plain_axes_outside_every_structure():
     # Painted, it labels its own axes, as it labels its parts; drawn, the video writes their names.
     axes = 'Its axes are two plain, thin lines, the horizontal one labelled "Quantity" and the vertical one labelled "Price".'
     assert axes in art.paint_prompt(bundle, graph) and "Its axes" not in art.paint_prompt(bundle, hook)
-    assert art.paint_prompt(bundle, graph).endswith(axes + " " + art.LABELS)
+    assert art.paint_prompt(bundle, graph).endswith(axes + " " + art.labels_line(graph))
     assert art.axes_line(Axes(x="Time", y="")) == 'Its axes are two plain, thin lines, the horizontal one labelled "Time".'
     asked = art.user_prompt(bundle, graph)
     assert ('Axes: this scene is a graph. Draw its two axes as two plain <line>s in one <g data-role="axes">, outside '
@@ -736,3 +736,19 @@ def test_a_song_picture_drawn_to_scale_is_given_the_lines_sung_over_it():
     bundle = Bundle.model_validate(data)
     assert art._said_over(bundle, bundle.scenes[-1]) == ["Protons flow and ATP grows"] * 3
     assert art._said_over(bundle, bundle.scenes[2]) == ["ATP synthase uses the returning protons to make ATP."]
+
+
+def test_a_science_diagram_labels_its_nonobvious_structures_and_any_other_scene_only_its_parts():
+    # Oct 31: "nonobvious" labelled a membrane's pump, channels, ATP and spaces, and a boat's oarlock and thwart.
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[0]
+    names = ", ".join(s.name for s in scene.structures)
+    science = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a thylakoid membrane, "
+                                                       "clean scientific style: the membrane across the middle."})
+    everyday = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a rowing boat, clean "
+                                                        "textbook style: the boat in the centre."})
+    assert art.labels_line(science) == art.LABELS == "Clearly label nonobvious structures. " + art.NO_SLIDE
+    line = art.labels_line(everyday)
+    assert line == (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, "
+                    f"furniture or background objects. {art.NO_SLIDE}")
+    assert art.paint_prompt(bundle, everyday).endswith(line)
