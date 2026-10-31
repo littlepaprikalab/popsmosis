@@ -44,15 +44,16 @@ The runner needs these in its environment:
 | `INKMORY_API_URL` | Inkmory's base URL, `https://inkmory.com` (the API host itself refuses direct calls) |
 | `INKMORY_OPERATOR_API_KEY` | the operator agent's `sk_inkmory_…` key, from the Inkmory sponsor dashboard. With this and the URL set, the operator keeps its record |
 | `INKMORY_ENABLED` | optional: `false` turns Inkmory off and leaves everything else as it is |
-| `ELEVENLABS_API_KEY` | the narration and the exam question read aloud, and the song unless Lyria sings it (the audio step). Its calls bill to that ElevenLabs account |
-| `ELEVENLABS_VOICE_ID` | optional: the narration's voice |
+| `ELEVENLABS_API_KEY` | the song and the narration when ElevenLabs makes the audio (the Studio page's choice), and a song Lyria will not sing. Its calls bill to that ElevenLabs account |
+| `ELEVENLABS_VOICE_ID` | optional: the narration's voice, when ElevenLabs reads |
 | `ELEVENLABS_USD_PER_1K_CREDITS` | optional: what 1,000 ElevenLabs credits cost on the plan, e.g. `0.30`, so a droplet's bill of materials shows its ElevenLabs lines in dollars too. Unset: credits only |
-| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and Lyria when it sings: a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song) |
+| `GEMINI_API_KEY` | Gemini 3.1 Flash Image when it paints, and the song and the narration when Google makes the audio (Lyria and Gemini 3.8 Flash TTS): a Gemini API key from Google AI Studio, on a paid tier (Lyria has no free tier; about $0.08 a song, 4 cents a narration) |
 | `GEMINI_SONG_MODEL` | optional: the Lyria model, when Lyria sings. Default `lyria-3.5` |
+| `GEMINI_TTS_VOICE` | optional: the narration's voice, when Gemini reads. Default `Sadaltager` |
 | `STUDIO_VIDEOS` | optional: `lesson` leaves the song out from the start (a lesson written while it is set has no lyrics to write or fact-check; the lesson video alone, no hook clip); `off` makes text-only droplets (no claim, no media steps, no recovery) |
 | `STUDIO_CLAUDE_DRAWS` | optional: what Claude draws as SVG whoever paints the rest. `math` (default): charts, graphs and a math lesson's pictures; `charts`: charts and graphs; `brain`: only on Claude's brain. On a Muse topic it draws them on `POPSMOSIS_ANTHROPIC_API_KEY` |
 
-`ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL`, `STUDIO_VIDEOS` and
+`ELEVENLABS_VOICE_ID`, `ELEVENLABS_USD_PER_1K_CREDITS`, `GEMINI_SONG_MODEL`, `GEMINI_TTS_VOICE`, `STUDIO_VIDEOS` and
 `STUDIO_CLAUDE_DRAWS` are knobs: an admin can set them on `/admin/studio` instead, and a value set there wins over the
 one here from the next run (README, [Knobs](../README.md#knobs)).
 

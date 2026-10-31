@@ -121,11 +121,15 @@ python -m studio recover                 # take a render that died with its mach
 ```
 
 `videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
-the timeline, render and upload. Who sings the song is picked on the Studio page
-([Choosing the models](#choosing-the-models)): ElevenLabs' Eleven Music (the default, with
-`ELEVENLABS_API_KEY`) or Lyria 3.5 on the Gemini API (with `GEMINI_API_KEY`;
-`GEMINI_SONG_MODEL` picks another Lyria model). The narration is ElevenLabs either way.
-Switching it makes a job's song again on its next run, and only the song. `run` claims the videos as soon as it posts the lesson,
+the timeline, render and upload. Who makes the audio, the song and the narration together, is
+picked on the Studio page ([Choosing the models](#choosing-the-models)): ElevenLabs (the default,
+with `ELEVENLABS_API_KEY`: Eleven Music sings, its text-to-speech reads) or Google (with
+`GEMINI_API_KEY`: Lyria 3.5 sings, Gemini 3.8 Flash TTS reads; `GEMINI_SONG_MODEL` picks another
+Lyria model, `GEMINI_TTS_VOICE` another voice). One switch moves all the audio, so a droplet is
+made when one service's quota has run out. ElevenLabs says when it read each word; Gemini does
+not, so the timing step finds the narration's words with the MMS aligner it runs on songs, and
+fails the step (and reads it again on the retry) when it cannot hear most of the lines. Switching
+it makes a job's song again on its next run, and only the song: a narration already read stays. `run` claims the videos as soon as it posts the lesson,
 and `videos` renews the claim before every step, so a render whose machine dies is handed
 to a later run by `recover` (`docs/agent-runbook.md`). `STUDIO_VIDEOS=lesson` leaves the song
 out from the start: a lesson written while it is set has no lyrics or music to write or
@@ -186,7 +190,7 @@ environment's settings ([docs/agent-runbook.md](docs/agent-runbook.md), section 
 |---|---|---|
 | `POPSMOSIS_ANTHROPIC_API_KEY` | an Anthropic API key, `sk-ant-...` | Claude's brain, and its picture checks (Claude Sonnet 5.5). `ANTHROPIC_API_KEY` works too on a laptop, but a Claude Code cloud environment does not pass it through |
 | `MODEL_API_KEY` | a Meta API key, from dev.meta.ai | a Muse brain and its picture checks (Muse Spark 1.3), Muse Image, and SAM 3.1 with any painter but the SVG |
-| `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, and Lyria songs |
+| `GEMINI_API_KEY` | a Gemini API key, from aistudio.google.com | Gemini 3.1 Flash Image, Lyria songs, and Gemini's narration |
 
 Everything else is chosen by an admin on **STUDIO** in the nav (`/admin/studio`), kept in the
 database (`api/src/lib/studio-settings.ts`): the default brain, Claude's effort, who sings
@@ -201,7 +205,7 @@ page and remove it, so nothing changes without anyone seeing why.
 |---|---|---|
 | Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
-| Song: who sings it (the narration is ElevenLabs' either way) | ElevenLabs Eleven Music (credits), or Lyria 3.5 on the Gemini API ($0.08 a song) | ElevenLabs Eleven Music |
+| Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | ElevenLabs |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 | Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $20 (generous for the hackathon; $5 is about two and a half times the dearest topic so far) |
@@ -280,7 +284,7 @@ what each does.
 | `QUESTIONS_PER_USER_PER_DAY`, `TOPICS_PER_DAY`, `REPLIES_PER_USER_PER_HOUR`, `DROPLET_COMMENTS_PER_USER_PER_HOUR`, `ATTACHMENT_MB_PER_USER_PER_DAY`, `ATTACHMENT_MB_HELD_PER_USER` | the API's limits on what learners may ask for | from the next request |
 | `QUESTION_CLAIM_MINUTES`, `VIDEO_STALE_MINUTES`, `LESSON_HOLD_MINUTES`, `VIDEO_MAX_ATTEMPTS` | the API's leases and renders | from the next request |
 | `POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS`, `POPSMOSIS_ROUTINE_BETA` | waking the teacher | from the next write |
-| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `ELEVENLABS_USD_PER_1K_CREDITS`, `STUDIO_CLAUDE_DRAWS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
+| `STUDIO_VIDEOS`, `ELEVENLABS_VOICE_ID`, `GEMINI_SONG_MODEL`, `GEMINI_TTS_VOICE`, `ELEVENLABS_USD_PER_1K_CREDITS`, `STUDIO_CLAUDE_DRAWS` | the studio, over the teacher's own environment (`studio/knobs.py`) | from the teacher's next run |
 
 Each API instance keeps the knobs in memory, so the code that reads them stays as fast as an
 environment variable: the instance that takes a change has it at once, and another reads it

@@ -1,4 +1,5 @@
 import base64
+import datetime
 import json
 import shutil
 import subprocess
@@ -39,16 +40,30 @@ class FakeEleven:
 
 
 class FakeGemini(FakeEleven):
-    """Also stands in for the Gemini API's generateContent: answers with a song, or with what it is given."""
+    """Also stands in for the Gemini API: generateContent answers with a song, the Interactions API with speech, or
+    either with what it is given."""
 
-    def __init__(self, status=200, answer=None, song=b"ID3 lyria", mime_type="audio/mpeg"):
+    def __init__(self, status=200, answer=None, song=b"ID3 lyria", mime_type="audio/mpeg", speech=None,
+                 speech_status=200):
         super().__init__()
         self.gemini_status, self.answer, self.song, self.mime_type = status, answer, song, mime_type
+        self.speech_answer, self.speech_status = speech, speech_status
 
     def __call__(self, method, url, headers, body):
         if "generativelanguage.googleapis.com" not in url:
             return super().__call__(method, url, headers, body)
         self.requests.append((url, headers, json.loads(body)))
+        if url.endswith("/interactions"):
+            if self.speech_status != 200:
+                error = {"code": self.speech_status, "message": "Resource has been exhausted", "status": "RESOURCE_EXHAUSTED"}
+                return self.speech_status, {}, json.dumps({"error": error}).encode()
+            answer = self.speech_answer or {
+                "id": "int42", "object": "interaction", "status": "completed",
+                "steps": [{"type": "model_output", "content": [
+                    {"type": "audio", "mime_type": "audio/wav", "data": base64.b64encode(b"RIFF speech").decode()}]}],
+                "usage": {"total_input_tokens": 600, "total_output_tokens": 2500},
+            }
+            return 200, {"Content-Type": "application/json"}, json.dumps(answer).encode()
         if self.gemini_status != 200:
             error = {"code": self.gemini_status, "message": "Lyria could not make it", "status": "INVALID_ARGUMENT"}
             return self.gemini_status, {}, json.dumps({"error": error}).encode()
@@ -62,7 +77,12 @@ class FakeGemini(FakeEleven):
         return 200, {"Content-Type": "application/json"}, json.dumps(answer).encode()
 
     def gemini(self):
-        return [r for r in self.requests if "generativelanguage.googleapis.com" in r[0]]
+        """The songs asked of Lyria."""
+        return [r for r in self.requests if "generativelanguage.googleapis.com" in r[0] and ":generateContent" in r[0]]
+
+    def speech(self):
+        """The narrations asked of Gemini's text-to-speech."""
+        return [r for r in self.requests if r[0].endswith("/interactions")]
 
 
 def sing(job, provider):
@@ -74,11 +94,11 @@ def sing(job, provider):
 def job(tmp_path, monkeypatch):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
-    for name in ("ELEVENLABS_VOICE_ID", "GEMINI_SONG_MODEL", audio.ELEVENLABS_PRICE_VAR):
+    for name in ("ELEVENLABS_VOICE_ID", "GEMINI_SONG_MODEL", "GEMINI_TTS_VOICE", audio.ELEVENLABS_PRICE_VAR):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(audio, "duration", lambda path: 30.0)
     monkeypatch.setattr(audio, "sleep", lambda seconds: None)
-    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type: data)  # the fakes' songs are not real audio
+    monkeypatch.setattr(audio, "as_mp3", lambda data, mime_type, kind="song": data)  # the fakes' audio is not real
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
@@ -262,12 +282,12 @@ def test_speech_too_long_for_one_call_fails_before_spending_anything(job, monkey
 # --- the song from Lyria on the Gemini API (set to gemini on /admin/studio) -------------------------
 
 
-def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, monkeypatch):
+def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
     sing(job, "gemini")
     summary = audio.run(job)
-    assert "song (gemini)" in summary
+    assert "song (gemini)" in summary and "narration (gemini)" in summary
     (url, headers, body), = fake.gemini()
     assert url == "https://generativelanguage.googleapis.com/v1beta/models/lyria-3.5:generateContent"
     assert headers["x-goog-api-key"] == "gemini-key" and "xi-api-key" not in headers
@@ -281,8 +301,7 @@ def test_gemini_sings_the_song_from_one_prompt_and_elevenlabs_still_reads(job, m
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Verse]\nOnly b6f pumps them in"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Bridge]\nFeel the gradient build"
                            "\n\n[Chorus]\nProtons flow and ATP grows")
-    assert not any("/v1/music" in u for u in fake.urls())
-    assert sum("text-to-speech" in u for u in fake.urls()) == 1  # the narration
+    assert not any("api.elevenlabs.io" in u for u in fake.urls())  # nothing from ElevenLabs: its quota may be gone
 
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["provider"] == "gemini" and plan["model_id"] == "lyria-3.5" and plan["sections_pinned"] is False
@@ -421,14 +440,17 @@ def test_every_key_the_step_needs_is_checked_before_anything_is_spent(job, monke
     sing(job, "gemini")
     monkeypatch.delenv("GEMINI_API_KEY")
     with pytest.raises(media.StepFailed, match="^GEMINI_API_KEY is not set"):
-        audio.run(job)
+        audio.run(job)  # the narration needs it too: the song is not bought without it
+    sing(job, "elevenlabs")
     monkeypatch.delenv("ELEVENLABS_API_KEY")
-    with pytest.raises(media.StepFailed, match="ELEVENLABS_API_KEY and GEMINI_API_KEY are not set"):
-        audio.run(job)
-    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     with pytest.raises(media.StepFailed, match="^ELEVENLABS_API_KEY is not set"):
-        audio.run(job)  # the narration still needs it: the song is not bought without it
+        audio.run(job)
     assert fake.requests == []
+    # Gemini makes it all with no ElevenLabs key at all: a droplet is made with ElevenLabs out of reach.
+    sing(job, "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    audio.run(job)
+    assert audio.is_done(job) and len(fake.gemini()) == 1 == len(fake.speech()) and len(fake.requests) == 2
 
 
 def test_an_unknown_provider_fails_before_any_call(job, monkeypatch):
@@ -466,10 +488,13 @@ def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, m
     if "-write_xing" in sent:
         assert abs(DURATION_OF(song) - 6.0) > 0.15  # as sent, its length reads wrong (3% here)
     monkeypatch.setattr(audio, "as_mp3", AS_MP3)
-    monkeypatch.setattr(audio, "send", FakeGemini(song=song, mime_type=mime_type))
+    speech = {"id": "int7", "status": "completed", "steps": [{"type": "model_output", "content": [
+        {"type": "audio", "mime_type": "audio/wav", "data": base64.b64encode(_sound(2, "-f", "wav")).decode()}]}]}
+    monkeypatch.setattr(audio, "send", FakeGemini(song=song, mime_type=mime_type, speech=speech))
     sing(job, "gemini")
     audio.run(job)
     assert _probe(job / "audio/song.mp3") == ("mp3", "192000")
+    assert _probe(job / "audio/narration.mp3") == ("mp3", "128000")  # Gemini's WAV narration, kept as ElevenLabs' are
     assert abs(DURATION(job / "audio/song.mp3") - 6.0) < 0.1  # the MP3's own padding, a few hundredths
     assert json.loads((job / audio.plan_path("song")).read_text())["mime_type"] == mime_type
 
@@ -502,7 +527,7 @@ def test_a_gemini_quota_error_waits_as_long_as_it_asks(job, monkeypatch):
         {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "33s"}]}}
 
     def busy_once(method, url, headers, body):
-        if "generativelanguage" in url and not fake.gemini():
+        if ":generateContent" in url and not fake.gemini():
             fake.requests.append((url, headers, json.loads(body)))
             return 429, {}, json.dumps(quota).encode()
         return fake(method, url, headers, body)
@@ -592,15 +617,93 @@ def test_a_topic_past_its_spend_ceiling_asks_for_no_song_or_voice(job, monkeypat
 
 
 def test_the_lesson_alone_makes_only_the_narration(job, monkeypatch):
-    """STUDIO_VIDEOS=lesson on /admin/studio: no song is asked for, so Lyria's key is not needed either."""
+    """STUDIO_VIDEOS=lesson on /admin/studio: no song is asked for, only the narration, from the audio's provider."""
     sing(job, "gemini")
     knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
-    monkeypatch.delenv("GEMINI_API_KEY")
+    monkeypatch.delenv("ELEVENLABS_API_KEY")
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
-    assert audio.run(job) == "made narration; narration 30.0s"
-    assert not fake.gemini() and not any("/v1/music" in url for url in fake.urls())
+    assert audio.run(job) == "made narration (gemini); narration 30.0s"
+    assert not fake.gemini() and len(fake.speech()) == 1 and not any("api.elevenlabs.io" in url for url in fake.urls())
     assert (job / media.audio_path("narration")).exists() and not (job / media.audio_path("song")).exists()
     assert audio.is_done(job)
     knobs.use({"knobs": {"STUDIO_VIDEOS": "on"}})
     assert not audio.is_done(job)  # both videos again: the song is still to make
+
+
+# --- the narration from Gemini's text-to-speech (gemini on /admin/studio) ---------------------------
+
+
+def test_gemini_reads_the_narration_in_one_call_and_keeps_no_timings(job, monkeypatch):
+    fake = FakeGemini()
+    monkeypatch.setattr(audio, "send", fake)
+    sing(job, "gemini")
+    audio.run(job)
+    (url, headers, body), = fake.speech()
+    assert url == "https://generativelanguage.googleapis.com/v1beta/interactions"
+    assert headers["x-goog-api-key"] == "gemini-key"
+    text, spans = audio.join_lines(audio.speech_lines(sample_media.bundle(), "narration"))
+    assert body == {
+        "model": "gemini-3.8-flash-tts",
+        "input": [{"type": "user_input", "content": [{"type": "text", "text": text, "annotations": [
+            {"type": "speech_metadata", "style": audio.GEMINI_TTS_STYLE}]}]}],
+        "response_format": {"type": "audio"},
+        "generation_config": {"speech_config": [{"voice": "Sadaltager"}]},
+        "store": False,
+    }
+    plan = json.loads((job / audio.plan_path("narration")).read_text())
+    assert plan["provider"] == "gemini" and plan["voice"] == "Sadaltager" and plan["model_id"] == "gemini-3.8-flash-tts"
+    assert plan["text"] == text and plan["lines"] == spans and plan["interaction_id"] == "int42"
+    assert plan["mime_type"] == "audio/wav" and "alignment" not in plan  # step 6 aligns it
+    assert (job / "audio/narration.mp3").read_bytes() == b"RIFF speech"  # as_mp3 is stood in for
+    narration, = [json.loads(row) for row in (job / "calls.jsonl").read_text().splitlines()
+                  if json.loads(row)["label"] == "narration"]
+    assert narration["model"] == "gemini-3.8-flash-tts" and narration["cost_usd"] > 0
+
+
+def test_a_narration_made_stays_whoever_read_it(job, monkeypatch):
+    fake = FakeGemini()
+    monkeypatch.setattr(audio, "send", fake)
+    sing(job, "gemini")
+    audio.run(job)
+    sing(job, "elevenlabs")
+    audio.run(job)  # the song only: Eleven Music sings now, the Gemini narration is kept
+    assert [u for u in fake.urls() if "api.elevenlabs.io" in u] == ["https://api.elevenlabs.io/v1/music?output_format=mp3_44100_128"]
+    assert json.loads((job / audio.plan_path("narration")).read_text())["provider"] == "gemini"
+
+
+def test_the_gemini_voice_can_be_changed_on_the_studio_page(job, monkeypatch):
+    fake = FakeGemini()
+    monkeypatch.setattr(audio, "send", fake)
+    sing(job, "gemini")
+    monkeypatch.setenv("GEMINI_TTS_VOICE", "Kore")
+    jobs.keep_studio_settings(job, {**jobs.studio_settings(job), "knobs": {"GEMINI_TTS_VOICE": "Sulafat"}})
+    knobs.use(jobs.studio_settings(job))
+    audio.run(job)
+    knobs.use({"knobs": {}})
+    body = fake.speech()[0][2]
+    assert body["generation_config"]["speech_config"] == [{"voice": "Sulafat"}]
+
+
+@pytest.mark.parametrize("fake, reason", [
+    (FakeGemini(speech_status=429), "refused the narration: 429 RESOURCE_EXHAUSTED Resource has been exhausted"),
+    (FakeGemini(speech={"id": "i1", "status": "failed", "steps": []}), r"did not finish the narration \(status: failed\)"),
+    (FakeGemini(speech={"id": "i1", "status": "completed", "steps": [{"type": "model_output", "content": [
+        {"type": "text", "text": "I cannot read that."}]}]}), "Gemini sent back no narration"),
+])
+def test_a_gemini_narration_refused_or_unfinished_fails_the_step_and_keeps_nothing(job, monkeypatch, fake, reason):
+    monkeypatch.setattr(audio, "send", fake)
+    sing(job, "gemini")
+    with pytest.raises(media.StepFailed, match=reason):
+        audio.run(job)
+    assert not (job / "audio/narration.mp3").exists() and not (job / audio.plan_path("narration")).exists()
+    assert (job / "audio/song.mp3").exists()  # what was made is kept: the retry asks only for the narration
+
+
+def test_a_gemini_narration_costs_its_tokens_at_the_prices_of_the_day():
+    usage = {"total_input_tokens": 600, "total_output_tokens": 2500}
+    assert audio.gemini_speech_cost(usage, 100.0, datetime.date(2026, 12, 31)) == 0.0228  # $0.50 and $9 a million
+    assert audio.gemini_speech_cost(usage, 100.0, datetime.date(2027, 1, 1)) == 0.0456  # doubled from 2027
+    # No count of its own: the audio's length, at 25 tokens a second; neither: no price.
+    assert audio.gemini_speech_cost(None, 100.0, datetime.date(2026, 12, 31)) == 0.0225
+    assert audio.gemini_speech_cost({"total_output_tokens": "lots"}, None) is None

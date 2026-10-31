@@ -119,9 +119,9 @@ The other jobs:
 |---|---|
 | Diagrams | Gemini 3.1 Flash Image (`gemini-3.1-flash-image`) with `claude`, Muse Image (`muse-image-1.0`) with `meta`, by default; or brain-drawn SVG with `claude` (`/admin/studio`; step 3) |
 | Structure masks | SAM 3.1 (`sam-3.1`) on the painted art, with a helper box as the fallback; the SVG art's own groups |
-| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API, picked on `/admin/studio` |
-| Narration | ElevenLabs text-to-speech with timestamps |
-| Word timing (song) | Demucs (vocals) + Meta's MMS forced aligner, both open source, run locally |
+| Song | ElevenLabs Eleven Music (`music_v2_5`); or Lyria 3.5 (`lyria-3.5`) on the Gemini API, picked on `/admin/studio` with the narration |
+| Narration | ElevenLabs text-to-speech with timestamps; or Gemini 3.8 Flash TTS (`gemini-3.8-flash-tts`), when Google makes the audio |
+| Word timing (song, and a Gemini narration) | Demucs (vocals, for the song) + Meta's MMS forced aligner, both open source, run locally |
 | Timeline | Code |
 | Video | Code: skia-python draws, ffmpeg encodes |
 
@@ -179,8 +179,8 @@ step <name> <id>` redoes one step by hand, even when its file exists.
 | | Post the lesson | API | `posted.json`; lesson text, bundle and fact-check saved; the topic leaves the queue |
 | 3 | Art | Gemini 3.1 Flash Image or Muse Image + helper; or the brain's SVG (`/admin/studio`) | `art/<scene>.png` |
 | 4 | Locate | SAM 3.1 + helper on painted art; nothing to do on the SVG art | `masks/<scene>/<structure>.png`, `locations.json` |
-| 5 | Audio | ElevenLabs (the song: or Lyria) | `audio/song.mp3`, `audio/narration.mp3` |
-| 6 | Timing | Demucs + MMS; TTS timestamps | `timing/song_words.json`, `timing/narration_words.json` |
+| 5 | Audio | ElevenLabs, or Google: Lyria and Gemini TTS | `audio/song.mp3`, `audio/narration.mp3` |
+| 6 | Timing | Demucs + MMS; ElevenLabs' timestamps, or MMS | `timing/song_words.json`, `timing/narration_words.json` |
 | 7 | Timeline | Code | `timeline_song.json`, `timeline_lesson.json` |
 | 8 | Render | Code | `out/song_h.mp4`, `out/lesson_h.mp4` |
 | 9 | Upload | API + Cloudflare R2 | Videos (public), intermediates (private) |
@@ -534,8 +534,15 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   song is then not asked of either again until its lines change. Lyria blocked "Why the
   Holocaust happened" twice (`blockReason` OTHER, Oct 30), where the same style with no
   lyrics was made.
-- **Narration:** `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio
-  and per-character timings, so it needs no aligner.
+- **Narration:** from whoever makes the audio (the song's setting on `/admin/studio`, so one
+  switch moves a droplet off a service whose quota has run out). ElevenLabs:
+  `/v1/text-to-speech/{voice_id}/with-timestamps`, which returns the audio and per-character
+  timings, so it needs no aligner. Google: Gemini 3.8 Flash TTS on the Interactions API
+  (`POST /v1beta/interactions`, one call for the whole narration, a prebuilt voice and a
+  style kept apart from the text, `store: false`), which returns a 24 kHz WAV and no
+  timings; it is kept as a 128k MP3 like ElevenLabs'. The first, on Oct 31, read the mitosis
+  narration (2,413 characters) in 35 s: 169 s of speech, 4,221 audio tokens, 3.8 cents. A
+  narration already read stays when the setting changes.
 - **No exam question:** both videos ended on a read-aloud exam question (`audio/frq.mp3`)
   until Oct 28, when it left them (the song's bridge still poses one, sung). A bundle
   written before still loads, its `frq` dropped.
@@ -550,7 +557,12 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   2.2 GB (one pass took 4.5 GB for 3 minutes, and grows with the song); 3 minutes take
   about 50 s on 4 CPUs. The separated vocals are kept, and separated again once the song
   is made again.
-- **Narration:** ElevenLabs' character timings converted to words.
+- **Narration:** ElevenLabs' character timings converted to words. A Gemini narration has
+  none: the MMS aligner finds its words over the whole narration (no Demucs: no music),
+  as it agrees with ElevenLabs' own timings to within 0.15 s on average on speech
+  (`studio/tests/test_live_audio.py`). Its scores go to `timing/narration_report.json`;
+  when the aligner cannot hear more than half of the lines, the voice did not read what
+  was written, so the step fails and the narration is read again on the retry.
 - **Checks:** repeated chorus lines should have near-identical durations; flag any line
   that drifts more than 0.5 s. If a section was sung wrong, regenerate that section only.
   Built: the flag, in `timing/song_report.json` and the step's summary line. Not built:

@@ -54,6 +54,10 @@ export const KNOBS = {
     where: 'studio', kind: 'text', default: 'lyria-3.5', pattern: /^[a-z0-9][a-z0-9.-]{0,63}$/,
     rule: 'a Lyria model id: lowercase letters, digits, dots and hyphens',
   },
+  GEMINI_TTS_VOICE: {
+    where: 'studio', kind: 'text', default: 'Sadaltager', pattern: /^[A-Za-z0-9_-]{1,64}$/,
+    rule: 'a Gemini voice name: letters, digits, hyphens and underscores',
+  },
   ELEVENLABS_USD_PER_1K_CREDITS: { where: 'studio', kind: 'number', default: null, min: 0, max: 100 },
   // Which scenes Claude draws as SVG whatever paints the rest (studio/steps/art.py, claude_draws()).
   STUDIO_CLAUDE_DRAWS: { where: 'studio', kind: 'choice', default: 'math', choices: ['math', 'charts', 'brain'] },
