@@ -423,42 +423,17 @@ def _check_narrated_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_narration"]])
 
 
-STILL_LINES_MAX = 4  # lines in a row with nothing moving on a scene where things travel: a line that comments or sums up holds still
-STILL_SCENES = ("hook", "analogy")  # scenes where nothing needs to move
-
-
 def motion_problems(bundle: Bundle) -> list[Problem]:
-    """The song's direction against the planning rules a check can count: no more than STILL_LINES_MAX lines in a
-    row with no particles on a scene where something travels, and every chorus directed alike (compared from its
-    end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them."""
+    """The song's direction against the planning rule a check can count: every chorus directed alike (compared from
+    its end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them.
+
+    How many lines in a row hold still is not counted. The bundle prompt has a line that comments or sums up hold
+    still, and the spotlight and the camera carry a scene where nothing travels, so a run of still lines is no
+    mistake. Counted until Oct 31, a run of five flagged a chorus summing up the Moon's phases over the overview,
+    the spotlight stepping from phase to phase, and only because one earlier line had sent sunlight across it: a
+    scene that never moved was never flagged, so the count pushed toward dots for their own sake."""
     directions = {d.line_id: d for d in bundle.direction}
-    blockers = {b.structure for b in bundle.blocks}
-    # A failure scene (one that draws a blocker) holds still after the block on purpose: what stopped stays stopped.
-    # So does a scene where nothing travels on any line of either video (a graph, a stage): asked to keep every
-    # scene moving, the brain sent unmarked dots from Romeo to the audience and from one point of a graph to
-    # another, a journey nothing makes.
-    travels = {d.scene for d in bundle.direction if d.flows()}
-    still = set(STILL_SCENES) | {s.id for s in bundle.scenes
-                                 if s.id not in travels or blockers & {x.name for x in s.structures}}
-    problems, run = [], []
-
-    def close_run() -> None:
-        if len(run) > STILL_LINES_MAX:
-            problems.append(Problem(line_id=run[0], rule="motion", repaired=False,
-                                    detail=f"{len(run)} lines in a row from {run[0]} with nothing moving, on a scene "
-                                           f"where things travel"))
-        run.clear()
-
-    for line in bundle.lyrics:
-        d = directions.get(line.id)
-        if d and d.scene not in still and not d.flows() and (not run or directions[run[0]].scene == d.scene):
-            run.append(line.id)
-        else:
-            close_run()
-            if d and d.scene not in still and not d.flows():
-                run.append(line.id)
-    close_run()
-
+    problems = []
     choruses, current = [], []
     for i, line in enumerate(bundle.lyrics):
         if line.section == "chorus":

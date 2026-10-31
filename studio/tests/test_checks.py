@@ -387,19 +387,15 @@ def test_every_section_is_asked_for_the_songs_own_style_with_nothing_added():
     assert ".." not in prompt  # the description's own full stop is the sentence's
 
 
-def test_a_scene_where_things_travel_and_the_song_stands_still_is_recorded():
+def test_lines_that_hold_still_are_not_a_problem():
+    # A line that comments or sums up holds still, whether or not something travels on its scene elsewhere.
     data = bundle_data()
     for d in data["direction"]:
         d.update(particles=[], carries="")
-    # Nothing travels on the overview in either video: a still picture (a graph, a stage), never asked to move.
     assert checks.motion_problems(Bundle.model_validate(data)) == []
-    direction(data, "n1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")  # now something does
-    found = [(p.line_id, p.detail) for p in checks.motion_problems(Bundle.model_validate(data))]
-    still = [line for line, detail in found if "nothing moving" in detail]
-    assert still == ["v1-1"], "a song standing still on a scene where things travel is recorded"
+    direction(data, "n1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
     direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
-    # v1-1 alone is short enough; the five still lines after v1-2 are not.
-    assert [p.line_id for p in checks.motion_problems(Bundle.model_validate(data))] == ["c1-1"]
+    assert checks.motion_problems(Bundle.model_validate(data)) == []
 
 
 def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
