@@ -1398,3 +1398,20 @@ def test_the_lesson_alone_renders_no_song_and_no_hook_cut(tmp_path):
     assert render_step.videos(tmp_path) == [("song", "h"), ("lesson", "h"), (media.HOOK, media.HOOK_LAYOUT)]
     knobs.use({"knobs": {"STUDIO_VIDEOS": "lesson"}})
     assert render_step.videos(tmp_path) == [("lesson", "h")]
+
+
+def test_a_post_it_sits_off_its_labels_ring_on_its_side_and_stays_in_bounds():
+    from studio.render.renderer import POSTIT_GAP, POSTIT_SIDES, _gap, _overlap, _postit_rect, _within
+
+    ring, size = (400.0, 300.0, 500.0, 340.0), (200.0, 80.0)
+    for side, (sx, sy) in enumerate(POSTIT_SIDES):
+        rect = _postit_rect(ring, size, side, POSTIT_GAP)
+        assert (rect[2] - rect[0], rect[3] - rect[1]) == size and _overlap(rect, ring) == 0
+        assert _gap(rect, ring) == pytest.approx(POSTIT_GAP * (math.sqrt(2) if sx and sy else 1))
+        if sx > 0:
+            assert rect[0] == ring[2] + POSTIT_GAP
+        if sy < 0:
+            assert rect[3] == ring[1] - POSTIT_GAP
+    # Pushed off the frame, it is moved back inside the bounds whole, not cut.
+    left = _postit_rect(ring, size, POSTIT_SIDES.index((-1, 0)), 300.0)
+    assert left[0] < 0 and _within(left, (40, 40, 1880, 1000)) == (40, left[1], 240, left[3])
