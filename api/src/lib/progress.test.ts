@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   awaitingVideos, lessonHoldMinutes, lessonProgress, progressError, readProgress, secondsSoFar, storedProgress, videoProgress,
 } from './progress.js';
@@ -85,25 +85,12 @@ describe('awaitingVideos', () => {
   afterEach(() => { delete process.env.LESSON_HOLD_MINUTES; });
   const lesson = (minutes: number, attempts = 1) => ({ createdAt: minutesAgo(minutes), videoAttempts: attempts });
 
-  it('shows the text as soon as the lesson is posted, by default, while its videos are still to come or rendering', () => {
-    expect(lessonHoldMinutes()).toBe(0);
-    expect(awaitingVideos(lesson(0, 0), null, true, NOW)).toBe(false);
-    expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, true, NOW)).toBe(false);
-    // Stamped by a database whose clock runs a little ahead of this server's: still shown.
-    expect(awaitingVideos(lesson(-0.1), { status: 'RENDERING' }, true, NOW)).toBe(false);
-  });
-});
-
-describe('awaitingVideos, with LESSON_HOLD_MINUTES=20', () => {
-  beforeEach(() => { process.env.LESSON_HOLD_MINUTES = '20'; });
-  afterEach(() => { delete process.env.LESSON_HOLD_MINUTES; });
-  const lesson = (minutes: number, attempts = 1) => ({ createdAt: minutesAgo(minutes), videoAttempts: attempts });
-
-  it('holds the text back while the first attempt renders, for 20 minutes after the lesson was posted', () => {
-    expect(lessonHoldMinutes()).toBe(20);
+  it('holds the text back while the first attempt renders, by default for an hour, longer than the videos take', () => {
+    expect(lessonHoldMinutes()).toBe(60);
     expect(awaitingVideos(lesson(5), { status: 'RENDERING' }, true, NOW)).toBe(true);
-    expect(awaitingVideos(lesson(19.9), { status: 'RENDERING' }, true, NOW)).toBe(true);
-    expect(awaitingVideos(lesson(20), { status: 'RENDERING' }, true, NOW)).toBe(false);
+    expect(awaitingVideos(lesson(35), { status: 'RENDERING' }, true, NOW)).toBe(true); // a slow render: still held
+    expect(awaitingVideos(lesson(59.9), { status: 'RENDERING' }, true, NOW)).toBe(true);
+    expect(awaitingVideos(lesson(60), { status: 'RENDERING' }, true, NOW)).toBe(false);
   });
 
   it('never holds a lesson whose studio did not say videos follow, so a claim just after its post cannot hide it', () => {
@@ -118,10 +105,10 @@ describe('awaitingVideos, with LESSON_HOLD_MINUTES=20', () => {
     expect(awaitingVideos(lesson(5, 0), { status: 'RENDERING' }, true, NOW)).toBe(true); // marked by hand, never claimed
   });
 
-  it('holds a lesson with no videos yet only when the studio said they are coming', () => {
-    expect(awaitingVideos(lesson(1, 0), null, true, NOW)).toBe(true);
+  it('holds a lesson with no videos yet only when the studio said they are coming, and not for good', () => {
+    expect(awaitingVideos(lesson(0, 0), null, true, NOW)).toBe(true);
     expect(awaitingVideos(lesson(1, 0), null, false, NOW)).toBe(false); // a text-only droplet: shown at once
-    expect(awaitingVideos(lesson(25, 0), null, true, NOW)).toBe(false);
+    expect(awaitingVideos(lesson(61, 0), null, true, NOW)).toBe(false); // never started: shown an hour on
   });
 
   it('never holds past the stale limit, so a late heartbeat cannot hide a lesson the stale render showed', () => {
@@ -131,14 +118,17 @@ describe('awaitingVideos, with LESSON_HOLD_MINUTES=20', () => {
     delete process.env.VIDEO_STALE_MINUTES;
   });
 
-  it('takes LESSON_HOLD_MINUTES, where 0 never holds and a bad value keeps the default', () => {
+  it('takes LESSON_HOLD_MINUTES, where 0 shows the text as soon as it is posted and a bad value keeps the default', () => {
     process.env.LESSON_HOLD_MINUTES = '5';
     expect(awaitingVideos(lesson(4), { status: 'RENDERING' }, true, NOW)).toBe(true);
     expect(awaitingVideos(lesson(6), { status: 'RENDERING' }, true, NOW)).toBe(false);
     process.env.LESSON_HOLD_MINUTES = '0';
+    expect(awaitingVideos(lesson(0, 0), null, true, NOW)).toBe(false);
     expect(awaitingVideos(lesson(0), { status: 'RENDERING' }, true, NOW)).toBe(false);
+    // Stamped by a database whose clock runs a little ahead of this server's: still shown.
+    expect(awaitingVideos(lesson(-0.1), { status: 'RENDERING' }, true, NOW)).toBe(false);
     process.env.LESSON_HOLD_MINUTES = 'soon';
-    expect(lessonHoldMinutes()).toBe(0);
+    expect(lessonHoldMinutes()).toBe(60);
   });
 });
 

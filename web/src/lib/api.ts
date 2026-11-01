@@ -357,8 +357,8 @@ export interface Answer {
   awaitingReview?: boolean; // READY, and off the Droplets tab until an admin has looked at it; absent from an older API
   replies: Reply[];
   awaitingAgent: boolean;
-  // True while the page holds the lesson text back until its videos are done (at most 20 minutes after the
-  // lesson was posted); absent from an API older than this page, which shows the text at once.
+  // True while the page holds the lesson text back until its videos are READY or FAILED (at most an hour after
+  // the lesson was posted); absent from an API older than this page, which shows the text at once.
   awaitingVideos?: boolean;
 }
 

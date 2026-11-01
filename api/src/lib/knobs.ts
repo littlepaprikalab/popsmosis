@@ -36,7 +36,7 @@ export const KNOBS = {
   // The API: the leases and the renders (lib/claim.ts, lib/droplet.ts, lib/progress.ts, lib/video-claim.ts).
   QUESTION_CLAIM_MINUTES: { where: 'api', kind: 'int', default: 20, min: 1, max: 1440 },
   VIDEO_STALE_MINUTES: { where: 'api', kind: 'int', default: 60, min: 1, max: 1440 },
-  LESSON_HOLD_MINUTES: { where: 'api', kind: 'int', default: 0, min: 0, max: 1440 },
+  LESSON_HOLD_MINUTES: { where: 'api', kind: 'int', default: 60, min: 0, max: 1440 },
   VIDEO_MAX_ATTEMPTS: { where: 'api', kind: 'int', default: 2, min: 1, max: 10 },
   // The API: waking the teacher (lib/routine.ts).
   POPSMOSIS_ROUTINE_DEBOUNCE_SECONDS: { where: 'api', kind: 'int', default: 300, min: 0, max: 3600 },
