@@ -12,7 +12,11 @@ const STORES = {
   'Hummingbird Biofeedback': ['https://apps.apple.com/app/hummingbird-biofeedback/id6762854409',
     'https://play.google.com/store/apps/details?id=com.spicygingerlabs.hummingbird'],
 };
-const SITES = { 'SAT Sprints': 'https://www.satsprints.com', 'Total Sparks AI': 'https://totalsparksai.com' };
+const SITES = {
+  'SAT Sprints': 'https://www.satsprints.com',
+  'Total Sparks AI': 'https://totalsparksai.com',
+  'The Crossroads Oracle': 'https://crossroads.littlepaprikalab.com',
+};
 
 /** Scroll the page through, so every lazy image has loaded, and return the ones that did not. */
 async function brokenImages(page: Page) {
@@ -57,7 +61,7 @@ test.describe('the About page', () => {
     }
     // The pictures are POPsmosis's own files: reading the page asks nothing of Apple or Google.
     const srcs = await page.locator('img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).src));
-    expect(srcs.length).toBe(14);
+    expect(srcs.length).toBe(15);
     for (const src of srcs) expect(new URL(src).origin).toBe(new URL(page.url()).origin);
     expect(await brokenImages(page)).toEqual([]);
   });
@@ -82,6 +86,13 @@ test.describe('the About page', () => {
     await expect(page).toHaveURL(/\/about$/);
     expect(await brokenImages(page)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    // The narrowest phones too. A card clips what spills out of it, so the page would not scroll: look at each button.
+    await page.setViewportSize({ width: 320, height: 640 });
+    const spilled = await page.locator('article a').evaluateAll((links) => links
+      .filter((a) => a.getBoundingClientRect().right > a.parentElement!.getBoundingClientRect().right + 0.5)
+      .map((a) => a.getAttribute('aria-label')));
+    expect(spilled).toEqual([]);
   });
 
   test('reads the same signed in', async ({ page, context }) => {
