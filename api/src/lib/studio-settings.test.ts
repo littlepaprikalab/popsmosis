@@ -67,7 +67,7 @@ describe('parseBrainSettings', () => {
 
 describe('songFrom and parseSongSettings', () => {
   it('is ElevenLabs with nothing stored, and takes Lyria when stored', () => {
-    expect(DEFAULT_SONG).toEqual({ provider: 'elevenlabs' });
+    expect(DEFAULT_SONG).toEqual({ provider: 'gemini' });
     for (const stored of [undefined, null, 'gemini', { provider: 'suno' }]) expect(songFrom(stored)).toEqual(DEFAULT_SONG);
     expect(songFrom({ provider: 'gemini' })).toEqual({ provider: 'gemini' });
   });

@@ -66,6 +66,7 @@ def made(tmp_path, monkeypatch):
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
+    jobs.keep_studio_settings(job, {"song": {"provider": "elevenlabs"}})  # FakeEleven makes it
     audio.run(job)
     return job
 
@@ -505,6 +506,7 @@ def test_the_lesson_alone_times_only_the_narration(tmp_path, monkeypatch):
     job = tmp_path / "sample"
     job.mkdir()
     jobs.write(job / "bundle.json", sample_media.bundle())
+    jobs.keep_studio_settings(job, {"song": {"provider": "elevenlabs"}})  # FakeEleven reads it
     audio.run(job)
 
     def no_song(*args):

@@ -463,7 +463,7 @@ test.describe('studio settings', () => {
     await request.put(apiUrl('/api/studio/settings'), {
       headers: asAda(),
       data: {
-        brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'gemini', meta: 'muse' },
+        brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'gemini', meta: 'muse' },
         spend: { topicUsd: 20 },
       },
     });
@@ -486,7 +486,7 @@ test.describe('studio settings', () => {
     const asked = await request.post(apiUrl('/api/questions'), { headers: asAda(), data: { content: text } });
     const claimed = await agent(request, S.POPSMOSIS_API_KEY).claim((await asked.json()).id);
     expect((await claimed.json()).studio).toEqual({
-      brain: { default: 'claude', effort: 'high' }, song: { provider: 'elevenlabs' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
+      brain: { default: 'claude', effort: 'high' }, song: { provider: 'gemini' }, art: { claude: 'muse', meta: 'muse' }, knobs: {},
       spend: { topicUsd: 20 },
     });
     expect((await request.delete(apiUrl(`/api/questions/${(await asked.json()).id}`), { headers: asAda() })).status()).toBe(204);
@@ -525,7 +525,7 @@ test.describe('studio settings', () => {
     await expect(page.getByText('Google: Lyria 3.5 and Gemini 3.8 Flash TTS make the audio from the next droplet\'s videos.')).toBeVisible();
     const teacher = await request.get(apiUrl('/api/studio/settings'), { headers: { Authorization: `Bearer ${S.POPSMOSIS_API_KEY}` } });
     expect((await teacher.json()).song).toEqual({ provider: 'gemini' });
-    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'elevenlabs' } } });
+    await request.put(apiUrl('/api/studio/settings'), { headers: asAda(), data: { song: { provider: 'gemini' } } });
   });
 
   test('an admin sets a knob instead of its environment variable: the API\'s at once, the studio\'s for the teacher', async ({ page, context, request }) => {

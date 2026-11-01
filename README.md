@@ -122,10 +122,10 @@ python -m studio recover                 # take a render that died with its mach
 
 `videos` runs the media steps (`studio/media.py`): art and audio at the same time, then
 the timeline, render and upload. Who makes the audio, the song and the narration together, is
-picked on the Studio page ([Choosing the models](#choosing-the-models)): ElevenLabs (the default,
-with `ELEVENLABS_API_KEY`: Eleven Music sings, its text-to-speech reads) or Google (with
+picked on the Studio page ([Choosing the models](#choosing-the-models)): Google (the default, with
 `GEMINI_API_KEY`: Lyria 3.5 sings, Gemini 3.8 Flash TTS reads; `GEMINI_SONG_MODEL` picks another
-Lyria model, `GEMINI_TTS_VOICE` another voice). One switch moves all the audio, so a droplet is
+Lyria model, `GEMINI_TTS_VOICE` another voice) or ElevenLabs (with `ELEVENLABS_API_KEY`: Eleven
+Music sings, its text-to-speech reads). One switch moves all the audio, so a droplet is
 made when one service's quota has run out. ElevenLabs says when it read each word; Gemini does
 not, so the timing step finds the narration's words with the MMS aligner it runs on songs, and
 fails the step (and reads it again on the retry) when it cannot hear most of the lines. Switching
@@ -205,7 +205,7 @@ page and remove it, so nothing changes without anyone seeing why.
 |---|---|---|
 | Default brain: writes and fact-checks every topic no admin sent elsewhere | Claude Opus 5.5 ($4 / $20 per million tokens, about 70 cents a topic), Muse Wonder 1.0 ($4 / $20), Muse Spark 1.3 ($1.25 / $4.25) | Claude Opus 5.5 |
 | Claude's effort | `low`, `medium`, `high`, `xhigh`, `max`; Muse ignores it | `high` |
-| Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | ElevenLabs |
+| Song and narration: who makes the audio | ElevenLabs: Eleven Music and its text-to-speech (credits), or Google: Lyria 3.5 ($0.08 a song) and Gemini 3.8 Flash TTS (about 4 cents a narration: $0.50 / $9 per million tokens in and out, 25 audio tokens a second; $1 / $18 from 2027) | Google (Lyria) |
 | Pictures for Claude topics | Gemini 3.1 Flash Image (about $0.07 a picture), Muse Image ($0.01), or Claude draws them as SVG | Gemini 3.1 Flash Image |
 | Pictures for Muse topics | Muse Image or Gemini 3.1 Flash Image | Muse Image |
 | Spend ceiling: the most one topic may cost in model calls, its lesson, videos and every retry together | $0 (no ceiling) to $100 | $20 (generous for the hackathon; $5 is about two and a half times the dearest topic so far) |
