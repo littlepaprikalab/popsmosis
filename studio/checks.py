@@ -39,7 +39,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _no_analogy_scene(data) + _settle_song_scenes(data)
+    problems = _no_analogy_scene(data) + _settle_song_scenes(data) + _same_choruses(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -480,9 +480,39 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
     return problems
 
 
+def _place_question(data: dict, problems: list) -> None:
+    """The first key line, the question (it ends in "?"), where each video asks it: on the song's first line, and on
+    the narration's last question before it leaves the hook. The writer put it on the narration's first sentence, a
+    fact two sentences before the narrator asks (the pump's and the derivative's, Nov 1). Not onto a line another
+    key line has."""
+    if not data["key_lines"] or not data["key_lines"][0]["text"].strip().endswith("?"):
+        return
+    question, others = data["key_lines"][0], data["key_lines"][1:]
+    first = data["lyrics"][0]["id"] if data["lyrics"] else ""
+    if first and first != question["from_line"] and first not in {k["from_line"] for k in others}:
+        problems.append(Problem(line_id=first, rule="key-line", repaired=True,
+                                detail="the question's key line is on the song's first line"))
+        question["from_line"] = first
+    scenes = {d["line_id"]: d["scene"] for d in data["direction"]}
+    ids = [s["id"] for s in data["scenes"]]
+    hook = "hook" if "hook" in ids else (ids[0] if ids else "")  # as the timeline has it (timeline.hook_scene)
+    opening = data["narration"][:1]  # the lesson opens on the hook, whatever its first line's direction says
+    for n in data["narration"][1:]:
+        if scenes.get(n["id"]) != hook:
+            break
+        opening.append(n)
+    asked = [n["id"] for n in opening if n["text"].rstrip(" \"'”’").endswith("?")]
+    if asked and asked[-1] != question.get("from_narration") \
+            and asked[-1] not in {k.get("from_narration", "") for k in others}:
+        problems.append(Problem(line_id=asked[-1], rule="key-line", repaired=True,
+                                detail=f'the question\'s key line is on {asked[-1]}, where the narrator asks it'))
+        question["from_narration"] = asked[-1]
+
+
 def _check_key_lines(data: dict, problems: list) -> None:
     """Key lines, one to a lyric line: one on a line the song does not have, or a second on the same line, is left
     out of the song video (and dropped, with no narration sentence either), since the screen could not show it."""
+    _place_question(data, problems)
     if not data["lyrics"]:  # the lesson video alone: they are placed on the narration
         _check_narrated_key_lines(data, problems)
         return
@@ -539,9 +569,46 @@ def _check_narrated_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_narration"]])
 
 
+def chorus_runs(sections: list[str]) -> list[list[int]]:
+    """Each chorus as the lyrics run, a list of its lines' places in them."""
+    runs: list[list[int]] = []
+    for i, section in enumerate(sections):
+        if section == "chorus":
+            if runs and runs[-1][-1] == i - 1:
+                runs[-1].append(i)
+            else:
+                runs.append([i])
+    return runs
+
+
+def _same_choruses(data: dict) -> list[Problem]:
+    """Every chorus directed as the first, so the refrain reads as one: a later chorus's line that sings a line of
+    the first word for word (matched from the end, as the last chorus may open with lines of its own) takes its
+    direction, all but its caption. The brief asked for it, and the five choruses of Nov 1 did; this makes it sure.
+    Before the lines are checked, so each is held to what is named by its own place in the song."""
+    lyrics, problems = data["lyrics"], []
+    directions = {d["line_id"]: d for d in data["direction"]}
+    runs = chorus_runs([line["section"] for line in lyrics])
+    for run in runs[1:]:
+        for i, j in zip(reversed(runs[0]), reversed(run)):
+            first, later = directions.get(lyrics[i]["id"]), directions.get(lyrics[j]["id"])
+            sung = {" ".join(fold(lyrics[k]["text"]).split()) for k in (i, j)}
+            if not first or not later or len(sung) > 1:
+                continue
+            copied = {**json.loads(json.dumps(first)), "line_id": later["line_id"], "caption": later["caption"]}
+            if copied != later:
+                later.clear()
+                later.update(copied)
+                problems.append(Problem(line_id=later["line_id"], rule="motion", repaired=True,
+                                        detail=f"directed as {first['line_id']}, the first chorus's same line"))
+    return problems
+
+
 def motion_problems(bundle: Bundle) -> list[Problem]:
     """The song's direction against the planning rule a check can count: every chorus directed alike (compared from
-    its end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them.
+    its end, since the last one opens with a summary couplet). The review directs a line the first chorus sings word
+    for word as the first does (_same_choruses), so what is left is a line of its own. Recorded, not repaired; the
+    bundle step adds them.
 
     How many lines in a row hold still is not counted. The bundle prompt moves only what travels, and the spotlight
     and the camera carry a scene where nothing does, so a run of still lines is no mistake. Counted until Oct 31, a run of five flagged a chorus summing up the Moon's phases over the overview,
@@ -549,13 +616,7 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     scene that never moved was never flagged, so the count pushed toward dots for their own sake."""
     directions = {d.line_id: d for d in bundle.direction}
     problems = []
-    choruses, current = [], []
-    for i, line in enumerate(bundle.lyrics):
-        if line.section == "chorus":
-            current.append(line.id)
-        if current and (i + 1 == len(bundle.lyrics) or bundle.lyrics[i + 1].section != "chorus"):
-            choruses.append(current)
-            current = []
+    choruses = [[bundle.lyrics[i].id for i in run] for run in chorus_runs([line.section for line in bundle.lyrics])]
     for later in choruses[1:]:
         for first_id, later_id in zip(reversed(choruses[0]), reversed(later)):
             a, b = directions.get(first_id), directions.get(later_id)
