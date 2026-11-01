@@ -23,6 +23,7 @@ import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
 import { DropletReview } from '@/components/DropletReview';
 import { Wordmark } from '@/components/Wordmark';
+import { DropletPill, Marked, SongChip } from '@/components/Highlights';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
 import { BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
@@ -573,14 +574,21 @@ function LearnContent() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
-        <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
+        {/* The side padding stops at 10vw: at 200% text on a phone, 2rem a side left the sign-in button no room */}
+        <div className="text-center py-8 px-[min(2rem,10vw)] rounded-lg max-w-md animate-fade-in"
           style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
           <h1 className="mb-3"><Wordmark size="lg" /></h1>
           <p className="text-sm mb-1 font-bold" style={{ color: 'var(--text-primary)' }}>
             Droplets for learning
           </p>
-          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-            Ask for any topic. An AI teacher makes you a short lesson, and you can ask follow-ups under it.
+          <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--text-secondary)' }}>
+            {/* A line can break between a pill and the character after it, so the colon and the period are held to
+                theirs. The two phrases are kept whole only from 16em of screen up (em follows the reader's text
+                size), where the card has room for them; narrower, they wrap rather than push the card off screen. */}
+            Ask for any topic. An AI teacher makes you a{' '}
+            <span className="whitespace-nowrap"><DropletPill />:</span> a short lesson with{' '}
+            <span className="min-[16em]:whitespace-nowrap">a <Marked color="var(--accent-green)">narrated video</Marked></span>{' '}
+            <span className="min-[16em]:whitespace-nowrap">and a <span className="whitespace-nowrap"><SongChip />.</span></span>
           </p>
           <Link href="/auth/callback?returnTo=%2Flearn"
             className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"

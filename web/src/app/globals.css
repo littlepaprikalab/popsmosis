@@ -26,6 +26,9 @@
   --btn-filled-text: #ffffff;
   --accent-cyan: #00BCD4;
   --accent-pink: #FF6B9D;
+  /* How strong a highlighter stroke is (components/Highlights.tsx, Marked). Lighter in the dark theme, so light text
+     still reads at 4.5:1 on the yellow stroke over a card. */
+  --highlight-mix: 35%;
   --toast-shadow: 0 20px 60px rgba(0,0,0,0.5);
   --dialog-shadow: 0 20px 60px rgba(0,0,0,0.5);
   --overlay-bg: rgba(0, 0, 0, 0.85);
@@ -61,6 +64,7 @@
     --btn-filled-text: #ffffff;
     --accent-cyan: #0097A7;
     --accent-pink: #D4365E;
+    --highlight-mix: 50%;
     --toast-shadow: 0 20px 60px rgba(0,0,0,0.15);
     --dialog-shadow: 0 20px 60px rgba(0,0,0,0.15);
     --overlay-bg: rgba(0, 0, 0, 0.5);

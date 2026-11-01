@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'POPsmosis — droplets for learning',
     short_name: 'POPsmosis',
-    description: 'Droplets for learning. Ask for any topic and get a short lesson you can ask follow-ups under.',
+    description: 'Droplets for learning. Ask for any topic and get a droplet: a short lesson with a narrated video and a song.',
     start_url: '/',
     display: 'browser',
     background_color: '#111318',

@@ -23,11 +23,11 @@ test.describe('the How it’s made page', () => {
       'The AI models we use', 'What we don’t do yet']) {
       await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
     }
-    // The lesson's steps in order, the last two the checks that hold it back, each saying so.
+    // The lesson's steps in order. The fact check and the line check hold it back, and each says so.
     const steps = page.getByRole('list', { name: 'Making the lesson' }).getByRole('listitem');
     await expect(steps).toHaveCount(5);
-    await expect(steps.nth(3)).toContainText('Fact check');
-    await expect(steps.nth(4)).toContainText('Line check');
+    await expect(steps).toContainText(['Plan', 'Fact check', 'Rule check', 'Student test', 'Line check']);
+    for (const gate of [1, 4]) await expect(steps.nth(gate)).toContainText('Fails? Nothing is posted.');
     await expect(page.getByText('Fails? Nothing is posted.')).toHaveCount(2);
     // Then the pictures and the sound, made side by side.
     const pictures = page.getByRole('list', { name: 'Pictures' });
@@ -46,7 +46,7 @@ test.describe('the How it’s made page', () => {
     await page.waitForFunction(() => [...document.querySelectorAll('section[aria-labelledby="notice-title"] img')]
       .every((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0));
     await expect(page.getByRole('article')).toHaveCount(6);
-    await expect(page.getByRole('list', { name: 'The models' }).getByRole('listitem')).toHaveCount(7);
+    await expect(page.getByRole('list', { name: 'The models' }).getByRole('listitem')).toHaveCount(8);
   });
 
   test('sends people on to POPsmosis itself: a droplet to watch, or a topic to ask for', async ({ page }) => {
