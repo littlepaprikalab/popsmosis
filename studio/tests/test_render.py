@@ -401,6 +401,23 @@ def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
 
 
 
+
+def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job):
+    # The wash over a filling space was nearly half of a frame's time on the pump's song (Nov 1): it changes slowly,
+    # so it is part of the picture the renderer keeps, in steps of TINT_STEP.
+    gold = "#F2C230"
+
+    def tints(level):
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"crowds": [
+            Crowd(region="Thylakoid", label="H⁺", color=gold, start=level, end=level)]})
+        renderer = Renderer(job, flowing([beat]))
+        renderer.frame(4.0)
+        return renderer._frame_tints, [key[2] for key in renderer.scene("overview")._composed]
+
+    frame_tints, kept = tints(1.0)
+    assert frame_tints == (("Thylakoid", gold, round(renderer_module.CROWD_TINT, 4)),) and frame_tints in kept
+    assert tints(0.0) == ((), [])  # nothing filling: the picture as painted
+
 def test_a_few_dots_where_particles_are_scarce_sit_apart_from_the_crowd_and_only_in_a_space(job):
     # Round 22's pump showed no K⁺ outside the cell at all: a gradient is more on one side, not none on the other.
     gold, blue = "#F2C230", "#7FD1FF"

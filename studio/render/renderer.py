@@ -132,6 +132,7 @@ THIN_MIN = 2  # dots where particles are scarce (Crowd.thin), however small the 
 # A crowd that is always there (Crowd.held) is part of the picture: in a space not yet named it shows half pale,
 # where one filling up waits for the name. Round 22's cytoplasm, named at 66 s, hid its potassium till then.
 HELD_GHOST = 0.5
+TINT_STEP = 0.005  # a crowd's tint changes in steps this big: the picture with it is kept while it holds
 CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 # A part that turns (Beat.turning). One that looks the same turned a quarter and a half turn (its outline
 # overlaps itself so turned by SPIN_SAME or more, and its box is at most SPIN_ROUND times wider than tall, or
@@ -457,11 +458,14 @@ class SceneArt:
         whole = max((box[2] - box[0]) * (box[3] - box[1]), 1.0)
         return (float(self._drawn[y0:y1, x0:x1].sum()) + whole - inside) / whole if inside else 1.0
 
-    def compose(self, ghosts: dict[str, float], spots: dict[str, float]) -> tuple[tuple, skia.Image]:
-        """The art with each ghost and spotlight wash at its level (0-1), kept for reuse; and its key."""
+    def compose(self, ghosts: dict[str, float], spots: dict[str, float],
+                tints: tuple = ()) -> tuple[tuple, skia.Image]:
+        """The art with each ghost and spotlight wash at its level (0-1), and each crowd's tint over its space
+        ((name, colour, alpha), Renderer._crowd_tints), kept for reuse; and its key."""
         key = (tuple(sorted((n, round(v, 3)) for n, v in ghosts.items() if v > 0.002 and n in self.masks)),
-               tuple(sorted((n, round(v, 3)) for n, v in spots.items() if v > 0.002 and n in self.masks)))
-        if not key[0] and not key[1]:
+               tuple(sorted((n, round(v, 3)) for n, v in spots.items() if v > 0.002 and n in self.masks)),
+               tuple(sorted(tint for tint in tints if tint[0] in self.masks and tint[2] > 0)))
+        if not key[0] and not key[1] and not key[2]:
             return key, self.art
         if key in self._composed:
             self._composed.move_to_end(key)
@@ -475,6 +479,9 @@ class SceneArt:
         for name, level in key[1]:
             canvas.drawImage(self.spot(name), 0, 0, skia.SamplingOptions(),
                              skia.Paint(Color=self.paper, Alphaf=SPOT_WASH * level))
+        for name, color, alpha in key[2]:
+            canvas.drawImage(self.ghost(name), 0, 0, skia.SamplingOptions(),
+                             skia.Paint(Color=p.argb(color), Alphaf=alpha))
         image = surface.makeImageSnapshot()
         self._composed[key] = image
         while len(self._composed) > 6:
@@ -794,6 +801,7 @@ class Renderer:
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
         self._through: dict[tuple, list[Point] | None] = {}  # legs routed through the parts (_routed)
+        self._frame_tints: tuple = ()  # the crowds' tints of the frame being drawn (_crowd_tints)
         scene_ids = {b.scene for b in timeline.beats}
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
@@ -1123,7 +1131,8 @@ class Renderer:
         return levels
 
     def _draw_background(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect,
-                         ghosts: dict[str, float], spots: dict[str, float], keep: bool = True) -> None:
+                         ghosts: dict[str, float], spots: dict[str, float], keep: bool = True,
+                         tints: tuple = ()) -> None:
         """The scene's picture, framed by the camera, over the whole frame. Kept for the next frame unless
         `keep` is False (a stage fading into the next: two pictures, each drawn in part).
 
@@ -1131,7 +1140,7 @@ class Renderer:
         it comes twice running, and drawn the second time just as the first, so the frames are the same as when
         every one was kept. Where the picture fills its view, the paper is cleared only around the view."""
         art = self.scene(scene_id)
-        washes, composed = art.compose(ghosts, spots)
+        washes, composed = art.compose(ghosts, spots, tints)
         key = (scene_id, washes, round(cam.cx, 3), round(cam.cy, 3), round(cam.zoom, 5), view)
         if keep and self._background and self._background[0] == key:
             canvas.drawImage(self._background[1], 0, 0)
@@ -1325,17 +1334,18 @@ class Renderer:
             spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
         reveals = self.revealed.get(beat.scene, {})
         ghosts = self._ghosts(beat.scene, reveals, t)
+        self._frame_tints = tints = self._crowd_tints(beat, t, ghosts, spots) if beat.crowds else ()
         fade = p.ease((t - beat.t0) / STAGE_FADE_S) if plan.fade_from else 1.0
         if fade < 1.0:  # the stage before, under this one fading in, framed alike
             before = plan.fade_from
             self._draw_background(canvas, before, cam, view,
                                   self._ghosts(before, self.revealed.get(before, {}), t), {}, keep=False)
             canvas.saveLayerAlpha(None, round(255 * fade))
-            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False)
+            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False, tints=tints)
             self._reacting(canvas, beat, plan, cam, view, t, ghosts, spots)  # its parts fade in with their stage
             canvas.restore()
         else:
-            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots)
+            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, tints=tints)
         if beat.turning:
             self._turning(canvas, beat, cam, view, t, ghosts, spots, face=True)
         if fade >= 1.0:
@@ -1652,7 +1662,7 @@ class Renderer:
                 if turns % 1 == 0:
                     continue  # as painted
                 cx, cy, r = disc
-                _, composed = art.compose(ghosts, spots)
+                _, composed = art.compose(ghosts, spots, self._frame_tints)
                 canvas.save()
                 canvas.clipRect(skia.Rect.MakeLTRB(*view))
                 canvas.translate(cx * scale + dx, cy * scale + dy)
@@ -1740,7 +1750,7 @@ class Renderer:
                 size += ROCK_COVER * work[name] * (1.0 if rocks else 0.5 + 0.5 * swing)
             if size - 1 < 1e-3 and abs(deg) < 0.02:
                 continue
-            _, composed = art.compose(ghosts, spots)
+            _, composed = art.compose(ghosts, spots, self._frame_tints)
             cx, cy = loc.centroid.x, loc.centroid.y
             canvas.save()
             canvas.clipRect(skia.Rect.MakeLTRB(*view))
@@ -1801,25 +1811,40 @@ class Renderer:
             if crowd.region not in art.masks or (crowd.thin and id(crowd) not in slices):
                 continue
             level = p.lerp(crowd.start, crowd.end, x)
-            moving = any(f.label == crowd.label and crowd.region in (f.path[0], f.path[-1]) for f in beat.particles)
-            others = 0.0 if moving else max((v for name, v in spots.items() if name != crowd.region), default=0.0)
-            ghost = ghosts.get(crowd.region, 0.0) * (HELD_GHOST if crowd.held else 1.0)
-            alpha = (1 - ghost) * (1 - SPOT_WASH * others)
+            alpha = self._crowd_alpha(beat, crowd, spots, ghosts)
             if alpha <= 0.01:
                 continue
             if crowd.thin:  # its few dots, untinted: the space is the other crowd's
                 points = slices[id(crowd)]
                 self._crowd_dots(canvas, crowd, points, len(points), (scale, dx, dy), t, alpha)
                 continue
-            canvas.save()
-            canvas.translate(dx, dy)
-            canvas.scale(scale, scale)
-            canvas.drawImage(art.ghost(crowd.region), 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear),
-                             skia.Paint(Color=p.argb(crowd.color), Alphaf=CROWD_TINT * level * alpha))
-            canvas.restore()
-            points = art.crowd_points(crowd.region)
+            points = art.crowd_points(crowd.region)  # its tint is in the picture (_crowd_tints)
             points = points[:len(points) - reserved.get(crowd.region, 0)]
             self._crowd_dots(canvas, crowd, points, level * len(points), (scale, dx, dy), t, alpha)
+
+    def _crowd_alpha(self, beat, crowd, spots: dict[str, float], ghosts: dict[str, float]) -> float:
+        """How strongly a crowd shows: as pale as its space while that is a ghost (half, for one always there), and
+        dimmed with it when something else is spotlit, unless the beat's particles fill or empty it."""
+        moving = any(f.label == crowd.label and crowd.region in (f.path[0], f.path[-1]) for f in beat.particles)
+        others = 0.0 if moving else max((v for name, v in spots.items() if name != crowd.region), default=0.0)
+        ghost = ghosts.get(crowd.region, 0.0) * (HELD_GHOST if crowd.held else 1.0)
+        return (1 - ghost) * (1 - SPOT_WASH * others)
+
+    def _crowd_tints(self, beat, t: float, ghosts: dict[str, float], spots: dict[str, float]) -> tuple:
+        """Each filling space's tint at t, (name, colour, alpha), in steps of TINT_STEP: drawn into the picture
+        (SceneArt.compose), which is kept while it does not change, so a frame no longer washes every space over
+        the whole frame again. That wash was nearly half of a frame's time on the pump's song (Nov 1)."""
+        art = self.scene(beat.scene)
+        x = p.clamp01((t - beat.t0) / (beat.t1 - beat.t0))
+        tints = []
+        for crowd in beat.crowds:
+            if crowd.thin or crowd.region not in art.masks:
+                continue
+            alpha = CROWD_TINT * p.lerp(crowd.start, crowd.end, x) * self._crowd_alpha(beat, crowd, spots, ghosts)
+            step = round(alpha / TINT_STEP) * TINT_STEP
+            if step > 0:
+                tints.append((crowd.region, crowd.color, round(step, 4)))
+        return tuple(tints)
 
     @staticmethod
     def _crowd_dots(canvas: skia.Canvas, crowd, points: list, shown: float, frame: tuple, t: float,
