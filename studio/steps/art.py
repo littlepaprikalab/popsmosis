@@ -80,7 +80,6 @@ pictures. Resuming and redrawing work as for the SVG art.
 
 from __future__ import annotations
 
-import colorsys
 import hashlib
 import json
 import math
@@ -98,6 +97,7 @@ import skia
 from pydantic import Field
 
 from studio import brain, checks, gemini, jobs, knobs, ledger, media, muse, repair, svg
+from studio.checks import colour_word
 from studio.jobs import read, write
 from studio.schemas import (Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, locations_problems,
                              stage_groups)
@@ -535,6 +535,7 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 # science diagram keeps the operator's line, and any other scene labels its parts and nothing else (labels_line()).
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
 LABELS = f"Clearly label nonobvious structures. {NO_SLIDE}"
+NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
 EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
@@ -909,9 +910,10 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
                  styled: bool = False) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
     image model reads names), a graph's axes, and last what to label (labels_line()): the picture labels its own
-    parts. Short on purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE
-    says why). A later stage `redrawn` from
-    its first stage's picture says so first."""
+    parts. The Colours line is the picture's only word for its structures' colours: since Nov 1 the image_prompt
+    names none, as the writer's own ("a brown ATP synthase") disagreed with it ("ATP synthase orange"). Short on
+    purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE says why). A later
+    stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
     parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
     if scene.axes:
@@ -930,7 +932,11 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
 def labels_line(scene: Scene) -> str:
     """What the picture labels. A science diagram, its nonobvious structures (LABELS), which there are the parts a
     textbook figure labels; any other scene, its own parts by the lesson's names and nothing else, since everything
-    in a room or on a boat has a name a student would not know."""
+    in a room or on a boat has a name a student would not know. The hook, an everyday sight, labels nothing
+    (NO_LABELS): its parts' names teach nothing (Nov 1: the pump's hook labelled "Body" and "Couch"), and the upright
+    hook video cropped them."""
+    if scene.id in EVERYDAY:
+        return NO_LABELS
     if SCIENCE_STYLE in scene.image_prompt.lower():
         return LABELS
     names = ", ".join(s.name for s in scene.structures)
@@ -943,29 +949,6 @@ def axes_line(axes: Axes) -> str:
     named = [f'the {which} one labelled "{name}"' for which, name in (("horizontal", axes.x), ("vertical", axes.y))
              if name]
     return "Its axes are two plain, thin lines" + (", " + " and ".join(named) if named else "") + "."
-
-
-# Hue bands in degrees, for colour_word. Purples run past 290 (#9C27B0 is 291) and pinks to 345 (#F06292 is
-# 340): with the bands at 290 and 335, round 17 asked for a purple Roman Empire as "light pink" and its pink
-# civil wars as "red", and the label "Civil wars" went on the Empire.
-HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
-        (310, "purple"), (345, "pink"), (360, "red"))
-
-
-def colour_word(color_hex: str) -> str:
-    """A colour as everyday words, which image and segmentation models know: "#90BE6D" -> "light green"."""
-    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
-    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
-    if saturation < 0.15:
-        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
-    name = next(word for limit, word in HUES if hue * 360 < limit)
-    if name in ("orange", "red") and value < 0.55:
-        return "brown"
-    if value < 0.4:
-        return f"dark {name}"
-    if saturation < 0.5 and value > 0.6:
-        return "pink" if name == "red" else f"light {name}"  # light red is what everyone calls pink (#FFC0CB)
-    return name
 
 
 # What each kind of scene is for, by the ids the bundle prompt gives them (studio/prompts/bundle.md), so the

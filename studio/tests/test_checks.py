@@ -261,6 +261,9 @@ def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
     assert converting(("Thylakoid", [], ["O₂"])) == ([], left_out)  # nothing goes in
     assert converting(("Thylakoid", ["glucose6phosphate"], ["O₂"])) == ([], left_out)  # too long to print
     assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
+    assert converting(("Thylakoid", ["H₂O"], ["thylakoid"])) == ([], left_out)  # never the structure itself
+    assert converting(("ATP synthase", ["ADP", "Pᵢ"], ["ATP"])) == (  # a word of its name is not the structure
+        [("ATP synthase", ["ADP", "Pᵢ"], ["ATP"])], [])
 
 
 def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
@@ -718,3 +721,67 @@ def test_no_picture_draws_the_analogy_and_its_lines_play_over_the_real_thing():
         assert ("scenes", "analogy", True) in found
         assert ("analogy" in [s.id for s in bundle.scenes]) == (not extra)  # kept, unshown, when 3 would not be left
         assert not any(d.scene == "analogy" for d in bundle.direction)
+
+
+def test_a_scene_with_more_structures_than_a_learner_can_follow_is_recorded():
+    # Nov 1: the light reactions' overview drew 15 parts; it stayed pale for 30 s and SAM never found 7 of 43.
+    def drawing(count, audience="high school"):
+        def change(data):
+            data["audience"] = audience
+            data["scenes"][1]["structures"] += [{"name": f"Part {k}", "aliases": [], "sam_phrase": f"the part {k}",
+                                                 "color_hex": "#3366CC"} for k in range(count - 2)]
+        return [p for p in review(change)[1] if p[1] == "crowded"]
+
+    assert drawing(8) == [] and drawing(9) == [("scene:overview", "crowded", False)]
+    assert drawing(4, "about age 10") == [] and drawing(5, "about age 10") == [("scene:overview", "crowded", False)]
+    assert [checks.younger(a) for a in ("about age 10", "6th grade", "middle school", "10-year-olds")] == [True] * 4
+    assert [checks.younger(a) for a in ("high school", "college", "9th grade", "adults")] == [False] * 4
+
+
+def test_sam_is_asked_for_each_colour_in_the_word_the_picture_is_painted_in():
+    # Nov 1: the picture names no colour of its own, so the painting has the Colours line's ("NADPH yellow"), and SAM
+    # asked for the writer's "lime ball" would look for a colour it was never asked for.
+    def phrased(*phrases):
+        def change(data):
+            for structure, phrase in zip(data["scenes"][1]["structures"], phrases):
+                structure["sam_phrase"] = phrase
+        bundle, found, _ = review(change)
+        return [s.sam_phrase for s in bundle.scenes[1].structures], found
+
+    assert phrased("pale lime blob", "coral wedge") == (["green blob", "orange wedge"],
+                                                        [("structures", "colours", True)])
+    assert phrased("green blob", "man in orange") == (["green blob", "man in orange"], [])  # as it is painted
+    assert phrased("the thylakoid", "red light") == (["the thylakoid", "orange light"],  # only the colour word
+                                                     [("structures", "colours", True)])
+
+
+def test_two_parts_in_one_colour_word_are_recorded():
+    # Nov 1: water (#00ACC1) and carbon dioxide (#00897B) were both "teal" to the illustrator, and were painted alike;
+    # Louis XVI and Charles I, both a "king in blue", were sung as one king.
+    def coloured(overview):
+        def change(data):
+            for structure, colour in zip(data["scenes"][1]["structures"], overview):
+                structure["color_hex"] = colour
+        return [(p.line_id, p.detail) for p in review(change)[2].problems if p.rule == "colours"]
+
+    assert coloured(["#2E8B57", "#E07A2F"]) == []
+    assert coloured(["#2E8B57", "#43A047"]) == [
+        ("scene:overview", 'Thylakoid and Cytochrome b6f are both "green" to the illustrator')]
+
+    def alike(data):
+        data["scenes"][1]["structures"][1].update(sam_phrase="king in blue", color_hex="#2F6FDB")
+        data["scenes"][2]["structures"][0].update(sam_phrase="king in blue", color_hex="#3366CC")
+    assert [(p.line_id, p.detail) for p in review(alike)[2].problems] == [
+        ("structures", 'Cytochrome b6f and ATP synthase are drawn alike, each a "king in blue", so they read as one')]
+
+
+def test_an_alias_that_is_a_word_of_the_topic_is_recorded():
+    # Nov 1: Sunlight's alias "light" revealed it on every "light reactions".
+    def aliased(name, *aliases):
+        def change(data):
+            data["scenes"][1]["structures"][1].update(name=name, aliases=list(aliases))
+        return [(p.line_id, p.rule, p.repaired) for p in review(change)[2].problems if p.rule == "alias"]
+
+    assert aliased("Sunlight", "light", "sun") == [("structures", "alias", False)]
+    assert aliased("Light-harvesting complex", "light") == []  # a word of its own name: the topic's word means it
+    assert aliased("Sunlight", "sun") == []

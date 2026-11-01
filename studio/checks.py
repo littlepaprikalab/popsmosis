@@ -12,6 +12,7 @@ Writes checks.json beside the bundle.
 
 from __future__ import annotations
 
+import colorsys
 import json
 import re
 from collections import Counter
@@ -64,6 +65,9 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     _check_stages(data, problems)
+    _check_crowded(data, problems)
+    _check_colours(data, problems)
+    _check_aliases(data, problems)
     _check_side_by_side(data, problems)
     _check_axes(data, problems)
     _check_spins(data, canon, problems)
@@ -190,6 +194,151 @@ def _check_stages(data: dict, problems: list) -> None:
             problems.append(Problem(line_id=f"scene:{scene['id']}", rule="stages", repaired=True,
                                     detail=f"the only stage of {scene['stage_of']}; an ordinary scene instead"))
             scene["stage_of"] = ""
+
+
+# A scene's structures, past which it is only recorded: each is one more part to name, find and follow. The light
+# reactions' overview drew 15 on Nov 1: it stayed pale for 30 s or more until each was named, SAM never found 7 of the
+# droplet's 43 parts, and code's colour words ran out (three "yellow", two "teal"). The brief asks a younger audience
+# for two or three; one over passes, as the Moon's phases need the Sun, Earth, the Moon and its orbit.
+STRUCTURES_MAX, YOUNGER_STRUCTURES_MAX = 8, 4
+YOUNGER = re.compile(r"\bages?\s+(\d{1,2})\b|\b(\d{1,2})[\s-]+years?[\s-]+olds?\b|\b(\d{1,2})(?:st|nd|rd|th)[\s-]+grade"
+                     r"|\bgrade\s+(\d{1,2})\b|\b(?:elementary|primary|middle school|kids?|child(?:ren)?)\b", re.I)
+
+
+def younger(audience: str) -> bool:
+    """Whether the droplet is for a younger audience than high school, as the brief has it written: "about age 10",
+    "6th grade", "middle school"; not "high school", "college" or "9th grade"."""
+    found = YOUNGER.search(audience)
+    if not found:
+        return False
+    age, years, grade, grade_after = found.groups()
+    if age or years:
+        return int(age or years) <= 13
+    if grade or grade_after:
+        return int(grade or grade_after) <= 8
+    return True
+
+
+def _check_crowded(data: dict, problems: list) -> None:
+    """A scene with more structures than a learner can follow is recorded, for the prompt: which parts to leave out
+    is the writer's to say."""
+    most = YOUNGER_STRUCTURES_MAX if younger(data["audience"]) else STRUCTURES_MAX
+    for scene in data["scenes"]:
+        if len(scene["structures"]) > most:
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="crowded", repaired=False,
+                                    detail=f"draws {len(scene['structures'])} structures, over {most}"))
+
+
+# Hue bands in degrees, for colour_word. Purples run past 290 (#9C27B0 is 291) and pinks to 345 (#F06292 is
+# 340): with the bands at 290 and 335, round 17 asked for a purple Roman Empire as "light pink" and its pink
+# civil wars as "red", and the label "Civil wars" went on the Empire. Cyan is its own since Nov 1: the light
+# reactions' water (#00ACC1) was "teal" like the carbon dioxide beside it (#00897B), and the picture drew two alike
+# teal balls.
+HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (182, "teal"), (197, "cyan"), (250, "blue"),
+        (310, "purple"), (345, "pink"), (360, "red"))
+# A mid-tone orange this dark is brown, as everyone names it: ATP synthase's #A0703C, the Bastille's #A86B32 and a
+# friar's robe were "orange" to the illustrator while the writer called them brown (Nov 1).
+BROWN_VALUE = 0.72
+
+
+def colour_word(color_hex: str) -> str:
+    """A colour as everyday words, which image and segmentation models know: "#90BE6D" -> "light green". The
+    illustrator's only word for a structure's colour (art.paint_prompt), and SAM's (_recolour_sam_phrases)."""
+    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
+    if saturation < 0.15:
+        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
+    name = next(word for limit, word in HUES if hue * 360 < limit)
+    if (name == "orange" and value < BROWN_VALUE) or (name == "red" and value < 0.55):
+        return "brown"
+    if value < 0.4:
+        return f"dark {name}"
+    if saturation < 0.5 and value > 0.6:
+        return "pink" if name == "red" else f"light {name}"  # light red is what everyone calls pink (#FFC0CB)
+    return name
+
+
+# A colour as a sam_phrase names it ("orange lobe", "man in red", "golden yellow flashlight", "pale green fluid"): an
+# everyday colour word, maybe with a shade before it or a second hue after it.
+_HUE_WORDS = "red|orange|brown|yellow|green|blue|purple|pink|grey|gray"
+_COLOUR_WORDS = (_HUE_WORDS + "|gold|golden|amber|lime|olive|teal|cyan|turquoise|aqua|navy|indigo|violet|lavender"
+                 "|magenta|coral|salmon|crimson|scarlet|maroon|silver|white|black|tan|beige")
+COLOUR_NAME = re.compile(rf"\b(?:(?:light|dark|pale|bright|deep|soft|vivid)[\s-]+)?(?:{_COLOUR_WORDS})"
+                         rf"(?:[\s-]+(?:{_HUE_WORDS}))?\b", re.I)
+
+
+def _listed(names: list[str]) -> str:
+    return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else "".join(names)
+
+
+def _recolour_sam_phrases(data: dict, problems: list) -> None:
+    """Each sam_phrase names its structure's colour in the word the illustrator is told (colour_word), the writer's
+    noun kept: since Nov 1 the picture's description names no colour, so the painting has the colour code names, and
+    SAM asked for the writer's "lime ball" looked for a colour the picture was never asked for ("NADPH yellow"). A
+    phrase with no colour word is left as it is. Repaired, and recorded."""
+    changed = []
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            phrase, word = structure["sam_phrase"], colour_word(structure["color_hex"])
+            found = COLOUR_NAME.search(phrase)
+            if found and re.sub(r"[\s-]+", " ", found.group(0).lower()) != word:
+                structure["sam_phrase"] = phrase[:found.start()] + word + phrase[found.end():]
+                changed.append(f'"{phrase}" as "{structure["sam_phrase"]}"')
+    if changed:
+        problems.append(Problem(line_id="structures", rule="colours", repaired=True,
+                                detail="SAM asks for each colour as the illustrator is told it: "
+                                       + "; ".join(dict.fromkeys(changed))))
+
+
+def _check_colours(data: dict, problems: list) -> None:
+    """Code finds each structure by its colour and names it to the illustrator (colour_word), the picture's only word
+    for it: two structures of one scene in one colour word are painted alike. Two structures anywhere drawn alike, in
+    one colour word as one thing ("king in blue"), read as one (Nov 1: Louis XVI and Charles I, and the bridge sang
+    "Same broke king"); one colour for two different things (an orange tower and an orange chest) does not. The
+    sam_phrases are made to name their colours so first. The rest is recorded, for the prompt: which part should
+    change is the writer's to say."""
+    _recolour_sam_phrases(data, problems)
+    looks: dict[tuple[str, str], list[str]] = {}
+    for scene in data["scenes"]:
+        by_word: dict[str, list[str]] = {}
+        for structure in scene["structures"]:
+            word = colour_word(structure["color_hex"])
+            by_word.setdefault(word, []).append(structure["name"])
+            alike = looks.setdefault((word, " ".join(fold(structure["sam_phrase"]).split())), [])
+            if structure["name"] not in alike:
+                alike.append(structure["name"])
+        for word, names in by_word.items():
+            if len(names) > 1:
+                problems.append(Problem(line_id=f"scene:{scene['id']}", rule="colours", repaired=False,
+                                        detail=f'{_listed(names)} are {"both" if len(names) == 2 else "all"} '
+                                               f'"{word}" to the illustrator'))
+    for (_, phrase), names in looks.items():
+        if len(names) > 1:
+            problems.append(Problem(line_id="structures", rule="colours", repaired=False,
+                                    detail=f'{_listed(names)} are drawn alike, each a "{phrase}", so they read as one'))
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"[^\W_]+", fold(text)))
+
+
+def _check_aliases(data: dict, problems: list) -> None:
+    """An alias that is a word of the topic reveals its structure every time the topic is said: the light reactions'
+    Sunlight, with the alias "light", was revealed by every "light reactions" (Nov 1). Not a word of the structure's own
+    name ("pump" for the sodium-potassium pump), which means it. Recorded, not repaired: without the alias, a part the
+    lines call by that word alone would never be revealed."""
+    topic, seen = fold(data["topic"]), set()
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            for alias in structure["aliases"]:
+                word = " ".join(fold(alias).split())
+                if not word or (structure["name"], word) in seen or _words(word) <= _words(structure["name"]):
+                    continue
+                if re.search(rf"(?<!\w){re.escape(word)}(?!\w)", topic):
+                    seen.add((structure["name"], word))
+                    problems.append(Problem(line_id="structures", rule="alias", repaired=False,
+                                            detail=f'"{alias}", an alias of {structure["name"]}, is a word of the '
+                                                   f'topic: every line that says "{data["topic"]}" reveals it'))
 
 
 AXIS_MAX = 28  # characters an axis name holds ("Number of molecules"); a longer one would run across the graph
@@ -592,12 +741,16 @@ def _check_meanings(data: dict, canon: dict[str, str], problems: list) -> None:
 
 def _check_conversions(data: dict, canon: dict[str, str], problems: list) -> None:
     """Each conversion names a structure, as its name, with something going in and something coming out, each as a
-    textbook prints it. One structure shows one conversion; any other is left out."""
+    textbook prints it, none of them the structure itself: "rock → magma" beside Magma is a cycle's form turning into
+    another, not a reaction there. One structure shows one conversion; any other is left out."""
     kept, seen = [], set()
     for conv in data["conversions"]:
         name = canon.get(fold(conv["structure"]))
         sides = [[notation(x) for x in conv[side] if notation(x)] for side in ("inputs", "outputs")]
-        why = ("names no structure" if not name else "repeats a structure's conversion" if name in seen else
+        itself = name and any(canon.get(fold(x)) == name for side in ("inputs", "outputs")
+                              for x in [*conv[side], *map(notation, conv[side])])
+        why = ("names no structure" if not name else "names the structure itself" if itself else
+               "repeats a structure's conversion" if name in seen else
                "has nothing going in or coming out" if not all(sides) else
                f"has more than {CONVERT_MAX} on one side" if any(len(side) > CONVERT_MAX for side in sides) else
                "has a name too long to print" if any(len(x) > MARKER_MAX for side in sides for x in side) else "")

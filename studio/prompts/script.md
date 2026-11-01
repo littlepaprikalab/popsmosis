@@ -15,7 +15,7 @@ answers it.
 ## The scenes
 
 3 to 6 pictures, each with a short `id` and a `picture`: one to three plain sentences saying
-what it draws and where, every part the narration names over it, and nothing it does not need.
+what it draws and where, and nothing it does not need.
 A picture is still: a textbook diagram or a friendly illustration. The video adds the labels,
 the motion (dots that travel between the parts) and the zoom, so say where things are, never
 an arrow, a word or something happening.
@@ -98,9 +98,9 @@ Every sentence:
   "that's why"). One new term a sentence, said with what it means, in the words the course
   uses. No lists, no parentheses, no "as we saw".
 
-Play the scenes in the order the explanation needs them: the hook, the overview,
-each close-up once the overview has shown where it is, the overview again between close-ups
-and at the end. Each passage is one scene; the hook comes back only to close.
+Play the scenes in the order the explanation needs them: the hook, the overview, then
+each close-up once the overview has shown where it is. Each passage is one scene; the hook
+comes back only to close.
 
 The rules for the audience, the facts and the essence follow, after "How we teach", as the
 writer's full brief gives them. Where they mention the song or the lesson text, those are made
