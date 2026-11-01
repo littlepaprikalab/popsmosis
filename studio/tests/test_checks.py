@@ -764,9 +764,15 @@ def test_a_head_count_is_said_as_a_common_answer():
     data["narration"][1]["text"] = "Does the heavy one land first? Most people say yes."
     data["lesson_markdown"] += "\nMany students think that every carrier pumps protons. And most people say no.\n"
     bundle, problems = checks.repair_once(Bundle.model_validate(data))
-    assert bundle.narration[1].text == "Does the heavy one land first? A common answer is yes."
-    assert "\nA common guess is that every carrier pumps protons. And most people say no.\n" in bundle.lesson_markdown
+    said = bundle.narration[1].text.removeprefix("Does the heavy one land first? ")
+    assert said in [form.format("yes") + "." for form in checks.COMMON_ANSWER]
+    assert any(f"\n{form}every carrier pumps protons. And most people say no.\n" in bundle.lesson_markdown
+               for form in checks.COMMON_GUESS)
     assert [(p.line_id, p.rule) for p in problems] == [("n2", "head-count"), ("lesson_markdown", "head-count")]
+    # Not one form for every droplet (Nov 1: "A common answer is yes" in all twelve), but the same for the same text.
+    picked = {checks._counted(f"Is it {thing}? Most people say yes.").split("? ")[1]
+              for thing in ("heavy", "red", "fast", "big", "warm", "wet")}
+    assert len(picked) > 1 and checks._counted("Most people say no.") == checks._counted("Most people say no.")
 
 
 def test_a_source_quote_the_study_guide_does_not_hold_is_left_out():

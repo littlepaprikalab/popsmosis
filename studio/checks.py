@@ -15,6 +15,7 @@ from __future__ import annotations
 import colorsys
 import json
 import re
+import zlib
 from collections import Counter
 from pathlib import Path
 
@@ -719,9 +720,19 @@ HEAD_COUNT = re.compile(r"(^|[.!?:]\s+|\n\s*(?:[-*>]\s+|\d+\.\s+)?)(?:most|many|
                         r"|(?:think|believe)\s+that\s+)", re.I)
 
 
+# What a head count is said as, one picked by the sentence so the same text always reads the same: one form stamped on
+# every droplet read as a template (Nov 1, "A common answer is yes" in all twelve).
+COMMON_ANSWER = ("A common answer is {}", "The usual guess is {}", "It's tempting to say {}")
+COMMON_GUESS = ("A common guess is that ", "It's tempting to think that ", "It's easy to believe that ")
+
+
 def _counted(text: str) -> str:
-    return HEAD_COUNT.sub(lambda m: m[1] + (f"A common answer is {m[2].lower()}" if m[2] else "A common guess is that "),
-                          text)
+    def said(m: re.Match) -> str:
+        pick = zlib.crc32(text[max(0, m.start() - 80):m.end() + 80].encode())  # the question before it, too
+        if m[2]:
+            return m[1] + COMMON_ANSWER[pick % len(COMMON_ANSWER)].format(m[2].lower())
+        return m[1] + COMMON_GUESS[pick % len(COMMON_GUESS)]
+    return HEAD_COUNT.sub(said, text)
 
 
 def held_to_guide(facts: list[Fact], study_guide: str) -> tuple[list[Fact], list[Problem]]:
