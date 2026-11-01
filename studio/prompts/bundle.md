@@ -60,10 +60,7 @@ facts do not support, even if it is true; a line it cannot fix fails the droplet
   what it resembles that the learner already knows (the same trick in another topic of the
   course), and a way it can fail with what follows
   step by step, for the song's bridge ("cyanide blocks the chain's last carrier, so the cell
-  stops making most of its ATP"). A topic that is not a system that can break (a chain of
-  events, a writer's device) needs another case the same idea explains instead, worked step
-  by step: the same device in another play, the same causes in another revolution. Facts
-  that hold only definitions make dry lines.
+  stops making most of its ATP"). Facts that hold only definitions make dry lines.
 - Choose one everyday picture, the frame for the whole idea, and put it in the fact it
   explains, saying what matches what. Choose it by what the whole thing is *for*: an
   everyday thing that does the same job (a trade, a delivery, a relay, a recipe, a filter),
@@ -466,10 +463,8 @@ In this order, each section a run of lines with its own `section` value:
 - **Bridge**, 8 lines: a sung exam question. Name one thing that breaks the system (a drug,
   a toxin, a mutation, a missing part) and walk its effects in cause-and-effect order to the
   outcome, one link a line ("no myelin, so the signal crawls"), every effect one the facts
-  say follows from that break. For a topic that is not a system (a chain of events, a
-  writer's device), the bridge takes the other case the facts give and walks it the same
-  way. Either way it sings something new, never the verses' story again, and a story in
-  time never steps back to an earlier event.
+  say follows from that break. It sings something new, never the verses' story again, and a
+  story in time never steps back to an earlier event.
 - **Chorus**: a summary couplet, then the chorus word for word.
 - **Outro**, 3 lines: echo the intro and end on the title line.
 

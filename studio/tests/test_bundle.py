@@ -45,7 +45,10 @@ def test_the_prompt_holds_for_topics_outside_science():
     # which sums up the same way, keeps the warning.
     assert "for a process, what goes in and what comes out" in " ".join(script_step.narration_rules().split())
     assert "for any other idea, its cause and its result. Only something really taken in" in prompt
-    assert "the bridge takes the other case the facts give" in prompt and "another case the same idea explains" in prompt
+    assert "It sings something new, never the verses' story again" in prompt
+    # Nov 1, the owner: no other case for a chain of events. Asked for "the same causes in another revolution", the
+    # French Revolution's lesson and bridge turned to England, a segue that taught nothing.
+    assert "another revolution" not in prompt and "other case" not in prompt
 
 
 def test_the_facts_say_the_misconception_is_a_common_one():
