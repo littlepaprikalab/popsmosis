@@ -106,6 +106,12 @@ HANDOFF_GROW_S = 0.35  # an arrow drawing itself in, from its tail
 HANDOFF_REST = 0.7  # how strong an arrow is while the pulse is on another
 ROUTE_GROW_S = 1.0  # an arrow along a whole way drawing itself in
 ROUTE_DASH_SPEED = 40.0  # frame pixels a second its dashes move along it, the way the flow goes
+# Off a graph every flow is an arrow, never particles travelling along it (the owner, Nov 1: dots running across a
+# painted picture went sideways and through the membrane): one particle of what it carries sits at the arrow's tail,
+# jiggling in place (at its head, before the cross, when the flow is blocked), and the spaces' crowds jiggle in theirs.
+FACE_DEPTH = 40.0  # art pixels: a path meets a part at its end this far in from its face toward the stop beside it
+TAIL_JIGGLE_PX = 5.0  # frame pixels the particle at an arrow's tail jiggles
+TAIL_SIZE = 0.9  # its size, as a share of a lead particle's
 # A note (an arrow's one-liner): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
 # clear of the parts' label points and other notes (NOTE_CROWD each).
@@ -1683,11 +1689,14 @@ class Renderer:
             alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
             if alpha <= 0.01:
                 continue
-            if self._travels(beat.scene, flow):  # each part bumps once, as the arrow into it draws in
+            if self._as_arrow(beat.scene, flow):  # each part bumps once, as the arrow into it draws in
                 for k, (_, _, loc) in enumerate(self._handoffs(beat.scene, flow)):
                     at = t - flow_in - k * HANDOFF_STEP_S - HANDOFF_GROW_S
                     if 0 <= at < BUMP_S and not self._is_space(beat.scene, loc):
                         grow[loc.name] = grow.get(loc.name, 0.0) + BUMP * math.sin(math.pi * at / BUMP_S)
+                if not flow.blocked:  # and a part it passes through works while it runs, as under particles
+                    for name in self._arrivals(beat.scene, flow)[2]:
+                        work[name] = max(work.get(name, 0.0), alpha)
                 continue
             trip, reached, through = self._arrivals(beat.scene, flow)
             if trip <= 0:
@@ -1887,6 +1896,15 @@ class Renderer:
             if len(points) == 2 and math.dist(*points) < 1:
                 points = points[:1]
             out += [(point, loc, True) for point in points]
+        # A part at either end of the path is met at its face toward the stop beside it, a little way in, never at its
+        # label point, which can lie anywhere in it: in the pump's close-up of Nov 1 it was out in the lobes above the
+        # membrane, and ATP was drawn crossing the membrane to reach it.
+        if len(out) > 1:
+            given = [point for point, _, _ in out]
+            for i in (0, len(out) - 1):
+                point, loc, fixed = out[i]
+                if not fixed:
+                    out[i] = (self._face(scene_id, loc, given[1 if i == 0 else -2]), loc, True)
         anchors = [point for point, _, _ in out]
         if len(anchors) < 2:
             return [(point, loc) for point, loc, _ in out]
@@ -1965,19 +1983,24 @@ class Renderer:
         stops = [loc for name in path if (loc := located.get(name)) is not None]
         found = None
         if len(stops) == 3 and len({s.name for s in stops}) == 3:
-            a, mid, b = (s.label_anchor for s in stops)
+            # Which way it crosses goes by where its ends lie beside the part (_path_stops), not by their label points:
+            # a space's label point can sit at the far edge of the picture. On Nov 1 the inside of the cell had its
+            # point at the left edge, so the sides read as left and right of the pump, and the sodium ran sideways.
+            ends = self._path_stops(scene_id, path)
+            (ax, ay), (bx, by) = ends[0][0], ends[-1][0]
+            mid = stops[1].label_anchor
             part = stops[1]
-            upright = abs(b.y - a.y) >= abs(b.x - a.x)  # the sides lie above and below it: it crosses up or down
-            if upright and min(a.y, b.y) < mid.y < max(a.y, b.y):
+            upright = abs(by - ay) >= abs(bx - ax)  # the sides lie above and below it: it crosses up or down
+            if upright and min(ay, by) < mid.y < max(ay, by):
                 across = part.label_anchor.x + LANE_GAP * (1 if lane % 2 else -1) * ((lane + 1) // 2)
                 near, far = self._extent(scene_id, part, across, upright=True)
-                down = b.y > a.y
+                down = by > ay
                 start, end = (near - SPACE_REACH, far + SPACE_REACH) if down else (far + SPACE_REACH, near - SPACE_REACH)
                 found = [(across, start), (across, (near + far) / 2), (across, end)]
-            elif not upright and min(a.x, b.x) < mid.x < max(a.x, b.x):
+            elif not upright and min(ax, bx) < mid.x < max(ax, bx):
                 across = part.label_anchor.y + LANE_GAP * (1 if lane % 2 else -1) * ((lane + 1) // 2)
                 near, far = self._extent(scene_id, part, across, upright=False)
-                right = b.x > a.x
+                right = bx > ax
                 start, end = (near - SPACE_REACH, far + SPACE_REACH) if right else (far + SPACE_REACH, near - SPACE_REACH)
                 found = [(start, across), ((near + far) / 2, across), (end, across)]
         self._through[key] = found
@@ -2051,7 +2074,14 @@ class Renderer:
                         routes.append((route.path, route.label, route.color))
             samples, drawn = [], set()
             for path, label, color in routes:
-                flow = next((f for f in self._flows_of(scene_id, path, label) if self._travels(scene_id, f)), None)
+                flow = next((f for f in self._flows_of(scene_id, path, label) if self._as_arrow(scene_id, f)), None)
+                if flow is not None and not self._graph(scene_id):  # its arrow
+                    line = self._flow_line(scene_id, flow)
+                    for start, end in zip(line, line[1:]):
+                        n = max(int(math.dist(start, end) / ARROW_SAMPLE), 1)
+                        samples += [(p.lerp(start[0], end[0], k / n), p.lerp(start[1], end[1], k / n))
+                                    for k in range(n + 1)]
+                    continue
                 if flow is not None:  # its arrows, not the route between its stops
                     for tail, tip, _ in self._handoffs(scene_id, flow):
                         n = max(int(math.dist(tail, tip) / ARROW_SAMPLE), 1)
@@ -2081,7 +2111,7 @@ class Renderer:
         """What travels on the scene as hand-off arrows, which the legend keys with an arrow; once per scene."""
         if scene_id not in self._arrowed_labels:
             self._arrowed_labels[scene_id] = {f.label for b in self.timeline.beats if b.scene == scene_id
-                                              for f in b.particles if f.label and self._travels(scene_id, f)}
+                                              for f in b.particles if f.label and self._as_arrow(scene_id, f)}
         return self._arrowed_labels[scene_id]
 
     def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
@@ -2122,8 +2152,8 @@ class Renderer:
             if alpha <= 0.01:
                 continue
             elapsed = t - flow_in
-            if self._travels(beat.scene, flow):
-                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame)
+            if self._as_arrow(beat.scene, flow):
+                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t)
                 continue
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
@@ -2222,6 +2252,73 @@ class Renderer:
             self._handoff_arrows[key] = arrows
         return self._handoff_arrows[key]
 
+    def _as_arrow(self, scene_id: str, flow) -> bool:
+        """Whether a flow is drawn as an arrow: every flow off a graph (FACE_DEPTH's note says why), and on a graph,
+        those that travel (_travels)."""
+        return not self._graph(scene_id) or self._travels(scene_id, flow)
+
+    def _face(self, scene_id: str, loc, toward: Point) -> Point:
+        """Where a path meets a part at its end, in art pixels: the point of its outline nearest `toward` (the stop
+        beside it), moved FACE_DEPTH in toward its middle; its label point when it has no outline here."""
+        try:
+            cells = self.scene(scene_id).cells(loc.name)
+        except KeyError:
+            return loc.label_anchor.x, loc.label_anchor.y
+        ys, xs = np.nonzero(cells)
+        if not len(xs):
+            return loc.label_anchor.x, loc.label_anchor.y
+        cx, cy = (xs + 0.5) * routing.GRID, (ys + 0.5) * routing.GRID
+        k = int(np.argmin((cx - toward[0]) ** 2 + (cy - toward[1]) ** 2))
+        ex, ey = float(cx[k]), float(cy[k])
+        mx, my = loc.centroid.x, loc.centroid.y
+        d = math.dist((ex, ey), (mx, my))
+        if d < 1.0:
+            return ex, ey
+        step = min(FACE_DEPTH, d)
+        return ex + (mx - ex) / d * step, ey + (my - ey) / d * step
+
+    def _flow_line(self, scene_id: str, flow) -> list[Point]:
+        """A flow's arrow off a graph, art pixels: straight through the part it crosses (_crossing); along its parts
+        when it is a journey (_route_line); else its stops' legs, as particles ran them before Nov 1 (_path_points,
+        _bends); up to its blocker when blocked."""
+        key = ("flow", scene_id, tuple(flow.path), flow.label, flow.blocked)
+        if key not in self._through:
+            lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
+            crossing = None if flow.blocked else self._crossing(scene_id, flow.path, lane)
+            if crossing:
+                line = list(crossing)
+            elif not flow.blocked and self._travels(scene_id, flow):
+                line = self._route_line(scene_id, flow)
+            else:
+                points = self._path_points(scene_id, flow.path, flow.blocked, lane)
+                line = _dense(points, None if flow.blocked else self._bends(scene_id, flow.path, lane)) \
+                    if len(points) > 1 else points
+            self._through[key] = line
+        return self._through[key]
+
+    def _draw_tail(self, canvas: skia.Canvas, flow, shown: list[Point], alpha: float, t: float) -> None:
+        """One particle of what the flow carries, jiggling in place just behind its arrow's tail (frame pixels), so the
+        arrow says what moves; for a blocked flow, just short of the cross at its head, where it piles up. A flow
+        carrying nothing has none."""
+        if not flow.label or len(shown) < 2:
+            return
+        total = routing.length(shown)
+        if total < 1.0:
+            return
+        head = flow.blocked
+        end = shown[-1] if head else shown[0]
+        toward = _along(shown, max(total - 30.0, 0.0)) if head else _along(shown, min(30.0, total))
+        d = math.dist(end, toward) or 1.0
+        ux, uy = (end[0] - toward[0]) / d, (end[1] - toward[1]) / d  # pointing away from the arrow's body
+        if head:  # the cross sits at the head; the particle waits just before it
+            at = (end[0] - ux * (p.BLOCK_R + p.MARKER_R + 6), end[1] - uy * (p.BLOCK_R + p.MARKER_R + 6))
+            p.draw_block(canvas, end, alpha)
+        else:
+            at = (end[0] + ux * (p.MARKER_R + 4), end[1] + uy * (p.MARKER_R + 4))
+        phase = (zlib.crc32(flow.label.encode("utf-8")) % 628) / 100
+        at = (at[0] + TAIL_JIGGLE_PX * math.sin(2.3 * t + phase), at[1] + TAIL_JIGGLE_PX * math.cos(1.9 * t + 2 * phase))
+        p.draw_kind(canvas, at, flow.color, flow.label, alpha, size=TAIL_SIZE)
+
     def _route_line(self, scene_id: str, flow) -> list[Point]:
         """A travelling flow's way as one line, art pixels: from stop to stop through the two parts' outlines
         (routing.route), however far that bends from the straight line, since following the parts is the point (up
@@ -2251,19 +2348,21 @@ class Renderer:
         return self._through[key]
 
     def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
-                       on_frame) -> None:
+                       on_frame, t: float = 0.0) -> None:
         """A travelling flow's arrows. Off a graph, one dashed arrow along its whole way (_route_line), drawing itself
         in from its tail as it sets off, its dashes then moving along it, with its one-liner (Particles.says) beside
         it, joined to it. On a
         graph, an arrow at each hand-off drawn in one after another, then a pulse running along them in order, with
         its one-liner, or else its word ("price rises"), beside the first."""
         if not self._graph(scene_id):
-            line = self._route_line(scene_id, flow)
+            line = self._flow_line(scene_id, flow)
             if len(line) < 2:
                 return
             grown = p.ease(elapsed / ROUTE_GROW_S)
-            p.draw_route_arrow(canvas, [on_frame(q) for q in line], flow.color, alpha, grown,
-                               phase=max(elapsed, 0.0) * ROUTE_DASH_SPEED)
+            shown = [on_frame(q) for q in line]
+            p.draw_route_arrow(canvas, shown, flow.color, alpha, grown,
+                               phase=0.0 if flow.blocked else max(elapsed, 0.0) * ROUTE_DASH_SPEED)
+            self._draw_tail(canvas, flow, shown, alpha, t)
             says = getattr(flow, "says", "")
             if says:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
