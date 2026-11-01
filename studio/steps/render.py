@@ -18,11 +18,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from studio import media
-from studio.jobs import read
+from studio.jobs import read, write
 from studio.media import StepFailed
 from studio.schemas import Locations, Timeline, timeline_problems
 
 LAYOUT = "h"  # the song and lesson videos; the hook cut is upright (media.HOOK_LAYOUT)
+LEFT_OUT = "left_out.json"  # per video, each arrow the sanity gate left out and why (Renderer.left_out)
 
 
 def videos(job: Path) -> list[tuple[str, str]]:
@@ -51,6 +52,12 @@ def run(job: Path, ask=None) -> str:
             raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
         timelines.append(timeline)
 
+    # The arrows the renderer's sanity gate leaves out rather than draw wrong, recorded beside the videos.
+    from studio.render.renderer import Renderer
+    left_out = {video: Renderer(job, timeline, layout, locations).left_out
+                for (video, layout), timeline in zip(made, timelines)}
+    write(job / LEFT_OUT, left_out)
+
     def posters() -> None:
         for (video, layout), timeline in zip(made, timelines):
             try:
@@ -67,8 +74,10 @@ def run(job: Path, ask=None) -> str:
         except EncodeError as e:
             raise StepFailed(f"{made[e.index][0]}: {e}") from e
         drawn.result()
-    return "rendered " + ", ".join(f"{video} {timeline.duration:.0f} s in {done.seconds:.0f} s"
-                                   for (video, _), timeline, done in zip(made, timelines, rendered))
+    dropped = len({(a["scene"], tuple(a["path"]), a["carries"]) for arrows in left_out.values() for a in arrows})
+    return ("rendered " + ", ".join(f"{video} {timeline.duration:.0f} s in {done.seconds:.0f} s"
+                                    for (video, _), timeline, done in zip(made, timelines, rendered))
+            + (f"; {dropped} arrow(s) left out ({LEFT_OUT})" if dropped else ""))
 
 
 def is_done(job: Path) -> bool:

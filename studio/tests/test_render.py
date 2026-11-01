@@ -402,7 +402,8 @@ def test_the_particle_at_an_arrows_tail_is_a_badge_with_what_it_carries_and_a_wo
         "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle
 
 
-def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
+def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "CROWDS", True)  # switched off since Nov 1; the code is kept
     gold = "#F2C230"
 
     def crowded(level):
@@ -432,7 +433,8 @@ def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
 
 
 
-def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job):
+def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "CROWDS", True)  # switched off since Nov 1; the code is kept
     # The wash over a filling space was nearly half of a frame's time on the pump's song (Nov 1): it changes slowly,
     # so it is part of the picture the renderer keeps, in steps of TINT_STEP.
     gold = "#F2C230"
@@ -448,7 +450,8 @@ def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job):
     assert frame_tints == (("Thylakoid", gold, round(renderer_module.CROWD_TINT, 4)),) and frame_tints in kept
     assert tints(0.0) == ((), [])  # nothing filling: the picture as painted
 
-def test_a_few_dots_where_particles_are_scarce_sit_apart_from_the_crowd_and_only_in_a_space(job):
+def test_a_few_dots_where_particles_are_scarce_sit_apart_from_the_crowd_and_only_in_a_space(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "CROWDS", True)  # switched off since Nov 1; the code is kept
     # Round 22's pump showed no K⁺ outside the cell at all: a gradient is more on one side, not none on the other.
     gold, blue = "#F2C230", "#7FD1FF"
 
@@ -1653,6 +1656,7 @@ def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
 
 
 def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossing_straight_through(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "ROUTES", True)  # switched off since Nov 1; the code is kept
     # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
     # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
     # nothing). Since Nov 1 every other flow off a graph is an arrow too, an ion's straight through what it crosses.
@@ -1822,3 +1826,40 @@ def test_an_arrow_carries_as_many_as_the_moments_words_count_for_what_moves():
     assert count_in("Three go out and two come in", "Na⁺") == 1
     assert count_in("Sodium out, potassium in", "K⁺") == 1
     assert count_in("ten sodium", "Na⁺") == 1
+
+
+def test_an_arrow_that_would_mislead_is_left_out_and_said_why(job, monkeypatch):
+    # Nov 1: K⁺ ran sideways into the cell, two arrows had no length, and H⁺ ended above the picture. The gate leaves
+    # such an arrow out (Renderer.left_out) instead of drawing it wrong; a blocked one may be short, ending at its cross.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    flow = Particles(path=["Cytochrome b6f", "Thylakoid"], color="#F2C230", label="H⁺", trail=True)
+    beats = list(timeline.beats)
+    beats[i] = beats[i].model_copy(update={"particles": [flow]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    real = renderer._flow_line("overview", flow)
+    assert renderer._wrong_arrow("overview", flow) == "" and renderer.left_out == []  # the real arrow passes
+    (x0, y0), (x1, y1) = real[0], real[-1]
+    for line, why in (([(x0, y0), (x0 + 5, y0 + 5)], "too short to read"),
+                      ([(x0, y0), (x0, -40.0)], "leaves the picture"),
+                      ([(x1, y1), (x0, y0)], "points away from Thylakoid")):
+        monkeypatch.setattr(renderer, "_flow_line", lambda scene_id, f, line=line: line)
+        assert renderer._wrong_arrow("overview", flow) == why
+    monkeypatch.setattr(renderer, "_flow_line", lambda scene_id, f: [(x0, y0), (x0 + 5, y0 + 5)])
+    assert renderer._wrong_arrow("overview", flow.model_copy(update={"blocked": True})) == ""
+    # Built with a wrong line, the renderer lists the arrow and never draws it.
+    monkeypatch.setattr(Renderer, "_flow_line", lambda self, scene_id, f: [(x1, y1), (x0, y0)])
+    wrong = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert wrong.left_out == [{"scene": "overview", "path": ["Cytochrome b6f", "Thylakoid"], "carries": "H⁺",
+                               "why": "points away from Thylakoid"}]
+
+
+def test_crowds_are_left_out_unless_switched_on(job, monkeypatch):
+    # Nov 1, the owner: fewer kinds of motion; a crowd's dots are placed through a space's outline, a guess.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = [b.model_copy(update={"crowds": [Crowd(region="Thylakoid", label="H⁺", color="#F2C230", start=0.5,
+                                                   end=1.0)]}) for b in timeline.beats]
+    crowded = timeline.model_copy(update={"beats": beats})
+    assert all(not b.crowds for b in Renderer(job, crowded).timeline.beats)
+    monkeypatch.setattr(renderer_module, "CROWDS", True)
+    assert all(b.crowds for b in Renderer(job, crowded).timeline.beats)

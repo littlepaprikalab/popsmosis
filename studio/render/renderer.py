@@ -49,6 +49,15 @@ LANE_GAP = 64.0  # art pixels between two things travelling the same stops side 
 # particles (Na⁺ out, K⁺ in) to pass without touching
 SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
 SPACE_FILL = 0.25  # and fills at least this share of its box: a curve across a chart has a big box but is no space
+# Fewer kinds of motion (the owner, Nov 1): every kind guesses where things are in a painted picture, from the outlines
+# SAM finds, and each guess was a way to draw motion wrong. Off until someone misses them:
+CROWDS = False  # a space filling with dots (Bundle.builds_up), placed through the space's outline
+ROUTES = False  # an arrow routed along the parts' outlines; off, a journey or a hop is a straight line or an arc
+# The sanity gate: an arrow failing any of these is left out (Renderer.left_out), never drawn wrong. Nov 1's wrong
+# arrows each failed one: K+ sideways into the cell, two with no length, H+ ending above the picture.
+ARROW_MIN = 25.0  # art pixels: shorter reads as no arrow
+ARROW_REACH = 60.0  # art pixels an end may fall outside the box of the part or space it starts or ends in
+ARROW_TURN = 0.3  # the least cosine between an arrow and the way from where it starts to where it goes
 LINE_RATIO = 12.0  # a structure this many times longer than it is wide is a line: its label hangs from one end
 LINE_END = 0.12  # how far in from that end, as a share of its length: on the line, clear of its tip
 SPOT_S = 0.6
@@ -876,6 +885,10 @@ class Renderer:
         self._frame_tints: tuple = ()  # the crowds' tints of the frame being drawn (_crowd_tints)
         # The spaces the lesson fills (Bundle.builds_up, as the beats' crowds): spaces wherever they are drawn big.
         self._crowded = {c.region for beat in timeline.beats for c in beat.crowds if not c.thin}
+        if not CROWDS:
+            timeline = timeline.model_copy(update={"beats": [b.model_copy(update={"crowds": []}) if b.crowds else b
+                                                             for b in timeline.beats]})
+            self.timeline = timeline
         scene_ids = {b.scene for b in timeline.beats}
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
@@ -950,6 +963,15 @@ class Renderer:
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
         self._postits: dict[str, list[tuple[int, float]]] = {}  # per scene, each flag's post-it side and reach
+        # The sanity gate, once for every arrow off a graph (a graph's are drawn exactly): what fails is never drawn.
+        self._wrong: dict[tuple, str] = {}
+        for beat in timeline.beats:
+            for flow in beat.particles if not self._graph(beat.scene) else ():
+                key = (beat.scene, tuple(flow.path), flow.label, flow.blocked)
+                if key not in self._wrong:
+                    self._wrong[key] = self._wrong_arrow(beat.scene, flow)
+        self.left_out = [{"scene": scene, "path": list(path), "carries": label, "why": why}
+                         for (scene, path, label, _), why in self._wrong.items() if why]
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the key band and the lyric band, and left of the
@@ -1788,7 +1810,7 @@ class Renderer:
                 grow[name] = grow.get(name, 0.0) + POP * math.sin(math.pi * (t - at) / POP_S)
         for flow, (flow_in, flow_out) in zip(beat.particles, plan.runs):
             alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
-            if alpha <= 0.01:
+            if alpha <= 0.01 or self._wrong.get((beat.scene, tuple(flow.path), flow.label, flow.blocked)):
                 continue
             if self._as_arrow(beat.scene, flow):  # each part bumps once, as the arrow into it draws in
                 for k, (_, _, loc) in enumerate(self._handoffs(beat.scene, flow)):
@@ -2065,7 +2087,7 @@ class Renderer:
             if self._is_space(scene_id, stops[i]) or self._is_space(scene_id, stops[i + 1]):
                 bends.append(None)
                 continue
-            through = self._routed(scene_id, stops[i], stops[i + 1], ends[i], ends[i + 1])
+            through = self._routed(scene_id, stops[i], stops[i + 1], ends[i], ends[i + 1]) if ROUTES else None
             if through:  # along the parts themselves, where their outlines join
                 bends.append(through)
                 continue
@@ -2262,7 +2284,7 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         for flow, (flow_in, flow_out) in zip(beat.particles, plan.runs):
             alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
-            if alpha <= 0.01:
+            if alpha <= 0.01 or self._wrong.get((beat.scene, tuple(flow.path), flow.label, flow.blocked)):
                 continue
             elapsed = t - flow_in
             if self._as_arrow(beat.scene, flow):
@@ -2390,6 +2412,43 @@ class Renderer:
         step = min(FACE_DEPTH, d)
         return ex + (mx - ex) / d * step, ey + (my - ey) / d * step
 
+    def _wrong_arrow(self, scene_id: str, flow) -> str:
+        """Why a flow's arrow would mislead, or "": too short to read, leaving the picture, starting or ending away
+        from where its path says, or pointing away from where it goes (the way from its first stop to its last)."""
+        art = self.scene(scene_id)
+        try:
+            line = self._flow_line(scene_id, flow)
+        except (KeyError, ValueError, RuntimeError) as e:
+            return f"no line: {e}"
+        if len(line) < 2 or (routing.length(line) < ARROW_MIN and not flow.blocked):  # a blocked one ends at its cross
+            return "too short to read"
+        if any(not (0 <= x <= art.width and 0 <= y <= art.height) for x, y in line):
+            return "leaves the picture"
+        located = self.locations.scene(scene_id)
+        stops = [loc for name in flow.path if (loc := located.get(name)) is not None]
+        if len(stops) < 2:
+            return ""
+        first, last = stops[0], stops[-1]
+        for end, loc, what in ((line[0], first, "starts"), (line[-1], last, "ends")):
+            b = loc.box
+            if not (b.x0 - ARROW_REACH <= end[0] <= b.x1 + ARROW_REACH
+                    and b.y0 - ARROW_REACH <= end[1] <= b.y1 + ARROW_REACH):
+                return f"{what} away from {loc.name}"
+        if first.name == last.name:
+            return ""
+
+        # The way it should go: from a part's middle, or from where it starts in a space (beside the part it goes to,
+        # not the space's middle: the stroke's O2 set off beside the clot); to a part's middle, or a space by its box,
+        # which a patchy outline does not move.
+        ax, ay = line[0] if self._is_space(scene_id, first) else (first.centroid.x, first.centroid.y)
+        bx, by = (((last.box.x0 + last.box.x1) / 2, (last.box.y0 + last.box.y1) / 2)
+                  if self._is_space(scene_id, last) else (last.centroid.x, last.centroid.y))
+        vx, vy, wx, wy = line[-1][0] - line[0][0], line[-1][1] - line[0][1], bx - ax, by - ay
+        norm = math.hypot(vx, vy) * math.hypot(wx, wy)
+        if norm and (vx * wx + vy * wy) / norm < ARROW_TURN:
+            return f"points away from {last.name}"
+        return ""
+
     def _flow_line(self, scene_id: str, flow) -> list[Point]:
         """A flow's arrow off a graph, art pixels: straight through the part it crosses (_crossing); along its parts
         when it is a journey (_route_line); else its stops' legs, as particles ran them before Nov 1 (_path_points,
@@ -2400,7 +2459,7 @@ class Renderer:
             crossing = None if flow.blocked else self._crossing(scene_id, flow.path, lane)
             if crossing:
                 line = list(crossing)
-            elif not flow.blocked and self._travels(scene_id, flow):
+            elif ROUTES and not flow.blocked and self._travels(scene_id, flow):
                 line = self._route_line(scene_id, flow)
             else:
                 points = self._path_points(scene_id, flow.path, flow.blocked, lane)
