@@ -129,6 +129,46 @@ that as a hint. Accuracy went from 4.42 to 4.67. Read through:
   saying the new moon has "no lit half", and classical conditioning's frame making the learned response a choice
   ("reaching for the umbrella").
 
+## In-session run, Nov 1
+
+After the day's changes: the core idea says what a thing is and what it is for (cause and effect for a topic about
+why something happens), a fact says what it is for, step lines follow the song's order, crowds that are always
+there (`held`), no analogy picture, and the brief trimmed of its analogy leftovers. Judged by Opus beside the same
+baseline droplets:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Oct 31, after the song changes | 12 of 12 | 4.52 | 3.69 | 6 / 13 |
+| Nov 1 | 12 of 12 | 4.44 | 3.71 | 12 / 9 |
+
+By criterion, against Oct 31: hook 4.92 (4.75), frame 4.75 (4.58), singability 4.25 (4.08), lesson 4.83 (4.92),
+why chain 4.33 (4.58), key lines 3.67 (4.08), accuracy 4.33 (4.67). Read through, and beside the judge:
+
+- **No droplet drew the analogy**, and every core idea took its kind: what it is and what it is for ("The
+  sodium-potassium pump spends ATP pushing sodium out and potassium in, so nerves can fire and cells don't swell";
+  "A p-value is how often luck alone would give results at least as extreme as yours; small makes luck doubtful"),
+  cause and effect for the Moon, the revolution, the rocket and prices. Lessons say what the thing is for early:
+  "Catalysts let reactions that would be far too slow run fast at ordinary temperatures, so life and much of
+  industry depend on them."
+- **Key lines dipped for a known reason in part:** the rubric reads them "in order", and the rocket's, placed as
+  its song sings them, put "No air in the pair → slightly more thrust in space" first (scored 2). The light
+  reactions and the p-value lost a point for a question as the first line and a last line on the next stage.
+- **The errors doubled** (6 to 12), none of them in what changed: song lines that overclaim ("Small enough, the
+  court rules luck out", "She can really taste it after all"; "a republic grows" sung as if straight after 1789),
+  a bridge saying |x|'s secant slopes "climb" and "fall", a misconception that is itself wrong (air "only drags",
+  so a rocket pushes harder in space), "rolling forward is the thrust", and the pump's "Three sodium climb in from
+  inside", heard as sodium entering the cell. One run's spread; the fact-check, which this run leaves out, is
+  there for these.
+- **`held` was missed where it mattered:** the pump wrote sodium outside and potassium inside as `held: false`,
+  the rule's own example of true.
+- **The step-line hint fired 6 times, about one of them real** (supply and demand's equilibrium step on "Squeezed
+  from the top, squeezed from the floor"): songs sing their steps in their own words.
+- **The side-by-side check fired 6 times, half of them real:** classical conditioning's three panels, the Moon
+  drawn three times, the catalyst's two panels; not two strawberry markets, nor Romeo and Juliet standing side by
+  side.
+- **The light reactions' old song is the better song**, "Split the water, catch the light", though the judge and
+  the lesson preferred the new droplet.
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
