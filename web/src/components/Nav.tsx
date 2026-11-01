@@ -75,7 +75,8 @@ export function Nav() {
         <div className="hidden lg:flex flex-wrap items-center gap-x-4 gap-y-1 text-sm flex-1">
           <Link href="/learn" className="hover-text transition-colors" style={isActive('/learn') ? activeStyle : idleStyle}>LEARN</Link>
           <Link href="/droplets" className="hover-text transition-colors" style={isActive('/droplets') ? activeStyle : idleStyle}>DROPLETS</Link>
-          <Link href="/how-its-made" className="hover-text transition-colors" style={isActive('/how-its-made') ? activeStyle : idleStyle}>HOW IT&rsquo;S MADE</Link>
+          {/* ml-auto: the pages about the site sit on the right, by the account, apart from the app's own two */}
+          <Link href="/how-its-made" className="hover-text transition-colors ml-auto" style={isActive('/how-its-made') ? activeStyle : idleStyle}>HOW IT&rsquo;S MADE</Link>
           <Link href="/about" className="hover-text transition-colors" style={isActive('/about') ? activeStyle : idleStyle}>ABOUT</Link>
           <span style={{ color: 'var(--border)' }}>|</span>
           {authLinks()}
@@ -100,6 +101,9 @@ export function Nav() {
           <div className="flex flex-col gap-3" style={{ color: 'var(--text-secondary)' }}>
             <Link href="/learn" className="hover-text transition-colors" onClick={closeMenu}>LEARN</Link>
             <Link href="/droplets" className="hover-text transition-colors" onClick={closeMenu}>DROPLETS</Link>
+          </div>
+          <div className="h-px" style={{ backgroundColor: 'var(--border)' }} />
+          <div className="flex flex-col gap-3" style={{ color: 'var(--text-secondary)' }}>
             <Link href="/how-its-made" className="hover-text transition-colors" onClick={closeMenu}>HOW IT&rsquo;S MADE</Link>
             <Link href="/about" className="hover-text transition-colors" onClick={closeMenu}>ABOUT</Link>
           </div>
