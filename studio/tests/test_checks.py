@@ -554,6 +554,46 @@ def test_key_lines_keep_the_chains_order_and_ones_the_song_cannot_show_stay_in_t
     assert not any("Not sung" in d for d in details)  # "" is no problem: a step the song never sings
 
 
+def test_every_chorus_is_directed_as_the_first_where_it_sings_the_same_words():
+    def change(data):
+        direction(data, "c1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+        direction(data, "c2-1").update(spotlight="Thylakoid", caption="Proton pump")
+        next(line for line in data["lyrics"] if line["id"] == "c3-1")["text"] = "Protons flow and the gradient goes"
+        direction(data, "c3-1").update(spotlight="Thylakoid")  # a line of its own keeps its own
+
+    bundle, found, _ = review(change)
+    directed = {d.line_id: d for d in bundle.direction}
+    assert (directed["c2-1"].particles, directed["c2-1"].carries, directed["c2-1"].spotlight) == (
+        ["Thylakoid", "Cytochrome b6f"], "H⁺", "")
+    assert directed["c2-1"].caption == "Proton pump"  # but its caption
+    assert (directed["c3-1"].spotlight, directed["c3-1"].particles) == ("Thylakoid", [])
+    assert [f for f in found if f[1] == "motion"] == [("c2-1", "motion", True)]
+
+
+def test_the_questions_key_line_goes_where_each_video_asks_it():
+    # Nov 1: the writer put the question on the narration's first sentence, a fact two before the narrator asks it.
+    def asked(question_on="n1", step_on="n3"):
+        data = bundle_data()
+        data["narration"] = [{"id": "n1", "text": "The light reactions happen in the thylakoid membrane.",
+                              "names": ["thylakoid"], "fact_id": "f1"},
+                             {"id": "n2", "text": "So how does a leaf make ATP from light?", "names": [],
+                              "fact_id": "filler"},
+                             {"id": "n3", "text": "Only cytochrome b6f pumps protons.", "names": ["cytochrome b6f"],
+                              "fact_id": "f2"}]
+        scenes = {"n1": "hook", "n2": "hook", "n3": "overview"}
+        data["direction"] = [d for d in data["direction"] if not d["line_id"].startswith("n")] + [
+            {**direction(bundle_data(), "n1"), "line_id": n, "scene": s} for n, s in scenes.items()]
+        data["key_lines"] = [{"from_line": "v1-2", "text": "How does a leaf make ATP?", "from_narration": question_on},
+                             {"from_line": "v2-1", "text": "Only b6f pumps H⁺", "from_narration": step_on}]
+        bundle, report = checks.review(Bundle.model_validate(data))
+        return ([(k.from_line, k.from_narration) for k in bundle.key_lines],
+                [p.line_id for p in report.problems if p.rule == "key-line"])
+
+    assert asked() == ([("v1-1", "n2"), ("v2-1", "n3")], ["v1-1", "n2"])  # the song's first line, the hook's question
+    assert asked(question_on="n2") == ([("v1-1", "n2"), ("v2-1", "n3")], ["v1-1"])
+    assert asked(step_on="n2") == ([("v1-1", "n1"), ("v2-1", "n2")], ["v1-1"])  # never onto another's sentence
+
+
 def test_key_lines_are_recorded_when_too_few_or_too_long():
     data = bundle_data()
     data["why_chain"] = ["a", "b", "c"]

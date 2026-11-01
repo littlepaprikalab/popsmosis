@@ -39,7 +39,8 @@ No model calls, so it is free to run again:
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
 - The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
   line, so the learner sees where a close-up sits before it is shown. A zoom counts from the whole scene's
-  framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.6 to 2.0 a close-up. The
+  framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.4 to 1.6 a close-up (1.6
+  to 2.0 until Nov 1, which cropped the labels a painted picture writes beside its parts). The
   whole scene frames what is drawn, often already closer than the whole art, so a close-up counted from the art
   came out barely closer (1.8 on the sample's overview, whose whole scene is at 1.44: 1.25 times).
 - The song's camera follows the words on a long hold (_follow). A shot of the whole picture only drifts, and the
@@ -58,9 +59,13 @@ No model calls, so it is free to run again:
 - Particles whose last stop is a blocker (Bundle.blocks) are marked blocked: the renderer
   piles them up there. A line's glow, like its spotlight, needs its structure located on
   the scene and named by then.
-- A beat that sums up (the whole scene, nothing spotlit) runs every flow its scene has shown so far, beside its
-  own, up to RUN_MAX: the system running, as a textbook's summary figure draws it. Each was taught, and
-  fact-checked, on an earlier line, so nothing new is claimed; the spaces fill only from the beat's own.
+- A beat that sums up runs every flow its scene has shown so far, beside its own, up to RUN_MAX: the system
+  running, as a textbook's summary figure draws it. Each was taught, and fact-checked, on an earlier line, so
+  nothing new is claimed; the spaces fill only from the beat's own. A line sums up by where it is (_sums_up): a
+  chorus or the outro in the song, and in the lesson the sentence that says the core idea and those after it; on
+  the whole scene with nothing spotlit, as the brief directs such lines. Any line on the whole scene did until
+  Nov 1, and the brief gives that to a question or an aside too: the pump's lesson ran sodium out through the pump
+  under "does the pump push the sodium back out?" and "A common mistake is to say yes".
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
@@ -467,7 +472,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _convert(beats, bundle, located)
     _write_values(beats, locations)
     _mean(beats, bundle, locations)
-    _run_all(beats, hook)
+    _run_all(beats, hook, _sums_up(bundle, video))
     _turn(beats, bundle, located)
     _route(beats)
     _key_lines(beats, bundle, video)
@@ -527,7 +532,7 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     sentence in the lesson), held through the gaps after it, and in the song only to the end of its section. None
     from each chorus (the core idea sung) or the narration's sentence that says the core idea until a key line starts
     later: the core idea is written at the top of every frame, and a step held over the line that sings something
-    else misled (the owner, Nov 1)."""
+    else misled (the owner, Nov 1). In the lesson, none from the first cut after the last step's key line either."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -543,7 +548,12 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
         sections = [i for i, line in enumerate(bundle.lyrics)
                     if i and line.section != bundle.lyrics[i - 1].section and i not in core_from]
     else:
-        core_from, sections = [_says_core_idea(bundle)], []
+        core_from = [_says_core_idea(bundle)]
+        # The case comes after the steps and has no key line (the script's prompt, the brief): the last step's, held
+        # on over it, sat over the stroke, the weed killer, England and the tomb for half a minute or more (Nov 1).
+        last = max((at for at, _ in starts if at < core_from[0]), default=-1)
+        sections = [order[b["line_id"]] for i, b in enumerate(beats)
+                    if i and order.get(b["line_id"], -1) > last and b["scene"] != beats[i - 1]["scene"]][:1]
     # Stable, in this order on one line: a section's start gives way to a key line there, which gives way to the
     # core idea's (a chorus, or the narration's sentence that says it).
     starts = [(at, "") for at in sections] + starts + [(at, "") for at in core_from]
@@ -667,20 +677,33 @@ def _within(short: Particles, long: Particles) -> bool:
     return short.label == long.label and any(long.path[k:k + n] == short.path for k in range(len(long.path) - n + 1))
 
 
-def _run_all(beats: list[dict], hook: str) -> None:
-    """On a beat that sums up (the whole scene in view, nothing spotlit), every flow its scene has shown so far
-    moves at once beside the beat's own. A flow along part of a longer one carrying the same thing gives way to the
-    longer, so the whole pathway runs rather than two dots on one leg; at most RUN_MAX move. Not on the hook, nor on
-    a scene once a flow on it has been blocked: after the block, the stillness is the point. Runs after the spaces
-    are filled, so a space fills or empties only as the beat's own flows say."""
+def _sums_up(bundle: Bundle, video: str) -> set[str]:
+    """The lines that sum up, where the whole pathway may run (_run_all): the song's choruses and outro, and the
+    narration from the sentence that says the core idea to its end. Never the misconception's question or its
+    answer, which come inside the steps."""
+    if video == "song":
+        return {line.id for line in bundle.lyrics if line.section in ("chorus", "outro")}
+    return {n.id for n in bundle.narration[_says_core_idea(bundle):]} if bundle.narration else set()
+
+
+def _run_all(beats: list[dict], hook: str, summing: set[str]) -> None:
+    """On a beat that sums up (its line in `summing`, the whole scene in view, nothing spotlit), every flow its scene
+    has shown so far moves at once beside the beat's own. A flow along part of a longer one carrying the same thing
+    gives way to the longer, so the whole pathway runs rather than two dots on one leg; at most RUN_MAX move. An
+    instrumental gap goes on as the line before it. Not on the hook, nor on a scene once a flow on it has been
+    blocked: after the block, the stillness is the point. Runs after the spaces are filled, so a space fills or
+    empties only as the beat's own flows say."""
     taught: dict[str, list[Particles]] = {}  # per scene, each unblocked flow in the order it was first shown
     stopped: set[str] = set()  # scenes where a flow has been blocked
+    sums = False
     for beat in beats:
         scene, own = beat["scene"], beat["particles"]
         shown = taught.setdefault(scene, [])
         if any(f.blocked for f in own):
             stopped.add(scene)
-        if scene != hook and scene not in stopped and beat["spotlight"] is None and beat["camera"].target is None:
+        sums = beat["line_id"] in summing if beat["line_id"] else sums
+        if sums and scene != hook and scene not in stopped and beat["spotlight"] is None \
+                and beat["camera"].target is None:
             running = list(own)
             for flow in shown:
                 if any(_within(flow, g) for g in running):

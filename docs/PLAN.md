@@ -762,11 +762,12 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     particle, and so is a blocked flow; a short word ("air", "sap") is no symbol and goes as the bundle says. How far
     a route runs inside a part is measured a cell at a time along it. The legend keys a journey with an arrow; what moves takes
     the colour of the structure it names, when the pictures draw one (magma red, sediment tan).
-  - **The system running:** a line that sums up (the whole scene, nothing spotlit, as the
-    bundle prompt asks of summing-up and chorus lines) runs every flow its scene has shown so
-    far beside its own, up to 4: on the light reactions, electrons down the chain, protons
-    pumped into the lumen and protons back through a turning ATP synthase, all at once. Each
-    was taught, and passed the fact-check, on an earlier line, so nothing new is claimed. A
+  - **The system running:** a line that sums up (a chorus or outro line, or the narration
+    from the sentence that says the core idea on; on the whole scene, nothing spotlit) runs
+    every flow its scene has shown so far beside its own, up to 2 (RUN_MAX): on the light
+    reactions, electrons down the chain beside protons back through a turning ATP synthase.
+    Until Nov 1 any line on the whole scene did, and the pump's lesson ran sodium out through
+    the pump under "does the pump push the sodium back out?". Each was taught, and passed the fact-check, on an earlier line, so nothing new is claimed. A
     flow along part of a longer one carrying the same thing gives way to the longer. Not on the
     hook, nor on a scene once a flow on it is blocked; spaces fill only as the line's own flows
     say (`studio/steps/timeline.py`). Upright, such a line keeps looking where the line before

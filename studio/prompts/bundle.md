@@ -483,8 +483,8 @@ section the picture of what it sings:
 
 ## The narration
 
-`narration` is the lesson video's voice-over, one sentence an item, ids "n1", "n2" and on,
-each with `names` and `fact_id` as the lyrics have them.
+`narration` is the lesson video's voice-over, each item with `names` and `fact_id` as the
+lyrics have them.
 
 ## Direction
 
@@ -495,10 +495,9 @@ across the whole video before writing any one line's.
 - `scene`: on screen while the line plays; it draws every structure in the line's `names`.
   Stay on a scene for several lines and cut when the content moves on; in the song, keep a
   section on one scene where you can (a picture up for one sung line is gone before the
-  viewer finds anything in it). The chorus is directed the same way each time: the same
-  scene, the same flows on the same lines.
+  viewer finds anything in it).
 - `camera`: `target` a structure ("" for the whole scene); `zoom` 1.0 for the whole scene,
-  about 1.6 to 2.0 for a close-up. Wide on lines that sum up or link steps; close on the
+  about 1.4 to 1.6 for a close-up. Wide on lines that sum up or link steps; close on the
   part a line is about, for at most three lines, then pull back or move on. Move with the
   story (along the chain, the way the particles go), not back and forth.
 - `spotlight`: the structure the line is about, kept bright while the others fade, or "".
@@ -512,10 +511,9 @@ across the whole video before writing any one line's.
   to the audience, from one line of a graph to another). Many topics outside science have
   little or nothing that travels (a writer's device, a graph, a chain of events): their
   scenes hold still, with [] here, and the camera and the spotlight move from part to part
-  with the lines instead. The hook, the learner's world as it is, has none. Across a wall or
-  membrane, the route goes through the opening the facts name (a channel, a pump, a carrier,
-  a gate): sodium leaking into a cell through the leak channel, H⁺ through ATP synthase,
-  water through a dam's gate. Through the wall itself only where the facts say it crosses
+  with the lines instead. Across a wall or membrane, the route goes through the opening the
+  facts name (a channel, a pump, a carrier, a gate): sodium leaking into a cell through the
+  leak channel, H⁺ through ATP synthase, water through a dam's gate. Through the wall itself only where the facts say it crosses
   that way (O₂ across the alveolus wall): a route through the membrane drew Na⁺ slipping
   through the bare bilayer beside the pump, which no ion does (Nov 1).
 - `carries`: what the particles are, at most 8 characters, the same thing written the same
@@ -532,7 +530,7 @@ across the whole video before writing any one line's.
 - `also`: at most one second flow, only when the line names both and they move at once:
   what one structure gives off together (H⁺ and O₂ from Photosystem II to the lumen), or
   two ways at once (the pump's Na⁺ out while its K⁺ comes in), with its own `particles`,
-  `carries`, `moves` and `says` under the same rules; [] on every other line.
+  `carries` and `says` under the same rules; [] on every other line.
 - `glow`: a structure an outside cause switches on in this line (light excites photosystem
   II, a hormone reaches its receptor). Rare, a handful in a whole lesson, and never to point
   at what the line is about (that is `spotlight`); "" otherwise.
@@ -599,25 +597,21 @@ the question, then a key line for each link of `why_chain` (two for a long one).
 
 - `from_line`: the lyric line where the song sings that step, in the song's own order, which
   need not be the chain's: a song that sings how the pump turns before why it is needed puts
-  those key lines first. It stays until the next, across scene changes, so put one where the
-  song moves on to a new step, not on every line. "" for a link the song never sings: it is
-  shown in the lesson video only. Never on a line that sings something else: the learner
-  reads the step while hearing the line.
+  those key lines first. Put one where the song moves on to a new step, not on every line.
+  "" for a link the song never sings: it is shown in the lesson video only. Never on a line
+  that sings something else: the learner reads the step while hearing the line.
 - `text`: that step cut to its cause and effect, at most 10 words, with an arrow for what
   turns into or leads to what: "Tilt toward the Sun → longer, stronger daylight", "Heart
   squeezes → blood pushed into the arteries". Use `key_terms` as the textbook writes them. Not the lyric it appears
   on, and not just a label already on the diagram.
 - An arrow means one thing (becomes, leads to, or goes from one place to another). When an
   arrow could be read two ways, say it in words.
-- The first sits on the first sung line and asks the question the song answers ("Why is it
-  hot in summer?"): it is how the video shows the question. Every other key line is a link
-  of `why_chain`, as cause → effect. Never a label, a slogan, a comparison's mapping
-  ("Wanted poster = vaccine") or the bridge's case: read alone, in the chain's order, they
-  tell the why chain.
+- The first asks the question the song answers ("Why is it hot in summer?"). Every other
+  key line is a link of `why_chain`, as cause → effect. Never a label, a slogan, a
+  comparison's mapping ("Wanted poster = vaccine") or the bridge's case: read alone, in the
+  chain's order, they tell the why chain.
 - `from_narration`: the narration sentence where the narrator starts on that step, in the
   narration's order, never two on one sentence; "" where the narration has no place for it.
-- None on a chorus or the narration's last sentence: they say `core_idea`, which the videos
-  already keep at the top.
 
 ## Tags
 
