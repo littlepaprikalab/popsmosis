@@ -169,6 +169,36 @@ why chain 4.33 (4.58), key lines 3.67 (4.08), accuracy 4.33 (4.67). Read through
 - **The light reactions' old song is the better song**, "Split the water, catch the light", though the judge and
   the lesson preferred the new droplet.
 
+### Again, after the day's later changes
+
+Run again in the session after: a fact that says what the thing is for, `held` for crowds that are always there,
+step lines that follow the song and hold only to the end of their section, the rap sections (K-pop and Latin pop
+their second verse, dance-pop its bridge), the rule for crossing a membrane through its channel or pump, the
+compressed fact-check prompt, and the side-by-side check tightened to panels and things drawn twice. Judged by Opus
+beside the same baseline droplets:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Oct 31, after the song changes | 12 of 12 | 4.52 | 3.69 | 6 / 13 |
+| Nov 1, morning | 12 of 12 | 4.44 | 3.71 | 12 / 8 |
+| Nov 1, evening | 12 of 12 | 4.43 | 3.79 | 9 / 12 |
+
+By criterion, against the morning: key lines 4.17 (3.67), why chain 4.42 (4.33), lesson 4.92 (4.83), hook 4.67
+(4.92), frame 4.58 (4.75), singability 4.00 (4.25), accuracy 4.25 (4.33). The key lines came back: none was read
+out of order this time. Read through:
+
+- **The rap sections held:** the three topics the rotation gives K-pop, Latin pop or dance-pop rapped exactly
+  their one section, 8 lines each, and nothing else rapped.
+- **What it is for reached the song:** the pump's chorus sings it ("So the nerves can fire, and the cell / Keeps its
+  size, it doesn't swell"), its facts state it, and its core idea says it.
+- **`held` was never set,** in this run or the morning's, not even for the pump's resting gradients the rule named:
+  it was dropped that evening, and every crowd starts half full.
+- **The pump still routed sodium in and potassium out through the bare membrane** on two of its fourteen routes,
+  beside the sodium and potassium channels it drew and used elsewhere: the fact-check, which this run leaves out,
+  fails both (tested on the morning's pump), and the video leaves them out.
+- **Panels are asked for three times,** twice in classical conditioning (as in every run) and once in the rocket's
+  air against space: the check records them, but they would still be painted.
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
