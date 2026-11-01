@@ -87,7 +87,8 @@ empty list is a real answer when there is nothing to correct.
 
 ## singability
 
-The song as words to be sung, at its style (verses and chorus sung; rap only where the learner asked for it).
+The song as words to be sung, at its style (verses and chorus sung; rap only in a section the learner or the
+style asks to be rapped, never the chorus).
 
 - 5: Every line sounds like something a singer sings, not a sentence cut into lines: short phrases with the
   small words that carry the rhythm, 6 to 9 syllables with room to hold a note (up to about 14 rapped). Its
