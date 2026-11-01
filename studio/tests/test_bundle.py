@@ -61,7 +61,7 @@ def test_a_grave_topic_sets_its_own_slow_style_over_the_rotation():
     assert "A grave topic sets its own style**, whatever the rotation says" in rules
     assert "80 to 90 bpm" in rules and "No dance beat" in rules and "never a full or epic orchestra" in rules
     # The first Holocaust droplet carried "trains" to occupied Poland; the slave trade's carried "people" south.
-    assert "The people such a topic is about are never particles" in rules
+    assert 'In a grave topic, dots marked "people" or "trains" carried across a map make tokens of the dead' in rules
 
 
 def test_the_prompt_carries_the_request_and_study_guide():

@@ -138,8 +138,8 @@ them too wherever they picture what it sings; its own pictures come after its ly
   synthesis). The hook line is about what it shows.
 - "overview", then one or two detail scenes, zoomed in (short ids such as "limbic-detail").
 - A failure the bridge sings can have a detail scene (a song picture when the lesson shows
-  none): the same view as another scene with the blocker drawn in as a structure and the
-  stopped flow left out (the video shows it stopping).
+  none): the same view as another scene with the blocker drawn in as a structure, the parts
+  its effects reach, and the stopped flow left out (the video shows it stopping).
 - A process whose parts move or change shape from stage to stage (mitosis, the Moon's
   phases): each stage taught is a scene of its own, in order, 2 to 5, each with `stage_of`
   naming the process ("mitosis"); `stage_of` is "" on every other scene. Each stage's
@@ -177,8 +177,7 @@ sentences. The illustrator draws best the diagrams it already knows:
   and never move. A space is an even wash of its own colour ("the matrix below it tinted
   pink"). A stage textbooks draw as a shape is that shape where it happens (the Krebs cycle
   as a ring of arrows in the matrix); a molecule the scene names is one small shape where it
-  sits. Hooks and analogies too: their things in place (the reservoir behind the dam), the
-  dots showing what moves.
+  sits. A hook too: its things in place, the dots showing what moves.
 - Lay it out region by region: the regions first ("the membrane across the middle, the
   intermembrane space above it tinted blue, the matrix below it tinted pink"), then each
   part in its region, how it sits and which way it faces. Where the layout is left out, the
@@ -227,9 +226,10 @@ Structures:
 - `color_hex` (#RRGGBB): a structure keeps one name and one colour in every scene and both
   videos. Distinct, saturated mid-tones, never pastels, near white, navy, slate, dark grey
   or near black.
-- One thing in two places with two jobs is two structures, each its own name and colour: a
-  water tower's pipe up to the tank and its pipe down to the house are "Pipe up to the tank"
-  and "Pipe down to the house", never one "Pipe", or an arrow up one runs along the other.
+- One kind of thing in two places with two jobs is two structures, each its own name and
+  colour: a membrane's sodium leak channel and its potassium leak channel are "Na⁺ leak
+  channel" and "K⁺ leak channel", never one "Leak channels", or sodium's arrow runs along
+  potassium's channel.
 - Structures in a scene never overlap: a group (the limbic system) and its parts (amygdala,
   hippocampus) are never both structures in one scene. When the core idea is about groups,
   the overview draws the groups and the detail scenes their parts.
@@ -270,21 +270,17 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   part stands for (never by a colour or a place: the lesson has no picture), then call each
   step by its part of the analogy as it is taught ("Copy first: every page gets its
   photocopy").
-- **Make them predict where the misconception would answer wrong.** Once, right where the
-  wrong idea would form, ask one question the learner can answer with a guess, chosen so the
-  common mistake gives the wrong answer ("So if the forces are equal, does the rocket push
-  the gas as hard as the gas pushes the rocket?"), before anything gives the answer away.
-  Answer it in the next sentences: that is where the misconception is corrected (below).
-  Committing to a guess and seeing it fail is what changes a wrong idea.
+- **Make them predict, then correct the misconception.** Once, right where the wrong idea
+  would form, ask one question the learner can answer with a guess, chosen so the common
+  mistake gives the wrong answer ("So if the forces are equal, does the rocket push the gas
+  as hard as the gas pushes the rocket?"), before anything gives the answer away. Answer it
+  in the next sentences: name the wrong guess as a common mistake once, say why it fails,
+  and give the right idea (in numbered steps, an indented paragraph inside the step it is
+  about); a mistake about the whole idea goes right after the big picture. Never before
+  they have met what it is about, never in a section of its own. Committing to a guess and
+  seeing it fail is what changes a wrong idea.
 - **Link to what they know**: where the facts give it, one sentence inside the step it
   explains.
-- **Correct the misconception where it would form**, as the answer to the prediction: name
-  the wrong guess as a common mistake once, say why it fails, and give the right idea (in
-  numbered steps, an indented paragraph inside the step it is about); a mistake about the
-  whole idea goes right after the big picture. Never before they have met what it is
-  about, never in a section of its own.
-- **Make it vivid**: explain with the analogy, a concrete example and why it matters to the
-  learner, all from the facts.
 - **One path, then the end.** The lesson is the question and the big picture, the steps
   (with the predict question and the misconception inside them), at most one case (one
   example the facts give, cause before effect, in a short paragraph), then the check.
@@ -299,9 +295,8 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   synthase stop when a herbicide stops electrons leaving photosystem II?"), then an
   invitation to ask a follow-up.
 - Write for a learner at that level meeting the topic for the first time, unless the
-  request says they know more, and say when
-  something is simplified. Most lessons fit in 300-500 words; never over 5000 characters.
-  No personal data.
+  request says they know more. Most lessons fit in 300-500 words; never over 5000
+  characters. No personal data.
 
 The fact-checker reads each sentence, list item, heading and table row on its own: each
 says something the facts support, or nothing factual (a transition, a question).
@@ -352,10 +347,8 @@ explanation left to the narration.
     war film's victory. An instrument from a culture only when it belongs to the people the
     topic is about (an erhu for the Nanjing Massacre). No dance beat, drops, claps or party
     sounds; "dance beat", "euphoric", "upbeat", "party" and "epic orchestral" go in
-    `negative_styles`. The people such a topic is about are never particles: dots marked
-    "people" or "trains" carried across a map make tokens of the dead. Goods, ships and
-    money may move; the camera and the spotlight show where people were taken. A
-    revolution's causes or a war's alliances are not grave in this sense.
+    `negative_styles`. A revolution's causes or a war's alliances are not grave in this
+    sense.
   - **A younger audience** gets the current pop they play themselves, never a children's
     song or "playful" pop, which comes back a classroom jingle: bright, with a big
     sing-along chorus, a clear lead vocal and sung verses.
@@ -506,8 +499,6 @@ section the picture of what it sings:
 - Where one of the lesson's scenes draws what a section sings, it plays there: the overview
   under a chorus that sums up the path the way the overview lays it out, the failure scene
   under the bridge. Prefer a lesson scene: the learner knows it from both videos.
-- Its frame lives in its words ("You can't spend sunshine" over the thylakoid, not over a
-  bank): the pictures show the real thing the line is about.
 - Where none does, draw one in `song_scenes`: at most 3, each for a section or a run of
   them, never for one line. The usual ones:
   - the intro and outro: the title line's big move on the real things ("Split the water,
@@ -516,8 +507,8 @@ section the picture of what it sings:
     the hook.
   - the chorus: every part it names, laid out in the order it sings them, when the overview
     lays them out another way or leaves some out.
-  - the bridge: the break and the parts its effects reach, when the lesson draws no such
-    failure.
+  - the bridge: its failure scene (under "Scenes and structures"), when the lesson draws
+    none.
 - Every rule under "Scenes and structures" holds for a song picture, and a structure keeps
   its lesson name and colour. It draws the topic's real things as a textbook would picture
   what the lines sing (the everyday picture is the hook's). Its
@@ -577,8 +568,7 @@ no times: code adds them from the audio.
 - `particles`: for a line about something that travels (a molecule, a signal, money, a
   letter), the structures it travels between, in order; otherwise []. Only what the facts
   say travels that way moves: never a route made up to keep the dots busy (from a character
-  to the audience, from a king to his people, from one line of a graph to another). Many
-  topics outside science have little or nothing that travels (a writer's device, a graph, a
+  to the audience, from one line of a graph to another). Many topics outside science have little or nothing that travels (a writer's device, a graph, a
   chain of events): their scenes hold still, with [] here, and the camera and the spotlight
   move from part to part with the lines instead. The hook, the learner's world as it is,
   has none.
@@ -601,8 +591,8 @@ no times: code adds them from the audio.
   way. The same thing on one scene moves the same way on every line. "" with no
   particles.
 - `says`: for every arrow (it travels, or what moves has no short symbol), one line the
-  video writes beside it saying what it shows, at most 40 characters: "The pump lifts water
-  to the tank", "Glucose rides in with sodium", "Shortage pushes the price up". An arrow with
+  video writes beside it saying what it shows, at most 40 characters: "Glucose rides in with
+  sodium", "Shortage pushes the price up". An arrow with
   nothing beside it leaves the learner asking what it means. "" for particles.
 - `also`: at most one second flow, only when the line names both and they move at once:
   what one structure gives off together (H⁺ and O₂ from Photosystem II to the lumen), or
@@ -638,8 +628,11 @@ Plan the motion like an animator:
   only for what really is carried (sediment washed to the sea, vapour rising to the
   clouds).
 - **In history, only what was carried moves**: goods, grain, money, letters. Never land,
-  power, loyalty, votes or ideas, and never people or armies, which are drawn: the camera
-  following the army from its figure to the city is the march.
+  power, loyalty, votes or ideas (no route from a king to his people), and never people or
+  armies, which are drawn: the camera following the army from its figure to the city is the
+  march. In a grave topic, dots marked "people" or "trains" carried across a map make tokens
+  of the dead: goods, ships and money may move, and the camera and the spotlight show where
+  people were taken.
 
 ## What builds up, turns, blocks and changes
 
@@ -648,7 +641,7 @@ fact-check holds each to the facts. [] when there is none.
 
 - `builds_up`: what is crowded in a space, when the lesson is about it (a gradient):
   `[{"carries": "H⁺", "region": "Thylakoid lumen", "held": false}]`. The region is a
-  structure that is a space (a lumen, a compartment, the reservoir behind a dam); particles
+  structure that is a space (a lumen, a compartment); particles
   with the same `carries` end in it (piling up) and start from it (leaving), and the video
   fills and empties it, and puts a few of them in the space at their path's other end, where
   they are scarce, not absent. `held`: true for a difference that is always there and kept
@@ -656,8 +649,8 @@ fact-check holds each to the facts. [] when there is none.
   start, and a leak only dips it), false for one the lesson builds up (H⁺ pumped into the
   lumen while light shines, sodium flooding a cell whose pump has stopped: the video starts
   it with a few and fills it).
-- `spins`: a part that turns while particles flow into or through it (a rotor, a turbine, a
-  water wheel): `[{"structure": "ATP synthase"}]`. The video turns it while they flow.
+- `spins`: a part that turns while particles flow into or through it (a rotor, a turbine):
+  `[{"structure": "ATP synthase"}]`. The video turns it while they flow.
 - `blocks`: what stops the particles that reach it, on a failure scene (a poison, a drug, a
   herbicide): `[{"structure": "Herbicide"}]`. They pile up there under a cross.
 - `conversions`: the reactions a textbook writes beside a diagram: `[{"structure":
