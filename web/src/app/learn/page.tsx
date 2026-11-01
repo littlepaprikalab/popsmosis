@@ -574,7 +574,8 @@ function LearnContent() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)]">
-        <div className="text-center p-8 rounded-lg max-w-md animate-fade-in"
+        {/* The side padding stops at 10vw: at 200% text on a phone, 2rem a side left the sign-in button no room */}
+        <div className="text-center py-8 px-[min(2rem,10vw)] rounded-lg max-w-md animate-fade-in"
           style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
           <h1 className="mb-3"><Wordmark size="lg" /></h1>
           <p className="text-sm mb-1 font-bold" style={{ color: 'var(--text-primary)' }}>

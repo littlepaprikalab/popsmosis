@@ -53,7 +53,8 @@ export function Marked({ color, children }: { color: string; children: React.Rea
   return (
     <span style={{
       color: 'var(--text-primary)',
-      background: `linear-gradient(transparent 55%, ${tint(color, 50)} 55%)`,
+      // Its strength is set per theme in globals.css, so the words read on it in both.
+      background: `linear-gradient(transparent 55%, color-mix(in srgb, ${color} var(--highlight-mix), transparent) 55%)`,
       padding: '0 0.1em',
     }}>{children}</span>
   );
