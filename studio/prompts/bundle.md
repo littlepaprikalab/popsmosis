@@ -150,6 +150,13 @@ them too wherever they picture what it sings; its own pictures come after its ly
   stage, and the video fades each stage into the next. Never draw a part twice, or several
   stages side by side: they come back wrong, captioned "State 1" and "State 2". The stages
   are the overview, and the chorus plays over the stage that draws what it names.
+- A picture is one moment: never ask it for panels ("first panel", "left panel", "two
+  panels"), even where a textbook prints the figure that way. Each panel is a scene of its
+  own: moments of one process are its stages, as above (before, during and after
+  conditioning; the Moon on different nights), and a comparison is two scenes the narration
+  moves between (a rocket in air, then in space). In panels the same part is drawn twice,
+  and the labels and the moving dots can land on only one of them (Nov 1: classical
+  conditioning asked for panels in every scorecard run).
 - Things crossing between two side-by-side spaces, one way and the other (reabsorption and
   secretion; oxygen in, carbon dioxide out): a detail scene with the two spaces wide apart
   and the wall between them, each a structure, so one crossing moves left to right and the

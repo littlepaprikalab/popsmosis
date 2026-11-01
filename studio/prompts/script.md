@@ -23,6 +23,14 @@ A picture is still: a textbook diagram or a friendly illustration. The video add
 the motion (dots that travel between the parts) and the zoom, so say where things are, never
 an arrow, a word or something happening.
 
+A picture is one moment, never panels ("four panels in a row", "two panels side by side"),
+even where a textbook prints the figure that way: each panel is a scene of its own, with its
+own id. Moments of one process are its stages, drawn alike and in the same place (before,
+during and after conditioning, "before", "pairing", "after"; the Moon on different nights),
+and a comparison is two scenes the narration moves between (a rocket in air, then in space).
+In panels the same thing is drawn twice, and the video can label and move only one of them
+(Nov 1: classical conditioning asked for panels in every scorecard run).
+
 - "hook": where the topic turns up in the learner's world, at a scale they know.
 - "overview": the map of the whole lesson, the one picture every step can be pointed at.
   For a process, the whole path, every part the steps pass through in order (a nephron, from
