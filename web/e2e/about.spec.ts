@@ -86,6 +86,13 @@ test.describe('the About page', () => {
     await expect(page).toHaveURL(/\/about$/);
     expect(await brokenImages(page)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+    // The narrowest phones too. A card clips what spills out of it, so the page would not scroll: look at each button.
+    await page.setViewportSize({ width: 320, height: 640 });
+    const spilled = await page.locator('article a').evaluateAll((links) => links
+      .filter((a) => a.getBoundingClientRect().right > a.parentElement!.getBoundingClientRect().right + 0.5)
+      .map((a) => a.getAttribute('aria-label')));
+    expect(spilled).toEqual([]);
   });
 
   test('reads the same signed in', async ({ page, context }) => {

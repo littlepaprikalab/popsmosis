@@ -104,9 +104,9 @@ const SITES: Site[] = [
   {
     name: 'The Crossroads Oracle',
     url: 'https://crossroads.littlepaprikalab.com',
-    tagline: 'Tarot for when you can\'t decide',
+    tagline: 'Tarot for when you can’t decide',
     about: 'It started with going in circles over where to eat. Type your question and your two choices, draw a '
-      + 'crossroads spread, and Paprika, an AI tarot reader, weighs each path. There\'s also a three-card reading, a '
+      + 'crossroads spread, and Paprika, an AI tarot reader, weighs each path. There’s also a three-card reading, a '
       + 'card for the day, and plain-spoken meanings for all 78 cards.',
     shot: { src: '/about/crossroads.webp', alt: 'A reading for dinner, the ramen place or the taco truck: three cards drawn for the ramen place and the start of what they say' },
   },
@@ -231,17 +231,25 @@ function SiteCard({ site }: { site: Site }) {
         <p className="text-xs mb-3" style={{ color: ink('var(--accent-purple)', 85) }}>{site.tagline}</p>
         <p className="text-sm leading-relaxed mb-4 flex-1" style={{ color: 'var(--text-secondary)' }}>{site.about}</p>
         <div>
-          <OutLink href={site.url} label={`Visit ${site.name} at ${host}`}>{host}</OutLink>
+          <OutLink href={site.url} label={`Visit ${site.name} at ${host}`}>{breakable(host)}</OutLink>
         </div>
       </div>
     </article>
   );
 }
 
+/** A site's host that may wrap after its subdomain (crossroads. / littlepaprikalab.com), so on a narrow phone it breaks there. */
+function breakable(host: string): React.ReactNode {
+  const labels = host.split('.');
+  if (labels.length <= 2) return host;
+  return <>{labels.slice(0, -2).join('.')}.<wbr />{labels.slice(-2).join('.')}</>;
+}
+
 function OutLink({ href, label, children }: { href: string; label: string; children: React.ReactNode }) {
   return (
+    // max-w-full and break-words keep a button inside its card even when a phone's larger text makes a line too long
     <a href={href} target="_blank" rel="noopener noreferrer" aria-label={label}
-      className="inline-block px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
+      className="inline-block max-w-full break-words px-4 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all hover:brightness-110"
       style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }}>
       {children} ↗
     </a>
