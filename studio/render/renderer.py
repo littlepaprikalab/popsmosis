@@ -2463,7 +2463,9 @@ class Renderer:
             if not (b.x0 - ARROW_REACH <= end[0] <= b.x1 + ARROW_REACH
                     and b.y0 - ARROW_REACH <= end[1] <= b.y1 + ARROW_REACH):
                 return f"{what} away from {loc.name}"
-        if first.name == last.name:
+        # A pointed arrow's way is the helper's, read off the painting and looked at in a still (studio/steps/arrows.py):
+        # this guess from the boxes failed two right ones on Nov 1, a part to a wide strip of space beside it.
+        if first.name == last.name or self._pointed(scene_id, flow):
             return ""
 
         # The way it should go: from a part's middle, or from where it starts in a space (beside the part it goes to,
