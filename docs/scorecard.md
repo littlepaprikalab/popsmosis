@@ -199,6 +199,43 @@ out of order this time. Read through:
 - **Panels are asked for three times,** twice in classical conditioning (as in every run) and once in the rocket's
   air against space: the check records them, but they would still be painted.
 
+### Again, after the brief's trim
+
+Run again in the session after the writer's brief was trimmed (9,298 to 8,795 words: its narration rules left to
+the script's prompt, rules said twice said once, and "a line that sums up holds still" cut, which contradicted "the
+chorus shows the whole pathway"), after the panels rule, and with the rubric's singability anchor allowing the
+section a style raps. Judged by Opus beside the same baseline droplets:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Oct 31, after the song changes | 12 of 12 | 4.52 | 3.69 | 6 / 13 |
+| Nov 1, morning | 12 of 12 | 4.44 | 3.71 | 12 / 8 |
+| Nov 1, evening | 12 of 12 | 4.43 | 3.79 | 9 / 12 |
+| Nov 1, after the trim | 12 of 12 | 4.52 | 3.75 | 3 / 12 |
+
+By criterion, against the evening: accuracy 4.75 (4.25), why chain 4.67 (4.42), frame 4.75 (4.58), singability
+4.08 (4.00), lesson 4.83 (4.92), hook 4.58 (4.67), key lines 4.00 (4.17). The baseline, the same droplets each
+time, scored 3.75 against 3.79: about that much is the judge. Read through:
+
+- **No panels:** none of the 12 asked for one. Classical conditioning drew "before", "pairing" and "after" as stages
+  of one lab, and the rocket its air and space as two scenes; the evening run asked three times.
+- **What it is for:** the pump's core idea is "A pump in the cell membrane spends ATP to keep sodium out and
+  potassium in, so nerves can fire", and its lesson opens on "So what does a cell get for all that energy?". Every
+  route of its ions goes through the pump, a channel or a carrier; only water crosses the membrane itself.
+- **The rap sections** kept to their one section (the derivative's second verse, the bridges of supply and demand
+  and the subjunctive); singability 4, 5 and 4 (4, 4 and 4 in the evening).
+- **Three errors:** the catalyst's chorus sings "More collisions, faster chemistry" three times, when a catalyst
+  makes more of the same collisions succeed; the derivative's lesson says "an average over an interval is not the
+  rate at either point", which is not so for a line; the p-value's says it "lets you tell a real effect from a
+  fluke of chance". The fact-check, which this run leaves out, is where these would be caught.
+- **Key lines** lost a point in two droplets for opening on the question and not ending on the core idea, as the
+  rubric's anchor asks ("from its first link to the core idea"), and for narration anchors out of the list's
+  order. The brief now asks for the question first, keeps the core idea at the top of every frame and never on a
+  key line, and each video places the key lines by its own lines: the anchor is out of date.
+- **The lyric check that flags a line narrating the picture** fired on "Watch the replay, you know the score" and
+  "Watch where the slopes are heading": a frame sung to the listener, not a camera direction.
+- Chorus lines with particles: 79 of 198 (70 of 204 in the evening), with the summing-up rule gone.
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
