@@ -275,6 +275,22 @@ frame the new droplets score 4.60 against the baseline's 3.57. The key lines wen
   gravity. The fact-check, which this run leaves out, is where these would be caught.
 - **Still long:** the lessons run 512 to 697 words against the 300 to 500 asked, and the narrations 366 to 417 of 420.
 
+#### Judged again, the frame criterion as "connect"
+
+The rubric's frame criterion now grades connecting to what the learner knows (principle 2): building on an earlier
+idea or an everyday experience, a comparison where it helps, matched and said once, and none needed for a story in time
+(commit with this note). The same 12 pairs judged again by Opus, blind:
+
+| Judging | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Rubric with frame | 12 of 12 | 4.33 | 3.64 | 3 / 14 |
+| Rubric with connect | 12 of 12 | 4.64 | 3.58 | 2 / 14 |
+
+Connect 4.75 against the baseline's 3.67; the French Revolution 4 ("a story in time, and most steps are tied to things a
+learner can picture"), the derivative 5 ("It builds on the slope the learner already knows"). The other criteria moved by
+a tenth or two between the two judgings, the judge's own noise: hook 4.58, why chain 4.67, key lines 4.83, accuracy 4.83,
+singability 3.92, lesson 4.92. Runs before Nov 1's evening compare with these on six criteria, not seven.
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
