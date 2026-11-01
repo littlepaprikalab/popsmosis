@@ -156,18 +156,20 @@ GLOW_IN_S = 0.4
 ARROW_WIDTH = 1.2
 ARROW_TILT = 0.28
 # Parts react to what happens to them, so the picture moves with the story: a part pops POP bigger as its name is
-# first heard, over POP_S; bumps BUMP bigger as a particle reaches it, over BUMP_S; and rocks either way ROCK_HZ
-# times a second while particles pass through it (a pump, a carrier handing on), ROCK_COVER bigger. Each is drawn
-# over the picture's own copy of the part, which only ever grows, so the copy never shows; a part rocks only as
-# far (of ROCK_DEGS) as its shape, turned that far and grown ROCK_COVER, still covers it. Never a space, a part that
-# turns, or anything on a graph.
+# first heard, over POP_S; bumps BUMP bigger as a particle reaches it, over BUMP_S; and pulses on the beat while
+# particles pass through it (a pump, a carrier handing on): on each beat of the song (Timeline.bpm; PULSE_HZ in the
+# lesson) it swells quickly by PULSE_GROW, at most PULSE_PX art pixels at its far edge so a long part only breathes,
+# and eases back. Each is drawn over the picture's own copy of the part, grown about its middle, so the copy never
+# shows: rocking turned the copy aside and its edge showed beneath, the part doubled (the owner, Nov 1). Never a
+# space, a part that turns, or anything on a graph.
 POP = 0.08
 POP_S = 0.45
 BUMP = 0.05
 BUMP_S = 0.35
-ROCK_DEGS = (3.0, 2.0, 1.2)
-ROCK_HZ = 1.2
-ROCK_COVER = 0.03
+PULSE_GROW = 0.05
+PULSE_PX = 14.0
+PULSE_HZ = 1.2  # the lesson's pulses a second: no song to beat to
+PULSE_ATTACK = 0.15  # the share of a beat it takes to swell; it eases back over the rest
 CUT_BLUR = 0.8  # a reacting part's edge, in art pixels: soft, so the mask's steps do not show
 AXIS_GAP = 10.0  # frame pixels between an axis's end and its name
 VALUE_GAP = 8.0  # frame pixels between a value's point and its writing (Beat.values)
@@ -210,6 +212,14 @@ def _read(path: Path, color_type) -> np.ndarray:
         raise RenderError(f"{path.parent.name}/{path.name} is not an image the renderer can read ({e})") from e
 
 
+def pulse(t: float, hz: float) -> float:
+    """A beat's swell at t, 0-1: up quickly over PULSE_ATTACK of the beat, then easing back to rest by the next."""
+    phase = (t * hz) % 1.0
+    if phase < PULSE_ATTACK:
+        return p.ease(phase / PULSE_ATTACK)
+    return ((1 - phase) / (1 - PULSE_ATTACK)) ** 2
+
+
 class SceneArt:
     """One scene's art and masks, and the washes made from them, composed on demand."""
 
@@ -236,7 +246,6 @@ class SceneArt:
         self._discs: dict[str, tuple[float, float, float] | None] = {}
         self._glows: dict[str, skia.Image] = {}
         self._cuts: dict[str, skia.Image] = {}
-        self._rocks: dict[str, float] = {}
         self._axes: tuple[axes.Line, axes.Line] | None = None
         self._drawn: np.ndarray | None = None
         self._cells: dict[str, np.ndarray] = {}
@@ -379,31 +388,6 @@ class SceneArt:
                              skia.Paint(Color=skia.ColorWHITE, ImageFilter=skia.ImageFilters.Blur(CUT_BLUR, CUT_BLUR)))
             self._cuts[name] = surface.makeImageSnapshot()
         return self._cuts[name]
-
-    def rock_deg(self, name: str) -> float:
-        """How far either way the part may rock: the largest of ROCK_DEGS that, turned that far either way and
-        grown ROCK_COVER about its middle, it still covers all but a speck of where it is painted; 0 for none (a
-        long, thin part, whose ends would swing clear of its painted copy). Worked out at half size."""
-        if name not in self._rocks:
-            inside = (_read(self._mask_files[name], skia.kGray_8_ColorType) > 127)[::2, ::2]
-            ys, xs = np.nonzero(inside)
-            self._rocks[name] = 0.0
-            if len(xs):
-                cx, cy = xs.mean(), ys.mean()
-                ux, uy = xs - cx, ys - cy
-                h, w = inside.shape
-
-                def covered(deg: float) -> bool:
-                    for a in (math.radians(deg), -math.radians(deg)):  # where each painted pixel comes from in it
-                        sx = np.round((math.cos(a) * ux + math.sin(a) * uy) / (1 + ROCK_COVER) + cx).astype(int)
-                        sy = np.round((-math.sin(a) * ux + math.cos(a) * uy) / (1 + ROCK_COVER) + cy).astype(int)
-                        on = (sx >= 0) & (sx < w) & (sy >= 0) & (sy < h)
-                        if inside[sy[on], sx[on]].sum() < 0.997 * len(xs):
-                            return False
-                    return True
-
-                self._rocks[name] = next((deg for deg in ROCK_DEGS if covered(deg)), 0.0)
-        return self._rocks[name]
 
     def spin_disc(self, name: str) -> tuple[float, float, float] | None:
         """The disc a face-on part turns in: its centre and a radius taking in all of it but stray
@@ -1737,25 +1721,23 @@ class Renderer:
             for name in through if not flow.blocked else []:
                 work[name] = max(work.get(name, 0.0), alpha)
         scale, dx, dy = to_frame(cam, view, art)
-        swing = math.sin(2 * math.pi * ROCK_HZ * t)
+        beat_pulse = pulse(t, self.timeline.bpm / 60 if self.timeline.bpm else PULSE_HZ)
         for name in sorted(set(grow) | set(work)):
             loc = located.get(name)
             if (loc is None or name not in art.masks or self._is_space(beat.scene, loc)
                     or (name in turning and art.spin_disc(name) is not None)):  # a wheel turning in place already moves
                 continue
-            size, deg = 1 + grow.get(name, 0.0), 0.0
+            size = 1 + grow.get(name, 0.0)
             if name in work and name not in turning and ghosts.get(name, 0.0) < 0.5:
-                rocks = art.rock_deg(name)
-                deg = rocks * work[name] * swing
-                size += ROCK_COVER * work[name] * (1.0 if rocks else 0.5 + 0.5 * swing)
-            if size - 1 < 1e-3 and abs(deg) < 0.02:
+                reach = max(loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0) / 2
+                size += min(PULSE_GROW, PULSE_PX / max(reach, 1.0)) * work[name] * beat_pulse
+            if size - 1 < 1e-3:
                 continue
             _, composed = art.compose(ghosts, spots, self._frame_tints)
             cx, cy = loc.centroid.x, loc.centroid.y
             canvas.save()
             canvas.clipRect(skia.Rect.MakeLTRB(*view))
             canvas.translate(cx * scale + dx, cy * scale + dy)
-            canvas.rotate(deg)
             canvas.scale(scale * size, scale * size)
             canvas.translate(-cx, -cy)
             canvas.saveLayer(skia.Rect.MakeLTRB(loc.box.x0 - 4, loc.box.y0 - 4, loc.box.x1 + 4, loc.box.y1 + 4))

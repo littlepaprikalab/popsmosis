@@ -478,6 +478,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
                     key_terms=bundle.key_terms, core_idea=" ".join(bundle.core_idea.split()),
+                    bpm=bundle.music.bpm if video == "song" else 0,
                     axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
 
 

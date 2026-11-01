@@ -647,36 +647,32 @@ def test_a_part_pops_as_its_name_is_first_heard_and_not_when_a_later_scene_carri
     assert (frames[4.2] == plain.frame(4.2)).all()
 
 
-def test_a_part_bumps_as_a_particle_reaches_it_and_rocks_while_particles_pass_through_it(job, monkeypatch):
+def test_a_part_bumps_as_a_particle_reaches_it_and_pulses_on_the_beat_while_particles_pass_through_it(job, monkeypatch):
     into = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW)]))
     trip, [(at, name)], through = into._arrivals("overview", into.timeline.beats[0].particles[0])
-    assert name == "Cytochrome b6f" and through == []  # the thylakoid is a space: never bumped, nor rocked
+    assert name == "Cytochrome b6f" and through == []  # the thylakoid is a space: never bumped, nor pulsed
     bump = at + renderer_module.BUMP_S / 2
     bumped = {t: into.frame(t).copy() for t in (bump, at + renderer_module.BUMP_S + 0.05)}
     across = ["Thylakoid", "Cytochrome b6f", "Thylakoid"]
-    passing = Renderer(job, flowing([flow_beat(0, 12, path=across, labels=FLOW)]))
+    # On the song's beat: 120 bpm, a swell every half second, at its fullest PULSE_ATTACK of a beat in.
+    passing = Renderer(job, flowing([flow_beat(0, 12, path=across, labels=FLOW)]).model_copy(update={"bpm": 120}))
     assert passing._arrivals("overview", passing.timeline.beats[0].particles[0])[2] == ["Cytochrome b6f"]
-    swing = (6 + 0.25 / renderer_module.ROCK_HZ, 6 + 0.75 / renderer_module.ROCK_HZ)  # one way, then the other
-    rocked = [passing.frame(t).copy() for t in swing]
+    peak, rest = 6 + renderer_module.PULSE_ATTACK / 2, 6 + 0.499  # at the top of a beat, and back at rest
+    assert renderer_module.pulse(peak, 2.0) == pytest.approx(1.0) and renderer_module.pulse(rest, 2.0) < 0.01
+    swelled, rested = passing.frame(peak).copy(), passing.frame(rest).copy()
     reacting_off(monkeypatch)
     plain_into, plain_passing = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW)])), Renderer(
-        job, flowing([flow_beat(0, 12, path=across, labels=FLOW)]))
+        job, flowing([flow_beat(0, 12, path=across, labels=FLOW)]).model_copy(update={"bpm": 120}))
     x0, y0, x1, y1 = changed_box(bumped[bump], plain_into.frame(bump))
     bx0, by0, bx1, by1 = part_on_frame(plain_into, bump, "Cytochrome b6f", grow=renderer_module.BUMP / 2)
     assert bx0 <= x0 and by0 <= y0 and x1 <= bx1 and y1 <= by1
     late = at + renderer_module.BUMP_S + 0.05
     assert (bumped[late] == plain_into.frame(late)).all()
-    for t, frame in zip(swing, rocked):
-        x0, y0, x1, y1 = changed_box(frame, plain_passing.frame(t))
-        bx0, by0, bx1, by1 = part_on_frame(plain_passing, t, "Cytochrome b6f", grow=0.08)
-        assert bx0 <= x0 and by0 <= y0 and x1 <= bx1 and y1 <= by1
-    assert (rocked[0] != rocked[1]).any()
-
-
-def test_a_part_rocks_only_as_far_as_its_shape_still_covers_its_painted_copy(job, graph):
-    art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
-    assert art.rock_deg("Cytochrome b6f") == max(renderer_module.ROCK_DEGS)  # an upright oval: the furthest
-    assert graph_art(graph, "overview").rock_deg("Supply curve") == 0.0  # a long, thin line: its ends would swing clear
+    # Grown about its middle, never turned: the painted copy beneath never shows beside it (the owner, Nov 1).
+    x0, y0, x1, y1 = changed_box(swelled, plain_passing.frame(peak))
+    bx0, by0, bx1, by1 = part_on_frame(plain_passing, peak, "Cytochrome b6f", grow=renderer_module.PULSE_GROW)
+    assert bx0 <= x0 and by0 <= y0 and x1 <= bx1 and y1 <= by1
+    assert (swelled != rested).any()
 
 
 def test_a_part_named_as_its_stage_fades_in_pops_with_it(job, monkeypatch):

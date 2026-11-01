@@ -772,14 +772,15 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     say (`studio/steps/timeline.py`). Upright, such a line keeps looking where the line before
     it was, rather than swinging over to a flow it set going.
   - **Parts react:** a part pops 8% bigger as its name is first heard (not where a later
-    scene carries its label over), bumps 5% as a particle reaches it, and rocks a few degrees
-    either way while particles pass through it (a pump, a carrier handing on). Each is the
-    picture cut out by the part's mask, turned and grown about its middle over its painted
-    copy, which it covers: a part only grows, and rocks only as far (3, 2 or 1.2 degrees) as
-    its shape, turned that far and grown 3%, still covers where it is painted; a long, thin
-    part swells and eases back instead. Never a space, a part that turns, or anything on a
-    graph (a scene with axes): grown or turned, a curve would no longer say what the graph
-    says. Rocking is not turning: `spins` stays the only claim that a part goes round.
+    scene carries its label over), bumps 5% as a particle reaches it, and pulses on the beat
+    while particles pass through it (a pump, a carrier handing on): on each beat of the song
+    (`Timeline.bpm`; 1.2 a second in the lesson) it swells 5%, at most 14 art pixels at its
+    far edge so a long part only breathes, and eases back. Each is the picture cut out by the
+    part's mask, grown about its middle over its painted copy, which it covers. It rocked a
+    few degrees either way until Nov 1, and the turned cut-out let its painted copy show at
+    the edges: the pump looked doubled (the owner). Never a space, a part that turns, or
+    anything on a graph (a scene with axes): grown, a curve would no longer say what the
+    graph says. `spins` stays the only claim that a part goes round.
     When the line's direction says what the particles carry, the lead particle is a badge
     with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
     kind has its own colour in every lesson (protons gold, electrons cyan), so a proton

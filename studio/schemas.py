@@ -1025,6 +1025,7 @@ class Timeline(Strict):
     title: str = ""  # written across the top by a layout with a title band (the hook cut's): the topic
     key_terms: list[str] = []  # Bundle.key_terms: picked out in colour where a key line says one
     core_idea: str = ""  # Bundle.core_idea, written across the top of every frame; "" in a timeline made before
+    bpm: int = 0  # the song's tempo, which a working part pulses to; 0 in the lesson, and in a timeline made before
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.
