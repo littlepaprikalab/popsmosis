@@ -39,7 +39,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _settle_song_scenes(data)
+    problems = _settle_song_scenes(data) + _song_off_analogy(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -74,6 +74,33 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_key_lines(data, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+ANALOGY = "analogy"  # the analogy scene's id (studio/prompts/bundle.md)
+
+
+def _song_off_analogy(data: dict) -> list[Problem]:
+    """The song never plays over the analogy scene: its frame lives in its words, and its pictures show the real
+    thing (the owner, Nov 1: an analogy drawn under a song made the learner map two pictures while the lyrics flew
+    past). A lyric directed onto it plays over the scene with the real thing the analogy explains, the one after it,
+    whole, with nothing moving or lit, its motion having been the analogy's. Repaired, and recorded for the prompt."""
+    ids = [s["id"] for s in data["scenes"]]
+    if ANALOGY not in ids or not data.get("lyrics"):
+        return []
+    after = [s["id"] for s in data["scenes"][ids.index(ANALOGY) + 1:] if not s.get("song_only")]
+    others = [i for i in ids if i not in (ANALOGY, "hook")]
+    real = (after or others or [None])[0]
+    if real is None:
+        return []
+    sung = {line["id"] for line in data["lyrics"]}
+    problems = []
+    for d in data["direction"]:
+        if d["line_id"] in sung and d["scene"] == ANALOGY:
+            d.update(scene=real, camera={"target": "", "zoom": 1.0}, spotlight="", particles=[], carries="",
+                     moves="", says="", glow="", also=[])
+            problems.append(Problem(line_id=d["line_id"], rule="song-scene", repaired=True,
+                                    detail=f'sung over the analogy: plays over "{real}" instead'))
+    return problems
 
 
 def _settle_song_scenes(data: dict) -> list[Problem]:

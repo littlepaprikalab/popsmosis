@@ -646,3 +646,21 @@ def test_a_bundle_with_no_song_is_checked_as_the_lesson_alone():
     assert not any(p.rule == "tempo" for p in report.problems)
     assert checks.song_length_problems(reviewed) == checks.song_shape_problems(reviewed) == []
     assert checks.style_problems(reviewed, "k-pop, 140 bpm") == [] and checks.motion_problems(reviewed) == []
+
+
+def test_a_lyric_never_plays_over_the_analogy():
+    # The owner (Nov 1): the song's frame lives in its words; a lyric directed onto the analogy plays over the scene
+    # with the real thing after it, whole and still. A narration sentence keeps the analogy.
+    def change(data):
+        analogy = next(s for s in data["scenes"] if s["id"] == "hook")
+        analogy["id"] = "analogy"
+        data["scenes"] = [s for s in data["scenes"] if s is not analogy]
+        data["scenes"].insert(0, analogy)  # just before the overview, the real thing it explains
+        for d in data["direction"]:
+            if d["line_id"] in ("v1-1", "n1"):
+                d.update(scene="analogy", particles=["Thylakoid", "Thylakoid"][:1], carries="", moves="")
+    bundle, found, _ = review(change)
+    directed = {d.line_id: d for d in bundle.direction}
+    assert directed["v1-1"].scene == "overview" and not directed["v1-1"].particles  # the real thing, still
+    assert directed["n1"].scene == "analogy"  # the lesson keeps its analogy
+    assert ("v1-1", "song-scene", True) in found

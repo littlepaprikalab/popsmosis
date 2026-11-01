@@ -128,9 +128,9 @@ them too wherever they picture what it sings; its own pictures come after its ly
 - "analogy", when the droplet's frame has a scene, just before the scene with the real thing
   it explains: the everyday object, each of its parts that stands for a structure a
   structure of its own (the "water wheel" for the rotor), in the colour of the structure it
-  stands for, so the viewer sees which matches which. A line that says one of its names
-  plays over it; other lines can still use the analogy, in other words than its parts'
-  names. Name each part for the everyday thing ("Huge table", "Water wheel"), never with
+  stands for, so the viewer sees which matches which. A narration sentence that says one of
+  its names plays over it, never a lyric (the song shows the real thing); other sentences
+  can still use the analogy, in other words than its parts' names. Name each part for the everyday thing ("Huge table", "Water wheel"), never with
   the real thing's name as a name or alias: that name belongs to the real thing's own
   structure, and said in a line it would reveal the wrong one.
 - A failure the bridge sings can have a detail scene (a song picture when the lesson shows
@@ -500,10 +500,13 @@ pictures alone sang "Copy each chromosome, split the pair" over a scraped knee, 
 choruses over an overview drawn for other steps. Once the lyrics are written, give each
 section the picture of what it sings:
 
-- Where one of the lesson's scenes draws what a section sings, it plays there: the analogy
-  under lines that sing the frame, the overview under a chorus that sums up the path the way
-  the overview lays it out, the failure scene under the bridge. Prefer a lesson scene:
-  the learner knows it from both videos.
+- Where one of the lesson's scenes draws what a section sings, it plays there: the overview
+  under a chorus that sums up the path the way the overview lays it out, the failure scene
+  under the bridge. Prefer a lesson scene: the learner knows it from both videos.
+- The song never plays over the analogy scene. Its frame lives in its words ("You can't
+  spend sunshine" over the thylakoid, not over a bank), and the pictures show the real
+  thing the line is about: an analogy drawn under a song made the learner map two pictures
+  while the lyrics flew past (the owner, Nov 1). The analogy scene is the lesson video's.
 - Where none does, draw one in `song_scenes`: at most 3, each for a section or a run of
   them, never for one line. The usual ones:
   - the intro and outro: the title line's big move on the real things ("Split the water,
