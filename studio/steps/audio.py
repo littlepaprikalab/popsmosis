@@ -270,10 +270,10 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
 
 
 # Eleven Music: one chunk per section, each exactly as long as asked, and each asked for the song's own style and
-# avoid list as the bundle writes them, with only the diction clause added (with_diction): how the verses and the
-# chorus are sung is the style's to say ("rapped verses, rising into a big sing-along chorus"). Until Oct 29 code
-# added "clear rapped verse" to the verses and "sung melodic vocal, not rapped" to the rest, after a song told one
-# style for every section rapped throughout.
+# avoid list as the bundle writes them, with only the diction clause and the studio's own things to avoid added
+# (with_diction, with_avoid): how the verses and the chorus are sung is the style's to say ("rapped verses, rising
+# into a big sing-along chorus"). Until Oct 29 code added "clear rapped verse" to the verses and "sung melodic vocal,
+# not rapped" to the rest, after a song told one style for every section rapped throughout.
 
 # Every song asks once for clear diction, the owner's rule since Oct 31: on Lyria, which is given no timings, songs
 # came back with lines step 6 could not hear (30 of 47 in one supply-and-demand song, which was sung again). Once,
@@ -289,6 +289,19 @@ def with_diction(styles: list[str]) -> list[str]:
     return [*styles, DICTION]
 
 
+# What every song avoids, asked by the studio itself as it asks for diction: the writer listed both in every bundle
+# (Nov 1). Songs opened on long instrumental intros (fc8bae6), and no song is explicit, whoever it is for.
+AVOID = ("long instrumental intro", "explicit lyrics")
+
+
+def with_avoid(avoid: list[str]) -> list[str]:
+    """The song's avoid list with AVOID added where it lacks them, and nothing about diction, which the style asks
+    for once (with_diction): asked again and again, a singer sings like someone reading."""
+    kept = [a for a in avoid if "diction" not in a.lower()]
+    have = {" ".join(a.lower().split()) for a in kept}
+    return [*kept, *(a for a in AVOID if a not in have)]
+
+
 def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     """The music request's plan, one chunk per section, and where each section is planned to fall."""
     planned = planned_sections(bundle)
@@ -296,7 +309,7 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
         "positive_styles": with_diction(bundle.music.positive_styles),
-        "negative_styles": list(bundle.music.negative_styles),
+        "negative_styles": with_avoid(bundle.music.negative_styles),
         "context_adherence": "high",
     } for part in planned]
     return {"chunks": chunks}, _placed(planned)
@@ -339,8 +352,7 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
-    if music.negative_styles:
-        head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
+    head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in with_avoid(music.negative_styles))}.")
     head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)

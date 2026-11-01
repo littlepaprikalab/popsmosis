@@ -77,8 +77,7 @@ Tell it as one path, each sentence following from the one before:
    never before the learner has met what it is about: ask the listener to guess, with a
    question the common mistake answers wrong ("So if you drop a heavy ball and a light one
    together, does the heavy one land first? A common answer is yes."), then answer it:
-   the mistake named as a common one, why it fails, the right idea. Never "most people": the
-   facts call a mistake common, they never count who makes it. Committing to a guess and
+   the mistake named as a common one, why it fails, the right idea. Committing to a guess and
    seeing it fail is what changes a wrong idea.
 5. **A case** (2 to 5 sentences), where the idea applies to something new: one example the
    facts give (a failure for a system, one point read off a graph), worked step by step,

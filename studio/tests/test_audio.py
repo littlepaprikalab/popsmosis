@@ -121,8 +121,8 @@ def test_the_song_is_one_chunk_per_section_timed_by_its_lines(job, monkeypatch):
     # as long as its lines take to sing: 7 and 10 syllables at 4 a second, and a second's rest each; the
     # one-line sections are held to the 3 s a chunk must last
     assert [c["duration_ms"] for c in chunks] == [6250, 3000, 3000, 3000, 3000, 3000]
-    assert all(c["positive_styles"] == ["upbeat pop", "112 bpm", audio.DICTION] and c["negative_styles"] == ["mumbled vocals"]
-               for c in chunks)
+    assert all(c["positive_styles"] == ["upbeat pop", "112 bpm", audio.DICTION]
+               and c["negative_styles"] == ["mumbled vocals", *audio.AVOID] for c in chunks)
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["song_id"] == "song123"
     assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 6250)]
@@ -294,7 +294,8 @@ def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monk
     assert body["generationConfig"] == {"responseModalities": ["AUDIO", "TEXT"]}
     prompt = body["contents"][0]["parts"][0]["text"]
     # the style, what to avoid and the lyrics: no length and no timings, so the singer takes the time it needs
-    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\nAvoid: mumbled vocals.\nSing the lines in order, section "
+    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\nAvoid: mumbled vocals, "
+                             "long instrumental intro, explicit lyrics.\nSing the lines in order, section "
                              "by section. Backing vocals and echoes of the hook are welcome.\n\nLyrics:\n")
     assert "Length" not in prompt and "Structure" not in prompt and "0:0" not in prompt
     assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEach electron hand-off pumps a proton"

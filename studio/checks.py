@@ -18,7 +18,8 @@ from collections import Counter
 from pathlib import Path
 
 from studio.jobs import write
-from studio.schemas import BPM_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Problem, lesson_scenes_max
+from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, SONG_SCENES_MAX, Bundle, CheckReport, Fact, Problem,
+                            lesson_scenes_max, with_study_tags)
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
 SYMBOL_LETTERS = 3  # what a particle can carry written on it ("Na⁺", "Ca²⁺", "NAD⁺"): anything longer moves as an arrow
@@ -262,14 +263,18 @@ def syllables(line: str) -> int:
 LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
 LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
-# A style that raps one section says which (studio/styles.py, Nov 1): only that section's lines run longer.
-RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped)? second verse\b|\bsecond verse rapped\b", re.I)
-RAPPED_BRIDGE = re.compile(r"\brap(?:ped)? bridge\b|\bbridge rapped\b", re.I)
+# A style that raps one section says which (studio/styles.py, Nov 1): only that section's lines run longer. However the
+# writer puts it: "a rapped second verse", "raps the second verse", "the bridge is rapped".
+RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?(?:second verse|verse (?:2|two))\b"
+                                 r"|\b(?:second verse|verse (?:2|two))\s+(?:is\s+|gets\s+)?rapped\b", re.I)
+RAPPED_BRIDGE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?bridge\b"
+                           r"|\bbridge\s+(?:is\s+|gets\s+)?rapped\b", re.I)
 
 
 def rapped_lines(data: dict) -> set[str]:
-    """The ids of the lines the style raps: its second verse or its bridge when it names one, every line when it
-    raps otherwise ("rapped verses", "make it rap"), none when it does not."""
+    """The ids of the lines the style raps: its second verse or its bridge when it names one (none, for a rapped
+    bridge in a song with no bridge), every line when it raps otherwise ("rapped verses", "make it rap"), none when
+    it does not."""
     style = " ".join((data.get("music") or {}).get("positive_styles") or [])
     if not RAPPED.search(style):
         return set()
@@ -281,12 +286,13 @@ def rapped_lines(data: dict) -> set[str]:
         else:
             runs.append((line["section"], [line["id"]]))
     picked: set[str] = set()
+    named = RAPPED_SECOND_VERSE.search(style) or RAPPED_BRIDGE.search(style)
     if RAPPED_SECOND_VERSE.search(style):
         verses = [ids for section, ids in runs if section == "verse"]
         picked |= set(verses[1]) if len(verses) > 1 else set()
     if RAPPED_BRIDGE.search(style):
         picked |= {i for section, ids in runs if section == "bridge" for i in ids}
-    return picked if picked else {line["id"] for line in lyrics}
+    return picked if named else {line["id"] for line in lyrics}
 # A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
 # next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
@@ -357,6 +363,27 @@ def _stems(text: str) -> set[str]:
     return {w[:5] for w in re.findall(r"[a-z0-9]+", fold(text).replace("'", "")) if w not in PLAIN and len(w) > 2}
 
 
+def chorus_spans(sections: list[str]) -> list[list[int]]:
+    """The positions of each chorus's lines, chorus 1 first, from the lyrics' sections in order. A run of chorus lines
+    can hold two: in a song with no bridge (a topic that is not a system that fails) the second chorus runs straight
+    into the last, which opens on its summary couplet. So a later run holds as many choruses as chorus 1's length
+    fits in it, the last aligned with the run's end, after its couplet."""
+    runs, start = [], None
+    for i, section in enumerate([*sections, ""]):
+        if section == "chorus" and start is None:
+            start = i
+        elif section != "chorus" and start is not None:
+            runs.append(list(range(start, i)))
+            start = None
+    if not runs:
+        return []
+    size, spans = len(runs[0]), [runs[0]]
+    for run in runs[1:]:
+        count = max(1, len(run) // size)
+        spans += [run[k * size:(k + 1) * size] for k in range(count - 1)] + [run[-size:]]
+    return spans
+
+
 def song_shape_problems(bundle: Bundle) -> list[Problem]:
     """The song against the rules a check can count, for any subject: the chorus three times; a title line that
     names real things from the droplet's own idea, not pronouns; a chorus that says the idea; verses no longer
@@ -372,7 +399,7 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
             runs[-1][1].append(line)
         else:
             runs.append((line.section, [line]))
-    choruses = [lines for section, lines in runs if section == "chorus"]
+    choruses = [[bundle.lyrics[i] for i in span] for span in chorus_spans([line.section for line in bundle.lyrics])]
     if len(choruses) < CHORUSES:
         problems.append(Problem(line_id="music", rule="lyric-style", repaired=False,
                                 detail=f"the chorus is sung {len(choruses)} times, not {CHORUSES}"))
@@ -423,6 +450,85 @@ def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
                                 detail=f"the song is at {bundle.music.bpm} bpm, not the {found.group(1)} bpm the "
                                        f"learner asked for"))
     return problems
+
+
+def repair_once(bundle: Bundle, study_guide: str = "") -> tuple[Bundle, list[Problem]]:
+    """What the writer is no longer asked to get right, set once by the bundle step before its last code checks: every
+    chorus sung as the first, a head count said as a common answer, only quotes the study guide holds, and the tags
+    every video carries (schemas.with_study_tags). Not part of review(), which runs again after the fact-check: these
+    change words, and a word changed after the check would go out unchecked. The same bundle when nothing changes."""
+    data = bundle.model_dump()
+    problems = _same_choruses(data)
+    for line in data["narration"]:
+        if (text := _counted(line["text"])) != line["text"]:
+            problems.append(Problem(line_id=line["id"], rule="head-count", repaired=True,
+                                    detail=f'"{line["text"]}" counts who makes the mistake; "{text}" instead'))
+            line["text"] = text
+    lesson = _counted(data["lesson_markdown"])
+    if lesson != data["lesson_markdown"] and len(lesson) <= LESSON_MAX_CHARS:
+        problems.append(Problem(line_id="lesson_markdown", rule="head-count", repaired=True,
+                                detail="a sentence counted who makes the mistake; said as a common answer instead"))
+        data["lesson_markdown"] = lesson
+    facts, unquoted = held_to_guide(bundle.facts, study_guide)
+    data["facts"] = [fact.model_dump() for fact in facts]
+    data["tags"] = with_study_tags(bundle.tags, bundle.audience, bundle.sung).model_dump()
+    settled = Bundle.model_validate(data)
+    return (bundle if settled == bundle else settled), problems + unquoted
+
+
+def _same_choruses(data: dict) -> list[Problem]:
+    """Every later chorus sung word for word as the first, so a learner can sing it back after two hearings: a line
+    that differs takes the first chorus's words, names and fact, keeping its own id and direction. Only a chorus as
+    long as the first, opening and ending as it does, is held to it: any other may not line up with it."""
+    lyrics = data["lyrics"]
+    spans = chorus_spans([line["section"] for line in lyrics])
+    first = [lyrics[i] for i in spans[0]] if spans else []
+    problems = []
+    for span in spans[1:]:
+        later = [lyrics[i] for i in span]
+        if len(later) != len(first) or not (_same(later[0]["text"], first[0]["text"])
+                                            and _same(later[-1]["text"], first[-1]["text"])):
+            continue
+        for want, line in zip(first, later):
+            if line["text"] != want["text"]:
+                problems.append(Problem(line_id=line["id"], rule="chorus", repaired=True,
+                                        detail=f'sang "{line["text"]}" where the first chorus sings "{want["text"]}"; '
+                                               "sung as the first"))
+                line.update(text=want["text"], names=list(want["names"]), fact_id=want["fact_id"])
+    return problems
+
+
+def _same(a: str, b: str) -> bool:
+    return " ".join(fold(a).split()) == " ".join(fold(b).split())
+
+
+# A head count no fact supports: the facts call a mistake common, they never count who makes it. "Most people say
+# yes." went from the script prompt's own example into four droplets on Oct 31, "Many people say yes." into the
+# derivative's on Nov 1, and the fact-check rewrote each. At the start of a sentence, said as a common answer, or a
+# common guess, instead; any other head count is still the fact-check's.
+HEAD_COUNT = re.compile(r"(^|[.!?:]\s+|\n\s*(?:[-*>]\s+|\d+\.\s+)?)(?:most|many|lots of|a lot of)\s+"
+                        r"(?:people|students|learners)\s+(?:would\s+)?(?:(?:say|answer|guess)\s+(yes|no)\b"
+                        r"|(?:think|believe)\s+that\s+)", re.I)
+
+
+def _counted(text: str) -> str:
+    return HEAD_COUNT.sub(lambda m: m[1] + (f"A common answer is {m[2].lower()}" if m[2] else "A common guess is that "),
+                          text)
+
+
+def held_to_guide(facts: list[Fact], study_guide: str) -> tuple[list[Fact], list[Problem]]:
+    """Each fact's source_quote only when it is copied from the study guide (3+ words, factcheck.quotes_guide): the
+    audit is told it is the guide's words, so one the guide does not hold, or any with no guide, is left out."""
+    from studio.steps.factcheck import quotes_guide  # the fact-check imports this module
+
+    kept, problems = [], []
+    for fact in facts:
+        if fact.source_quote.strip() and not quotes_guide(fact.source_quote, study_guide):
+            problems.append(Problem(line_id=fact.id, rule="source-quote", repaired=True,
+                                    detail=f'"{fact.source_quote}" is not copied from the study guide; left out'))
+            fact = fact.model_copy(update={"source_quote": ""})
+        kept.append(fact)
+    return kept, problems
 
 
 ESSENCE_WORDS_MAX = 20

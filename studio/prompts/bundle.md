@@ -97,8 +97,8 @@ facts do not support, even if it is true; a line it cannot fix fails the droplet
   proximal tubule", not "the kidney takes back water"). Never invent figures, dates, names or quotes; leave out what
   you are unsure of.
 - With a study guide, teach what it covers, in its terms, and give each fact a
-  `source_quote`: a short passage copied word for word from the guide that supports it;
-  with none, `source_quote` is "". A guide can be wrong: where it says what the field does
+  `source_quote`: a short passage copied word for word from the guide that supports it.
+  A guide can be wrong: where it says what the field does
   not, the facts follow the field.
 
 Then:
@@ -295,8 +295,7 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
 - **End on the essence, then a check on it**: the core idea once more in one plain sentence,
   then one short "why" or "what happens if" question about a situation the lesson has not
   shown, which only a learner who understood the core idea can answer ("Why is it summer in
-  Australia in December?"), then an
-  invitation to ask a follow-up.
+  Australia in December?").
 - Write for a learner at that level meeting the topic for the first time, unless the
   request says they know more. Most lessons fit in 300-500 words; never over 5000
   characters.
@@ -328,7 +327,7 @@ explanation left to the narration.
   warm Rhodes", "an 808 that slides", "gang vocals on the hook") beat adjectives ("catchy",
   "educational"). The verses are sung with a melody, unless the learner asks for rap or the
   style raps them, or raps one section (a rapped second verse, a rapped bridge): rap that
-  section then, and only that one, and say so in the style ("a rapped second verse"). A
+  section then, and only that one, and say so in the style. A
   rapped line follows every rule a sung one does (a lyric with its rhyme and beat, one idea,
   one term at most, never a sentence of the lesson recited); it only runs longer. The chorus
   is always sung.
@@ -355,12 +354,9 @@ explanation left to the narration.
   - **A younger audience** gets the current pop they play themselves, never a children's
     song or "playful" pop, which comes back a classroom jingle: bright, with a big
     sing-along chorus, a clear lead vocal and sung verses.
-  - Name the tempo once, as "<n> bpm", from 80 to 160. Never name an artist, band or song:
-    the music generator refuses them.
-- `music.negative_styles`: short things to avoid, a list: always "long instrumental intro"
-  and "explicit lyrics", and anything the learner said they did not want. Leave diction out
-  of both lists: the studio asks every song for clear diction once, itself, and a singer
-  asked again and again sings like someone reading.
+  - Never name an artist, band or song: the music generator refuses them.
+- `music.negative_styles`: short things to avoid, a list, such as what the learner said
+  they did not want; [] for none.
 - `lyrics`: every line as sung, in order, section by section, so the chorus appears three
   times. A line is 6 to 9 syllables, room to hold a note (rapped, up to about 14).
 
@@ -403,9 +399,6 @@ explanation left to the narration.
   it; the title, the chorus, the bridge and the outro sing the real thing.
 - **One surprise**, where the facts give one that serves the core idea: a line a listener
   repeats to a friend, in a verse.
-- **Attitude**: a short tag that makes no claim ("that's the trick", "for real") may end a
-  line at most twice in the song, and never just to reach a rhyme ("it's true", "no
-  doubt"): find a rhyme that carries the idea.
 - **Terms as they are sung**: the course's real terms, written as a singer says them: "NAD
   plus", not "NAD+"; "sodium", not "Na+"; "CO2" and "two ATP" are fine.
 
@@ -433,8 +426,7 @@ In this order, each section a run of lines with its own `section` value:
   before so the rhythm repeats ("Pull the sea, then let it go / High tide, low tide, to and
   fro"): for a process, what goes in and what comes out ("Sugar and oxygen in / Water, CO2
   out"); for any other idea, its cause and its result, never "in" and "out". Short words,
-  nothing to stumble on. Word for word the same each time, each repeat with its own ids; a
-  learner can sing it back after two hearings.
+  nothing to stumble on.
 - **Verse**, 8 lines: the second half of the story, ending with what it makes.
 - **Chorus**, word for word.
 - **Bridge**, 8 lines, only for a system that can fail: a sung exam question. Name one thing
@@ -453,16 +445,8 @@ lines.
 - `fact_id`: the fact a line teaches, or "filler" for one that teaches nothing (a call-out,
   pure attitude). Most lines carry one of the song's ideas; a line that says one again in a
   new way carries it too.
-- A line need not name a structure. When it names one the viewer should see, its label
-  appears the first time it is sung, so use the `name` or an alias exactly as written, of a
-  structure drawn in the scene the line plays over (one of the lesson's or a song picture).
-  Group words count: a chorus that sings "limbic system" plays over a scene that draws the
-  limbic system as a structure.
-- `names`: every structure name or alias the line says, exactly as in the line, or [].
 - A rhyme makes a line sound true, so a lyric is as true as a sentence of the lesson: never
   a claim that sounds right and is not ("every mutation does harm", when most do nothing).
-- Ids are short and unique across lyrics and narration: "v1-1" to "v1-8", "c1-1", "v2-1",
-  "c2-1", "b-1", "c3-1" and so on.
 
 ### The song's pictures
 
@@ -477,9 +461,6 @@ section the picture of what it sings:
   under the bridge. Prefer a lesson scene: the learner knows it from both videos.
 - Where none does, draw one in `song_scenes`: at most 3, each for a section or a run of
   them, never for one line.
-- A song picture draws the topic's real things as a textbook would picture what the lines
-  sing (the everyday picture is the hook's). Its `structures` are the parts its lines name,
-  its `stage_of` is "", and its id is short and new ("title", "chorus", "bridge-detail").
 
 ## The narration
 
@@ -622,15 +603,11 @@ the question, then a key line for each link of `why_chain` (two for a long one).
 ## Tags
 
 `tags.song` and `tags.lesson` are hashtags for each video, the way a creator tags a TikTok,
-so that someone searching the Droplets tab finds it: 6 to 10 each, the most useful first.
+so that someone searching the Droplets tab finds it: 5 to 7 each, the most useful first.
 
-- Both lists start with what a student would type: the topic, its key terms and structures,
-  the subject, the course or exam ("#photosynthesis", "#lightreactions", "#thylakoid",
-  "#biology", "#apbio").
-- Then a few for the video: the song's genre and that it is a study song ("#kpop",
-  "#studysong"); the lesson's that it explains ("#explained", "#examprep"); "#studytok"
-  fits both.
+- What a student would type: the topic, its key terms and structures, the subject, the
+  course or exam ("#photosynthesis", "#lightreactions", "#thylakoid", "#biology", "#apbio"),
+  and last, for the song, its genre ("#kpop").
 - Search words for what the video teaches, never claims: the fact-checker drops any that
   names a topic or term the facts do not cover.
-- Never tags that help no one find it ("#fyp", "#foryou", "#viral"), an artist or band, or
-  anything about the learner.
+- Never an artist or band, or anything about the learner.
