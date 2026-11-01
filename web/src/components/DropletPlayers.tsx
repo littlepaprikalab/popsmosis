@@ -42,18 +42,19 @@ export function DropletPlayers({ dropletId, video, tags, title }: { dropletId: s
       ))}
     </div>
     <TagList tags={allTags(tags)} className="mt-1.5" />
-    {video.hookVideoUrl && <HookClip dropletId={dropletId} src={video.hookVideoUrl} poster={video.hookPosterUrl ?? null} title={title} />}
+    {video.hookVideoUrl && <HookClip dropletId={dropletId} src={video.hookVideoUrl} title={title} />}
     </>
   );
 }
 
 /**
- * The hook cut: the song's pre-chorus and first chorus as a short upright clip, the part students post. A small
- * tile beside its two buttons, so it never competes with the full videos: Share hands the clip's link to the
- * phone's share sheet with #popsmosis (or copies the link where there is none), Download saves the file. A share is
- * counted once it went through (a share sheet closed without sharing is not), a download when it is pressed.
+ * The hook cut: the song's pre-chorus and first chorus as a short upright clip, the part students post. Only its two
+ * buttons here, no player: the clip is a cut of the song just above, and the Clips feed plays it full size. Share
+ * hands the clip's link to the phone's share sheet with #popsmosis (or copies the link where there is none), Download
+ * saves the file. A share is counted once it went through (a share sheet closed without sharing is not), a download
+ * when it is pressed.
  */
-export function HookClip({ dropletId, src, poster, title }: { dropletId: string; src: string; poster: string | null; title?: string }) {
+export function HookClip({ dropletId, src, title }: { dropletId: string; src: string; title?: string }) {
   const [copied, setCopied] = useState(false);
   async function share() {
     const data = { title: title ? `${title}: the hook` : 'The hook', text: '#popsmosis', url: src };
@@ -76,34 +77,22 @@ export function HookClip({ dropletId, src, poster, title }: { dropletId: string;
     }
   }
   return (
-    <figure className="mt-3 flex items-end gap-3" data-testid="hook-clip">
-      <video
-        controls
-        playsInline
-        loop
-        preload="none"
-        poster={poster ?? undefined}
-        src={src}
-        {...countPlays(dropletId, 'hook')}
-        aria-label="hook clip"
-        className="w-32 rounded-md"
-        style={{ aspectRatio: '9 / 16', background: '#000', border: '1px solid var(--border)' }}
-      />
-      <figcaption className="flex flex-col gap-2 pb-1">
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="hook-clip">
+      <p className="flex flex-col gap-0.5">
         <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: 'var(--accent-red)' }}>Hook clip</span>
         <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>The catchiest bit, ready to post.</span>
-        <div className="flex gap-2">
-          <button type="button" onClick={share} className="text-xs font-bold px-3 py-1.5 rounded-md"
-            style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }} data-testid="hook-share">
-            {copied ? 'Link copied' : 'Share clip'}
-          </button>
-          <a href={src} download onClick={() => countClip(dropletId, 'downloaded')} className="text-xs font-bold px-3 py-1.5 rounded-md"
-            style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }} data-testid="hook-download">
-            Download
-          </a>
-        </div>
-      </figcaption>
-    </figure>
+      </p>
+      <div className="flex gap-2">
+        <button type="button" onClick={share} className="text-xs font-bold px-3 py-1.5 rounded-md"
+          style={{ background: 'var(--accent-brand)', color: 'var(--accent-brand-text)' }} data-testid="hook-share">
+          {copied ? 'Link copied' : 'Share clip'}
+        </button>
+        <a href={src} download onClick={() => countClip(dropletId, 'downloaded')} className="text-xs font-bold px-3 py-1.5 rounded-md"
+          style={{ border: '1px solid var(--border)', color: 'var(--text-primary)' }} data-testid="hook-download">
+          Download
+        </a>
+      </div>
+    </div>
   );
 }
 
