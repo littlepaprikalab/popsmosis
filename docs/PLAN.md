@@ -843,7 +843,9 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     over a chorus or the narration's sentence that says the core idea, as both say it.
   - **Key lines:** each sits on the lyric that sings its step, in the song's own order, and on
     the narration sentence that says it, so one set of lines places itself in each video; a
-    step the song never sings is the lesson video's only (`from_line` ""). No code checks the
+    step the song never sings is the lesson video's only (`from_line` ""). In the song a step
+    holds only to the end of its section, and a section starts with none unless a key line
+    starts there: one held into the pre-chorus sat over lines about something else (Nov 1). No code checks the
     placement: a hint by shared words (a key line on a lyric sharing few of its words) found
     round 22's three, but on the Nov 1 scorecard 5 of its 6 were wrong, songs saying their
     steps in their own words, and it was taken out.

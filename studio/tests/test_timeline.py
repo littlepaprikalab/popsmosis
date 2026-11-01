@@ -566,6 +566,17 @@ def test_the_song_holds_each_key_line_until_the_next_and_none_over_a_chorus(job)
     assert hook.key_terms == song.key_terms and hook.core_idea == song.core_idea
 
 
+
+def test_a_step_is_held_only_to_the_end_of_its_section(job):
+    # Nov 1: "2 K⁺ binding drops phosphate" stayed over the pre-chorus's "Towing sugar uphill with it too".
+    data = bundle_data()
+    keyed(data)
+    next(line for line in data["lyrics"] if line["id"] == "v1-2")["section"] = "pre-chorus"
+    write_bundle(job, data)
+    shown = {b.line_id: b.key_line for b in make(job)["song"].beats if b.line_id}
+    assert shown["v1-1"] == "How does a leaf make fuel from light?" and shown["v1-2"] == ""  # a new section: none
+    assert shown["v2-1"] == "Light pumps H⁺ into the lumen"  # a key line where a section starts wins
+
 def test_a_song_from_a_bundle_without_key_lines_has_none(job):
     for timeline in make(job).values():
         assert all(b.key_line == "" for b in timeline.beats)  # not even the core idea: no band at all

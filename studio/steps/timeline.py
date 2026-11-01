@@ -522,9 +522,10 @@ def _says_core_idea(bundle: Bundle) -> int:
 
 def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
-    sentence in the lesson), held through the gaps after it. None from each chorus (the core idea sung) or the
-    narration's sentence that says the core idea until a key line starts later: the core idea is written at the top
-    of every frame, and a step held over the line that sings something else misled (the owner, Nov 1)."""
+    sentence in the lesson), held through the gaps after it, and in the song only to the end of its section. None
+    from each chorus (the core idea sung) or the narration's sentence that says the core idea until a key line starts
+    later: the core idea is written at the top of every frame, and a step held over the line that sings something
+    else misled (the owner, Nov 1)."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -534,10 +535,17 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     if video == "song":
         choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
         core_from = [i for i in choruses if i - 1 not in choruses]  # where each chorus starts
+        # A step held into the next section sat over lines about something else ("2 K⁺ binding drops phosphate"
+        # over the pre-chorus's "Towing sugar uphill with it too", Nov 1): each section starts with none, unless a
+        # key line starts there too, which wins.
+        sections = [i for i, line in enumerate(bundle.lyrics)
+                    if i and line.section != bundle.lyrics[i - 1].section and i not in core_from]
     else:
-        core_from = [_says_core_idea(bundle)]
-    starts += [(at, "") for at in core_from]
-    starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
+        core_from, sections = [_says_core_idea(bundle)], []
+    # Stable, in this order on one line: a section's start gives way to a key line there, which gives way to the
+    # core idea's (a chorus, or the narration's sentence that says it).
+    starts = [(at, "") for at in sections] + starts + [(at, "") for at in core_from]
+    starts.sort(key=lambda s: s[0])
     for i, beat in enumerate(beats):
         if beat["line_id"] in order:
             at = order[beat["line_id"]]
