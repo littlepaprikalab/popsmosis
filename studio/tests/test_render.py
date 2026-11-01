@@ -1828,6 +1828,19 @@ def test_an_arrow_carries_as_many_as_the_moments_words_count_for_what_moves():
     assert count_in("ten sodium", "Na⁺") == 1
 
 
+def test_a_crossing_keeps_the_count_the_lesson_gave_it_where_its_own_line_gives_none(job):
+    # The owner, Nov 1: the ratio comes from the counts. Three sodium out for two potassium in, said once, holds for
+    # every crossing of the pump in the video; a part never counted for it (the sodium channel) crosses CROSS_MANY.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = list(timeline.beats)
+    flow = Particles(path=["Cytochrome b6f", "Thylakoid"], color="#F2C230", label="H⁺", trail=True)
+    first, then = [i for i, b in enumerate(beats) if b.scene == "overview"][:2]
+    beats[first] = beats[first].model_copy(update={"line": "Four protons cross here", "particles": [flow]})
+    beats[then] = beats[then].model_copy(update={"line": "Ten protons cross here", "particles": [flow]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert renderer._counts == {("H⁺", "Cytochrome b6f"): 4}  # the first count, for the part; ten is past COUNT_MAX
+
+
 def test_an_arrow_that_would_mislead_is_left_out_and_said_why(job, monkeypatch):
     # Nov 1: K⁺ ran sideways into the cell, two arrows had no length, and H⁺ ended above the picture. The gate leaves
     # such an arrow out (Renderer.left_out) instead of drawing it wrong; a blocked one may be short, ending at its cross.

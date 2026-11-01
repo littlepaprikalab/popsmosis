@@ -999,6 +999,17 @@ class Renderer:
                     self._wrong[key] = self._wrong_arrow(beat.scene, flow)
         self.left_out = [{"scene": scene, "path": list(path), "carries": label, "why": why}
                          for (scene, path, label, _), why in self._wrong.items() if why]
+        # How many of a thing go through a part at once, from the first line anywhere that counts them ("three sodium
+        # bind"), so a crossing of that part under a line with no number keeps the lesson's ratio: three Na+ out for
+        # two K+ in through the pump, while the sodium channel, never counted, keeps CROSS_MANY.
+        self._counts: dict[tuple[str, str], int] = {}
+        for beat in timeline.beats:
+            located = self.locations.scene(beat.scene)
+            for flow in beat.particles:
+                if (n := count_in(beat.line, flow.label)) > 1:
+                    for name in flow.path:
+                        if (loc := located.get(name)) is not None and not self._is_space(beat.scene, loc):
+                            self._counts.setdefault((flow.label, name), n)
         # The arrows whose one-liner only repeats what is said or written as it first plays: no note for them.
         self._said: set[tuple] = set()
         seen: set[tuple] = set()
@@ -2326,8 +2337,10 @@ class Renderer:
             elapsed = t - flow_in
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             if not flow.blocked and not self._graph(beat.scene) and self._crossing(beat.scene, flow.path, lane):
+                said = count_in(beat.line, flow.label)
                 self._draw_crossing(canvas, flow, self._flow_line(beat.scene, flow), elapsed, alpha, on_frame, t,
-                                    count_in(beat.line, flow.label))
+                                    said if said > 1 else next((n for name in flow.path
+                                                                if (n := self._counts.get((flow.label, name)))), 1))
                 continue
             if self._as_arrow(beat.scene, flow):
                 self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t, count_in(beat.line, flow.label))
