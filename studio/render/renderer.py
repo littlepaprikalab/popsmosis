@@ -2296,11 +2296,12 @@ class Renderer:
             self._through[key] = line
         return self._through[key]
 
-    def _draw_tail(self, canvas: skia.Canvas, flow, shown: list[Point], alpha: float, t: float) -> None:
+    def _draw_tail(self, canvas: skia.Canvas, flow, shown: list[Point], alpha: float, t: float,
+                   grown: float = 1.0) -> None:
         """One particle of what the flow carries, jiggling in place just behind its arrow's tail (frame pixels), so the
-        arrow says what moves; for a blocked flow, just short of the cross at its head, where it piles up. A flow
-        carrying nothing has none."""
-        if not flow.label or len(shown) < 2:
+        arrow says what moves; for a blocked flow, just short of the cross at its head, where it piles up, both once
+        the arrow drawing itself in (`grown`) has reached the blocker. A flow carrying nothing has no particle."""
+        if len(shown) < 2 or not (flow.label or flow.blocked):
             return
         total = routing.length(shown)
         if total < 1.0:
@@ -2310,9 +2311,12 @@ class Renderer:
         toward = _along(shown, max(total - 30.0, 0.0)) if head else _along(shown, min(30.0, total))
         d = math.dist(end, toward) or 1.0
         ux, uy = (end[0] - toward[0]) / d, (end[1] - toward[1]) / d  # pointing away from the arrow's body
-        if head:  # the cross sits at the head; the particle waits just before it
+        if head:  # the cross sits at the head, once the arrow gets there; the particle waits just before it
+            alpha *= p.clamp01((grown - 0.9) / 0.1)
             at = (end[0] - ux * (p.BLOCK_R + p.MARKER_R + 6), end[1] - uy * (p.BLOCK_R + p.MARKER_R + 6))
             p.draw_block(canvas, end, alpha)
+            if not flow.label:
+                return
         else:
             at = (end[0] + ux * (p.MARKER_R + 4), end[1] + uy * (p.MARKER_R + 4))
         phase = (zlib.crc32(flow.label.encode("utf-8")) % 628) / 100
@@ -2362,7 +2366,7 @@ class Renderer:
             shown = [on_frame(q) for q in line]
             p.draw_route_arrow(canvas, shown, flow.color, alpha, grown,
                                phase=0.0 if flow.blocked else max(elapsed, 0.0) * ROUTE_DASH_SPEED)
-            self._draw_tail(canvas, flow, shown, alpha, t)
+            self._draw_tail(canvas, flow, shown, alpha, t, grown)
             says = getattr(flow, "says", "")
             if says:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
