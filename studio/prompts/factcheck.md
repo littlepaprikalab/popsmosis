@@ -159,64 +159,38 @@ judge a tag by one question: would a student searching for it be right to find t
 
 ## Motions
 
-A line whose id starts with "motion:" is what a video shows moving: dots marked with what
-they are, travelling between the parts of its diagram in order ("H⁺ travels from Stroma to
-Cytochrome b6f to Thylakoid lumen"). A student watches the marked dot go, so it is a claim
-about what moves, where from, through what and where to.
+A line whose id starts with "motion:" is something the video shows, and a student believes
+what they see: each is one claim, SUPPORTED when the facts say it (`source` the fact id),
+UNSUPPORTED when they do not or say otherwise (`problem` in a few words, `corrected` ""). A
+motion that fails is left out of the video, never rewritten, and a motion is never FILLER.
+The kinds:
 
-- **SUPPORTED**: the facts say this thing moves along this route, in this direction. A
-  route that leaves out a step the facts name between two of its stops is fine (electrons
-  from photosystem II to cytochrome b6f, though they pass through plastoquinone on the
-  way). `source` is the fact id.
-- **UNSUPPORTED**: the wrong thing moving (electrons where the facts move protons), the
-  wrong direction (protons into the stroma where the facts pump them out of it), a stop
-  the facts do not put on its route, or a route the facts never give. That includes a route
-  through a wall or membrane itself where the facts say the thing crosses through something
-  in it (a channel, a pump, a carrier, a gate): "Na⁺ travels from Outside of the cell to Cell
-  membrane to Inside of the cell" when the facts let sodium in through leak channels; a
-  student watching sees it slip through the wall. Through the wall itself is supported only
-  where the facts say it crosses that way (O₂ across the alveolus wall). `problem` says what
-  is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
-  video, never rewritten.
-
-A motion that says "Something travels" is dots with nothing written on them: the video
-shows something going along that route without saying what (a nerve signal, light).
-SUPPORTED when the facts say something goes along that route, in that direction, whatever
-it is; UNSUPPORTED when the facts move nothing there (from a character to the audience,
-from one point of a graph to another), judged as above.
-
-A motion that says something "builds up" in a space ("H⁺ builds up in Thylakoid lumen")
-is the video filling that space with it as it arrives: SUPPORTED when the facts say it
-piles up or accumulates there, UNSUPPORTED otherwise, judged as above.
-
-A motion that says something "spins" as particles flow ("ATP synthase spins as H⁺ flows
-through it") is the video turning that part while they pass: SUPPORTED when the facts say
-that flow turns it (an analogy's part by what the facts say of the analogy), UNSUPPORTED
-otherwise.
-
-A motion that says a flow "is stopped at" something ("e⁻ flow from Photosystem II is
-stopped at Herbicide") is the video showing the particles pile up there and go no further:
-SUPPORTED when the facts say that thing blocks or stops that flow, UNSUPPORTED otherwise.
-
-A motion that says something "is turned into" something ("At Photosystem II, H₂O is turned into O₂, H⁺
-and e⁻") is the video writing that conversion beside the structure: SUPPORTED when the facts say that
-structure makes those outputs from those inputs (every one of them, and nothing the facts do not say),
-UNSUPPORTED otherwise.
-
-A motion that says a part of a graph "means" something ("On the graph, Demand curve means: lower price →
-people buy more") is the video writing that line under the part's name: SUPPORTED when the facts say that part
-shows that (the arrow as "leads to"), in plain words a learner reads off the graph, UNSUPPORTED when it says
-what the part does not show, or the wrong way round.
-
-A motion that says a part of the analogy "stands for" something ("In the analogy, Electric pump stands for:
-the Na⁺/K⁺ pump") is the video writing that beside the part: SUPPORTED when, by the facts and the analogy the
-lesson draws, that part plays the role of that real thing; UNSUPPORTED when it maps it onto the wrong thing.
-
-A motion that says what the video writes "beside the arrow" ("Beside the arrow from Outside of the cell to
-Inside of the cell, carrying glucose: Glucose rides in with sodium") is the arrow's one-liner: SUPPORTED when
-the facts say it of what moves that way, UNSUPPORTED when it says more than they do or the wrong thing.
-
-A motion is never FILLER.
+- **"X travels from A to B to C"**: dots marked X go along that route, in that direction.
+  Unsupported for the wrong thing moving (electrons where the facts move protons), the wrong
+  direction (protons into the stroma where the facts pump them out of it), a stop the facts
+  do not put on its route, or a route they never give. A route may leave out a step the facts
+  name between two stops (electrons from photosystem II to cytochrome b6f, past
+  plastoquinone). Across a wall or membrane it goes through what the facts say it crosses by
+  (a channel, a pump, a carrier, a gate): "Na⁺ travels from Outside of the cell to Cell
+  membrane to Inside of the cell", when the facts let sodium in through leak channels, shows
+  it slipping through the wall. Through the wall itself only where the facts say it crosses
+  that way (O₂ across the alveolus wall).
+- **"Something travels ..."**: unmarked dots, something going that way without saying what
+  (a nerve signal, light): supported when the facts move anything along that route, in that
+  direction; unsupported when they move nothing there (from a character to the audience,
+  from one point of a graph to another).
+- **"X builds up in A"**: the video fills A with X: the facts say it piles up there.
+- **"A spins as X flows through it"**: the video turns A while X passes: the facts say that
+  flow turns it.
+- **"X flow from A is stopped at B"**: the particles pile up at B and go no further: the
+  facts say B blocks that flow.
+- **"At A, X is turned into Y"**: the conversion written beside A: the facts say A makes
+  every one of those outputs from those inputs, and nothing else.
+- **"On the graph, A means: ..."**: the line written under a graph part's name: the facts say
+  that part shows that (an arrow as "leads to"), the right way round, in words a learner
+  reads off the graph.
+- **"Beside the arrow from A to B ...: ..."**: an arrow's one-liner: the facts say it of what
+  moves that way, and no more.
 
 ## Public text
 
