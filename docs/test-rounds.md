@@ -1264,6 +1264,13 @@ against 16, judged by Opus told that a rapped bar at 100 bpm carries 16 or more,
 singability 4.0 each, exam value 4.0 and 4.2. Told that, the judge scored the 16-syllable songs' singing 4.0, where it
 had scored it 3.4: what it had marked down was length, not flow. Shipped at 16, as the owner asked (rap is fast).
 
+**Then undone, after the owner watched both** (Nov 1). The sodium pump's two songs were sung by Lyria in Cash in the
+Carrier's style ($0.16) and made into song videos with the same pictures (the earlier droplet's paintings, a water
+tower drawn in the session for the analogy). The owner chose the brief as it was: the review rap had "too much
+detail", more than a student will retain from a song, whatever the judge scored for exam value. Rapped verses keep
+the sung song's rules (one number at most, about 14 syllables). Lyria's first take of the review rap also left out
+its bridge and last chorus; sung again, it sang every line.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
