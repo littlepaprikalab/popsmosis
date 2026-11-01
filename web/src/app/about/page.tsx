@@ -108,7 +108,7 @@ const SITES: Site[] = [
     about: 'It started with going in circles over where to eat. Type your question and your two choices, draw a '
       + 'crossroads spread, and Paprika, an AI tarot reader, weighs each path. There\'s also a three-card reading, a '
       + 'card for the day, and plain-spoken meanings for all 78 cards.',
-    shot: { src: '/about/crossroads.webp', alt: 'The Crossroads Oracle home page: a question box and the two choices to weigh' },
+    shot: { src: '/about/crossroads.webp', alt: 'A reading for dinner, the ramen place or the taco truck: three cards drawn for the ramen place and the start of what they say' },
   },
 ];
 
