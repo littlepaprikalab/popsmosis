@@ -144,10 +144,12 @@ TRACK_ALPHA = 0.85  # the track under it: bold enough to see on a busy picture b
 # A crossing (straight through one part, _crossing) is its particles crossing, not an arrow (the owner, Nov 1): the line
 # is sure now, and ions streaming through the pump look like what the textbook says. As many as the words count (three
 # Na+), else CROSS_MANY, one after another, each a little to one side of the line and wobbling, so they read as a flow.
-CROSS_S = 2.0  # seconds a particle takes to cross
+CROSS_S = 3.5  # seconds a particle takes to cross, on average: at 2 they looked rushed (the owner, Nov 1)
+CROSS_PACE = 0.25  # each its own pace, up to this share faster or slower, so they bunch and spread as they go
 CROSS_MANY = 3  # in flight at once when the words give no count
-CROSS_SPREAD = 16.0  # frame pixels they keep either side of the line, at most
-CROSS_WOBBLE = 4.0  # frame pixels each wobbles about its place
+CROSS_SPREAD = 12.0  # frame pixels each keeps to one side of the line, at most
+CROSS_WIGGLE = 8.0  # frame pixels each swings left and right of its place as it goes...
+CROSS_SWINGS = 1.5  # ...this many times on the way across, as a molecule jostles through
 CROSS_FADE = 0.15  # the share of the way each fades in over as it leaves, and out over as it arrives
 # A note (an arrow's one-liner): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
@@ -618,6 +620,11 @@ def _nearest(a: Rect, b: Rect) -> Point:
 
 def _inside(q: Point, box) -> bool:
     return box.x0 <= q[0] <= box.x1 and box.y0 <= q[1] <= box.y1
+
+
+def _jitter(k: int) -> float:
+    """A number from 0 to 1 that is always the same for k: a particle's own pace or swing, varied but fixed."""
+    return math.sin(k * 12.9898 + 4.1414) * 43758.5453 % 1.0
 
 
 def _repeats(note: str, said: str) -> bool:
@@ -2536,8 +2543,10 @@ class Renderer:
     def _draw_crossing(self, canvas: skia.Canvas, flow, line: list[Point], elapsed: float, alpha: float, on_frame,
                        t: float, count: int = 1) -> None:
         """A crossing's particles streaming along its line (art pixels) from one side of the part to the other, again and
-        again: `count` of them a cycle (CROSS_MANY when the words give none), each off the line by its own share of
-        CROSS_SPREAD and wobbling about it, fading in as it leaves and out as it arrives."""
+        again: `count` of them a cycle (CROSS_MANY when the words give none), each at its own pace (CROSS_PACE), off the
+        line by its own share of CROSS_SPREAD and swinging left and right of it on the way (CROSS_WIGGLE), fading in as
+        it leaves and out as it arrives. Each particle's pace and swing are its own and fixed, so a frame depends only on
+        its time."""
         shown = [on_frame(q) for q in line]
         total = routing.length(shown)
         if len(shown) < 2 or total < 1.0:
@@ -2547,9 +2556,10 @@ class Renderer:
         nx, ny = -(y1 - y0) / d, (x1 - x0) / d  # across the way it goes
         many = count if count > 1 else CROSS_MANY
         for k in range(many):
-            gone = (elapsed / CROSS_S + k / many) % 1.0
+            pace, start, place = _jitter(k), _jitter(k + 17), _jitter(k + 41)
+            gone = (elapsed / (CROSS_S * (1 + CROSS_PACE * (2 * pace - 1))) + k / many + 0.2 * start) % 1.0
             x, y = _along(shown, gone * total)
-            side = CROSS_SPREAD * ((k * 0.618 + 0.31) % 1.0 * 2 - 1) + CROSS_WOBBLE * math.sin(2.3 * t + 1.7 * k)
+            side = CROSS_SPREAD * (2 * place - 1) + CROSS_WIGGLE * math.sin(2 * math.pi * (CROSS_SWINGS * gone + start))
             fade = p.clamp01(gone / CROSS_FADE) * p.clamp01((1 - gone) / CROSS_FADE)
             p.draw_kind(canvas, (x + nx * side, y + ny * side), flow.color, flow.label, alpha * fade, size=TAIL_SIZE)
 
