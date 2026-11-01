@@ -1569,3 +1569,13 @@ def test_a_post_it_sits_off_its_labels_ring_on_its_side_and_stays_in_bounds():
     # Pushed off the frame, it is moved back inside the bounds whole, not cut.
     left = _postit_rect(ring, size, POSTIT_SIDES.index((-1, 0)), 300.0)
     assert left[0] < 0 and _within(left, (40, 40, 1880, 1000)) == (40, left[1], 240, left[3])
+
+
+def test_a_crossings_bends_cover_every_leg_the_arrows_and_labels_count(job, monkeypatch):
+    # A crossing's particles have two legs, but the arrows and the labels' keep-clear points count a leg for each
+    # pair of its stops, a space in the middle twice: one bend short, the render failed (Nov 1).
+    renderer = Renderer(job, flowing([flow_beat(0, 8)]))
+    monkeypatch.setattr(renderer, "_crossing", lambda *a, **k: [(0.0, 0.0), (0.0, 10.0), (0.0, 20.0)])
+    stops = renderer._path_stops("overview", FLOW + FLOW[:1])
+    assert len(renderer._bends("overview", FLOW + FLOW[:1])) >= max(2, len(stops) - 1)
+    renderer._legs("overview", FLOW + FLOW[:1])  # no leg without its bend

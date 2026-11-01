@@ -1885,9 +1885,11 @@ class Renderer:
         """Each leg's bend, in art pixels: a hop from one part to the next (both stops parts, not spaces) curves
         up in a gentle arc, the hand-off a textbook draws; a flow into, out of or through a space runs straight.
         The particles ride the same curve as the arrow."""
-        if self._crossing(scene_id, path, lane):
-            return [None, None]  # straight through the part, holding in its middle
         pairs = self._path_stops(scene_id, path, lane)
+        if self._crossing(scene_id, path, lane):
+            # Straight through the part, holding in its middle: two legs for the particles, and one for each pair of
+            # the stops the arrows and the labels' keep-clear points count (a space in the middle counts twice).
+            return [None] * max(2, len(pairs) - 1)
         points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
         ends = self._path_points(scene_id, path, lane=lane)  # where the particles set off and arrive
         bends: list[Point | list[Point] | None] = []
