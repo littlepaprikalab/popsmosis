@@ -1271,6 +1271,67 @@ detail", more than a student will retain from a song, whatever the judge scored 
 the sung song's rules (one number at most, about 14 syllables). Lyria's first take of the review rap also left out
 its bridge and last chorus; sung again, it sang every line.
 
+## In-session tests, Nov 1: the pump video, its analogy, the core idea, step lines and crowds
+
+All in the session, with every API key unset, except one Muse Image painting the owner asked for ($0.01: the club,
+below) and a Lyria song for it.
+
+### The analogy picture
+
+The owner read the pump song's lyrics and understood them, but not the video: "trying to reconcile the bounce".
+The water tower (an SVG drawing) was "very confusing", with a tower, a pump and a house to map. A nightclub
+(bouncer, door, street), painted by Muse Image, read no better: "the analogy doesn't quite work for this topic".
+The song then stopped playing over the analogy scene (`checks._song_off_analogy`), and the club song was directed
+again over the real pictures only (job sp-f). A dam was drawn too (SVG, passed the picture check on its first try)
+but not shown. The owner's decision: no analogy picture for any topic. The analogy stays in words, said over the
+real picture, each part matched to the real part as it is named. That is the next change.
+
+### What it is and why it's needed
+
+The pump lesson said what the pump is in one phrase ("a protein in the cell membrane") and why it runs ("so the
+gradients would fade if nothing pushed them back"), but not what the gradients are for: nerve signals were only in
+the song ("And that spark races down your nerve"), and its core idea was a step, "Each ATP flips the pump's shape,
+carrying three sodium out and two potassium in, as fast as they leak back." The core idea rule now has two kinds: a
+thing or an idea with a job says what it is and what it is for, then how; a topic about why something happens says
+its cause and effect. A subagent writing under the new rule, from the same droplet's facts, wrote "A pump in the
+cell membrane keeps sodium out and potassium in, using ATP to push back what leaks": it left out "so nerves can
+fire", since those facts never say what the gradients are for. Only a fresh droplet, whose facts are written under
+the rule, will show whether it says why.
+
+A "THE BIG IDEA" tag on the key line band was tried and undone the same hour: at the end of the lesson the band
+already repeated the narration word for word. The core idea is now written quietly across the top of every frame
+instead, and the band shows only steps.
+
+### Step lines on the wrong lyric
+
+Five of the pump song's six key lines sat on lyrics singing another step ("2 K⁺ binding drops phosphate → pump
+snaps back inward" over "Potassium leaks out, takes its plus charge down the hill"). The brief asked for both the
+why chain's order and the song's, and the song sang the pump's cycle before the leak. The song's order now wins.
+A check by shared words was tried on the pump song and the 12 scorecard songs of Oct 31: it found the pump's three
+clear cases, but on the 12 it flagged six lines, most of them right where they were, sung through a metaphor (the
+catalyst song's "Hit too soft and you roll back down" is its activation energy step) or one line from the line
+that repeats the words. It records a hint (`checks.misplaced_key_lines`) and moves nothing.
+
+### Crowds of dots
+
+The owner saw no K⁺ outside the cell, and too few dots. Each crowd started with a few dots and filled only while
+the pump ran, the leak drained the K⁺ inside to two, and the cytoplasm's outline (from SAM) was the band just under
+the membrane, room for four dots, and hidden until the song named "inside" at 66 s. Now a held difference starts
+full and only dips, a few of each kind show where it is scarce, a held crowd shows half pale before its space is
+named, and a thin outline seats its crowd in its whole box.
+
+### A lyric the motion contradicts
+
+The club song's pre-chorus sang "Side door swings open, the street floods in / That's how a nerve signal begins"
+over Na⁺ moving through the leak channels: as if leak channels started nerve signals. The fact-check judges each
+lyric and each motion on its own, so nothing asks whether a lyric matches what moves under it. A subagent stood in
+for the checker on the droplet's whole round-one call (136 lines: 111 SUPPORTED, 24 FILLER, 1 UNSUPPORTED) and did
+fail the couplet, but only because the song had said "Side door's cracked, the leak channels let the sodium in" a
+verse before, so it read the side door as the leak channels, which stay open. Its correction, "Other doors swing
+open", would still be sung over Na⁺ moving through the leak channels: the motion passed on its own ("Na⁺ travels
+from Outside of the cell to Leak channels to Inside of the cell", f1). Checking each sung line together with what
+moves under it would catch both; a pair that fails would lose its motion, not its words.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
