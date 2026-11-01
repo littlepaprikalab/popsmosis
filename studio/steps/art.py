@@ -916,6 +916,8 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
     parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
+    if loose := loose_line(bundle, scene):
+        parts.append(loose)
     if scene.axes:
         parts.append(axes_line(scene.axes))
     if redrawn and (stage := Stage.of(bundle, scene)):
@@ -927,6 +929,18 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
                      + ". Make it again with these fixed.")
     parts.append(labels_line(scene))
     return " ".join(parts)
+
+
+def loose_line(bundle: Bundle, scene: Scene) -> str:
+    """The ions and small molecules the video moves on this scene (MARKER_COLOURS), which the picture draws none of:
+    on Nov 1 the pump's painter added its own Na⁺ and K⁺ balls, brown and blue, beside the video's purple and green
+    ones. Not one that is a part of the scene ("Oxygen", "Water", "ATP"): that part is drawn."""
+    kinds = dict.fromkeys(kind for d in bundle.direction if d.scene == scene.id for f in d.flows()
+                          if (kind := checks.notation(f.carries)) in checks.MARKER_COLOURS)
+    loose = [k for k in kinds if not any(checks.is_kind(s.name, k) for s in scene.structures)]
+    if not loose:
+        return ""
+    return f"Draw no {' or '.join(loose)} particles anywhere: the video adds its own, moving."
 
 
 def labels_line(scene: Scene) -> str:

@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 import skia
 
-from studio import jobs, media, svg
+from studio import checks, jobs, media, svg
 from studio.schemas import Axes, Bundle, Locations, Structure, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
@@ -738,6 +738,27 @@ def test_the_hook_labels_nothing_whatever_its_style():
         scene = hook.model_copy(update={"image_prompt": prompt})
         assert art.labels_line(scene) == art.NO_LABELS
         assert art.paint_prompt(bundle, scene).endswith("Colours: Thylakoid green. " + art.NO_LABELS)
+
+
+def test_the_picture_draws_none_of_the_particles_the_video_moves_over_it():
+    # Nov 1: the pump's painter added its own Na⁺ and K⁺ balls, brown and blue, beside the video's purple and green.
+    data = bundle_data()
+    data["scenes"][1]["structures"].append({"name": "Oxygen", "aliases": [], "sam_phrase": "white ball",
+                                            "color_hex": "#E8EEF5"})
+    moves = {"n1": ("H⁺", "O₂", "sugar"), "n2": ("H⁺",)}
+    for d in data["direction"]:
+        if d["line_id"] in moves:
+            first, *also = moves[d["line_id"]]
+            d.update(particles=["Thylakoid", "Cytochrome b6f"], carries=first,
+                     also=[{"particles": ["Cytochrome b6f", "Thylakoid"], "carries": c} for c in also])
+    bundle = Bundle.model_validate(data)
+    line = "Draw no H⁺ particles anywhere: the video adds its own, moving."
+    assert art.loose_line(bundle, bundle.scenes[1]) == line  # Oxygen is a part of it; sugar no common kind
+    assert line in art.paint_prompt(bundle, bundle.scenes[1])
+    assert art.loose_line(bundle, bundle.scenes[0]) == ""  # nothing moves on the hook
+    assert [checks.is_kind(n, k) for n, k in (("Water molecules", "H₂O"), ("Carbon dioxide", "CO₂"),
+                                              ("ATP synthase", "ATP"), ("Electron transport chain", "e⁻"))] == [
+        True, True, False, False]
 
 
 def test_the_picture_is_told_each_colour_in_one_everyday_word():

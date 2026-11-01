@@ -92,7 +92,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from studio import checks, media
-from studio.checks import notation
+from studio.checks import MARKER_COLOURS, notation
 from studio.jobs import read, write
 from studio.media import StepFailed
 from studio.schemas import (
@@ -124,10 +124,7 @@ GAP_S = 1.5  # a silence at least this long between lines gets a beat of its own
 LINGER_S = 0.4  # how long a line stays in the lyric band after its last word, before a gap
 CAPTION_HOLD_S = 4.0
 LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions are spaced instead
-PARTICLE_COLOR = "#F2C230"  # an unmarked particle's, and a proton's
-# Each common kind of particle in its own colour, the same in every lesson; any other by its name.
-MARKER_COLOURS = {"H⁺": PARTICLE_COLOR, "e⁻": "#4CC9F0", "O₂": "#E8EEF5", "H₂O": "#7FD1FF", "CO₂": "#B8C2CC",
-                  "ATP": "#FF6B6B", "Na⁺": "#B79CFF", "K⁺": "#8EE06B", "Ca²⁺": "#F4E1C1", "Cl⁻": "#5EF2C4"}
+PARTICLE_COLOR = MARKER_COLOURS["H⁺"]  # an unmarked particle's, and a proton's
 OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF")
 MAX_ZOOM = 3.0
 FILL_S = 6.0  # seconds of particles arriving that fill a space from empty

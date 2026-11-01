@@ -24,6 +24,7 @@ import numpy as np
 import skia
 
 from studio import jobs, media
+from studio.checks import CARRIED_WORDS
 from studio.render import axes, routing
 from studio.render import primitives as p
 from studio.render.layouts import LAYOUTS, Layout, Rect
@@ -127,9 +128,6 @@ TAIL_SIZE = 0.9  # its size, as a share of a lead particle's
 COUNT_MAX = 5
 NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
            "ten": 10, "a dozen": 12, "dozens of": 24}
-CARRIED_WORDS = {"Na⁺": ("sodium",), "K⁺": ("potassium",), "H⁺": ("hydrogen", "proton"), "Ca²⁺": ("calcium",),
-                 "Cl⁻": ("chloride",), "e⁻": ("electron",), "O₂": ("oxygen",), "CO₂": ("carbon dioxide",),
-                 "H₂O": ("water",)}  # what a carried symbol is called in words, to find its count in a line
 # Where each of a few particles sits around the head, in their own widths: across the way they move, then behind.
 CLUSTER = {1: [(0.0, 0.0)], 2: [(-0.5, 0.0), (0.5, 0.0)], 3: [(-0.5, 0.29), (0.5, 0.29), (0.0, -0.58)],
            4: [(-0.5, 0.5), (0.5, 0.5), (-0.5, -0.5), (0.5, -0.5)],

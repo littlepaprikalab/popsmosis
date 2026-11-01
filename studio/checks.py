@@ -298,6 +298,7 @@ def _check_colours(data: dict, problems: list) -> None:
     "Same broke king"); one colour for two different things (an orange tower and an orange chest) does not. The
     sam_phrases are made to name their colours so first. The rest is recorded, for the prompt: which part should
     change is the writer's to say."""
+    _colour_for_ions(data, problems)
     _recolour_sam_phrases(data, problems)
     looks: dict[tuple[str, str], list[str]] = {}
     for scene in data["scenes"]:
@@ -317,6 +318,42 @@ def _check_colours(data: dict, problems: list) -> None:
         if len(names) > 1:
             problems.append(Problem(line_id="structures", rule="colours", repaired=False,
                                     detail=f'{_listed(names)} are drawn alike, each a "{phrase}", so they read as one'))
+
+
+def _names_kinds(name: str, kinds) -> list[str]:
+    """The kinds a structure's name is named for, by symbol or by word: "Sodium channel" and "Na⁺ channel", Na⁺."""
+    return [kind for kind in kinds if any(re.search(rf"(?<!\w){re.escape(word)}s?(?!\w)", fold(name))
+                                          for word in (kind.casefold(), *CARRIED_WORDS.get(kind, ())))]
+
+
+def is_kind(name: str, kind: str) -> bool:
+    """A structure that is the carried thing itself ("Oxygen", "Water molecules", "ATP"), not one named for it."""
+    said = " ".join(re.sub(r"\b(ions?|molecules?|particles?)\b", " ", fold(name)).split())
+    return said.removesuffix("s") in {kind.casefold(), *CARRIED_WORDS.get(kind, ())} or said == kind.casefold()
+
+
+def _colour_for_ions(data: dict, problems: list) -> None:
+    """A part named for one ion takes that ion's colour, the colour of its dots in every lesson (MARKER_COLOURS): the
+    sodium channel the purple of Na⁺. On Nov 1 the pump's sodium channel was green, as the K⁺ dots were, and its
+    potassium channel purple, as Na⁺, so the colours taught the swap. A part named for two (the sodium-potassium
+    pump) keeps its own. Repaired, and recorded. Every other part keeps the writer's colour: moved off the hue of an
+    ion on its scene, the light reactions' sunlight went grey, and their overview, fifteen parts, had no hue left."""
+    changed = []
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            ions = _names_kinds(structure["name"], IONS)
+            if len(ions) == 1 and (new := MARKER_COLOURS[ions[0]]) != structure["color_hex"]:
+                old, word = colour_word(structure["color_hex"]), colour_word(new)
+                changed.append(f'{structure["name"]} {old} as {word}')
+                structure["color_hex"] = new
+                # The picture's words, where they still name the old colour ("a green sodium channel"), say the new.
+                for name in (structure["name"], *structure["aliases"]):
+                    scene["image_prompt"] = re.sub(rf"{COLOUR_NAME.pattern}(?=\s+{re.escape(name)}\b)", word,
+                                                   scene["image_prompt"], flags=re.I)
+    if changed:
+        problems.append(Problem(line_id="structures", rule="colours", repaired=True,
+                                detail="a part named for an ion is painted in its colour: "
+                                       + "; ".join(dict.fromkeys(changed))))
 
 
 def _words(text: str) -> set[str]:
@@ -975,6 +1012,15 @@ def flows_of(direction: dict) -> list[dict]:
     """Everything moving on a line, as data: the main flow first (Direction.flows)."""
     main = [{"particles": direction["particles"], "carries": direction["carries"]}] if direction["particles"] else []
     return main + [f for f in direction.get("also", []) if f["particles"]]
+
+
+# Each common kind of particle in its own colour, the same in every lesson (timeline.marker_colour), and the words a
+# line calls it by: the renderer finds a count by them ("three sodium"), and _colour_for_ions a part named for an ion.
+MARKER_COLOURS = {"H⁺": "#F2C230", "e⁻": "#4CC9F0", "O₂": "#E8EEF5", "H₂O": "#7FD1FF", "CO₂": "#B8C2CC",
+                  "ATP": "#FF6B6B", "Na⁺": "#B79CFF", "K⁺": "#8EE06B", "Ca²⁺": "#F4E1C1", "Cl⁻": "#5EF2C4"}
+IONS = {"Na⁺": ("sodium",), "K⁺": ("potassium",), "H⁺": ("hydrogen", "proton"), "Ca²⁺": ("calcium",),
+        "Cl⁻": ("chloride",)}
+CARRIED_WORDS = {**IONS, "e⁻": ("electron",), "O₂": ("oxygen",), "CO₂": ("carbon dioxide",), "H₂O": ("water",)}
 
 
 def notation(carries: str) -> str:

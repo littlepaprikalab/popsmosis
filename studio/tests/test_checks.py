@@ -920,6 +920,31 @@ def test_two_parts_in_one_colour_word_are_recorded():
         ("structures", 'Cytochrome b6f and ATP synthase are drawn alike, each a "king in blue", so they read as one')]
 
 
+def test_a_part_named_for_an_ion_is_painted_in_the_ions_colour():
+    # Nov 1: the pump's sodium channel was green, as the K⁺ dots were, and its potassium channel purple, as Na⁺: the
+    # colours taught the swap. A part named for two ions keeps its own; so does every other part.
+    def part(name, colour, phrase):
+        return {"name": name, "aliases": [], "sam_phrase": phrase, "color_hex": colour}
+
+    data = {"scenes": [{"id": "overview", "structures": [
+        part("Sodium channel", "#22A355", "green tube"), part("Potassium channel", "#8B5CF6", "purple tube"),
+        part("Sodium-potassium pump", "#F57C1F", "orange blob"), part("Phosphate", "#8CC63F", "green ball")],
+        "image_prompt": "On the left a green sodium channel; in the centre the orange sodium-potassium pump; on the "
+                        "right a purple potassium channel."}], "direction": []}
+    problems = []
+    checks._check_colours(data, problems)
+    parts = {s["name"]: (s["color_hex"], s["sam_phrase"]) for s in data["scenes"][0]["structures"]}
+    assert parts == {"Sodium channel": (checks.MARKER_COLOURS["Na⁺"], "light purple tube"),
+                     "Potassium channel": (checks.MARKER_COLOURS["K⁺"], "green tube"),
+                     "Sodium-potassium pump": ("#F57C1F", "orange blob"), "Phosphate": ("#8CC63F", "green ball")}
+    assert data["scenes"][0]["image_prompt"] == ("On the left a light purple sodium channel; in the centre the orange "
+                                                 "sodium-potassium pump; on the right a green potassium channel.")
+    assert problems[0].detail == ("a part named for an ion is painted in its colour: Sodium channel green as light "
+                                  "purple; Potassium channel purple as green") and problems[0].repaired
+    assert [checks._names_kinds(n, checks.IONS) for n in ("Na⁺ channel", "Proton pumps", "ATP synthase")] == [
+        ["Na⁺"], ["H⁺"], []]
+
+
 def test_an_alias_that_is_a_word_of_the_topic_is_recorded():
     # Nov 1: Sunlight's alias "light" revealed it on every "light reactions".
     def aliased(name, *aliases):
