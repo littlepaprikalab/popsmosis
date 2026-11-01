@@ -332,16 +332,19 @@ def test_off_a_graph_a_flow_is_an_arrow_with_its_particle_jiggling_behind_its_ta
     flow.frame(1.0)
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
 
-    arrows, dots, kinds = [], [], []
+    tracks, arrows, dots, kinds = [], [], [], []
+    monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
     monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: arrows.append(points))
     monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
     monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: kinds.append((at, label, size)))
     places = []
     for t in (held, held + 0.3):
-        arrows.clear(), kinds.clear()
+        tracks.clear(), arrows.clear(), kinds.clear()
         flow.frame(t)
-        [drawn] = arrows
-        assert np.allclose(drawn, tail_of(flow, t, moving))  # along the flow's line, tail to head
+        [drawn] = tracks
+        assert np.allclose(drawn, tail_of(flow, t, moving))  # its track along the flow's line, tail to head
+        for piece in arrows:  # and the arrow gliding along it, a piece of the same line
+            assert all(min(math.dist(q, r) for r in renderer_module._cut(drawn, 0, 1e9)) < 2 for q in piece)
         [(at, label, size)] = kinds
         assert label == "H⁺" and size == renderer_module.TAIL_SIZE
         reach = math.dist(at, line[0])  # behind the tail, give or take its jiggle
@@ -378,11 +381,12 @@ def test_the_particle_at_an_arrows_tail_is_a_badge_with_what_it_carries_and_a_wo
     monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((at, label, size)))
     word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
     monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries, arrows=(): legends.append((rect, entries)))
-    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: arrows.append(points))
+    tracks = []
+    monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
     times = (held + 1.0, held + 2.0)
     for t in times:
         word.frame(t)
-    assert {label for _, label, _ in shapes} == {"glucose"} and p.kind_of("glucose") == "sugar" and arrows
+    assert {label for _, label, _ in shapes} == {"glucose"} and p.kind_of("glucose") == "sugar" and tracks
     assert word._travels("overview", word.timeline.beats[0].particles[0])
     assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
     assert legends[0][0] == legends[1][0]  # in one place
@@ -1601,9 +1605,9 @@ def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossi
     # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
     # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
     # nothing). Since Nov 1 every other flow off a graph is an arrow too, an ion's straight through what it crosses.
-    arrows, dots = [], []
-    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, color, alpha, grown=1.0, phase=0.0:
-                        arrows.append((points[0], points[-1], grown, phase)))
+    arrows, dots = [], []  # each flow's track, which draws itself in, and the arrow gliding along it
+    monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, color, alpha, grown=1.0:
+                        arrows.append((points[0], points[-1], grown, 0.0)))
     monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
 
     def moving(label, moves, path=FLOW):
@@ -1734,3 +1738,22 @@ def test_a_crossings_bends_cover_every_leg_the_arrows_and_labels_count(job, monk
     stops = renderer._path_stops("overview", FLOW + FLOW[:1])
     assert len(renderer._bends("overview", FLOW + FLOW[:1])) >= max(2, len(stops) - 1)
     renderer._legs("overview", FLOW + FLOW[:1])  # no leg without its bend
+
+
+def test_the_arrow_glides_along_its_track_from_tail_to_head_and_stays_short():
+    # The owner, Nov 1: the arrows should move, and be shorter. A piece of the route glides along it, again and again.
+    line = [(0.0, 0.0), (400.0, 0.0), (400.0, 300.0)]  # 700 frame pixels
+    total = 700.0
+    piece = min(renderer_module.GLIDE_SHARE * total, renderer_module.GLIDE_MAX)
+    period = (total + piece) / renderer_module.GLIDE_SPEED + renderer_module.GLIDE_PAUSE_S
+    heads = []
+    for t in (0.2, 0.8, 1.6, 2.4):
+        shown = renderer_module._glide(line, t)
+        assert shown and renderer_module.routing.length(shown) <= piece + 1e-6  # never longer than its piece
+        heads.append(shown[-1])
+    assert heads[0] != heads[1] != heads[2]  # it moves on
+    assert renderer_module._glide(line, period - renderer_module.GLIDE_PAUSE_S / 2) == []  # a pause between glides
+    assert np.allclose(renderer_module._glide(line, 0.2), renderer_module._glide(line, period + 0.2))  # and again
+    end = renderer_module._glide(line, (total + piece / 2) / renderer_module.GLIDE_SPEED)
+    assert end[-1] == pytest.approx(line[-1])  # shrinking into the head as it arrives
+    assert renderer_module._cut(line, 100, 500) == [(100.0, 0.0), (400.0, 0.0), (400.0, 100.0)]

@@ -112,6 +112,13 @@ ROUTE_DASH_SPEED = 40.0  # frame pixels a second its dashes move along it, the w
 FACE_DEPTH = 40.0  # art pixels: a path meets a part at its end this far in from its face toward the stop beside it
 TAIL_JIGGLE_PX = 5.0  # frame pixels the particle at an arrow's tail jiggles
 TAIL_SIZE = 0.9  # its size, as a share of a lead particle's
+# The arrow moves (the owner, Nov 1): the route is a faint dotted track, and a short solid arrow glides along it from
+# tail to head, again and again, so the way the flow goes is seen and the arrow on screen stays short.
+GLIDE_SHARE = 0.35  # the gliding arrow's length, as a share of its route...
+GLIDE_MAX = 170.0  # ...and at most this many frame pixels
+GLIDE_SPEED = 300.0  # frame pixels a second
+GLIDE_PAUSE_S = 0.5  # between one glide and the next
+TRACK_ALPHA = 0.6  # the track under it
 # A note (an arrow's one-liner): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
 # clear of the parts' label points and other notes (NOTE_CROWD each).
@@ -646,6 +653,42 @@ def _dense(points: list[Point], bends=None) -> list[Point]:
         else:
             out.append(points[i + 1])
     return out
+
+
+def _cut(points: list[Point], a: float, b: float) -> list[Point]:
+    """The part of the line from a to b along it (pixels from its start)."""
+    out, done = [], 0.0
+    for p0, p1 in zip(points, points[1:]):
+        d = math.dist(p0, p1)
+        if d <= 0:
+            continue
+        lo, hi = max(a - done, 0.0), min(b - done, d)
+        if lo < hi:
+            q0 = (p0[0] + (p1[0] - p0[0]) * lo / d, p0[1] + (p1[1] - p0[1]) * lo / d)
+            q1 = (p0[0] + (p1[0] - p0[0]) * hi / d, p0[1] + (p1[1] - p0[1]) * hi / d)
+            if not out or math.dist(out[-1], q0) > 0.5:
+                out.append(q0)
+            out.append(q1)
+        done += d
+        if done >= b:
+            break
+    return out
+
+
+def _glide(line: list[Point], elapsed: float) -> list[Point]:
+    """The gliding arrow on a route at `elapsed` seconds into its flow (frame pixels): a piece GLIDE_SHARE of the route
+    long (at most GLIDE_MAX) running from its tail to its head at GLIDE_SPEED, shrinking into the head as it arrives,
+    then GLIDE_PAUSE_S with none before the next; [] when none shows."""
+    total = routing.length(line)
+    if total < 2.0:
+        return []
+    piece = min(GLIDE_SHARE * total, GLIDE_MAX)
+    period = (total + piece) / GLIDE_SPEED + GLIDE_PAUSE_S
+    head = (elapsed % period) * GLIDE_SPEED
+    if head > total + piece:
+        return []
+    start, end = max(head - piece, 0.0), min(head, total)
+    return _cut(line, start, end) if end - start > 6.0 else []
 
 
 def lead_at(points: list[Point], t: float, bends=None) -> tuple[Point, int]:
@@ -2323,6 +2366,23 @@ class Renderer:
         at = (at[0] + TAIL_JIGGLE_PX * math.sin(2.3 * t + phase), at[1] + TAIL_JIGGLE_PX * math.cos(1.9 * t + 2 * phase))
         p.draw_kind(canvas, at, flow.color, flow.label, alpha, size=TAIL_SIZE)
 
+    def _draw_rider(self, canvas: skia.Canvas, flow, shown: list[Point], piece: list[Point], alpha: float, t: float,
+                    elapsed: float) -> None:
+        """The flow's particle riding the head of its gliding arrow (frame pixels), the owner's idea (Nov 1): it says
+        what moves and the arrow trailing it which way. It fades out at the head as the glide ends, and waits at the
+        tail, jiggling and fading in, through the pause before the next."""
+        total = routing.length(shown)
+        length = min(GLIDE_SHARE * total, GLIDE_MAX)
+        period = (total + length) / GLIDE_SPEED + GLIDE_PAUSE_S
+        head = (elapsed % period) * GLIDE_SPEED
+        if piece and head <= total + length:
+            fade = 1.0 if head <= total else p.clamp01(1 - (head - total) / max(length, 1.0))
+            p.draw_kind(canvas, piece[-1], flow.color, flow.label, alpha * fade, size=TAIL_SIZE)
+            return
+        waited = (elapsed % period) - (total + length) / GLIDE_SPEED  # into the pause, or setting off
+        fade = p.ease(waited / GLIDE_PAUSE_S) if head > total + length else 1.0
+        self._draw_tail(canvas, flow, shown, alpha * fade, t)
+
     def _route_line(self, scene_id: str, flow) -> list[Point]:
         """A travelling flow's way as one line, art pixels: from stop to stop through the two parts' outlines
         (routing.route), however far that bends from the straight line, since following the parts is the point (up
@@ -2364,9 +2424,19 @@ class Renderer:
                 return
             grown = p.ease(elapsed / ROUTE_GROW_S)
             shown = [on_frame(q) for q in line]
-            p.draw_route_arrow(canvas, shown, flow.color, alpha, grown,
-                               phase=0.0 if flow.blocked else max(elapsed, 0.0) * ROUTE_DASH_SPEED)
-            self._draw_tail(canvas, flow, shown, alpha, t, grown)
+            if flow.blocked:  # the whole way to the cross, still
+                p.draw_route_arrow(canvas, shown, flow.color, alpha, grown, phase=0.0)
+            else:
+                p.draw_route_track(canvas, shown, flow.color, alpha * TRACK_ALPHA, grown)
+                gliding = elapsed - ROUTE_GROW_S  # it glides once its track has drawn itself in
+                piece = _glide(shown, gliding) if gliding >= 0 else []
+                rider = bool(flow.label) and gliding >= 0  # its particle rides the gliding arrow's head
+                if piece:
+                    p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
+                if rider:
+                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding)
+            if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
+                self._draw_tail(canvas, flow, shown, alpha, t, grown)
             says = getattr(flow, "says", "")
             if says:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
