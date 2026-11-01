@@ -592,8 +592,8 @@ def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
     (Value.label): from when the part is first named on a graph (its first reveal there) on, wherever its name is
     written, as long as it is: part of its label, as a textbook's caption is (the owner, Oct 31). A part not named
     yet has none, so a graph the video shows before naming its parts does not open with every meaning at once. An
-    analogy part's (what it stands for) the same way, from its first naming on the analogy, on every later beat of
-    it (the owner, Nov 1)."""
+    analogy part's (what it stands for) the same way, from its first naming on the analogy or the first arrow
+    through it there, on every later beat of it (the owner, Nov 1)."""
     named = {s.scene: {v.text for v in s.values if v.label} for s in locations.scenes}
     # The analogy's parts are named by the lines that sing or say them, wherever the picture puts them.
     named |= {s.scene: {loc.name for loc in s.structures} for s in locations.scenes if s.scene == ANALOGY}
@@ -603,6 +603,13 @@ def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
         for r in beat["reveal"]:
             if r.name in meant and r.name in named.get(beat["scene"], set()) and r.name not in first:
                 first[r.name] = max(r.t, beat["t0"])
+        # On the analogy a part also shows what it stands for when an arrow first runs through it: no line names
+        # the power line, but the water the pump lifts is what the learner is asked to map.
+        if beat["scene"] == ANALOGY:
+            for flow in beat.get("particles", []):
+                for name in flow.path:
+                    if name in meant and name in named.get(ANALOGY, set()) and name not in first:
+                        first[name] = beat["t0"]
     end = beats[-1]["t1"] if beats else 0.0
     for beat in beats:
         beat["meanings"] = [Gloss(structure=name, text=meant[name], since=round(first[name], 3), until=round(end, 3))

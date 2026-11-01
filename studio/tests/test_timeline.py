@@ -780,3 +780,8 @@ def test_an_analogy_parts_mapping_shows_beside_it_from_when_it_is_first_named():
     assert got[0] == [] and got[2] == []
     assert got[1] == [("Electric pump", "the Na⁺/K⁺ pump", 4.0)]
     assert got[3] == [("Electric pump", "the Na⁺/K⁺ pump", 4.0), ("Power line", "ATP", 10.0)]
+
+    # An arrow through a part on the analogy shows its mapping too, though no line names it.
+    beats = [beat("analogy", 0.0, 3.0) | {"particles": [SimpleNamespace(path=["Electric pump", "Water tower"])]}]
+    _mean(beats, bundle, locations)
+    assert [(m.structure, m.since) for m in beats[0]["meanings"]] == [("Electric pump", 0.0)]
