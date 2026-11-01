@@ -614,8 +614,14 @@ def test_the_videos_need_the_keys_of_the_painter_and_sam(setup, monkeypatch):
     assert videos.videos("q1", api=api) == ("STOPPED", "videos", wrong)
     assert claims(api) == [] and setup.ran == []
 
-    # The claim says an admin has Claude draw it, which needs neither key: the setting kept, the run goes on.
+    # Claude drawing it needs neither of the art's keys, but Lyria, who sings when no setting says, needs Gemini's.
     jobs.keep_studio_settings(job, {"art": {"claude": "svg"}})
+    result, step, reason = videos.videos("q1", api=api)
+    assert (result, step) == ("STOPPED", "videos") and "the song needs GEMINI_API_KEY" in reason
+    assert claims(api) == [] and setup.ran == []
+
+    # The claim says an admin has Claude draw it and ElevenLabs sing: neither key, the setting kept, the run goes on.
+    jobs.keep_studio_settings(job, {"art": {"claude": "svg"}, "song": {"provider": "elevenlabs"}})
     assert videos.videos("q1", api=api)[0] == "DONE"
 
     # A claim that switches to a painter this machine has no key for stops before any step, the attempt held.
@@ -651,7 +657,8 @@ def test_a_painter_changed_on_the_page_since_the_lesson_unblocks_the_videos(setu
     jobs.keep_studio_settings(job, {"art": {"claude": "gemini", "meta": "muse"}})
     api = VideoApi()
     assert videos.videos("q1", api=api)[:2] == ("STOPPED", "videos")
-    api.studio_settings = lambda: {"brain": {"default": "claude"}, "art": {"claude": "svg", "meta": "muse"}}
+    api.studio_settings = lambda: {"brain": {"default": "claude"}, "art": {"claude": "svg", "meta": "muse"},
+                                   "song": {"provider": "elevenlabs"}}  # no Gemini key here for Lyria either
     assert videos.videos("q1", api=api)[0] == "DONE"
     assert jobs.studio_settings(job)["art"]["claude"] == "svg"
     api2 = VideoApi()  # and the background start reads them too

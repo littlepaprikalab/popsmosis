@@ -61,7 +61,7 @@ export const ART_CHOICES: Record<Provider, readonly Painter[]> = {
 };
 export const DEFAULT_ART: ArtSettings = { claude: 'gemini', meta: 'muse' };
 export const DEFAULT_BRAIN: BrainSettings = { default: 'claude', effort: 'high' };
-export const DEFAULT_SONG: SongSettings = { provider: 'elevenlabs' };
+export const DEFAULT_SONG: SongSettings = { provider: 'gemini' };
 // Generous for the hackathon: about ten times the dearest topic so far, retries included. Lower it afterwards
 // ($5 is about two and a half times), here and in studio/ledger.py.
 export const DEFAULT_SPEND: SpendSettings = { topicUsd: 20 };

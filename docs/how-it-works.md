@@ -56,8 +56,8 @@ Two branches run side by side, then the rest in order (`videos.py`):
   - **Locate** (`steps/locate.py`): **SAM** finds each part in a painting, so the camera and the spotlight
     know where it is. A drawing needs none: its parts are its own.
 - **Sound**
-  - **Audio** (`steps/audio.py`): the song by **Eleven Music**, the narration read by an **ElevenLabs voice**, by
-    default; an admin can switch both to Gemini (Lyria sings, Gemini's voice reads), and a song Lyria will not
+  - **Audio** (`steps/audio.py`): the song by **Lyria**, the narration read by **Gemini's voice**, by default; an
+    admin can switch both to ElevenLabs (Eleven Music sings, an ElevenLabs voice reads), and a song Lyria will not
     sing goes to Eleven Music. The studio asks every song for clear diction once.
   - **Timing** (`steps/timing.py`): **Demucs** takes the vocals out of the song, and **MMS** finds when each
     word is sung or said. A song that did not sing its lyrics, or a narration not read as written, is made again.

@@ -66,6 +66,9 @@ MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload
 VIDEOS = ("song", "lesson")
 HOOK, HOOK_LAYOUT = "hook", "v"  # the hook cut: the song's pre-chorus and first chorus, upright, to share
 TIMED = ("song", "narration")  # the audio files, each with its Timing
+# Who makes the audio when no setting says (api/src/lib/studio-settings.ts, DEFAULT_SONG): Lyria sings, Gemini TTS
+# reads. The audio step makes it and the videos' check of the keys asks for its key, so both read it from here.
+DEFAULT_SONG_PROVIDER = "gemini"
 
 ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
