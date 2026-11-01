@@ -157,7 +157,7 @@ MOVES = ('How it moves: "crosses" when it passes through one wall, membrane or c
 # What an arrow is about, written beside it, joined to it (the owner, Nov 1: an arrow with nothing beside it left the
 # learner asking what it meant). "" in a bundle written before, and the video writes none off a graph.
 SAYS = ('For an arrow (it travels, or what moves has no short symbol), one line beside it saying what it shows, at '
-        'most 40 characters: "The pump lifts water to the tank", "Shortage pushes the price up"; "" otherwise')
+        'most 40 characters: "Glucose rides in with sodium", "Shortage pushes the price up"; "" otherwise')
 
 
 class Flow(Strict):

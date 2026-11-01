@@ -517,7 +517,7 @@ def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once()
 
 
 def test_lines_that_hold_still_are_not_a_problem():
-    # A line that comments or sums up holds still, whether or not something travels on its scene elsewhere.
+    # A line about nothing that travels holds still, whether or not something travels on its scene elsewhere.
     data = bundle_data()
     for d in data["direction"]:
         d.update(particles=[], carries="")

@@ -70,8 +70,7 @@ Tell it as one path, each sentence following from the one before:
    nothing yet: the question is what pulls the learner through.
 2. **The idea** (2 or 3 sentences, over "overview"): the core idea in plain words, through the
    analogy, each part of it matched to the real part as the sentence names it, since the
-   picture is the real thing: no picture draws the analogy (Nov 1: a second picture to map lost
-   the learner). The matches are signposts: the steps can be called by them from here on
+   picture is the real thing. The matches are signposts: the steps can be called by them from here on
    ("That's the dump: filtration.").
 3. **The path** (most of the narration, over the overview and the close-ups): each step in
    the order it happens, one at a time: where it happens, what happens, and why it has to

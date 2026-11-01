@@ -22,7 +22,7 @@ from studio.schemas import BPM_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Proble
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
 SYMBOL_LETTERS = 3  # what a particle can carry written on it ("Na⁺", "Ca²⁺", "NAD⁺"): anything longer moves as an arrow
-SAYS_MAX = 40  # characters of an arrow's one-liner: one short line beside it ("The pump lifts water to the tank")
+SAYS_MAX = 40  # characters of an arrow's one-liner: one short line beside it ("Glucose rides in with sodium")
 ALSO_MAX = 1  # second flows on one line: two things moving at once is as much as a learner can follow
 SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
 SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
@@ -536,9 +536,8 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     """The song's direction against the planning rule a check can count: every chorus directed alike (compared from
     its end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them.
 
-    How many lines in a row hold still is not counted. The bundle prompt has a line that comments or sums up hold
-    still, and the spotlight and the camera carry a scene where nothing travels, so a run of still lines is no
-    mistake. Counted until Oct 31, a run of five flagged a chorus summing up the Moon's phases over the overview,
+    How many lines in a row hold still is not counted. The bundle prompt moves only what travels, and the spotlight
+    and the camera carry a scene where nothing does, so a run of still lines is no mistake. Counted until Oct 31, a run of five flagged a chorus summing up the Moon's phases over the overview,
     the spotlight stepping from phase to phase, and only because one earlier line had sent sunlight across it: a
     scene that never moved was never flagged, so the count pushed toward dots for their own sake."""
     directions = {d.line_id: d for d in bundle.direction}

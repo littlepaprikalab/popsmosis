@@ -64,7 +64,7 @@ from studio.steps import songwriter
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KEY = "keyline"  # a key line, or the core idea: written on screen in the song
+KEY = "keyline"  # a key line, or the core idea: written on screen in both videos
 LYRIC = "lyric"  # a couplet of the song, its lines joined by "\n"
 KINDS = (LYRIC, "narration", "lesson", "caption", KEY)  # the lines a correction rewrites, besides the below
 TITLE = "title"  # "course: topic", the droplet's public title: fit to go out, corrected like a line

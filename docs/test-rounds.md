@@ -1343,6 +1343,31 @@ swings and the slopes close in"). Lyria sang both ($0.16). Timed by the studio's
 about half again as fast as the sung lines (6.4 and 6.0 syllables a second, against 4.1 and 4.0), though the aligner
 was unsure of 30 and 19 lines; the owner listened and approved both.
 
+### Panels
+
+Classical conditioning asked for panels in both of the day's scorecard runs ("before, during and after, three
+panels"), and the rocket for one picture in air and in space side by side. A rule in the brief and the script's
+prompt now says a picture is one moment, never panels: moments of one process are its stages, and a comparison is
+two scenes. Two writers in the session wrote both topics under it. Neither asked for a panel: classical
+conditioning drew "before", "pairing" and "after" as three stages of the same lab, and the rocket "in-space" as a
+scene of its own. The rule stays, and the stages' older "never several stages side by side" is now said in it.
+
+### A trim of the writer's brief
+
+The brief was read for what it says twice, or says for something code now does. It lost 500 words (9,298 to
+8,795), and nothing it asks changed:
+
+- Its narration section: the script's narration is spoken word for word (`script.follow`), so those rules were read
+  only when the script call failed, and had drifted from the script's (350 to 450 words against 300 to 420). With
+  no script, the bundle writer now gets the script prompt's narration rules (`script.narration_rules`).
+- What code does: `music.sections` (set from the lyrics), the lesson never playing a song picture
+  (`_settle_song_scenes`).
+- Rules said twice: key terms in the lesson, the song and the narration; a structure's name and colour; the song's
+  first scene; the chorus's scene; the fact-check, now named once for everything it reads; the key lines' order.
+- "A line that sums up holds still", against "the chorus and the summary lines show the whole pathway": in the two
+  scorecard runs, the writer showed the whole pathway wherever something travels (31 of 34 chorus lines for the
+  light reactions, 28 of 31 for the pump) and held still where nothing does. The first went.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

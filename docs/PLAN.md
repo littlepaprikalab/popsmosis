@@ -749,7 +749,7 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     tubule). A journey along several parts (filtrate down the nephron, magma up through the
     volcano, sediment down a river) is drawn instead as an arrow: off a graph one arrow along the
     whole way, through the parts where they join, drawing itself in and then pulsing, with its
-    one-liner (`says`, "The pump lifts water to the tank") in a pill beside it, joined to it; on a
+    one-liner (`says`, "Glucose rides in with sodium") in a pill beside it, joined to it; on a
     graph an arrow where it passes from each part into the next (`routing.handoff()`), drawn in one
     after another the way it goes, then a pulse runs along them in order, with its one-liner or
     its word ("price rises") beside the first. What has no short symbol (a word, "glucose", or

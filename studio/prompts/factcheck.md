@@ -13,8 +13,9 @@ You get JSON with:
   comes from: "lyric:..." is a couplet of the song (its lines separated by line breaks),
   "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
-  row's cells are separated by " | "), and "keyline:..." a line the song video writes
-  above its diagram for the learner to read: what a scene teaches, or the core idea.
+  row's cells are separated by " | "), and "keyline:..." a line both videos write on screen
+  for the learner to read: a step of the lesson, or ("keyline:core_idea") the core idea,
+  written across the top of every frame.
   "caption:..." is a caption shown on a video over the line it names, judged like a lesson
   sentence. "tag:..." is a hashtag under one of the videos, "motion:..." is what a video
   shows moving across its diagram, and "title:", "scene:", "style:" and "avoid:" are the
