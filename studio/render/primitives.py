@@ -888,11 +888,16 @@ def draw_band(canvas: skia.Canvas, rect: Rect, words: list[BandWord], t: float, 
             x += tw + space
 
 
-def draw_title(canvas: skia.Canvas, rect: Rect, text: str, font_size: float) -> None:
-    """The title band along the top of an upright frame: the topic, white on the art's dark slate, centred, on up
-    to two lines."""
+def draw_title(canvas: skia.Canvas, rect: Rect, text: str, font_size: float, core: str = "",
+               core_size: float = 0.0, clear: float = 0.0) -> None:
+    """The title band along the top: the topic, white on the art's dark slate, centred, on up to two lines; and the
+    core idea, if any, quieter under it (or alone, in a band with no topic) on up to PIN_ROWS lines, both kept
+    `clear` of each side for the brand, and smaller until they fit."""
     x0, y0, x1, y1 = rect
     canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y1), skia.Paint(Color=argb(TITLE_BG)))
+    if core.strip() and core_size:
+        _draw_pinned(canvas, rect, text, font_size, " ".join(core.split()), core_size, clear)
+        return
     if not text:
         return
     f = font("ExtraBold", font_size)
@@ -901,6 +906,55 @@ def draw_title(canvas: skia.Canvas, rect: Rect, text: str, font_size: float) -> 
     first = (y0 + y1) / 2 - step * (len(rows) - 1) / 2 + cap_height(f) / 2
     for r, row in enumerate(rows):
         draw_text(canvas, row, (x0 + x1) / 2 - text_width(f, row) / 2, first + r * step, f, 0xFFFFFFFF)
+
+
+def balanced(text: str, f: skia.Font, width: float) -> list[str]:
+    """text wrapped to `width` on as few lines as wrap() needs, but each about as long, not a last line of one
+    word ("swell.")."""
+    rows = wrap(text, f, width)
+    lo, hi = 0.0, width
+    while len(rows) > 1 and hi - lo > 4:
+        mid = (lo + hi) / 2
+        if len(wrap(text, f, mid)) == len(rows):
+            hi = mid
+        else:
+            lo = mid
+    return wrap(text, f, hi) if len(rows) > 1 else rows
+
+
+PIN_INK = 0xFFCBD5E1  # slate-300: the core idea, quieter than the topic and the key line
+PIN_ROWS = 3  # lines the core idea may take
+PIN_PAD = 8.0  # frame px the band keeps above and below its text
+PIN_SHRINK = 0.6  # the smallest the text gets, to its font size
+
+
+def _draw_pinned(canvas: skia.Canvas, rect: Rect, title: str, title_size: float, core: str, core_size: float,
+                 clear: float) -> None:
+    """The topic (if any) over the core idea, centred in rect, both smaller until they fit its height."""
+    x0, y0, x1, y1 = rect
+    room = (x1 - x0) - 2 * max(clear, 60.0)
+    scale = 1.0
+    while True:
+        big, small = font("ExtraBold", title_size * scale), font("SemiBold", core_size * scale)
+        tops = wrap(title, big, room)[:2] if title else []
+        rows = balanced(core, small, room)
+        step_t, step_c = title_size * scale * 1.2, core_size * scale * 1.22
+        gap = title_size * scale * 0.35 if tops else 0.0
+        height = len(tops) * step_t + gap + len(rows) * step_c
+        if (len(rows) <= PIN_ROWS and height <= (y1 - y0) - 2 * PIN_PAD) or scale <= PIN_SHRINK:
+            break
+        scale *= 0.95
+    rows = rows[:PIN_ROWS]
+    y = (y0 + y1) / 2 - height / 2
+    for row in tops:
+        draw_text(canvas, row, (x0 + x1) / 2 - text_width(big, row) / 2, y + step_t / 2 + cap_height(big) / 2, big,
+                  0xFFFFFFFF)
+        y += step_t
+    y += gap
+    for row in rows:
+        draw_text(canvas, row, (x0 + x1) / 2 - text_width(small, row) / 2, y + step_c / 2 + cap_height(small) / 2,
+                  small, PIN_INK)
+        y += step_c
 
 
 TITLE_BG = "#34435E"  # a shade under the art's dark slate blue, so the title sits on it as a band

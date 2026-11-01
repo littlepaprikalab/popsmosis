@@ -788,7 +788,13 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     three is marked. How full it is runs on across scenes. The dots sit inside the space's
     mask, drift a few pixels in place, and stay bright while particles fill or empty the
     space, whatever the spotlight. The pictures paint no loose ions, so nothing painted
-    looks like them.
+    looks like them. A difference that is always there and kept (`held`: sodium outside a
+    resting cell) is full from the first frame and a leak only dips it to 70%; one the
+    lesson builds up starts with a few. And a gradient is more on one side, not none on the
+    other (round 22's pump showed no K⁺ outside the cell at all, Nov 1): the space at the
+    other end of that kind's paths, when it is a space with no crowd of that kind of its own,
+    has a few of them, about one for every five where they crowd, untinted, on points the
+    crowd gives up so no dot sits on another.
   - **Parts that turn:** for what the bundle's `spins` names (a rotor, a turbine, a water
     wheel), the part eases up to turning while particles flow into or through it and eases
     to a stop when they stop, so the flow is seen to drive it. How it turns is read off the
@@ -822,13 +828,27 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
     spotlight still move when it is sung).
+  - **Core idea:** the bundle's `core_idea`, what the topic is and what it is for, written
+    across the top of every frame, quiet (slate-300 on the title band's slate, smaller than
+    the key line), so a learner lost in the moving parts can look up and see what it is all
+    for (the owner, Nov 1): a 64 px band in 16:9, the picture below it; in the upright hook
+    cut, under the topic in the title band. The key line band then shows only steps: none
+    over a chorus or the narration's sentence that says the core idea, as both say it.
+  - **Key lines:** each sits on the lyric that sings its step, in the song's own order, and on
+    the narration sentence that says it, so one set of lines places itself in each video; a
+    step the song never sings is the lesson video's only (`from_line` ""). The bundle step
+    records a key line whose lyric shares few of its words while another verse line shares
+    many (`checks.misplaced_key_lines`), as a hint, not a repair: on the 12 scorecard songs
+    of Oct 31 it found round 22's three, but would have moved lines that sang their step
+    through a metaphor.
   - **Caption pill:** optional, top area, held at least 4 s.
   - **Brand:** the site's wordmark chip ("**POP**smosis", white on aqua `#0B7499`, as
     `web/src/components/Wordmark.tsx` draws it) on every frame, so a clip saved and posted
     elsewhere still says where it came from. Always a bottom right corner, out of the way of
-    what is read: in 16:9 the picture's, across from the "AI-generated picture" tag and about
-    its size, with labels kept clear of it (beside a notice card it is under the card); in the
-    upright hook cut the title band's, below the topic or the key line.
+    what is read: in 16:9 the core idea band's right end, or, in a video made before it, the
+    picture's, across from the "AI-generated picture" tag and about its size, with labels kept
+    clear of it (beside a notice card it is under the card); in the upright hook cut the title
+    band's, below the topic and the core idea.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
   - **Ending:** the last picture stays on screen 1.5 s after the voice ends.
 - **Encoding:** pipe raw BGRA frames to ffmpeg (H.264 + AAC, 30 fps, 1920x1080). Render

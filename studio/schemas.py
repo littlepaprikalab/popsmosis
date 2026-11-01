@@ -194,6 +194,11 @@ class Direction(Strict):
 class BuildUp(Strict):
     carries: str = Field(description='What piles up, as `carries` writes it ("H⁺")')
     region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
+    # A resting cell's sodium outside is there from the first frame; round 22's pump lesson filled it from a few
+    # dots only once the pump ran, and drained the potassium inside to two dots when the leak played (Nov 1).
+    held: bool = Field(default_factory=bool, description="True for a difference that is always there and kept (sodium "
+                                                  "outside a resting cell): shown full from the start; false for "
+                                                  "one the lesson builds up (H⁺ pumped into the lumen)")
 
 
 class Block(Strict):
@@ -207,7 +212,8 @@ class Spin(Strict):
 
 
 class KeyLine(Strict):
-    from_line: str = Field(description="The id of the lyric line it appears on; it stays until the next key line's")
+    from_line: str = Field(description="The id of the lyric line that sings this step, where it appears and stays "
+                                       "until the next key line's; \"\" for a step the song never sings")
     text: str = Field(description='The step being sung, in at most 10 words: "Light splits water → O₂ + H⁺ + e⁻"')
     # Where the lesson video writes the same line. "" in a bundle written before the lesson video showed them.
     from_narration: str = Field(default_factory=str, description="The id of the narration sentence it appears on in the "
@@ -896,6 +902,7 @@ class Crowd(Strict):
     color: str
     start: float  # how full it is when the beat starts, 0-1
     end: float  # and when it ends; it changes evenly in between
+    thin: bool = False  # a few of them where they are scarce (the other end of their path), not a space filling up
 
     @field_validator("color")
     @classmethod
@@ -1020,6 +1027,7 @@ class Timeline(Strict):
     beats: list[Beat]
     title: str = ""  # written across the top by a layout with a title band (the hook cut's): the topic
     key_terms: list[str] = []  # Bundle.key_terms: picked out in colour where a key line says one
+    core_idea: str = ""  # Bundle.core_idea, written across the top of every frame; "" in a timeline made before
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.

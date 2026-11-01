@@ -128,6 +128,7 @@ STOP_OFFSET = 34.0  # art pixels: the lead particle holds beside a label's dot, 
 CROWD_MAX = 24
 CROWD_SPACING = 60.0
 CROWD_DRIFT = 5.0
+THIN_MIN = 2  # dots where particles are scarce (Crowd.thin), however small the space
 CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 # A part that turns (Beat.turning). One that looks the same turned a quarter and a half turn (its outline
 # overlaps itself so turned by SPIN_SAME or more, and its box is at most SPIN_ROUND times wider than tall, or
@@ -774,6 +775,8 @@ class Renderer:
         self.job = job
         self.timeline = timeline
         self.layout = LAYOUTS[layout] if isinstance(layout, str) else layout
+        if timeline.core_idea:
+            self.layout = self.layout.pinned()
         self.portrait = self.layout.height > self.layout.width
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
@@ -1401,7 +1404,9 @@ class Renderer:
         # frame, a learner reading the lyrics never saw it (the owner, Oct 31).
         key_alpha = p.ease((t - plan.key_in) / KEY_FADE_S) * p.ease((plan.key_out - t) / KEY_FADE_S)
         if layout.title_h:
-            p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font)
+            p.draw_title(canvas, (0, 0, layout.width, layout.title_h), self.timeline.title, layout.title_font,
+                         core=self.timeline.core_idea, core_size=layout.pin_font,
+                         clear=self.brand[0] + 2 * layout.margin)
         key_top = layout.height - layout.band_h - (layout.key_h if self.keyed else 0)
         if self.keyed and layout.key_h:
             p.draw_key_band(canvas, (0, key_top, layout.width, layout.height - layout.band_h), beat.key_line,
@@ -1766,14 +1771,31 @@ class Renderer:
         art = self.scene(beat.scene)
         scale, dx, dy = to_frame(cam, view, art)
         x = p.clamp01((t - beat.t0) / (beat.t1 - beat.t0))
+        located = self.locations.scene(beat.scene)
+        # A few where they are scarce (Crowd.thin), only in a space (the outside of a cell, not the pump at a
+        # path's end), each on points of its own at the end of the space's list, so no dot sits on another.
+        thin = [c for c in beat.crowds if c.thin and c.region in art.masks
+                and (loc := located.get(c.region)) is not None and self._is_space(beat.scene, loc)]
+        reserved: dict[str, int] = {}
+        slices: dict[int, list] = {}
+        for crowd in thin:
+            points = art.crowd_points(crowd.region)
+            n = max(THIN_MIN, round(len(points) * crowd.start))
+            used = reserved.get(crowd.region, 0)
+            slices[id(crowd)] = points[max(len(points) - used - n, 0):len(points) - used]
+            reserved[crowd.region] = used + n
         for crowd in beat.crowds:
-            if crowd.region not in art.masks:
+            if crowd.region not in art.masks or (crowd.thin and id(crowd) not in slices):
                 continue
             level = p.lerp(crowd.start, crowd.end, x)
             moving = any(f.label == crowd.label and crowd.region in (f.path[0], f.path[-1]) for f in beat.particles)
             others = 0.0 if moving else max((v for name, v in spots.items() if name != crowd.region), default=0.0)
             alpha = (1 - ghosts.get(crowd.region, 0.0)) * (1 - SPOT_WASH * others)
             if alpha <= 0.01:
+                continue
+            if crowd.thin:  # its few dots, untinted: the space is the other crowd's
+                points = slices[id(crowd)]
+                self._crowd_dots(canvas, crowd, points, len(points), (scale, dx, dy), t, alpha)
                 continue
             canvas.save()
             canvas.translate(dx, dy)
@@ -1782,19 +1804,26 @@ class Renderer:
                              skia.Paint(Color=p.argb(crowd.color), Alphaf=CROWD_TINT * level * alpha))
             canvas.restore()
             points = art.crowd_points(crowd.region)
-            shown = level * len(points)
-            for k, (px, py) in enumerate(points):
-                fade = p.clamp01(shown - k)
-                if fade <= 0.01:
-                    break
-                phase = k * 2.39996  # the golden angle, so no two drift together
-                speed = 0.5 + 0.08 * (k % 5)
-                at = ((px + CROWD_DRIFT * math.sin(speed * t + phase)) * scale + dx,
-                      (py + CROWD_DRIFT * math.cos(0.8 * speed * t + 2 * phase)) * scale + dy)
-                if p.carried(crowd.label):
-                    p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade)
-                else:
-                    p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
+            points = points[:len(points) - reserved.get(crowd.region, 0)]
+            self._crowd_dots(canvas, crowd, points, level * len(points), (scale, dx, dy), t, alpha)
+
+    @staticmethod
+    def _crowd_dots(canvas: skia.Canvas, crowd, points: list, shown: float, frame: tuple, t: float,
+                    alpha: float = 1.0) -> None:
+        """A crowd's dots, drifting in place: the first `shown` of `points` (art pixels), the last fading in."""
+        scale, dx, dy = frame
+        for k, (px, py) in enumerate(points):
+            fade = p.clamp01(shown - k)
+            if fade <= 0.01:
+                break
+            phase = (k + (7 if crowd.thin else 0)) * 2.39996  # the golden angle, so no two drift together
+            speed = 0.5 + 0.08 * (k % 5)
+            at = ((px + CROWD_DRIFT * math.sin(speed * t + phase)) * scale + dx,
+                  (py + CROWD_DRIFT * math.cos(0.8 * speed * t + 2 * phase)) * scale + dy)
+            if p.carried(crowd.label):
+                p.draw_marker(canvas, at, crowd.color, crowd.label, alpha * fade)
+            else:
+                p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
 
     def _is_space(self, scene_id: str, loc) -> bool:
         """A space (the stroma, a lumen): a box covering much of its picture, or spanning most of its width."""

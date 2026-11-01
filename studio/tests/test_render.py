@@ -393,6 +393,40 @@ def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
     assert (full.frame(4.0) == full.frame(4.0)).all()
 
 
+
+def test_a_few_dots_where_particles_are_scarce_sit_apart_from_the_crowd_and_only_in_a_space(job):
+    # Round 22's pump showed no K⁺ outside the cell at all: a gradient is more on one side, not none on the other.
+    gold, blue = "#F2C230", "#7FD1FF"
+
+    def frame(*crowds):
+        beat = flow_beat(0, 8, path=[]).model_copy(update={"crowds": list(crowds)})
+        return Renderer(job, flowing([beat])).frame(4.0)[..., 2::-1].astype(int)
+
+    def count(rgb, colour):
+        return int((np.abs(rgb - p.rgb(colour)).max(-1) < 20).sum())
+
+    full = Crowd(region="Thylakoid", label="H⁺", color=gold, start=1.0, end=1.0)
+    few = Crowd(region="Thylakoid", label="H₂O", color=blue, start=0.2, end=0.2, thin=True)
+    alone, both = frame(full), frame(full, few)
+    assert 0 < count(both, blue) < count(both, gold)  # a few, fewer than the crowd
+    assert count(both, gold) < count(alone, gold)  # the crowd gave up its last points to them: none on another
+    assert count(frame(Crowd(region="Cytochrome b6f", label="H₂O", color=blue, start=0.2, end=0.2, thin=True)),
+                 blue) == 0  # a part at a path's end is not a space
+
+
+def test_the_core_idea_is_written_across_the_top_of_every_frame(job):
+    # A learner lost in the moving parts can look up and see what it is all for (the owner, Nov 1).
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    plain = Renderer(job, timeline)
+    pinned = Renderer(job, timeline.model_copy(update={"core_idea": "Light makes the fuel a leaf builds sugar with"}))
+    assert plain.layout.title_h == 0 and pinned.layout.title_h == pinned.layout.pin_h > 0
+    assert pinned.view("overview")[1] == pinned.layout.pin_h
+    band = pinned.frame(14.0)[:pinned.layout.pin_h, :, 2::-1].astype(int)
+    ink = (np.abs(band - np.array([(p.PIN_INK >> 16) & 255, (p.PIN_INK >> 8) & 255, p.PIN_INK & 255])).max(-1) < 30)
+    assert ink.sum() > 500  # the words, quiet on the slate
+    upright = Renderer(job, pinned.timeline.model_copy(update={"title": "the light reactions"}), "v")
+    assert upright.layout.title_h == renderer_module.LAYOUTS["v"].title_h  # under the topic, in the band it has
+
 def test_a_round_part_seen_face_on_turns_in_place_and_nothing_outside_it_moves(job):
     def turned(turns):
         beat = flow_beat(0, 8, path=[]).model_copy(update={"turning": [
@@ -1188,7 +1222,8 @@ def test_a_graphs_frame_is_the_same_whichever_frame_a_worker_draws_first(graph):
 
 
 def test_axis_names_stay_on_through_a_stage_fade_when_the_next_stage_has_the_same(graph):
-    timeline = jobs.read(graph / media.timeline_path("song"), Timeline)
+    # Without the core idea along the top: the shares below were measured on the frame as it was before it.
+    timeline = jobs.read(graph / media.timeline_path("song"), Timeline).model_copy(update={"core_idea": ""})
     cut = next(b.t0 for b in timeline.beats if b.scene == "ceiling")
     mid, settled = cut + renderer_module.STAGE_FADE_S / 2, cut + 2 * renderer_module.STAGE_FADE_S
 

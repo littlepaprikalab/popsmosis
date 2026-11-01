@@ -17,8 +17,8 @@ drawing what its `picture` says, and every part its narration names over a scene
 structure there, named as the narration says it. Speak its narration word for word: one
 narration item a sentence, in its order, with the ids it gives, each over the scene its
 passage names. The rest is yours: the pictures' requests and structures, the direction, the
-lesson text and the song. The lesson text, the song and the key lines tell the same story as
-the script, in the same order, with the same analogy, and the first key line asks the
+lesson text and the song. The lesson text and the song tell the same story as the script, in
+the same order, with the same analogy; the key lines tell it too, and the first asks the
 script's `question`. The song may also have pictures of its own (`song_scenes`, under "The
 song's pictures"). Where this brief's rules for the narration differ from the script, the
 script stands.
@@ -93,12 +93,22 @@ Then:
 - `topic`: the topic as a textbook names it ("the light reactions"). With the course it is
   the droplet's public title: nothing about the learner (no name, school, teacher, class or
   test date).
-- `core_idea`: the one sentence the learner should still be able to say a week later: how
-  the thing works or why it happens, cause and effect, not a name or a definition. At most
-  20 words, plain, with at most two `key_terms`. The chorus sings it, the narration ends on
-  it, the lesson opens toward it and checks it. Not the steps ("Sodium channels open, the
-  membrane depolarizes, potassium channels open and it repolarizes") but "A nerve signal is
-  a chain reaction: sodium rushing in at one spot opens the gates just ahead."
+- `core_idea`: the one sentence the learner should still be able to say a week later. At
+  most 20 words, plain, with at most two `key_terms`. The chorus sings it, the narration ends
+  on it, the lesson opens toward it and checks it, and both videos keep it written across the
+  top of every frame, so a learner lost in the moving parts can look up and see what it is all
+  for. What it says depends on the topic:
+  - A thing or an idea with a job (a pump, an enzyme, a stage of a process, a tool like the
+    derivative, a rule like the subjunctive, a device like dramatic irony): what it is and
+    what it is for, in plain words, then how, if there is room. "A pump in the cell membrane
+    keeps sodium out and potassium in, so nerves can fire and cells don't swell", not "Each
+    ATP flips the pump's shape, carrying three sodium out and two potassium in": that is a
+    step, and the steps are `why_chain`'s. Where things move, say which way each goes.
+  - Why something happens (the Moon's phases, a revolution, a price): the cause and its
+    effect. Nobody needs the Moon's phases: "The Sun always lights half the Moon; as it
+    orbits, we see different amounts of that lit half."
+  Never a name or a definition alone, and never the steps one by one ("Sodium channels open,
+  the membrane depolarizes, potassium channels open and it repolarizes").
 - `why_chain`: 3 to 5 links, each one short sentence saying what happens and why ("The next
   gates open because the sodium rushing in changes the charge beside them"), each following
   from the one before. The lesson and the narration are built on these links, not on a list
@@ -644,11 +654,16 @@ Plan the motion like an animator:
 List each only where the facts say so, naming structures as in `structures`; the
 fact-check holds each to the facts. [] when there is none.
 
-- `builds_up`: what piles up in a space as the lesson goes, when the lesson is about it (a
-  gradient): `[{"carries": "H⁺", "region": "Thylakoid lumen"}]`. The region is a structure
-  that is a space (a lumen, a compartment, the reservoir behind a dam); particles with the
-  same `carries` end in it (piling up) and start from it (leaving), and the video fills and
-  empties it.
+- `builds_up`: what is crowded in a space, when the lesson is about it (a gradient):
+  `[{"carries": "H⁺", "region": "Thylakoid lumen", "held": false}]`. The region is a
+  structure that is a space (a lumen, a compartment, the reservoir behind a dam); particles
+  with the same `carries` end in it (piling up) and start from it (leaving), and the video
+  fills and empties it, and puts a few of them in the space at their path's other end, where
+  they are scarce, not absent. `held`: true for a difference that is always there and kept
+  (sodium outside a resting cell, potassium inside it: the video shows it full from the
+  start, and a leak only dips it), false for one the lesson builds up (H⁺ pumped into the
+  lumen while light shines, sodium flooding a cell whose pump has stopped: the video starts
+  it with a few and fills it).
 - `spins`: a part that turns while particles flow into or through it (a rotor, a turbine, a
   water wheel): `[{"structure": "ATP synthase"}]`. The video turns it while they flow.
 - `blocks`: what stops the particles that reach it, on a failure scene (a poison, a drug, a
@@ -680,12 +695,16 @@ fact-check holds each to the facts. [] when there is none.
 ## On screen
 
 The lyrics fly past faster than a learner can take them in, so both videos write the step
-being taught above the diagram and hold it. `key_lines` are those steps, in song
-order: the question, then the `why_chain` walked through the song, a key line for each link
-(two for a long one), each where the song starts singing it. The lesson video shows the same lines.
+being taught above the diagram and hold it. `key_lines` are those steps: the question, then a key line for each link of `why_chain` (two for
+a long one), each where the song starts singing it and where the narration starts saying it.
+The lesson video shows the same lines, in the narration's order.
 
-- `from_line`: the lyric line it appears on. It stays until the next, across scene changes,
-  so put one where the song moves on to a new step, not on every line.
+- `from_line`: the lyric line where the song sings that step, in the song's own order, which
+  need not be the chain's: a song that sings how the pump turns before why it is needed puts
+  those key lines first. It stays until the next, across scene changes, so put one where the
+  song moves on to a new step, not on every line. "" for a link the song never sings: it is
+  shown in the lesson video only. Never on a line that sings something else: the learner
+  reads the step while hearing the line.
 - `text`: that step cut to its cause and effect, at most 10 words, with an arrow for what
   turns into or leads to what: "Light splits water → O₂ + H⁺ + e⁻", "H⁺ flowing back spins
   ATP synthase → ATP". Use `key_terms` as the textbook writes them. Not the lyric it appears
@@ -696,13 +715,13 @@ order: the question, then the `why_chain` walked through the song, a key line fo
   arrow could be read two ways, say it in words.
 - The first sits on the first sung line and asks the question the song answers ("How does
   a leaf turn light into fuel?"): it is how the video shows the question. Every other key
-  line is a link of `why_chain`, in its order, as cause → effect, and the last is its last
-  link. Never a label, a slogan, an analogy's mapping ("Turnstile = ATP synthase") or the
-  bridge's case: read alone, in order, they tell the why chain.
+  line is a link of `why_chain`, as cause → effect, listed in the chain's order. Never a
+  label, a slogan, an analogy's mapping ("Turnstile = ATP synthase") or the bridge's case:
+  read alone, in the chain's order, they tell the why chain.
 - `from_narration`: the narration sentence where the narrator starts on that step, in the
   narration's order, never two on one sentence; "" where the narration has no place for it.
-- None on the last chorus or the narration's last sentence: the videos show `core_idea`
-  there. Each is fact-checked like a sentence of the lesson.
+- None on a chorus or the narration's last sentence: they say `core_idea`, which the videos
+  already keep at the top. Each is fact-checked like a sentence of the lesson.
 
 ## Tags
 

@@ -252,10 +252,12 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
     level = step.CROWD_START
     for beat in song.beats:
         crowds = beat.crowds
-        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
-            assert crowds == []
+        if beat.scene != "overview":  # the hook does not draw cytochrome b6f (it does the thylakoid: a few there)
+            assert all(c.thin for c in crowds)
             continue
-        [crowd] = crowds
+        [crowd] = [c for c in crowds if not c.thin]
+        [few] = [c for c in crowds if c.thin]  # where they come from and go: a few there, the same all along
+        assert (few.region, few.label, few.start, few.end) == ("Thylakoid", "H⁺", step.THIN_SHARE, step.THIN_SHARE)
         assert (crowd.region, crowd.label, crowd.color) == ("Cytochrome b6f", "H⁺", "#F2C230")
         assert crowd.start == pytest.approx(level, abs=1e-3)  # it runs on from where it was
         rise = (crowd.end - crowd.start) / (beat.t1 - beat.t0)
@@ -267,6 +269,24 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
             assert rise == 0
         level = crowd.end
 
+
+
+def test_a_held_difference_starts_full_and_only_dips_and_none_is_added_where_it_crowds_already(job):
+    # Round 22's pump lesson filled the sodium outside the cell from a few dots only once the pump ran (Nov 1).
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")  # in
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # out: a leak
+    data["builds_up"] = [{"carries": "H⁺", "region": "Cytochrome b6f", "held": True},
+                         {"carries": "H⁺", "region": "Thylakoid"}]  # crowded at both ends: no thin side
+    write_bundle(job, data)
+    song = make(job)["song"]
+    shown = [c for b in song.beats if b.scene == "overview" for c in b.crowds]
+    assert not any(c.thin for c in shown)
+    held = [c for c in shown if c.region == "Cytochrome b6f"]
+    assert held[0].start == 1.0 and min(c.end for c in held) >= step.HELD_MIN
+    assert min(c.end for c in held) < 1.0  # the leak dips it
+    built = [c for c in shown if c.region == "Thylakoid"]
+    assert built[0].start == step.CROWD_START
 
 def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job):
     data = sample_media.bundle().model_dump()
@@ -519,17 +539,18 @@ def keyed(data):
     data["key_terms"] = ["ATP synthase", "lumen"]
 
 
-def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_every_chorus(job):
+def test_the_song_holds_each_key_line_until_the_next_and_none_over_a_chorus(job):
     data = bundle_data()
     keyed(data)
     bundle = write_bundle(job, data)
     timelines = make(job)
     song = timelines["song"]
     shown = {b.line_id: b.key_line for b in song.beats if b.line_id}
-    # Each chorus sings the core idea, so it shows it, until the next key line (the bridge has none of its own).
+    # Each chorus sings the core idea, written at the top of every frame: no step under it, until the next key line
+    # (the bridge has none of its own).
     assert shown == {"v1-1": "How does a leaf make fuel from light?", "v1-2": "How does a leaf make fuel from light?",
-                     "c1-1": bundle.core_idea, "v2-1": "Light pumps H⁺ into the lumen",
-                     "c2-1": bundle.core_idea, "b-1": bundle.core_idea, "c3-1": bundle.core_idea}
+                     "c1-1": "", "v2-1": "Light pumps H⁺ into the lumen", "c2-1": "", "b-1": "", "c3-1": ""}
+    assert all(t.core_idea == " ".join(bundle.core_idea.split()) for t in timelines.values())
     for i, beat in enumerate(song.beats):  # a gap holds the line before it
         if not beat.line_id and i:
             assert beat.key_line == song.beats[i - 1].key_line
@@ -537,11 +558,11 @@ def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_ever
     lesson = {b.line_id: b.key_line for b in timelines["lesson"].beats if b.line_id}
     narration = [n.id for n in bundle.narration]
     assert lesson[narration[0]] == "How does a leaf make fuel from light?"
-    assert lesson[narration[-1]] == bundle.core_idea  # the narration ends on the core idea
+    assert lesson[narration[-1]] == ""  # the narration ends on the core idea, already at the top
     assert all(lesson[n] == "Light pumps H⁺ into the lumen" for n in narration[1:-1])
     assert timelines["lesson"].key_terms == ["ATP synthase", "lumen"]
     hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
-    assert any(b.key_line for b in hook.beats) and hook.key_terms == song.key_terms
+    assert hook.key_terms == song.key_terms and hook.core_idea == song.core_idea
 
 
 def test_a_song_from_a_bundle_without_key_lines_has_none(job):

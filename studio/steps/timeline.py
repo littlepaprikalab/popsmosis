@@ -129,6 +129,8 @@ FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
 DRAIN_S = 10.0  # seconds of them leaving that would empty it
 CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
+HELD_MIN = 0.7  # a held difference (BuildUp.held) only dips while it leaks: the pump keeps it
+THIN_SHARE = 0.2  # where particles are scarce, about one dot for every five where they crowd
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
 RUN_MAX = 2  # flows moving at once on a beat that sums up: round 17's rock cycle moved 4 at once, and it read as a swarm
 SCENE_MIN_S = 3.5  # a picture on screen for less than this (one sung line) gives way to the one before it
@@ -475,7 +477,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     shown = {b["scene"] for b in beats}
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
-                    key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
+                    key_terms=bundle.key_terms, core_idea=" ".join(bundle.core_idea.split()),
+                    axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
 
 
 def _scenes(sung: list, directions: dict, located: set[str], hook: str, end: float,
@@ -518,9 +521,9 @@ def _says_core_idea(bundle: Bundle) -> int:
 
 def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
-    sentence in the lesson), held through the gaps after it. From each chorus (the core idea sung), or the
-    narration's last sentence that says it, the core idea, the whole why chain in one line, until a key line
-    starts later: round 19's Rome song held "Gracchi killed → politics settled by force" over its first chorus."""
+    sentence in the lesson), held through the gaps after it. None from each chorus (the core idea sung) or the
+    narration's sentence that says the core idea until a key line starts later: the core idea is written at the top
+    of every frame, and a step held over the line that sings something else misled (the owner, Nov 1)."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -532,8 +535,7 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
         core_from = [i for i in choruses if i - 1 not in choruses]  # where each chorus starts
     else:
         core_from = [_says_core_idea(bundle)]
-    if bundle.core_idea.strip():
-        starts += [(at, " ".join(bundle.core_idea.split())) for at in core_from]
+    starts += [(at, "") for at in core_from]
     starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
     for i, beat in enumerate(beats):
         if beat["line_id"] in order:
@@ -545,11 +547,20 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
 
 def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
     """How full each build-up's space is on each beat: rising while particles carrying it end there,
-    falling while they start from it, carried on from beat to beat whatever the scene. A beat shows
-    the spaces located on its scene."""
+    falling while they start from it, carried on from beat to beat whatever the scene. One that is held
+    (BuildUp.held: sodium outside a resting cell) starts full and only dips; one the lesson builds up starts with a
+    few. A beat shows the spaces located on its scene, and a few of each where its particles are scarce: the other
+    end of their paths, unless they crowd there too (round 22's pump showed no K⁺ outside the cell at all)."""
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
-    level = dict.fromkeys(builds, CROWD_START)
+    held = {(notation(b.carries), b.region) for b in bundle.builds_up if b.held}
+    level = {build: 1.0 if build in held else CROWD_START for build in builds}
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    thin: list[tuple[str, str]] = []
+    for label, region in builds:
+        for f in (f for beat in beats for f in beat["particles"] if f.label == label and len(f.path) > 1):
+            other = f.path[-1] if f.path[0] == region else f.path[0] if f.path[-1] == region else None
+            if other and other != region and (label, other) not in builds and (label, other) not in thin:
+                thin.append((label, other))
     for beat in beats:
         crowds = []
         for build in builds:
@@ -558,10 +569,14 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             rate = ((1 / FILL_S if any(f.path[-1] == region for f in flows) else 0)
                     - (1 / DRAIN_S if any(f.path[0] == region for f in flows) else 0))
             start = level[build]
-            level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
+            floor = HELD_MIN if build in held else CROWD_MIN
+            level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), floor), 1.0)
             if region in located.get(beat["scene"], set()):
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
                                     start=round(start, 4), end=round(end, 4)))
+        crowds += [Crowd(region=region, label=label, color=marker_colour(label, palette), start=THIN_SHARE,
+                         end=THIN_SHARE, thin=True)
+                   for label, region in thin if region in located.get(beat["scene"], set())]
         beat["crowds"] = crowds
 
 

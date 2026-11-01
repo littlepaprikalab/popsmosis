@@ -214,7 +214,7 @@ def droplet_text(bundle: Bundle, request: Request) -> str:
         parts.append(f"{lyric.id}: {lyric.text}")
     parts += ["", "## Key lines (on screen, in order, each from the line it starts on)"]
     for key in bundle.key_lines:
-        where = f'from lyric {key.from_line} "{lines.get(key.from_line, "?")}"'
+        where = f'from lyric {key.from_line} "{lines.get(key.from_line, "?")}"' if key.from_line else "not in the song"
         if key.from_narration:
             where += f'; from narration {key.from_narration} "{lines.get(key.from_narration, "?")}"'
         parts.append(f'- "{key.text}" ({where})')

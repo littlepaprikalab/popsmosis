@@ -497,16 +497,42 @@ def test_lines_that_hold_still_are_not_a_problem():
     assert checks.motion_problems(Bundle.model_validate(data)) == []
 
 
-def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
+def test_key_lines_keep_the_chains_order_and_ones_the_song_cannot_show_stay_in_the_lesson():
     data = bundle_data()
     data["key_lines"] = [{"from_line": "v2-1", "text": "Light pumps H⁺", "from_narration": "n2"},
                          {"from_line": "v1-1", "text": "How?", "from_narration": "n2"},
                          {"from_line": "nope", "text": "Lost"}, {"from_line": "v2-1", "text": "Twice"},
-                         {"from_line": "c1-1", "text": "Unspoken", "from_narration": "zz"}]
+                         {"from_line": "c1-1", "text": "Unspoken", "from_narration": "zz"},
+                         {"from_line": "", "text": "Not sung", "from_narration": "n1"},  # as the brief asks
+                         {"from_line": "gone", "text": "Said only", "from_narration": "n1"}]
     bundle, report = checks.review(Bundle.model_validate(data))
     assert [(k.from_line, k.text, k.from_narration) for k in bundle.key_lines] == [
-        ("v1-1", "How?", ""), ("c1-1", "Unspoken", ""), ("v2-1", "Light pumps H⁺", "n2")]  # n2 went to the first
-    assert len([p for p in report.problems if p.rule == "key-line"]) == 4
+        ("v2-1", "Light pumps H⁺", "n2"), ("v1-1", "How?", ""), ("c1-1", "Unspoken", ""), ("", "Not sung", "n1"),
+        ("", "Said only", "")]  # n2 and n1 went to the first that asked; a song may sing the chain out of order
+    details = [p.detail for p in report.problems if p.rule == "key-line"]
+    assert len(details) == 6 and any("out of the song video" in d and "Said only" in d for d in details)
+    assert not any("Not sung" in d for d in details)  # "" is no problem: a step the song never sings
+
+
+def test_a_key_line_on_a_lyric_that_sings_something_else_is_recorded():
+    # Round 22's pump song held "2 K⁺ binding drops phosphate → pump snaps back inward" over the potassium leak.
+    data = bundle_data()
+    data["why_chain"] = ["a", "b", "c"]
+    texts = {"v1-1": "Sodium climbs on, ATP hands the pump a piece",
+             "v1-2": "Potassium hops on, the piece drops, the pump flips back in",
+             "v2-1": "Ions leak back slowly, so the pumps run night and day",
+             "b-1": "Potassium leaks out, takes its plus charge down the hill"}
+    for line in data["lyrics"]:
+        line["text"] = texts.get(line["id"], line["text"])
+    data["lyrics"][5]["section"] = "verse"  # b-1: a verse line here
+    data["key_lines"] = [{"from_line": "v1-1", "text": "How does the pump keep sodium out?", "from_narration": "n1"},
+                         {"from_line": "b-1", "text": "2 K⁺ binding drops phosphate → pump snaps back inward"},
+                         {"from_line": "v2-1", "text": "Leaks never stop → pumps run nonstop"}]
+    found = [p.detail for p in checks.misplaced_key_lines(Bundle.model_validate(data))]
+    assert found == ['the key line "2 K⁺ binding drops phosphate → pump snaps back inward" is on b-1 ("Potassium leaks '
+                     'out, takes its plus charge down the hill"), which may sing something else: v1-2 ("Potassium '
+                     'hops on, the piece drops, the pump flips back in") says more of it']
+    assert checks.step_words("Na⁺ leaks, K⁺ dropped") == {"sodium", "leak", "potassium", "drop"}
 
 
 def test_key_lines_are_recorded_when_too_few_or_too_long():
