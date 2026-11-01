@@ -30,7 +30,7 @@ PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
 RECORD = "script.json"
 # Taken from the writer's brief (prompts/bundle.md) as they stand. "No song for this droplet" is in the brief only for
 # the lesson video alone (studio/steps/bundle.py, NO_SONG).
-BRIEF_SECTIONS = ("The audience", "The facts", "No song for this droplet")
+BRIEF_SECTIONS = ("How we teach", "The audience", "The facts", "No song for this droplet")
 
 
 class ScriptScene(Strict):

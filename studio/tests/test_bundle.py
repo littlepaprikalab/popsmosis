@@ -44,8 +44,8 @@ def test_the_prompt_holds_for_topics_outside_science():
     # The narration is the script's now, and ends on what goes in and comes out only for a process; the chorus,
     # which sums up the same way, keeps the warning.
     assert "for a process, what goes in and what comes out" in " ".join(script_step.narration_rules().split())
-    assert "for any other idea, its cause and its result. Only something really taken in" in prompt
-    assert "It sings something new, never the verses' story again" in prompt
+    assert 'for any other idea, its cause and its result, never "in" and "out"' in prompt
+    assert "never the verses' story again" in prompt and "Any other topic has no bridge" in prompt
     # Nov 1, the owner: no other case for a chain of events. Asked for "the same causes in another revolution", the
     # French Revolution's lesson and bridge turned to England, a segue that taught nothing.
     assert "another revolution" not in prompt and "other case" not in prompt
