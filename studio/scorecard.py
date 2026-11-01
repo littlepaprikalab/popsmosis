@@ -212,14 +212,17 @@ def droplet_text(bundle: Bundle, request: Request) -> str:
             section = lyric.section
             parts.append(f"[{section}]")
         parts.append(f"{lyric.id}: {lyric.text}")
-    parts += ["", "## Key lines (on screen, in order, each from the line it starts on)"]
+    parts += ["", "## Key lines (on screen, in the why chain's order, each from the line it starts on)"]
     for key in bundle.key_lines:
-        where = f'from lyric {key.from_line} "{lines.get(key.from_line, "?")}"'
+        where = f'from lyric {key.from_line} "{lines.get(key.from_line, "?")}"' if key.from_line else "not in the song"
         if key.from_narration:
             where += f'; from narration {key.from_narration} "{lines.get(key.from_narration, "?")}"'
         parts.append(f'- "{key.text}" ({where})')
     if not bundle.key_lines:
         parts.append("(none)")
+    if bundle.meanings:  # a droplet with no graph has none, and prints as it did before them
+        parts += ["", "## Meanings (each written under a graph part's name once it is named)",
+                  *[f"- {m.structure}: {m.text}" for m in bundle.meanings]]
     parts += ["", "## Narration (the lesson video's voice-over)", *[f"{n.id}: {n.text}" for n in bundle.narration]]
     if request.study_guide:
         parts += ["", "## Study guide the learner gave", request.study_guide.strip()]

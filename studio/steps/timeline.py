@@ -31,6 +31,9 @@ No model calls, so it is free to run again:
 - A conversion (Bundle.conversions) is written beside its structure, "H₂O → O₂ + H⁺ + e⁻", on the beats where
   that structure is first the subject (its spotlight, glow or camera target, or a stop of the particles), and
   it stays on every later beat of the scene.
+- A graph part's meaning (Bundle.meanings) is written under the name its drawing placed from when the part is
+  first named on, wherever and as long as the name is written. A part not named yet has none: shown from a graph's
+  first frame, four of them came on at once (Oct 31).
 - A path particles travel on a scene is drawn as arrows from stop to stop from when they first set off, and
   the arrows stay on every later beat of that scene, so the route stays readable after the particles stop.
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
@@ -93,6 +96,7 @@ from studio.schemas import (
     Bundle,
     Converting,
     Crowd,
+    Gloss,
     Locations,
     Particles,
     Reveal,
@@ -123,8 +127,12 @@ OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF
 MAX_ZOOM = 3.0
 FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
 DRAIN_S = 10.0  # seconds of them leaving that would empty it
-CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
+# How full a space is before anything has arrived: half, so it reads as crowded from the start (a resting cell's
+# sodium outside is there before the pump runs) and still visibly fills as particles arrive (H⁺ into the lumen). The
+# writer was asked to say which a crowd was (held, Nov 1) and never did; round 22's pump began nearly empty.
+CROWD_START = 0.5
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
+THIN_SHARE = 0.2  # where particles are scarce, about one dot for every five where they crowd
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
 RUN_MAX = 2  # flows moving at once on a beat that sums up: round 17's rock cycle moved 4 at once, and it read as a swarm
 SCENE_MIN_S = 3.5  # a picture on screen for less than this (one sung line) gives way to the one before it
@@ -243,6 +251,8 @@ def hook_cut(bundle: Bundle, song: Timeline) -> Timeline | None:
             # A value said before the cut is on from its first frame, settled: not fading in, nor popping, as if said
             # then.
             "values": [v.model_copy(update={"since": round(v.since - t0, 3)}) for v in beat.values],
+            "meanings": [m.model_copy(update={"since": round(m.since - t0, 3), "until": round(m.until - t0, 3)})
+                         for m in beat.meanings],
         }))
     duration = round(t1 - t0, 3)
     beats[-1] = beats[-1].model_copy(update={"t1": duration})
@@ -427,7 +437,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             label = notation(flow.carries)
             if len(stops) >= 2:
                 particles.append(Particles(path=stops, color=marker_colour(label, palette), trail=True, label=label,
-                                           blocked=stops[-1] in blockers, moves=flow.moves))
+                                           blocked=stops[-1] in blockers, moves=flow.moves,
+                                           says=" ".join(flow.says.split())))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
         if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
             target, zoom = None, 1.0
@@ -455,6 +466,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _fill_crowds(beats, bundle, located)
     _convert(beats, bundle, located)
     _write_values(beats, locations)
+    _mean(beats, bundle, locations)
     _run_all(beats, hook)
     _turn(beats, bundle, located)
     _route(beats)
@@ -467,7 +479,9 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     shown = {b["scene"] for b in beats}
     return Timeline(video=video, duration=duration, fps=media.FPS, audio=audio, palette=palette,
                     beats=[Beat(**b) for b in beats], stages=stages,
-                    key_terms=bundle.key_terms, axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
+                    key_terms=bundle.key_terms, core_idea=" ".join(bundle.core_idea.split()),
+                    bpm=bundle.music.bpm if video == "song" else 0,
+                    axes={s.id: s.axes for s in bundle.scenes if s.axes and s.id in shown})
 
 
 def _scenes(sung: list, directions: dict, located: set[str], hook: str, end: float,
@@ -510,9 +524,10 @@ def _says_core_idea(bundle: Bundle) -> int:
 
 def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     """Each beat's key line: the last one to start on or before its line (a lyric in the song, a narration
-    sentence in the lesson), held through the gaps after it. From each chorus (the core idea sung), or the
-    narration's last sentence that says it, the core idea, the whole why chain in one line, until a key line
-    starts later: round 19's Rome song held "Gracchi killed → politics settled by force" over its first chorus."""
+    sentence in the lesson), held through the gaps after it, and in the song only to the end of its section. None
+    from each chorus (the core idea sung) or the narration's sentence that says the core idea until a key line starts
+    later: the core idea is written at the top of every frame, and a step held over the line that sings something
+    else misled (the owner, Nov 1)."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -522,11 +537,17 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     if video == "song":
         choruses = [i for i, line in enumerate(bundle.lyrics) if line.section == "chorus"]
         core_from = [i for i in choruses if i - 1 not in choruses]  # where each chorus starts
+        # A step held into the next section sat over lines about something else ("2 K⁺ binding drops phosphate"
+        # over the pre-chorus's "Towing sugar uphill with it too", Nov 1): each section starts with none, unless a
+        # key line starts there too, which wins.
+        sections = [i for i, line in enumerate(bundle.lyrics)
+                    if i and line.section != bundle.lyrics[i - 1].section and i not in core_from]
     else:
-        core_from = [_says_core_idea(bundle)]
-    if bundle.core_idea.strip():
-        starts += [(at, " ".join(bundle.core_idea.split())) for at in core_from]
-    starts.sort(key=lambda s: s[0])  # stable: the core idea comes after a key line on the same line, and wins
+        core_from, sections = [_says_core_idea(bundle)], []
+    # Stable, in this order on one line: a section's start gives way to a key line there, which gives way to the
+    # core idea's (a chorus, or the narration's sentence that says it).
+    starts = [(at, "") for at in sections] + starts + [(at, "") for at in core_from]
+    starts.sort(key=lambda s: s[0])
     for i, beat in enumerate(beats):
         if beat["line_id"] in order:
             at = order[beat["line_id"]]
@@ -537,11 +558,17 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
 
 def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
     """How full each build-up's space is on each beat: rising while particles carrying it end there,
-    falling while they start from it, carried on from beat to beat whatever the scene. A beat shows
-    the spaces located on its scene."""
+    falling while they start from it, carried on from beat to beat whatever the scene, from half full. A beat shows the spaces located on its scene, and a few of each where its particles are scarce: the other
+    end of their paths, unless they crowd there too (round 22's pump showed no K⁺ outside the cell at all)."""
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
     level = dict.fromkeys(builds, CROWD_START)
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    thin: list[tuple[str, str]] = []
+    for label, region in builds:
+        for f in (f for beat in beats for f in beat["particles"] if f.label == label and len(f.path) > 1):
+            other = f.path[-1] if f.path[0] == region else f.path[0] if f.path[-1] == region else None
+            if other and other != region and (label, other) not in builds and (label, other) not in thin:
+                thin.append((label, other))
     for beat in beats:
         crowds = []
         for build in builds:
@@ -554,6 +581,9 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             if region in located.get(beat["scene"], set()):
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
                                     start=round(start, 4), end=round(end, 4)))
+        crowds += [Crowd(region=region, label=label, color=marker_colour(label, palette), start=THIN_SHARE,
+                         end=THIN_SHARE, thin=True)
+                   for label, region in thin if region in located.get(beat["scene"], set())]
         beat["crowds"] = crowds
 
 
@@ -576,11 +606,31 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             for c in bundle.conversions if c.structure in scene]
 
 
+def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
+    """The graph parts' meanings each beat writes (Bundle.meanings), under the name the part's drawing placed
+    (Value.label): from when the part is first named on a graph (its first reveal there) on, wherever its name is
+    written, as long as it is: part of its label, as a textbook's caption is (the owner, Oct 31). A part not named
+    yet has none, so a graph the video shows before naming its parts does not open with every meaning at once."""
+    named = {s.scene: {v.text for v in s.values if v.label} for s in locations.scenes}
+    meant = {m.structure: m.text for m in bundle.meanings}
+    first: dict[str, float] = {}  # structure -> when it is first named on a graph
+    for beat in beats:
+        for r in beat["reveal"]:
+            if r.name in meant and r.name in named.get(beat["scene"], set()) and r.name not in first:
+                first[r.name] = max(r.t, beat["t0"])
+    end = beats[-1]["t1"] if beats else 0.0
+    for beat in beats:
+        beat["meanings"] = [Gloss(structure=name, text=meant[name], since=round(first[name], 3), until=round(end, 3))
+                            for name in meant if name in first and first[name] < beat["t1"]
+                            and name in named.get(beat["scene"], set())]
+
+
 def _write_values(beats: list[dict], locations: Locations) -> None:
     """The drawn values each beat writes (SceneLocations.values): an amount from the word that first says it on a
     beat of its scene, a tick (and an amount no line there says) from the scene's first beat; each stays on every later
     beat of the scene, as a label does."""
-    marked = {s.scene: s.values for s in locations.scenes if s.values}
+    # A structure's name (Value.label) is no value: the renderer writes it with its structure, as a label.
+    marked = {s.scene: [v for v in s.values if not v.label] for s in locations.scenes if any(not v.label for v in s.values)}
     since: dict[str, list[float]] = {}
     for scene, values in marked.items():
         on = [b for b in beats if b["scene"] == scene]

@@ -11,6 +11,9 @@ from studio.schemas import Bundle, FactAudit, FactCheck, FactCheckReport, Lesson
 from studio.tests.sample import bundle_data, lesson_bundle_data
 from studio.steps import bundle as bundle_step
 from studio.steps import factcheck as factcheck_step
+from studio.steps import script as script_step
+
+NO_SCRIPT = bundle_step.NO_SCRIPT + script_step.narration_rules()  # the brief's tail with no script
 
 QUESTION = {
     "id": "q1", "content": "ATP synthesis  for my\nAP Bio exam", "status": "PENDING", "answer": None,
@@ -746,7 +749,7 @@ def test_the_operators_note_ends_the_bundle_prompt_and_never_reaches_the_fact_ch
     note = "Pictures keep coming back\nwith text in them;   keep image prompts free of labels."
     assert operator_run.run("q1", api=FakeApi(), ask=ask, note=note)[0] == "DONE"
     clean = "Pictures keep coming back with text in them; keep image prompts free of labels."
-    assert ask.systems["bundle"] == bundle_step.PROMPT + bundle_step.NOTE.format(note=clean)
+    assert ask.systems["bundle"] == bundle_step.PROMPT + NO_SCRIPT + bundle_step.NOTE.format(note=clean)
     assert ask.systems["factcheck round 1"] == factcheck_step.PROMPT
     [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert record["note"] == clean
@@ -755,7 +758,7 @@ def test_the_operators_note_ends_the_bundle_prompt_and_never_reaches_the_fact_ch
 def test_without_a_note_the_bundle_prompt_is_as_it_was(jobs_root):
     ask = Recording()
     assert operator_run.run("q1", api=FakeApi(), ask=ask, note="   ")[0] == "DONE"
-    assert ask.systems["bundle"] == bundle_step.PROMPT
+    assert ask.systems["bundle"] == bundle_step.PROMPT + NO_SCRIPT  # the fake writes no script
     [record] = operator_run.read_jsonl(jobs_root / "q1" / "runs.jsonl")
     assert "note" not in record
 

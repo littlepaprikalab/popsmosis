@@ -154,12 +154,17 @@ MOVES = ('How it moves: "crosses" when it passes through one wall, membrane or c
          'wall, H⁺ through ATP synthase, salt out of the tubule), drawn as particles; "travels" when it goes a long '
          'way along several parts (filtrate down the nephron, magma up through the volcano, sediment down a river), '
          'drawn as an arrow where it passes from each part into the next; "" with no particles')
+# What an arrow is about, written beside it, joined to it (the owner, Nov 1: an arrow with nothing beside it left the
+# learner asking what it meant). "" in a bundle written before, and the video writes none off a graph.
+SAYS = ('For an arrow (it travels, or what moves has no short symbol), one line beside it saying what it shows, at '
+        'most 40 characters: "Glucose rides in with sodium", "Shortage pushes the price up"; "" otherwise')
 
 
 class Flow(Strict):
     particles: list[str] = Field(description="Structure names they travel between, in order")
     carries: str = Field(description='What they are, as a textbook prints it ("O₂")')
     moves: Moves = Field(default_factory=str, description=MOVES)
+    says: str = Field(default_factory=str, description=SAYS)
 
 
 class Direction(Strict):
@@ -171,6 +176,7 @@ class Direction(Strict):
     carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
                                      '"" for none')
     moves: Moves = Field(default_factory=str, description=MOVES)
+    says: str = Field(default_factory=str, description=SAYS)
     glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
     # A second thing moving on the line at the same time, when it names both: what one structure gives off together
@@ -180,13 +186,22 @@ class Direction(Strict):
 
     def flows(self) -> list[Flow]:
         """Everything moving on the line, the main flow first; a flow with no path is left out."""
-        main = [Flow(particles=self.particles, carries=self.carries, moves=self.moves)] if self.particles else []
+        main = [Flow(particles=self.particles, carries=self.carries, moves=self.moves, says=self.says)] \
+            if self.particles else []
         return main + [f for f in self.also if f.particles]
 
 
 class BuildUp(Strict):
     carries: str = Field(description='What piles up, as `carries` writes it ("H⁺")')
     region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _without_held(cls, data):
+        """`held` (Nov 1, dropped the same day: the writer never set it) is ignored in what was saved with it."""
+        if isinstance(data, dict) and "held" in data:
+            data = {key: value for key, value in data.items() if key != "held"}
+        return data
 
 
 class Block(Strict):
@@ -200,7 +215,8 @@ class Spin(Strict):
 
 
 class KeyLine(Strict):
-    from_line: str = Field(description="The id of the lyric line it appears on; it stays until the next key line's")
+    from_line: str = Field(description="The id of the lyric line that sings this step, where it appears and stays "
+                                       "until the next key line's; \"\" for a step the song never sings")
     text: str = Field(description='The step being sung, in at most 10 words: "Light splits water → O₂ + H⁺ + e⁻"')
     # Where the lesson video writes the same line. "" in a bundle written before the lesson video showed them.
     from_narration: str = Field(default_factory=str, description="The id of the narration sentence it appears on in the "
@@ -211,6 +227,12 @@ class Conversion(Strict):
     structure: str = Field(description="The structure where it happens (a complex, an enzyme, a stage), by its name")
     inputs: list[str] = Field(description='What goes in, as a textbook prints it: ["H₂O"], ["NADP⁺", "H⁺", "e⁻"]')
     outputs: list[str] = Field(description='What comes out, as a textbook prints it: ["O₂", "H⁺", "e⁻"]')
+
+
+class Meaning(Strict):
+    structure: str = Field(description="A part of a graph (a curve, a line, a point, a gap), by its name")
+    text: str = Field(description='What it says, as the learner reads it off the graph: "lower price → people buy '
+                                  'more"')
 
 
 def tag_of(value: str) -> str:
@@ -286,6 +308,11 @@ class Bundle(Strict):
     # A bundle written before Oct 29 has none.
     conversions: list[Conversion] = Field(default_factory=list,
                                           description="What turns into what, and where; [] for none")
+    # What each part of a graph says, written under its name once the part is named ("lower price → people
+    # buy more" under "Demand curve"): reading a curve's meaning off its slope is the hard part of a graph for a
+    # learner new to them (the owner, Oct 31). A bundle written before Oct 31 has none.
+    meanings: list[Meaning] = Field(default_factory=list,
+                                    description="What each part of a graph says, written under its name; [] for none")
     # What both videos write above their diagram, held while the lines go by, so a learner who cannot keep up
     # with them reads the step being taught. A bundle written before Oct 29 has none.
     key_lines: list[KeyLine] = Field(default_factory=list,
@@ -472,8 +499,8 @@ def bundle_problems(bundle: Bundle) -> list[str]:
 class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
-                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style", "axes", "song-scene"]
+                  "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
+                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -581,6 +608,20 @@ class Correction(Strict):
 class RewrittenCouplet(Strict):
     id: str
     lines: list[str] = Field(description="The couplet rewritten, a line for each line it had, in order")
+    appeal: str = Field(default_factory=str,
+                        description='"" unless the checker is wrong about the couplet as it was: why no student who '
+                                    'sings it would believe its problem, in one sentence')
+
+
+class Appeal(Strict):
+    """A couplet the songwriter said the checker was wrong about (RewrittenCouplet.appeal), and what the checker made of
+    it on a second look: upheld, it is sung as it was written."""
+
+    round: int  # the round that heard it
+    ids: list[str]
+    text: str  # the couplet as it was written, its lines joined by "\n"
+    reason: str
+    upheld: bool
 
 
 class LyricRewrite(Strict):
@@ -597,6 +638,8 @@ class FactCheckReport(Strict):
     rounds: int
     lines: list[CheckedLine]
     corrections: list[Correction]
+    # The songwriter's appeals, kept out of factcheck.json as Correction.by is: songwriter.json lists them.
+    appeals: list[Appeal] = Field(default_factory=list, exclude=True)
 
 
 # --- Job input ----------------------------------------------------------------
@@ -674,6 +717,9 @@ class Value(Strict):
     at: Point  # art pixels: the point it is written beside
     side: Literal["above", "below", "left", "right"] = "above"  # which side of the point
     tick: bool = False  # read off the axis, not said: on from the scene's first frame
+    # A structure's name (text), placed by the drawing as a textbook prints a curve's name beside it: written in the
+    # structure's colour as the structure is revealed, in place of the pill the renderer draws other labels in.
+    label: bool = False
 
 
 class SceneLocations(Strict):
@@ -839,6 +885,7 @@ class Particles(Strict):
     label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
     blocked: bool = False  # the last stop stops them (Bundle.blocks): they pile up there, not go round again
     moves: Moves = ""  # as the bundle directs it (Direction.moves); "" in a timeline made before, or a bundle
+    says: str = ""  # its arrow's one-liner (Direction.says), written beside it; "" for none
 
     @field_validator("color")
     @classmethod
@@ -854,6 +901,15 @@ class Crowd(Strict):
     color: str
     start: float  # how full it is when the beat starts, 0-1
     end: float  # and when it ends; it changes evenly in between
+    thin: bool = False  # a few of them where they are scarce (the other end of their path), not a space filling up
+
+    @model_validator(mode="before")
+    @classmethod
+    def _without_held(cls, data):
+        """`held` (Nov 1, dropped the same day: the writer never set it) is ignored in what was saved with it."""
+        if isinstance(data, dict) and "held" in data:
+            data = {key: value for key, value in data.items() if key != "held"}
+        return data
 
     @field_validator("color")
     @classmethod
@@ -907,6 +963,16 @@ class Written(Strict):
     tick: bool = False  # an axis's tick, written as the axis names are; an amount stands out, and pops as it is said
 
 
+class Gloss(Strict):
+    """A graph part's meaning (Bundle.meanings) as the beats show it, from `since`, when the part is first named, to
+    `until`, the video's end: written under its name, wherever the name is written."""
+
+    structure: str  # with a name its drawing placed (Value.label) on the beat's scene
+    text: str  # "lower price → people buy more"
+    since: float
+    until: float
+
+
 class Converting(Strict):
     """A conversion (Bundle.conversions) as one beat shows it: written beside the structure where it happens."""
 
@@ -932,6 +998,7 @@ class Beat(Strict):
     conversions: list[Converting] = []  # the conversions written on this beat; [] in a timeline made before
     routes: list[Route] = []  # the paths drawn as arrows on this beat; [] in a timeline made before
     values: list[Written] = []  # the drawn values written on this beat; [] in a timeline made before
+    meanings: list[Gloss] = []  # the graph parts' meanings written on this beat; [] in a timeline made before
     glow: str | None = None  # a structure lit up on this line (Direction.glow); None in a timeline made before
     key_line: str = ""  # written above the diagram (Bundle.key_lines; the core idea on the last chorus); "" for none
     caption: str | None
@@ -942,10 +1009,12 @@ class Beat(Strict):
 
 class Flag(Strict):
     """A label the art check found wrong in a painted picture (art.flags()): the box round it, in art pixels, and
-    the sticky note the video puts beside it, for the student."""
+    the sticky note the video puts beside it, for the student. Or a note about one place in it (art.PinnedNote),
+    with no ring: the sticky note joined to the place."""
 
     box: Box
     note: str
+    ring: bool = True
 
 
 class Timeline(Strict):
@@ -964,6 +1033,8 @@ class Timeline(Strict):
     beats: list[Beat]
     title: str = ""  # written across the top by a layout with a title band (the hook cut's): the topic
     key_terms: list[str] = []  # Bundle.key_terms: picked out in colour where a key line says one
+    core_idea: str = ""  # Bundle.core_idea, written across the top of every frame; "" in a timeline made before
+    bpm: int = 0  # the song's tempo, which a working part pulses to; 0 in the lesson, and in a timeline made before
     stages: list[list[str]] = []  # each process's stage scenes, in order: the video cross-fades between them
     # What the art check found still wrong in a scene's AI-made picture, a sentence each for the student,
     # by scene: shown beside the picture, so a flawed picture is disclosed rather than passed off as right.

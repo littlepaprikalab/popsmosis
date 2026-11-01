@@ -117,12 +117,13 @@ class FakeMuse:
 class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
-    def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=()):
+    def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=(), pinned=None):
         self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check
         self.boxes = boxes or {}  # structure -> a Spot dict
         self.writing = writing or {}  # scene -> the LabelFlag dicts the helper confirms, boxes and notes
         self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
         self.unconfirmed = set(unconfirmed)  # notes the brain, asked to confirm them, finds wrong
+        self.pinned = pinned or {}  # scene -> the PinnedNote dicts the brain gives for notes about one place
         self.asked: list[tuple[str, str]] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -131,7 +132,8 @@ class FakeHelper:
         if schema is art.ConfirmedNotes:  # the brain's look at the notes the helper wrote
             assert role == "brain" and system == art.NOTES_PROMPT and "The lesson's facts:" in prompt
             notes = [line[2:] for line in prompt.split("The notes:\n")[1].splitlines()]
-            return {"keep": [n for n in notes if n not in self.unconfirmed]}
+            return {"keep": [n for n in notes if n not in self.unconfirmed],
+                    "pinned": self.pinned.get(label.split()[2], [])}
         assert role == "helper"
         if schema is art.ArtCheck:
             assert system == art.CHECK_PROMPT
@@ -170,7 +172,7 @@ def test_muse_image_paints_each_scene_and_the_helper_checks_it(job, monkeypatch)
 
     prompt = dict(fake.painted)["art overview"]
     bundle = sample_media.bundle()
-    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.LABELS)
+    assert prompt.startswith(bundle.scenes[1].image_prompt.rstrip(".")) and prompt.endswith(art.labels_line(bundle.scenes[1]))
     assert "Colours: Thylakoid green, Cytochrome b6f orange." in prompt  # names, which the model reads
     assert "#" not in prompt and "slate blue" not in prompt  # no hex codes, and no style line
 
@@ -268,12 +270,6 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     bundle = checks.load(job / "bundle.json")
     assert art.notices(job, bundle) == {"synthase": [note]}
     assert "art notes synthase" in helper.labels()  # confirmed by the brain before it is shown
-    # The same picture as the lesson's analogy says nothing: an everyday picture cannot teach the topic wrong.
-    as_analogy = bundle.model_copy(update={"scenes": [s.model_copy(update={"id": "analogy"}) if s.id == "synthase"
-                                                      else s for s in bundle.scenes]})
-    shutil.copy(job / "art" / "synthase.png", job / "art" / "analogy.png")
-    (job / "art" / "analogy.json").write_text(json.dumps({**made, "key": art.key(as_analogy, as_analogy.scenes[-1])}))
-    assert art._painted(job, as_analogy, as_analogy.scenes[-1]) and art.notices(job, as_analogy) == {}
     staged(job)  # a changed bundle: the pictures are no longer this bundle's, so nothing is disclosed for them
     assert art.notices(job, checks.load(job / "bundle.json")) == {}
 
@@ -374,13 +370,13 @@ def test_every_scene_is_asked_to_label_its_structures_and_for_no_look():
     # Oct 31: without the style line (a flat dark slate blue background, rounded proteins, only the parts named, no
     # text) the pictures came back better, and the operator's labels line, last, got them labelled.
     bundle = sample_media.bundle()
-    prompts = [art.paint_prompt(bundle, scene) for scene in bundle.scenes]
-    prompts.append(art.paint_prompt(bundle, bundle.scenes[1].model_copy(update={"id": "analogy"})))
-    for prompt in prompts:
-        assert prompt.endswith(" Colours: " + prompt.split(" Colours: ")[1].split(". ")[0] + ". " + art.LABELS)
+    for scene in bundle.scenes:
+        prompt = art.paint_prompt(bundle, scene)
+        colours = prompt.split(" Colours: ")[1].split(". ")[0]
+        assert prompt.endswith(" Colours: " + colours + ". " + art.labels_line(scene))
         assert not any(old in prompt for old in ("slate blue", "No text", "Proteins and molecules", "Draw only"))
     refused = art.paint_prompt(bundle, bundle.scenes[1], ["no b6f"])
-    assert refused.endswith("refused: no b6f. Make it again with these fixed. " + art.LABELS)
+    assert refused.endswith("refused: no b6f. Make it again with these fixed. " + art.labels_line(bundle.scenes[1]))
 
 
 def test_the_helper_is_told_what_kind_of_scene_it_checks():
@@ -389,10 +385,7 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert "The scene is the video's opening" in hook
     assert "The scene is the overview" in overview
     assert "The scene is a close-up of one part of the topic." in synthase
-    analogy = bundle.scenes[2].model_copy(update={"id": "analogy"})
-    told = art.check_prompt(bundle, analogy)
-    assert "The scene is the lesson's analogy" in told and "not the topic's own parts" in told
-    assert told.index("The scene is") < told.index("What the scene should show")
+    assert overview.index("The scene is") < overview.index("What the scene should show")
     song = bundle.scenes[2].model_copy(update={"id": "chorus", "song_only": True})
     assert f"The scene is {art.SONG}" in art.check_prompt(bundle, song)
     # Which video plays a picture is no part of what it shows: a song's picture the lesson takes keeps its painting.
@@ -421,12 +414,14 @@ def test_a_wrong_label_is_kept_and_flagged_where_the_helper_finds_it(job, monkey
     [flag] = art.flags(job, bundle)["overview"]
     assert (flag.box.x0, flag.box.y0, flag.box.x1, flag.box.y1) == pytest.approx((840, 140, 960, 210))  # art pixels
     assert flag.note == "This is cytochrome b6f"
-    assert list(art.flags(job, bundle)) == ["overview"] and art.notices(job, bundle) == {"overview": [note]}
+    # Its note is the sticky note's to say: the card beside the picture leaves it out (the owner, Nov 1).
+    assert list(art.flags(job, bundle)) == ["overview"] and art.notices(job, bundle) == {}
     assert sorted(art.self_labelled(job, bundle)) == ["hook", "overview", "synthase"]
 
     # A wrong label the helper cannot find, or a call that fails, is not flagged; the picture and its note stand.
     art.run(job, FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]}))
     assert "flags" not in json.loads((job / "art" / "overview.json").read_text()) and art.flags(job, bundle) == {}
+    assert art.notices(job, bundle) == {"overview": [note]}  # not flagged, so the card still says it
 
     def no_boxes(role, prompt, schema=None, images=(), **kwargs):
         if schema is art.LabelFlags:
@@ -938,7 +933,7 @@ def test_a_coarse_mask_is_stretched_over_its_box_and_clipped_to_the_art():
 def test_the_helpers_prompts_read_cleanly_and_its_answers_fit_both_providers():
     for schema in (art.ArtCheck, locate.Spot, art.LabelFlags):
         brain.strict_schema(schema)  # raises on a keyword one provider would refuse
-    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.FLAGS_PROMPT, art.LABELS):
+    for prompt in (art.CHECK_PROMPT, locate.BOX_PROMPT, art.FLAGS_PROMPT, *map(art.labels_line, sample_media.bundle().scenes)):
         assert "\\" not in prompt and "  " not in prompt
 
 
@@ -955,25 +950,43 @@ def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
     assert muse.paint(tmp_path, "art hook", "a leaf") == picture() and len(tries) == 2
 
 
+def test_a_note_about_one_place_is_stuck_there_and_leaves_the_card(job, monkeypatch):
+    # The owner (Nov 1): a note on a card beside the picture left the learner to find the place; one about a place
+    # is a sticky note there, with no ring, and the card keeps only what has no one place.
+    placed = "The picture shows only plus signs outside; the inner face of the membrane is negative."
+    whole = "The picture shows far too many pumps for one patch of membrane."
+    FakeMuse().install(monkeypatch)
+    pin = {"text": placed, "note": "The inner face is negative", "left": 0.1, "top": 0.6, "right": 0.9, "bottom": 0.7}
+    helper = FakeHelper({"overview": [{"notes": [placed, whole]}]}, pinned={"overview": [pin]})
+    art.run(job, helper)
+    bundle = checks.load(job / "bundle.json")
+    assert art.notices(job, bundle) == {"overview": [whole]}
+    [flag] = art.flags(job, bundle)["overview"]
+    assert flag.note == "The inner face is negative" and flag.ring is False
+    assert (flag.box.y0, flag.box.y1) == pytest.approx((0.6 * media.ART_HEIGHT, 0.7 * media.ART_HEIGHT))
+
+
 def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_beside_it(job, monkeypatch):
     # Across the steps: the painted picture labels its own parts, so the video draws none over it; the label the
-    # check found wrong is flagged on the picture, and its note for the student reaches both timelines as a notice.
+    # check found wrong is flagged on the picture with its sticky note, and the card beside the picture keeps only
+    # the notes that are not about it, in both timelines.
     # The upright hook cut puts that card above the picture, which keeps the frame's width, and the wide song puts
     # it at the right.
     from studio.render import primitives as p
     from studio.render.renderer import NOTICE_GAP, NOTICE_W, Renderer
     from studio.steps import timeline as timeline_step
 
-    note = "The label 'PSI' is on the cytochrome complex; photosystem I is not in this picture."
+    flagged = "The label 'PSI' is on the cytochrome complex; photosystem I is not in this picture."
+    note = "Cytochrome b6f should sit across the membrane, not on it."
     FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]},
+    helper = FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [flagged, note]}]},
                         writing={"overview": [LABEL_BOX]})
     art.run(job, helper)
     locate.run(job, helper)
     timeline_step.run(job)
     song = jobs.read(job / media.timeline_path("song"), Timeline)
     lesson = jobs.read(job / media.timeline_path("lesson"), Timeline)
-    assert song.notices == {"overview": [note]}
+    assert song.notices == {"overview": [note]}  # the flagged label's note is its sticky note's alone
     assert lesson.notices == ({"overview": [note]} if any(b.scene == "overview" for b in lesson.beats) else {})
     shown = sorted({b.scene for b in song.beats})
     assert sorted(song.self_labelled) == shown and list(song.flags) == ["overview"]

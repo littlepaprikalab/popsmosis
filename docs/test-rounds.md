@@ -1184,6 +1184,190 @@ wrote "One hundred dollars" (its sentence spells it out; the drawer now writes f
 pills crowd the thin top blocks, which is what a director's review would catch
 (docs/director-review.md).
 
+## In-session tests, Oct 31: the fact-check, the songwriter and title lines
+
+No API calls: subagents stood in for every model call (CLAUDE.md), on the 12 scorecard topics' droplets written
+in-session on the day's prompts.
+
+**The fact-check is not degrading the songs.** Each droplet's round-1 call, built by the code
+(`check_bundle`) and answered by a subagent on `prompts/factcheck.md`, failed 22 of about 1,500 lines and 3 of
+228 song couplets (the audit step was skipped: the facts as the brain wrote them). Its fixes were mostly right
+("Spanish verbs come in two moods" is wrong: there is the imperative too; "The secret's shared with only us" became
+"The suitors miss what's plain to us", rhyme kept). Two findings:
+
+- Four droplets wrote "Most people say yes", copied from the script prompt's example, and the checker softened each
+  to "Many people": the example now says "Many people", and why.
+- Its fix to the sodium pump's chorus, "Open a gate, the rush begins / Sodium out, potassium in", flipped the
+  title line to "Potassium out, sodium in", so the chorus no longer ended on its first line.
+
+**The songwriter** (`prompts/songwriter.md`), on those 3 couplets and 6 the scorecard judge had flagged, the old
+prompt against a new one carrying the song brief's craft and an appeal, judged blind by a Sonnet subagent: every
+rewrite of both true, the new one preferred 3 to 1 (5 ties), singing 3.67 to 3.44 of 5. The checker was right on 7
+of 9; on the two it was wrong about, the new one did better: it defended "The gas is light, it shoots out quick",
+the facts' own words, where the old one sang "Hot gas at high pressure shoots out quick". Both flipped the sodium
+pump's title line until the new prompt said never to change one and to rewrite the line beside it ("Gates let it
+rush, the pump still spins": the title line kept, though "spins" is no picture of that pump). Shipped, with the
+appeal.
+
+**Title lines**, the intro and chorus written from each topic's script, judged blind against the hook anchors:
+
+| Wording | Title line, mean | Preferred | Weak (3 or lower) |
+|---|---|---|---|
+| The examples as they are ("Open the gates, let sodium in", "Split the water, catch the light") | 3.92 / 4.17 | 7 / 8 of 12 | 2 / 1 |
+| Examples from three subjects ("The Moon pulls, the oceans rise", "Buy on credit, watch the banks fall") and "a stranger can guess the topic" | 3.50 | 4 | 6 |
+| "Split the water…", "Pull the sea, then let it go", "Print the page, spread the word" | 4.00 | 4 | 2 |
+
+The first row is one set of title lines judged twice: 3.92 and 4.17, so about 0.2 is the judge's own noise. The
+statement-shaped example ("The Moon pulls…") was copied as a shape ("The catalyst lowers the hump"); commands come
+out as chants ("Ring the tone, then bring the bowl"). Neither change helped. The owner then dropped "Open the gates,
+let sodium in" (it reads like a sentence, and sings sodium the way the pump does not move it), so the examples are
+the third row's, which tested within the judge's noise of the first. On
+its own topic an example is copied word for word (the light reactions sang "Split the water, catch the light" in
+both arms that had it): it teaches the shape everywhere else.
+
+Then the chorus example, which had been "Open the gates, let sodium in / Flip the charge and the spike begins", each
+arm against the old brief (judged by Sonnet, then by Opus from the fifth test on):
+
+| Title examples, chorus example | New | Old brief | Preferred new | Weak, new / old |
+|---|---|---|---|---|
+| Split, Pull, Print; "Moon overhead, the sea climbs high / Moon moves on, the sand runs dry" (Sonnet) | 3.67 | 4.08 | 2 of 12 (1 tie) | 6 / 2 |
+| Split, Pull, Print; "Spot the germ, lock it tight / Call the cells, win the fight" (Opus) | 4.17 | 4.67 | 5 of 12 | 1 / 0 |
+| Split, Pull, "Cash in the carriers"; "Pull the sea, then let it go / High tide, low tide, to and fro" (Opus, against the old brief written afresh) | 4.00 | 4.17 | 5 of 12 | 4 / 1 |
+
+The old brief's lead was mostly one lucky draw: written again, its title lines scored 4.17 where its first set had
+scored 4.67, so a brief's own runs differ by about half a point on 12 topics, more than the judge's 0.2. These tests
+cannot tell apart briefs closer than that. The last row, the owner's picks, is within that of the old brief and ships:
+the title examples "Split the water, catch the light", "Pull the sea, then let it go" and "Cash in the carriers" (a
+phrase that is also the science, from the owner's favourite song), and a chorus example that opens on a title example
+and answers it, as the old one did. The Moon chorus, the one example that was not a command, did worst: statement
+examples are copied as statements. Its writer sang "Split the water, bank the sun" on the light reactions, rather
+than copy the example.
+
+The owner also loosened the song's shape (Oct 31): the intro need not open on the title line, as a song that always
+starts on its title is predictable, and the chorus may run 5 lines, as Split the Water's does (docs/reference-songs.md).
+
+**Rapped verses that review for the exam**, after the owner's favourite, Cash in the Carrier (docs/reference-songs.md):
+five AP topics (cellular respiration, the light reactions, the sodium pump, supply and demand, the derivative) sung
+in its style, rapped verses and a sung chorus, by the brief as it was and by one with a rule that rapped verses
+carry the course's counts, numbers and names in order, judged blind by Opus:
+
+| | Exam value | Singability | Accuracy | Preferred |
+|---|---|---|---|---|
+| The brief as it was | 3.4 | 4.4 | 5.0 (no errors) | 1 of 5 |
+| Rapped verses review for the exam, up to about 16 syllables | 4.4 | 3.4 | 4.6 (3 errors) | 4 of 5 |
+
+The review rap sang what the exam asks ("Three sodium inside lock into the pump's pockets tight", "Sodium's ten times
+thicker outside, potassium thirty times in", "Inside's minus seventy"), where the brief as it was never gave the pump's
+3 to 2. Its lines ran long (median 15 syllables, 11 of 80 over 16), and its errors were overreach: "Each hop powers a
+pump" (only three complexes pump), "Same chain" for the chloroplast's and the mitochondrion's. Held to 14 syllables
+against 16, judged by Opus told that a rapped bar at 100 bpm carries 16 or more, the two tied: preferred 3 to 2,
+singability 4.0 each, exam value 4.0 and 4.2. Told that, the judge scored the 16-syllable songs' singing 4.0, where it
+had scored it 3.4: what it had marked down was length, not flow. Shipped at 16, as the owner asked (rap is fast).
+
+**Then undone, after the owner watched both** (Nov 1). The sodium pump's two songs were sung by Lyria in Cash in the
+Carrier's style ($0.16) and made into song videos with the same pictures (the earlier droplet's paintings, a water
+tower drawn in the session for the analogy). The owner chose the brief as it was: the review rap had "too much
+detail", more than a student will retain from a song, whatever the judge scored for exam value. Rapped verses keep
+the sung song's rules (one number at most, about 14 syllables). Lyria's first take of the review rap also left out
+its bridge and last chorus; sung again, it sang every line.
+
+## In-session tests, Nov 1: the pump video, its analogy, the core idea, step lines and crowds
+
+All in the session, with every API key unset, except one Muse Image painting the owner asked for ($0.01: the club,
+below) and a Lyria song for it.
+
+### The analogy picture
+
+The owner read the pump song's lyrics and understood them, but not the video: "trying to reconcile the bounce".
+The water tower (an SVG drawing) was "very confusing", with a tower, a pump and a house to map. A nightclub
+(bouncer, door, street), painted by Muse Image, read no better: "the analogy doesn't quite work for this topic".
+The song then stopped playing over the analogy scene (`checks._song_off_analogy`), and the club song was directed
+again over the real pictures only (job sp-f). A dam was drawn too (SVG, passed the picture check on its first try)
+but not shown. The owner's decision: no analogy picture for any topic. The analogy stays in words, said over the
+real picture, each part matched to the real part as it is named. That is the next change.
+
+### What it is and why it's needed
+
+The pump lesson said what the pump is in one phrase ("a protein in the cell membrane") and why it runs ("so the
+gradients would fade if nothing pushed them back"), but not what the gradients are for: nerve signals were only in
+the song ("And that spark races down your nerve"), and its core idea was a step, "Each ATP flips the pump's shape,
+carrying three sodium out and two potassium in, as fast as they leak back." The core idea rule now has two kinds: a
+thing or an idea with a job says what it is and what it is for, then how; a topic about why something happens says
+its cause and effect. A subagent writing under the new rule, from the same droplet's facts, wrote "A pump in the
+cell membrane keeps sodium out and potassium in, using ATP to push back what leaks": it left out "so nerves can
+fire", since those facts never say what the gradients are for. Only a fresh droplet, whose facts are written under
+the rule, will show whether it says why.
+
+A "THE BIG IDEA" tag on the key line band was tried and undone the same hour: at the end of the lesson the band
+already repeated the narration word for word. The core idea is now written quietly across the top of every frame
+instead, and the band shows only steps.
+
+### Step lines on the wrong lyric
+
+Five of the pump song's six key lines sat on lyrics singing another step ("2 K⁺ binding drops phosphate → pump
+snaps back inward" over "Potassium leaks out, takes its plus charge down the hill"). The brief asked for both the
+why chain's order and the song's, and the song sang the pump's cycle before the leak. The song's order now wins.
+A check by shared words was tried on the pump song and the 12 scorecard songs of Oct 31: it found the pump's three
+clear cases, but on the 12 it flagged six lines, most of them right where they were, sung through a metaphor (the
+catalyst song's "Hit too soft and you roll back down" is its activation energy step) or one line from the line
+that repeats the words. It records a hint (`checks.misplaced_key_lines`) and moves nothing.
+
+### Crowds of dots
+
+The owner saw no K⁺ outside the cell, and too few dots. Each crowd started with a few dots and filled only while
+the pump ran, the leak drained the K⁺ inside to two, and the cytoplasm's outline (from SAM) was the band just under
+the membrane, room for four dots, and hidden until the song named "inside" at 66 s. Now a held difference starts
+full and only dips, a few of each kind show where it is scarce, a held crowd shows half pale before its space is
+named, and a thin outline seats its crowd in its whole box.
+
+### A lyric the motion contradicts
+
+The club song's pre-chorus sang "Side door swings open, the street floods in / That's how a nerve signal begins"
+over Na⁺ moving through the leak channels: as if leak channels started nerve signals. The fact-check judges each
+lyric and each motion on its own, so nothing asks whether a lyric matches what moves under it. A subagent stood in
+for the checker on the droplet's whole round-one call (136 lines: 111 SUPPORTED, 24 FILLER, 1 UNSUPPORTED) and did
+fail the couplet, but only because the song had said "Side door's cracked, the leak channels let the sodium in" a
+verse before, so it read the side door as the leak channels, which stay open. Its correction, "Other doors swing
+open", would still be sung over Na⁺ moving through the leak channels: the motion passed on its own ("Na⁺ travels
+from Outside of the cell to Leak channels to Inside of the cell", f1). Checking each sung line together with what
+moves under it would catch both; a pair that fails would lose its motion, not its words.
+
+### Rap sections
+
+K-pop and Latin pop now rap their second verse, and dance-pop its bridge; the rest is sung (the owner: "it doesn't
+mean the whole song is rap"). Two writers in the session wrote derivative (Latin pop) and supply and demand
+(dance-pop) from the new brief: each rapped only that section, said so in its style ("the first verse sung and the
+second verse rapped in quick, crisp bars"), and kept the chorus sung; the rapped lines ran 9 to 15 syllables against
+6 to 10 sung, in couplets like the rest ("Slide that second point in, make the gap get thin / Every secant line
+swings and the slopes close in"). Lyria sang both ($0.16). Timed by the studio's own aligner, the rapped section ran
+about half again as fast as the sung lines (6.4 and 6.0 syllables a second, against 4.1 and 4.0), though the aligner
+was unsure of 30 and 19 lines; the owner listened and approved both.
+
+### Panels
+
+Classical conditioning asked for panels in both of the day's scorecard runs ("before, during and after, three
+panels"), and the rocket for one picture in air and in space side by side. A rule in the brief and the script's
+prompt now says a picture is one moment, never panels: moments of one process are its stages, and a comparison is
+two scenes. Two writers in the session wrote both topics under it. Neither asked for a panel: classical
+conditioning drew "before", "pairing" and "after" as three stages of the same lab, and the rocket "in-space" as a
+scene of its own. The rule stays, and the stages' older "never several stages side by side" is now said in it.
+
+### A trim of the writer's brief
+
+The brief was read for what it says twice, or says for something code now does. It lost 500 words (9,298 to
+8,795), and nothing it asks changed:
+
+- Its narration section: the script's narration is spoken word for word (`script.follow`), so those rules were read
+  only when the script call failed, and had drifted from the script's (350 to 450 words against 300 to 420). With
+  no script, the bundle writer now gets the script prompt's narration rules (`script.narration_rules`).
+- What code does: `music.sections` (set from the lyrics), the lesson never playing a song picture
+  (`_settle_song_scenes`).
+- Rules said twice: key terms in the lesson, the song and the narration; a structure's name and colour; the song's
+  first scene; the chorus's scene; the fact-check, now named once for everything it reads; the key lines' order.
+- "A line that sums up holds still", against "the chorus and the summary lines show the whole pathway": in the two
+  scorecard runs, the writer showed the whole pathway wherever something travels (31 of 34 chorus lines for the
+  light reactions, 28 of 31 for the pump) and held still where nothing does. The first went.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

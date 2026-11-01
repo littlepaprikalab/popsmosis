@@ -66,6 +66,52 @@ def test_a_wrong_couplet_is_rewritten_by_the_songwriter_and_checked_again():
                        "problem": "wrong", "true_version": [FIRST, FIXED]}
 
 
+def appeals(couplets_asked):
+    """A songwriter that says the checker was wrong about the seeded couplet, and rewrites it in case it is not."""
+    return [{"id": c["id"], "lines": [FIRST, SUNG], "appeal": "No student would believe that from it."}
+            for c in couplets_asked if c["id"] == "v1-1,v1-2"]
+
+
+def test_an_appeal_upheld_keeps_the_couplet_as_it_was_written():
+    # On Oct 31 the songwriter rightly defended "The gas is light, it shoots out quick", the facts' own words.
+    fake = FakeChecker(seeded_is_wrong, song=appeals, appealed=supported)
+    report, checked = check_bundle(bundle(), "", fake)
+    assert report.status == "passed" and report.rounds == 2
+    assert [line.text for line in checked.lyrics[:2]] == [FIRST, SEEDED] and report.corrections == []
+    [heard] = [line for line in fake.payloads[1]["lines"] if line["id"] == "lyric:v1-1,v1-2"]
+    assert (heard["text"], heard["appeal"]) == (f"{FIRST}\n{SEEDED}", "No student would believe that from it.")
+    [appeal] = report.appeals
+    assert (appeal.round, appeal.ids, appeal.upheld) == (2, ["v1-1", "v1-2"], True)
+    assert "appeals" not in report.model_dump()  # factcheck.json stays as a studio from before reads it
+
+
+def test_an_appeal_lost_sings_the_rewrite_written_beside_it_checked_like_any():
+    fake = FakeChecker(seeded_is_wrong, song=appeals)
+    report, checked = check_bundle(bundle(), "", fake)
+    assert report.status == "passed" and report.rounds == 3 and len(fake.songs) == 1
+    assert [line.text for line in checked.lyrics[:2]] == [FIRST, SUNG]
+    [correction] = report.corrections
+    assert (correction.round, correction.by, correction.after) == (2, "songwriter", f"{FIRST}\n{SUNG}")
+    assert [a.upheld for a in report.appeals] == [False]
+    assert fake.ids(3) == ["lyric:v1-1,v1-2"]
+
+
+def test_an_appeal_too_late_to_hear_is_not_heard():
+    # Two rounds leave none to hear it and check the rewrite too: the rewrite goes in, as before appeals.
+    fake = FakeChecker(seeded_is_wrong, song=appeals)
+    report, checked = check_bundle(bundle(), "", fake, max_rounds=2)
+    assert report.status == "passed" and report.rounds == 2 and report.appeals == []
+    assert [line.text for line in checked.lyrics[:2]] == [FIRST, SUNG]
+
+
+def test_songwriter_json_lists_the_appeals(tmp_path):
+    fake = FakeChecker(seeded_is_wrong, song=appeals, appealed=supported)
+    report, _ = check_bundle(bundle(), "", fake)
+    factcheck.write_songwriter(tmp_path, report)
+    data = json.loads((tmp_path / factcheck.SONGWRITER).read_text())
+    assert data["corrections"] == [] and [(a["ids"], a["upheld"]) for a in data["appeals"]] == [(["v1-1", "v1-2"], True)]
+
+
 def test_a_rewrite_that_fails_too_takes_the_checkers_correction_and_goes_to_the_songwriter_once():
     def rule(text):
         if text == SUNG:

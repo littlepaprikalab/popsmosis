@@ -48,8 +48,11 @@ def test_the_script_is_written_first_and_the_bundle_keeps_its_essence_facts_and_
     write(tmp_path / "request.json", Request(topic="the light reactions", course="AP Bio"))
     ask = asking({"script": script_data(), "bundle": bundle_data(), "narration edit": unchanged_narration})
     bundle = bundle_step.run(tmp_path, ask=ask)
-    assert [a[0] for a in ask.asked] == ["script", "bundle", "narration edit"]
-    (_, first, system), (_, second, _) = ask.asked[:2]
+    # The facts' audit begins beside the bundle call; with no answer here it is left to its own step.
+    labels = [a[0] for a in ask.asked]
+    assert labels.count("fact audit") == 1 and [x for x in labels if x != "fact audit"] == [
+        "script", "bundle", "narration edit"]
+    (_, first, system), (_, second, _) = [a for a in ask.asked if a[0] != "fact audit"][:2]
     assert "## The question" in system and "## The audience" in system and "## The facts" in system
     assert "## The song" not in system  # the script writer gets the brief's audience and facts, not the rest
     assert second.startswith(first) and "<script>" in second and '"id": "n2"' in second

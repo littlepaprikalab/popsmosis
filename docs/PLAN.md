@@ -220,9 +220,11 @@ already written.
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
    (`id`, `text`, `source_quote` when a study guide was given), `misconception`.
 2. `scenes[3-7]`: the lesson's, which the song plays too where they picture what it sings:
-   the hook (where it can, the topic in the learner's world), overview, one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
-   in the colours of what they stand for) and a detail showing what happens when a part
-   fails. Each has `id`,
+   the hook (where it can, the topic in the learner's world), overview, one or two zoomed details; and, when it
+   helps, a detail showing what happens when a part fails. No picture draws the analogy (Nov 1: a water tower, then
+   a nightclub, drawn for the pump made the learner map two pictures): it is said over the overview, each part
+   matched to the real part as it is named, and the bundle step leaves out a scene drawn for it
+   (`checks._no_analogy_scene`), its lines played over the real thing, whole and still. Each has `id`,
    `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
    `stage_of`, `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
    axes' ends; "" elsewhere) and `to_scale` (a chart or figure the learner reads amounts off,
@@ -499,15 +501,22 @@ The brain decides what a scene draws and where; code decides how it looks (`svg.
 the same in every scene of every droplet. Drawn one scene to a call, the brain's own styling
 drifted (one plan's graphs came back with axes in three greys and lines 16 to 22 px wide),
 and its gradients, shadows and highlights were over half of each drawing's tokens. Every
-drawing goes on the house page, the dark slate blue the painted art was asked for until Oct 31
-and the bundle's colours are picked for. A graph (a scene with `axes`) also has its lines drawn flat
-at one weight with a soft glow of their own colour, its axes (which the brain marks
-`<g data-role="axes">`) pale with arrowheads over a faint grid, and its points (marked
-`data-role="point"`) as rings, a line's label anchored on the line rather than on a point
-(wider, so it took the anchor, and the pill beside it hid the point the song is about). A
-line keeps its dash and its fading, a band its width, and a shape its mask. The glow is one layer under every structure, one blur however many there
-are, and each structure's copy in it is part of that structure's mask, so a line's ghost and
-its spotlight take its glow with it. The drawing is kept as the brain made it and styled
+drawing goes on the house page, warm white paper as a textbook's is (look 4, Oct 31: the dark slate
+blue of looks 1 to 3, with a glow and a grid, made the graphs look like a dashboard beside the light
+painted pictures in the same video). A graph (a scene with `axes`) also has its lines drawn flat
+at one weight, in its structures' colours darkened where they would not read on the paper
+(`svg.readable()`), its axes (which the brain marks `<g data-role="axes">`) dark with arrowheads and
+no grid, and its points (marked `data-role="point"`) as rings, a line's label anchored on the line
+rather than on a point (wider, so it took the anchor, and the pill beside it hid the point the song
+is about). A line keeps its dash and its fading, a band its width, and a shape its mask. A graph
+draws only the graph: no figures or scenery round it, which have scenes of their own. The drawing
+marks where each structure's name goes (`<circle data-label="demand curve" ...>`), and the video
+writes it there in the structure's colour as the structure is revealed, as a textbook prints a
+curve's name, with no pill (pills on a graph covered its lines and its axis names). Under it, once
+the part is named, the video writes what it means (`Bundle.meanings`, "lower price → people
+buy more"), fact-checked like a motion, and keeps it with the name. The whole-scene
+framing makes room for these names, and a graph's arrow has its word beside it ("price rises")
+rather than in the corner key, which diagrams keep. The drawing is kept as the brain made it and styled
 before it is rasterised, so a new look (`svg.LOOK`, kept with each scene's locations) is no
 new drawing: the art step styles the kept drawings again, with no call to the brain. Styling
 takes under a millisecond, and the glow about a fifth of a second to rasterise, once a scene.
@@ -724,19 +733,27 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     darkened version of that colour, Inter Bold, a leader line and a 6 px dot at the
     mask's `label_anchor`. Pills stay inside the frame and avoid each other (a simple
     repulsion pass). Once introduced, a label stays on every shot of that diagram.
-  - **Particles:** for a line whose direction names `particles`, dots stream slowly along
+  - **Particles:** for a line whose direction names `particles`, particles stream slowly along
     a polyline between the structures' label anchors (always inside them), and one lead
-    particle with a trail eases from stop to stop, holding at each one beside the label's
-    dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
+    particle eases from stop to stop, holding at each one beside the label's dot, then starts
+    over. Every particle, the stream's too, has what it carries written on it ("Na⁺", "Ca²⁺":
+    a symbol of at most 3 letters, its charge and numbers free); there are no bare dots and
+    no trail (the owner, Nov 1: unmarked dots looked cheap). A flow through one part from one
+    side to the other goes straight through the part's middle, a second thing crossing it in a
+    lane beside it (Na⁺ out, K⁺ in), rather than bending at the part's label point. Over the diagram, under the labels; a white ring, as the dots
     have, keeps them readable on any colour. Lines in a row that carry a flow (its path and
     what it carries) are one run for it, so it carries on across them, whatever joins it or
     leaves, and it waits for its stops to be revealed.
   - **Journeys as arrows:** particles are for a crossing, the short trip through one wall that
     a line teaches (O₂ across the alveolus's wall, H⁺ through ATP synthase, salt out of the
     tubule). A journey along several parts (filtrate down the nephron, magma up through the
-    volcano, sediment down a river) is drawn instead as an arrow where it passes from each part
-    into the next (`routing.handoff()`), drawn in one after another the way it goes, then a pulse
-    runs along them in order: in rounds 20 and 21 dots following a long route through painted
+    volcano, sediment down a river) is drawn instead as an arrow: off a graph one arrow along the
+    whole way, through the parts where they join, drawing itself in and then pulsing, with its
+    one-liner (`says`, "Glucose rides in with sodium") in a pill beside it, joined to it; on a
+    graph an arrow where it passes from each part into the next (`routing.handoff()`), drawn in one
+    after another the way it goes, then a pulse runs along them in order, with its one-liner or
+    its word ("price rises") beside the first. What has no short symbol (a word, "glucose", or
+    nothing) always moves as an arrow. Before Nov 1 every arrow was a stub at each joint: in rounds 20 and 21 dots following a long route through painted
     masks, which are only roughly the parts, cut across the nephron's bends and rose through the
     volcano's rock. The bundle says which (`moves`: "crosses" or "travels"); where it does not,
     a route that bends with its parts (1.5 times the straight line) or runs more than 200 px
@@ -755,14 +772,15 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     say (`studio/steps/timeline.py`). Upright, such a line keeps looking where the line before
     it was, rather than swinging over to a flow it set going.
   - **Parts react:** a part pops 8% bigger as its name is first heard (not where a later
-    scene carries its label over), bumps 5% as a particle reaches it, and rocks a few degrees
-    either way while particles pass through it (a pump, a carrier handing on). Each is the
-    picture cut out by the part's mask, turned and grown about its middle over its painted
-    copy, which it covers: a part only grows, and rocks only as far (3, 2 or 1.2 degrees) as
-    its shape, turned that far and grown 3%, still covers where it is painted; a long, thin
-    part swells and eases back instead. Never a space, a part that turns, or anything on a
-    graph (a scene with axes): grown or turned, a curve would no longer say what the graph
-    says. Rocking is not turning: `spins` stays the only claim that a part goes round.
+    scene carries its label over), bumps 5% as a particle reaches it, and pulses on the beat
+    while particles pass through it (a pump, a carrier handing on): on each beat of the song
+    (`Timeline.bpm`; 1.2 a second in the lesson) it swells 5%, at most 14 art pixels at its
+    far edge so a long part only breathes, and eases back. Each is the picture cut out by the
+    part's mask, grown about its middle over its painted copy, which it covers. It rocked a
+    few degrees either way until Nov 1, and the turned cut-out let its painted copy show at
+    the edges: the pump looked doubled (the owner). Never a space, a part that turns, or
+    anything on a graph (a scene with axes): grown, a curve would no longer say what the
+    graph says. `spins` stays the only claim that a part goes round.
     When the line's direction says what the particles carry, the lead particle is a badge
     with it written on, as a textbook prints it ("H⁺", "e⁻"; a pill for "glucose"), and each
     kind has its own colour in every lesson (protons gold, electrons cyan), so a proton
@@ -773,7 +791,18 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     three is marked. How full it is runs on across scenes. The dots sit inside the space's
     mask, drift a few pixels in place, and stay bright while particles fill or empty the
     space, whatever the spotlight. The pictures paint no loose ions, so nothing painted
-    looks like them.
+    looks like them. Every crowd starts half full, so it reads as crowded from the first
+    frame (a resting cell's sodium outside) and still visibly fills (H⁺ into the lumen): the
+    writer was asked to say which a crowd was (`held`, Nov 1) and never did, and round 22's
+    pump began its sodium nearly empty. And a gradient is more on one side, not none on the
+    other (round 22's pump showed no K⁺ outside the cell at all, Nov 1): the space at the
+    other end of that kind's paths, when it is a space with no crowd of that kind of its own,
+    has a few of them, about one for every five where they crowd, untinted, on points the
+    crowd gives up so no dot sits on another. Both are part of the picture: in a space not yet
+    named they show half pale. A space whose
+    outline is a thin strip of it (round 22's cytoplasm came back as the band under the
+    membrane: a full crowd was four dots) seats its crowd in its whole box, where no other part
+    is drawn.
   - **Parts that turn:** for what the bundle's `spins` names (a rotor, a turbine, a water
     wheel), the part eases up to turning while particles flow into or through it and eases
     to a stop when they stop, so the flow is seen to drive it. How it turns is read off the
@@ -807,13 +836,28 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     centred, the current word highlighted by its timing. In the song, the next line shows
     dimmed for the last 1.5 s of an instrumental gap, as karaoke does (the camera and
     spotlight still move when it is sung).
+  - **Core idea:** the bundle's `core_idea`, what the topic is and what it is for, written
+    across the top of every frame, quiet (slate-300 on the title band's slate, smaller than
+    the key line), so a learner lost in the moving parts can look up and see what it is all
+    for (the owner, Nov 1): a 64 px band in 16:9, the picture below it; in the upright hook
+    cut, under the topic in the title band. The key line band then shows only steps: none
+    over a chorus or the narration's sentence that says the core idea, as both say it.
+  - **Key lines:** each sits on the lyric that sings its step, in the song's own order, and on
+    the narration sentence that says it, so one set of lines places itself in each video; a
+    step the song never sings is the lesson video's only (`from_line` ""). In the song a step
+    holds only to the end of its section, and a section starts with none unless a key line
+    starts there: one held into the pre-chorus sat over lines about something else (Nov 1). No code checks the
+    placement: a hint by shared words (a key line on a lyric sharing few of its words) found
+    round 22's three, but on the Nov 1 scorecard 5 of its 6 were wrong, songs saying their
+    steps in their own words, and it was taken out.
   - **Caption pill:** optional, top area, held at least 4 s.
   - **Brand:** the site's wordmark chip ("**POP**smosis", white on aqua `#0B7499`, as
     `web/src/components/Wordmark.tsx` draws it) on every frame, so a clip saved and posted
     elsewhere still says where it came from. Always a bottom right corner, out of the way of
-    what is read: in 16:9 the picture's, across from the "AI-generated picture" tag and about
-    its size, with labels kept clear of it (beside a notice card it is under the card); in the
-    upright hook cut the title band's, below the topic or the key line.
+    what is read: in 16:9 the core idea band's right end, or, in a video made before it, the
+    picture's, across from the "AI-generated picture" tag and about its size, with labels kept
+    clear of it (beside a notice card it is under the card); in the upright hook cut the title
+    band's, below the topic and the core idea.
   - **Hook:** frame 0 already shows motion and the hook claim; no title card.
   - **Ending:** the last picture stays on screen 1.5 s after the voice ends.
 - **Encoding:** pipe raw BGRA frames to ffmpeg (H.264 + AAC, 30 fps, 1920x1080). Render
@@ -836,7 +880,7 @@ video in under 5 minutes per layout.
 ## 8. Quality rules (also the QA checklist)
 
 - One style: a modern textbook illustration (soft gradients, semi-realistic parts, colour
-  coding), the SVG art's graphs in the house look on its dark slate blue page. Never anime, personified characters,
+  coding), the SVG art's graphs in the house look, on paper as a textbook's are. Never anime, personified characters,
   clip-art, 3D molecule renders, mixed styles, or slide-style text cards.
 - A painted picture carries its own labels, a wrong one flagged on it; the renderer draws every other text,
   and every label on a drawing.

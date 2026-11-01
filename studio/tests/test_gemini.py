@@ -135,7 +135,7 @@ def test_on_claudes_brain_gemini_paints_by_default_and_sam_finds_the_structures(
     assert art.run(job, helper) == "painted 3 scenes with Gemini 3.1 Flash Image in 3 tries"
     assert sorted(label for label, _ in painter.painted) == ["art hook", "art overview", "art synthase"]  # at once
     assert sam.painted == []  # Muse Image was not asked
-    assert dict(painter.painted)["art overview"].endswith(art.LABELS)
+    assert dict(painter.painted)["art overview"].endswith(art.labels_line(sample_media.bundle().scenes[1]))
     for scene in sample_media.bundle().scenes:
         assert json.loads((job / "art" / f"{scene.id}.json").read_text())["model"] == "gemini-3.1-flash-image"
     assert art.is_done(job) and not locate.is_done(job)

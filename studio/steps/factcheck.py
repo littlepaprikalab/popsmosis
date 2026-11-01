@@ -33,8 +33,8 @@ they take ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"), sin
 shows it as a claim. A motion that fails is left out of the video (no particles on its
 lines), never rewritten, and never fails the job; one shown on several lines is checked
 once. Unmarked particles are checked as "Something travels from Romeo to Audience", so a
-route nothing travels is left out too; on the hook and the analogy they are not sent, as
-there they are the everyday thing (the analogy's water), which the facts do not trace.
+route nothing travels is left out too; on the hook they are not sent, as there they are the
+everyday thing, which the facts do not trace.
 
 The facts it holds every line to have been audited first (studio/steps/audit.py). A fact the audit
 corrected is sent as corrected, with what it said before (`was`), and the lyrics and narration sentences
@@ -57,14 +57,14 @@ from pydantic import ValidationError
 
 from studio import brain, checks
 from studio.jobs import read, write
-from studio.schemas import (AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
+from studio.schemas import (Appeal, AuditReport, Bundle, Check, CheckedLine, CheckReport, Correction, FactCheck,
                             FactCheckReport, Request)
 from studio.sentences import replace_sentences, split_sentences
 from studio.steps import songwriter
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "factcheck.md").read_text(encoding="utf-8")
 MAX_ROUNDS = 3
-KEY = "keyline"  # a key line, or the core idea: written on screen in the song
+KEY = "keyline"  # a key line, or the core idea: written on screen in both videos
 LYRIC = "lyric"  # a couplet of the song, its lines joined by "\n"
 KINDS = (LYRIC, "narration", "lesson", "caption", KEY)  # the lines a correction rewrites, besides the below
 TITLE = "title"  # "course: topic", the droplet's public title: fit to go out, corrected like a line
@@ -78,7 +78,7 @@ KEPT_OR_DROPPED = (TAG, MOTION, AVOID)  # never corrected, and never failing the
 PASSING = ("SUPPORTED", "FILLER")
 COURSE_KNOWLEDGE = "course knowledge"  # a lyric's source when it is true but the facts do not say it
 SONGWRITER = "songwriter.json"  # the corrections the songwriter wrote (write_songwriter())
-EVERYDAY = ("hook", "analogy")  # scenes whose unmarked dots are not checked (studio/prompts/bundle.md)
+EVERYDAY = ("hook",)  # the scene whose unmarked dots are not checked (studio/prompts/bundle.md)
 
 
 @dataclass(frozen=True)
@@ -115,11 +115,12 @@ def run(job: Path, ask=brain.ask, max_rounds: int = MAX_ROUNDS) -> FactCheckRepo
 
 
 def write_songwriter(job: Path, report: FactCheckReport) -> None:
-    """songwriter.json: the corrections the songwriter wrote, which factcheck.json leaves unmarked (Correction.by);
-    none, and the file goes."""
+    """songwriter.json: the corrections the songwriter wrote, which factcheck.json leaves unmarked (Correction.by),
+    and its appeals, upheld or not; none of either, and the file goes."""
     sung = [c.model_dump(exclude={"kind", "by"}) for c in report.corrections if c.by == "songwriter"]
-    if sung:
-        write(job / SONGWRITER, {"corrections": sung})
+    appeals = [a.model_dump() for a in report.appeals]
+    if sung or appeals:
+        write(job / SONGWRITER, {"corrections": sung, **({"appeals": appeals} if appeals else {})})
     else:
         (job / SONGWRITER).unlink(missing_ok=True)
 
@@ -208,7 +209,7 @@ def motion_text(carries: str, particles: list[str], blocked: bool = False) -> st
 
 
 def is_checked(scene: str, carries: str, particles: list[str]) -> bool:
-    """Whether a flow goes to the fact-check: every one with a path, but an unmarked one on the hook or the analogy.
+    """Whether a flow goes to the fact-check: every one with a path, but an unmarked one on the hook.
     Unmarked, the brain sent dots from Romeo to the audience and from one point of a graph to another (Oct 29)."""
     return len(particles) >= 2 and (bool(carries) or scene not in EVERYDAY)
 
@@ -224,7 +225,7 @@ def build_up_text(carries: str, region: str) -> str:
 
 def spin_text(bundle: Bundle, structure: str) -> str:
     """What the video shows turning, and what drives it: "ATP synthase spins as H⁺ flows through it", or for
-    unmarked particles (an analogy's water) "Water wheel spins as particles flow into it from Reservoir"."""
+    unmarked particles "Turbine spins as particles flow into it from Reservoir"."""
     flows = [f for d in bundle.direction for f in d.flows() if structure in f.particles[1:]]
     marked = sorted({d.carries for d in flows if d.carries})
     if marked:
@@ -240,6 +241,25 @@ def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> st
     return f"At {structure}, {' and '.join(inputs)} is turned into {' and '.join(outputs)}"
 
 
+def meaning_text(structure: str, text: str) -> str:
+    """What the video writes under a graph part's name: "On the graph, Demand curve means: lower price → people buy
+    more"."""
+    return f"On the graph, {structure} means: {text}"
+
+
+def says_text(carries: str, particles: list[str], says: str) -> str:
+    """What the video writes beside an arrow: "Beside the arrow from Outside of the cell to Inside of the cell,
+    carrying glucose: Glucose rides in with sodium"."""
+    what = f", carrying {carries}" if carries else ""
+    return f"Beside the arrow from {particles[0]} to {particles[-1]}{what}: {says}"
+
+
+def says_checked(scene: str, says: str, particles: list[str]) -> bool:
+    """Whether an arrow's one-liner goes to the fact-check: every one, but one on the hook, which speaks of the
+    everyday picture, not of the topic."""
+    return bool(says) and len(particles) >= 2 and scene not in EVERYDAY
+
+
 def motion_lines(bundle: Bundle) -> list[Line]:
     """What each line's particles show moving (is_checked), and what the video shows piling up and turning."""
     return [Line(MOTION, d.line_id, _motion(bundle, d)) for d in bundle.direction
@@ -249,7 +269,12 @@ def motion_lines(bundle: Bundle) -> list[Line]:
         Line(MOTION, f"builds-{i}", build_up_text(b.carries, b.region)) for i, b in enumerate(bundle.builds_up, 1)] + [
         Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
         Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
-        for i, c in enumerate(bundle.conversions, 1)]
+        for i, c in enumerate(bundle.conversions, 1)] + [
+        Line(MOTION, f"means-{i}", meaning_text(m.structure, m.text)) for i, m in enumerate(bundle.meanings, 1)] + [
+        Line(MOTION, f"{d.line_id}~says", says_text(d.carries, d.particles, d.says)) for d in bundle.direction
+        if says_checked(d.scene, d.says, d.particles)] + [
+        Line(MOTION, f"{d.line_id}+{k}~says", says_text(f.carries, f.particles, f.says)) for d in bundle.direction
+        for k, f in enumerate(d.also, 1) if says_checked(d.scene, f.says, f.particles)]
 
 
 def tag_lines(bundle: Bundle) -> list[Line]:
@@ -309,6 +334,10 @@ def check_bundle(
     # The couplets sent to the songwriter (each goes once), with the checker's correction of each as it was then:
     # what stands in when the songwriter's rewrite fails and the checker has no usable correction of that.
     to_songwriter: dict[str, str] = {}
+    # The couplets the songwriter said the checker was wrong about, by key: its reason, and its rewrite for when the
+    # appeal is lost. The next round hears each one: the couplet as written, sent again with the reason.
+    appealing: dict[str, tuple[str, str]] = {}
+    appeals: list[Appeal] = []
     reason = ""
     rounds = 0
     for round_no in range(1, max_rounds + 1):
@@ -322,7 +351,8 @@ def check_bundle(
         if not pending:
             break
         rounds = round_no
-        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from)
+        heard = {line.key: appealing[line.key][0] for line in pending if line.key in appealing}
+        checks = ask_checker(pending, lines, facts, study_guide, ask, round_no, context, was, written_from, heard)
         for line in pending:
             check = checks.get(line.key)
             # A missing verdict, or SUPPORTED without a real source, is asked again next round. A lyric may rest
@@ -331,6 +361,13 @@ def check_bundle(
             if check and (check.verdict != "SUPPORTED" or line.kind in NO_SOURCE or cites(check.source, facts)
                           or (line.kind == LYRIC and COURSE_KNOWLEDGE in check.source.lower())):
                 verdicts[(line.kind, line.text)] = (check, round_no)
+        for line in pending:
+            if line.key in heard:
+                upheld = _verdict(verdicts, line) in PASSING
+                appeals.append(Appeal(round=round_no, ids=list(line.members or (line.id,)), text=line.text,
+                                      reason=heard[line.key], upheld=upheld))
+                if upheld:
+                    del appealing[line.key]  # sung as it was written
         # A tag or a motion that fails is dropped below, never corrected: only the other lines get fixes.
         wrong = [line for line in pending
                  if line.kind not in KEPT_OR_DROPPED and _verdict(verdicts, line) == "UNSUPPORTED"]
@@ -347,14 +384,25 @@ def check_bundle(
             break
         fresh = [(line, verdicts[(line.kind, line.text)][0]) for line in wrong
                  if line.kind == LYRIC and line.id not in to_songwriter]
-        written = songwriter.rewrite(bundle, fresh, ask, round_no) if fresh else {}
+        written, said = songwriter.rewrite(bundle, fresh, ask, round_no) if fresh else ({}, {})
         to_songwriter |= {line.id: corrected(line, check) for line, check in fresh}
+        # An appeal is heard next round, and its rewrite, if it is lost, checked the round after: one too late is not.
+        late = round_no + 2 > max_rounds
 
         fixes: dict[tuple[str, str], str] = {}
         made: list[Correction] = []
         for line in wrong:
             check = verdicts[(line.kind, line.text)][0]
-            after, by = (written[line.id], "songwriter") if line.id in written else (corrected(line, check), "checker")
+            if line.id in said and not late:
+                appealing[line.key] = (said[line.id], written.get(line.id, ""))
+                del verdicts[(line.kind, line.text)]  # so the next round reads it again, with the reason
+                continue
+            if line.key in appealing:  # its appeal was heard and lost: the rewrite the songwriter wrote beside it
+                rewritten = appealing.pop(line.key)[1]
+                after, by = (rewritten, "songwriter") if rewritten else (corrected(line, check), "checker")
+            else:
+                after, by = ((written[line.id], "songwriter") if line.id in written
+                             else (corrected(line, check), "checker"))
             if not after and line.kind == LYRIC and to_songwriter.get(line.id, line.text) != line.text:
                 after = to_songwriter[line.id]  # the songwriter's rewrite failed with no fix: the checker's first
             if line.kind == KEY and not after:
@@ -413,6 +461,14 @@ def check_bundle(
         data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
         data["conversions"] = [c for c in data["conversions"]
                                if conversion_text(c["structure"], c["inputs"], c["outputs"]) in passed_motions]
+        data["meanings"] = [m for m in data["meanings"] if meaning_text(m["structure"], m["text"]) in passed_motions]
+        # An arrow's one-liner that failed is left off the video, as a meaning is; its arrow stays, as its motion
+        # passed on its own.
+        for d in data["direction"]:
+            for flow in [d, *d["also"]]:
+                if (says_checked(d["scene"], flow.get("says", ""), flow["particles"])
+                        and says_text(flow["carries"], flow["particles"], flow["says"]) not in passed_motions):
+                    flow["says"] = ""
         bundle = Bundle.model_validate(data)
     # A key line still not passed after the last round is taken off the screen, as one with no correction is.
     unpassed = {(KEY, c.text): "" for c in checked if c.kind == KEY and c.verdict not in PASSING}
@@ -425,12 +481,12 @@ def check_bundle(
         ) + (f"; and {len(failing) - 3} more" if len(failing) > 3 else "")
     status = "failed" if reason else "passed"
     return FactCheckReport(status=status, reason=reason, rounds=rounds, lines=checked,
-                           corrections=corrections), bundle
+                           corrections=corrections, appeals=appeals), bundle
 
 
 def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], study_guide: str, ask,
                 round_no: int, context: dict[str, str] | None = None, was: dict[str, str] | None = None,
-                written_from: dict[str, str] | None = None) -> dict[str, Check]:
+                written_from: dict[str, str] | None = None, appeals: dict[str, str] | None = None) -> dict[str, Check]:
     previous: dict[str, str] = {}
     if round_no > 1:
         # A re-check sends lines without their neighbours, so each brings the one before it.
@@ -438,7 +494,7 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
             same = [line for line in lines if line.kind == kind]
             for before, line in zip(same, same[1:]):
                 previous.setdefault(line.key, before.text)
-    was, written_from = was or {}, written_from or {}
+    was, written_from, appeals = was or {}, written_from or {}, appeals or {}
     payload: dict = {"facts": [{"id": i, "text": text, **({"was": was[i]} if i in was else {})}
                                for i, text in facts.items()]}
     if study_guide:
@@ -447,7 +503,8 @@ def ask_checker(pending: list[Line], lines: list[Line], facts: dict[str, str], s
         payload["about"] = context  # for the tags and the lyrics: every other line is judged by the facts alone
     payload["lines"] = [
         {"id": line.key, "text": line.text, **({"previous": previous[line.key]} if line.key in previous else {}),
-         **({"written_from": written_from[line.key]} if line.key in written_from else {})}
+         **({"written_from": written_from[line.key]} if line.key in written_from else {}),
+         **({"appeal": appeals[line.key]} if line.key in appeals else {})}
         for line in pending
     ]
     answer = ask("brain", json.dumps(payload, ensure_ascii=False, indent=1), FactCheck, system=PROMPT,
@@ -471,8 +528,8 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
     sung = {before: after for (kind, before), after in fixes.items() if kind == LYRIC}
     new = {i: text for unit in couplets(bundle) if unit.text in sung
            for i, text in zip(unit.members, sung[unit.text].split("\n"))}
-    # A line sung in more than one couplet (the title line, in the intro, every chorus and the outro; a chorus the
-    # last one pairs differently) stays one line: its new words wherever it is sung, the chorus's when two
+    # A line sung in more than one couplet (the title line, in every chorus, the outro and often the intro; a
+    # chorus the last one pairs differently) stays one line: its new words wherever it is sung, the chorus's when two
     # couplets changed it differently. The couplets it changes in are checked again, as any changed line.
     became: dict[str, str] = {}
     for line in sorted(bundle.lyrics, key=lambda line: line.section != "chorus"):

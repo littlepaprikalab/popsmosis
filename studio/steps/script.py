@@ -34,7 +34,7 @@ BRIEF_SECTIONS = ("The audience", "The facts", "No song for this droplet")
 
 
 class ScriptScene(Strict):
-    id: str = Field(description='"hook", "analogy", "overview", or a short id for a close-up ("tubule-detail")')
+    id: str = Field(description='"hook", "overview", or a short id for a close-up ("tubule-detail")')
     picture: str = Field(description="What it draws and where, every part the narration names over it")
 
 
@@ -63,6 +63,14 @@ def brief_sections(brief: str, titles=BRIEF_SECTIONS) -> str:
     """The `## ` sections of the writer's brief with these titles, as written there."""
     parts = re.split(r"(?m)^(?=## )", brief)
     return "\n".join(p for p in parts if any(p.startswith(f"## {t}\n") for t in titles))
+
+
+def narration_rules() -> str:
+    """The script prompt's rules for the narration, without its heading, for a bundle written with no script
+    (studio/steps/bundle.py): the writer's brief keeps none of its own, since the script's narration is spoken."""
+    text = (PROMPTS / "script.md").read_text(encoding="utf-8")
+    start, end = text.find("\n## The narration\n"), text.find("\nThe rules for the audience")
+    return text[start + len("\n## The narration\n"):end].strip() + "\n" if 0 <= start < end else ""
 
 
 def system_prompt(brief: str) -> str:

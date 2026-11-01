@@ -21,6 +21,8 @@ from studio.jobs import write
 from studio.schemas import BPM_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Problem, lesson_scenes_max
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
+SYMBOL_LETTERS = 3  # what a particle can carry written on it ("Na⁺", "Ca²⁺", "NAD⁺"): anything longer moves as an arrow
+SAYS_MAX = 40  # characters of an arrow's one-liner: one short line beside it ("Glucose rides in with sodium")
 ALSO_MAX = 1  # second flows on one line: two things moving at once is as much as a learner can follow
 SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
 SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
@@ -37,7 +39,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _settle_song_scenes(data)
+    problems = _no_analogy_scene(data) + _settle_song_scenes(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -62,14 +64,49 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     _check_stages(data, problems)
+    _check_side_by_side(data, problems)
     _check_axes(data, problems)
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
     _check_conversions(data, canon, problems)
+    _check_meanings(data, canon, problems)
     _check_lyric_style(data, problems)
     _check_key_lines(data, problems)
     problems += _check_tempo(bundle, data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
+
+
+ANALOGY = "analogy"  # the id the analogy's picture had (studio/prompts/bundle.md, before Nov 1)
+SCENES_MIN = 3  # the fewest scenes a droplet's lesson has (schemas.bundle_problems)
+
+
+def _no_analogy_scene(data: dict) -> list[Problem]:
+    """No picture draws the analogy: it lives in the words, over the real thing (the owner, Nov 1: a water tower,
+    then a nightclub, drawn for the sodium-potassium pump, made the learner map two pictures). A scene with the
+    analogy's id is left out, and each line directed onto it plays over the scene with the real thing it explains,
+    the one after it, whole, with nothing moving or lit, its motion having been the analogy's. A droplet that would
+    keep fewer than 3 scenes keeps the scene, with no line on it, never shown. Repaired, and recorded for the
+    prompt."""
+    ids = [s["id"] for s in data["scenes"]]
+    if ANALOGY not in ids:
+        return []
+    after = [s["id"] for s in data["scenes"][ids.index(ANALOGY) + 1:] if not s.get("song_only")]
+    others = [i for i in ids if i not in (ANALOGY, "hook")]
+    real = (after or others or [i for i in ids if i != ANALOGY] or [None])[0]
+    if real is None:
+        return []
+    lesson = [s for s in data["scenes"] if not s.get("song_only")]
+    dropped = len(lesson) > SCENES_MIN
+    problems = [Problem(line_id="scenes", rule="analogy", repaired=True,
+                        detail=f'{"left out" if dropped else "showed nothing on"} the analogy\'s picture: its lines '
+                               f'play over "{real}"')]
+    for d in data["direction"]:
+        if d["scene"] == ANALOGY:
+            d.update(scene=real, camera={"target": "", "zoom": 1.0}, spotlight="", particles=[], carries="",
+                     moves="", says="", glow="", also=[])
+    if dropped:
+        data["scenes"] = [s for s in data["scenes"] if s["id"] != ANALOGY]
+    return problems
 
 
 def _settle_song_scenes(data: dict) -> list[Problem]:
@@ -121,6 +158,27 @@ def _settle_song_scenes(data: dict) -> list[Problem]:
     return problems
 
 
+# A picture asking for one thing drawn twice or for two moments side by side ("one pump, drawn twice side by side",
+# Nov 1) came back with both and with captions of its own ("State 1", "Conformational change"); the brief has each
+# stage a scene of its own, which the video fades between.
+# One thing drawn more than once, or panels: "side by side" alone is no sign, as two markets, two people or a chart's
+# bars stand side by side (the scorecard of Nov 1: half the pictures it caught were fine).
+SIDE_BY_SIDE = re.compile(r"\b(?:(?:drawn|shown|painted) (?:twice|again|two times|three times|four times|\d+ times)|"
+                          r"(?:two|three|four|2|3|4) panels|(?:first|second|third|fourth|left|right|middle) panel|"
+                          r"split (?:into|in) two|before and after|state [12]\b)", re.I)
+
+
+def _check_side_by_side(data: dict, problems: list) -> None:
+    """A scene's picture shows one moment: one asking for a thing drawn twice or for two moments side by side is
+    recorded, for the prompt to fix (two stages, each a scene)."""
+    for scene in data["scenes"]:
+        found = SIDE_BY_SIDE.search(scene.get("image_prompt", ""))
+        if found:
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="side-by-side", repaired=False,
+                                    detail=f'the picture asks for "{found.group(0)}": draw each stage as a scene of '
+                                           "its own"))
+
+
 def _check_stages(data: dict, problems: list) -> None:
     """A process needs two stages or more: a lone one is an ordinary scene."""
     counts: dict[str, int] = {}
@@ -169,11 +227,21 @@ def _check_blocks(data: dict, canon: dict[str, str], problems: list) -> None:
     data["blocks"] = kept
 
 
+def _silent_ed(word: str) -> bool:
+    """Whether a word's final "-ed" is silent: "learned", "used", but not after t or d ("wanted", "needed"), nor after
+    a consonant and an l or r ("troubled", "hundred"), where the e is sung."""
+    if len(word) < 4 or not word.endswith("ed"):
+        return False
+    before, earlier = word[-3], word[-4]
+    return before not in "td" and not (before in "lr" and earlier not in "aeiouy")
+
+
 def syllables(line: str) -> int:
     """A rough count of a line's syllables, enough to tell a line too full to sing: vowel groups in each word, a
-    silent final e aside; a term in capitals or with no vowel ("ATP", "b6f") said letter by letter."""
+    silent final e and a silent "-ed" aside ("learned", "used", but not "wanted", "hundred" or "troubled"), a
+    contraction one word ("it's", "you're"); a term in capitals or with no vowel ("ATP", "b6f") said letter by letter."""
     count = 0
-    for word in re.findall(r"[^\W_]+", line):
+    for word in re.findall(r"[^\W_]+(?:['’][^\W_]+)*", line):  # "it's" one word: a lone "s" is no syllable
         if (len(word) > 1 and word.isupper()) or not re.search(r"[aeiouy]", word, re.IGNORECASE):
             count += len(word)
             continue
@@ -181,33 +249,69 @@ def syllables(line: str) -> int:
         groups = len(re.findall(r"[aeiouy]+", lower))
         if groups > 1 and lower.endswith("e") and not lower.endswith(("le", "ee")):
             groups -= 1
+        elif groups > 1 and _silent_ed(lower):
+            groups -= 1
         count += max(1, groups)
     return count
 
 
 # A sung line is 6 to 9 syllables, so the singer has room to hold a note: round 17's lines of 12 and 13 came back
 # at 5 to 6 syllables a second, the speed of speech, sung or rapped. A rapped line, when the learner asks for rap,
-# can carry more.
+# can carry more. A line one over is let through: a singer takes one extra in stride, and the rough count is often
+# one high itself. Only a line LYRIC_SLACK + 1 or more over is too full to sing (the owner, Oct 31).
 LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
+LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
+# A style that raps one section says which (studio/styles.py, Nov 1): only that section's lines run longer.
+RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped)? second verse\b|\bsecond verse rapped\b", re.I)
+RAPPED_BRIDGE = re.compile(r"\brap(?:ped)? bridge\b|\bbridge rapped\b", re.I)
+
+
+def rapped_lines(data: dict) -> set[str]:
+    """The ids of the lines the style raps: its second verse or its bridge when it names one, every line when it
+    raps otherwise ("rapped verses", "make it rap"), none when it does not."""
+    style = " ".join((data.get("music") or {}).get("positive_styles") or [])
+    if not RAPPED.search(style):
+        return set()
+    lyrics = data["lyrics"]
+    runs: list[tuple[str, list[str]]] = []
+    for line in lyrics:
+        if runs and runs[-1][0] == line["section"]:
+            runs[-1][1].append(line["id"])
+        else:
+            runs.append((line["section"], [line["id"]]))
+    picked: set[str] = set()
+    if RAPPED_SECOND_VERSE.search(style):
+        verses = [ids for section, ids in runs if section == "verse"]
+        picked |= set(verses[1]) if len(verses) > 1 else set()
+    if RAPPED_BRIDGE.search(style):
+        picked |= {i for section, ids in runs if section == "bridge" for i in ids}
+    return picked if picked else {line["id"] for line in lyrics}
 # A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
 # next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
 # arriving ("Here comes HIV with a protein like a key"), as three droplets did on Oct 29.
+# A bare "watch" or "see" is sung to the listener as often as not, and carries a song's frame: "Watch the replay, you
+# know the score", "Watch the needle climbing slow" (Nov 1). They point at the screen only after "now" or "let's",
+# and "look" only when it points somewhere ("look at", "look inside"); "zoom" always does.
 SECTION_NAMES = r"(?:intro|verse|pre-chorus|chorus|bridge|hook|outro)"
-DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+we"
-                            rf"|(?:next\s+up|here\s+comes)\W+(?:(?:is|comes|the|a)\s+)*{SECTION_NAMES}\b)\b", re.I)
+DIRECTION_LINE = re.compile(r"^\W*(?:(?:now\s+)?(?:let'?s\s+)?zoom"
+                            r"|(?:now\s+|(?:now\s+)?let'?s\s+)(?:look|see|watch)"
+                            r"|(?:now\s+)?(?:let'?s\s+)?look\s+(?:at|inside|into|closer|here)"
+                            r"|(?:now\s+)?here\s+we"
+                            rf"|(?:now\s+)?(?:next\s+up|here\s+comes)\W+(?:(?:is|comes|the|a)\s+)*{SECTION_NAMES})\b",
+                            re.I)
 
 
 def _check_lyric_style(data: dict, problems: list) -> None:
     """A sung line is not a stage direction and is not too full to sing: both are only recorded (a better bundle,
     by the prompt, is the fix), so the operator sees which droplets sing them."""
-    rapped = RAPPED.search(" ".join((data.get("music") or {}).get("positive_styles") or []))
-    most = LYRIC_SYLLABLES_RAPPED if rapped else LYRIC_SYLLABLES_MAX
+    rapped = rapped_lines(data)
     for line in data["lyrics"]:
         text = line["text"]
+        most = LYRIC_SYLLABLES_RAPPED if line["id"] in rapped else LYRIC_SYLLABLES_MAX
         why = ("narrates the picture instead of being sung" if DIRECTION_LINE.match(text) else
-               f"runs {syllables(text)} syllables, over {most}" if syllables(text) > most else "")
+               f"runs {syllables(text)} syllables, over {most}" if syllables(text) > most + LYRIC_SLACK else "")
         if why:
             problems.append(Problem(line_id=line["id"], rule="lyric-style", repaired=False,
                                     detail=f'"{text}" {why}'))
@@ -377,24 +481,36 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
 
 
 def _check_key_lines(data: dict, problems: list) -> None:
-    """Key lines in song order, one to a lyric line: one on a line the song does not have, or a second on the same
-    line, is dropped, since the screen could not show it."""
+    """Key lines, one to a lyric line: one on a line the song does not have, or a second on the same line, is left
+    out of the song video (and dropped, with no narration sentence either), since the screen could not show it."""
     if not data["lyrics"]:  # the lesson video alone: they are placed on the narration
         _check_narrated_key_lines(data, problems)
         return
     order = {line["id"]: i for i, line in enumerate(data["lyrics"])}
+    spoken = {n["id"] for n in data["narration"]}
     kept, seen = [], set()
     for key in data["key_lines"]:
-        if key["from_line"] not in order or key["from_line"] in seen or not key["text"].strip():
+        if not key["text"].strip():
             problems.append(Problem(line_id=key["from_line"] or "key_lines", rule="key-line", repaired=True,
-                                    detail=f'dropped the key line "{key["text"]}": its lyric line is unknown, taken, '
-                                           f"or it is empty"))
+                                    detail="dropped an empty key line"))
             continue
-        seen.add(key["from_line"])
+        if key["from_line"] not in order or key["from_line"] in seen:
+            if key.get("from_narration", "") not in spoken:
+                problems.append(Problem(line_id=key["from_line"] or "key_lines", rule="key-line", repaired=True,
+                                        detail=f'dropped the key line "{key["text"]}": its lyric line is unknown or '
+                                               f"taken, and it has no narration sentence"))
+                continue
+            if key["from_line"]:  # "" is a step the song never sings: the lesson video's only, as the brief asks
+                problems.append(Problem(line_id=key["from_line"], rule="key-line", repaired=True,
+                                        detail=f'left the key line "{key["text"]}" out of the song video: its lyric '
+                                               f"line is unknown or taken"))
+            key["from_line"] = ""
+        else:
+            seen.add(key["from_line"])
         kept.append(key)
     # In the lesson video, one on a sentence the narration does not have, or a second on the same sentence, is
     # left out of that video only.
-    spoken, taken = {n["id"] for n in data["narration"]}, set()
+    taken = set()
     for key in kept:
         at = key.get("from_narration", "")
         if at and (at not in spoken or at in taken):
@@ -403,7 +519,7 @@ def _check_key_lines(data: dict, problems: list) -> None:
                                            f"sentence is unknown or taken"))
             key["from_narration"] = ""
         taken.add(key["from_narration"])
-    data["key_lines"] = sorted(kept, key=lambda k: order[k["from_line"]])
+    data["key_lines"] = kept  # in the brief's order, the chain's: each video places them by its own lines
 
 
 def _check_narrated_key_lines(data: dict, problems: list) -> None:
@@ -423,42 +539,16 @@ def _check_narrated_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_narration"]])
 
 
-STILL_LINES_MAX = 4  # lines in a row with nothing moving on a scene where things travel: a line that comments or sums up holds still
-STILL_SCENES = ("hook", "analogy")  # scenes where nothing needs to move
-
-
 def motion_problems(bundle: Bundle) -> list[Problem]:
-    """The song's direction against the planning rules a check can count: no more than STILL_LINES_MAX lines in a
-    row with no particles on a scene where something travels, and every chorus directed alike (compared from its
-    end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them."""
+    """The song's direction against the planning rule a check can count: every chorus directed alike (compared from
+    its end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them.
+
+    How many lines in a row hold still is not counted. The bundle prompt moves only what travels, and the spotlight
+    and the camera carry a scene where nothing does, so a run of still lines is no mistake. Counted until Oct 31, a run of five flagged a chorus summing up the Moon's phases over the overview,
+    the spotlight stepping from phase to phase, and only because one earlier line had sent sunlight across it: a
+    scene that never moved was never flagged, so the count pushed toward dots for their own sake."""
     directions = {d.line_id: d for d in bundle.direction}
-    blockers = {b.structure for b in bundle.blocks}
-    # A failure scene (one that draws a blocker) holds still after the block on purpose: what stopped stays stopped.
-    # So does a scene where nothing travels on any line of either video (a graph, a stage): asked to keep every
-    # scene moving, the brain sent unmarked dots from Romeo to the audience and from one point of a graph to
-    # another, a journey nothing makes.
-    travels = {d.scene for d in bundle.direction if d.flows()}
-    still = set(STILL_SCENES) | {s.id for s in bundle.scenes
-                                 if s.id not in travels or blockers & {x.name for x in s.structures}}
-    problems, run = [], []
-
-    def close_run() -> None:
-        if len(run) > STILL_LINES_MAX:
-            problems.append(Problem(line_id=run[0], rule="motion", repaired=False,
-                                    detail=f"{len(run)} lines in a row from {run[0]} with nothing moving, on a scene "
-                                           f"where things travel"))
-        run.clear()
-
-    for line in bundle.lyrics:
-        d = directions.get(line.id)
-        if d and d.scene not in still and not d.flows() and (not run or directions[run[0]].scene == d.scene):
-            run.append(line.id)
-        else:
-            close_run()
-            if d and d.scene not in still and not d.flows():
-                run.append(line.id)
-    close_run()
-
+    problems = []
     choruses, current = [], []
     for i, line in enumerate(bundle.lyrics):
         if line.section == "chorus":
@@ -477,6 +567,27 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
 
 
 CONVERT_MAX = 4  # species on one side of a conversion
+MEANING_MAX = 40  # characters of a graph part's meaning: one short line under its name ("lower price → people buy more")
+
+
+def _check_meanings(data: dict, canon: dict[str, str], problems: list) -> None:
+    """Each meaning names a part of a graph (a structure on a scene with axes), as its name, in one short line. One
+    part has one meaning; any other is left out, and the video writes only the part's name."""
+    graphed = {canon.get(fold(s["name"])) for scene in data["scenes"]
+               if any(" ".join(scene["axes"][side].split()) for side in ("x", "y")) for s in scene["structures"]}
+    kept, seen = [], set()
+    for meaning in data["meanings"]:
+        name, text = canon.get(fold(meaning["structure"])), " ".join(meaning["text"].split())
+        why = ("names no structure" if not name else "is not a part of a graph" if name not in graphed else
+               "repeats a part's meaning" if name in seen else "is empty" if not text else
+               f"is over {MEANING_MAX} characters" if len(text) > MEANING_MAX else "")
+        if why:
+            problems.append(Problem(line_id="meanings", rule="meanings", repaired=True,
+                                    detail=f"{meaning['structure']}'s meaning {text!r} {why}; left out"))
+            continue
+        seen.add(name)
+        kept.append({"structure": name, "text": text})
+    data["meanings"] = kept
 
 
 def _check_conversions(data: dict, canon: dict[str, str], problems: list) -> None:
@@ -651,8 +762,14 @@ def _check_names(line: dict, canon: dict[str, str], scene: str, drawn: set[str],
         else:
             kept.append(name)
             named.add(structure)
+    # A word the line says but does not list is added only when its scene draws that part: the video reveals it
+    # there whatever the list says. Elsewhere it is a word, not a pointer: the song carrying its frame ("Charged-up
+    # batteries, out they ride" over the overview, where only the analogy draws "Batteries"), or the topic's own
+    # word ("rocket") said over a scene that draws the rocket's parts. Added and then flagged as not in the scene,
+    # such words were 141 of 142 not-in-scene problems in a 12-topic simulation on Oct 31; the brain had listed the
+    # one real slip itself.
     for structure, word in said(line["text"], canon).items():
-        if structure not in named:
+        if structure not in named and structure in drawn:
             problems.append(Problem(line_id=line["id"], rule="unlisted-name", repaired=True,
                                     detail=f'says "{word}" but does not list it; added'))
             kept.append(word)
@@ -713,5 +830,27 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         if marked != flow["carries"]:
             problems.append(Problem(line_id=line_id, rule="carries", repaired=True,
                                     detail=f"carries {flow['carries']!r} is over {MARKER_MAX} characters; unmarked"))
-        also.append({"particles": stops, "carries": marked, "moves": flow.get("moves", "")})
+        also.append({"particles": stops, "carries": marked, "moves": flow.get("moves", ""), "says": flow.get("says", "")})
     direction["also"] = also
+    for flow in [direction, *direction["also"]]:
+        _check_says(line_id, flow, problems)
+
+
+def arrow(carries: str, moves: str) -> bool:
+    """Whether a flow is drawn as an arrow (renderer: _travels): it travels, or what moves has no short symbol to
+    write on a particle (a word, "glucose", or nothing). A crossing ion ("Na⁺") is particles."""
+    return moves == "travels" or sum(ch.isalpha() for ch in notation(carries)) > SYMBOL_LETTERS or not carries.strip()
+
+
+def _check_says(line_id: str, flow: dict, problems: list[Problem]) -> None:
+    """An arrow's one-liner (Direction.says) is one short line; one too long is left out. An arrow with none is
+    recorded: the video draws it bare, and the learner is left asking what it shows (the owner, Nov 1)."""
+    says = " ".join(flow.get("says", "").split())
+    if len(says) > SAYS_MAX:
+        problems.append(Problem(line_id=line_id, rule="says", repaired=True,
+                                detail=f"the arrow's one-liner {says!r} is over {SAYS_MAX} characters; left out"))
+        says = ""
+    flow["says"] = says
+    if flow["particles"] and not says and arrow(flow["carries"], flow.get("moves", "")):
+        problems.append(Problem(line_id=line_id, rule="says", repaired=False,
+                                detail=f"an arrow ({' → '.join(flow['particles'])}) with no one-liner beside it"))

@@ -47,7 +47,7 @@ import textwrap
 import time
 from pathlib import Path
 
-from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post, scorecard
+from studio import ass_fallback, brain, checks, files, jobs, knobs, ledger, media, post, scorecard, styles
 from studio import run as operator_run
 from studio import videos as operator_videos
 from studio.ledger import call_row
@@ -100,7 +100,8 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--topic", required=True)
     plan.add_argument("--course", default="")
     plan.add_argument("--request", default="", help="the learner's request in their own words")
-    plan.add_argument("--style", default="", help="the song style the learner asked for, in their words")
+    plan.add_argument("--style", default="", help="the song style the learner asked for, in their words, or a "
+                                                  f"reference style's name ({', '.join(styles.REFERENCE_STYLES)})")
     plan.add_argument("--study-guide", type=Path, help="a text file of course material")
     plan.add_argument("--image", type=Path, action="append", default=[], help="a photo of notes; repeatable")
     plan.add_argument("--job", help="the job id (default: made from the topic and the time)")
@@ -213,7 +214,7 @@ def main(argv: list[str] | None = None) -> int:
             topic=args.topic,
             course=args.course,
             request=args.request,
-            song_style=args.style,
+            song_style=styles.named(args.style),  # a reference style by its name, written out
             study_guide=args.study_guide.read_text(encoding="utf-8") if args.study_guide else "",
             images=[str(path.resolve()) for path in args.image],
         )

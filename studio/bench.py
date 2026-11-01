@@ -69,7 +69,7 @@ OVERVIEW = {
 }
 SPOTS = {("hook", "Thylakoid"): (896, 512, 300), ("synthase", "ATP synthase"): (896, 512, 250),
          **{("overview", name): spot[1:] for name, spot in OVERVIEW.items()}}
-NARRATION = [  # (text, scene): about three minutes read aloud, as the narration's 350 to 450 words are
+NARRATION = [  # (text, scene): about three minutes read aloud, as the narration's 300 to 420 words are
     ("Light lands on the thylakoid, the stack of membranes inside the chloroplast.", "hook"),
     ("Photosystem II catches that light and pulls electrons from water.", "overview"),
     ("The electrons hop to cytochrome b6f, which pumps protons into the lumen.", "overview"),

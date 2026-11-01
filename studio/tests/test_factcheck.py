@@ -33,8 +33,8 @@ class FakeChecker:
     """Stands in for brain.ask: judges each line with `rule(text)` (a couplet line by line), records every
     payload. Asked to rewrite, it answers `song(couplets)`, by default with none, so the checker's fix is used."""
 
-    def __init__(self, rule, song=None):
-        self.rule, self.song = rule, song
+    def __init__(self, rule, song=None, appealed=None):
+        self.rule, self.song, self.appealed = rule, song, appealed  # appealed: the rule for a line sent with an appeal
         self.payloads, self.songs = [], []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -48,7 +48,7 @@ class FakeChecker:
         self.payloads.append(payload)
         checks = []
         for line in payload["lines"]:
-            verdict = judge(self.rule, line["text"])
+            verdict = judge(self.appealed if self.appealed and line.get("appeal") else self.rule, line["text"])
             if verdict is None:
                 continue  # the checker skipped this line
             name, source, corrected = verdict
@@ -342,16 +342,13 @@ def test_a_route_nothing_travels_is_left_out_of_the_video():
     assert [m.text for m in dropped_motions(report)] == ["Something travels from Cytochrome b6f to Thylakoid", SOMETHING]
 
 
-def test_unmarked_dots_on_the_hook_and_the_analogy_are_not_sent():
-    def everyday(data):  # the analogy's water, the hook's everyday thing
-        data["scenes"].append({**data["scenes"][1], "id": "analogy"})
+def test_unmarked_dots_on_the_hook_are_not_sent():
+    def everyday(data):  # the hook's everyday thing
         for d in data["direction"]:
             if d["line_id"] in ("v1-1", "n1"):
                 d.update(scene="hook", particles=["Thylakoid", "Thylakoid"], carries="")
-            elif d["line_id"] == "v2-1":
-                d.update(scene="analogy", particles=["Cytochrome b6f", "Thylakoid"], carries="")
             elif d["line_id"] == "c1-1":
-                d.update(scene="analogy", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+                d.update(scene="hook", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
 
     fake = FakeChecker(supported)
     check_bundle(bundle(everyday), "", fake)
@@ -403,6 +400,36 @@ def test_what_builds_up_is_checked_too_and_left_out_when_it_fails():
     assert sent == [("motion:builds-1", "H⁺ builds up in Thylakoid"), ("motion:builds-2", "e⁻ builds up in Cytochrome b6f")]
     assert report.status == "passed" and [(b.carries, b.region) for b in checked.builds_up] == [("H⁺", "Thylakoid")]
     assert [m.text for m in dropped_motions(report)] == ["e⁻ builds up in Cytochrome b6f"]
+
+
+def test_a_graph_parts_meaning_is_checked_and_left_out_when_it_fails():
+    def meaning(data):
+        data["meanings"] = [{"structure": "Thylakoid", "text": "more light → faster"},
+                            {"structure": "Cytochrome b6f", "text": "more light → slower"}]
+
+    wrong = "On the graph, Cytochrome b6f means: more light → slower"
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == wrong else supported(text))
+    report, checked = check_bundle(bundle(meaning), "", fake)
+    sent = [(line["id"], line["text"]) for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:means")]
+    assert sent == [("motion:means-1", "On the graph, Thylakoid means: more light → faster"), ("motion:means-2", wrong)]
+    assert report.status == "passed" and [m.structure for m in checked.meanings] == ["Thylakoid"]
+    assert [m.text for m in dropped_motions(report)] == [wrong]
+
+
+def test_an_arrows_one_liner_is_checked_and_left_out_when_it_fails():
+    def saying(data):
+        for d in data["direction"]:
+            if d["line_id"] == "v1-1":
+                d.update(scene="overview", particles=["Thylakoid", "Cytochrome b6f"], carries="glucose",
+                         moves="travels", says="Glucose rides up to the complex")
+
+    wrong = "Beside the arrow from Thylakoid to Cytochrome b6f, carrying glucose: Glucose rides up to the complex"
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == wrong else supported(text))
+    report, checked = check_bundle(bundle(saying), "", fake)
+    sent = {line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")}
+    assert wrong in sent
+    line = next(d for d in checked.direction if d.line_id == "v1-1")
+    assert report.status == "passed" and line.says == "" and line.particles  # the arrow stays, bare
 
 
 def test_what_turns_is_checked_with_what_drives_it():

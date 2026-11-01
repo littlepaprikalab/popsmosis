@@ -23,8 +23,15 @@ A picture is still: a textbook diagram or a friendly illustration. The video add
 the motion (dots that travel between the parts) and the zoom, so say where things are, never
 an arrow, a word or something happening.
 
+A picture is one moment, never panels ("four panels in a row", "two panels side by side"),
+even where a textbook prints the figure that way: each panel is a scene of its own, with its
+own id. Moments of one process are its stages, drawn alike and in the same place (before,
+during and after conditioning, "before", "pairing", "after"; the Moon on different nights),
+and a comparison is two scenes the narration moves between (a rocket in air, then in space).
+In panels the same thing is drawn twice, and the video can label and move only one of them
+(Nov 1: classical conditioning asked for panels in every scorecard run).
+
 - "hook": where the topic turns up in the learner's world, at a scale they know.
-- "analogy": the everyday picture, with each of its parts that the analogy matches.
 - "overview": the map of the whole lesson, the one picture every step can be pointed at.
   For a process, the whole path, every part the steps pass through in order (a nephron, from
   the glomerulus to the collecting duct; the rock cycle with each kind of rock where it
@@ -61,23 +68,27 @@ Tell it as one path, each sentence following from the one before:
    world, then the question. "Every day your kidneys filter about 180 liters out of your
    blood. Yet you make only one or two liters of urine. So where does the rest go?" Answer
    nothing yet: the question is what pulls the learner through.
-2. **The idea** (2 or 3 sentences, over "analogy"): the core idea in plain words, through the
-   analogy, each part of it matched to the real thing once. The matches are signposts: the
-   steps can be called by them from here on ("That's the dump: filtration.").
+2. **The idea** (2 or 3 sentences, over "overview"): the core idea in plain words, through the
+   analogy, each part of it matched to the real part as the sentence names it, since the
+   picture is the real thing. The matches are signposts: the steps can be called by them from here on
+   ("That's the dump: filtration.").
 3. **The path** (most of the narration, over the overview and the close-ups): each step in
    the order it happens, one at a time: where it happens, what happens, and why it has to
    (`why_chain`). Signpost every step ("First...", "Next...", "Now the filtrate...") so the
    learner always knows where they are. Go to a close-up for the step it shows, and come back
    to the overview after it ("Back in the nephron..."). A story in time goes in the order it
    happened, each event with its year and why it led to the next.
-4. **A predict question** once, mid-way, answered in the next sentence: "What do you think
-   all that weight does to the layers underneath?"
-5. **The misconception**, once, right where the wrong idea would form: named as a common
-   mistake, then the right idea and why. Never before the learner has met what it is about.
-6. **A case** (2 to 5 sentences): the idea at work in one example the facts give, worked
+4. **The prediction and the misconception**, once, right where the wrong idea would form,
+   never before the learner has met what it is about: ask the listener to guess, with a
+   question the common mistake answers wrong ("So if the forces are equal, does the gas push
+   the rocket as hard as the rocket pushes the gas? Many people say no."), then answer it:
+   the mistake named as a common one, why it fails, the right idea. Never "most people": the
+   facts call a mistake common, they never count who makes it. Committing to a guess and
+   seeing it fail is what changes a wrong idea.
+5. **A case** (2 to 5 sentences): the idea at work in one example the facts give, worked
    step by step, cause before effect, opened as what it is ("Now, what happens when blood
    sugar runs too high?"). It comes after the path, never in the middle of it.
-7. **The end**: the core idea in the words of `core_idea`, then the question answered in one
+6. **The end**: the core idea in the words of `core_idea`, then the question answered in one
    sentence; for a process, what goes in and what comes out.
 
 Every sentence:
@@ -93,11 +104,11 @@ Every sentence:
 - **names each part as the pictures do**, in the same words, since its label lights up as it
   is said.
 
-Play the scenes in the order the explanation needs them: the hook, the analogy, the overview,
+Play the scenes in the order the explanation needs them: the hook, the overview,
 each close-up once the overview has shown where it is, the overview again between close-ups
 and at the end. Each passage is one scene; the hook comes back only to close.
 
 The rules for the audience, the facts and the essence follow, as the writer's full brief
-gives them. Where they mention the song, the lesson text or an analogy scene, those are made
+gives them. Where they mention the song or the lesson text, those are made
 later from what you write here.
 

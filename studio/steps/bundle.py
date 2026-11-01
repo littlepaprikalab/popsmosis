@@ -22,7 +22,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from studio import brain, checks, media
-from studio.steps import learner, narration, script as script_step
+from studio.steps import audit, learner, narration, script as script_step
 from studio.jobs import read, write
 from studio.schemas import Bundle, LessonBundle, Request, bundle_of
 from studio.styles import style_for
@@ -58,9 +58,6 @@ on the sentences that sum it up, and keep captions to a few in the whole narrati
   one sentence and none on the last. The first can ask the script's `question`. Write each
   `text` as "On screen" says.
 - `tags.lesson` only, as "Tags" says for the lesson video.
-- The people a grave topic (a genocide, slavery) is about are never particles: dots marked
-  "people" or "trains" carried across a map make tokens of the dead. Goods, ships and money
-  may move; the camera and the spotlight show where people were taken.
 """
 
 
@@ -74,6 +71,16 @@ def without_song(brief: str) -> str:
 
 
 LESSON_ONLY_PROMPT = without_song(PROMPT)
+# With no script (its call failed), the narration is the plan's to write, by the script writer's rules for it.
+NO_SCRIPT = """
+
+## With no script
+
+The request carries no script, so you write the narration too, as the script's writer would
+have, by its rules below. Where they say a passage, it is the run of sentences you direct over
+one scene, each sentence an item of `narration`.
+
+"""
 # The operator's note (python -m studio run <id> --note): what it has seen go wrong in recent droplets.
 NOTE = """
 
@@ -97,12 +104,14 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     request = read(job / "request.json", Request)
     sung = not media.lesson_only()
     brief = PROMPT if sung else LESSON_ONLY_PROMPT
-    system = brief + (NOTE.format(note=note) if note.strip() else "")
     for stale in ("audit.json", "factcheck.json", "songwriter.json", "bundle.draft.json", "bundle.invalid.json",
                   "learner.json", narration.RECORD, script_step.RECORD):
         (job / stale).unlink(missing_ok=True)
     prompt = user_prompt(request, style_for(job.name), sung)
     script = script_step.write_script(prompt, brief, ask, request.images, job)
+    system = (brief + ("" if script else NO_SCRIPT + script_step.narration_rules())
+              + (NOTE.format(note=note) if note.strip() else ""))
+    early = audit.begin(request, script, ask)  # the facts audited beside the bundle call (studio/steps/audit.py)
     try:
         answer = ask("brain", prompt + ("\n\n" + script_step.as_prompt(script) if script else ""),
                      Bundle if sung else LessonBundle, request.images, system=system, label="bundle")
@@ -127,7 +136,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
                         + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))
     write(job / "bundle.json", bundle)
     write(job / "checks.json", report)
-    return bundle
+    return audit.settle(job, bundle, early)
 
 
 def _lesson_only(answer: dict) -> Bundle:
@@ -150,8 +159,8 @@ def user_prompt(request: Request, rotation: str = "", sung: bool = True) -> str:
         parts.append(f"The song style the learner asked for: {request.song_style}")
     elif sung and rotation:
         parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. For a high school "
-                     "or older audience, it is the seed of the song's style: keep its genre and roughly its tempo, "
-                     "and write your own description from it. A younger audience gets the younger style below, and "
+                     "or older audience, it is the seed of the song's style: keep its genre, roughly its tempo and any "
+                     "section it raps, and write your own description from it. A younger audience gets the younger style below, and "
                      "a grave topic (a genocide, slavery) the grave topic's own slow style.")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")

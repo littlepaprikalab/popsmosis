@@ -252,15 +252,19 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
     level = step.CROWD_START
     for beat in song.beats:
         crowds = beat.crowds
-        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
-            assert crowds == []
+        if beat.scene != "overview":  # the hook does not draw cytochrome b6f (it does the thylakoid: a few there)
+            assert all(c.thin for c in crowds)
             continue
-        [crowd] = crowds
+        [crowd] = [c for c in crowds if not c.thin]
+        [few] = [c for c in crowds if c.thin]  # where they come from and go: a few there, the same all along
+        assert (few.region, few.label, few.start, few.end) == ("Thylakoid", "H⁺", step.THIN_SHARE, step.THIN_SHARE)
         assert (crowd.region, crowd.label, crowd.color) == ("Cytochrome b6f", "H⁺", "#F2C230")
         assert crowd.start == pytest.approx(level, abs=1e-3)  # it runs on from where it was
         rise = (crowd.end - crowd.start) / (beat.t1 - beat.t0)
         if beat.line_id == "v1-2":
-            assert rise == pytest.approx(1 / step.FILL_S, rel=0.01)
+            # it fills at 1 / FILL_S a second, up to full: from half full (CROWD_START) it can get there first
+            assert crowd.end == pytest.approx(min(1.0, crowd.start + (beat.t1 - beat.t0) / step.FILL_S), rel=0.01)
+            assert rise > 0
         elif beat.line_id == "v2-1":
             assert rise < 0 and crowd.end >= step.CROWD_MIN
         else:
@@ -268,27 +272,21 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
         level = crowd.end
 
 
-def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job):
+
+def test_a_crowd_starts_half_full_and_none_is_added_where_it_crowds_already(job):
+    # Round 22's pump began its sodium outside nearly empty; the writer never said which crowds were already there.
     data = sample_media.bundle().model_dump()
-    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
-    direct(data, "v2-1", spotlight="Thylakoid")  # a line about one part: nothing flows on it, so it slows to a stop
-    data["spins"] = [{"structure": "Cytochrome b6f"}]
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")  # in
+    direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # out: a leak
+    data["builds_up"] = [{"carries": "H⁺", "region": "Cytochrome b6f", "held": True},  # saved before Nov 1's drop
+                         {"carries": "H⁺", "region": "Thylakoid"}]  # crowded at both ends: no thin side
     write_bundle(job, data)
     song = make(job)["song"]
-    before = None
-    for beat in song.beats:
-        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
-            assert beat.turning == []
-            continue
-        [turn] = beat.turning
-        driven = any("Cytochrome b6f" in f.path[1:] for f in beat.particles)  # its own flow, or the scene running
-        assert driven == (beat.line_id != "v2-1" and beat.t0 >= lines(song)["v1-2"].t0)
-        assert turn.speed == (step.SPIN_SPEED if driven else 0.0)
-        if before is not None:  # it runs on from where the beat before left it, never jumping
-            turns, speed = before[0].at(before[1])
-            assert turn.from_speed == pytest.approx(speed) and turn.turns == pytest.approx(turns % 1, abs=1e-5)
-        before = (turn, beat.t1 - beat.t0)
-    assert any(b.turning and b.turning[0].turns > 0 for b in song.beats)
+    shown = [c for b in song.beats if b.scene == "overview" for c in b.crowds]
+    assert not any(c.thin for c in shown)
+    for region in ("Cytochrome b6f", "Thylakoid"):
+        crowd = [c for c in shown if c.region == region]
+        assert crowd[0].start == step.CROWD_START == 0.5 and min(c.end for c in crowd) >= step.CROWD_MIN
 
 
 def test_particles_that_end_at_a_blocker_are_blocked_and_a_glow_shows_once_named(job):
@@ -519,17 +517,18 @@ def keyed(data):
     data["key_terms"] = ["ATP synthase", "lumen"]
 
 
-def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_every_chorus(job):
+def test_the_song_holds_each_key_line_until_the_next_and_none_over_a_chorus(job):
     data = bundle_data()
     keyed(data)
     bundle = write_bundle(job, data)
     timelines = make(job)
     song = timelines["song"]
     shown = {b.line_id: b.key_line for b in song.beats if b.line_id}
-    # Each chorus sings the core idea, so it shows it, until the next key line (the bridge has none of its own).
+    # Each chorus sings the core idea, written at the top of every frame: no step under it, until the next key line
+    # (the bridge has none of its own).
     assert shown == {"v1-1": "How does a leaf make fuel from light?", "v1-2": "How does a leaf make fuel from light?",
-                     "c1-1": bundle.core_idea, "v2-1": "Light pumps H⁺ into the lumen",
-                     "c2-1": bundle.core_idea, "b-1": bundle.core_idea, "c3-1": bundle.core_idea}
+                     "c1-1": "", "v2-1": "Light pumps H⁺ into the lumen", "c2-1": "", "b-1": "", "c3-1": ""}
+    assert all(t.core_idea == " ".join(bundle.core_idea.split()) for t in timelines.values())
     for i, beat in enumerate(song.beats):  # a gap holds the line before it
         if not beat.line_id and i:
             assert beat.key_line == song.beats[i - 1].key_line
@@ -537,12 +536,23 @@ def test_the_song_holds_each_key_line_until_the_next_and_the_core_idea_over_ever
     lesson = {b.line_id: b.key_line for b in timelines["lesson"].beats if b.line_id}
     narration = [n.id for n in bundle.narration]
     assert lesson[narration[0]] == "How does a leaf make fuel from light?"
-    assert lesson[narration[-1]] == bundle.core_idea  # the narration ends on the core idea
+    assert lesson[narration[-1]] == ""  # the narration ends on the core idea, already at the top
     assert all(lesson[n] == "Light pumps H⁺ into the lumen" for n in narration[1:-1])
     assert timelines["lesson"].key_terms == ["ATP synthase", "lumen"]
     hook = jobs.read(job / media.timeline_path(media.HOOK), Timeline)
-    assert any(b.key_line for b in hook.beats) and hook.key_terms == song.key_terms
+    assert hook.key_terms == song.key_terms and hook.core_idea == song.core_idea
 
+
+
+def test_a_step_is_held_only_to_the_end_of_its_section(job):
+    # Nov 1: "2 K⁺ binding drops phosphate" stayed over the pre-chorus's "Towing sugar uphill with it too".
+    data = bundle_data()
+    keyed(data)
+    next(line for line in data["lyrics"] if line["id"] == "v1-2")["section"] = "pre-chorus"
+    write_bundle(job, data)
+    shown = {b.line_id: b.key_line for b in make(job)["song"].beats if b.line_id}
+    assert shown["v1-1"] == "How does a leaf make fuel from light?" and shown["v1-2"] == ""  # a new section: none
+    assert shown["v2-1"] == "Light pumps H⁺ into the lumen"  # a key line where a section starts wins
 
 def test_a_song_from_a_bundle_without_key_lines_has_none(job):
     for timeline in make(job).values():
@@ -617,7 +627,8 @@ def test_a_drawn_value_is_written_as_the_voice_says_it_and_a_tick_from_the_start
     assert not says("10%", "$10") and not says("1,100", "$1,210")
     values = [Value(text="$1,210", at=Point(x=500, y=300)), Value(text="Year 2", at=Point(x=500, y=900), side="below",
                                                                      tick=True),
-              Value(text="$1,331", at=Point(x=700, y=250))]  # never said: written from the start
+              Value(text="$1,331", at=Point(x=700, y=250)),  # never said: written from the start
+              Value(text="Thylakoid", at=Point(x=300, y=250), label=True)]  # a name: the renderer's, with its label
     beats = [{"scene": "hook", "t0": 0.0, "t1": 4.0, "words": [Word(word="$1,210", start=1.0, end=1.5)]},
              {"scene": "overview", "t0": 4.0, "t1": 8.0, "words": [Word(word="So", start=4.2, end=4.4)]},
              {"scene": "overview", "t0": 8.0, "t1": 12.0, "words": [Word(word="reaches", start=8.5, end=9.0),
@@ -725,3 +736,32 @@ def test_the_song_follows_on_its_long_hold_and_the_lesson_keeps_its_direction(jo
     for beat in timelines["lesson"].beats:
         if beat.line_id:
             assert beat.camera.target in (None, directed[beat.line_id])
+
+
+def test_a_graph_parts_meaning_stays_with_its_name_from_when_it_is_first_named():
+    from types import SimpleNamespace
+    from studio.schemas import Meaning, Point, Reveal, Value
+    from studio.steps.timeline import _mean
+
+    names = [Value(text=n, at=Point(x=500, y=300), label=True) for n in ("Demand curve", "Supply curve", "Gap")]
+    locations = SimpleNamespace(scenes=[SimpleNamespace(scene="graph", values=names),
+                                        SimpleNamespace(scene="close", values=names[:1]),
+                                        SimpleNamespace(scene="hook", values=[])])
+    bundle = SimpleNamespace(meanings=[Meaning(structure="Demand curve", text="lower price → people buy more"),
+                                       Meaning(structure="Supply curve", text="higher price → sellers offer more"),
+                                       Meaning(structure="Gap", text="buyers want more than sellers have")])
+
+    def beat(scene, t0, t1, *reveal):
+        return {"scene": scene, "t0": t0, "t1": t1, "reveal": [Reveal(name=n, t=at) for n, at in reveal]}
+
+    beats = [beat("graph", 0.0, 3.0), beat("graph", 3.0, 6.0, ("Demand curve", 4.0)), beat("graph", 6.0, 9.0),
+             beat("hook", 9.0, 12.0), beat("graph", 12.0, 15.0, ("Gap", 13.0)), beat("close", 15.0, 20.0)]
+    _mean(beats, bundle, locations)
+    got = [[(m.structure, m.since, m.until) for m in b["meanings"]] for b in beats]
+    # Demand curve, named on the second line, keeps its meaning from then to the video's end wherever its name is
+    # written, the close-up too; the gap from its own naming. Supply curve, never named: none. The hook has no names.
+    assert got[0] == []
+    assert got[1] == got[2] == [("Demand curve", 4.0, 20.0)]
+    assert got[3] == []
+    assert got[4] == [("Demand curve", 4.0, 20.0), ("Gap", 13.0, 20.0)]
+    assert got[5] == [("Demand curve", 4.0, 20.0)]

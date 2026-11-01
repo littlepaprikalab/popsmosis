@@ -4,7 +4,7 @@ from studio import brain, knobs
 from studio.jobs import read, write
 from studio.styles import style_for
 from studio.schemas import Bundle, CheckReport, LessonBundle, Request
-from studio.steps import bundle as bundle_step
+from studio.steps import bundle as bundle_step, script as script_step
 from studio.tests.sample import bundle_data, lesson_bundle_data
 
 
@@ -25,7 +25,8 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
     bundle = bundle_step.run(tmp_path, ask=fake_ask)
     assert labels == ["script", "bundle", "narration edit"]
     assert seen["role"] == "brain" and seen["schema"] is Bundle and seen["label"] == "bundle"
-    assert seen["system"] == bundle_step.PROMPT and "Teach the why, not the parts list" in seen["system"]
+    assert seen["system"] == bundle_step.PROMPT + NO_SCRIPT
+    assert "Teach the why, not the parts list" in seen["system"]
     assert seen["prompt"].startswith("Topic: the light reactions\n\nCourse: AP Bio\n\nThe song style for this droplet, "
                                      "from the studio's rotation: ")
     assert style_for(tmp_path.name) in seen["prompt"]
@@ -40,7 +41,10 @@ def test_the_prompt_holds_for_topics_outside_science():
     prompt = " ".join(bundle_step.PROMPT.split())
     assert "never a route made up to keep the dots busy" in prompt and "their scenes hold still" in prompt
     assert 'named in a plain word ("price", "letter", "taxes")' in prompt
-    assert "or, for any other idea, its cause and its result, and why it matters" in prompt
+    # The narration is the script's now, and ends on what goes in and comes out only for a process; the chorus,
+    # which sums up the same way, keeps the warning.
+    assert "for a process, what goes in and what comes out" in " ".join(script_step.narration_rules().split())
+    assert "for any other idea, its cause and its result. Only something really taken in" in prompt
     assert "the bridge takes the other case the facts give" in prompt and "another case the same idea explains" in prompt
 
 
@@ -61,7 +65,8 @@ def test_a_grave_topic_sets_its_own_slow_style_over_the_rotation():
     assert "A grave topic sets its own style**, whatever the rotation says" in rules
     assert "80 to 90 bpm" in rules and "No dance beat" in rules and "never a full or epic orchestra" in rules
     # The first Holocaust droplet carried "trains" to occupied Poland; the slave trade's carried "people" south.
-    assert "The people such a topic is about are never particles" in rules
+    assert ('In a grave topic (a genocide, slavery), dots marked "people" or "trains" carried across a map make '
+            "tokens of the dead") in rules
 
 
 def test_the_prompt_carries_the_request_and_study_guide():
@@ -95,6 +100,9 @@ def test_the_learners_own_song_style_wins_over_the_rotation():
     assert "The song style the learner asked for: K-pop" in prompt and "rotation" not in prompt
 
 
+NO_SCRIPT = bundle_step.NO_SCRIPT + script_step.narration_rules()  # what the brief gets when the script fails
+
+
 def _asking(answer, seen):
     def fake_ask(role, prompt, schema=None, images=(), *, system=None, label=None):
         if label == "script":
@@ -115,9 +123,9 @@ def test_the_lesson_video_alone_is_written_with_no_song(tmp_path):
             {"text": "Light splits water → O₂ + H⁺ + e⁻", "from_narration": "n1"}]
     seen = {}
     bundle = bundle_step.run(tmp_path, ask=_asking(lesson_bundle_data(keys), seen))
-    assert seen["schema"] is LessonBundle and seen["system"] == bundle_step.LESSON_ONLY_PROMPT
+    assert seen["schema"] is LessonBundle and seen["system"] == bundle_step.LESSON_ONLY_PROMPT + NO_SCRIPT
     assert "## The song" not in seen["system"] and "### The music" not in seen["system"]
-    assert "## The narration" in seen["system"] and seen["system"].endswith(bundle_step.NO_SONG)
+    assert "## The narration" in seen["system"] and bundle_step.LESSON_ONLY_PROMPT.endswith(bundle_step.NO_SONG)
     assert "song style" not in seen["prompt"] and "k-pop" not in seen["prompt"]
     assert not bundle.sung and bundle.lyrics == [] and bundle.tags.song == []
     assert [k.from_narration for k in bundle.key_lines] == ["n1", "n2"]
@@ -130,7 +138,7 @@ def test_with_the_song_on_the_brief_and_the_schema_are_as_they_were(tmp_path):
     seen = {}
     write(tmp_path / "request.json", Request(topic="the light reactions"))
     bundle_step.run(tmp_path, ask=_asking(bundle_data(), seen))
-    assert seen["schema"] is Bundle and seen["system"] == bundle_step.PROMPT
+    assert seen["schema"] is Bundle and seen["system"] == bundle_step.PROMPT + NO_SCRIPT
 
 
 def test_a_song_asked_for_and_not_written_is_refused(tmp_path):
@@ -161,5 +169,24 @@ def test_the_lesson_alone_brief_cuts_the_song_and_survives_a_renamed_heading():
     assert len(bundle_step.LESSON_ONLY_PROMPT) < 0.8 * len(bundle_step.PROMPT)
     renamed = "Intro\n\n## Songs\n\nSing.\n\n## Narration\n\nSay.\n"
     assert bundle_step.without_song(renamed) == renamed + bundle_step.NO_SONG
-    # The grave-topic rule the song section carried is said again for the plan.
-    assert 'never particles: dots marked\n  "people" or "trains"' in bundle_step.NO_SONG
+    # The grave-topic rule is Direction's, which the lesson alone keeps: said once.
+    lesson_only = " ".join(bundle_step.LESSON_ONLY_PROMPT.split())
+    assert lesson_only.count('dots marked "people" or "trains"') == 1 and "people" not in bundle_step.NO_SONG
+
+
+def test_the_narration_rules_are_the_script_writers():
+    """The brief keeps no narration rules of its own: the script's narration is spoken word for word, and with no
+    script the bundle writer gets the script writer's rules for it."""
+    rules = script_step.narration_rules()
+    assert rules.startswith("`narration` is the voice-over, in passages") and "## " not in rules
+    assert "The rules for the audience" not in rules and "**The hook**" in rules
+    assert "350 to 450" not in bundle_step.PROMPT and "**The hook**" not in bundle_step.PROMPT
+
+
+def test_a_reference_style_is_asked_for_by_name_and_never_rotated():
+    from studio import styles
+    for name, style in styles.REFERENCE_STYLES.items():
+        assert styles.named(name) == style == styles.named(f"  {name.upper()} ")
+        assert "diction" in style  # said once, by the style itself
+    assert styles.CASH_IN_THE_CARRIER in styles.SONG_STYLES  # the owner's favourite, in the rotation too
+    assert styles.named("pop-punk, fast") == "pop-punk, fast"  # anything else, as the learner said it

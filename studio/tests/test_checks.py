@@ -127,6 +127,18 @@ def test_a_name_the_scene_does_not_draw_is_left_for_the_prompt():
     assert report.problems[0].detail == 'names ATP synthase, which scene "overview" does not draw'
 
 
+def test_a_word_for_a_part_off_screen_is_a_word_not_a_name():
+    # The line says "ATP synthase" over a scene that does not draw it, and does not list it: a word, as a song
+    # carrying its frame says one. Listed, the same line is a real slip (the test above).
+    def change(d):
+        direction(d, "n2").update(scene="overview")
+        line(d, "n2").update(names=[])
+
+    bundle, found, _ = review(change)
+    assert found == []
+    assert next(n for n in bundle.narration if n.id == "n2").names == []
+
+
 def test_names_are_held_to_what_the_line_says():
     def change(d):
         line(d, "v1-1").update(names=[])  # says "thylakoid" without listing it
@@ -166,7 +178,44 @@ def test_what_particles_carry_needs_particles_and_fits_on_the_dot():
 
     assert carrying(["Thylakoid", "Cytochrome b6f"], "H⁺") == ("H⁺", [])
     assert carrying([], "H⁺") == ("", [("v1-1", "carries", True)])
-    assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True)])
+    # Unmarked, it moves as an arrow (it has no symbol to write on a particle), which then wants its one-liner.
+    assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True),
+                                                                              ("v1-1", "says", False)])
+
+
+def test_an_arrow_has_a_short_one_liner_beside_it():
+    def saying(carries, says, moves=""):
+        def change(data):
+            direction(data, "v1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries=carries, moves=moves,
+                                           says=says)
+        bundle, found, _ = review(change)
+        return next(d.says for d in bundle.direction if d.line_id == "v1-1"), [f for f in found if f[1] == "says"]
+
+    assert saying("H⁺", "") == ("", [])  # a marked ion crosses as particles: no arrow, nothing to say
+    assert saying("H⁺", "", moves="travels") == ("", [("v1-1", "says", False)])  # an arrow, bare
+    assert saying("glucose", "") == ("", [("v1-1", "says", False)])  # a word moves as an arrow
+    assert saying("glucose", "  Glucose rides in   with sodium ") == ("Glucose rides in with sodium", [])
+    assert saying("glucose", "x" * (checks.SAYS_MAX + 1)) == ("", [("v1-1", "says", True), ("v1-1", "says", False)])
+    assert checks.arrow("Ca²⁺", "") is False and checks.arrow("NAD⁺", "crosses") is False  # three letters at most
+    assert checks.arrow("NADPH", "crosses") is True and checks.arrow("", "") is True
+
+
+def test_a_picture_asking_for_two_moments_side_by_side_is_recorded():
+    def asking(prompt):
+        def change(data):
+            data["scenes"][-1]["image_prompt"] = prompt
+        _, found, _ = review(change)
+        return [f for f in found if f[1] == "side-by-side"]
+
+    assert asking("One sodium-potassium pump in a membrane, drawn twice side by side.") != []
+    assert asking("A before and after view of the cell.") != []
+    assert asking("The dog in four panels, left to right.") != [] and asking("In the third panel, the bell.") != []
+    assert asking("The Moon drawn three times across the sky.") != []
+    assert asking("One pump in a membrane, its pocket open toward the inside.") == []
+    # Two things side by side are no sign (the scorecard of Nov 1): two markets, two people, a chart's bars.
+    assert asking("Two places that sell strawberries, side by side.") == []
+    assert asking("Romeo and Juliet standing side by side under the stars.") == []
+    assert asking("Eleven vertical bars of equal width stand side by side.") == []
 
 
 def test_what_builds_up_is_where_marked_particles_start_or_end():
@@ -214,6 +263,80 @@ def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
     assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
 
 
+def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
+    def meaning(*pairs, graph=True):
+        def change(data):
+            if graph:
+                scene = next(s for s in data["scenes"] if s["id"] == "overview")
+                scene["axes"] = {"x": "Time", "y": "Rate"}
+            data["meanings"] = [{"structure": s, "text": text} for s, text in pairs]
+        bundle, found, _ = review(change)
+        return [(m.structure, m.text) for m in bundle.meanings], [f for f in found if f[1] == "meanings"]
+
+    assert meaning(("thylakoid", "  more  light → faster ")) == ([("Thylakoid", "more light → faster")], [])
+    left_out = [("meanings", "meanings", True)]
+    assert meaning(("the rotor", "spins")) == ([], left_out)  # no such structure
+    assert meaning(("Thylakoid", "more light → faster"), graph=False) == ([], left_out)  # no graph draws it
+    assert meaning(("Thylakoid", "x" * 41)) == ([], left_out)  # too long for one line under its name
+    assert meaning(("Thylakoid", "")) == ([], left_out)
+    assert meaning(("Thylakoid", "one"), ("thylakoid", "two"))[1] == left_out  # one a part
+
+    def on_analogy(*pairs):  # no picture draws the analogy (Nov 1): a meaning for one of its parts is left out
+        def change(data):
+            next(s for s in data["scenes"] if s["id"] == "hook")["id"] = "analogy"
+            for d in data["direction"]:
+                d["scene"] = "analogy" if d["scene"] == "hook" else d["scene"]
+            data["meanings"] = [{"structure": s, "text": text} for s, text in pairs]
+        bundle, found, _ = review(change)
+        return [(m.structure, m.text) for m in bundle.meanings], [f for f in found if f[1] == "meanings"]
+
+    assert on_analogy(("Thylakoid", "the stored-up protons")) == ([], left_out)
+
+
+def test_syllables_are_counted_as_sung():
+    from studio.checks import syllables
+    # A silent "-ed" is no syllable, but a sung one is; a contraction is one word, not a word and a lone letter.
+    assert [syllables(w) for w in ("learned", "used", "wanted", "needed", "hundred", "troubled")] == [1, 1, 2, 2, 2, 2]
+    assert [syllables(w) for w in ("it's", "you're", "don't", "they're")] == [1, 1, 1, 1]
+    assert syllables("Acquisition, now it's learned by heart") == 9  # was counted 11, and flagged
+
+
+def test_a_lyric_one_syllable_over_passes_and_two_over_is_recorded():
+    def lyric(text):
+        def change(data):
+            data["lyrics"][0]["text"] = text
+        _, found, _ = review(change)
+        return [rule for line, rule, _ in found if line == "v1-1" and rule == "lyric-style"]
+
+    assert lyric(" ".join(["la"] * 11)) == []  # one over the cap: a singer takes it in stride
+    assert lyric(" ".join(["la"] * 12)) == ["lyric-style"]
+
+
+
+def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
+    # The owner (Nov 1): a K-pop song has a rap section, not a rapped song. The rest stays sung, held to the sung cap.
+    def rapped(style):
+        data = bundle_data()
+        data["music"]["positive_styles"] = [style]
+        return checks.rapped_lines(data)
+
+    assert rapped("K-pop, a sung first verse, a rapped second verse, 100 bpm") == {"v2-1"}
+    assert rapped("dance-pop, short sung verses and a rapped bridge, 112 bpm") == {"b-1"}
+    assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {
+        "v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"}  # rapped, no section named: every line, as before
+    assert rapped("bright teen pop with melodic sung verses, 104 bpm") == set()
+
+    def long_lines(style):
+        def change(data):
+            data["music"]["positive_styles"] = [style]
+            for line in data["lyrics"]:
+                if line["id"] in ("v1-1", "v2-1"):
+                    line["text"] = " ".join(["la"] * 13)
+        _, found, _ = review(change)
+        return [line for line, rule, _ in found if rule == "lyric-style"]
+
+    assert long_lines("K-pop, a sung first verse, a rapped second verse, 100 bpm") == ["v1-1"]  # the sung one
+
 def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
     def change(data):
         data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"
@@ -231,6 +354,16 @@ def test_next_up_and_here_comes_announce_a_section_but_are_sung_before_anything_
         "Next up, the power rule, with no limit to compute", "Next up: estar plus an -ando, the present progressive",
         "Here comes HIV with a protein like a key")]
     assert narrates == [True, True, True, True, False, False, False]
+
+
+def test_a_sung_watch_or_see_is_not_a_direction():
+    # Nov 1: two songs' frames were flagged as narrating the picture.
+    narrates = [bool(checks.DIRECTION_LINE.match(text)) for text in (
+        "Zoom inside to the chloroplast", "Zoom on the corner, what do you see?", "Now look at the membrane",
+        "Look inside the nephron", "Let's see how the pump turns", "Now watch the gate swing open",
+        "Watch the replay, you know the score", "Watch the needle climbing slow", "See if the same result is found",
+        "Look up some night, a silver sliver", "Now seeing is believing")]
+    assert narrates == [True, True, True, True, True, True, False, False, False, False, False]
 
 
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
@@ -373,45 +506,52 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
 
 
-def test_every_section_is_asked_for_the_songs_own_style_with_nothing_added():
+def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once():
     from studio.steps import audio
 
     data = bundle_data()
     data["music"]["positive_styles"] = ["Pop with clear rapped verses, rising into a sung chorus; 100 bpm."]
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
-    assert all(c["positive_styles"] == bundle.music.positive_styles for c in plan["chunks"])
+    assert all(c["positive_styles"] == [*bundle.music.positive_styles, audio.DICTION] for c in plan["chunks"])
     assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
     prompt, _ = audio.song_prompt(bundle)
-    assert "never rapped" not in prompt and prompt.startswith(f"Style: {bundle.music.positive_styles[0]}\n")
+    style = bundle.music.positive_styles[0].rstrip(".")
+    assert "never rapped" not in prompt and prompt.startswith(f"Style: {style}, {audio.DICTION}.\n")
     assert ".." not in prompt  # the description's own full stop is the sentence's
+    # A style that asks for diction already is not asked again.
+    data["music"]["positive_styles"] = ["Pop with crisp diction on the verses; 100 bpm"]
+    plan, _ = audio.composition_plan(Bundle.model_validate(data))
+    assert all(c["positive_styles"] == ["Pop with crisp diction on the verses; 100 bpm"] for c in plan["chunks"])
+    assert audio.song_prompt(Bundle.model_validate(data))[0].count("diction") == 1
 
 
-def test_a_scene_where_things_travel_and_the_song_stands_still_is_recorded():
+def test_lines_that_hold_still_are_not_a_problem():
+    # A line about nothing that travels holds still, whether or not something travels on its scene elsewhere.
     data = bundle_data()
     for d in data["direction"]:
         d.update(particles=[], carries="")
-    # Nothing travels on the overview in either video: a still picture (a graph, a stage), never asked to move.
     assert checks.motion_problems(Bundle.model_validate(data)) == []
-    direction(data, "n1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")  # now something does
-    found = [(p.line_id, p.detail) for p in checks.motion_problems(Bundle.model_validate(data))]
-    still = [line for line, detail in found if "nothing moving" in detail]
-    assert still == ["v1-1"], "a song standing still on a scene where things travel is recorded"
+    direction(data, "n1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
     direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
-    # v1-1 alone is short enough; the five still lines after v1-2 are not.
-    assert [p.line_id for p in checks.motion_problems(Bundle.model_validate(data))] == ["c1-1"]
+    assert checks.motion_problems(Bundle.model_validate(data)) == []
 
 
-def test_key_lines_are_put_in_song_order_and_ones_the_screen_cannot_show_are_dropped():
+def test_key_lines_keep_the_chains_order_and_ones_the_song_cannot_show_stay_in_the_lesson():
     data = bundle_data()
     data["key_lines"] = [{"from_line": "v2-1", "text": "Light pumps H⁺", "from_narration": "n2"},
                          {"from_line": "v1-1", "text": "How?", "from_narration": "n2"},
                          {"from_line": "nope", "text": "Lost"}, {"from_line": "v2-1", "text": "Twice"},
-                         {"from_line": "c1-1", "text": "Unspoken", "from_narration": "zz"}]
+                         {"from_line": "c1-1", "text": "Unspoken", "from_narration": "zz"},
+                         {"from_line": "", "text": "Not sung", "from_narration": "n1"},  # as the brief asks
+                         {"from_line": "gone", "text": "Said only", "from_narration": "n1"}]
     bundle, report = checks.review(Bundle.model_validate(data))
     assert [(k.from_line, k.text, k.from_narration) for k in bundle.key_lines] == [
-        ("v1-1", "How?", ""), ("c1-1", "Unspoken", ""), ("v2-1", "Light pumps H⁺", "n2")]  # n2 went to the first
-    assert len([p for p in report.problems if p.rule == "key-line"]) == 4
+        ("v2-1", "Light pumps H⁺", "n2"), ("v1-1", "How?", ""), ("c1-1", "Unspoken", ""), ("", "Not sung", "n1"),
+        ("", "Said only", "")]  # n2 and n1 went to the first that asked; a song may sing the chain out of order
+    details = [p.detail for p in report.problems if p.rule == "key-line"]
+    assert len(details) == 6 and any("out of the song video" in d and "Said only" in d for d in details)
+    assert not any("Not sung" in d for d in details)  # "" is no problem: a step the song never sings
 
 
 def test_key_lines_are_recorded_when_too_few_or_too_long():
@@ -444,7 +584,8 @@ def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_ke
     line = next(d for d in bundle.direction if d.line_id == "v1-1")
     assert [(f.particles, f.carries) for f in line.flows()] == [
         (["Thylakoid", "Cytochrome b6f"], "H⁺"), (["Cytochrome b6f", "Thylakoid"], "")]
-    assert sorted(found) == [("v1-1", "carries", True), ("v1-1", "particles", True)]
+    # The unmarked one moves as an arrow, which wants a one-liner (Direction.says).
+    assert sorted(found) == [("v1-1", "carries", True), ("v1-1", "particles", True), ("v1-1", "says", False)]
     _, found, _ = review(lambda d: direction(d, "v1-1").update(also=[{"particles": ["Thylakoid", "ATP synthase"],
                                                                        "carries": "O₂"}]))
     assert found == [("v1-1", "particles", True)]  # ATP synthase is not on the hook: fewer than two stops
@@ -550,3 +691,30 @@ def test_a_bundle_with_no_song_is_checked_as_the_lesson_alone():
     assert not any(p.rule == "tempo" for p in report.problems)
     assert checks.song_length_problems(reviewed) == checks.song_shape_problems(reviewed) == []
     assert checks.style_problems(reviewed, "k-pop, 140 bpm") == [] and checks.motion_problems(reviewed) == []
+
+
+def test_no_picture_draws_the_analogy_and_its_lines_play_over_the_real_thing():
+    # The owner (Nov 1): a water tower, then a nightclub, drawn for the pump made the learner map two pictures. The
+    # analogy lives in the words: a scene drawn for it is left out, and its lines, sung or said, play over the scene
+    # with the real thing after it, whole and still.
+    def analogy_first(extra):
+        def change(data):
+            analogy = next(s for s in data["scenes"] if s["id"] == "hook")
+            analogy["id"] = "analogy"
+            data["scenes"] = [s for s in data["scenes"] if s is not analogy]
+            data["scenes"].insert(0, analogy)  # just before the overview, the real thing it explains
+            if extra:
+                data["scenes"].append({**data["scenes"][1], "id": "detail"})
+            for d in data["direction"]:
+                if d["line_id"] in ("v1-1", "n1"):
+                    d.update(scene="analogy", particles=["Thylakoid"], carries="", moves="")
+        return change
+
+    for extra in (True, False):
+        bundle, found, _ = review(analogy_first(extra))
+        directed = {d.line_id: d for d in bundle.direction}
+        for line in ("v1-1", "n1"):
+            assert directed[line].scene == "overview" and not directed[line].particles  # the real thing, still
+        assert ("scenes", "analogy", True) in found
+        assert ("analogy" in [s.id for s in bundle.scenes]) == (not extra)  # kept, unshown, when 3 would not be left
+        assert not any(d.scene == "analogy" for d in bundle.direction)

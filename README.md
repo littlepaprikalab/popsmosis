@@ -582,8 +582,8 @@ asked for the topic, and not the Droplets tab. It is fetched only when opened (`
 - **Fact-check**: how many lines it judged supported, filler and unsupported, in how many rounds, what it fixed
   (before and after, and why), and every line it judged. Saved with every lesson since the fact-check began.
 - **Code checks**: what `studio/checks.py` found in the bundle that only a better bundle could fix (a line naming a
-  part its scene does not draw, a run of lines with nothing moving), and how many it repaired itself. The studio
-  sends `checks.json` with the lesson (`checks`).
+  part its scene does not draw, a chorus directed differently each time it is sung), and how many it repaired
+  itself. The studio sends `checks.json` with the lesson (`checks`).
 - **Pictures**: each scene's kept picture beside what the art checker said about it (writing in it, a part missing
   or out of place, an unnamed thing, anything else wrong, a note that would teach something false), which try was
   kept, and why each earlier try was painted again or declined. The studio sends each scene's `art/<scene>.json`

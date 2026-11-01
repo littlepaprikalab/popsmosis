@@ -21,9 +21,10 @@ The drawer is Claude Opus 5.5 at high effort, whatever the brain: on Muse's brai
 admin's STUDIO_CLAUDE_DRAWS knob gives Claude (charts, and a math lesson's pictures; studio/steps/art.py), since a
 painter cannot count or draw to scale. On Claude's brain the brain draws them itself.
 
-The judge, which grades droplets for the scorecard (studio/scorecard.py), is Claude Sonnet 5.5 whatever
-the brain, so two runs on different brains are graded alike, and the brain in force by default is never
-its own judge.
+The judge, which grades droplets for the scorecard (studio/scorecard.py), is Claude Opus 5.5 whatever
+the brain, so two runs on different brains are graded alike: the stronger reader (the owner, Oct 31), though
+Claude's brain is then graded by its own model. Until Oct 31 it was Claude Sonnet 5.5, and runs are compared only
+on one judge.
 
 Prompts and schemas are shared. A schema is a pydantic model, sent as a JSON schema
 cut down to what both providers accept (strict_schema), and every answer is
@@ -59,7 +60,7 @@ CLAUDE = {
     # parts SAM missed.
     "helper": {"model": "claude-sonnet-5-5", "effort": "low", "max_tokens": 16000},
     # The scorecard's judge, on every brain. Changing it makes earlier scorecards no longer comparable.
-    "judge": {"model": "claude-sonnet-5-5", "effort": "high", "max_tokens": 32000},
+    "judge": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 32000},
     # Draws a Muse brain's charts and math as SVG (studio/steps/art.py): Claude's brain as it is by default.
     "drawer": {"model": "claude-opus-5-5", "effort": "high", "max_tokens": 128000},
 }

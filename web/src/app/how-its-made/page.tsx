@@ -43,6 +43,12 @@ const LESSON_STEPS: Step[] = [
       + 'lesson, the spoken lesson and the song all come from this one plan.',
   },
   {
+    name: 'Fact check',
+    kind: 'gate',
+    text: 'While the lesson is written from the plan, the AI starts fresh and checks each fact on its own against what '
+      + 'textbooks teach at your level. Wrong facts are fixed, and the fixes are checked again.',
+  },
+  {
     name: 'Rule check',
     kind: 'checks',
     text: 'Simple computer rules check what can be counted, like whether every song line is short enough to sing. '
@@ -53,12 +59,6 @@ const LESSON_STEPS: Step[] = [
     kind: 'checks',
     text: 'A second AI plays a student who has never seen the topic. It reads only the lesson and explains it back, '
       + 'and if it misses the big idea or why it works, the lesson is rewritten once.',
-  },
-  {
-    name: 'Fact check',
-    kind: 'gate',
-    text: 'The AI starts fresh and checks each fact on its own against what textbooks teach at your level. Wrong facts '
-      + 'are fixed, and the fixes are checked again.',
   },
   {
     name: 'Line check',
@@ -72,21 +72,22 @@ const PICTURE_STEPS: Step[] = [
   {
     name: 'Pictures',
     kind: 'makes',
-    text: 'An AI paints each picture like a textbook diagram with no words; the video adds the labels. With Claude '
-      + 'writing (our default), charts and anything to scale are drawn by code from the real numbers instead.',
+    text: 'An AI paints each picture like a textbook diagram, with its parts labeled. Graphs, charts and math pictures '
+      + 'are drawn instead as exact shapes, to scale, and code checks that every part is there.',
   },
   {
     name: 'Picture check',
     kind: 'checks',
-    text: 'A second AI looks at each painted picture for parts that are missing or out of place, and for any writing. '
-      + 'If it finds one, the picture is painted once more.',
+    text: 'A second AI looks at each painted picture for parts that are missing or out of place, and for wrong labels. '
+      + 'A picture with a part missing or out of place is painted once more. A wrong label stays, but the video '
+      + 'circles it and says what’s true.',
     discloses: true,
   },
   {
-    name: 'Labels',
+    name: 'Finding the parts',
     kind: 'checks',
-    text: 'Another AI finds each part so its label points to the right spot, and then checks where every label landed. '
-      + 'A part it can’t find gets no label, not a guess.',
+    text: 'Another AI finds each part in the picture, so the camera can zoom in on it and the video can point it out. '
+      + 'It checks every spot it found, and a part it can’t find is left out, not guessed.',
   },
 ];
 
@@ -146,22 +147,22 @@ const HARD: Hard[] = [
     title: 'AI draws what looks right, not what is right',
     happened: 'We asked for Earth with its axis “at right angles to the equator.” The image AI drew a flat equator with '
       + 'a tilted stick through it. It got this wrong six times out of six.',
-    changed: 'Pictures that need exact angles or sizes are now drawn by code, where “at right angles” is an exact '
-      + 'number. In our tests, code drew the axis and the tilt right every time.',
+    changed: 'Pictures that need exact angles or sizes are now drawn as exact shapes, where “at right angles” is an '
+      + 'exact number. In our tests, the axis and the tilt came out right every time.',
   },
   {
     title: 'Numbers can’t be painted',
     happened: 'An AI painted a chart about compound interest. It got the bars wrong: simple interest looked bigger than '
       + 'compound interest, and every year’s interest was the same height.',
-    changed: 'Charts are now drawn by code from the real numbers. $1,100, $1,210 and $1,331 are each drawn at exactly '
-      + 'the right height, and each amount pops up as the narrator says it.',
+    changed: 'Charts are now drawn as exact shapes from the real numbers. $1,100, $1,210 and $1,331 are each drawn at '
+      + 'exactly the right height, and each amount pops up as the narrator says it.',
   },
   {
     title: 'Labels land on the wrong thing',
     happened: 'The label “Mountain” once landed on a layer of rock underground. Another time, “Southern Hemisphere” '
       + 'landed on Earth’s northern half.',
-    changed: 'A part now only counts where the picture has its color. And an AI looks at every label on the picture '
-      + 'before the video is made.',
+    changed: 'Now the picture labels its own parts, and the video points only where the picture has the part’s color. '
+      + 'When the check finds a wrong label, the video circles it and says what’s true.',
   },
   {
     title: 'The checker is AI too',
@@ -194,6 +195,7 @@ const JOBS: Job[] = [
     uses: [{ name: 'Gemini 3.1 Flash Image', maker: 'Google' }],
     or: [{ name: 'Muse Image', maker: 'Meta' }],
   },
+  { job: 'Draws graphs, charts and math pictures', uses: [{ name: 'Claude Opus 5.5', maker: 'Anthropic' }] },
   { job: 'Finds each part in a picture', uses: [{ name: 'SAM 3.1', maker: 'Meta' }] },
   {
     job: 'Sings the song',
@@ -213,9 +215,10 @@ const LIMITS = [
     + 'lesson doesn’t show where a fact comes from.',
   'The fact check and the line check use the same AI that wrote the lesson. It starts fresh each time, without the '
     + 'writer’s notes, but it can still miss things.',
-  'No person reviews each droplet before it goes on the Droplets tab.',
-  'The picture check doesn’t look at charts and diagrams drawn by code. Those are built from the real numbers, and '
-    + 'they still get the AI tag.',
+  'No person reviews each droplet before it goes on the Droplets tab. We test every change on the same 12 topics and '
+    + 'watch the test droplets ourselves.',
+  'The picture check doesn’t look at the exact drawings of graphs, charts and math. Code checks that each part is '
+    + 'there, not that the drawing is right, and they still get the AI tag.',
   'Song lines get a little more room. If the facts don’t cover something, a song line can still pass if it’s true at '
     + 'your level. The lesson and the spoken lesson must stick to the facts.',
   'The song’s words are checked before it is sung. After, we only check that most of its lines can be heard, not '
@@ -240,15 +243,20 @@ export default function HowItsMadePage() {
         </div>
         <ul className="grid gap-3 mt-6 sm:grid-cols-3">
           <Pledge color="var(--accent-orange)" title="Every fact checked">
-            against what textbooks teach at your level
+            by an AI starting fresh, against what textbooks teach at your level
           </Pledge>
           <Pledge color="var(--accent-orange)" title="Every line checked">
             lesson, song and captions. Nothing is posted until they pass.
           </Pledge>
           <Pledge color="var(--accent-yellow)" title="Every picture marked as AI">
-            and mistakes we find are shown right next to it
+            and mistakes we find are shown right on it
           </Pledge>
         </ul>
+        <p className="text-sm leading-relaxed mt-4 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+          Our checks are AI too, so even the fact check can be wrong. We do our best to catch what it misses: we show
+          you what the checks find, test the checks themselves, and let you point out a mistake in a droplet&rsquo;s
+          comments, where the next learner will see it.
+        </p>
       </header>
 
       <section aria-labelledby="steps-title" className="mb-12">
@@ -292,27 +300,34 @@ export default function HowItsMadePage() {
             </p>
             <p>
               So when the picture check finds a mistake that could teach you something false, it writes a short note.
-              The video shows that note on a card next to the picture, for as long as the picture is on screen. Small
-              things about looks, like a cell drawn oval, are left out.
+              The video sticks it on the picture, right where the mistake is, for as long as the picture is on screen.
+              A note about the whole picture goes on a card beside it. Small things about looks, like a cell drawn
+              oval, are left out.
+            </p>
+            <p>
+              A painted picture labels its own parts, and sometimes it gets a label wrong. When the check finds one,
+              and a second look agrees, the video circles that label and puts a note beside it saying what&rsquo;s
+              true.
             </p>
             <p>
               The check can miss mistakes too. So every other AI picture has a small tag that says it&rsquo;s
-              AI-made, even the ones drawn by code. A picture that is only a comparison, like a tug-of-war standing in
-              for mitosis, gets the tag but never a card. It can&rsquo;t teach the topic wrong.
+              AI-made, even the exact drawings of graphs and charts. A picture that is only a comparison, like a
+              tug-of-war standing in for mitosis, gets the tag but never a note. It can&rsquo;t teach the topic wrong.
             </p>
           </div>
           <figure>
             <Frame frame={FRAMES.card} />
             <figcaption className="text-xs leading-relaxed mt-2" style={{ color: 'var(--text-muted)' }}>
-              A real frame from the lesson video of a test droplet on mitosis. The picture check found that the
-              metaphase cell has no spindle poles, so the card at the right says so while the picture is on screen.
+              A real frame from the lesson video of an earlier test droplet on mitosis, from before notes were stuck
+              on the picture: the check found that the metaphase cell has no spindle poles, and the card at the right
+              says so while the picture is on screen.
             </figcaption>
           </figure>
           <figure className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <div className="sm:w-64 sm:shrink-0"><Frame frame={FRAMES.tag} /></div>
             <figcaption className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               The bottom left of another frame from the same video. The check found nothing wrong in this picture,
-              so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a card. Every AI
+              so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a note. Every AI
               picture gets one or the other.
             </figcaption>
           </figure>
@@ -373,6 +388,10 @@ export default function HowItsMadePage() {
             </li>
           ))}
         </ul>
+        <p className="text-sm leading-relaxed mt-6 max-w-2xl" style={{ color: 'var(--text-secondary)' }}>
+          <span className="font-bold" style={{ color: 'var(--text-primary)' }}>Spotted a mistake?</span> Say so in the
+          droplet&rsquo;s comments, so the next learner sees it too. Thank you for helping.
+        </p>
       </section>
 
       <div className="rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between" style={card}>

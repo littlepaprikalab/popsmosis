@@ -13,8 +13,9 @@ You get JSON with:
   comes from: "lyric:..." is a couplet of the song (its lines separated by line breaks),
   "narration:..." a sentence of the voice-over,
   "lesson:..." a sentence, list item, heading or table row of the text lesson (a table
-  row's cells are separated by " | "), and "keyline:..." a line the song video writes
-  above its diagram for the learner to read: what a scene teaches, or the core idea.
+  row's cells are separated by " | "), and "keyline:..." a line both videos write on screen
+  for the learner to read: a step of the lesson, or ("keyline:core_idea") the core idea,
+  written across the top of every frame.
   "caption:..." is a caption shown on a video over the line it names, judged like a lesson
   sentence. "tag:..." is a hashtag under one of the videos, "motion:..." is what a video
   shows moving across its diagram, and "title:", "scene:", "style:" and "avoid:" are the
@@ -23,7 +24,8 @@ You get JSON with:
   by rules of their own (Lyrics, Tags, Motions and Public text, below). Lines come in order, so read each one in the
   context of the lines around it. A line sent back for a re-check may carry `previous`,
   the line just before it, for context only. A line may carry `written_from`: the id of a
-  corrected fact it was written from, before the correction (Corrected facts, below).
+  corrected fact it was written from, before the correction (Corrected facts, below). A
+  couplet you failed may come back as it was, with `appeal` (Lyrics, below).
 - `about`, only when there are lyrics or tags: the lesson's `course`, `topic` and
   `audience`, and the song's `song_style`. It is there for the lyrics and the tags alone;
   it never makes any other line supported.
@@ -128,6 +130,13 @@ What this prompt says above about figures of speech, attitude, cases and `correc
 for couplets too, with this question in place of the facts' words: an image in a couplet
 is UNSUPPORTED when the point it makes is false, not because the facts do not make it.
 
+A couplet you failed may come back as it was written, with `appeal`: the songwriter, who
+hears the whole song, says why no student who sings it would believe what you found. Judge
+it again with that in mind, fairly both ways. When the songwriter is right (a fair
+simplification for the audience, an image read too literally, a claim the facts do make,
+read as a listener reads a song), it is SUPPORTED or FILLER. When a student would still come
+away believing something false, it stays UNSUPPORTED, and your `problem` answers the appeal.
+
 ## Tags
 
 A line whose id starts with "tag:" is a hashtag under a video ("tag:song-3" under the song
@@ -151,46 +160,38 @@ judge a tag by one question: would a student searching for it be right to find t
 
 ## Motions
 
-A line whose id starts with "motion:" is what a video shows moving: dots marked with what
-they are, travelling between the parts of its diagram in order ("H⁺ travels from Stroma to
-Cytochrome b6f to Thylakoid lumen"). A student watches the marked dot go, so it is a claim
-about what moves, where from, through what and where to.
+A line whose id starts with "motion:" is something the video shows, and a student believes
+what they see: each is one claim, SUPPORTED when the facts say it (`source` the fact id),
+UNSUPPORTED when they do not or say otherwise (`problem` in a few words, `corrected` ""). A
+motion that fails is left out of the video, never rewritten, and a motion is never FILLER.
+The kinds:
 
-- **SUPPORTED**: the facts say this thing moves along this route, in this direction. A
-  route that leaves out a step the facts name between two of its stops is fine (electrons
-  from photosystem II to cytochrome b6f, though they pass through plastoquinone on the
-  way). `source` is the fact id.
-- **UNSUPPORTED**: the wrong thing moving (electrons where the facts move protons), the
-  wrong direction (protons into the stroma where the facts pump them out of it), a stop
-  the facts do not put on its route, or a route the facts never give. `problem` says what
-  is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
-  video, never rewritten.
-
-A motion that says "Something travels" is dots with nothing written on them: the video
-shows something going along that route without saying what (a nerve signal, light).
-SUPPORTED when the facts say something goes along that route, in that direction, whatever
-it is; UNSUPPORTED when the facts move nothing there (from a character to the audience,
-from one point of a graph to another), judged as above.
-
-A motion that says something "builds up" in a space ("H⁺ builds up in Thylakoid lumen")
-is the video filling that space with it as it arrives: SUPPORTED when the facts say it
-piles up or accumulates there, UNSUPPORTED otherwise, judged as above.
-
-A motion that says something "spins" as particles flow ("ATP synthase spins as H⁺ flows
-through it") is the video turning that part while they pass: SUPPORTED when the facts say
-that flow turns it (an analogy's part by what the facts say of the analogy), UNSUPPORTED
-otherwise.
-
-A motion that says a flow "is stopped at" something ("e⁻ flow from Photosystem II is
-stopped at Herbicide") is the video showing the particles pile up there and go no further:
-SUPPORTED when the facts say that thing blocks or stops that flow, UNSUPPORTED otherwise.
-
-A motion that says something "is turned into" something ("At Photosystem II, H₂O is turned into O₂, H⁺
-and e⁻") is the video writing that conversion beside the structure: SUPPORTED when the facts say that
-structure makes those outputs from those inputs (every one of them, and nothing the facts do not say),
-UNSUPPORTED otherwise.
-
-A motion is never FILLER.
+- **"X travels from A to B to C"**: dots marked X go along that route, in that direction.
+  Unsupported for the wrong thing moving (electrons where the facts move protons), the wrong
+  direction (protons into the stroma where the facts pump them out of it), a stop the facts
+  do not put on its route, or a route they never give. A route may leave out a step the facts
+  name between two stops (electrons from photosystem II to cytochrome b6f, past
+  plastoquinone). Across a wall or membrane it goes through what the facts say it crosses by
+  (a channel, a pump, a carrier, a gate): "Na⁺ travels from Outside of the cell to Cell
+  membrane to Inside of the cell", when the facts let sodium in through leak channels, shows
+  it slipping through the wall. Through the wall itself only where the facts say it crosses
+  that way (O₂ across the alveolus wall).
+- **"Something travels ..."**: unmarked dots, something going that way without saying what
+  (a nerve signal, light): supported when the facts move anything along that route, in that
+  direction; unsupported when they move nothing there (from a character to the audience,
+  from one point of a graph to another).
+- **"X builds up in A"**: the video fills A with X: the facts say it piles up there.
+- **"A spins as X flows through it"**: the video turns A while X passes: the facts say that
+  flow turns it.
+- **"X flow from A is stopped at B"**: the particles pile up at B and go no further: the
+  facts say B blocks that flow.
+- **"At A, X is turned into Y"**: the conversion written beside A: the facts say A makes
+  every one of those outputs from those inputs, and nothing else.
+- **"On the graph, A means: ..."**: the line written under a graph part's name: the facts say
+  that part shows that (an arrow as "leads to"), the right way round, in words a learner
+  reads off the graph.
+- **"Beside the arrow from A to B ...: ..."**: an arrow's one-liner: the facts say it of what
+  moves that way, and no more.
 
 ## Public text
 
