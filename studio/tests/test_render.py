@@ -360,6 +360,13 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, mon
     assert shapes == [] and arrows and word._travels("overview", word.timeline.beats[0].particles[0])
     assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
     assert legends[0][0] == legends[1][0]  # in one place
+    # With its one-liner beside the arrow, the key has nothing to add (Nov 1: "→ glucose" stayed on in a corner).
+    legends.clear()
+    said = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan).model_copy(update={"particles": [
+        f.model_copy(update={"says": "Glucose rides in with sodium"}) for f in flow_beat(0, 8, label="glucose",
+                                                                                         color=cyan).particles]})]))
+    said.frame(held + 1.0)
+    assert legends == []
     assert p.carried("Ca²⁺") == "Ca²⁺" and p.carried("NAD⁺") == "NAD⁺" and p.carried("NADPH") == ""  # 3 letters
     assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water")] == [
         "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle

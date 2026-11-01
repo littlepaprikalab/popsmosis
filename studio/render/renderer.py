@@ -2100,11 +2100,12 @@ class Renderer:
         return self._arrowed_labels[scene_id]
 
     def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
-        """The key to what moves on the scene: (colour, kind, alpha) for each kind of particle its flows and spaces have
-        shown so far whose particles cannot carry their own name (a word, not a symbol printed on them: p.carried), in
-        the order they first appeared, each fading in as its particles set off. Nothing that moves carries a word, so
-        the words are read here, still, in one corner. Not on a graph, whose arrow has its word beside it
-        (_draw_handoffs): a key in the corner saying "price" read as a button, far from the arrow it named."""
+        """The key to what the scene shows with no words of its own: (colour, kind, alpha) for each kind whose particles
+        cannot carry their name (a word, not a symbol printed on them: p.carried) and nothing beside them says it: an
+        arrow on this beat with no one-liner (Particles.says), and a space's crowd of unmarked dots. Only while they
+        show: a key listing what had moved before named, as the owner saw on Nov 1, a "glucose" no longer on screen.
+        Not on a graph, whose arrow has its word beside it (_draw_handoffs): a key in the corner saying "price" read
+        as a button, far from the arrow it named."""
         kinds: dict[str, tuple[str, str, float]] = {}
         graph = self._graph(beat.scene)
 
@@ -2112,11 +2113,9 @@ class Renderer:
             if label and not p.carried(label) and label not in kinds:
                 kinds[label] = (color, label, alpha)
 
-        for route in sorted(beat.routes, key=lambda r: r.since) if not graph else ():
-            set_off = (self.run_of(self.beat_index(route.since), route.path, route.label) or (route.since,))[0]
-            add(route.label, route.color, p.ease((t - set_off) / LABEL_IN_S))
         for flow in beat.particles if not graph else ():
-            add(flow.label, flow.color, p.ease((t - beat.t0) / LABEL_IN_S))
+            if not " ".join(flow.says.split()):
+                add(flow.label, flow.color, p.ease((t - beat.t0) / LABEL_IN_S))
         for crowd in beat.crowds:
             if max(crowd.start, crowd.end) > 0:  # an empty space shows no dots to name
                 add(crowd.label, crowd.color, 1.0)
