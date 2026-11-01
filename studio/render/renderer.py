@@ -104,7 +104,8 @@ THROUGH_MAX = 200.0  # art pixels: a route running further than this inside a pa
 HANDOFF_STEP_S = 0.5  # between one hand-off's arrow and the next's, as they draw in and as the pulse runs along them
 HANDOFF_GROW_S = 0.35  # an arrow drawing itself in, from its tail
 HANDOFF_REST = 0.7  # how strong an arrow is while the pulse is on another
-ROUTE_GROW_S = 1.0  # an arrow along a whole way drawing itself in, then each pulse along it
+ROUTE_GROW_S = 1.0  # an arrow along a whole way drawing itself in
+ROUTE_DASH_SPEED = 40.0  # frame pixels a second its dashes move along it, the way the flow goes
 # A note (an arrow's one-liner, what an analogy's part stands for): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
 # clear of the parts' label points and other notes (NOTE_CROWD each).
@@ -749,8 +750,8 @@ class BeatPlan:
     key_in: float  # the key line's run on screen, for its fades
     key_out: float
     # Each of the beat's flows' run, in the order of its particles: (from, to). A flow sets off once its run starts
-    # and its stops are revealed, and goes on across the beats in a row on the scene that carry it, whatever else
-    # joins it or leaves.
+    # and the stops named while it runs are revealed (on a picture that labels its own parts, at once), and goes on
+    # across the beats in a row on the scene that carry it, whatever else joins it or leaves.
     runs: list[tuple[float, float]]
     drift_from: float  # when the shot's drift set off: the start of the line its move is on
     drift: float = 1.0  # which way the camera drifts: 1 pushing in, -1 pulling back
@@ -1024,7 +1025,12 @@ class Renderer:
                 k = i
                 while k + 1 < len(beats) and carries_on(beats[k + 1]):
                     k += 1
-                runs.append((max([beats[j].t0] + [revealed.get(name, beats[j].t0) for name in flow.path]), beats[k].t1))
+                # It waits for its stops' names, so it never runs to a part not yet labelled: only for a name heard
+                # while it runs, and not at all on a picture that labels its own parts. Waiting for one heard a minute
+                # later hid every flow through the inside of the cell until then (Nov 1).
+                waits = [] if beat.scene in self.timeline.self_labelled else [
+                    at for name in flow.path if (at := revealed.get(name)) is not None and at < beats[k].t1]
+                runs.append((max([beats[j].t0] + waits), beats[k].t1))
             plans.append(BeatPlan(target=target, start=start, move_at=move_at, move_s=move_s, spot=beat.spotlight,
                                   spot_at=spot_at, prev_spot=prev_spot, caption_in=caption_in,
                                   caption_out=caption_out, key_in=key_in, key_out=key_out, runs=runs,
@@ -2183,15 +2189,28 @@ class Renderer:
         return self._handoff_arrows[key]
 
     def _route_line(self, scene_id: str, flow) -> list[Point]:
-        """A travelling flow's way as one line, art pixels: its legs (_legs) end to end, through the parts where they
-        join and curving from one to the next where they do not, so its arrow runs up the pipe and into the tank
-        rather than standing as a stub at each joint."""
+        """A travelling flow's way as one line, art pixels: from stop to stop through the two parts' outlines
+        (routing.route), however far that bends from the straight line, since following the parts is the point (up
+        the pipe and into the tank, down the other pipe to the house); a gentle arc from one to the next where they
+        do not join. Never a crossing's straight line, which is the particles'."""
         key = ("route", scene_id, tuple(flow.path), flow.label)
         if key not in self._through:
             lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
+            pairs = self._path_stops(scene_id, flow.path, lane)
+            art = self.scene(scene_id)
             line: list[Point] = []
-            for points, *_ in self._legs(scene_id, flow.path, lane):
-                for q in points:
+            for (a, first), (b, second) in zip(pairs, pairs[1:]):
+                region = art.cells(first.name) if first.name == second.name else routing.joined(
+                    art.cells(first.name), art.cells(second.name))
+                leg = routing.route(region, a, b, detour_max=math.inf)
+                if leg is None:
+                    length = math.dist(a, b) or 1.0
+                    nx, ny = (b[1] - a[1]) / length, -(b[0] - a[0]) / length
+                    if ny > 0:
+                        nx, ny = -nx, -ny
+                    bend = ((a[0] + b[0]) / 2 + nx * ROUTE_BEND * length, (a[1] + b[1]) / 2 + ny * ROUTE_BEND * length)
+                    leg = [bezier(a, bend, b, k / CURVE_STEPS) for k in range(CURVE_STEPS + 1)]
+                for q in leg:
                     if not line or math.dist(line[-1], q) > 1.0:
                         line.append(q)
             self._through[key] = line
@@ -2199,8 +2218,9 @@ class Renderer:
 
     def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
                        on_frame) -> None:
-        """A travelling flow's arrows. Off a graph, one arrow along its whole way (_route_line), drawing itself in
-        from its tail as it sets off, then pulsing, with its one-liner (Particles.says) beside it, joined to it. On a
+        """A travelling flow's arrows. Off a graph, one dashed arrow along its whole way (_route_line), drawing itself
+        in from its tail as it sets off, its dashes then moving along it, with its one-liner (Particles.says) beside
+        it, joined to it. On a
         graph, an arrow at each hand-off drawn in one after another, then a pulse running along them in order, with
         its one-liner, or else its word ("price rises"), beside the first."""
         if not self._graph(scene_id):
@@ -2208,11 +2228,8 @@ class Renderer:
             if len(line) < 2:
                 return
             grown = p.ease(elapsed / ROUTE_GROW_S)
-            cycle = ROUTE_GROW_S + FLOW_PAUSE_S
-            into = (elapsed - ROUTE_GROW_S) % cycle if elapsed >= ROUTE_GROW_S else -1.0
-            pulse = math.sin(math.pi * into / ROUTE_GROW_S) if 0 <= into < ROUTE_GROW_S else 0.0
-            strength = 1.0 if elapsed < ROUTE_GROW_S else HANDOFF_REST + (1 - HANDOFF_REST) * pulse
-            p.draw_route_arrow(canvas, [on_frame(q) for q in line], flow.color, alpha * strength, grown, pulse)
+            p.draw_route_arrow(canvas, [on_frame(q) for q in line], flow.color, alpha, grown,
+                               phase=max(elapsed, 0.0) * ROUTE_DASH_SPEED)
             says = getattr(flow, "says", "")
             if says:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
@@ -2253,7 +2270,7 @@ class Renderer:
             p.draw_name(canvas, word, rect, size, self.scene(scene_id).paper, flow.color, alpha * first, weight="Bold")
 
     def _note_spot(self, scene_id: str, key: tuple, anchor: Point, size: tuple[float, float],
-                   keep_clear: list[Point]) -> Point:
+                   keep_clear: list[Point], shown: tuple[float, float, float, float] | None = None) -> Point:
         """Where a note's middle sits, in art pixels, chosen once for the scene: near what it is about, where it
         covers the least of the picture (ink_share), clear of every part's label point, of `keep_clear` (its arrow)
         and of the notes placed before it; on the picture, never off its edge."""
@@ -2267,7 +2284,9 @@ class Renderer:
                 for ux, uy in NOTE_SIDES:
                     cx, cy = anchor[0] + ux * (reach + w / 2), anchor[1] + uy * (reach + h / 2)
                     box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
-                    if box[0] < 0 or box[1] < 0 or box[2] > art.width or box[3] > art.height:
+                    x0, y0, x1, y1 = shown or (0.0, 0.0, art.width, art.height)
+                    if box[0] < max(x0, 0) or box[1] < max(y0, 0) or box[2] > min(x1, art.width) \
+                            or box[3] > min(y1, art.height):
                         continue
                     cost = art.ink_share(box) + reach / NOTE_REACH[-1] * NOTE_FAR
                     cost += sum(NOTE_CROWD for q in [*points, *keep_clear]
@@ -2291,7 +2310,10 @@ class Renderer:
         scale = (fx1 - fx0) / 1000.0 or 1.0
         size = self.layout.label_font * p.NOTE_FONT
         w, h = p.note_size(text, size)
-        cx, cy = self._note_spot(scene_id, key, anchor, (w / scale, h / scale), keep_clear)
+        clip = canvas.getDeviceClipBounds()  # the view: what the frame shows of the picture, the bands left out
+        shown = ((clip.left() - fx0) / scale, (clip.top() - fy0) / scale,
+                 (clip.right() - fx0) / scale, (clip.bottom() - fy0) / scale)
+        cx, cy = self._note_spot(scene_id, key, anchor, (w / scale, h / scale), keep_clear, shown)
         mx, my = on_frame((cx, cy))
         p.draw_note(canvas, (mx - w / 2, my - h / 2, mx + w / 2, my + h / 2), text, size, color, alpha,
                     to=on_frame(anchor))

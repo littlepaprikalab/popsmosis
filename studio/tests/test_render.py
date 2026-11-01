@@ -295,6 +295,13 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
     assert plans[0].runs == [(2.0, 8.0)]  # from the reveal of its last stop
     assert plans[1].runs == [(2.0, 8.0)]
     assert plans[3].runs == [(10.0, 12.0)]
+    # A stop named only after the run ends holds nothing up, and a picture labelling its own parts holds up nothing.
+    late = Renderer(job, flowing([flow_beat(0, 4, labels=FLOW),
+                                  flow_beat(4, 8, path=[], labels=FLOW, reveal=[Reveal(name="Cytochrome b6f", t=6.0)])])).plans
+    assert late[0].runs == [(0.0, 4.0)]
+    painted = Renderer(job, flowing([flow_beat(0, 4, labels=FLOW, reveal=[reveal_b6f])]).model_copy(
+        update={"self_labelled": ["overview"]})).plans
+    assert painted[0].runs == [(0.0, 4.0)]
 
 
 def test_particles_travel_between_the_structures_and_fade_in(job):
@@ -1449,8 +1456,8 @@ def test_what_travels_is_drawn_as_an_arrow_along_its_way_and_a_crossing_as_parti
     # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
     # nothing). A crossing keeps its particles.
     arrows, dots = [], []
-    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, color, alpha, grown=1.0, pulse=0.0:
-                        arrows.append((points[0], points[-1], grown, pulse)))
+    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, color, alpha, grown=1.0, phase=0.0:
+                        arrows.append((points[0], points[-1], grown, phase)))
     monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
 
     def moving(label, moves):

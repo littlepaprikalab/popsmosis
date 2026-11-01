@@ -83,9 +83,10 @@ STEPS = [(-1, 0, 1.0), (1, 0, 1.0), (0, -1, 1.0), (0, 1, 1.0),
          (-1, -1, math.sqrt(2)), (-1, 1, math.sqrt(2)), (1, -1, math.sqrt(2)), (1, 1, math.sqrt(2))]
 
 
-def route(region: np.ndarray, a: Point, b: Point) -> list[Point] | None:
+def route(region: np.ndarray, a: Point, b: Point, detour_max: float = DETOUR_MAX) -> list[Point] | None:
     """The path from a to b (art pixels) through the region (cells), keeping to its middle, from a to b exactly;
-    None when the two are not joined inside it, or only the long way round."""
+    None when the two are not joined inside it, or only the long way round: over `detour_max` times the straight
+    line (math.inf for no limit: an arrow following a pipe goes the long way on purpose)."""
     start, end = _snap(region, a), _snap(region, b)
     if start is None or end is None:
         return None
@@ -117,7 +118,7 @@ def route(region: np.ndarray, a: Point, b: Point) -> list[Point] | None:
     path.reverse()
     points = _smooth([((x + 0.5) * GRID, (y + 0.5) * GRID) for y, x in path])
     points = [a, *points[1:-1], b]
-    if length(points) > DETOUR_MAX * max(math.dist(a, b), 4 * GRID):
+    if length(points) > detour_max * max(math.dist(a, b), 4 * GRID):
         return None
     return points
 

@@ -289,39 +289,50 @@ def place_labels(labels: list[Label], bounds: Rect, centre: tuple[float, float],
         lb.x, lb.y = x, y
 
 
+LABEL_INK = 0xFF0F172A  # a label's words: dark, as a textbook prints them, whatever its part's colour
+LABEL_HALO = 6.0  # the white ring round each letter, so the words read over any part of the picture
+LEADER_INK = 0xFF334155  # the thin line from the words to the dot on the part
+LEADER_W = 2.0
+LABEL_DOT_R = 4.5
+
+
+def draw_halo_text(canvas: skia.Canvas, text: str, x: float, y: float, f: skia.Font, color: int, alpha: float,
+                   halo: float = LABEL_HALO) -> None:
+    """Words with a white ring round each letter, as a textbook prints a label over its picture."""
+    blob = skia.TextBlob(text, f)
+    canvas.drawTextBlob(blob, x, y, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.95 * alpha),
+                                               Style=skia.Paint.kStroke_Style, StrokeWidth=halo,
+                                               StrokeJoin=skia.Paint.kRound_Join))
+    canvas.drawTextBlob(blob, x, y, skia.Paint(AntiAlias=True, Color=with_alpha(color, alpha)
+                                               if color >> 24 == 0xFF else color))
+
+
 def draw_label(canvas: skia.Canvas, lb: Label, font_size: float) -> None:
+    """A part's name as a textbook prints it (the owner, Nov 1, over a white pill with a coloured outline): dark
+    words ringed in white, no box, and a thin line from them to a dot on the part when they sit away from it."""
     if lb.alpha <= 0.01:
         return
     w, h = lb.size(font_size)
     scale = 1 + 0.08 * lb.emphasis
-    pop = 0.85 + 0.15 * ease_out(lb.alpha)  # pills grow into place as they appear
-    w, h = w * pop, h * pop
-    rect = (lb.x - w / 2, lb.y - h / 2, lb.x + w / 2, lb.y + h / 2)
-    color = argb(outline(lb.color), lb.alpha)
-    ink = argb(darken(lb.color), lb.alpha)  # the leader and dot sit on the structure, so they are darker
-    ax, ay = lb.anchor
-    # A pill against its structure, or inside its space, needs no line; one the placement pass pushed away keeps it.
-    bx0, by0, bx1, by1 = lb.box
-    gap = math.hypot(max(bx0 - rect[2], rect[0] - bx1, 0.0), max(by0 - rect[3], rect[1] - by1, 0.0))
-    leader = not lb.big and gap > h
-    # The leader runs from the dot to the nearest point on the pill.
-    ex, ey = min(max(ax, rect[0] + h / 2), rect[2] - h / 2), min(max(ay, rect[1]), rect[3])
-    line = skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=3.0, Style=skia.Paint.kStroke_Style,
-                      StrokeCap=skia.Paint.kRound_Cap)
-    if leader:
-        canvas.drawLine(ax, ay, ex, ey, line)
-        canvas.drawCircle(ax, ay, DOT_R + 2.5, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, lb.alpha)))
-        canvas.drawCircle(ax, ay, DOT_R, skia.Paint(AntiAlias=True, Color=ink))
-    rrect = rounded(rect, h / 2)
-    shadow(canvas, rrect, lb.alpha)
-    canvas.drawRRect(rrect, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, lb.alpha)))
-    inset = rounded((rect[0] + LABEL_OUTLINE / 2, rect[1] + LABEL_OUTLINE / 2,
-                     rect[2] - LABEL_OUTLINE / 2, rect[3] - LABEL_OUTLINE / 2), h / 2 - LABEL_OUTLINE / 2)
-    canvas.drawRRect(inset, skia.Paint(AntiAlias=True, Color=color, StrokeWidth=LABEL_OUTLINE,
-                                       Style=skia.Paint.kStroke_Style))
+    pop = 0.92 + 0.08 * ease_out(lb.alpha)  # the words grow a little into place as they appear
     f = font("Bold", font_size * scale * pop)
     tw = text_width(f, lb.name)
-    draw_text(canvas, lb.name, lb.x - tw / 2, lb.y + cap_height(f) / 2, f, argb(darken(lb.color), lb.alpha))
+    th = cap_height(f)
+    rect = (lb.x - tw / 2, lb.y - th / 2 - 4, lb.x + tw / 2, lb.y + th / 2 + 4)
+    ax, ay = lb.anchor
+    # Words against their structure, or inside their space, need no line; ones the placement pass pushed away keep it.
+    bx0, by0, bx1, by1 = lb.box
+    gap = math.hypot(max(bx0 - rect[2], rect[0] - bx1, 0.0), max(by0 - rect[3], rect[1] - by1, 0.0))
+    if not lb.big and gap > h * 0.5:
+        ex, ey = min(max(ax, rect[0]), rect[2]), min(max(ay, rect[1]), rect[3])
+        ink = with_alpha(LEADER_INK, lb.alpha)
+        canvas.drawLine(ax, ay, ex, ey, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.8 * lb.alpha),
+                                                   StrokeWidth=LEADER_W + 3, StrokeCap=skia.Paint.kRound_Cap))
+        canvas.drawLine(ax, ay, ex, ey, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=LEADER_W,
+                                                   StrokeCap=skia.Paint.kRound_Cap))
+        canvas.drawCircle(ax, ay, LABEL_DOT_R + 2, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, lb.alpha)))
+        canvas.drawCircle(ax, ay, LABEL_DOT_R, skia.Paint(AntiAlias=True, Color=ink))
+    draw_halo_text(canvas, lb.name, lb.x - tw / 2, lb.y + th / 2, f, LABEL_INK, lb.alpha)
 
 
 # --- axis names -----------------------------------------------------------------------------
@@ -679,49 +690,72 @@ def draw_handoff(canvas: skia.Canvas, tail: tuple[float, float], tip: tuple[floa
                                           StrokeJoin=skia.Paint.kRound_Join))
 
 
+ROUTE_DASH = (16.0, 11.0)  # a route arrow's dashes and the gaps between them, frame pixels
+ROUTE_WIDTH = 6.0  # its dashes
+ROUTE_CHEVRON = 18.0  # its single chevron at the end, from tip to each arm's end
+
+
+def smooth_line(points: list[tuple[float, float]], steps: int = 6) -> list[tuple[float, float]]:
+    """A curve through the points (Catmull-Rom), from the first to the last: a route's corners rounded off."""
+    if len(points) < 3:
+        return list(points)
+    pts = [points[0], *points, points[-1]]
+    out = []
+    for i in range(1, len(pts) - 2):
+        p0, p1, p2, p3 = pts[i - 1], pts[i], pts[i + 1], pts[i + 2]
+        for k in range(steps):
+            t = k / steps
+            out.append(tuple(0.5 * (2 * p1[j] + (p2[j] - p0[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t * t
+                                    + (3 * p1[j] - p0[j] - 3 * p2[j] + p3[j]) * t * t * t) for j in (0, 1)))
+    out.append(points[-1])
+    return out
+
+
 def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], color: str, alpha: float,
-                     grown: float = 1.0, pulse: float = 0.0) -> None:
-    """An arrow along a route (frame pixels), as a hand-off arrow is drawn (draw_handoff) but bending with the way it
-    goes: up a pipe, along a river, through the parts in turn. Drawn `grown` (0-1) of its length from its tail."""
+                     grown: float = 1.0, phase: float = 0.0) -> None:
+    """An arrow along a route (frame pixels), as a textbook draws a flow: a dashed line, its corners rounded, ending
+    in a single open chevron, in the flow's colour over a white halo (the owner, Nov 1, over a thick solid arrow).
+    Drawn `grown` (0-1) of its length from its tail; `phase` (frame pixels) moves the dashes along it, so it reads
+    as flowing."""
     if alpha <= 0.01 or grown <= 0.01 or len(points) < 2:
         return
-    lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
+    line = smooth_line(points)
+    lengths = [math.dist(a, b) for a, b in zip(line, line[1:])]
     total = sum(lengths)
     if total < 1.0:
         return
-    reach, line = total * grown, [points[0]]
-    for (a, b), d in zip(zip(points, points[1:]), lengths):
+    reach, drawn = total * grown, [line[0]]
+    for (a, b), d in zip(zip(line, line[1:]), lengths):
         if reach <= d:
             k = reach / d if d else 0.0
-            line.append((a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k))
+            drawn.append((a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k))
             break
-        line.append(b)
+        drawn.append(b)
         reach -= d
-    width = HANDOFF_WIDTH * (1 + HANDOFF_PULSE * pulse)
-    head = min(HANDOFF_HEAD * (1 + HANDOFF_PULSE * pulse), total * grown)
-    tip = line[-1]
-    back = next((q for q in reversed(line[:-1]) if math.dist(q, tip) >= head), line[0])
+    path = skia.Path()
+    path.moveTo(*drawn[0])
+    for q in drawn[1:]:
+        path.lineTo(*q)
+    ink, halo = argb(color, alpha), with_alpha(0xFFFFFFFF, 0.85 * alpha)
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=ROUTE_WIDTH + 2 * HALO,
+                                     Color=halo, StrokeCap=skia.Paint.kRound_Cap, StrokeJoin=skia.Paint.kRound_Join))
+    on, off = ROUTE_DASH
+    canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=ROUTE_WIDTH, Color=ink,
+                                     StrokeCap=skia.Paint.kRound_Cap,
+                                     PathEffect=skia.DashPathEffect.Make([on, off], -(phase % (on + off)))))
+    tip = drawn[-1]
+    size = min(ROUTE_CHEVRON, total * grown)
+    back = next((q for q in reversed(drawn[:-1]) if math.dist(q, tip) >= size), drawn[0])
     d = math.dist(back, tip) or 1.0
     ux, uy = (tip[0] - back[0]) / d, (tip[1] - back[1]) / d
-    base = (tip[0] - ux * head, tip[1] - uy * head)
-    shaft = skia.Path()
-    shaft.moveTo(*line[0])
-    for q in line[1:-1]:
-        if math.dist(q, tip) > head:
-            shaft.lineTo(*q)
-    shaft.lineTo(base[0] + ux * 2, base[1] + uy * 2)
-    shape = skia.Path()
-    shape.moveTo(*tip)
-    shape.lineTo(base[0] - uy * head * 0.62, base[1] + ux * head * 0.62)
-    shape.lineTo(base[0] + uy * head * 0.62, base[1] - ux * head * 0.62)
-    shape.close()
-    for ink, extra in ((with_alpha(0xFFFFFFFF, 0.9 * alpha), 2 * HALO), (argb(color, alpha), 0.0)):
-        canvas.drawPath(shaft, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width + extra,
-                                          Style=skia.Paint.kStroke_Style, StrokeCap=skia.Paint.kRound_Cap,
-                                          StrokeJoin=skia.Paint.kRound_Join))
-        canvas.drawPath(shape, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=extra,
-                                          Style=skia.Paint.kStrokeAndFill_Style if extra else skia.Paint.kFill_Style,
-                                          StrokeJoin=skia.Paint.kRound_Join))
+    arms = skia.Path()
+    arms.moveTo(tip[0] - ux * size - uy * size * 0.7, tip[1] - uy * size + ux * size * 0.7)
+    arms.lineTo(*tip)
+    arms.lineTo(tip[0] - ux * size + uy * size * 0.7, tip[1] - uy * size - ux * size * 0.7)
+    for paint_ink, width in ((halo, ROUTE_WIDTH + 2 * HALO), (argb(darken(color, 2.0), alpha), ROUTE_WIDTH)):
+        canvas.drawPath(arms, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=width,
+                                         Color=paint_ink, StrokeCap=skia.Paint.kRound_Cap,
+                                         StrokeJoin=skia.Paint.kRound_Join))
 
 
 NOTE_FONT = 0.8  # a note's text, as a share of the labels' size
@@ -735,26 +769,26 @@ def note_size(text: str, font_size: float) -> tuple[float, float]:
 
 def draw_note(canvas: skia.Canvas, rect: Rect, text: str, font_size: float, color: str, alpha: float,
               to: tuple[float, float] | None = None) -> None:
-    """A one-line note in a white pill with the colour's outline, as a label is drawn: an arrow's one-liner, or what
-    a part of an analogy stands for. `to`: what it is about (frame pixels), joined to the pill by a line ending in
-    a dot, when the pill does not touch it."""
+    """A one-line note as a label is printed (draw_label): an arrow's one-liner, or what a part of an analogy stands
+    for, in its colour's dark shade ringed in white, no box. `to`: what it is about (frame pixels), joined to the
+    words by a thin line ending in a dot, when they do not touch it."""
     if alpha <= 0.01:
         return
     x0, y0, x1, y1 = rect
-    ink = argb(darken(color), alpha)
+    f = font("Bold", font_size)
+    tw = text_width(f, text)
+    left = (x0 + x1) / 2 - tw / 2
     if to is not None:
-        ex, ey = min(max(to[0], x0), x1), min(max(to[1], y0), y1)
+        ex, ey = min(max(to[0], left), left + tw), min(max(to[1], y0), y1)
         if math.dist((ex, ey), to) > 0.5 * (y1 - y0):
-            canvas.drawLine(to[0], to[1], ex, ey, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=3.0,
+            ink = with_alpha(LEADER_INK, alpha)
+            canvas.drawLine(to[0], to[1], ex, ey, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.8 * alpha),
+                                                             StrokeWidth=LEADER_W + 3, StrokeCap=skia.Paint.kRound_Cap))
+            canvas.drawLine(to[0], to[1], ex, ey, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=LEADER_W,
                                                              StrokeCap=skia.Paint.kRound_Cap))
-            canvas.drawCircle(*to, DOT_R + 2.5, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
-            canvas.drawCircle(*to, DOT_R, skia.Paint(AntiAlias=True, Color=ink))
-    pill = rounded(rect, (y1 - y0) / 2)
-    shadow(canvas, pill, alpha)
-    canvas.drawRRect(pill, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
-    canvas.drawRRect(pill, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=3.0,
-                                      Color=argb(outline(color), alpha)))
-    draw_text(canvas, text, x0 + NOTE_PAD * font_size, (y0 + y1) / 2 + 0.36 * font_size, font("Bold", font_size), ink)
+            canvas.drawCircle(*to, LABEL_DOT_R + 2, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+            canvas.drawCircle(*to, LABEL_DOT_R, skia.Paint(AntiAlias=True, Color=ink))
+    draw_halo_text(canvas, text, left, (y0 + y1) / 2 + 0.36 * font_size, f, argb(darken(color), alpha), alpha)
 
 
 BLOCK_R = 17.0  # the cross on a blocker, in frame pixels
