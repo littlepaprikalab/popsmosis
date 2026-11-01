@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: 'POPsmosis — droplets for learning',
     template: '%s — POPsmosis',
   },
-  description: 'Droplets for learning. Ask for any topic and get a short lesson you can ask follow-ups under.',
+  description: 'Droplets for learning. Ask for any topic and get a droplet: a short lesson with a narrated video and a song.',
   applicationName: 'POPsmosis',
 };
 

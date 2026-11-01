@@ -23,6 +23,7 @@ import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
 import { DropletReview } from '@/components/DropletReview';
 import { Wordmark } from '@/components/Wordmark';
+import { DropletPill, Marked, SongChip } from '@/components/Highlights';
 import { MIN_AGE } from '@/lib/legal';
 import { inkmoryRecordsUrl } from '@/lib/inkmory';
 import { BRAIN_MODELS, BRAIN_OPTIONS, brainLabel, rememberedBrain, rememberBrain, type Brain } from '@/lib/brains';
@@ -579,8 +580,11 @@ function LearnContent() {
           <p className="text-sm mb-1 font-bold" style={{ color: 'var(--text-primary)' }}>
             Droplets for learning
           </p>
-          <p className="text-sm mb-6" style={{ color: 'var(--text-secondary)' }}>
-            Ask for any topic. An AI teacher makes you a short lesson, and you can ask follow-ups under it.
+          <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--text-secondary)' }}>
+            {/* Kept in pieces that don't wrap, so the highlight never breaks and the song never ends a line alone */}
+            Ask for any topic. An AI teacher makes you a <DropletPill />: a short lesson with{' '}
+            <span className="whitespace-nowrap">a <Marked color="var(--accent-green)">narrated video</Marked></span>{' '}
+            <span className="whitespace-nowrap">and a <SongChip />.</span>
           </p>
           <Link href="/auth/callback?returnTo=%2Flearn"
             className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"
