@@ -791,14 +791,15 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     three is marked. How full it is runs on across scenes. The dots sit inside the space's
     mask, drift a few pixels in place, and stay bright while particles fill or empty the
     space, whatever the spotlight. The pictures paint no loose ions, so nothing painted
-    looks like them. A difference that is always there and kept (`held`: sodium outside a
-    resting cell) is full from the first frame and a leak only dips it to 70%; one the
-    lesson builds up starts with a few. And a gradient is more on one side, not none on the
+    looks like them. Every crowd starts half full, so it reads as crowded from the first
+    frame (a resting cell's sodium outside) and still visibly fills (H⁺ into the lumen): the
+    writer was asked to say which a crowd was (`held`, Nov 1) and never did, and round 22's
+    pump began its sodium nearly empty. And a gradient is more on one side, not none on the
     other (round 22's pump showed no K⁺ outside the cell at all, Nov 1): the space at the
     other end of that kind's paths, when it is a space with no crowd of that kind of its own,
     has a few of them, about one for every five where they crowd, untinted, on points the
     crowd gives up so no dot sits on another. Both are part of the picture: in a space not yet
-    named they show half pale, where a crowd filling up waits for the name. A space whose
+    named they show half pale. A space whose
     outline is a thin strip of it (round 22's cytoplasm came back as the band under the
     membrane: a full crowd was four dots) seats its crowd in its whole box, where no other part
     is drawn.

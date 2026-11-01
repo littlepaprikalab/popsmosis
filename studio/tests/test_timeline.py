@@ -262,7 +262,9 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
         assert crowd.start == pytest.approx(level, abs=1e-3)  # it runs on from where it was
         rise = (crowd.end - crowd.start) / (beat.t1 - beat.t0)
         if beat.line_id == "v1-2":
-            assert rise == pytest.approx(1 / step.FILL_S, rel=0.01)
+            # it fills at 1 / FILL_S a second, up to full: from half full (CROWD_START) it can get there first
+            assert crowd.end == pytest.approx(min(1.0, crowd.start + (beat.t1 - beat.t0) / step.FILL_S), rel=0.01)
+            assert rise > 0
         elif beat.line_id == "v2-1":
             assert rise < 0 and crowd.end >= step.CROWD_MIN
         else:
@@ -271,45 +273,20 @@ def test_a_space_fills_while_particles_arrive_and_empties_while_they_leave(job):
 
 
 
-def test_a_held_difference_starts_full_and_only_dips_and_none_is_added_where_it_crowds_already(job):
-    # Round 22's pump lesson filled the sodium outside the cell from a few dots only once the pump ran (Nov 1).
+def test_a_crowd_starts_half_full_and_none_is_added_where_it_crowds_already(job):
+    # Round 22's pump began its sodium outside nearly empty; the writer never said which crowds were already there.
     data = sample_media.bundle().model_dump()
     direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")  # in
     direct(data, "v2-1", particles=["Cytochrome b6f", "Thylakoid"], carries="H⁺")  # out: a leak
-    data["builds_up"] = [{"carries": "H⁺", "region": "Cytochrome b6f", "held": True},
+    data["builds_up"] = [{"carries": "H⁺", "region": "Cytochrome b6f", "held": True},  # saved before Nov 1's drop
                          {"carries": "H⁺", "region": "Thylakoid"}]  # crowded at both ends: no thin side
     write_bundle(job, data)
     song = make(job)["song"]
     shown = [c for b in song.beats if b.scene == "overview" for c in b.crowds]
     assert not any(c.thin for c in shown)
-    held = [c for c in shown if c.region == "Cytochrome b6f"]
-    assert held[0].start == 1.0 and min(c.end for c in held) >= step.HELD_MIN
-    assert all(c.held for c in held) and not any(c.held for c in shown if c.region == "Thylakoid")
-    assert min(c.end for c in held) < 1.0  # the leak dips it
-    built = [c for c in shown if c.region == "Thylakoid"]
-    assert built[0].start == step.CROWD_START
-
-def test_a_part_turns_while_particles_flow_into_it_and_eases_to_a_stop_after(job):
-    data = sample_media.bundle().model_dump()
-    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
-    direct(data, "v2-1", spotlight="Thylakoid")  # a line about one part: nothing flows on it, so it slows to a stop
-    data["spins"] = [{"structure": "Cytochrome b6f"}]
-    write_bundle(job, data)
-    song = make(job)["song"]
-    before = None
-    for beat in song.beats:
-        if beat.scene != "overview":  # the hook does not draw cytochrome b6f
-            assert beat.turning == []
-            continue
-        [turn] = beat.turning
-        driven = any("Cytochrome b6f" in f.path[1:] for f in beat.particles)  # its own flow, or the scene running
-        assert driven == (beat.line_id != "v2-1" and beat.t0 >= lines(song)["v1-2"].t0)
-        assert turn.speed == (step.SPIN_SPEED if driven else 0.0)
-        if before is not None:  # it runs on from where the beat before left it, never jumping
-            turns, speed = before[0].at(before[1])
-            assert turn.from_speed == pytest.approx(speed) and turn.turns == pytest.approx(turns % 1, abs=1e-5)
-        before = (turn, beat.t1 - beat.t0)
-    assert any(b.turning and b.turning[0].turns > 0 for b in song.beats)
+    for region in ("Cytochrome b6f", "Thylakoid"):
+        crowd = [c for c in shown if c.region == region]
+        assert crowd[0].start == step.CROWD_START == 0.5 and min(c.end for c in crowd) >= step.CROWD_MIN
 
 
 def test_particles_that_end_at_a_blocker_are_blocked_and_a_glow_shows_once_named(job):

@@ -129,9 +129,9 @@ CROWD_MAX = 24
 CROWD_SPACING = 60.0
 CROWD_DRIFT = 5.0
 THIN_MIN = 2  # dots where particles are scarce (Crowd.thin), however small the space
-# A crowd that is always there (Crowd.held) is part of the picture: in a space not yet named it shows half pale,
-# where one filling up waits for the name. Round 22's cytoplasm, named at 66 s, hid its potassium till then.
-HELD_GHOST = 0.5
+# A crowd is there from the start (timeline.CROWD_START): in a space not yet named it shows half pale. Round 22's
+# cytoplasm, named at 66 s, hid its potassium till then.
+CROWD_GHOST = 0.5
 TINT_STEP = 0.005  # a crowd's tint changes in steps this big: the picture with it is kept while it holds
 CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 # A part that turns (Beat.turning). One that looks the same turned a quarter and a half turn (its outline
@@ -1783,11 +1783,11 @@ class Renderer:
             self._crowd_dots(canvas, crowd, points, level * len(points), (scale, dx, dy), t, alpha)
 
     def _crowd_alpha(self, beat, crowd, spots: dict[str, float], ghosts: dict[str, float]) -> float:
-        """How strongly a crowd shows: as pale as its space while that is a ghost (half, for one always there), and
+        """How strongly a crowd shows: half as pale as its space while that is a ghost (it is there from the start), and
         dimmed with it when something else is spotlit, unless the beat's particles fill or empty it."""
         moving = any(f.label == crowd.label and crowd.region in (f.path[0], f.path[-1]) for f in beat.particles)
         others = 0.0 if moving else max((v for name, v in spots.items() if name != crowd.region), default=0.0)
-        ghost = ghosts.get(crowd.region, 0.0) * (HELD_GHOST if crowd.held else 1.0)
+        ghost = ghosts.get(crowd.region, 0.0) * CROWD_GHOST
         return (1 - ghost) * (1 - SPOT_WASH * others)
 
     def _crowd_tints(self, beat, t: float, ghosts: dict[str, float], spots: dict[str, float]) -> tuple:

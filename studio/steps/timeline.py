@@ -127,9 +127,11 @@ OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF
 MAX_ZOOM = 3.0
 FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
 DRAIN_S = 10.0  # seconds of them leaving that would empty it
-CROWD_START = 0.15  # how full a space is before anything has arrived: a few, so it reads as a place they gather
+# How full a space is before anything has arrived: half, so it reads as crowded from the start (a resting cell's
+# sodium outside is there before the pump runs) and still visibly fills as particles arrive (H⁺ into the lumen). The
+# writer was asked to say which a crowd was (held, Nov 1) and never did; round 22's pump began nearly empty.
+CROWD_START = 0.5
 CROWD_MIN = 0.15  # it never empties: a gradient runs down, it does not vanish
-HELD_MIN = 0.7  # a held difference (BuildUp.held) only dips while it leaks: the pump keeps it
 THIN_SHARE = 0.2  # where particles are scarce, about one dot for every five where they crowd
 SPIN_SPEED = 0.45  # turns a second while particles drive a part: fast enough to see, slow enough to follow
 RUN_MAX = 2  # flows moving at once on a beat that sums up: round 17's rock cycle moved 4 at once, and it read as a swarm
@@ -556,13 +558,10 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
 
 def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) -> None:
     """How full each build-up's space is on each beat: rising while particles carrying it end there,
-    falling while they start from it, carried on from beat to beat whatever the scene. One that is held
-    (BuildUp.held: sodium outside a resting cell) starts full and only dips; one the lesson builds up starts with a
-    few. A beat shows the spaces located on its scene, and a few of each where its particles are scarce: the other
+    falling while they start from it, carried on from beat to beat whatever the scene, from half full. A beat shows the spaces located on its scene, and a few of each where its particles are scarce: the other
     end of their paths, unless they crowd there too (round 22's pump showed no K⁺ outside the cell at all)."""
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
-    held = {(notation(b.carries), b.region) for b in bundle.builds_up if b.held}
-    level = {build: 1.0 if build in held else CROWD_START for build in builds}
+    level = dict.fromkeys(builds, CROWD_START)
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
     thin: list[tuple[str, str]] = []
     for label, region in builds:
@@ -578,13 +577,12 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             rate = ((1 / FILL_S if any(f.path[-1] == region for f in flows) else 0)
                     - (1 / DRAIN_S if any(f.path[0] == region for f in flows) else 0))
             start = level[build]
-            floor = HELD_MIN if build in held else CROWD_MIN
-            level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), floor), 1.0)
+            level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
             if region in located.get(beat["scene"], set()):
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
-                                    start=round(start, 4), end=round(end, 4), held=build in held))
+                                    start=round(start, 4), end=round(end, 4)))
         crowds += [Crowd(region=region, label=label, color=marker_colour(label, palette), start=THIN_SHARE,
-                         end=THIN_SHARE, thin=True, held=True)
+                         end=THIN_SHARE, thin=True)
                    for label, region in thin if region in located.get(beat["scene"], set())]
         beat["crowds"] = crowds
 

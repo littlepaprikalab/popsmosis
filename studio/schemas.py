@@ -194,12 +194,14 @@ class Direction(Strict):
 class BuildUp(Strict):
     carries: str = Field(description='What piles up, as `carries` writes it ("H⁺")')
     region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
-    # A resting cell's sodium outside is there from the first frame; round 22's pump lesson filled it from a few
-    # dots only once the pump ran, and drained the potassium inside to two dots when the leak played (Nov 1).
-    held: bool = Field(default_factory=bool, description="True when the crowd is already there and something keeps it "
-                                                  "(sodium outside and potassium inside a resting cell, though a pump "
-                                                  "keeps them): shown full from the start. False only when the lesson "
-                                                  "builds it up from few (H⁺ pumped into the lumen once light shines)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _without_held(cls, data):
+        """`held` (Nov 1, dropped the same day: the writer never set it) is ignored in what was saved with it."""
+        if isinstance(data, dict) and "held" in data:
+            data = {key: value for key, value in data.items() if key != "held"}
+        return data
 
 
 class Block(Strict):
@@ -900,7 +902,14 @@ class Crowd(Strict):
     start: float  # how full it is when the beat starts, 0-1
     end: float  # and when it ends; it changes evenly in between
     thin: bool = False  # a few of them where they are scarce (the other end of their path), not a space filling up
-    held: bool = False  # always there (BuildUp.held, or thin): shown, half pale, while its space is not yet named
+
+    @model_validator(mode="before")
+    @classmethod
+    def _without_held(cls, data):
+        """`held` (Nov 1, dropped the same day: the writer never set it) is ignored in what was saved with it."""
+        if isinstance(data, dict) and "held" in data:
+            data = {key: value for key, value in data.items() if key != "held"}
+        return data
 
     @field_validator("color")
     @classmethod
