@@ -291,6 +291,32 @@ def _recolour_sam_phrases(data: dict, problems: list) -> None:
                                        + "; ".join(dict.fromkeys(changed))))
 
 
+def _recolour_image_prompts(data: dict, problems: list) -> None:
+    """A colour the picture's words give a part, right before its name ("a white potassium iodide"), is the one the
+    Colours line gives it (art.paint_prompt): the writer was asked to name no colour there and named one in 61 of 62
+    scenes (Nov 1), a quarter of them not the part's own. The longest name wins ("thylakoid lumen" over "thylakoid").
+    Repaired, and recorded."""
+    changed = []
+    for scene in data["scenes"]:
+        colours = {fold(name): s["color_hex"] for s in scene["structures"] for name in (s["name"], *s["aliases"])}
+        if not colours:
+            continue
+        names = "|".join(re.escape(n) for n in sorted(colours, key=len, reverse=True))
+        pattern = re.compile(rf"({COLOUR_NAME.pattern})(\s+)({names})\b", re.I)
+
+        def own(found: re.Match) -> str:
+            word = colour_word(colours[fold(found.group(3))])
+            if re.sub(r"[\s-]+", " ", found.group(1).lower()) != word:
+                changed.append(f'"{found.group(0)}" as "{word} {found.group(3)}"')
+            return word + found.group(2) + found.group(3)
+
+        scene["image_prompt"] = pattern.sub(own, scene["image_prompt"])
+    if changed:
+        problems.append(Problem(line_id="scenes", rule="colours", repaired=True,
+                                detail="the picture's words give each part the colour the illustrator is told: "
+                                       + "; ".join(dict.fromkeys(changed))))
+
+
 def _check_colours(data: dict, problems: list) -> None:
     """Code finds each structure by its colour and names it to the illustrator (colour_word), the picture's only word
     for it: two structures of one scene in one colour word are painted alike. Two structures anywhere drawn alike, in
@@ -300,6 +326,7 @@ def _check_colours(data: dict, problems: list) -> None:
     change is the writer's to say."""
     _colour_for_ions(data, problems)
     _recolour_sam_phrases(data, problems)
+    _recolour_image_prompts(data, problems)
     looks: dict[tuple[str, str], list[str]] = {}
     for scene in data["scenes"]:
         by_word: dict[str, list[str]] = {}
@@ -343,13 +370,8 @@ def _colour_for_ions(data: dict, problems: list) -> None:
         for structure in scene["structures"]:
             ions = _names_kinds(structure["name"], IONS)
             if len(ions) == 1 and (new := MARKER_COLOURS[ions[0]]) != structure["color_hex"]:
-                old, word = colour_word(structure["color_hex"]), colour_word(new)
-                changed.append(f'{structure["name"]} {old} as {word}')
+                changed.append(f'{structure["name"]} {colour_word(structure["color_hex"])} as {colour_word(new)}')
                 structure["color_hex"] = new
-                # The picture's words, where they still name the old colour ("a green sodium channel"), say the new.
-                for name in (structure["name"], *structure["aliases"]):
-                    scene["image_prompt"] = re.sub(rf"{COLOUR_NAME.pattern}(?=\s+{re.escape(name)}\b)", word,
-                                                   scene["image_prompt"], flags=re.I)
     if changed:
         problems.append(Problem(line_id="structures", rule="colours", repaired=True,
                                 detail="a part named for an ion is painted in its colour: "

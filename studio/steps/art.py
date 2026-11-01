@@ -910,8 +910,9 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
                  styled: bool = False) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
     image model reads names), a graph's axes, and last what to label (labels_line()): the picture labels its own
-    parts. The Colours line is the picture's only word for its structures' colours: since Nov 1 the image_prompt
-    names none, as the writer's own ("a brown ATP synthase") disagreed with it ("ATP synthase orange"). Short on
+    parts. The Colours line gives every structure's colour, and a colour the image_prompt gives one right before its
+    name is made to agree with it (checks._recolour_image_prompts): the writer's own ("a brown ATP synthase")
+    disagreed with it ("ATP synthase orange"). Short on
     purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE says why). A later
     stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)

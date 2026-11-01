@@ -945,6 +945,25 @@ def test_a_part_named_for_an_ion_is_painted_in_the_ions_colour():
         ["Na⁺"], ["H⁺"], []]
 
 
+def test_the_pictures_words_give_each_part_the_colour_the_illustrator_is_told():
+    # Nov 1: in 61 of 62 scenes the writer named colours in the picture's words, a quarter of them not the part's own
+    # ("a white potassium iodide" for a green one), so the painter had two colours for one part.
+    data = {"scenes": [{"id": "overview", "structures": [
+        {"name": "Thylakoid", "aliases": [], "sam_phrase": "green disc", "color_hex": "#2E8B57"},
+        {"name": "Thylakoid lumen", "aliases": ["lumen"], "sam_phrase": "pink space", "color_hex": "#E0559A"}],
+        "image_prompt": "A gold Thylakoid stack; inside it a blue thylakoid lumen, the lumen tinted blue, and a "
+                        "green thylakoid beside it."}]}
+    problems = []
+    checks._recolour_image_prompts(data, problems)
+    assert data["scenes"][0]["image_prompt"] == ("A green Thylakoid stack; inside it a pink thylakoid lumen, the "
+                                                 "lumen tinted blue, and a green thylakoid beside it.")
+    assert problems[0].detail == ("the picture's words give each part the colour the illustrator is told: "
+                                  '"gold Thylakoid" as "green Thylakoid"; "blue thylakoid lumen" as "pink thylakoid '
+                                  'lumen"') and problems[0].repaired
+    checks._recolour_image_prompts(data, problems := [])
+    assert problems == []  # as it is told
+
+
 def test_an_alias_that_is_a_word_of_the_topic_is_recorded():
     # Nov 1: Sunlight's alias "light" revealed it on every "light reactions".
     def aliased(name, *aliases):
