@@ -547,11 +547,10 @@ is right. Do not list matters of taste or style.
 
 Then, in `notes`, write for the student watching the video one short, plain sentence for each problem \
 above that would teach them something false about the topic: a part in the wrong place, facing the wrong \
-way, of the wrong shape or in the wrong number, or a label on the wrong part or naming the wrong thing. Say \
-what the picture shows and what is true ("The chromosomes' bends point the wrong way: each is pulled toward its \
-pole by its middle, so the bend leads."; "The label 'Photosystem I' is on the cytochrome complex; photosystem I \
-is the red complex to its right."). Under 25 words each. Leave out a misspelled label and problems of look, size \
-or framing, which mislead no one. Leave it empty when nothing would."""
+way, of the wrong shape or in the wrong number. Say what the picture shows and what is true ("The chromosomes' \
+bends point the wrong way: each is pulled toward its pole by its middle, so the bend leads."). Under 25 words \
+each. A wrong label is never a note: it is in `labels`, and the video flags it on the picture with a note of its \
+own. Leave out problems of look, size or framing, which mislead no one. Leave it empty when nothing would."""
 
 
 class ArtCheck(Strict):
@@ -947,7 +946,9 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     """What the checks found still wrong in the Muse Image pictures the videos use, as notes for the student,
     by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
-    None for a drawing (the brain's SVG), which is not checked this way."""
+    None for a drawing (the brain's SVG), which is not checked this way. A note about a label the video flags on
+    the picture (flags()) is left out: its sticky note says it there, and the card said it again (the owner, Nov 1).
+    One about a label that could not be flagged stays."""
     found = {}
     for scene in bundle.scenes:
         # An analogy is an everyday picture standing in for the topic: nothing in it can teach the topic wrong.
@@ -956,10 +957,19 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
         if scene.id == "analogy" or not _painted(job, bundle, scene):
             continue
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
-        notes = [n.strip() for n in (made.get("check") or {}).get("notes") or [] if n.strip()]
+        flagged = [str(f.get("text") or "").strip().lower() for f in made.get("flags") or [] if isinstance(f, dict)]
+        notes = [n.strip() for n in (made.get("check") or {}).get("notes") or []
+                 if n.strip() and not _about_flagged(n, flagged)]
         if notes:
             found[scene.id] = notes
     return found
+
+
+def _about_flagged(note: str, flagged: list[str]) -> bool:
+    """Whether a note is about one of the labels flagged on its picture: it speaks of a label and names one
+    ("The 'Leak channel' label is on a teal pump"), as the checker wrote them until Nov 1."""
+    text = note.lower()
+    return "label" in text and any(label and label in text for label in flagged)
 
 
 def _made(job: Path, bundle: Bundle, scene: Scene) -> dict | None:

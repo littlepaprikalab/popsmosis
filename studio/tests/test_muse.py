@@ -422,12 +422,14 @@ def test_a_wrong_label_is_kept_and_flagged_where_the_helper_finds_it(job, monkey
     [flag] = art.flags(job, bundle)["overview"]
     assert (flag.box.x0, flag.box.y0, flag.box.x1, flag.box.y1) == pytest.approx((840, 140, 960, 210))  # art pixels
     assert flag.note == "This is cytochrome b6f"
-    assert list(art.flags(job, bundle)) == ["overview"] and art.notices(job, bundle) == {"overview": [note]}
+    # Its note is the sticky note's to say: the card beside the picture leaves it out (the owner, Nov 1).
+    assert list(art.flags(job, bundle)) == ["overview"] and art.notices(job, bundle) == {}
     assert sorted(art.self_labelled(job, bundle)) == ["hook", "overview", "synthase"]
 
     # A wrong label the helper cannot find, or a call that fails, is not flagged; the picture and its note stand.
     art.run(job, FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]}))
     assert "flags" not in json.loads((job / "art" / "overview.json").read_text()) and art.flags(job, bundle) == {}
+    assert art.notices(job, bundle) == {"overview": [note]}  # not flagged, so the card still says it
 
     def no_boxes(role, prompt, schema=None, images=(), **kwargs):
         if schema is art.LabelFlags:
@@ -958,23 +960,25 @@ def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
 
 def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_beside_it(job, monkeypatch):
     # Across the steps: the painted picture labels its own parts, so the video draws none over it; the label the
-    # check found wrong is flagged on the picture, and its note for the student reaches both timelines as a notice.
+    # check found wrong is flagged on the picture with its sticky note, and the card beside the picture keeps only
+    # the notes that are not about it, in both timelines.
     # The upright hook cut puts that card above the picture, which keeps the frame's width, and the wide song puts
     # it at the right.
     from studio.render import primitives as p
     from studio.render.renderer import NOTICE_GAP, NOTICE_W, Renderer
     from studio.steps import timeline as timeline_step
 
-    note = "The label 'PSI' is on the cytochrome complex; photosystem I is not in this picture."
+    flagged = "The label 'PSI' is on the cytochrome complex; photosystem I is not in this picture."
+    note = "Cytochrome b6f should sit across the membrane, not on it."
     FakeMuse().install(monkeypatch)
-    helper = FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [note]}]},
+    helper = FakeHelper({"overview": [{"labels": ["'PSI' points at the cytochrome complex"], "notes": [flagged, note]}]},
                         writing={"overview": [LABEL_BOX]})
     art.run(job, helper)
     locate.run(job, helper)
     timeline_step.run(job)
     song = jobs.read(job / media.timeline_path("song"), Timeline)
     lesson = jobs.read(job / media.timeline_path("lesson"), Timeline)
-    assert song.notices == {"overview": [note]}
+    assert song.notices == {"overview": [note]}  # the flagged label's note is its sticky note's alone
     assert lesson.notices == ({"overview": [note]} if any(b.scene == "overview" for b in lesson.beats) else {})
     shown = sorted({b.scene for b in song.beats})
     assert sorted(song.self_labelled) == shown and list(song.flags) == ["overview"]
