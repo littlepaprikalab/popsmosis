@@ -560,6 +560,12 @@ def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label:
 
 
 MARKER_MARGIN = 12  # pixels round a marker's sprite for its shadow, which falls a little below it
+
+
+def marker_width(label: str, size: float = 1.0) -> float:
+    """How wide a marker for `label` is drawn, its halo included: a disc for "H⁺", wider for "Na⁺" or "ATP"."""
+    half = max(MARKER_R * size, text_width(font("ExtraBold", MARKER_FONT * size), label) / 2 + MARKER_PAD * size)
+    return 2 * (half + HALO)
 _SPRITES: dict[tuple[str, str, float], skia.Image] = {}
 
 

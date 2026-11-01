@@ -1808,3 +1808,17 @@ def test_the_arrow_glides_along_its_track_from_tail_to_head_and_stays_short():
     end = renderer_module._glide(line, (total + piece / 2) / renderer_module.GLIDE_SPEED)
     assert end[-1] == pytest.approx(line[-1])  # shrinking into the head as it arrives
     assert renderer_module._cut(line, 100, 500) == [(100.0, 0.0), (400.0, 0.0), (400.0, 100.0)]
+
+
+def test_an_arrow_carries_as_many_as_the_moments_words_count_for_what_moves():
+    # The owner, Nov 1: where the lesson gives a count, that many ride the arrow. Read off the line, by the name or
+    # symbol right after the number; a line that names nothing, or counts more than COUNT_MAX, keeps one.
+    from studio.render.renderer import count_in
+    assert count_in("From inside, three sodium bind", "Na⁺") == 3
+    assert count_in("Next, two potassium ions from outside the cell slip into the pocket.", "K⁺") == 2
+    trade = "The pump flips its shape to trade one ATP for three sodium out and two potassium in"
+    assert (count_in(trade, "Na⁺"), count_in(trade, "K⁺"), count_in(trade, "ATP")) == (3, 2, 1)
+    assert count_in("3 Na⁺ bind inside", "Na⁺") == 3
+    assert count_in("Three go out and two come in", "Na⁺") == 1
+    assert count_in("Sodium out, potassium in", "K⁺") == 1
+    assert count_in("ten sodium", "Na⁺") == 1

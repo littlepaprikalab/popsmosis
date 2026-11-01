@@ -13,6 +13,7 @@ frame above the lyric band.
 from __future__ import annotations
 
 import math
+import re
 import zlib
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -112,6 +113,18 @@ ROUTE_DASH_SPEED = 40.0  # frame pixels a second its dashes move along it, the w
 FACE_DEPTH = 40.0  # art pixels: a path meets a part at its end this far in from its face toward the stop beside it
 TAIL_JIGGLE_PX = 5.0  # frame pixels the particle at an arrow's tail jiggles
 TAIL_SIZE = 0.9  # its size, as a share of a lead particle's
+# How many ride an arrow: as many as the moment's own words count for what moves ("three sodium ions slip in"), packed
+# together at its head and waiting at its tail (the owner, Nov 1), up to COUNT_MAX; one when they count none or more.
+COUNT_MAX = 5
+NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+           "ten": 10, "a dozen": 12, "dozens of": 24}
+CARRIED_WORDS = {"Na⁺": ("sodium",), "K⁺": ("potassium",), "H⁺": ("hydrogen", "proton"), "Ca²⁺": ("calcium",),
+                 "Cl⁻": ("chloride",), "e⁻": ("electron",), "O₂": ("oxygen",), "CO₂": ("carbon dioxide",),
+                 "H₂O": ("water",)}  # what a carried symbol is called in words, to find its count in a line
+# Where each of a few particles sits around the head, in their own widths: across the way they move, then behind.
+CLUSTER = {1: [(0.0, 0.0)], 2: [(-0.5, 0.0), (0.5, 0.0)], 3: [(-0.5, 0.29), (0.5, 0.29), (0.0, -0.58)],
+           4: [(-0.5, 0.5), (0.5, 0.5), (-0.5, -0.5), (0.5, -0.5)],
+           5: [(-1.0, 0.43), (0.0, 0.43), (1.0, 0.43), (-0.5, -0.43), (0.5, -0.43)]}
 # The arrow moves (the owner, Nov 1): the route is a faint dotted track, and a short solid arrow glides along it from
 # tail to head, again and again, so the way the flow goes is seen and the arrow on screen stays short.
 GLIDE_SHARE = 0.35  # the gliding arrow's length, as a share of its route...
@@ -595,6 +608,40 @@ def _in_space(at: float, loc, upright: bool) -> float:
     lo, hi = (loc.box.y0, loc.box.y1) if upright else (loc.box.x0, loc.box.x1)
     inset = (hi - lo) * 0.1
     return min(max(at, lo + inset), hi - inset)
+
+
+def _width(label: str) -> float:
+    """How wide one particle at an arrow is drawn (frame pixels), with a little room between two side by side: a
+    pill as wide as its word ("Na⁺" is wider than it is tall, and three packed by its height hid each other's N)."""
+    if p.kind_of(label) == "symbol":
+        return p.marker_width(label, TAIL_SIZE) + 2.0
+    return 2 * (p.PARTICLE_R + p.HALO) * TAIL_SIZE + 2.0
+
+
+def count_in(line: str, label: str) -> int:
+    """How many of what `label` names the line says move: a number right before its name or symbol ("three sodium
+    ions", "two potassium", "3 Na⁺"); 1 when it gives none ("Three go out and two come in" names nothing), or more
+    than COUNT_MAX."""
+    if not label:
+        return 1
+    names = sorted({label, *CARRIED_WORDS.get(label, ())}, key=len, reverse=True)
+    numbers = "|".join(re.escape(n) for n in sorted(NUMBERS, key=len, reverse=True))
+    found = re.search(rf"(?<![\w.])(\d+|{numbers})\s+(?:{'|'.join(re.escape(n) for n in names)})(?:e?s)?(?![\w⁺⁻])",
+                      line, re.IGNORECASE)
+    if not found:
+        return 1
+    n = int(found.group(1)) if found.group(1).isdigit() else NUMBERS[found.group(1).lower()]
+    return n if 1 <= n <= COUNT_MAX else 1
+
+
+def cluster(at: Point, ahead: Point, n: int, width: float) -> list[Point]:
+    """Where n particles `width` across sit, packed together around `at`: the first row across the way they move
+    (`ahead`, a unit vector), the rest just behind it, back ones first so the front ones are drawn over them."""
+    ux, uy = ahead
+    vx, vy = -uy, ux
+    spots = [(at[0] + width * (a * vx - b * ux), at[1] + width * (a * vy - b * uy))
+             for a, b in CLUSTER.get(n, CLUSTER[1])]
+    return sorted(spots, key=lambda q: (q[0] - at[0]) * ux + (q[1] - at[1]) * uy)
 
 
 def _leave(a: Point, b: Point, box) -> Point:
@@ -2219,7 +2266,7 @@ class Renderer:
                 continue
             elapsed = t - flow_in
             if self._as_arrow(beat.scene, flow):
-                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t)
+                self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t, count_in(beat.line, flow.label))
                 continue
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
@@ -2363,7 +2410,7 @@ class Renderer:
         return self._through[key]
 
     def _draw_tail(self, canvas: skia.Canvas, flow, shown: list[Point], alpha: float, t: float,
-                   grown: float = 1.0) -> None:
+                   grown: float = 1.0, count: int = 1) -> None:
         """One particle of what the flow carries, jiggling in place just behind its arrow's tail (frame pixels), so the
         arrow says what moves; for a blocked flow, just short of the cross at its head, where it piles up, both once
         the arrow drawing itself in (`grown`) has reached the blocker. A flow carrying nothing has no particle."""
@@ -2387,10 +2434,19 @@ class Renderer:
             at = (end[0] + ux * (p.MARKER_R + 4), end[1] + uy * (p.MARKER_R + 4))
         phase = (zlib.crc32(flow.label.encode("utf-8")) % 628) / 100
         at = (at[0] + TAIL_JIGGLE_PX * math.sin(2.3 * t + phase), at[1] + TAIL_JIGGLE_PX * math.cos(1.9 * t + 2 * phase))
-        p.draw_kind(canvas, at, flow.color, flow.label, alpha, size=TAIL_SIZE)
+        ahead = (ux, uy) if head else (-ux, -uy)  # the way it moves
+        if count > 1 and not head:  # a few waiting at the tail sit just behind it, clear of the arrow
+            back = _width(flow.label) * (0.5 if count == 2 else 0.58)
+            at = (at[0] + ux * back, at[1] + uy * back)
+        self._draw_kinds(canvas, at, ahead, flow, alpha, count)
+
+    def _draw_kinds(self, canvas: skia.Canvas, at: Point, ahead: Point, flow, alpha: float, count: int) -> None:
+        """`count` particles of what the flow carries, packed together around `at` (cluster)."""
+        for spot in cluster(at, ahead, count, _width(flow.label)):
+            p.draw_kind(canvas, spot, flow.color, flow.label, alpha, size=TAIL_SIZE)
 
     def _draw_rider(self, canvas: skia.Canvas, flow, shown: list[Point], piece: list[Point], alpha: float, t: float,
-                    elapsed: float) -> None:
+                    elapsed: float, count: int = 1) -> None:
         """The flow's particle riding the head of its gliding arrow (frame pixels), the owner's idea (Nov 1): it says
         what moves and the arrow trailing it which way. It fades out at the head as the glide ends, and waits at the
         tail, jiggling and fading in, through the pause before the next."""
@@ -2400,11 +2456,17 @@ class Renderer:
         head = (elapsed % period) * GLIDE_SPEED
         if piece and head <= total + length:
             fade = 1.0 if head <= total else p.clamp01(1 - (head - total) / max(length, 1.0))
-            p.draw_kind(canvas, piece[-1], flow.color, flow.label, alpha * fade, size=TAIL_SIZE)
+            tip, behind = piece[-1], _along(piece, max(routing.length(piece) - 20.0, 0.0))
+            d = math.dist(tip, behind) or 1.0
+            ahead = ((tip[0] - behind[0]) / d, (tip[1] - behind[1]) / d)
+            if count > 1:  # the bunch's front row at the head, the rest riding just behind it
+                back = _width(flow.label) * (0.29 if count == 3 else 0.5 if count in (4, 5) else 0.0)
+                tip = (tip[0] - ahead[0] * back, tip[1] - ahead[1] * back)
+            self._draw_kinds(canvas, tip, ahead, flow, alpha * fade, count)
             return
         waited = (elapsed % period) - (total + length) / GLIDE_SPEED  # into the pause, or setting off
         fade = p.ease(waited / GLIDE_PAUSE_S) if head > total + length else 1.0
-        self._draw_tail(canvas, flow, shown, alpha * fade, t)
+        self._draw_tail(canvas, flow, shown, alpha * fade, t, count=count)
 
     def _route_line(self, scene_id: str, flow) -> list[Point]:
         """A travelling flow's way as one line, art pixels: from stop to stop through the two parts' outlines
@@ -2435,7 +2497,7 @@ class Renderer:
         return self._through[key]
 
     def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
-                       on_frame, t: float = 0.0) -> None:
+                       on_frame, t: float = 0.0, count: int = 1) -> None:
         """A travelling flow's arrows. Off a graph, one dashed arrow along its whole way (_route_line), drawing itself
         in from its tail as it sets off, its dashes then moving along it, with its one-liner (Particles.says) beside
         it, joined to it. On a
@@ -2457,9 +2519,9 @@ class Renderer:
                 if piece:
                     p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
                 if rider:
-                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding)
+                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count)
             if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
-                self._draw_tail(canvas, flow, shown, alpha, t, grown)
+                self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
             says = getattr(flow, "says", "")
             if says:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
