@@ -325,16 +325,19 @@ explanation left to the narration.
   sing-along chorus; shimmering synths lead, claps accent the beat". Concrete sounds ("a
   warm Rhodes", "an 808 that slides", "gang vocals on the hook") beat adjectives ("catchy",
   "educational"). The verses are sung with a melody, unless the learner asks for rap or the
-  rotation's style has rapped verses: rap them then, every line a lyric with its rhyme and
-  beat, never a sentence of the lesson recited.
+  style raps them, or raps one section (a rapped second verse, a rapped bridge): rap that
+  section then, and only that one, and say so in the style ("a rapped second verse"). A
+  rapped line follows every rule a sung one does (a lyric with its rhyme and beat, one idea,
+  one term at most, never a sentence of the lesson recited); it only runs longer. The chorus
+  is always sung.
   - **A style the learner asked for**, on its own line or anywhere in their words
     ("Style: pop-punk", "make the song K-pop"), is your brief: keep everything they asked
     for (the genre, voices, instruments, mood, tempo, their own vivid words), turn vague
     words into sounds and fill in the rest in the same spirit. Describe the sound of an
     artist they named instead of naming them, and leave out what would hide the words or
     does not belong in a classroom (screamed vocals, explicit lyrics).
-  - **Otherwise, the rotation's style is a seed**: keep its genre and its tempo within a
-    few bpm, and choose your own voice, instruments, textures and mood for this topic, so
+  - **Otherwise, the rotation's style is a seed**: keep its genre, its tempo within a few
+    bpm and any section it raps, and choose your own voice, instruments, textures and mood for this topic, so
     two droplets from one seed sound different. With none, a vocals-first pop a teenager
     plays for fun, sung verses and chorus, 92 to 112 bpm. A faster or heavier genre only
     when the learner asks.
@@ -342,7 +345,7 @@ explanation left to the narration.
     death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities),
     where a dance beat sounds like a celebration. Write a slow, respectful song: 80 to 90
     bpm, solemn and reflective, a sparse piano ballad with one solo cello or violin,
-    plainly sung verses and a chorus memorable without being euphoric. Keep it sparse,
+    plainly sung verses and a chorus memorable without being euphoric, nothing rapped. Keep it sparse,
     never a full or epic orchestra (brass, timpani, a swelling choir), which sounds like a
     war film's victory. An instrument from a culture only when it belongs to the people the
     topic is about (an erhu for the Nanjing Massacre). No dance beat, drops, claps or party

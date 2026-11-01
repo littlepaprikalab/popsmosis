@@ -262,6 +262,31 @@ def syllables(line: str) -> int:
 LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
 LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
+# A style that raps one section says which (studio/styles.py, Nov 1): only that section's lines run longer.
+RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped)? second verse\b|\bsecond verse rapped\b", re.I)
+RAPPED_BRIDGE = re.compile(r"\brap(?:ped)? bridge\b|\bbridge rapped\b", re.I)
+
+
+def rapped_lines(data: dict) -> set[str]:
+    """The ids of the lines the style raps: its second verse or its bridge when it names one, every line when it
+    raps otherwise ("rapped verses", "make it rap"), none when it does not."""
+    style = " ".join((data.get("music") or {}).get("positive_styles") or [])
+    if not RAPPED.search(style):
+        return set()
+    lyrics = data["lyrics"]
+    runs: list[tuple[str, list[str]]] = []
+    for line in lyrics:
+        if runs and runs[-1][0] == line["section"]:
+            runs[-1][1].append(line["id"])
+        else:
+            runs.append((line["section"], [line["id"]]))
+    picked: set[str] = set()
+    if RAPPED_SECOND_VERSE.search(style):
+        verses = [ids for section, ids in runs if section == "verse"]
+        picked |= set(verses[1]) if len(verses) > 1 else set()
+    if RAPPED_BRIDGE.search(style):
+        picked |= {i for section, ids in runs if section == "bridge" for i in ids}
+    return picked if picked else {line["id"] for line in lyrics}
 # A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
 # next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
@@ -274,10 +299,10 @@ DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watc
 def _check_lyric_style(data: dict, problems: list) -> None:
     """A sung line is not a stage direction and is not too full to sing: both are only recorded (a better bundle,
     by the prompt, is the fix), so the operator sees which droplets sing them."""
-    rapped = RAPPED.search(" ".join((data.get("music") or {}).get("positive_styles") or []))
-    most = LYRIC_SYLLABLES_RAPPED if rapped else LYRIC_SYLLABLES_MAX
+    rapped = rapped_lines(data)
     for line in data["lyrics"]:
         text = line["text"]
+        most = LYRIC_SYLLABLES_RAPPED if line["id"] in rapped else LYRIC_SYLLABLES_MAX
         why = ("narrates the picture instead of being sung" if DIRECTION_LINE.match(text) else
                f"runs {syllables(text)} syllables, over {most}" if syllables(text) > most + LYRIC_SLACK else "")
         if why:

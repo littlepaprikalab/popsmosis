@@ -151,8 +151,8 @@ def user_prompt(request: Request, rotation: str = "", sung: bool = True) -> str:
         parts.append(f"The song style the learner asked for: {request.song_style}")
     elif sung and rotation:
         parts.append(f"The song style for this droplet, from the studio's rotation: {rotation}. For a high school "
-                     "or older audience, it is the seed of the song's style: keep its genre and roughly its tempo, "
-                     "and write your own description from it. A younger audience gets the younger style below, and "
+                     "or older audience, it is the seed of the song's style: keep its genre, roughly its tempo and any "
+                     "section it raps, and write your own description from it. A younger audience gets the younger style below, and "
                      "a grave topic (a genocide, slavery) the grave topic's own slow style.")
     if request.images:
         parts.append(f"The learner sent {len(request.images)} photo(s) of their notes, shown above.")

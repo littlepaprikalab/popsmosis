@@ -312,6 +312,31 @@ def test_a_lyric_one_syllable_over_passes_and_two_over_is_recorded():
     assert lyric(" ".join(["la"] * 12)) == ["lyric-style"]
 
 
+
+def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
+    # The owner (Nov 1): a K-pop song has a rap section, not a rapped song. The rest stays sung, held to the sung cap.
+    def rapped(style):
+        data = bundle_data()
+        data["music"]["positive_styles"] = [style]
+        return checks.rapped_lines(data)
+
+    assert rapped("K-pop, a sung first verse, a rapped second verse, 100 bpm") == {"v2-1"}
+    assert rapped("dance-pop, short sung verses and a rapped bridge, 112 bpm") == {"b-1"}
+    assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {
+        "v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"}  # rapped, no section named: every line, as before
+    assert rapped("bright teen pop with melodic sung verses, 104 bpm") == set()
+
+    def long_lines(style):
+        def change(data):
+            data["music"]["positive_styles"] = [style]
+            for line in data["lyrics"]:
+                if line["id"] in ("v1-1", "v2-1"):
+                    line["text"] = " ".join(["la"] * 13)
+        _, found, _ = review(change)
+        return [line for line, rule, _ in found if rule == "lyric-style"]
+
+    assert long_lines("K-pop, a sung first verse, a rapped second verse, 100 bpm") == ["v1-1"]  # the sung one
+
 def test_a_lyric_that_narrates_the_picture_or_runs_long_is_recorded_not_repaired():
     def change(data):
         data["lyrics"][0]["text"] = "Zoom inside to the chloroplast"
