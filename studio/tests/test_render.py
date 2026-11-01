@@ -1242,7 +1242,6 @@ def test_a_space_the_lesson_fills_is_a_space_however_patchy_its_outline_and_an_a
     monkeypatch.setattr(renderer, "_crowded", {"Thylakoid"})  # what H⁺ builds up in
     assert renderer._is_space("overview", thylakoid)
     path = ["Cytochrome b6f", "Thylakoid"]
-    monkeypatch.setattr(renderer, "_routed", lambda *a: [(0.0, 0.0), (500.0, 900.0), (1.0, 1.0)])  # a detour
     assert renderer._bends("overview", path) == [None]
     flow = Particles(path=path, color="#F2C230", label="H⁺", trail=True)
     assert renderer._flow_line("overview", flow) == renderer._path_points("overview", path)  # one straight leg
@@ -1658,10 +1657,9 @@ def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
 
 
 def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossing_straight_through(job, monkeypatch):
-    monkeypatch.setattr(renderer_module, "ROUTES", True)  # switched off since Nov 1; the code is kept
     # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
-    # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
-    # nothing). Since Nov 1 every other flow off a graph is an arrow too, an ion's straight through what it crosses.
+    # drawn as one arrow along its way, off a graph (Nov 1: stubs at each joint read as nothing). Since Nov 1 every
+    # other flow off a graph is an arrow too, an ion's straight through what it crosses.
     arrows, dots = [], []  # each flow's track, which draws itself in, and the arrow gliding along it
     monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, color, alpha, grown=1.0:
                         arrows.append((points[0], points[-1], grown, 0.0)))
@@ -1675,8 +1673,7 @@ def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossi
     travelling = moving("filtrate", "travels")
     flow = travelling.timeline.beats[0].particles[0]
     assert travelling._travels("overview", flow)
-    line = travelling._route_line("overview", flow)  # from the thylakoid into b6f, along the way
-    assert travelling._flow_line("overview", flow) == line
+    line = travelling._flow_line("overview", flow)  # from the thylakoid into b6f
     b6f = located(job, "overview", "Cytochrome b6f").box
     assert len(line) >= 2 and b6f.x0 - 60 <= line[-1][0] <= b6f.x1 + 60 and b6f.y0 - 60 <= line[-1][1] <= b6f.y1 + 60
     start = travelling.plans[0].runs[0][0]  # when it sets off

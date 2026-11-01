@@ -53,7 +53,6 @@ SPACE_FILL = 0.25  # and fills at least this share of its box: a curve across a 
 # Fewer kinds of motion (the owner, Nov 1): every kind guesses where things are in a painted picture, from the outlines
 # SAM finds, and each guess was a way to draw motion wrong. Off until someone misses them:
 CROWDS = False  # a space filling with dots (Bundle.builds_up), placed through the space's outline
-ROUTES = False  # an arrow routed along the parts' outlines; off, a journey or a hop is a straight line or an arc
 # The sanity gate: an arrow failing any of these is left out (Renderer.left_out), never drawn wrong. Nov 1's wrong
 # arrows each failed one: K+ sideways into the cell, two with no length, H+ ending above the picture.
 ARROW_MIN = 25.0  # art pixels: shorter reads as no arrow
@@ -711,35 +710,24 @@ def bezier(a: Point, ctrl: Point, b: Point, u: float) -> Point:
 
 
 def _on_leg(points: list[Point], bends, i: int, x: float) -> Point:
-    """The point x (0 to 1) along leg i: along its route when it runs through the parts (routing), on its curve when
-    it bends, else on the straight line."""
+    """The point x (0 to 1) along leg i: on its curve when it bends, else on the straight line."""
     bend = bends[i] if bends else None
-    if isinstance(bend, list):
-        return _along(bend, x * routing.length(bend))
     if bend is not None:
         return bezier(points[i], bend, points[i + 1], x)
     return p.lerp(points[i][0], points[i + 1][0], x), p.lerp(points[i][1], points[i + 1][1], x)
 
 
 def _leg_seconds(points: list[Point], bends=None) -> list[float]:
-    """How long the lead particle takes over each leg: its length (a route's own, when it runs through the parts) at
-    FLOW_SPEED, and at least FLOW_MIN_LEG_S."""
-    out = []
-    for i, (a, b) in enumerate(zip(points, points[1:])):
-        bend = bends[i] if bends else None
-        out.append(max((routing.length(bend) if isinstance(bend, list) else math.dist(a, b)) / FLOW_SPEED,
-                       FLOW_MIN_LEG_S))
-    return out
+    """How long the lead particle takes over each leg: its length at FLOW_SPEED, and at least FLOW_MIN_LEG_S."""
+    return [max(math.dist(a, b) / FLOW_SPEED, FLOW_MIN_LEG_S) for a, b in zip(points, points[1:])]
 
 
 def _dense(points: list[Point], bends=None) -> list[Point]:
-    """The whole path as one line: each leg's route or curve, or the straight hop."""
+    """The whole path as one line: each leg's curve, or the straight hop."""
     out = [points[0]]
     for i in range(len(points) - 1):
         bend = bends[i] if bends else None
-        if isinstance(bend, list):
-            out += bend[1:]
-        elif bend is not None:
+        if bend is not None:
             out += [bezier(points[i], bend, points[i + 1], k / CURVE_STEPS) for k in range(1, CURVE_STEPS + 1)]
         else:
             out.append(points[i + 1])
@@ -913,7 +901,7 @@ class Renderer:
         self.portrait = self.layout.height > self.layout.width
         self.locations = locations or jobs.read(job / media.LOCATIONS, Locations)
         self._scenes: dict[str, SceneArt] = {}
-        self._through: dict[tuple, list[Point] | None] = {}  # legs routed through the parts (_routed)
+        self._through: dict[tuple, list[Point] | None] = {}  # each crossing's and each arrow's line, worked out once
         self._frame_tints: tuple = ()  # the crowds' tints of the frame being drawn (_crowd_tints)
         # The spaces the lesson fills (Bundle.builds_up, as the beats' crowds): spaces wherever they are drawn big.
         self._crowded = {c.region for beat in timeline.beats for c in beat.crowds if not c.thin}
@@ -2136,17 +2124,10 @@ class Renderer:
             # the stops the arrows and the labels' keep-clear points count (a space in the middle counts twice).
             return [None] * max(2, len(pairs) - 1)
         points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
-        ends = self._path_points(scene_id, path, lane=lane)  # where the particles set off and arrive
-        bends: list[Point | list[Point] | None] = []
+        bends: list[Point | None] = []
         for i, (a, b) in enumerate(zip(points, points[1:])):
-            # Straight before any route: routed through a space's patchy outline (the cytoplasm as red speckle), K⁺
-            # from the pump hooked out to a speck and back on its way down.
             if self._is_space(scene_id, stops[i]) or self._is_space(scene_id, stops[i + 1]):
                 bends.append(None)
-                continue
-            through = self._routed(scene_id, stops[i], stops[i + 1], ends[i], ends[i + 1]) if ROUTES else None
-            if through:  # along the parts themselves, where their outlines join
-                bends.append(through)
                 continue
             length = math.dist(a, b) or 1.0
             nx, ny = (b[1] - a[1]) / length, -(b[0] - a[0]) / length  # perpendicular to the leg...
@@ -2210,17 +2191,6 @@ class Renderer:
             return (part.box.y0, part.box.y1) if upright else (part.box.x0, part.box.x1)
         return hits[0] * routing.GRID, (hits[-1] + 1) * routing.GRID
 
-    def _routed(self, scene_id: str, first, second, a: Point, b: Point) -> list[Point] | None:
-        """The leg from a in one part to b in the next through the two parts' outlines (routing.route), or None
-        when they do not join; kept, since every frame asks."""
-        key = (scene_id, first.name, second.name, round(a[0]), round(a[1]), round(b[0]), round(b[1]))
-        if key not in self._through:
-            art = self.scene(scene_id)
-            region = art.cells(first.name) if first.name == second.name else routing.joined(
-                art.cells(first.name), art.cells(second.name))
-            self._through[key] = routing.route(region, a, b)
-        return self._through[key]
-
     def _legs(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[list[Point], bool, int, int, object]]:
         """A route's arrows, in art pixels: (the line it draws, ends in a space, its first stop, its last stop, the
         part it passes through or None). A
@@ -2237,10 +2207,6 @@ class Renderer:
                 i += 2
                 continue
             a, b = points[i], points[i + 1]
-            if isinstance(bends[i], list):  # a route through the parts: where the particles run
-                legs.append((bends[i], space[i + 1], i, i + 1, None))
-                i += 1
-                continue
             if bends[i] is not None:
                 curve = [bezier(a, bends[i], b, k / CURVE_STEPS) for k in range(CURVE_STEPS + 1)]
                 # From where the curve leaves the part it starts in to where it enters the part it reaches.
@@ -2255,8 +2221,7 @@ class Renderer:
         return legs
 
     def _arrow_points(self, scene_id: str, cam: Cam, view: Rect) -> list[Point]:
-        """Points along every path the scene's particles travel at any time in the video (through the parts, where
-        routing found a way), in frame pixels: what labels and reaction pills keep clear of. Every path, not only
+        """Points along every path the scene's particles travel at any time in the video, in frame pixels: what labels and reaction pills keep clear of. Every path, not only
         those travelled on screen, so a label is placed once for the scene and does not jump as each flow starts."""
         if scene_id not in self._scene_routes:
             routes = []
@@ -2552,8 +2517,9 @@ class Renderer:
 
     def _flow_line(self, scene_id: str, flow) -> list[Point]:
         """A flow's arrow off a graph, art pixels: where the helper pointed it on the painting (_pointed); else
-        straight through the part it crosses (_crossing); along its parts when it is a journey (_route_line); else its
-        stops' legs, as particles ran them before Nov 1 (_path_points, _bends); up to its blocker when blocked."""
+        straight through the part it crosses (_crossing); else its stops' legs, as particles ran them before Nov 1
+        (_path_points, _bends); up to its blocker when blocked. Routed along the parts' outlines until Nov 1, which
+        guessed from SAM's masks as the stops do: the helper points a hop on a painting instead."""
         key = ("flow", scene_id, tuple(flow.path), flow.label, flow.blocked)
         if key not in self._through:
             lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
@@ -2563,8 +2529,6 @@ class Renderer:
                 line = pointed
             elif crossing:
                 line = list(crossing)
-            elif ROUTES and not flow.blocked and self._travels(scene_id, flow):
-                line = self._route_line(scene_id, flow)
             else:
                 points = self._path_points(scene_id, flow.path, flow.blocked, lane)
                 line = _dense(points, None if flow.blocked else self._bends(scene_id, flow.path, lane)) \
@@ -2654,37 +2618,9 @@ class Renderer:
         fade = p.ease(waited / GLIDE_PAUSE_S) if head > total + length else 1.0
         self._draw_tail(canvas, flow, shown, alpha * fade, t, count=count)
 
-    def _route_line(self, scene_id: str, flow) -> list[Point]:
-        """A travelling flow's way as one line, art pixels: from stop to stop through the two parts' outlines
-        (routing.route), however far that bends from the straight line, since following the parts is the point (up
-        the pipe and into the tank, down the other pipe to the house); a gentle arc from one to the next where they
-        do not join. Never a crossing's straight line, which is the particles'."""
-        key = ("route", scene_id, tuple(flow.path), flow.label)
-        if key not in self._through:
-            lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
-            pairs = self._path_stops(scene_id, flow.path, lane)
-            art = self.scene(scene_id)
-            line: list[Point] = []
-            for (a, first), (b, second) in zip(pairs, pairs[1:]):
-                region = art.cells(first.name) if first.name == second.name else routing.joined(
-                    art.cells(first.name), art.cells(second.name))
-                leg = routing.route(region, a, b, detour_max=math.inf)
-                if leg is None:
-                    length = math.dist(a, b) or 1.0
-                    nx, ny = (b[1] - a[1]) / length, -(b[0] - a[0]) / length
-                    if ny > 0:
-                        nx, ny = -nx, -ny
-                    bend = ((a[0] + b[0]) / 2 + nx * ROUTE_BEND * length, (a[1] + b[1]) / 2 + ny * ROUTE_BEND * length)
-                    leg = [bezier(a, bend, b, k / CURVE_STEPS) for k in range(CURVE_STEPS + 1)]
-                for q in leg:
-                    if not line or math.dist(line[-1], q) > 1.0:
-                        line.append(q)
-            self._through[key] = line
-        return self._through[key]
-
     def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
                        on_frame, t: float = 0.0, count: int = 1) -> None:
-        """A travelling flow's arrows. Off a graph, one dashed arrow along its whole way (_route_line), drawing itself
+        """A travelling flow's arrows. Off a graph, one dashed arrow along its whole way (_flow_line), drawing itself
         in from its tail as it sets off, its dashes then moving along it, with its one-liner (Particles.says) beside
         it, joined to it. On a
         graph, an arrow at each hand-off drawn in one after another, then a pulse running along them in order, with
