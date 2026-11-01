@@ -564,7 +564,7 @@ class Problem(Strict):
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
                   "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy",
-                  "chorus", "head-count", "source-quote"]
+                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 

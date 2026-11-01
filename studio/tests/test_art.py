@@ -717,7 +717,7 @@ def test_a_song_picture_drawn_to_scale_is_given_the_lines_sung_over_it():
 def test_a_science_diagram_labels_its_nonobvious_structures_and_any_other_scene_only_its_parts():
     # Oct 31: "nonobvious" labelled a membrane's pump, channels, ATP and spaces, and a boat's oarlock and thwart.
     bundle = Bundle.model_validate(bundle_data())
-    scene = bundle.scenes[0]
+    scene = bundle.scenes[1]
     names = ", ".join(s.name for s in scene.structures)
     science = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a thylakoid membrane, "
                                                        "clean scientific style: the membrane across the middle."})
@@ -728,3 +728,23 @@ def test_a_science_diagram_labels_its_nonobvious_structures_and_any_other_scene_
     assert line == (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, "
                     f"furniture or background objects. {art.NO_SLIDE}")
     assert art.paint_prompt(bundle, everyday).endswith(line)
+
+
+def test_the_hook_labels_nothing_whatever_its_style():
+    # Nov 1: the pump's hook, a teenager on a couch, came back labelled "Body" and "Couch".
+    bundle = Bundle.model_validate(bundle_data())
+    hook = bundle.scenes[0]
+    for prompt in ("A teenager on a couch, clean textbook style.", "A leaf in the sun, clean scientific style."):
+        scene = hook.model_copy(update={"image_prompt": prompt})
+        assert art.labels_line(scene) == art.NO_LABELS
+        assert art.paint_prompt(bundle, scene).endswith("Colours: Thylakoid green. " + art.NO_LABELS)
+
+
+def test_the_picture_is_told_each_colour_in_one_everyday_word():
+    # Nov 1: the writer's "brown ATP synthase" and "cyan water" were "orange" and "teal" in the Colours line.
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1].model_copy(update={"structures": [
+        Structure(name="ATP synthase", aliases=[], sam_phrase="brown mushroom", color_hex="#A0703C"),
+        Structure(name="Water", aliases=[], sam_phrase="cyan ball", color_hex="#00ACC1"),
+        Structure(name="Carbon dioxide", aliases=[], sam_phrase="teal ball", color_hex="#00897B")]})
+    assert "Colours: ATP synthase brown, Water cyan, Carbon dioxide teal." in art.paint_prompt(bundle, scene)

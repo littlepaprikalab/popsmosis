@@ -677,7 +677,10 @@ def test_the_plainer_words_are_the_structures_colour_and_the_phrases_last_noun()
              "#4A7C2E": "green", "#8B4513": "brown", "#1B2A49": "dark blue", "#F4F4F4": "white", "#7F7F7F": "grey",
              # the pinks and purples round 17 named wrong ("red", "light pink"), and plain pink, once "light red"
              "#F06292": "pink", "#BA68C8": "light purple", "#9C27B0": "purple", "#FFC0CB": "pink",
-             "#DC143C": "red"}
+             "#DC143C": "red",
+             # Nov 1: the browns the writer named so ("orange" until then), and water's cyan beside a teal
+             "#A0703C": "brown", "#A86B32": "brown", "#A0522D": "brown", "#00ACC1": "cyan", "#00897B": "teal",
+             "#17A2A2": "teal"}
     assert {h: art.colour_word(h) for h in words} == words
 
 

@@ -152,7 +152,8 @@ one diagram:
   `image_prompt` opens with the same sentence word for word, saying the kind of picture,
   the subject, its size and place ("Educational textbook illustration of one animal cell,
   clean scientific style, the cell large and round in the centre of the picture."), then
-  says what this stage looks like. The video fades each stage into the next.
+  says what this stage looks like: a painter that cannot redraw from the first stage (Gemini)
+  keeps them alike only by that sentence. The video fades each stage into the next.
 - A picture is one moment: never ask it for panels ("first panel", "left panel", "two
   panels") or several stages side by side, even where a textbook prints the figure that way.
   Each panel is a scene of its own, as the script says.
@@ -180,19 +181,18 @@ sentences. The illustrator draws best the diagrams it already knows:
   lightning and symbols): nothing pumped, flowing, carried or turning into something, no
   arrows between parts, no streams, crowds or scatter of ions or small molecules. The video
   draws those as moving dots and fills spaces with them; painted ones clutter the picture
-  and never move. A space is an even wash of its own colour ("the matrix below it tinted
-  pink"). A stage textbooks draw as a shape is that shape where it happens (the Krebs cycle
+  and never move. A space is an even wash of its own colour ("the matrix below it, evenly
+  tinted"). A stage textbooks draw as a shape is that shape where it happens (the Krebs cycle
   as a ring of arrows in the matrix); a molecule the scene names is one small shape where it
   sits. A hook too: its things in place, the dots showing what moves.
 - Lay it out region by region: the regions first ("the membrane across the middle, the
-  intermembrane space above it tinted blue, the matrix below it tinted pink"), then each
-  part in its region, how it sits and which way it faces. Where the layout is left out, the
-  illustrator invents one, often wrong (the Krebs cycle in the cytoplasm). It draws a thing
-  the way up it is usually pictured whatever you say about its head, so when the scene
-  needs it the other way up, say it hangs upside down and where its cap is ("ATP synthase
-  as a mushroom hanging upside down from the membrane, its round cap below it in the
-  matrix"). Put every part inside what holds it (a mitochondrion inside its cell, not
-  beside it).
+  intermembrane space above it, the matrix below it"), then each part in its region, how it
+  sits and which way it faces. Where the layout is left out, the illustrator invents one,
+  often wrong (the Krebs cycle in the cytoplasm). It draws a thing the way up it is usually
+  pictured whatever you say about its head, so when the scene needs it the other way up, say
+  it hangs upside down and where its cap is ("ATP synthase as a mushroom hanging upside down
+  from the membrane, its round cap below it in the matrix"). Put every part inside what
+  holds it (a mitochondrion inside its cell, not beside it).
 - End with the look for its kind, in these words:
   - a cell or molecular process: "a clean, modern biology textbook illustration:
     semi-realistic organelles, each protein complex a smooth rounded shape, soft gradient
@@ -206,13 +206,9 @@ sentences. The illustrator draws best the diagrams it already knows:
 - Name the real things, never their shapes ("Earth's northern hemisphere", not "a blue
   dome"). Place things with plain words (left, right, above, below, inside, through, tilted
   toward), each said once, never a relation such as "at right angles to".
-- Give each structure its colour by name, the colour its `color_hex` is, never a darker one
-  or a pale wash. Code finds each
-  structure by its colour, so each in a scene needs its own, with names that differ (blue
-  and orange, not blue and teal). Keep a thing's natural colour (a green leaf, a yellow Sun,
-  a blue Earth with its continents, a grey Moon); choose one only for what has none (a protein, a
-  compartment). To tell apart two parts of one real thing, ask for a soft tint over it ("the
-  globe's northern half tinted orange, the continents showing through"), never solid paint.
+- Name no structure's colour: code tells the illustrator each one's from its `color_hex`. To
+  tell apart two parts of one real thing, ask for a soft tint over it ("the globe's northern
+  half softly tinted, the continents showing through"), never solid paint.
 - Leave out what the lesson does not need, and never ask for text, labels, letters or
   numbers: the art step asks for the labels itself.
 
@@ -231,7 +227,9 @@ Structures:
   the face, the hands and the legs out of it, so only the clothes light up.
 - `color_hex` (#RRGGBB): a structure keeps one name and one colour in every scene and both
   videos. Distinct, saturated mid-tones, never pastels, near white, navy, slate, dark grey
-  or near black, except a thing's own natural grey or white.
+  or near black, but a thing keeps its natural colour, grey or white too (a green leaf, a
+  yellow Sun, a grey Moon). Each structure in a scene has a hue of its own (blue and orange,
+  not blue and teal): code names each colour to the illustrator and finds each part by it.
 - One kind of thing in two places with two jobs is two structures, each its own name and
   colour: a membrane's sodium leak channel and its potassium leak channel are "Na⁺ leak
   channel" and "K⁺ leak channel", never one "Leak channels", or sodium's arrow runs along
@@ -247,14 +245,11 @@ Structures:
 - `axes`: on a graph, what each axis measures, a word or two as a textbook prints it
   ("Quantity" across, "Price" up); "" for both on any other scene, and for an axis the graph
   lacks. The video writes them from the scene's first frame. An axis is never a structure: a
-  common word like "price" would reveal it on every line. The `image_prompt` asks for the
-  axes as two plain lines meeting at the bottom left (crossing in the middle for negative
-  values), with nothing written on them, and draws only the graph: its axes, lines, bars
-  and points, no people, objects or scenery. Those belong in a scene of their own.
+  common word like "price" would reveal it on every line.
 - `to_scale`: true for a scene the learner reads amounts off (a chart, a stacked bar, a
   number line, a shape with given sides or angles): code draws it exactly from your
-  numbers, so its `image_prompt` gives each size as a number or a share of another ("a gold
-  block a third as tall as the blue one"). A graph (a scene with `axes`) is drawn so
+  numbers, so its `image_prompt` gives each size as a number or a share of another ("the
+  interest block a third as tall as the savings block"). A graph (a scene with `axes`) is drawn so
   whatever this says. False for every other scene.
 
 ## The lesson
@@ -559,9 +554,8 @@ there is none.
   "Photosystem II", "inputs": ["H₂O"], "outputs": ["O₂", "H⁺", "e⁻"]}, {"structure": "ATP
   synthase", "inputs": ["ADP", "Pᵢ"], "outputs": ["ATP"]}]`, one per structure, at most 4
   species a side, each at most 8 characters as a textbook prints it. The video writes "H₂O →
-  O₂ + H⁺ + e⁻" beside the structure while a line is about it. Only substances other than the structure
-  itself: never a structure's own name as what it makes ("rock → magma" beside Magma), nor a
-  cycle's forms turning into each other.
+  O₂ + H⁺ + e⁻" beside the structure while a line is about it. Only substances, never a
+  cycle's forms turning into each other ("rock → magma").
 - `meanings`: what each part of a graph says, in plain words a learner reads off it, as a
   textbook writes it under a curve's name: `[{"structure": "Demand curve", "text": "lower
   price → people buy more"}, {"structure": "Supply curve", "text": "higher price → sellers
