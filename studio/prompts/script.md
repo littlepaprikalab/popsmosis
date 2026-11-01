@@ -24,7 +24,6 @@ the motion (dots that travel between the parts) and the zoom, so say where thing
 an arrow, a word or something happening.
 
 - "hook": where the topic turns up in the learner's world, at a scale they know.
-- "analogy": the everyday picture, with each of its parts that the analogy matches.
 - "overview": the map of the whole lesson, the one picture every step can be pointed at.
   For a process, the whole path, every part the steps pass through in order (a nephron, from
   the glomerulus to the collecting duct; the rock cycle with each kind of rock where it
@@ -61,9 +60,11 @@ Tell it as one path, each sentence following from the one before:
    world, then the question. "Every day your kidneys filter about 180 liters out of your
    blood. Yet you make only one or two liters of urine. So where does the rest go?" Answer
    nothing yet: the question is what pulls the learner through.
-2. **The idea** (2 or 3 sentences, over "analogy"): the core idea in plain words, through the
-   analogy, each part of it matched to the real thing once. The matches are signposts: the
-   steps can be called by them from here on ("That's the dump: filtration.").
+2. **The idea** (2 or 3 sentences, over "overview"): the core idea in plain words, through the
+   analogy, each part of it matched to the real part as the sentence names it, since the
+   picture is the real thing: no picture draws the analogy (Nov 1: a second picture to map lost
+   the learner). The matches are signposts: the steps can be called by them from here on
+   ("That's the dump: filtration.").
 3. **The path** (most of the narration, over the overview and the close-ups): each step in
    the order it happens, one at a time: where it happens, what happens, and why it has to
    (`why_chain`). Signpost every step ("First...", "Next...", "Now the filtrate...") so the
@@ -96,11 +97,11 @@ Every sentence:
 - **names each part as the pictures do**, in the same words, since its label lights up as it
   is said.
 
-Play the scenes in the order the explanation needs them: the hook, the analogy, the overview,
+Play the scenes in the order the explanation needs them: the hook, the overview,
 each close-up once the overview has shown where it is, the overview again between close-ups
 and at the end. Each passage is one scene; the hook comes back only to close.
 
 The rules for the audience, the facts and the essence follow, as the writer's full brief
-gives them. Where they mention the song, the lesson text or an analogy scene, those are made
+gives them. Where they mention the song or the lesson text, those are made
 later from what you write here.
 

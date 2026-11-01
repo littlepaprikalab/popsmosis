@@ -39,7 +39,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _settle_song_scenes(data) + _song_off_analogy(data)
+    problems = _no_analogy_scene(data) + _settle_song_scenes(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -76,30 +76,36 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
 
-ANALOGY = "analogy"  # the analogy scene's id (studio/prompts/bundle.md)
+ANALOGY = "analogy"  # the id the analogy's picture had (studio/prompts/bundle.md, before Nov 1)
+SCENES_MIN = 3  # the fewest scenes a droplet's lesson has (schemas.bundle_problems)
 
 
-def _song_off_analogy(data: dict) -> list[Problem]:
-    """The song never plays over the analogy scene: its frame lives in its words, and its pictures show the real
-    thing (the owner, Nov 1: an analogy drawn under a song made the learner map two pictures while the lyrics flew
-    past). A lyric directed onto it plays over the scene with the real thing the analogy explains, the one after it,
-    whole, with nothing moving or lit, its motion having been the analogy's. Repaired, and recorded for the prompt."""
+def _no_analogy_scene(data: dict) -> list[Problem]:
+    """No picture draws the analogy: it lives in the words, over the real thing (the owner, Nov 1: a water tower,
+    then a nightclub, drawn for the sodium-potassium pump, made the learner map two pictures). A scene with the
+    analogy's id is left out, and each line directed onto it plays over the scene with the real thing it explains,
+    the one after it, whole, with nothing moving or lit, its motion having been the analogy's. A droplet that would
+    keep fewer than 3 scenes keeps the scene, with no line on it, never shown. Repaired, and recorded for the
+    prompt."""
     ids = [s["id"] for s in data["scenes"]]
-    if ANALOGY not in ids or not data.get("lyrics"):
+    if ANALOGY not in ids:
         return []
     after = [s["id"] for s in data["scenes"][ids.index(ANALOGY) + 1:] if not s.get("song_only")]
     others = [i for i in ids if i not in (ANALOGY, "hook")]
-    real = (after or others or [None])[0]
+    real = (after or others or [i for i in ids if i != ANALOGY] or [None])[0]
     if real is None:
         return []
-    sung = {line["id"] for line in data["lyrics"]}
-    problems = []
+    lesson = [s for s in data["scenes"] if not s.get("song_only")]
+    dropped = len(lesson) > SCENES_MIN
+    problems = [Problem(line_id="scenes", rule="analogy", repaired=True,
+                        detail=f'{"left out" if dropped else "showed nothing on"} the analogy\'s picture: its lines '
+                               f'play over "{real}"')]
     for d in data["direction"]:
-        if d["line_id"] in sung and d["scene"] == ANALOGY:
+        if d["scene"] == ANALOGY:
             d.update(scene=real, camera={"target": "", "zoom": 1.0}, spotlight="", particles=[], carries="",
                      moves="", says="", glow="", also=[])
-            problems.append(Problem(line_id=d["line_id"], rule="song-scene", repaired=True,
-                                    detail=f'sung over the analogy: plays over "{real}" instead'))
+    if dropped:
+        data["scenes"] = [s for s in data["scenes"] if s["id"] != ANALOGY]
     return problems
 
 
@@ -601,16 +607,14 @@ MEANING_MAX = 40  # characters of a graph part's meaning: one short line under i
 
 
 def _check_meanings(data: dict, canon: dict[str, str], problems: list) -> None:
-    """Each meaning names a part of a graph (a structure on a scene with axes) or of the analogy (what it stands
-    for), as its name, in one short line. One part has one meaning; any other is left out, and the video writes only
-    the part's name."""
+    """Each meaning names a part of a graph (a structure on a scene with axes), as its name, in one short line. One
+    part has one meaning; any other is left out, and the video writes only the part's name."""
     graphed = {canon.get(fold(s["name"])) for scene in data["scenes"]
-               if any(" ".join(scene["axes"][side].split()) for side in ("x", "y")) or scene["id"] == "analogy"
-               for s in scene["structures"]}
+               if any(" ".join(scene["axes"][side].split()) for side in ("x", "y")) for s in scene["structures"]}
     kept, seen = [], set()
     for meaning in data["meanings"]:
         name, text = canon.get(fold(meaning["structure"])), " ".join(meaning["text"].split())
-        why = ("names no structure" if not name else "is not a part of a graph or the analogy" if name not in graphed else
+        why = ("names no structure" if not name else "is not a part of a graph" if name not in graphed else
                "repeats a part's meaning" if name in seen else "is empty" if not text else
                f"is over {MEANING_MAX} characters" if len(text) > MEANING_MAX else "")
         if why:

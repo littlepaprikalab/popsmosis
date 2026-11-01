@@ -34,7 +34,7 @@ BRIEF_SECTIONS = ("The audience", "The facts", "No song for this droplet")
 
 
 class ScriptScene(Strict):
-    id: str = Field(description='"hook", "analogy", "overview", or a short id for a close-up ("tubule-detail")')
+    id: str = Field(description='"hook", "overview", or a short id for a close-up ("tubule-detail")')
     picture: str = Field(description="What it draws and where, every part the narration names over it")
 
 

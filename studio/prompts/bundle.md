@@ -51,6 +51,11 @@ cannot fix fails the droplet. So:
 - Put everything you will need to say into the facts, each a compact paragraph of related,
   exam-accurate claims: one structure or stage, what it does, where, and what happens when
   it fails.
+- For a thing or an idea with a job, one fact says what it is for: what depends on it and
+  why that matters to the learner ("the gradients the pump keeps are what nerve signals
+  spend: a signal starts when channels open and sodium rushes back in"). `core_idea` and
+  the lesson's opening say it, so it must be in the facts (Nov 1: the pump's facts never
+  said what the gradients are for, so its core idea could not).
 - Put what makes the topic come alive in them too: a concrete example, where it shows up in
   everyday life, a surprising true detail for the song, what it leads to next in the course,
   what it resembles that the learner already knows (the same trick in another topic of the
@@ -66,15 +71,12 @@ cannot fix fails the droplet. So:
   not one that only looks like a part, and never a stock one that fits any topic. "You
   can't spend sunshine, so the leaf trades it for cash" frames the light reactions; "a
   turnstile" only explains ATP synthase. A derivative as a speedometer, a revolution as a
-  pressure cooker. The lesson, the song, the narration and an analogy scene all use it. A
-  part may have a picture of its own too, in a fact, if it fits inside the frame.
-- When the frame is drawn (the analogy scene), its layout is the real thing's: the same
-  boundary, inside and outside where they are, each part where its counterpart is (a
-  club's wall with the bouncer at its turnstile and a side door in it, for a membrane with
-  its pump and a channel), never one that turns in and out into up and down, or puts two
-  parts that sit side by side at opposite ends of the picture (a water tower's pump and a
-  house's tap, Nov 1). Map three or four parts, each with a real counterpart, and say in
-  the lesson what the analogy leaves out.
+  pressure cooker. The lesson, the song and the narration use it, in words: no picture
+  draws it, since the videos show the real thing, and a second picture to map lost the
+  learner (Nov 1: a water tower, then a nightclub, for the sodium-potassium pump). A part
+  may have a picture of its own too, in a fact, if it fits inside the frame. Map three or
+  four parts, each with a real counterpart, and say in the lesson what the analogy leaves
+  out.
 - Say where each thing happens, part by part, since the pictures show it in a place: "the
   proximal tubule takes back glucose and secretes H⁺ into the filtrate", not "the tubule
   secretes". A step no fact places cannot be shown anywhere.
@@ -135,14 +137,6 @@ them too wherever they picture what it sings; its own pictures come after its ly
   they know, from the everyday detail in the facts (a sprinter's leg muscle for ATP
   synthesis). The hook line is about what it shows.
 - "overview", then one or two detail scenes, zoomed in (short ids such as "limbic-detail").
-- "analogy", when the droplet's frame has a scene, just before the scene with the real thing
-  it explains: the everyday object, each of its parts that stands for a structure a
-  structure of its own (the "water wheel" for the rotor), in the colour of the structure it
-  stands for, so the viewer sees which matches which. A narration sentence that says one of
-  its names plays over it, never a lyric (the song shows the real thing); other sentences
-  can still use the analogy, in other words than its parts' names. Name each part for the everyday thing ("Huge table", "Water wheel"), never with
-  the real thing's name as a name or alias: that name belongs to the real thing's own
-  structure, and said in a line it would reveal the wrong one.
 - A failure the bridge sings can have a detail scene (a song picture when the lesson shows
   none): the same view as another scene with the blocker drawn in as a structure and the
   stopped flow left out (the video shows it stopping).
@@ -170,7 +164,7 @@ sentences. The illustrator draws best the diagrams it already knows:
 
 - Open with "Educational textbook illustration of" the subject and its style: "clean
   scientific style" for a science scene, "clean textbook style" for anything else
-  (history, literature, economics, every hook and analogy). Then say what it shows and how
+  (history, literature, economics, every hook). Then say what it shows and how
   it is oriented: "Educational textbook illustration of a thylakoid membrane in
   cross-section, clean scientific style: the membrane across the middle, the stroma above,
   the lumen below, four protein complexes passing through it..." Never name a textbook, a
@@ -203,7 +197,7 @@ sentences. The illustrator draws best the diagrams it already knows:
   - anatomy: "a softly shaded medical textbook illustration."
   - astronomy, Earth science, physics or chemistry: "a clean textbook schematic, each
     object simplified but recognisable."
-  - an everyday hook or analogy: "a friendly textbook illustration of the real thing."
+  - an everyday hook: "a friendly textbook illustration of the real thing."
 - Name the real things, never their shapes ("Earth's northern hemisphere", not "a blue
   dome"). Place things with plain words (left, right, above, below, inside, through, tilted
   toward), each said once, never a relation such as "at right angles to".
@@ -232,8 +226,7 @@ Structures:
   the face, the hands and the legs out of it, so only the clothes light up.
 - `color_hex` (#RRGGBB): a structure keeps one name and one colour in every scene and both
   videos. Distinct, saturated mid-tones, never pastels, near white, navy, slate, dark grey
-  or near black. Only an analogy part shares a colour, with the
-  structure it stands for.
+  or near black.
 - One thing in two places with two jobs is two structures, each its own name and colour: a
   water tower's pipe up to the tank and its pipe down to the house are "Pipe up to the tank"
   and "Pipe down to the house", never one "Pipe", or an arrow up one runs along the other.
@@ -513,10 +506,8 @@ section the picture of what it sings:
 - Where one of the lesson's scenes draws what a section sings, it plays there: the overview
   under a chorus that sums up the path the way the overview lays it out, the failure scene
   under the bridge. Prefer a lesson scene: the learner knows it from both videos.
-- The song never plays over the analogy scene. Its frame lives in its words ("You can't
-  spend sunshine" over the thylakoid, not over a bank), and the pictures show the real
-  thing the line is about: an analogy drawn under a song made the learner map two pictures
-  while the lyrics flew past (the owner, Nov 1). The analogy scene is the lesson video's.
+- Its frame lives in its words ("You can't spend sunshine" over the thylakoid, not over a
+  bank): the pictures show the real thing the line is about.
 - Where none does, draw one in `song_scenes`: at most 3, each for a section or a run of
   them, never for one line. The usual ones:
   - the intro and outro: the title line's big move on the real things ("Split the water,
@@ -529,7 +520,7 @@ section the picture of what it sings:
     failure.
 - Every rule under "Scenes and structures" holds for a song picture, and a structure keeps
   its lesson name and colour. It draws the topic's real things as a textbook would picture
-  what the lines sing (the everyday pictures are the hook's and the analogy's). Its
+  what the lines sing (the everyday picture is the hook's). Its
   `structures` are the parts its lines name, its `stage_of` is "", and its id is short and
   new ("title", "chorus", "bridge-detail").
 - The lesson video never plays a song picture. `song_scenes` is [] when the lesson's scenes
@@ -545,7 +536,9 @@ it names every structure the scenes draw. Plain spoken language at the audience'
 short sentences, no markdown, no lists, nothing in parentheses, never more than one new name
 in a sentence, keeping to `key_terms`.
 
-Open on the hook. Use the analogy on its scene for two or three sentences. Once, right where
+Open on the hook. Then give the analogy in two or three sentences over the overview, each
+part of it matched to the real part as the sentence names it ("the membrane is the boat's
+hull, and the pump is the sailor bailing"), with the spotlight on that part. Once, right where
 the wrong idea would form (never before the learner has met what it is about), ask the
 listener to guess, with a question the common mistake answers wrong, and answer it in the
 next sentences by correcting the misconception: the mistake named as a common one, why it
@@ -596,10 +589,9 @@ no times: code adds them from the audio.
   not count: "Na⁺", "Ca²⁺", "NAD⁺", "H₂O") is written on every particle; anything longer,
   or "", moves as an arrow instead, with its `says` beside it. It is what really travels that
   path (protons through ATP synthase, electrons along the chain, the price up to
-  equilibrium). "" with no particles, for a nerve signal or light, and on the analogy scene
-  (its water stands for the protons, so "H₂O" would mislead). When you cannot say what would
+  equilibrium). "" with no particles, for a nerve signal or light. When you cannot say what would
   travel a route, the facts do not give it: leave it out. The fact-check holds each motion
-  to the facts (an unmarked one as "something", except on the hook and the analogy). On a
+  to the facts (an unmarked one as "something", except on the hook). On a
   graph, it is the quantity an axis measures, written as the axis is ("price"): the video
   writes "price rises" beside an arrow up that axis.
 - `moves`: "crosses" when it passes through one wall, membrane or carrier, the crossing
@@ -682,15 +674,7 @@ fact-check holds each to the facts. [] when there is none.
   offer more"}, {"structure": "Shortage", "text": "buyers want more than sellers have"}]`, one
   per part of a scene with `axes`, at most 40 characters, never the part's own name. The
   video writes it under the name once the part is named, and keeps it there with the name.
-  On the analogy scene, one for each part that stands for something: the real thing, as
-  short as a label (`{"structure": "Electric pump", "text": "the Na⁺/K⁺ pump"}`, `{"structure":
-  "Power line", "text": "ATP"}`); the video writes "= the Na⁺/K⁺ pump" beside the part once
-  a line names it, so the learner maps each part, and only the parts the facts support. Each
-  makes sense read alone, beside nothing but its part: say where and which way ("channels
-  letting Na⁺ into the cell", never "channels letting Na⁺ back in"). It maps only what the
-  part does in the analogy: an electric pump lifting water stands for "the pump moving Na⁺
-  out of the cell", never "the Na⁺/K⁺ pump" when nothing in the picture stands for the K⁺
-  it brings in. [] for a droplet with neither.
+  [] for a droplet with no graph.
 
 ## On screen
 

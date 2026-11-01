@@ -227,11 +227,9 @@ class Conversion(Strict):
 
 
 class Meaning(Strict):
-    structure: str = Field(description="A part of a graph (a curve, a line, a point, a gap) or of the analogy scene, "
-                                       "by its name")
-    text: str = Field(description='For a graph part, what it says, as the learner reads it off the graph: "lower '
-                                  'price → people buy more"; for an analogy part, the real thing it stands for: '
-                                  '"the Na⁺/K⁺ pump"')
+    structure: str = Field(description="A part of a graph (a curve, a line, a point, a gap), by its name")
+    text: str = Field(description='What it says, as the learner reads it off the graph: "lower price → people buy '
+                                  'more"')
 
 
 def tag_of(value: str) -> str:
@@ -309,11 +307,9 @@ class Bundle(Strict):
                                           description="What turns into what, and where; [] for none")
     # What each part of a graph says, written under its name once the part is named ("lower price → people
     # buy more" under "Demand curve"): reading a curve's meaning off its slope is the hard part of a graph for a
-    # learner new to them (the owner, Oct 31). On the analogy scene, what each part stands for, written beside it
-    # ("= the Na⁺/K⁺ pump" by the electric pump; the owner, Nov 1). A bundle written before Oct 31 has none.
+    # learner new to them (the owner, Oct 31). A bundle written before Oct 31 has none.
     meanings: list[Meaning] = Field(default_factory=list,
-                                    description="What each part of a graph says, written under its name, and what "
-                                                "each part of the analogy stands for, written beside it; [] for none")
+                                    description="What each part of a graph says, written under its name; [] for none")
     # What both videos write above their diagram, held while the lines go by, so a learner who cannot keep up
     # with them reads the step being taught. A bundle written before Oct 29 has none.
     key_lines: list[KeyLine] = Field(default_factory=list,
@@ -501,7 +497,7 @@ class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side"]
+                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -958,11 +954,10 @@ class Written(Strict):
 
 
 class Gloss(Strict):
-    """A part's meaning (Bundle.meanings) as the beats show it, from `since`, when the part is first named, to
-    `until`, the video's end: a graph part's written under its name, wherever the name is written; an analogy
-    part's, what it stands for, in a note beside it on every beat of the analogy."""
+    """A graph part's meaning (Bundle.meanings) as the beats show it, from `since`, when the part is first named, to
+    `until`, the video's end: written under its name, wherever the name is written."""
 
-    structure: str  # with a name its drawing placed (Value.label) on the beat's scene, or a part of the analogy
+    structure: str  # with a name its drawing placed (Value.label) on the beat's scene
     text: str  # "lower price → people buy more"
     since: float
     until: float

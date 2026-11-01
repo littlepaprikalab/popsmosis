@@ -275,7 +275,7 @@ def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
     assert meaning(("Thylakoid", "")) == ([], left_out)
     assert meaning(("Thylakoid", "one"), ("thylakoid", "two"))[1] == left_out  # one a part
 
-    def mapping(*pairs):  # on the analogy scene a meaning says what a part stands for
+    def on_analogy(*pairs):  # no picture draws the analogy (Nov 1): a meaning for one of its parts is left out
         def change(data):
             next(s for s in data["scenes"] if s["id"] == "hook")["id"] = "analogy"
             for d in data["direction"]:
@@ -284,8 +284,7 @@ def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
         bundle, found, _ = review(change)
         return [(m.structure, m.text) for m in bundle.meanings], [f for f in found if f[1] == "meanings"]
 
-    assert mapping(("Thylakoid", "the stored-up protons")) == ([("Thylakoid", "the stored-up protons")], [])
-    assert mapping(("ATP synthase", "the turbine")) == ([], left_out)  # not a part of the analogy (nor a graph)
+    assert on_analogy(("Thylakoid", "the stored-up protons")) == ([], left_out)
 
 
 def test_syllables_are_counted_as_sung():
@@ -674,19 +673,28 @@ def test_a_bundle_with_no_song_is_checked_as_the_lesson_alone():
     assert checks.style_problems(reviewed, "k-pop, 140 bpm") == [] and checks.motion_problems(reviewed) == []
 
 
-def test_a_lyric_never_plays_over_the_analogy():
-    # The owner (Nov 1): the song's frame lives in its words; a lyric directed onto the analogy plays over the scene
-    # with the real thing after it, whole and still. A narration sentence keeps the analogy.
-    def change(data):
-        analogy = next(s for s in data["scenes"] if s["id"] == "hook")
-        analogy["id"] = "analogy"
-        data["scenes"] = [s for s in data["scenes"] if s is not analogy]
-        data["scenes"].insert(0, analogy)  # just before the overview, the real thing it explains
-        for d in data["direction"]:
-            if d["line_id"] in ("v1-1", "n1"):
-                d.update(scene="analogy", particles=["Thylakoid", "Thylakoid"][:1], carries="", moves="")
-    bundle, found, _ = review(change)
-    directed = {d.line_id: d for d in bundle.direction}
-    assert directed["v1-1"].scene == "overview" and not directed["v1-1"].particles  # the real thing, still
-    assert directed["n1"].scene == "analogy"  # the lesson keeps its analogy
-    assert ("v1-1", "song-scene", True) in found
+def test_no_picture_draws_the_analogy_and_its_lines_play_over_the_real_thing():
+    # The owner (Nov 1): a water tower, then a nightclub, drawn for the pump made the learner map two pictures. The
+    # analogy lives in the words: a scene drawn for it is left out, and its lines, sung or said, play over the scene
+    # with the real thing after it, whole and still.
+    def analogy_first(extra):
+        def change(data):
+            analogy = next(s for s in data["scenes"] if s["id"] == "hook")
+            analogy["id"] = "analogy"
+            data["scenes"] = [s for s in data["scenes"] if s is not analogy]
+            data["scenes"].insert(0, analogy)  # just before the overview, the real thing it explains
+            if extra:
+                data["scenes"].append({**data["scenes"][1], "id": "detail"})
+            for d in data["direction"]:
+                if d["line_id"] in ("v1-1", "n1"):
+                    d.update(scene="analogy", particles=["Thylakoid"], carries="", moves="")
+        return change
+
+    for extra in (True, False):
+        bundle, found, _ = review(analogy_first(extra))
+        directed = {d.line_id: d for d in bundle.direction}
+        for line in ("v1-1", "n1"):
+            assert directed[line].scene == "overview" and not directed[line].particles  # the real thing, still
+        assert ("scenes", "analogy", True) in found
+        assert ("analogy" in [s.id for s in bundle.scenes]) == (not extra)  # kept, unshown, when 3 would not be left
+        assert not any(d.scene == "analogy" for d in bundle.direction)

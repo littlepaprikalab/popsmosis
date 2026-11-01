@@ -769,8 +769,8 @@ def note_size(text: str, font_size: float) -> tuple[float, float]:
 
 def draw_note(canvas: skia.Canvas, rect: Rect, text: str, font_size: float, color: str, alpha: float,
               to: tuple[float, float] | None = None) -> None:
-    """A one-line note as a label is printed (draw_label): an arrow's one-liner, or what a part of an analogy stands
-    for, in its colour's dark shade ringed in white, no box. `to`: what it is about (frame pixels), joined to the
+    """A one-line note as a label is printed (draw_label): an arrow's one-liner, in its colour's dark shade ringed in
+    white, no box. `to`: what it is about (frame pixels), joined to the
     words by a thin line ending in a dot, when they do not touch it."""
     if alpha <= 0.01:
         return

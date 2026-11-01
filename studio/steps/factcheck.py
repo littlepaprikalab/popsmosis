@@ -241,20 +241,10 @@ def conversion_text(structure: str, inputs: list[str], outputs: list[str]) -> st
     return f"At {structure}, {' and '.join(inputs)} is turned into {' and '.join(outputs)}"
 
 
-def meaning_text(structure: str, text: str, analogy: bool = False) -> str:
+def meaning_text(structure: str, text: str) -> str:
     """What the video writes under a graph part's name: "On the graph, Demand curve means: lower price → people buy
-    more"; or beside a part of the analogy, what it stands for: "In the analogy, Electric pump stands for: the Na⁺/K⁺
-    pump"."""
-    if analogy:
-        return f"In the analogy, {structure} stands for: {text}"
+    more"."""
     return f"On the graph, {structure} means: {text}"
-
-
-def analogy_parts(scenes) -> set[str]:
-    """The parts the analogy scene draws, by name: a meaning for one says what it stands for."""
-    return {s["name"] if isinstance(s, dict) else s.name for scene in scenes
-            if (scene["id"] if isinstance(scene, dict) else scene.id) == "analogy"
-            for s in (scene["structures"] if isinstance(scene, dict) else scene.structures)}
 
 
 def says_text(carries: str, particles: list[str], says: str) -> str:
@@ -280,8 +270,7 @@ def motion_lines(bundle: Bundle) -> list[Line]:
         Line(MOTION, f"spins-{i}", spin_text(bundle, s.structure)) for i, s in enumerate(bundle.spins, 1)] + [
         Line(MOTION, f"converts-{i}", conversion_text(c.structure, c.inputs, c.outputs))
         for i, c in enumerate(bundle.conversions, 1)] + [
-        Line(MOTION, f"means-{i}", meaning_text(m.structure, m.text, m.structure in analogy_parts(bundle.scenes)))
-        for i, m in enumerate(bundle.meanings, 1)] + [
+        Line(MOTION, f"means-{i}", meaning_text(m.structure, m.text)) for i, m in enumerate(bundle.meanings, 1)] + [
         Line(MOTION, f"{d.line_id}~says", says_text(d.carries, d.particles, d.says)) for d in bundle.direction
         if says_checked(d.scene, d.says, d.particles)] + [
         Line(MOTION, f"{d.line_id}+{k}~says", says_text(f.carries, f.particles, f.says)) for d in bundle.direction
@@ -472,9 +461,7 @@ def check_bundle(
         data["spins"] = [s for s in data["spins"] if spin_text(bundle, s["structure"]) in passed_motions]
         data["conversions"] = [c for c in data["conversions"]
                                if conversion_text(c["structure"], c["inputs"], c["outputs"]) in passed_motions]
-        mapped = analogy_parts(data["scenes"])
-        data["meanings"] = [m for m in data["meanings"]
-                            if meaning_text(m["structure"], m["text"], m["structure"] in mapped) in passed_motions]
+        data["meanings"] = [m for m in data["meanings"] if meaning_text(m["structure"], m["text"]) in passed_motions]
         # An arrow's one-liner that failed is left off the video, as a meaning is; its arrow stays, as its motion
         # passed on its own.
         for d in data["direction"]:

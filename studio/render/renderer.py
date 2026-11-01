@@ -106,7 +106,7 @@ HANDOFF_GROW_S = 0.35  # an arrow drawing itself in, from its tail
 HANDOFF_REST = 0.7  # how strong an arrow is while the pulse is on another
 ROUTE_GROW_S = 1.0  # an arrow along a whole way drawing itself in
 ROUTE_DASH_SPEED = 40.0  # frame pixels a second its dashes move along it, the way the flow goes
-# A note (an arrow's one-liner, what an analogy's part stands for): tried this far (art pixels) from what it is about,
+# A note (an arrow's one-liner): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
 # clear of the parts' label points and other notes (NOTE_CROWD each).
 NOTE_REACH = (30.0, 90.0, 160.0, 240.0)
@@ -1394,7 +1394,6 @@ class Renderer:
             self._flags(canvas, beat.scene, cam, view, bounds, fade)
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places, strength)
-        self._mappings(canvas, beat, cam, view, t, fade)
         if legend_rect:
             p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend],
                           self._arrowed(beat.scene))
@@ -2381,30 +2380,6 @@ class Renderer:
         mx, my = on_frame((cx, cy))
         p.draw_note(canvas, (mx - w / 2, my - h / 2, mx + w / 2, my + h / 2), text, size, color, alpha,
                     to=on_frame(anchor))
-
-    def _mappings(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float, fade: float) -> None:
-        """What each part of an analogy stands for (Beat.meanings on a scene that is no graph), each in a note
-        beside its part, joined to it: "= the Na⁺/K⁺ pump" by the electric pump. Spelling the mapping out is what
-        makes an analogy teach; left to themselves learners map the wrong features (the owner, Nov 1)."""
-        if self._graph(beat.scene) or not beat.meanings:
-            return
-        located = self.locations.scene(beat.scene)
-        scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
-
-        def on_frame(q: Point) -> Point:
-            return q[0] * scale + dx, q[1] * scale + dy
-
-        canvas.save()
-        canvas.clipRect(skia.Rect.MakeLTRB(*view))
-        for gloss in beat.meanings:
-            loc = located.get(gloss.structure)
-            if loc is None:
-                continue
-            on = p.ease((t - gloss.since) / LABEL_IN_S) * p.ease((gloss.until - t) / MEANING_OUT_S) * fade
-            colour = self.timeline.palette.get(gloss.structure, "#475569")
-            self._draw_note(canvas, beat.scene, ("maps", gloss.structure, gloss.text), f"= {gloss.text}",
-                            (loc.label_anchor.x, loc.label_anchor.y), [], colour, on, on_frame)
-        canvas.restore()
 
     def _graph(self, scene_id: str) -> bool:
         """Whether the scene is a graph (Timeline.axes)."""

@@ -220,9 +220,11 @@ already written.
    someone else; it sets the level of everything after it), `core_idea`, `facts[3-4]`
    (`id`, `text`, `source_quote` when a study guide was given), `misconception`.
 2. `scenes[3-7]`: the lesson's, which the song plays too where they picture what it sings:
-   the hook (where it can, the topic in the learner's world), overview, one or two zoomed details; and, when they help, the analogy drawn on its own (its parts
-   in the colours of what they stand for) and a detail showing what happens when a part
-   fails. Each has `id`,
+   the hook (where it can, the topic in the learner's world), overview, one or two zoomed details; and, when it
+   helps, a detail showing what happens when a part fails. No picture draws the analogy (Nov 1: a water tower, then
+   a nightclub, drawn for the pump made the learner map two pictures): it is said over the overview, each part
+   matched to the real part as it is named, and the bundle step leaves out a scene drawn for it
+   (`checks._no_analogy_scene`), its lines played over the real thing, whole and still. Each has `id`,
    `image_prompt`, `structures[]` (`name`, `aliases[]`, `sam_phrase`, `color_hex`),
    `stage_of`, `axes` (a graph's `x` and `y`, "Quantity" and "Price", written at the
    axes' ends; "" elsewhere) and `to_scale` (a chart or figure the learner reads amounts off,
