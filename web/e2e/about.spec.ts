@@ -12,7 +12,11 @@ const STORES = {
   'Hummingbird Biofeedback': ['https://apps.apple.com/app/hummingbird-biofeedback/id6762854409',
     'https://play.google.com/store/apps/details?id=com.spicygingerlabs.hummingbird'],
 };
-const SITES = { 'SAT Sprints': 'https://www.satsprints.com', 'Total Sparks AI': 'https://totalsparksai.com' };
+const SITES = {
+  'SAT Sprints': 'https://www.satsprints.com',
+  'Total Sparks AI': 'https://totalsparksai.com',
+  'The Crossroads Oracle': 'https://crossroads.littlepaprikalab.com',
+};
 
 /** Scroll the page through, so every lazy image has loaded, and return the ones that did not. */
 async function brokenImages(page: Page) {
@@ -57,7 +61,7 @@ test.describe('the About page', () => {
     }
     // The pictures are POPsmosis's own files: reading the page asks nothing of Apple or Google.
     const srcs = await page.locator('img').evaluateAll((imgs) => imgs.map((i) => (i as HTMLImageElement).src));
-    expect(srcs.length).toBe(14);
+    expect(srcs.length).toBe(15);
     for (const src of srcs) expect(new URL(src).origin).toBe(new URL(page.url()).origin);
     expect(await brokenImages(page)).toEqual([]);
   });

@@ -101,6 +101,15 @@ const SITES: Site[] = [
       + 'personality analysis.',
     shot: { src: '/about/totalsparks.webp', alt: 'The Total Sparks AI home page' },
   },
+  {
+    name: 'The Crossroads Oracle',
+    url: 'https://crossroads.littlepaprikalab.com',
+    tagline: 'Tarot for when you can\'t decide',
+    about: 'It started with going in circles over where to eat. Type your question and your two choices, draw a '
+      + 'crossroads spread, and Paprika, an AI tarot reader, weighs each path. There\'s also a three-card reading, a '
+      + 'card for the day, and plain-spoken meanings for all 78 cards.',
+    shot: { src: '/about/crossroads.webp', alt: 'The Crossroads Oracle home page: a question box and the two choices to weigh' },
+  },
 ];
 
 /** Who makes POPsmosis, then the other apps and sites from the same maker, with links to get them. */
