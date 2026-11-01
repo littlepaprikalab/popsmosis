@@ -48,16 +48,13 @@ build each pathway up one step a sentence as the narration teaches it, show the 
 on the sentences that sum it up, and keep captions to a few in the whole narration.
 
 - Tag each narration sentence with the id of the fact it teaches, or "filler" for one that
-  teaches nothing. `names` lists every structure name or alias the sentence says, exactly as
-  it appears in the sentence, or [] when it names none. A structure's label appears the first
-  time it is said, so use the `name` or an alias of a structure drawn in the scene the
-  sentence plays over.
+  teaches nothing.
 - `direction` has one entry for every narration sentence, in the narration's order.
 - `key_lines` walk the `why_chain` through the narration, in its order, every link on at least
   one: `from_narration` is the sentence where the narrator starts on that step, never two on
   one sentence and none on the last. The first can ask the script's `question`. Write each
   `text` as "On screen" says.
-- `tags.lesson` only, as "Tags" says for the lesson video.
+- `tags.lesson` only, as "Tags" says.
 """
 
 
@@ -109,6 +106,10 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
         (job / stale).unlink(missing_ok=True)
     prompt = user_prompt(request, style_for(job.name), sung)
     script = script_step.write_script(prompt, brief, ask, request.images, job)
+    unquoted = []
+    if script:  # held to the guide before the audit is shown them as its words
+        facts, unquoted = checks.held_to_guide(script.facts, request.study_guide)
+        script = script.model_copy(update={"facts": facts})
     system = (brief + ("" if script else NO_SCRIPT + script_step.narration_rules())
               + (NOTE.format(note=note) if note.strip() else ""))
     early = audit.begin(request, script, ask)  # the facts audited beside the bundle call (studio/steps/audit.py)
@@ -129,9 +130,10 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     if rewritten is not bundle:  # a new lesson: the code checks read it again
         bundle, report = checks.review(rewritten)
     edited = narration.edit(bundle, ask, job)  # the voice-over made one explanation (studio/steps/narration.py)
-    if edited is not bundle:
-        bundle, report = checks.review(edited)
-    report.problems += (checks.song_length_problems(bundle) + checks.motion_problems(bundle)
+    settled, repaired = checks.repair_once(edited, request.study_guide)  # words set once, before the fact-check
+    if settled is not bundle:
+        bundle, report = checks.review(settled)
+    report.problems += (unquoted + repaired + checks.song_length_problems(bundle) + checks.motion_problems(bundle)
                         + checks.essence_problems(bundle) + checks.key_line_problems(bundle)
                         + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))
     write(job / "bundle.json", bundle)

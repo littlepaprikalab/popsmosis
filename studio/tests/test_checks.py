@@ -325,6 +325,17 @@ def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
     assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {
         "v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"}  # rapped, no section named: every line, as before
     assert rapped("bright teen pop with melodic sung verses, 104 bpm") == set()
+    # However the writer words it, the section it names, never every line.
+    assert rapped("K-pop that raps the second verse, 100 bpm") == rapped("K-pop, verse two rapped") == {"v2-1"}
+    assert rapped("pop, the bridge is rapped") == rapped("pop rapping on the bridge") == {"b-1"}
+
+    def bridgeless(data):
+        data["lyrics"] = [line for line in data["lyrics"] if line["section"] != "bridge"]
+        return data
+    # A rotation style that raps the bridge, for a topic with no bridge: nothing is rapped, not everything.
+    assert checks.rapped_lines(bridgeless(dict(bundle_data(), music={
+        "positive_styles": ["dance-pop, short sung verses and a rapped bridge, 112 bpm"], "negative_styles": [],
+        "sections": []}))) == set()
 
     def long_lines(style):
         def change(data):
@@ -471,6 +482,7 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
     # at the end of the description
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+    assert styles(["pop at 98 beats per minute"]) == (["pop at 98 beats per minute"], [])  # named, in words
 
 
 def test_the_song_style_is_one_description_that_keeps_the_learners_tempo():
@@ -514,7 +526,7 @@ def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once()
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
     assert all(c["positive_styles"] == [*bundle.music.positive_styles, audio.DICTION] for c in plan["chunks"])
-    assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
+    assert all(c["negative_styles"] == [*bundle.music.negative_styles, *audio.AVOID] for c in plan["chunks"])
     prompt, _ = audio.song_prompt(bundle)
     style = bundle.music.positive_styles[0].rstrip(".")
     assert "never rapped" not in prompt and prompt.startswith(f"Style: {style}, {audio.DICTION}.\n")
@@ -524,6 +536,14 @@ def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once()
     plan, _ = audio.composition_plan(Bundle.model_validate(data))
     assert all(c["positive_styles"] == ["Pop with crisp diction on the verses; 100 bpm"] for c in plan["chunks"])
     assert audio.song_prompt(Bundle.model_validate(data))[0].count("diction") == 1
+
+
+def test_every_song_avoids_a_long_intro_and_explicit_lyrics_and_its_avoid_list_never_asks_for_diction():
+    from studio.steps import audio
+
+    assert audio.with_avoid([]) == ["long instrumental intro", "explicit lyrics"]
+    assert audio.with_avoid(["screamed vocals", "Mumbled diction", "Long  instrumental intro"]) == [
+        "screamed vocals", "Long  instrumental intro", "explicit lyrics"]  # each once, as the writer put it
 
 
 def test_lines_that_hold_still_are_not_a_problem():
@@ -679,6 +699,81 @@ def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded()
                   [("v1-1", "Light lands on the thylakoid, for real"), ("v1-2", "Protons pile up, no doubt"),
                    ("v2-1", "Only b6f pumps them in, it's true")])
     assert any("3 lines end on a claim-free tag" in f for f in tags)
+
+
+TITLE = "Pull the sea, then let it go"
+CHORUS_LINES = [TITLE, "High tide, low tide", "To and fro, to and fro", TITLE]
+
+
+def sung(data, sections):
+    """The sample with these lyrics, (id, section, text) each, all over the overview."""
+    data["lyrics"] = [{"id": i, "section": s, "text": t, "names": [], "fact_id": "f1"} for i, s, t in sections]
+    spoken = [d for d in data["direction"] if d["line_id"].startswith("n")]
+    data["direction"] = [{**spoken[0], "line_id": i, "scene": "overview"} for i, *_ in sections] + spoken
+    return data
+
+
+def chorus(k, lines=CHORUS_LINES):
+    return [(f"c{k}-{n}", "chorus", text) for n, text in enumerate(lines, 1)]
+
+
+def test_a_song_with_no_bridge_sings_its_chorus_three_times_though_the_last_two_run_together():
+    # Nov 1: with no bridge, the second chorus runs straight into the last, which opens on its summary couplet; read
+    # as one run, every bridgeless song was "sung 2 times" (dramatic irony, the subjunctive, classical conditioning).
+    lyrics = [("v1-1", "verse", "x"), *chorus(1), ("v2-1", "verse", "y"), *chorus(2),
+              ("s-1", "chorus", "The Moon pulls, the sea obeys"), ("s-2", "chorus", "Twice a day, in every bay"),
+              *chorus(3), ("o-1", "outro", TITLE)]
+    data = sung(dict(bundle_data(), why_chain=["a", "b", "c"]), lyrics)
+    assert checks.chorus_spans([s for _, s, _ in lyrics]) == [[1, 2, 3, 4], [6, 7, 8, 9], [12, 13, 14, 15]]
+    assert not any("chorus is sung" in p.detail for p in checks.song_shape_problems(Bundle.model_validate(data)))
+    data = sung(data, [line for line in lyrics if not line[0].startswith("c3")])
+    found = [p.detail for p in checks.song_shape_problems(Bundle.model_validate(data))]
+    assert "the chorus is sung 2 times, not 3" in found  # the couplet alone is no chorus
+
+
+def test_every_later_chorus_is_sung_word_for_word_as_the_first():
+    slipped = [TITLE, "High tide and low tide", "To and fro, to and fro", TITLE]
+    lyrics = [("v1-1", "verse", "x"), *chorus(1), ("v2-1", "verse", "y"), *chorus(2, slipped),
+              ("s-1", "chorus", "sum one"), ("s-2", "chorus", "sum two"), *chorus(3, slipped)]
+    bundle, problems = checks.repair_once(Bundle.model_validate(sung(bundle_data(), lyrics)))
+    texts = {line.id: line.text for line in bundle.lyrics}
+    assert texts["c2-2"] == texts["c3-2"] == "High tide, low tide" and texts["s-1"] == "sum one"
+    assert [(p.line_id, p.rule, p.repaired) for p in problems] == [("c2-2", "chorus", True), ("c3-2", "chorus", True)]
+    # One that does not open and end as the first may not line up with it: left as written.
+    shifted = [*chorus(1), ("v2-1", "verse", "y"), *chorus(2, ["High tide, low tide", "x", "y", TITLE])]
+    bundle, problems = checks.repair_once(Bundle.model_validate(sung(bundle_data(), shifted)))
+    assert [line.text for line in bundle.lyrics[-4:]] == ["High tide, low tide", "x", "y", TITLE] and problems == []
+
+
+def test_a_head_count_is_said_as_a_common_answer():
+    # The facts call a mistake common; they never count who makes it, so the fact-check rewrote each head count.
+    data = bundle_data()
+    data["narration"][1]["text"] = "Does the heavy one land first? Most people say yes."
+    data["lesson_markdown"] += "\nMany students think that every carrier pumps protons. And most people say no.\n"
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))
+    assert bundle.narration[1].text == "Does the heavy one land first? A common answer is yes."
+    assert "\nA common guess is that every carrier pumps protons. And most people say no.\n" in bundle.lesson_markdown
+    assert [(p.line_id, p.rule) for p in problems] == [("n2", "head-count"), ("lesson_markdown", "head-count")]
+
+
+def test_a_source_quote_the_study_guide_does_not_hold_is_left_out():
+    data = bundle_data()
+    data["facts"][0]["source_quote"] = "The light  reactions happen in the THYLAKOID"  # spacing and case aside
+    data["facts"][1]["source_quote"] = "only b6f pumps"
+    guide = "Notes: the light reactions happen in the thylakoid membrane."
+    bundle, problems = checks.repair_once(Bundle.model_validate(data), guide)
+    assert [f.source_quote for f in bundle.facts] == ["The light  reactions happen in the THYLAKOID", "", ""]
+    assert [(p.line_id, p.rule) for p in problems] == [("f2", "source-quote")]
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))  # no guide: no quote stands
+    assert [f.source_quote for f in bundle.facts] == ["", "", ""] and len(problems) == 2
+
+
+def test_the_study_tags_follow_the_writers_own_and_the_rest_is_left_as_it_was():
+    data = bundle_data()
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))
+    assert bundle.tags.song == ["photosynthesis", "lightreactions", "apbio", "studysong", "pop", "studytok"]
+    assert bundle.tags.lesson == ["photosynthesis", "lightreactions", "apbio", "explained", "examprep", "studytok"]
+    assert problems == [] and checks.repair_once(bundle) == (bundle, [])  # said once: the same bundle again
 
 
 def test_an_axis_name_is_trimmed_and_left_off_when_long_or_a_structures_name():

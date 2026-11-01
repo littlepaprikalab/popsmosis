@@ -13,6 +13,7 @@ import functools
 import math
 import re
 import unicodedata
+from collections import Counter
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, create_model, field_validator, model_validator
@@ -25,7 +26,8 @@ Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
 BPM_RANGE = (80, 160)  # the tempos the song may take
 DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
-BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
+# However the style names it ("104 bpm", "104 beats per minute"): one it missed would get a second tempo added.
+BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*(?:bpm|beats per minute)\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
 TAG_MAX_CHARS = 40  # a longer one is dropped, since cutting it short would make a word nobody searches for
 SONG_SCENES_MAX = 3  # the song's own pictures (Scene.song_only) it keeps (studio/checks.py), beside the lesson's
@@ -249,17 +251,40 @@ def tag_of(value: str) -> str:
     return unicodedata.normalize("NFKC", kept)
 
 
+# Tags that help no one find the video: they name no subject, only a hope of being shown.
+NO_TAGS = {"fyp", "fypシ", "foryou", "foryoupage", "viral", "trending"}
+
+
 def clean_tags(values: list[str]) -> list[str]:
-    """Each tag as tag_of() writes it, the first of each kept, at most TAGS_PER_VIDEO.
+    """Each tag as tag_of() writes it, the first of each kept, at most TAGS_PER_VIDEO; none of NO_TAGS.
 
     Never a reason to fail a bundle: a tag that does not fit is dropped, not sent back.
     """
     tags: list[str] = []
     for value in values:
         tag = tag_of(value)
-        if tag and len(tag) <= TAG_MAX_CHARS and tag not in tags:
+        if tag and len(tag) <= TAG_MAX_CHARS and tag not in tags and tag not in NO_TAGS:
             tags.append(tag)
     return tags[:TAGS_PER_VIDEO]
+
+
+# What each video is tagged with besides its subject, after the writer's own tags: asked to write them, the writer
+# spent 3 or 4 of its 10 on these same ones in every bundle (Nov 1). "#examprep" is not for a younger audience
+# ("about age 10", "6th grade"), who has no exam ahead.
+SONG_TAGS = ("studysong", "studytok")
+LESSON_TAGS = ("explained", "examprep", "studytok")
+YOUNGER = re.compile(r"\bages?\s+(?:[1-9]|1[0-3])\b|\b[1-8](?:st|nd|rd|th)\s+grade\b|\bgrade\s+[1-8]\b"
+                     r"|\b(?:middle|elementary|primary)\s+school\b|\b(?:kids?|child|children)\b", re.I)
+
+
+def with_study_tags(tags: Tags, audience: str, sung: bool = True) -> Tags:
+    """The tags with SONG_TAGS and LESSON_TAGS after the writer's own, room kept for them; a video with no song has
+    no song tags."""
+    def joined(own: list[str], more: tuple[str, ...]) -> list[str]:
+        more = [t for t in more if t not in own and not (t == "examprep" and YOUNGER.search(audience))]
+        return clean_tags([*own[:TAGS_PER_VIDEO - len(more)], *more])
+
+    return Tags(song=joined(tags.song, SONG_TAGS) if sung else tags.song, lesson=joined(tags.lesson, LESSON_TAGS))
 
 
 class Tags(Strict):
@@ -336,6 +361,44 @@ class Bundle(Strict):
             data["direction"] = [{"carries": "", "glow": "", **d} if isinstance(d, dict) else d
                                  for d in data["direction"]]
         return data
+
+    @model_validator(mode="before")
+    @classmethod
+    def _own_ids(cls, data):
+        # A line's id is only the key its direction is written under, so a line given an id already taken (a chorus
+        # repeat given its first's "c1-1") is numbered apart ("c1-1-2") rather than refuse the bundle, a whole bundle
+        # call again. The writer directs the lines in order: the k-th line under an id takes the k-th direction
+        # written under it, or a copy of the last one when there are fewer (a chorus is directed alike each time).
+        if not isinstance(data, dict) or not isinstance(data.get("direction"), list):
+            return data
+        streams = {key: data.get(key) or [] for key in ("lyrics", "narration")}
+        if not all(isinstance(lines, list) and all(isinstance(x, dict) for x in lines) for lines in streams.values()):
+            return data
+        ids = [line.get("id") for lines in streams.values() for line in lines]
+        if not all(isinstance(i, str) for i in ids) or len(set(ids)) == len(ids):
+            return data  # not ids, or each its own: the validation says the rest
+        taken, seen, renamed = set(ids), Counter(), {}
+        for key, lines in streams.items():
+            streams[key] = [dict(line) for line in lines]  # the answer as given stays as it was
+            for line in streams[key]:
+                old, k = line.get("id"), seen[line.get("id")]
+                seen[old] += 1
+                if k:
+                    n = k + 1
+                    while f"{old}-{n}" in taken:
+                        n += 1
+                    line["id"] = renamed[(old, k)] = f"{old}-{n}"
+                    taken.add(line["id"])
+        directed, last, direction = Counter(), {}, []
+        for d in data["direction"]:
+            if isinstance(d, dict) and isinstance(d.get("line_id"), str):
+                old, k = d.get("line_id"), directed[d.get("line_id")]
+                directed[old] += 1
+                d = last[old] = {**d, "line_id": renamed.get((old, k), old)}
+            direction.append(d)
+        direction += [{**last[old], "line_id": new} for (old, k), new in renamed.items()
+                      if k >= directed[old] and old in last]
+        return {**data, **{key: lines for key, lines in streams.items() if key in data}, "direction": direction}
 
     @model_validator(mode="before")
     @classmethod
@@ -500,7 +563,8 @@ class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy"]
+                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy",
+                  "chorus", "head-count", "source-quote"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 

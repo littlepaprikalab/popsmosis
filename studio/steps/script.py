@@ -116,8 +116,8 @@ def as_prompt(script: Script) -> str:
 
 def follow(bundle: Bundle, script: Script, job: Path | None = None) -> Bundle:
     """The bundle held to its script: the essence and the facts as the script has them, and its narration said as
-    the script says it, where the bundle has a narration item for every sentence. What could not be held is kept as
-    the bundle wrote it, and script.json says so."""
+    the script says it, over the scenes it says it over, where the bundle has a narration item for every sentence.
+    What could not be held is kept as the bundle wrote it, and script.json says so."""
     update = {"audience": script.audience, "core_idea": script.core_idea, "why_chain": script.why_chain,
               "key_terms": script.key_terms, "misconception": script.misconception}
     kept = {"essence": True}
@@ -131,6 +131,12 @@ def follow(bundle: Bundle, script: Script, job: Path | None = None) -> Bundle:
         scenes = {d.line_id: d.scene for d in bundle.direction}
         kept["scenes_as_written"] = sum(scenes.get(n.id) == scene for n, (scene, _) in zip(bundle.narration, sentences))
         kept["reworded"] = sum(" ".join(n.text.split()) != text for n, (_, text) in zip(bundle.narration, sentences))
+        # Each sentence over the scene its passage names, where the bundle draws it: the script wrote it to talk
+        # about that picture. What its direction points at there is held to that scene by the code checks.
+        drawn = {s.id for s in bundle.scenes}
+        over = {n.id: scene for n, (scene, _) in zip(bundle.narration, sentences) if scene in drawn}
+        update["direction"] = [d.model_copy(update={"scene": over[d.line_id]}) if d.line_id in over else d
+                               for d in bundle.direction]
     if job is not None:
         write(job / RECORD, {"script": script.model_dump(), "kept": kept})
     if not all(v for k, v in kept.items() if k in ("facts", "narration")):
