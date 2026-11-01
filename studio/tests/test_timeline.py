@@ -284,6 +284,7 @@ def test_a_held_difference_starts_full_and_only_dips_and_none_is_added_where_it_
     assert not any(c.thin for c in shown)
     held = [c for c in shown if c.region == "Cytochrome b6f"]
     assert held[0].start == 1.0 and min(c.end for c in held) >= step.HELD_MIN
+    assert all(c.held for c in held) and not any(c.held for c in shown if c.region == "Thylakoid")
     assert min(c.end for c in held) < 1.0  # the leak dips it
     built = [c for c in shown if c.region == "Thylakoid"]
     assert built[0].start == step.CROWD_START

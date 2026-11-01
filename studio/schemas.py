@@ -903,6 +903,7 @@ class Crowd(Strict):
     start: float  # how full it is when the beat starts, 0-1
     end: float  # and when it ends; it changes evenly in between
     thin: bool = False  # a few of them where they are scarce (the other end of their path), not a space filling up
+    held: bool = False  # always there (BuildUp.held, or thin): shown, half pale, while its space is not yet named
 
     @field_validator("color")
     @classmethod

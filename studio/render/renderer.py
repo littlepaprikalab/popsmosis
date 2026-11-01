@@ -129,6 +129,9 @@ CROWD_MAX = 24
 CROWD_SPACING = 60.0
 CROWD_DRIFT = 5.0
 THIN_MIN = 2  # dots where particles are scarce (Crowd.thin), however small the space
+# A crowd that is always there (Crowd.held) is part of the picture: in a space not yet named it shows half pale,
+# where one filling up waits for the name. Round 22's cytoplasm, named at 66 s, hid its potassium till then.
+HELD_GHOST = 0.5
 CROWD_TINT = 0.18  # stronger, gold over a blue space turns olive
 # A part that turns (Beat.turning). One that looks the same turned a quarter and a half turn (its outline
 # overlaps itself so turned by SPIN_SAME or more, and its box is at most SPIN_ROUND times wider than tall, or
@@ -325,6 +328,16 @@ class SceneArt:
         depends only on its time."""
         if name not in self._crowd_points:
             inside = _read(self._mask_files[name], skia.kGray_8_ColorType) > 127
+            loc = self.located.get(name)
+            if loc is not None and self.fill(name) < SPACE_FILL:
+                # An outline that is a thin strip of its space (round 22's cytoplasm came back as the band just under
+                # the membrane: a full crowd of K⁺ was four dots): the space's box, but where another part is drawn.
+                box = np.zeros_like(inside)
+                box[int(loc.box.y0):int(loc.box.y1), int(loc.box.x0):int(loc.box.x1)] = True
+                for other, path in self._mask_files.items():
+                    if other != name:
+                        box &= ~(_read(path, skia.kGray_8_ColorType) > 127)
+                inside |= box
             ys, xs = np.nonzero(inside)
             spacing = max(CROWD_SPACING, math.sqrt(len(xs) / CROWD_MAX)) if len(xs) else CROWD_SPACING
             m = int(spacing / 2)
@@ -1774,8 +1787,9 @@ class Renderer:
         located = self.locations.scene(beat.scene)
         # A few where they are scarce (Crowd.thin), only in a space (the outside of a cell, not the pump at a
         # path's end), each on points of its own at the end of the space's list, so no dot sits on another.
-        thin = [c for c in beat.crowds if c.thin and c.region in art.masks
-                and (loc := located.get(c.region)) is not None and self._is_space(beat.scene, loc)]
+        crowded = {c.region for c in beat.crowds if not c.thin}  # a space: something crowds it
+        thin = [c for c in beat.crowds if c.thin and c.region in art.masks and (c.region in crowded or (
+                (loc := located.get(c.region)) is not None and self._is_space(beat.scene, loc)))]
         reserved: dict[str, int] = {}
         slices: dict[int, list] = {}
         for crowd in thin:
@@ -1790,7 +1804,8 @@ class Renderer:
             level = p.lerp(crowd.start, crowd.end, x)
             moving = any(f.label == crowd.label and crowd.region in (f.path[0], f.path[-1]) for f in beat.particles)
             others = 0.0 if moving else max((v for name, v in spots.items() if name != crowd.region), default=0.0)
-            alpha = (1 - ghosts.get(crowd.region, 0.0)) * (1 - SPOT_WASH * others)
+            ghost = ghosts.get(crowd.region, 0.0) * (HELD_GHOST if crowd.held else 1.0)
+            alpha = (1 - ghost) * (1 - SPOT_WASH * others)
             if alpha <= 0.01:
                 continue
             if crowd.thin:  # its few dots, untinted: the space is the other crowd's

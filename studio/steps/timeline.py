@@ -573,9 +573,9 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), floor), 1.0)
             if region in located.get(beat["scene"], set()):
                 crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
-                                    start=round(start, 4), end=round(end, 4)))
+                                    start=round(start, 4), end=round(end, 4), held=build in held))
         crowds += [Crowd(region=region, label=label, color=marker_colour(label, palette), start=THIN_SHARE,
-                         end=THIN_SHARE, thin=True)
+                         end=THIN_SHARE, thin=True, held=True)
                    for label, region in thin if region in located.get(beat["scene"], set())]
         beat["crowds"] = crowds
 

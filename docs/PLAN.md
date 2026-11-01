@@ -794,7 +794,11 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     other (round 22's pump showed no K⁺ outside the cell at all, Nov 1): the space at the
     other end of that kind's paths, when it is a space with no crowd of that kind of its own,
     has a few of them, about one for every five where they crowd, untinted, on points the
-    crowd gives up so no dot sits on another.
+    crowd gives up so no dot sits on another. Both are part of the picture: in a space not yet
+    named they show half pale, where a crowd filling up waits for the name. A space whose
+    outline is a thin strip of it (round 22's cytoplasm came back as the band under the
+    membrane: a full crowd was four dots) seats its crowd in its whole box, where no other part
+    is drawn.
   - **Parts that turn:** for what the bundle's `spins` names (a rotor, a turbine, a water
     wheel), the part eases up to turning while particles flow into or through it and eases
     to a stop when they stop, so the flow is seen to drive it. How it turns is read off the
