@@ -46,7 +46,7 @@ test.describe('the How it’s made page', () => {
     await page.waitForFunction(() => [...document.querySelectorAll('section[aria-labelledby="notice-title"] img')]
       .every((i) => (i as HTMLImageElement).complete && (i as HTMLImageElement).naturalWidth > 0));
     await expect(page.getByRole('article')).toHaveCount(6);
-    await expect(page.getByRole('list', { name: 'The models' }).getByRole('listitem')).toHaveCount(7);
+    await expect(page.getByRole('list', { name: 'The models' }).getByRole('listitem')).toHaveCount(8);
   });
 
   test('sends people on to POPsmosis itself: a droplet to watch, or a topic to ask for', async ({ page }) => {
