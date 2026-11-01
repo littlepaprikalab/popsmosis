@@ -276,12 +276,12 @@ already written.
    `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
    `blocks`: what stops the particles reaching it (`[{"structure": "Herbicide"}]`). Each
    direction line may also name a `glow`: a part an outside cause switches on.
-8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
+8. `tags`: `song[]` and `lesson[]`, 5–7 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
-   then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
-   written knowing the whole plan. Code cleans them to one lowercase word each and never
-   fails a bundle over one; the fact-check (step 2) passes or drops each one (README,
-   "Tags").
+   then the song's genre. Last, so they are written knowing the whole plan. Code cleans them
+   to one lowercase word each, adds the tags every video carries ("#studysong",
+   "#explained") and never fails a bundle over one; the fact-check (step 2) passes or drops
+   each one (README, "Tags").
 
 Code checks then hold each line's `names` and its direction together
 (`studio/checks.py`): a line names only structures its scene draws, and a spotlight

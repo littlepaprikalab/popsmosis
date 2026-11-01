@@ -435,11 +435,14 @@ the question routes; the reply queue's `context` is the compact part a follow-up
 ### Tags
 
 Each video is tagged the way a TikTok is, so the Droplets tab can be searched: the brain
-writes 6 to 10 hashtags for the song video and for the lesson video as the last part of the
-bundle (`tags.song`, `tags.lesson`; the prompt is in `studio/prompts/bundle.md`). Both lists
-start with the topic, its key terms, the subject and the course ("#photosynthesis",
-"#thylakoid", "#apbio"); then come the video's own: the song's genre ("#kpop",
-"#studysong"), or what the lesson does ("#explained").
+writes 5 to 7 hashtags for the song video and for the lesson video as the last part of the
+bundle (`tags.song`, `tags.lesson`; the prompt is in `studio/prompts/bundle.md`): the topic,
+its key terms, the subject and the course ("#photosynthesis", "#thylakoid", "#apbio"), and
+last, for the song, its genre ("#kpop"). Code adds the tags every video carries after them
+("#studysong" and "#studytok" for the song; "#explained", "#examprep" and "#studytok" for the
+lesson, with no "#examprep" for a younger audience; `with_study_tags` in
+`studio/schemas.py`) and drops tags that find nothing ("#fyp", "#viral"), as the API does
+again (`api/src/lib/tags.ts`).
 
 The fact-check then checks every tag in the same call as the lines, by rules of its own
 (`studio/prompts/factcheck.md`, "Tags"): a tag passes when it names something the facts
