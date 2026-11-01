@@ -292,8 +292,7 @@ lesson that leaves the learner understanding the topic, not just knowing a fact 
   shown, which only a learner who understood the core idea can answer ("Why is it summer in
   Australia in December?").
 - Write for a learner at that level meeting the topic for the first time, unless the
-  request says they know more. Most lessons fit in 300-500 words; never over 5000
-  characters.
+  request says they know more. Under 700 words; never over 5000 characters.
 
 The fact-checker reads each sentence, list item, heading and table row on its own: each
 says something the facts support, or nothing factual (a transition, a question).
@@ -382,8 +381,7 @@ explanation left to the narration.
   - a number as a hook: "Minus seventy, waiting to fire";
   - a line sung again with one word changed: "Warm the gas, the pressure climbs / Cool it
     down, the pressure declines".
-- **Rhyme**: the chorus and the pre-chorus in couplets; a verse at least on lines 2 and 4 of
-  each four. A near rhyme is fine; rhyme on plain words. Never bend a line's meaning or
+- **Rhyme**: in couplets, every section. A near rhyme is fine; rhyme on plain words. Never bend a line's meaning or
   grammar to reach a rhyme, and never cut a name short ("the Krebs" for the Krebs cycle).
 - **A story that moves**: for a process, follow one thing through the steps (an electron, a
   signal, a drop of water), with verbs that move and a reason to move ("crowded outside, the

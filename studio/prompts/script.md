@@ -71,12 +71,12 @@ Tell it as one path, each sentence following from the one before:
    the order it happens, one at a time: where it happens, what happens, and why it has to
    (`why_chain`). Signpost every step ("First...", "Next...", "Now the filtrate...") so the
    learner always knows where they are. Go to a close-up for the step it shows, and come back
-   to the overview after it ("Back in the nephron..."). A story in time goes in the order it
+   to the overview after it. A story in time goes in the order it
    happened, each event with its year and why it led to the next.
 4. **The prediction and the misconception**, once, right where the wrong idea would form,
    never before the learner has met what it is about: ask the listener to guess, with a
    question the common mistake answers wrong ("So if you drop a heavy ball and a light one
-   together, does the heavy one land first? A common answer is yes."), then answer it:
+   together, does the heavy one land first?"), then answer it:
    the mistake named as a common one, why it fails, the right idea. Committing to a guess and
    seeing it fail is what changes a wrong idea.
 5. **A case** (2 to 5 sentences), where the idea applies to something new: one example the
