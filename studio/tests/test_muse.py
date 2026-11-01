@@ -270,12 +270,6 @@ def test_what_the_check_still_finds_wrong_in_a_picture_is_kept_as_notes_for_the_
     bundle = checks.load(job / "bundle.json")
     assert art.notices(job, bundle) == {"synthase": [note]}
     assert "art notes synthase" in helper.labels()  # confirmed by the brain before it is shown
-    # The same picture as the lesson's analogy says nothing: an everyday picture cannot teach the topic wrong.
-    as_analogy = bundle.model_copy(update={"scenes": [s.model_copy(update={"id": "analogy"}) if s.id == "synthase"
-                                                      else s for s in bundle.scenes]})
-    shutil.copy(job / "art" / "synthase.png", job / "art" / "analogy.png")
-    (job / "art" / "analogy.json").write_text(json.dumps({**made, "key": art.key(as_analogy, as_analogy.scenes[-1])}))
-    assert art._painted(job, as_analogy, as_analogy.scenes[-1]) and art.notices(job, as_analogy) == {}
     staged(job)  # a changed bundle: the pictures are no longer this bundle's, so nothing is disclosed for them
     assert art.notices(job, checks.load(job / "bundle.json")) == {}
 
@@ -376,8 +370,7 @@ def test_every_scene_is_asked_to_label_its_structures_and_for_no_look():
     # Oct 31: without the style line (a flat dark slate blue background, rounded proteins, only the parts named, no
     # text) the pictures came back better, and the operator's labels line, last, got them labelled.
     bundle = sample_media.bundle()
-    scenes = [*bundle.scenes, bundle.scenes[1].model_copy(update={"id": "analogy"})]
-    for scene in scenes:
+    for scene in bundle.scenes:
         prompt = art.paint_prompt(bundle, scene)
         colours = prompt.split(" Colours: ")[1].split(". ")[0]
         assert prompt.endswith(" Colours: " + colours + ". " + art.labels_line(scene))
@@ -392,10 +385,7 @@ def test_the_helper_is_told_what_kind_of_scene_it_checks():
     assert "The scene is the video's opening" in hook
     assert "The scene is the overview" in overview
     assert "The scene is a close-up of one part of the topic." in synthase
-    analogy = bundle.scenes[2].model_copy(update={"id": "analogy"})
-    told = art.check_prompt(bundle, analogy)
-    assert "The scene is the lesson's analogy" in told and "not the topic's own parts" in told
-    assert told.index("The scene is") < told.index("What the scene should show")
+    assert overview.index("The scene is") < overview.index("What the scene should show")
     song = bundle.scenes[2].model_copy(update={"id": "chorus", "song_only": True})
     assert f"The scene is {art.SONG}" in art.check_prompt(bundle, song)
     # Which video plays a picture is no part of what it shows: a song's picture the lesson takes keeps its painting.

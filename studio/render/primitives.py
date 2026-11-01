@@ -148,7 +148,6 @@ def shadow(canvas: skia.Canvas, rrect: skia.RRect, alpha: float, blur: float = 8
 # --- labels -------------------------------------------------------------------------------
 
 LABEL_PAD_X, LABEL_H = 20.0, 50.0
-LABEL_OUTLINE = 3.5
 DOT_R = 6.0
 TOUCH = 8.0  # from a structure's edge to its pill: it sits against the structure, with no line
 MAX_REACH = 200.0  # a big structure's label stays this close to its dot, on top of it
@@ -410,7 +409,6 @@ def _light(paper: int) -> bool:
 # --- particles ------------------------------------------------------------------------------
 
 PARTICLE_R = 13.0  # the lead particle, in frame pixels
-STREAM_R = 5.5  # the dots streaming along the path
 HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any colour
 
 
@@ -959,7 +957,6 @@ def _draw_pinned(canvas: skia.Canvas, rect: Rect, title: str, title_size: float,
 
 TITLE_BG = "#34435E"  # a shade under the art's dark slate blue, so the title sits on it as a band
 KEY_TERM = 0xFFFCD34D  # amber-300: a key term in a key line, so the words the learner must know stand out
-KICKER = 0xFFCBD5E1  # slate-300: the topic, small, above the key line in an upright title band
 
 
 def key_term_spans(text: str, terms: list[str]) -> list[tuple[int, int]]:

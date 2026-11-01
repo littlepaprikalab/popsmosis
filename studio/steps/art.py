@@ -16,7 +16,7 @@ structures, so the locate step takes them from it (drawn_locations()). Which sce
 STUDIO_CLAUDE_DRAWS on /admin/studio (claude_draws()):
 
     math     the default: every graph and scene to scale, and every picture of a math lesson (math_lesson()) but its
-             hook and analogy, whatever the brain. Muse Image painted a fractions lesson's six bars as seven, and
+             hook, whatever the brain. Muse Image painted a fractions lesson's six bars as seven, and
              thirds it was asked to group in twos ungrouped, which the helper passed (Oct 30)
     charts   every graph and scene to scale, whatever the brain
     brain    only Claude's brain draws its graphs and scenes to scale; Muse's brain has them painted, as before Oct 30
@@ -63,8 +63,7 @@ biology style for every subject, was right once in 6; on Oct 31 the pictures cam
 again without the style line every prompt ended in (a flat dark slate blue background, no text).
 The picture labels its own parts, and the video draws no labels over it, only over a drawing.
 The helper looks at each picture for a label that is wrong, for a structure missing or out of
-place, and for anything else wrong, told what kind of scene it is (an analogy is meant not to
-show the topic's own parts). A picture with a structure missing or out of place is asked for
+place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of place is asked for
 again with what was wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not
 repainted (round 8: a second picture painted for those was no better 9 times in 11). A wrong label
 is kept: the helper looks at it again, and if it agrees, boxes it and writes a sticky note saying what
@@ -173,7 +172,7 @@ def math_lesson(bundle: Bundle) -> bool:
 
 def exact(bundle: Bundle, scene: Scene) -> bool:
     """Whether the scene's sizes and counts must be right: a graph, or marked to scale (Scene.exact()), or, with the
-    knob at math, any picture of a math lesson but its hook and analogy. Drawn as SVG, it is drawn to scale from the
+    knob at math, any picture of a math lesson but its hook. Drawn as SVG, it is drawn to scale from the
     facts' numbers."""
     return scene.exact() or (claude_draws() == "math" and scene.id not in EVERYDAY and math_lesson(bundle))
 
@@ -185,7 +184,7 @@ def _stages(bundle: Bundle, scene: Scene) -> list[Scene]:
 
 
 def _to_scale(bundle: Bundle, group: list[Scene]) -> bool:
-    # The hook and the analogy are everyday pictures: marked to scale by mistake, they are still painted.
+    # The hook is an everyday picture: marked to scale by mistake, it is still painted.
     return any(s.axes or (exact(bundle, s) and s.id not in EVERYDAY) for s in group)
 
 
@@ -519,7 +518,7 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
 LABELS = f"Clearly label nonobvious structures. {NO_SLIDE}"
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
-EVERYDAY = ("hook", "analogy")
+EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The picture \
@@ -939,9 +938,6 @@ def colour_word(color_hex: str) -> str:
 SCENE_KINDS = {
     "hook": ("the video's opening: where it can, an everyday sight from the learner's world where the topic "
              "turns up, rather than a diagram of the topic."),
-    "analogy": ("the lesson's analogy: an everyday object standing in for the real thing, each of its parts "
-                "in the colour of the structure it stands for. It is meant to show that object, not the "
-                "topic's own parts. Judge it as a picture of the object."),
     "overview": "the overview: the whole system at once, each part in its place.",
 }
 DETAIL = "a close-up of one part of the topic."
@@ -975,10 +971,7 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     applies (PinnedNote): the card holds only what has no one place."""
     found = {}
     for scene in bundle.scenes:
-        # An analogy is an everyday picture standing in for the topic: nothing in it can teach the topic wrong.
-        # Round 20's Rome analogy carried a card the whole time it was on screen, for four committee members where
-        # the analogy had five.
-        if scene.id == "analogy" or not _painted(job, bundle, scene):
+        if not _painted(job, bundle, scene):
             continue
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
         flagged = [str(f.get("text") or "").strip().lower() for f in made.get("flags") or [] if isinstance(f, dict)]

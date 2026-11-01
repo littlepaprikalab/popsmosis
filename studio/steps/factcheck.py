@@ -33,8 +33,8 @@ they take ("H⁺ travels from Stroma to Cytochrome b6f to Thylakoid lumen"), sin
 shows it as a claim. A motion that fails is left out of the video (no particles on its
 lines), never rewritten, and never fails the job; one shown on several lines is checked
 once. Unmarked particles are checked as "Something travels from Romeo to Audience", so a
-route nothing travels is left out too; on the hook and the analogy they are not sent, as
-there they are the everyday thing (the analogy's water), which the facts do not trace.
+route nothing travels is left out too; on the hook they are not sent, as there they are the
+everyday thing, which the facts do not trace.
 
 The facts it holds every line to have been audited first (studio/steps/audit.py). A fact the audit
 corrected is sent as corrected, with what it said before (`was`), and the lyrics and narration sentences
@@ -78,7 +78,7 @@ KEPT_OR_DROPPED = (TAG, MOTION, AVOID)  # never corrected, and never failing the
 PASSING = ("SUPPORTED", "FILLER")
 COURSE_KNOWLEDGE = "course knowledge"  # a lyric's source when it is true but the facts do not say it
 SONGWRITER = "songwriter.json"  # the corrections the songwriter wrote (write_songwriter())
-EVERYDAY = ("hook", "analogy")  # scenes whose unmarked dots are not checked (studio/prompts/bundle.md)
+EVERYDAY = ("hook",)  # the scene whose unmarked dots are not checked (studio/prompts/bundle.md)
 
 
 @dataclass(frozen=True)
@@ -209,7 +209,7 @@ def motion_text(carries: str, particles: list[str], blocked: bool = False) -> st
 
 
 def is_checked(scene: str, carries: str, particles: list[str]) -> bool:
-    """Whether a flow goes to the fact-check: every one with a path, but an unmarked one on the hook or the analogy.
+    """Whether a flow goes to the fact-check: every one with a path, but an unmarked one on the hook.
     Unmarked, the brain sent dots from Romeo to the audience and from one point of a graph to another (Oct 29)."""
     return len(particles) >= 2 and (bool(carries) or scene not in EVERYDAY)
 
@@ -225,7 +225,7 @@ def build_up_text(carries: str, region: str) -> str:
 
 def spin_text(bundle: Bundle, structure: str) -> str:
     """What the video shows turning, and what drives it: "ATP synthase spins as H⁺ flows through it", or for
-    unmarked particles (an analogy's water) "Water wheel spins as particles flow into it from Reservoir"."""
+    unmarked particles "Turbine spins as particles flow into it from Reservoir"."""
     flows = [f for d in bundle.direction for f in d.flows() if structure in f.particles[1:]]
     marked = sorted({d.carries for d in flows if d.carries})
     if marked:
@@ -255,8 +255,8 @@ def says_text(carries: str, particles: list[str], says: str) -> str:
 
 
 def says_checked(scene: str, says: str, particles: list[str]) -> bool:
-    """Whether an arrow's one-liner goes to the fact-check: every one, but one on the hook or the analogy, which
-    speaks of the everyday picture ("The pump lifts water to the tank"), not of the topic."""
+    """Whether an arrow's one-liner goes to the fact-check: every one, but one on the hook, which speaks of the
+    everyday picture, not of the topic."""
     return bool(says) and len(particles) >= 2 and scene not in EVERYDAY
 
 

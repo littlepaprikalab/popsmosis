@@ -659,23 +659,6 @@ def lead_at(points: list[Point], t: float, bends=None) -> tuple[Point, int]:
     return points[-1], int(trip)
 
 
-def lead_leg(points: list[Point], t: float, bends=None) -> tuple[Point, int, bool]:
-    """Where the lead particle is t seconds after it set off, the stop it last left (it is between that stop and
-    the next), and whether it has finished its first trip."""
-    if t >= trip_s(points, bends):
-        return points[-1], len(points) - 1, True
-    legs = _leg_seconds(points, bends)
-    t = max(t, 0.0)
-    for i, leg in enumerate(legs):
-        if t < FLOW_PAUSE_S:
-            return points[i], i, False
-        t -= FLOW_PAUSE_S
-        if t < leg:
-            return _on_leg(points, bends, i, p.ease(t / leg)), i, False
-        t -= leg
-    return points[-1], len(points) - 1, True
-
-
 def trip_s(points: list[Point], bends=None) -> float:
     """How long the lead particle takes from its first stop to holding at its last."""
     return FLOW_PAUSE_S * (len(points) - 1) + sum(_leg_seconds(points, bends))
@@ -1073,11 +1056,6 @@ class Renderer:
         """Which way a shot drifts: on back after pulling back, while that keeps the whole picture filling the view
         (past it, a painted picture's edge would show), and pushing in otherwise."""
         return -1.0 if start.zoom > target.zoom * 1.001 and target.zoom * (1 - DRIFT) >= 1.0 else 1.0
-
-    def run_of(self, i: int, path: list[str], label: str) -> tuple[float, float] | None:
-        """The run of beat i's flow along `path` carrying `label`: (from, to); None when it has none."""
-        return next((run for f, run in zip(self.timeline.beats[i].particles, self.plans[i].runs)
-                     if f.path == path and f.label == label), None)
 
     def beat_index(self, t: float) -> int:
         """The index of the beat on screen at t (Timeline.beat_at)."""

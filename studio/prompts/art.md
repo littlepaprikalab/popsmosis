@@ -39,9 +39,6 @@ code styles it (below, "Graphs").
 - No drop shadows.
 - Get the anatomy right: shapes, proportions, positions and counts as a textbook shows
   them. Simplify detail, never correctness.
-- An analogy scene (id "analogy") draws an everyday object in place of the real thing,
-  in the same style and as it really looks. Its parts take the colours they are given,
-  which are the colours of the real structures they stand for in the other scenes.
 - A scene from everyday life (often the hook) draws only what the lesson needs: a person
   appears only as the part that matters (a leg, a hand), never a face.
 - For a younger audience, keep the same accuracy with less detail: bolder, simpler

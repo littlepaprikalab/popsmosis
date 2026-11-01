@@ -342,16 +342,13 @@ def test_a_route_nothing_travels_is_left_out_of_the_video():
     assert [m.text for m in dropped_motions(report)] == ["Something travels from Cytochrome b6f to Thylakoid", SOMETHING]
 
 
-def test_unmarked_dots_on_the_hook_and_the_analogy_are_not_sent():
-    def everyday(data):  # the analogy's water, the hook's everyday thing
-        data["scenes"].append({**data["scenes"][1], "id": "analogy"})
+def test_unmarked_dots_on_the_hook_are_not_sent():
+    def everyday(data):  # the hook's everyday thing
         for d in data["direction"]:
             if d["line_id"] in ("v1-1", "n1"):
                 d.update(scene="hook", particles=["Thylakoid", "Thylakoid"], carries="")
-            elif d["line_id"] == "v2-1":
-                d.update(scene="analogy", particles=["Cytochrome b6f", "Thylakoid"], carries="")
             elif d["line_id"] == "c1-1":
-                d.update(scene="analogy", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
+                d.update(scene="hook", particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻")
 
     fake = FakeChecker(supported)
     check_bundle(bundle(everyday), "", fake)
