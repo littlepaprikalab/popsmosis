@@ -170,7 +170,12 @@ about what moves, where from, through what and where to.
   way). `source` is the fact id.
 - **UNSUPPORTED**: the wrong thing moving (electrons where the facts move protons), the
   wrong direction (protons into the stroma where the facts pump them out of it), a stop
-  the facts do not put on its route, or a route the facts never give. `problem` says what
+  the facts do not put on its route, or a route the facts never give. That includes a route
+  through a wall or membrane itself where the facts say the thing crosses through something
+  in it (a channel, a pump, a carrier, a gate): "Na⁺ travels from Outside of the cell to Cell
+  membrane to Inside of the cell" when the facts let sodium in through leak channels; a
+  student watching sees it slip through the wall. Through the wall itself is supported only
+  where the facts say it crosses that way (O₂ across the alveolus wall). `problem` says what
   is wrong in a few words, and `corrected` is "": a motion that fails is left out of the
   video, never rewritten.
 

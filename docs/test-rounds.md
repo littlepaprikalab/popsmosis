@@ -1332,6 +1332,17 @@ open", would still be sung over Na⁺ moving through the leak channels: the moti
 from Outside of the cell to Leak channels to Inside of the cell", f1). Checking each sung line together with what
 moves under it would catch both; a pair that fails would lose its motion, not its words.
 
+### Rap sections
+
+K-pop and Latin pop now rap their second verse, and dance-pop its bridge; the rest is sung (the owner: "it doesn't
+mean the whole song is rap"). Two writers in the session wrote derivative (Latin pop) and supply and demand
+(dance-pop) from the new brief: each rapped only that section, said so in its style ("the first verse sung and the
+second verse rapped in quick, crisp bars"), and kept the chorus sung; the rapped lines ran 9 to 15 syllables against
+6 to 10 sung, in couplets like the rest ("Slide that second point in, make the gap get thin / Every secant line
+swings and the slopes close in"). Lyria sang both ($0.16). Timed by the studio's own aligner, the rapped section ran
+about half again as fast as the sung lines (6.4 and 6.0 syllables a second, against 4.1 and 4.0), though the aligner
+was unsure of 30 and 19 lines; the owner listened and approved both.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the

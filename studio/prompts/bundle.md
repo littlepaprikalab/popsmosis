@@ -575,6 +575,11 @@ no times: code adds them from the audio.
   chain of events): their scenes hold still, with [] here, and the camera and the spotlight
   move from part to part with the lines instead. The hook, the learner's world as it is,
   has none.
+  Across a wall or membrane, the route goes through the opening the facts name (a channel, a
+  pump, a carrier, a gate): sodium leaking into a cell through the leak channel, H⁺ through
+  ATP synthase, water through a dam's gate. Through the wall itself only where the facts say
+  it crosses that way (O₂ across the alveolus wall): a route through the membrane drew Na⁺
+  slipping through the bare bilayer beside the pump, which no ion does (Nov 1).
 - `carries`: what the particles are, at most 8 characters, the same thing written the same
   way on every line: a molecule or ion as a textbook prints it ("H⁺", "e⁻", "O₂", "Ca²⁺",
   "glucose"); anything else named in a plain word ("price", "letter", "taxes"), so the
