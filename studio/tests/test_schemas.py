@@ -88,22 +88,6 @@ def test_the_study_tags_come_after_the_writers_own_with_room_kept_for_them():
     assert "examprep" in with_study_tags(Tags(), "9th grade").lesson
 
 
-def test_a_line_given_an_id_already_taken_is_numbered_apart():
-    # A refused bundle is a whole bundle call again: a chorus repeat given its first's id keeps the direction written
-    # under it in order, or a copy of the last one when there is none.
-    data = bundle_data()
-    for line in data["lyrics"]:
-        line["id"] = {"c2-1": "c1-1", "c3-1": "c1-1"}.get(line["id"], line["id"])
-    for d in data["direction"]:
-        d.update({"c2-1": {"line_id": "c1-1", "scene": "hook"}}.get(d["line_id"], {}))
-    data["direction"] = [d for d in data["direction"] if d["line_id"] != "c3-1"]
-    bundle = Bundle.model_validate(data)
-    assert [line.id for line in bundle.lyrics] == ["v1-1", "v1-2", "c1-1", "v2-1", "c1-1-2", "b-1", "c1-1-3"]
-    scenes = {d.line_id: d.scene for d in bundle.direction}
-    assert (scenes["c1-1"], scenes["c1-1-2"], scenes["c1-1-3"]) == ("overview", "hook", "hook")
-    assert data["lyrics"][4]["id"] == "c1-1"  # the answer as given stays as it was
-
-
 def test_a_bundle_written_before_tags_has_none():
     data = bundle_data()
     del data["tags"]

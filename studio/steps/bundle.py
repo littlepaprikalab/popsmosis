@@ -131,8 +131,9 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
         bundle, report = checks.review(rewritten)
     edited = narration.edit(bundle, ask, job)  # the voice-over made one explanation (studio/steps/narration.py)
     settled, repaired = checks.repair_once(edited, request.study_guide)  # words set once, before the fact-check
-    if settled is not bundle:
-        bundle, report = checks.review(settled)
+    if settled is not bundle:  # read again, keeping what the first reading repaired (it is not there to find twice)
+        bundle, again = checks.review(settled)
+        report.problems += [p for p in again.problems if p not in report.problems]
     report.problems += (unquoted + repaired + checks.song_length_problems(bundle) + checks.motion_problems(bundle)
                         + checks.essence_problems(bundle) + checks.key_line_problems(bundle)
                         + checks.song_shape_problems(bundle) + checks.style_problems(bundle, request.song_style))

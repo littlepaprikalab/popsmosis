@@ -41,7 +41,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _no_analogy_scene(data) + _settle_song_scenes(data) + _same_choruses(data)
+    problems = _no_analogy_scene(data) + _settle_song_scenes(data) + _direct_choruses(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -824,28 +824,16 @@ def _check_narrated_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_narration"]])
 
 
-def chorus_runs(sections: list[str]) -> list[list[int]]:
-    """Each chorus as the lyrics run, a list of its lines' places in them."""
-    runs: list[list[int]] = []
-    for i, section in enumerate(sections):
-        if section == "chorus":
-            if runs and runs[-1][-1] == i - 1:
-                runs[-1].append(i)
-            else:
-                runs.append([i])
-    return runs
-
-
-def _same_choruses(data: dict) -> list[Problem]:
+def _direct_choruses(data: dict) -> list[Problem]:
     """Every chorus directed as the first, so the refrain reads as one: a later chorus's line that sings a line of
     the first word for word (matched from the end, as the last chorus may open with lines of its own) takes its
     direction, all but its caption. The brief asked for it, and the five choruses of Nov 1 did; this makes it sure.
     Before the lines are checked, so each is held to what is named by its own place in the song."""
     lyrics, problems = data["lyrics"], []
     directions = {d["line_id"]: d for d in data["direction"]}
-    runs = chorus_runs([line["section"] for line in lyrics])
-    for run in runs[1:]:
-        for i, j in zip(reversed(runs[0]), reversed(run)):
+    spans = chorus_spans([line["section"] for line in lyrics])
+    for span in spans[1:]:
+        for i, j in zip(reversed(spans[0]), reversed(span)):
             first, later = directions.get(lyrics[i]["id"]), directions.get(lyrics[j]["id"])
             sung = {" ".join(fold(lyrics[k]["text"]).split()) for k in (i, j)}
             if not first or not later or len(sung) > 1:
@@ -862,7 +850,7 @@ def _same_choruses(data: dict) -> list[Problem]:
 def motion_problems(bundle: Bundle) -> list[Problem]:
     """The song's direction against the planning rule a check can count: every chorus directed alike (compared from
     its end, since the last one opens with a summary couplet). The review directs a line the first chorus sings word
-    for word as the first does (_same_choruses), so what is left is a line of its own. Recorded, not repaired; the
+    for word as the first does (_direct_choruses), so what is left is a line of its own. Recorded, not repaired; the
     bundle step adds them.
 
     How many lines in a row hold still is not counted. The bundle prompt moves only what travels, and the spotlight
@@ -871,7 +859,7 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     scene that never moved was never flagged, so the count pushed toward dots for their own sake."""
     directions = {d.line_id: d for d in bundle.direction}
     problems = []
-    choruses = [[bundle.lyrics[i].id for i in run] for run in chorus_runs([line.section for line in bundle.lyrics])]
+    choruses = [[bundle.lyrics[i].id for i in span] for span in chorus_spans([line.section for line in bundle.lyrics])]
     for later in choruses[1:]:
         for first_id, later_id in zip(reversed(choruses[0]), reversed(later)):
             a, b = directions.get(first_id), directions.get(later_id)

@@ -13,7 +13,6 @@ import functools
 import math
 import re
 import unicodedata
-from collections import Counter
 from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, create_model, field_validator, model_validator
@@ -361,44 +360,6 @@ class Bundle(Strict):
             data["direction"] = [{"carries": "", "glow": "", **d} if isinstance(d, dict) else d
                                  for d in data["direction"]]
         return data
-
-    @model_validator(mode="before")
-    @classmethod
-    def _own_ids(cls, data):
-        # A line's id is only the key its direction is written under, so a line given an id already taken (a chorus
-        # repeat given its first's "c1-1") is numbered apart ("c1-1-2") rather than refuse the bundle, a whole bundle
-        # call again. The writer directs the lines in order: the k-th line under an id takes the k-th direction
-        # written under it, or a copy of the last one when there are fewer (a chorus is directed alike each time).
-        if not isinstance(data, dict) or not isinstance(data.get("direction"), list):
-            return data
-        streams = {key: data.get(key) or [] for key in ("lyrics", "narration")}
-        if not all(isinstance(lines, list) and all(isinstance(x, dict) for x in lines) for lines in streams.values()):
-            return data
-        ids = [line.get("id") for lines in streams.values() for line in lines]
-        if not all(isinstance(i, str) for i in ids) or len(set(ids)) == len(ids):
-            return data  # not ids, or each its own: the validation says the rest
-        taken, seen, renamed = set(ids), Counter(), {}
-        for key, lines in streams.items():
-            streams[key] = [dict(line) for line in lines]  # the answer as given stays as it was
-            for line in streams[key]:
-                old, k = line.get("id"), seen[line.get("id")]
-                seen[old] += 1
-                if k:
-                    n = k + 1
-                    while f"{old}-{n}" in taken:
-                        n += 1
-                    line["id"] = renamed[(old, k)] = f"{old}-{n}"
-                    taken.add(line["id"])
-        directed, last, direction = Counter(), {}, []
-        for d in data["direction"]:
-            if isinstance(d, dict) and isinstance(d.get("line_id"), str):
-                old, k = d.get("line_id"), directed[d.get("line_id")]
-                directed[old] += 1
-                d = last[old] = {**d, "line_id": renamed.get((old, k), old)}
-            direction.append(d)
-        direction += [{**last[old], "line_id": new} for (old, k), new in renamed.items()
-                      if k >= directed[old] and old in last]
-        return {**data, **{key: lines for key, lines in streams.items() if key in data}, "direction": direction}
 
     @model_validator(mode="before")
     @classmethod

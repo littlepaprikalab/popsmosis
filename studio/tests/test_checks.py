@@ -23,6 +23,14 @@ def direction(data, line_id):
     return next(d for d in data["direction"] if d["line_id"] == line_id)
 
 
+LATER_CHORUSES = ("c2-1", "c3-1")  # directed as c1-1 by the review (_direct_choruses), whatever a test set on c1-1
+
+
+def own(found):
+    """What a test found, leaving out the later choruses, which the review directs as the first."""
+    return [f for f in found if f[0] not in LATER_CHORUSES]
+
+
 def test_the_sample_bundle_is_clean():
     bundle, found, _ = review(lambda d: None)
     assert found == [] and bundle == Bundle.model_validate(bundle_data())
@@ -54,7 +62,7 @@ def test_the_song_keeps_the_3_pictures_of_its_own_it_plays_longest():
 
     bundle, found, _ = review(change)
     assert [s.id for s in bundle.scenes if s.song_only] == ["song-1", "song-2", "song-3"]
-    assert found == [("scene:song-0", "song-scene", True)]
+    assert own(found) == [("scene:song-0", "song-scene", True)]
     assert {d.line_id: d.scene for d in bundle.direction}["v1-1"] == "hook"  # the scene before the song's first
 
 
@@ -67,7 +75,7 @@ def test_a_narration_sentence_never_plays_over_the_songs_own_picture():
     # With room in the lesson, the picture is the lesson's too, and the sentence keeps it.
     bundle, found, _ = review(narrated)
     assert [(s.id, s.song_only) for s in bundle.scenes][-1] == ("chorus", False)
-    assert found == [("scene:chorus", "song-scene", True)]
+    assert own(found) == [("scene:chorus", "song-scene", True)]
     assert {d.line_id: d.scene for d in bundle.direction}["n2"] == "chorus"
 
     # With the lesson's 7 scenes drawn, the sentence plays over the scene the narration was on.
@@ -89,7 +97,7 @@ def test_a_spotlight_waits_until_its_structure_is_named_on_that_scene():
         direction(d, "n2").update(spotlight="Thylakoid")  # named, but not on this scene
 
     bundle, found, _ = review(change)
-    assert found == [("v1-2", "spotlight", True), ("n2", "spotlight", True)]
+    assert own(found) == [("v1-2", "spotlight", True), ("n2", "spotlight", True)]
     spotlights = {d.line_id: d.spotlight for d in bundle.direction}
     assert spotlights["v1-1"] == "Thylakoid" and spotlights["c1-1"] == "Thylakoid"
     assert spotlights["v1-2"] == "" and spotlights["n2"] == ""
@@ -389,7 +397,7 @@ def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     assert [b.structure for b in bundle.blocks] == ["Cytochrome b6f"]  # particles end there; none end at the other
     glows = {d.line_id: d.glow for d in bundle.direction if d.line_id in ("v1-2", "c1-1")}
     assert glows == {"v1-2": "Thylakoid", "c1-1": ""}
-    assert sorted(found) == [("blocks", "blocks", True), ("c1-1", "glow", True)]
+    assert sorted(own(found)) == [("blocks", "blocks", True), ("c1-1", "glow", True)]
 
 
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
@@ -412,10 +420,12 @@ def test_the_bundle_step_saves_the_repaired_bundle_and_the_checks(tmp_path):
     bundle_step.run(tmp_path, ask=lambda *args, **kwargs: data)
     assert read(tmp_path / "bundle.json", Bundle).direction[2].spotlight == ""
     problems = read(tmp_path / "checks.json", CheckReport).problems
-    # The bundle step also records what only a better bundle fixes: the sample song is short, and still in places.
-    assert (problems[0].line_id, problems[0].rule, problems[0].repaired) == ("c1-1", "spotlight", True)
-    assert ("music", "lyric-style", False) in [(p.line_id, p.rule, p.repaired) for p in problems]
-    assert all(not p.repaired for p in problems[1:])
+    # What the review repaired is kept when the words set once (the study tags) are read again; the later choruses are
+    # directed as the first, so its spotlight waits on them too. The bundle step also records what only a better
+    # bundle fixes: the sample song is short, and still in places.
+    found = [(p.line_id, p.rule, p.repaired) for p in problems]
+    assert [f for f in found if f[2] and f[0] not in LATER_CHORUSES] == [("c1-1", "spotlight", True)]
+    assert ("music", "lyric-style", False) in found
 
 
 def test_curly_quotes_and_dashes_match_plain_ones():
