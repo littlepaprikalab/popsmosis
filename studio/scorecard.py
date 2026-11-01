@@ -54,7 +54,7 @@ TOPICS = HERE / "scorecards" / "topics.json"
 RUNS = HERE / "scorecards" / "runs"
 RUBRIC_PATH = HERE / "prompts" / "rubric.md"
 RUBRIC = RUBRIC_PATH.read_text(encoding="utf-8")
-CRITERIA = {"hook": "Hook", "frame": "Frame", "why_chain": "Why chain", "key_lines": "Key lines",
+CRITERIA = {"hook": "Hook", "frame": "Connect", "why_chain": "Why chain", "key_lines": "Key lines",
             "accuracy": "Accuracy", "singability": "Singability", "lesson_clarity": "Lesson"}
 WORKERS = 3  # topics at a time: each waits minutes on its bundle call, and more risk the output rate limit
 BUDGET_USD = 40.0  # about twice a full run; no topic starts once the run has spent it

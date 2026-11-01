@@ -33,16 +33,16 @@ closes on), and how the song, the lesson and the narration open.
 
 ## frame
 
-The one everyday picture for the whole idea: an everyday thing that does the same job as the whole
-thing (a trade, a delivery, a relay, a pressure cooker), not one that only looks like a part.
+How the droplet connects the new idea to what the learner already knows (this criterion keeps its old name).
 
-- 5: One apt everyday picture of what the whole thing is for, not a stock one that fits any topic; set
-  up early in the song and carried through its chorus, bridge and outro; the lesson and the narration
-  use it too; any picture for a single part fits inside it.
-- 3: There is a frame, but it fits only one part, or is stock ("a factory", "a machine"), or is set up
-  and then dropped.
-- 1: No frame; or several pictures competing for the whole idea; or one that misleads about how the real
-  thing works.
+- 5: It builds on something the learner already knows at that level, an earlier idea in the course or an everyday
+  experience, and says how it connects. Where it uses an everyday comparison, the comparison does the same job as the
+  whole idea, its parts are matched to the real ones, it says where it stops fitting, and it is used where it helps,
+  not stretched over every step or every line of the song. A topic concrete enough to need no comparison (a story in
+  time, a play) scores 5 when each step is tied to things the learner can picture.
+- 3: The link is loose: a comparison that fits only one part, a stock one that fits any topic, or one stretched until
+  it strains; or the droplet never ties the idea to anything the learner knows.
+- 1: A comparison that misleads about how the real thing works, or several competing ones.
 
 ## why_chain
 
