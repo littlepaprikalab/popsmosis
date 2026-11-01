@@ -192,7 +192,7 @@ def song_provider(job: Path) -> str:
     """Who makes the audio, the song and the narration: the admin's setting on /admin/studio as the job's last
     claim said, else gemini (Lyria sings, Gemini TTS reads)."""
     song = jobs.studio_settings(job).get("song")
-    return (song.get("provider") if isinstance(song, dict) else None) or "gemini"
+    return (song.get("provider") if isinstance(song, dict) else None) or media.DEFAULT_SONG_PROVIDER
 
 
 def _check_keys(todo: list[str], provider: str) -> None:
