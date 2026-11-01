@@ -842,11 +842,10 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     over a chorus or the narration's sentence that says the core idea, as both say it.
   - **Key lines:** each sits on the lyric that sings its step, in the song's own order, and on
     the narration sentence that says it, so one set of lines places itself in each video; a
-    step the song never sings is the lesson video's only (`from_line` ""). The bundle step
-    records a key line whose lyric shares few of its words while another verse line shares
-    many (`checks.misplaced_key_lines`), as a hint, not a repair: on the 12 scorecard songs
-    of Oct 31 it found round 22's three, but would have moved lines that sang their step
-    through a metaphor.
+    step the song never sings is the lesson video's only (`from_line` ""). No code checks the
+    placement: a hint by shared words (a key line on a lyric sharing few of its words) found
+    round 22's three, but on the Nov 1 scorecard 5 of its 6 were wrong, songs saying their
+    steps in their own words, and it was taken out.
   - **Caption pill:** optional, top area, held at least 4 s.
   - **Brand:** the site's wordmark chip ("**POP**smosis", white on aqua `#0B7499`, as
     `web/src/components/Wordmark.tsx` draws it) on every frame, so a clip saved and posted

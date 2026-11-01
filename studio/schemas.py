@@ -196,9 +196,10 @@ class BuildUp(Strict):
     region: str = Field(description="The structure it piles up in, by its name: a space (a lumen, a compartment)")
     # A resting cell's sodium outside is there from the first frame; round 22's pump lesson filled it from a few
     # dots only once the pump ran, and drained the potassium inside to two dots when the leak played (Nov 1).
-    held: bool = Field(default_factory=bool, description="True for a difference that is always there and kept (sodium "
-                                                  "outside a resting cell): shown full from the start; false for "
-                                                  "one the lesson builds up (H⁺ pumped into the lumen)")
+    held: bool = Field(default_factory=bool, description="True when the crowd is already there and something keeps it "
+                                                  "(sodium outside and potassium inside a resting cell, though a pump "
+                                                  "keeps them): shown full from the start. False only when the lesson "
+                                                  "builds it up from few (H⁺ pumped into the lumen once light shines)")
 
 
 class Block(Strict):

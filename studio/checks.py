@@ -161,8 +161,11 @@ def _settle_song_scenes(data: dict) -> list[Problem]:
 # A picture asking for one thing drawn twice or for two moments side by side ("one pump, drawn twice side by side",
 # Nov 1) came back with both and with captions of its own ("State 1", "Conformational change"); the brief has each
 # stage a scene of its own, which the video fades between.
-SIDE_BY_SIDE = re.compile(r"\b(?:side[- ]by[- ]side|drawn twice|shown twice|two panels|split (?:into|in) two|"
-                          r"before and after|left panel|right panel)\b", re.I)
+# One thing drawn more than once, or panels: "side by side" alone is no sign, as two markets, two people or a chart's
+# bars stand side by side (the scorecard of Nov 1: half the pictures it caught were fine).
+SIDE_BY_SIDE = re.compile(r"\b(?:(?:drawn|shown|painted) (?:twice|again|two times|three times|four times|\d+ times)|"
+                          r"(?:two|three|four|2|3|4) panels|(?:first|second|third|fourth|left|right|middle) panel|"
+                          r"split (?:into|in) two|before and after|state [12]\b)", re.I)
 
 
 def _check_side_by_side(data: dict, problems: list) -> None:
@@ -442,7 +445,7 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
         if words > KEY_LINE_WORDS_MAX:
             problems.append(Problem(line_id=key.from_line or key.from_narration, rule="key-line", repaired=False,
                                     detail=f'the key line "{key.text}" runs {words} words, over {KEY_LINE_WORDS_MAX}'))
-    return problems + misplaced_key_lines(bundle)
+    return problems
 
 
 def _check_key_lines(data: dict, problems: list) -> None:
@@ -485,76 +488,6 @@ def _check_key_lines(data: dict, problems: list) -> None:
             key["from_narration"] = ""
         taken.add(key["from_narration"])
     data["key_lines"] = kept  # in the brief's order, the chain's: each video places them by its own lines
-
-
-# A key line's words and a lyric's, to tell whether the lyric sings its step: round 22's pump song showed
-# "2 K⁺ binding drops phosphate → pump snaps back inward" over "Potassium leaks out, takes its plus charge down the
-# hill", a verse after the line that sang it ("Potassium hops on, the piece drops, the pump flips back in"): the
-# writer kept the chain's order where the song had its own (the owner, Nov 1).
-STEP_SAID = 2  # words a lyric shares with a key line to sing its step
-STEP_CLEARER = 2  # flagged only beside a lyric that shares this many more words than its own...
-STEP_OWN = 1  # ...and only on one that shares at most this many
-STEP_COMMON = 0.2  # a word in more than this share of the song's lines ("pump", in a pump song) says nothing
-STEP_SECTIONS = ("verse", "pre-chorus")  # where a step is sung: not the chorus (the core idea) nor the bridge (the case)
-STEP_STOP = frozenset("""a an the and or but so as of to in on at by for with from into onto out up down off over
-    under it its it's is are was were be been being this that these those then than there here they them their we
-    you your our his her he she i me my not no yes all each every one two three what which who how why when where
-    just only still too very can will would could should do does did get gets got let lets make makes""".split())
-STEP_SYMBOLS = {"na": "sodium", "k": "potassium", "h": "hydrogen", "ca": "calcium", "cl": "chloride",
-                "h2o": "water", "o2": "oxygen", "co2": "carbon", "e": "electron", "mg": "magnesium"}
-
-
-def step_words(text: str) -> set[str]:
-    """The words a line says, folded, cut to their stems ("drops", "dropped" -> "drop") and with a symbol read as its
-    name ("Na⁺" -> "sodium"), leaving out the small words every line has."""
-    words = set()
-    for word in re.findall(r"[a-z0-9]+", fold(text).translate(str.maketrans("₀₁₂₃₄₅₆₇₈₉", "0123456789")).replace("'", "")):
-        word = STEP_SYMBOLS.get(word, word)
-        for end in ("ing", "ed", "es", "s"):
-            if len(word) > len(end) + 2 and word.endswith(end):
-                word = word[: -len(end)]
-                if end in ("ing", "ed") and len(word) > 3 and word[-1] == word[-2] and word[-1] not in "aeiouls":
-                    word = word[:-1]  # "dropped" -> "drop"
-                break
-        word = word.rstrip("e") if len(word) > 3 else word
-        if word not in STEP_STOP and len(word) > 1:
-            words.add(word)
-    return words
-
-
-def misplaced_key_lines(bundle: Bundle) -> list[Problem]:
-    """Key lines that may sit on a lyric singing something else: after the first (the question), one whose own lyric
-    shares at most STEP_OWN of its words while a verse or pre-chorus line more than one line away, free of other key
-    lines, shares STEP_CLEARER more. Recorded, not moved: on the 12 scorecard songs of Oct 31 it found the pump
-    song's three, but would have moved four lines that sang their step through a metaphor ("Hit too soft and you
-    roll back down" is the catalyst song's activation energy) onto lines that only repeat its words."""
-    lyrics = bundle.lyrics
-    order = {line.id: i for i, line in enumerate(lyrics)}
-    said = {line.id: step_words(line.text) for line in lyrics}
-    counts = Counter(word for words in said.values() for word in words)
-    common = {word for word, n in counts.items() if n > max(STEP_COMMON * len(lyrics), 3)}
-    said = {at: words - common for at, words in said.items()}
-    text = {line.id: line.text for line in lyrics}
-    placed = [k for k in bundle.key_lines if k.from_line in order]
-    first = min(placed, key=lambda k: order[k.from_line], default=None)
-    taken = {k.from_line for k in placed}
-    problems = []
-    for key in placed:
-        if key is first:
-            continue
-        words = step_words(key.text)
-        own = len(words & said[key.from_line])
-        free = [line.id for line in lyrics[1:] if line.section in STEP_SECTIONS and line.id not in taken
-                and abs(order[line.id] - order[key.from_line]) > 1]
-        best = max(free, key=lambda at: (len(words & said[at]), -order[at]), default=None)
-        if best is None:
-            continue
-        shared = len(words & said[best])
-        if shared >= STEP_SAID and own <= STEP_OWN and shared >= own + STEP_CLEARER:
-            problems.append(Problem(line_id=key.from_line, rule="key-line", repaired=False,
-                                    detail=f'the key line "{key.text}" is on {key.from_line} ("{text[key.from_line]}"), '
-                                           f'which may sing something else: {best} ("{text[best]}") says more of it'))
-    return problems
 
 
 def _check_narrated_key_lines(data: dict, problems: list) -> None:

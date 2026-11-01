@@ -209,7 +209,13 @@ def test_a_picture_asking_for_two_moments_side_by_side_is_recorded():
 
     assert asking("One sodium-potassium pump in a membrane, drawn twice side by side.") != []
     assert asking("A before and after view of the cell.") != []
+    assert asking("The dog in four panels, left to right.") != [] and asking("In the third panel, the bell.") != []
+    assert asking("The Moon drawn three times across the sky.") != []
     assert asking("One pump in a membrane, its pocket open toward the inside.") == []
+    # Two things side by side are no sign (the scorecard of Nov 1): two markets, two people, a chart's bars.
+    assert asking("Two places that sell strawberries, side by side.") == []
+    assert asking("Romeo and Juliet standing side by side under the stars.") == []
+    assert asking("Eleven vertical bars of equal width stand side by side.") == []
 
 
 def test_what_builds_up_is_where_marked_particles_start_or_end():
@@ -511,27 +517,6 @@ def test_key_lines_keep_the_chains_order_and_ones_the_song_cannot_show_stay_in_t
     details = [p.detail for p in report.problems if p.rule == "key-line"]
     assert len(details) == 6 and any("out of the song video" in d and "Said only" in d for d in details)
     assert not any("Not sung" in d for d in details)  # "" is no problem: a step the song never sings
-
-
-def test_a_key_line_on_a_lyric_that_sings_something_else_is_recorded():
-    # Round 22's pump song held "2 K⁺ binding drops phosphate → pump snaps back inward" over the potassium leak.
-    data = bundle_data()
-    data["why_chain"] = ["a", "b", "c"]
-    texts = {"v1-1": "Sodium climbs on, ATP hands the pump a piece",
-             "v1-2": "Potassium hops on, the piece drops, the pump flips back in",
-             "v2-1": "Ions leak back slowly, so the pumps run night and day",
-             "b-1": "Potassium leaks out, takes its plus charge down the hill"}
-    for line in data["lyrics"]:
-        line["text"] = texts.get(line["id"], line["text"])
-    data["lyrics"][5]["section"] = "verse"  # b-1: a verse line here
-    data["key_lines"] = [{"from_line": "v1-1", "text": "How does the pump keep sodium out?", "from_narration": "n1"},
-                         {"from_line": "b-1", "text": "2 K⁺ binding drops phosphate → pump snaps back inward"},
-                         {"from_line": "v2-1", "text": "Leaks never stop → pumps run nonstop"}]
-    found = [p.detail for p in checks.misplaced_key_lines(Bundle.model_validate(data))]
-    assert found == ['the key line "2 K⁺ binding drops phosphate → pump snaps back inward" is on b-1 ("Potassium leaks '
-                     'out, takes its plus charge down the hill"), which may sing something else: v1-2 ("Potassium '
-                     'hops on, the piece drops, the pump flips back in") says more of it']
-    assert checks.step_words("Na⁺ leaks, K⁺ dropped") == {"sodium", "leak", "potassium", "drop"}
 
 
 def test_key_lines_are_recorded_when_too_few_or_too_long():

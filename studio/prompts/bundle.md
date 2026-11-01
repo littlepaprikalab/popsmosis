@@ -640,15 +640,18 @@ List each only where the facts say so, naming structures as in `structures`; the
 fact-check holds each to the facts. [] when there is none.
 
 - `builds_up`: what is crowded in a space, when the lesson is about it (a gradient):
-  `[{"carries": "H⁺", "region": "Thylakoid lumen", "held": false}]`. The region is a
-  structure that is a space (a lumen, a compartment); particles
-  with the same `carries` end in it (piling up) and start from it (leaving), and the video
-  fills and empties it, and puts a few of them in the space at their path's other end, where
-  they are scarce, not absent. `held`: true for a difference that is always there and kept
-  (sodium outside a resting cell, potassium inside it: the video shows it full from the
-  start, and a leak only dips it), false for one the lesson builds up (H⁺ pumped into the
-  lumen while light shines, sodium flooding a cell whose pump has stopped: the video starts
-  it with a few and fills it).
+  `[{"carries": "Na⁺", "region": "Outside the cell", "held": true}, {"carries": "H⁺",
+  "region": "Thylakoid lumen", "held": false}]`. The region is a structure that is a space
+  (a lumen, a compartment); particles with the same `carries` end in it (piling up) and
+  start from it (leaving), and the video fills and empties it, and puts a few of them in
+  the space at their path's other end, where they are scarce, not absent. `held` is true
+  when the crowd is already there before the lesson starts and something keeps it so:
+  sodium outside and potassium inside every resting cell are `held: true`, though a pump
+  keeps them, since the pump keeps a crowd that is already there (the video shows it full
+  from the start, and a leak only dips it). It is false only when the lesson builds the
+  crowd up from few: H⁺ pumped into the lumen once light shines, sodium flooding a cell
+  whose pump has stopped (the video starts it with a few and fills it). Nov 1: the pump's
+  droplet wrote its own resting gradients `false`, and the video began them nearly empty.
 - `spins`: a part that turns while particles flow into or through it (a rotor, a turbine):
   `[{"structure": "ATP synthase"}]`. The video turns it while they flow.
 - `blocks`: what stops the particles that reach it, on a failure scene (a poison, a drug, a
