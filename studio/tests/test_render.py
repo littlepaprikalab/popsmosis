@@ -1225,6 +1225,56 @@ def test_a_hop_from_part_to_part_ends_at_the_face_nearest_the_part_it_comes_from
     assert renderer._flow_line("overview", flow)[-1] == pytest.approx(end)  # and the arrow ends there
 
 
+def test_a_space_the_lesson_fills_is_a_space_however_patchy_its_outline_and_an_arrow_into_it_runs_straight(
+        job, monkeypatch):
+    # Nov 1: the pump's cytoplasm came back as red speckle on the pink, 3% of its box. Taken for a part, K⁺ ran
+    # sideways to the speckle's label point; routed through the speckle, it then hooked out to a speck and back.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    thylakoid = located(job, "overview", "Thylakoid")
+    monkeypatch.setitem(renderer.scene("overview")._shapes, "Thylakoid", (0.03, None))
+    monkeypatch.setattr(renderer, "_crowded", set())
+    assert not renderer._is_space("overview", thylakoid)
+    monkeypatch.setattr(renderer, "_crowded", {"Thylakoid"})  # what H⁺ builds up in
+    assert renderer._is_space("overview", thylakoid)
+    path = ["Cytochrome b6f", "Thylakoid"]
+    monkeypatch.setattr(renderer, "_routed", lambda *a: [(0.0, 0.0), (500.0, 900.0), (1.0, 1.0)])  # a detour
+    assert renderer._bends("overview", path) == [None]
+    flow = Particles(path=path, color="#F2C230", label="H⁺", trail=True)
+    assert renderer._flow_line("overview", flow) == renderer._path_points("overview", path)  # one straight leg
+
+
+def test_a_crossing_through_a_part_as_tall_as_the_picture_ends_inside_the_spaces_beside_it(job, monkeypatch):
+    # Nov 1: ATP synthase's close-up ran from the bottom of the picture to the top, and its H⁺ arrow ended past the
+    # picture's top edge, "just past" the synthase.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    located_ = renderer.locations.scene("overview")
+    inside, part = located_.get("Thylakoid"), located_.get("Cytochrome b6f")
+    inside = inside.model_copy(update={"box": Box(x0=0, y0=640, x1=1792, y1=1000), "centroid": Point(x=896, y=820),
+                                       "label_anchor": Point(x=900, y=900)})
+    outside = inside.model_copy(update={"name": "Stroma", "box": Box(x0=0, y0=20, x1=1792, y1=300),
+                                        "centroid": Point(x=896, y=160), "label_anchor": Point(x=900, y=150)})
+    monkeypatch.setattr(located_, "structures", [inside, part, outside])
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name in ("Thylakoid", "Stroma"))
+    monkeypatch.setattr(renderer, "_extent", lambda *a, **k: (5.0, 1015.0))  # the part, top to bottom
+    (_, y0), _, (_, y1) = renderer._crossing("overview", ["Thylakoid", "Cytochrome b6f", "Stroma"])
+    assert inside.box.y0 < y0 < inside.box.y1 and outside.box.y0 < y1 < outside.box.y1
+
+
+def test_a_hop_into_a_space_whose_point_lies_in_the_parts_box_still_has_length(job, monkeypatch):
+    # Nov 1: the pump's box held the whole strip the picture's outside of the cell was found as; leaving the box
+    # toward the outside's point landed on it, and the Na⁺ arrow had no length.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    located_ = renderer.locations.scene("overview")
+    part = located_.get("Cytochrome b6f")
+    strip = located_.get("Thylakoid").model_copy(update={
+        "name": "Stroma", "box": Box(x0=0, y0=part.box.y0 + 20, x1=1792, y1=part.box.y0 + 120),
+        "centroid": Point(x=896, y=part.box.y0 + 70), "label_anchor": Point(x=896, y=part.box.y0 + 70)})
+    monkeypatch.setattr(located_, "structures", [part, strip])
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name == "Stroma")
+    points = renderer._path_points("overview", ["Cytochrome b6f", "Stroma"])
+    assert math.dist(points[0], points[-1]) > 10
+
+
 
 # --- a graph's axis names -------------------------------------------------------------------
 

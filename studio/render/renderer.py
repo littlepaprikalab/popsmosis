@@ -588,6 +588,15 @@ def _inside(q: Point, box) -> bool:
     return box.x0 <= q[0] <= box.x1 and box.y0 <= q[1] <= box.y1
 
 
+def _in_space(at: float, loc, upright: bool) -> float:
+    """A crossing's end kept inside the space it reaches, a tenth of the way in from its box's edges, as a space's
+    stop is (_path_stops): ATP synthase's close-up of Nov 1 ran from the bottom of the picture to the top, and its H⁺
+    arrow ended past the picture's top edge."""
+    lo, hi = (loc.box.y0, loc.box.y1) if upright else (loc.box.x0, loc.box.x1)
+    inset = (hi - lo) * 0.1
+    return min(max(at, lo + inset), hi - inset)
+
+
 def _leave(a: Point, b: Point, box) -> Point:
     """Where the line from a toward b leaves the box a sits in: its edge, or a itself when a is outside it."""
     t_out = 1.0
@@ -818,6 +827,8 @@ class Renderer:
         self._scenes: dict[str, SceneArt] = {}
         self._through: dict[tuple, list[Point] | None] = {}  # legs routed through the parts (_routed)
         self._frame_tints: tuple = ()  # the crowds' tints of the frame being drawn (_crowd_tints)
+        # The spaces the lesson fills (Bundle.builds_up, as the beats' crowds): spaces wherever they are drawn big.
+        self._crowded = {c.region for beat in timeline.beats for c in beat.crowds if not c.thin}
         scene_ids = {b.scene for b in timeline.beats}
         for scene_id in sorted(scene_ids):
             if self.locations.scene(scene_id) is None:
@@ -1877,11 +1888,13 @@ class Renderer:
                 p.draw_crowd_dot(canvas, at, crowd.color, alpha * fade)
 
     def _is_space(self, scene_id: str, loc) -> bool:
-        """A space (the stroma, a lumen): a box covering much of its picture, or spanning most of its width."""
+        """A space (the stroma, a lumen): a box covering much of its picture, or spanning most of its width. One the
+        lesson fills is a space however little of its box its outline fills: the pump's cytoplasm came back as red
+        speckle on the pink (3% of its box), and K⁺ crossed the picture sideways to the speckle's label point."""
         art = self.scene(scene_id)
         wide, tall = loc.box.x1 - loc.box.x0, loc.box.y1 - loc.box.y0
         big = wide * tall > SPACE_SHARE * art.width * art.height or wide > SPACE_SPAN * art.width
-        return big and (loc.name not in art.masks or art.fill(loc.name) >= SPACE_FILL)
+        return big and (loc.name not in art.masks or loc.name in self._crowded or art.fill(loc.name) >= SPACE_FILL)
 
     def _path_stops(self, scene_id: str, path: list[str], lane: int = 0) -> list[tuple[Point, object]]:
         """Where particles stop along a path, in art pixels, each with the structure it is in: a structure's label
@@ -1975,11 +1988,15 @@ class Renderer:
         points = [point for point, _ in pairs]
         if len(pairs) < 2:
             return points
+        # Not when the space's point lies in the part's box (the pump's box held the whole strip of the outside the
+        # Nov 1 picture found): leaving the box toward it lands on it, and the arrow had no length. The stop is
+        # already at the part's face (_face).
         (a, first), (b, second) = pairs[0], pairs[1]
-        if not self._is_space(scene_id, first) and self._is_space(scene_id, second):
+        if not self._is_space(scene_id, first) and self._is_space(scene_id, second) and not _inside(b, first.box):
             points[0] = _leave(a, b, first.box)
         (y, before), (z, last) = pairs[-2], pairs[-1]
-        if not blocked and self._is_space(scene_id, before) and not self._is_space(scene_id, last):
+        if (not blocked and self._is_space(scene_id, before) and not self._is_space(scene_id, last)
+                and not _inside(y, last.box)):
             points[-1] = _leave(z, y, last.box)
         return points
 
@@ -1996,12 +2013,14 @@ class Renderer:
         ends = self._path_points(scene_id, path, lane=lane)  # where the particles set off and arrive
         bends: list[Point | list[Point] | None] = []
         for i, (a, b) in enumerate(zip(points, points[1:])):
+            # Straight before any route: routed through a space's patchy outline (the cytoplasm as red speckle), K⁺
+            # from the pump hooked out to a speck and back on its way down.
+            if self._is_space(scene_id, stops[i]) or self._is_space(scene_id, stops[i + 1]):
+                bends.append(None)
+                continue
             through = self._routed(scene_id, stops[i], stops[i + 1], ends[i], ends[i + 1])
             if through:  # along the parts themselves, where their outlines join
                 bends.append(through)
-                continue
-            if self._is_space(scene_id, stops[i]) or self._is_space(scene_id, stops[i + 1]):
-                bends.append(None)
                 continue
             length = math.dist(a, b) or 1.0
             nx, ny = (b[1] - a[1]) / length, -(b[0] - a[0]) / length  # perpendicular to the leg...
@@ -2039,12 +2058,16 @@ class Renderer:
                 near, far = self._extent(scene_id, part, across, upright=True)
                 down = by > ay
                 start, end = (near - SPACE_REACH, far + SPACE_REACH) if down else (far + SPACE_REACH, near - SPACE_REACH)
+                start, end = (_in_space(start, stops[0], True) if self._is_space(scene_id, stops[0]) else start,
+                              _in_space(end, stops[2], True) if self._is_space(scene_id, stops[2]) else end)
                 found = [(across, start), (across, (near + far) / 2), (across, end)]
             elif not upright and min(ax, bx) < mid.x < max(ax, bx):
                 across = part.label_anchor.y + LANE_GAP * (1 if lane % 2 else -1) * ((lane + 1) // 2)
                 near, far = self._extent(scene_id, part, across, upright=False)
                 right = bx > ax
                 start, end = (near - SPACE_REACH, far + SPACE_REACH) if right else (far + SPACE_REACH, near - SPACE_REACH)
+                start, end = (_in_space(start, stops[0], False) if self._is_space(scene_id, stops[0]) else start,
+                              _in_space(end, stops[2], False) if self._is_space(scene_id, stops[2]) else end)
                 found = [(start, across), ((near + far) / 2, across), (end, across)]
         self._through[key] = found
         return found
