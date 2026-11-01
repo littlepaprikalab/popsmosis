@@ -660,8 +660,12 @@ fact-check holds each to the facts. [] when there is none.
   On the analogy scene, one for each part that stands for something: the real thing, as
   short as a label (`{"structure": "Electric pump", "text": "the Na⁺/K⁺ pump"}`, `{"structure":
   "Power line", "text": "ATP"}`); the video writes "= the Na⁺/K⁺ pump" beside the part once
-  a line names it, so the learner maps each part, and only the parts the facts support. []
-  for a droplet with neither.
+  a line names it, so the learner maps each part, and only the parts the facts support. Each
+  makes sense read alone, beside nothing but its part: say where and which way ("channels
+  letting Na⁺ into the cell", never "channels letting Na⁺ back in"). It maps only what the
+  part does in the analogy: an electric pump lifting water stands for "the pump moving Na⁺
+  out of the cell", never "the Na⁺/K⁺ pump" when nothing in the picture stands for the K⁺
+  it brings in. [] for a droplet with neither.
 
 ## On screen
 

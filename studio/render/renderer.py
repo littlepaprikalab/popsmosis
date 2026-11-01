@@ -846,6 +846,7 @@ class Renderer:
         self._handoff_arrows: dict[tuple, list] = {}  # each such flow's arrows, in art pixels, with the part entered
         self._note_spots: dict[tuple, Point] = {}  # where each note sits (an arrow's one-liner, a part's mapping), art
         self._noted: dict[str, list[Rect]] = {}  # the notes placed on each scene, art pixels, for the next to keep clear
+        self._leaders: dict[str, list[tuple[Point, Point]]] = {}  # and the lines joining each to what it is about
         self._arrowed_labels: dict[str, set[str]] = {}  # per scene, what travels as arrows (the legend's)
         self._scene_values: dict[str, list] = {}  # per scene, every value it writes in the video (_value_points)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
@@ -2279,6 +2280,12 @@ class Renderer:
             w, h = size
             points = [(loc.label_anchor.x, loc.label_anchor.y) for loc in self.locations.scene(scene_id).structures]
             placed = self._noted.setdefault(scene_id, [])
+            leaders = self._leaders.setdefault(scene_id, [])
+
+            def crosses(box, a, b) -> bool:  # a line from a to b passes through the box
+                return any(box[0] <= a[0] + (b[0] - a[0]) * k / 16 <= box[2] and
+                           box[1] <= a[1] + (b[1] - a[1]) * k / 16 <= box[3] for k in range(1, 16))
+
             best = None
             for reach in NOTE_REACH:
                 for ux, uy in NOTE_SIDES:
@@ -2293,11 +2300,18 @@ class Renderer:
                                 if box[0] - h / 2 <= q[0] <= box[2] + h / 2 and box[1] - h / 2 <= q[1] <= box[3] + h / 2)
                     cost += sum(NOTE_CROWD * 4 for r in placed
                                 if r[0] < box[2] and box[0] < r[2] and r[1] < box[3] and box[1] < r[3])
+                    # Nor across another note's line, nor its own line across another note (Nov 1: the house's
+                    # line ran through the channels' note).
+                    near = (min(max(anchor[0], box[0]), box[2]), min(max(anchor[1], box[1]), box[3]))
+                    cost += sum(NOTE_CROWD * 2 for a, b in leaders if crosses(box, a, b))
+                    cost += sum(NOTE_CROWD * 2 for r in placed if crosses(r, near, anchor))
                     if best is None or cost < best[0]:
                         best = (cost, (cx, cy), box)
             if best is None:
                 best = (0.0, anchor, (anchor[0] - w / 2, anchor[1] - h / 2, anchor[0] + w / 2, anchor[1] + h / 2))
             placed.append(best[2])
+            box = best[2]
+            leaders.append(((min(max(anchor[0], box[0]), box[2]), min(max(anchor[1], box[1]), box[3])), anchor))
             self._note_spots[key] = best[1]
         return self._note_spots[key]
 
