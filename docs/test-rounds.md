@@ -1368,6 +1368,104 @@ The brief was read for what it says twice, or says for something code now does. 
   scorecard runs, the writer showed the whole pathway wherever something travels (31 of 34 chorus lines for the
   light reactions, 28 of 31 for the pump) and held still where nothing does. The first went.
 
+## In-session round, Nov 1: five topics end to end
+
+The first five scorecard topics (`studio/scorecards/topics.json`), each from its request to its finished song,
+lesson and upright hook videos, with no Anthropic API call at all: every call the pipeline makes to Claude was
+answered by a subagent in the Claude Code session, from the exact system prompt, prompt, schema and images the code
+built. The owner approved the paid calls and their prices: Muse Image ($0.01 a picture), SAM 3.1 ($0.0025 an image),
+Lyria 3.5 ($0.08 a song) and Gemini TTS (about $0.04 a narration). The Anthropic and ElevenLabs keys were unset, so a
+call nobody approved would fail rather than bill. The owner had first asked for all 12 topics and then cut the round
+to five.
+
+How it ran (`tools/insession/`): each topic's job (`jobs/<topic id>/`, so the song style rotates as in the
+scorecard) ran the studio's own steps, `bundle`, `audit` and `factcheck`, then the videos as `make` runs them, with
+`settings.json` set to `{"song": {"provider": "gemini"}, "art": {"claude": "muse"}}`. Their `ask` wrote each call to a
+folder and waited until a subagent saved an answer, which `answer.py` checked against the call's schema and the
+studio's own model. The brain's calls were answered on the session's model (the writer did the script and then the
+bundle), the helper's on Sonnet as the pipeline runs them. 157 calls in all.
+
+| Topic | Spend | What the fact audit and the fact-check changed | Pictures repainted, and why | What looked wrong in the videos |
+|---|---|---|---|---|
+| The sodium-potassium pump | $0.31 | Audit: a stroke is "the most common kind" that a clot causes, not every stroke. Fact-check: the two lines that still said every stroke (narration, lesson); 132 of 134 passed round 1 | The facing-in close-up once: ATP floated apart from the pump and the K⁺ arrows pointed the wrong way. Kept with one wrong label ("ATP Phosphate group"), flagged | Choruses mistimed and the hook cut short (below). ATP dots ran through the pump to the outside of the cell, Na⁺ ran sideways (fixed, below). The facing-out picture also opens to the inside, and only a sticky note says so. The gut picture's route ends in a mitochondrion. The upright hook crops the painted labels and its flag. The picture's own ions beside the video's Na⁺/K⁺ dots |
+| The light reactions | $0.44 | Audit: all correct. Fact-check (3 rounds): photosystem I does not make NADPH itself; "your own cells" became mitochondria; 3 motions dropped (NADPH from photosystem I; photosystem I or the cycle turning things into NADPH or sugar) | None | The last key line stays through the whole weed-killer case. The overview stays pale until its 15 parts are named. Arrow one-liners over painted labels. SAM cost $0.27: 7 of 43 parts never found |
+| What a derivative means | $0.13 | Audit: a derivative is zero at a peak or valley, not at an endpoint. Fact-check: nothing failed | None: its hook was painted once, and its 3 graphs, drawn as SVG, were each refused once (their dots too small, below) and redrawn | Text on the graph collides: two parts' meanings run together, and the arrow's one-liner sits on "Point Q" |
+| Why the French Revolution happened | $0.24 | Audit: England had "a similar trigger", not "the same causes". Fact-check (2 rounds, 8 lines): the bridge (the songwriter's "Same broke king, but church fights stir the pot" and "In France, that's when the lid gives way"), the narration and lesson on England, "the lid blows off" moved to August, and 3 picture descriptions that named a real king | None | The corrected England line is 31 words, and the lyric band shrinks it to unreadable type. The overview is pale for long stretches and the camera crops its labels. The last key line stays through the England case |
+| Dramatic irony in Romeo and Juliet | $0.24 | Audit: three facts (suspense or humour; the wedding is offstage; Paris is arranged in Act 3). Fact-check: 7 lines, the core idea among them ("so we often watch") | None (the tomb lacks its vault, logged as minor) | The last key line stays from the potion to the end. The camera's follow crops painted labels ("rents", "us"). Nothing flows in it, so no arrows |
+
+Every learner test passed first time (the core idea and every link), so no lesson was rewritten. The narration edits
+added linking words, and twice moved a passage so the lesson ends on its core idea. The round cost $1.48: the five
+topics, and $0.12 for repainting the pump's close-ups in the overview's look (below).
+
+### Fixed on this branch
+
+- **Particles went sideways and through the membrane** ([still](test-rounds-nov1/pump-atp-dots-cross-membrane.jpg)). A
+  flow's stops were its parts' label points. The inside of the cell had its label point at the picture's far left
+  edge, so the pump's crossing read as left to right and the Na⁺ ran sideways. In the close-up, the pump's label
+  point was in its lobes above the membrane, and ATP crossed the membrane to reach it. Now a crossing's direction comes
+  from where its ends lie beside the part, and a part at a path's end is met at its face toward the stop beside it.
+- **Flows are arrows that move** (the owner). Off a graph, each flow is a faint dotted track, with a short arrow (a
+  third of the route, at most 170 px) gliding along it, and its particle rides the arrow's head (the owner's idea). It
+  fades at the head and waits at the tail through a short pause
+  ([stills, 0.4 s apart](test-rounds-nov1/pump-arrows-with-riding-particles.jpg)). The pump was re-rendered both ways.
+- **Close-ups in the overview's look** (the owner, after the pump's pictures came out in different styles: "not sure
+  if they are intended to convey something different"). A scene that shares a part with the overview is now painted
+  after it, redrawn from the overview's picture. Tried on the pump only ($0.12): the set reads as one, but the
+  facing-in pocket reads less clearly, and the stroke picture came back with three wrong labels, each flagged
+  ([before and after](test-rounds-nov1/pump-close-ups-before-after-style.jpg)). The other four topics kept their first
+  pictures.
+
+### Still wrong, worst first
+
+1. **The choruses are mistimed, in all five songs.** The forced aligner (MMS_FA on Demucs's vocals; no model
+   writes the timings) puts several chorus lines in under a second, then leaves the singer singing over a blank
+   band for 6 to 15 s ([still](test-rounds-nov1/pump-chorus-blank-band.jpg)): the pump's first chorus is sung from
+   54 to about 69 s, timed 54 to 60 s. Chorus lines under a second: pump 5 of 17, derivative 4 of 14, French
+   Revolution 4 of 17, light reactions 1, dramatic irony 1. Each song passed the step, the aligner being unsure of 20
+   to 23 lines of 47 to 50, under its limit. The hook cut is timed from it too, so the pump's ends a third of the way
+   into its chorus. Lyria returns its words (it sang the lyrics as written) but no timings.
+2. **Crackle in the songs.** Lyria's songs are mastered loud: the pump's goes past full scale 79 times, in its
+   choruses. The audio step then re-encodes Lyria's MP3 to MP3, and the render to AAC, with no headroom. Proposed:
+   keep Lyria's MP3 as it comes, and lower it a dB or two before the render (not done, for the owner's word).
+3. **The last key line stays for a minute or more** when a lesson ends on a case (the stroke, the weed killer,
+   England, the tomb): the band holds the last step of the why chain over the whole case
+   ([still](test-rounds-nov1/irony-key-line-held-over-tomb.jpg)).
+4. **A fact-check correction can lengthen a narration line past the band** (the England line, 31 words, in tiny
+   type: [still](test-rounds-nov1/french-long-line-tiny-band.jpg)). The narration editor holds lines to 22 words, but
+   the checker's corrections are not held to anything.
+5. **A graph dot that is a part of its own is refused every first time.** The drawing instructions give a point
+   `r="12"` (about 650 px drawn), and the code refuses a part under 1,500 px (`svg.MIN_AREA`). All three derivative
+   graphs came back once, and the redraws used r ≈ 33. Proposed: draw a point that is a part of its own at r ≥ 24 in
+   `svg.style`.
+6. **Text collides on a graph** ([still](test-rounds-nov1/derivative-text-collides.jpg)): two meanings at the top run
+   into each other, and the arrow's one-liner sits on "Point Q".
+7. **Painted labels are cropped**: by the camera's follow and zoom on every topic
+   ([still](test-rounds-nov1/french-pale-overview-cropped-labels.jpg)), and by the upright hook, which also drops the
+   sticky note of a flagged label ([still](test-rounds-nov1/pump-hook-crops-labels.jpg)). A painted picture labels
+   itself, so the video cannot move its labels clear.
+8. **A painting that contradicts its scene is not repainted.** The pump's facing-out stage also opens to the inside.
+   The checker listed it under "wrong" (recorded, not repainted), not "misplaced", so it was only disclosed in a
+   sticky note.
+9. **Pale for long**: a picture's parts are ghosted until named, and an overview with many parts (the light
+   reactions' 15, the French timeline's 8) stays mostly pale for 30 s or more.
+10. **The arrows' one-liners sit on painted labels** ([still](test-rounds-nov1/light-arrow-note-on-labels.jpg)): they
+    keep clear of the video's labels, which a painted picture has none of.
+11. Smaller: the pump's hook scene labelled "Body" and "Couch". The picture's own painted ions beside the video's
+    Na⁺/K⁺ dots, in other colours. Three French picture descriptions failed the public-text rule for naming real
+    kings (Louis XVI, Charles I), though the facts and the labels name them.
+
+### The round itself
+
+- Two drivers were killed for memory (4 GB each) while a third topic rendered, on this 15 GB machine. Run two or three
+  topics at once at most. They were restarted from the commit before the art change, so their pictures were kept. A
+  repair the killed run had made in place changed one picture, so 6 SAM calls were billed again ($0.015).
+- When a label check fails, locate asks the helper for the same box again, with the same picture and prompt. The
+  driver answered it with the first answer (the pump's "Small intestine"). The live helper would likely answer it
+  alike: the second call learns nothing from the failed dot.
+- SAM is the largest and least predictable cost: $0.005 for the derivative, whose graphs locate themselves, and
+  $0.27 for the light reactions, whose overview has 15 parts. Each part is asked in up to three phrasings, then by the
+  helper's box.
+
 ## Not tested
 
 - `python -m studio run`, `videos`, `wait`, `recover` and the upload step: they post to the
@@ -1385,6 +1483,9 @@ python -m studio show <id> --brief
 ```
 
 For the art alone: `plan`, then `python -m studio step art <id>` and `step locate <id>`.
+
+To run topics with every Claude call answered by subagents in a Claude Code session, as the Nov 1 round did, see
+`tools/insession/README.md`: `tools/insession/start.sh <topic id>`, then answer what `answer.py groups` lists.
 
 To hear a lesson sung by the other singer (round 17), copy the finished job, set
 `{"song": {"provider": "gemini"}}` (or `"elevenlabs"`) in the copy's `settings.json`, and run
