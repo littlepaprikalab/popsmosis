@@ -257,3 +257,41 @@ Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current 
   an improvement; a harder transfer question would.
 - **The judge's error list is still noisy:** about a third of its 22 entries say nothing needs
   correcting. Trust the accuracy score and its reason over the count.
+
+### Again, after the principles brief
+
+Run again in the session after the writers' prompts were rebuilt on seven teaching principles and cut back (commit
+a6063f3): no "same trick in another topic" or "what comes next in the course" fact, one pre-chorus, a bridge only for
+a system that can fail, a case only where the idea applies to something new, the everyday comparison optional and said
+once, motion only where a line names it, and examples no longer drawn from these 12 topics. The learner test and the
+narration edit were skipped, as in every in-session run. Judged by Opus beside the same baseline droplets:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 1, after the trim | 12 of 12 | 4.52 | 3.75 | 3 / 12 |
+| Nov 1, principles brief | 12 of 12 | 4.33 | 3.64 | 3 / 14 |
+
+By criterion, against the trim: frame 2.75 (4.75), key lines 4.75 (4.00), hook 4.58 (4.58), why chain 4.67 (4.67),
+accuracy 4.75 (4.75), singability 4.00 (4.08), lesson 4.83 (4.83). The whole drop is the frame: the rubric rewards one
+comparison carried through the song, the lesson and the narration, which this brief no longer asks for. Without the
+frame the new droplets score 4.60 against the baseline's 3.57. The key lines went up most. Read through:
+
+- **No second topic.** The French Revolution's core idea is "France's king went broke, and the Third Estate turned a
+  fight over who pays into a fight over who rules"; no England, Charles I or pressure cooker. Its misconception is a
+  real one ("did the royal court's luxury at Versailles empty the treasury?"), sung as "Not the court, its slice is
+  small / War debt eats up half of it all". Romeo and Juliet's title is the play itself, "We see the end, but Romeo
+  can't", where it was "Don't open that door, Romeo".
+- **The comparison is used in 4 of 12, once each:** the pump's water tower, the light reactions' solar charger, the
+  p-value's trial, Romeo and Juliet's surprise party. The judge marks the others down for having none (the French
+  Revolution 1, the subjunctive and the Moon 2).
+- **Bridges only where a system can fail:** the pump's stroke, the light reactions' weedkiller, the catalyst's boiled
+  potato, the rocket's engine quitting, supply and demand's price cap. The other seven songs run 37 to 40 lines. The
+  derivative dropped its corner of |x|; the subjunctive moved its rotation's rapped bridge to its second verse.
+- **A false alarm:** on every song without a bridge the last two choruses run together, and song_shape_problems counts
+  them as one ("the chorus is sung 2 times, not 3").
+- **A new tic:** the French narration says "Back on the line" four times, about a timeline it never sets up, from the
+  script prompt's "back to the overview between close-ups".
+- **Three errors:** Juliet waking moments too late called situational irony as if a twist could only be that; the light
+  reactions song singing "hydrogen" for hydrogen ions; the rocket coasting "because nothing pushes it", leaving out
+  gravity. The fact-check, which this run leaves out, is where these would be caught.
+- **Still long:** the lessons run 512 to 697 words against the 300 to 500 asked, and the narrations 366 to 417 of 420.
