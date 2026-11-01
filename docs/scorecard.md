@@ -233,7 +233,8 @@ time, scored 3.75 against 3.79: about that much is the judge. Read through:
   order. The brief now asks for the question first, keeps the core idea at the top of every frame and never on a
   key line, and each video places the key lines by its own lines: the anchor is out of date.
 - **The lyric check that flags a line narrating the picture** fired on "Watch the replay, you know the score" and
-  "Watch where the slopes are heading": a frame sung to the listener, not a camera direction.
+  "Watch where the slopes are heading": a frame sung to the listener, not a camera direction. It now counts "watch"
+  and "see" only after "now" or "let's", and "look" only when it points somewhere ("look at", "look inside").
 - Chorus lines with particles: 79 of 198 (70 of 204 in the evening), with the summing-up rule gone.
 
 ## The baseline: `20261029-2019-ba83842`

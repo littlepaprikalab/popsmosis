@@ -210,7 +210,7 @@ def test_the_judge_reads_the_whole_droplet():
     text = scorecard.droplet_text(bundle, Request(topic="x", request="for my exam", study_guide="ATP is made."))
     for part in (bundle.core_idea, "1. A because B", bundle.lesson_markdown.strip(), "[chorus]", "c1-1: " + CHORUS,
                  "n2: ATP synthase uses", "for my exam", "## Study guide the learner gave\nATP is made.",
-                 "## Key lines (on screen, in order, each from the line it starts on)\n(none)"):
+                 "## Key lines (on screen, in the why chain's order, each from the line it starts on)\n(none)"):
         assert part in text
 
 

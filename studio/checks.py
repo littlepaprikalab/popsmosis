@@ -291,9 +291,16 @@ def rapped_lines(data: dict) -> set[str]:
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
 # next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
 # arriving ("Here comes HIV with a protein like a key"), as three droplets did on Oct 29.
+# A bare "watch" or "see" is sung to the listener as often as not, and carries a song's frame: "Watch the replay, you
+# know the score", "Watch the needle climbing slow" (Nov 1). They point at the screen only after "now" or "let's",
+# and "look" only when it points somewhere ("look at", "look inside"); "zoom" always does.
 SECTION_NAMES = r"(?:intro|verse|pre-chorus|chorus|bridge|hook|outro)"
-DIRECTION_LINE = re.compile(r"^\W*(?:now\s+)?(?:let'?s\s+)?(?:zoom|look|see|watch|here\s+we"
-                            rf"|(?:next\s+up|here\s+comes)\W+(?:(?:is|comes|the|a)\s+)*{SECTION_NAMES}\b)\b", re.I)
+DIRECTION_LINE = re.compile(r"^\W*(?:(?:now\s+)?(?:let'?s\s+)?zoom"
+                            r"|(?:now\s+|(?:now\s+)?let'?s\s+)(?:look|see|watch)"
+                            r"|(?:now\s+)?(?:let'?s\s+)?look\s+(?:at|inside|into|closer|here)"
+                            r"|(?:now\s+)?here\s+we"
+                            rf"|(?:now\s+)?(?:next\s+up|here\s+comes)\W+(?:(?:is|comes|the|a)\s+)*{SECTION_NAMES})\b",
+                            re.I)
 
 
 def _check_lyric_style(data: dict, problems: list) -> None:

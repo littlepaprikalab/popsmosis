@@ -356,6 +356,16 @@ def test_next_up_and_here_comes_announce_a_section_but_are_sung_before_anything_
     assert narrates == [True, True, True, True, False, False, False]
 
 
+def test_a_sung_watch_or_see_is_not_a_direction():
+    # Nov 1: two songs' frames were flagged as narrating the picture.
+    narrates = [bool(checks.DIRECTION_LINE.match(text)) for text in (
+        "Zoom inside to the chloroplast", "Zoom on the corner, what do you see?", "Now look at the membrane",
+        "Look inside the nephron", "Let's see how the pump turns", "Now watch the gate swing open",
+        "Watch the replay, you know the score", "Watch the needle climbing slow", "See if the same result is found",
+        "Look up some night, a silver sliver", "Now seeing is believing")]
+    assert narrates == [True, True, True, True, True, True, False, False, False, False, False]
+
+
 def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     def change(data):
         direction(data, "v1-2").update(particles=["Thylakoid", "Cytochrome b6f"], carries="e⁻", glow="Thylakoid")
