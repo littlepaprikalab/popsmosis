@@ -410,8 +410,7 @@ In this order, each section a run of lines with its own `section` value:
   on the title line, but most songs are better opening on a line that leads to it, so the
   chorus lands it ("Moon rolls over, the water leans / Sand gets swallowed, then it's seen",
   before "Pull the sea, then let it go").
-- **Verse**, 8 lines, four couplets: the first half of the story in order, a couplet a step
-  (the first line shows it happening, the second lands what follows).
+- **Verse**, 8 lines, four couplets: the first of the things to remember.
 - **Pre-chorus**, 2 lines, once in the song: bust the misconception with a fact, singing the
   right idea and the mistake only as what it is not ("it's not how close, it's how the
   Earth is tilted"), never a filler like "that isn't true". It comes before the first chorus,
@@ -422,7 +421,7 @@ In this order, each section a run of lines with its own `section` value:
   fro"): for a process, what goes in and what comes out ("Sugar and oxygen in / Water, CO2
   out"); for any other idea, its cause and its result, never "in" and "out". Short words,
   nothing to stumble on.
-- **Verse**, 8 lines: the second half of the story, ending with what it makes.
+- **Verse**, 8 lines: the rest of them.
 - **Chorus**, word for word.
 - **Bridge**, 8 lines, only for a system that can fail: a sung exam question. Name one thing
   that breaks it (a drug, a toxin, a mutation, a missing part) and walk its effects in
