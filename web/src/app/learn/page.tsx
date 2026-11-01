@@ -581,10 +581,13 @@ function LearnContent() {
             Droplets for learning
           </p>
           <p className="text-sm leading-relaxed mb-6" style={{ color: 'var(--text-secondary)' }}>
-            {/* Kept in pieces that don't wrap, so the highlight never breaks and the song never ends a line alone */}
-            Ask for any topic. An AI teacher makes you a <DropletPill />: a short lesson with{' '}
-            <span className="whitespace-nowrap">a <Marked color="var(--accent-green)">narrated video</Marked></span>{' '}
-            <span className="whitespace-nowrap">and a <SongChip />.</span>
+            {/* A line can break between a pill and the character after it, so the colon and the period are held to
+                theirs. The two phrases are kept whole only from 16em of screen up (em follows the reader's text
+                size), where the card has room for them; narrower, they wrap rather than push the card off screen. */}
+            Ask for any topic. An AI teacher makes you a{' '}
+            <span className="whitespace-nowrap"><DropletPill />:</span> a short lesson with{' '}
+            <span className="min-[16em]:whitespace-nowrap">a <Marked color="var(--accent-green)">narrated video</Marked></span>{' '}
+            <span className="min-[16em]:whitespace-nowrap">and a <span className="whitespace-nowrap"><SongChip />.</span></span>
           </p>
           <Link href="/auth/callback?returnTo=%2Flearn"
             className="inline-block px-6 py-3 rounded font-bold text-sm uppercase tracking-wider transition-colors"

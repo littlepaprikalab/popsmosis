@@ -127,9 +127,10 @@ export default function AboutPage() {
             Making them was
             a <Marked color="var(--accent-pink)">pain in the tush</Marked>, with pictures that came out wrong and
             content that needed checking line by line, and the <Pill color="var(--accent-purple)">#metahackathon</Pill> was
-            a good excuse to fix that. Ask for any topic and an AI teacher makes you a <DropletPill />, a short lesson
+            a good excuse to fix that. Ask for any topic and an AI teacher makes you
+            a <span className="whitespace-nowrap"><DropletPill />,</span> a short lesson
             with a <Marked color="var(--accent-green)">narrated video</Marked> and
-            a <SongChip />. It
+            a <span className="whitespace-nowrap"><SongChip />.</span> It
             checks <strong style={{ color: 'var(--text-primary)' }}>every line and every picture</strong> first, and
             shares the droplet on the <Link href="/droplets" className="underline"
             style={{ color: 'var(--accent-blue)' }}>Droplets tab</Link> for anyone to learn from. I

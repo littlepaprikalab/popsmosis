@@ -1,4 +1,6 @@
 // Words that pop out of a sentence: the About page and the sign-in card use them to say what a droplet is.
+// A line can break between a pill or chip and the punctuation after it, so hold the two together in a
+// whitespace-nowrap span: <span className="whitespace-nowrap"><SongChip />.</span>
 
 export const tint = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 // An accent for small text: blended toward the text colour, so it darkens in the light theme and lightens in the dark
@@ -43,13 +45,16 @@ export function SongChip() {
   );
 }
 
-/** A highlighter stroke across the lower half of the words. */
+/**
+ * A highlighter stroke across the lower half of the words. A span, not <mark>: in Windows high-contrast mode a
+ * <mark> takes the system's highlight text colour on our see-through background, and the words vanish.
+ */
 export function Marked({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <mark style={{
+    <span style={{
       color: 'var(--text-primary)',
       background: `linear-gradient(transparent 55%, ${tint(color, 50)} 55%)`,
       padding: '0 0.1em',
-    }}>{children}</mark>
+    }}>{children}</span>
   );
 }
