@@ -96,10 +96,12 @@ def test_the_run_still_going_and_the_step_sending_it_count(tmp_path):
 def test_the_art_and_the_audio_are_timed_side_by_side(tmp_path):
     (tmp_path / "run.current.json").write_text(json.dumps({"part": "videos", "steps": [
         {"step": "art", "seconds": 76.0}, {"step": "audio", "seconds": 95.0}, {"step": "locate", "seconds": 0.1},
-        {"step": "timing", "seconds": 110.0}, {"step": "timeline", "seconds": 0.3}, {"step": "render", "seconds": 157.0}]}))
+        {"step": "timing", "seconds": 110.0}, {"step": "timeline", "seconds": 0.3}, {"step": "arrows", "seconds": 20.0},
+        {"step": "render", "seconds": 157.0}]}))
     report = ledger.breakdown(tmp_path, "videos", running=("upload", 12.0))
-    assert [s["step"] for s in report["steps"]] == ["art", "locate", "audio", "timing", "timeline", "render", "upload"]
-    assert report["seconds"] == pytest.approx(95.0 + 110.0 + 0.3 + 157.0 + 12.0)  # the audio branch is the longer
+    assert [s["step"] for s in report["steps"]] == ["art", "locate", "audio", "timing", "timeline", "arrows", "render",
+                                                    "upload"]
+    assert report["seconds"] == pytest.approx(95.0 + 110.0 + 0.3 + 20.0 + 157.0 + 12.0)  # the audio branch is the longer
 
 
 def test_an_interrupted_try_counts_without_a_time(tmp_path):

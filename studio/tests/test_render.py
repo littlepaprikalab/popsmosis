@@ -20,6 +20,7 @@ from studio.render.encode import EncodeError, audio_filter, encode, encode_all, 
 from studio.render.layouts import LAYOUTS
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
+    Arrows,
     AudioClip,
     Beat,
     Box,
@@ -28,6 +29,7 @@ from studio.schemas import (
     Crowd,
     Locations,
     Particles,
+    PlacedArrow,
     Point,
     Reveal,
     Route,
@@ -1240,7 +1242,6 @@ def test_a_space_the_lesson_fills_is_a_space_however_patchy_its_outline_and_an_a
     monkeypatch.setattr(renderer, "_crowded", {"Thylakoid"})  # what H⁺ builds up in
     assert renderer._is_space("overview", thylakoid)
     path = ["Cytochrome b6f", "Thylakoid"]
-    monkeypatch.setattr(renderer, "_routed", lambda *a: [(0.0, 0.0), (500.0, 900.0), (1.0, 1.0)])  # a detour
     assert renderer._bends("overview", path) == [None]
     flow = Particles(path=path, color="#F2C230", label="H⁺", trail=True)
     assert renderer._flow_line("overview", flow) == renderer._path_points("overview", path)  # one straight leg
@@ -1656,10 +1657,9 @@ def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
 
 
 def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossing_straight_through(job, monkeypatch):
-    monkeypatch.setattr(renderer_module, "ROUTES", True)  # switched off since Nov 1; the code is kept
     # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
-    # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
-    # nothing). Since Nov 1 every other flow off a graph is an arrow too, an ion's straight through what it crosses.
+    # drawn as one arrow along its way, off a graph (Nov 1: stubs at each joint read as nothing). Since Nov 1 every
+    # other flow off a graph is an arrow too, an ion's straight through what it crosses.
     arrows, dots = [], []  # each flow's track, which draws itself in, and the arrow gliding along it
     monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, color, alpha, grown=1.0:
                         arrows.append((points[0], points[-1], grown, 0.0)))
@@ -1673,8 +1673,7 @@ def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossi
     travelling = moving("filtrate", "travels")
     flow = travelling.timeline.beats[0].particles[0]
     assert travelling._travels("overview", flow)
-    line = travelling._route_line("overview", flow)  # from the thylakoid into b6f, along the way
-    assert travelling._flow_line("overview", flow) == line
+    line = travelling._flow_line("overview", flow)  # from the thylakoid into b6f
     b6f = located(job, "overview", "Cytochrome b6f").box
     assert len(line) >= 2 and b6f.x0 - 60 <= line[-1][0] <= b6f.x1 + 60 and b6f.y0 - 60 <= line[-1][1] <= b6f.y1 + 60
     start = travelling.plans[0].runs[0][0]  # when it sets off
@@ -1865,6 +1864,67 @@ def test_an_arrow_that_would_mislead_is_left_out_and_said_why(job, monkeypatch):
     wrong = Renderer(job, timeline.model_copy(update={"beats": beats}))
     assert wrong.left_out == [{"scene": "overview", "path": ["Cytochrome b6f", "Thylakoid"], "carries": "H⁺",
                                "why": "points away from Thylakoid"}]
+
+
+def pointed(tail, head, **fields):
+    """arrows.json with the sample flow's hop (the thylakoid up into b6f) as the arrows step placed it."""
+    return Arrows(arrows=[PlacedArrow(scene="overview", path=FLOW, carries="H⁺", start=Point(x=tail[0], y=tail[1]),
+                                      end=Point(x=head[0], y=head[1]), **fields)])
+
+
+def test_a_pointed_hop_is_drawn_straight_from_its_tail_to_its_head_and_the_gate_still_checks_it(job, tmp_path):
+    # Nov 1: a hop placed from SAM's outlines ran sideways, as a stub, or in an odd spot; the arrows step has the helper
+    # point it on the painting (studio/steps/arrows.py), and the renderer draws it from there.
+    timeline = flowing([flow_beat(0, 8)])
+    flow = timeline.beats[0].particles[0]
+    guessed = Renderer(job, timeline)._flow_line("overview", flow)  # no arrows.json: code places it, as before
+    assert guessed == Renderer(job, timeline, arrows=Arrows(arrows=[]))._flow_line("overview", flow)
+    renderer = Renderer(job, timeline, arrows=pointed((820, 700), (880, 520)))
+    assert renderer._flow_line("overview", flow) == [(820, 700), (880, 520)] != guessed
+    assert renderer.left_out == []
+    # The camera keeps it in view; arrows.json in the job folder is read when none is given.
+    copy = sample_media.write_job(tmp_path / "pointed", art=True)
+    jobs.write(copy / media.ARROWS, pointed((820, 700), (880, 520)))
+    assert Renderer(copy, timeline)._flow_line("overview", flow) == [(820, 700), (880, 520)]
+    # The gate checks a pointed arrow as any other: one leaving the picture is left out.
+    assert Renderer(job, timeline, arrows=pointed((820, 700), (880, -40))).left_out == [
+        {"scene": "overview", "path": FLOW, "carries": "H⁺", "why": "leaves the picture"}]
+
+
+def test_a_hop_the_arrows_step_left_out_is_never_drawn_and_says_why(job, monkeypatch):
+    timeline = flowing([flow_beat(0, 8)])
+    for why in ("the picture cannot show it: no cell is drawn", "as drawn it does not show it: it runs sideways"):
+        renderer = Renderer(job, timeline, arrows=pointed((820, 700), (880, 520), left_out=why))
+        assert renderer.left_out == [{"scene": "overview", "path": FLOW, "carries": "H⁺", "why": why}]
+        tracks = []
+        monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
+        renderer.frame(4.0)
+        assert tracks == []
+
+
+def test_a_still_of_one_arrow_shows_it_alone_part_way_along_its_glide(job, monkeypatch):
+    other = flow_beat(0, 8, path=["Cytochrome b6f", "Thylakoid"], label="O₂").particles[0]
+    beat = flow_beat(0, 8)
+    timeline = flowing([beat.model_copy(update={"particles": [*beat.particles, other]})])
+    flow = beat.particles[0]
+    renderer = Renderer(job, timeline, arrows=pointed((820, 700), (880, 520)))
+    assert [(scene, f.label, line) for scene, f, line in renderer.hops()] == [
+        ("overview", "H⁺", "protons flow"), ("overview", "O₂", "protons flow")]
+    t = renderer.arrow_time("overview", flow)
+    flow_in, flow_out = renderer.plans[0].runs[0]
+    assert flow_in + renderer_module.ROUTE_GROW_S < t < flow_out
+    pieces = []
+    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: pieces.append(points))
+    renderer.only = ("overview", tuple(FLOW), "H⁺", False)
+    renderer.frame(t)
+    [piece] = pieces  # its gliding arrow alone, its head ARROW_SEEN of the way along
+    line = [renderer.art_to_frame(t, *q) for q in renderer._flow_line("overview", flow)]
+    assert math.dist(piece[-1], line[0]) / math.dist(line[0], line[-1]) == pytest.approx(renderer_module.ARROW_SEEN,
+                                                                                      abs=0.05)
+    # A crossing is drawn as its particles crossing, never pointed, and is no hop.
+    monkeypatch.setattr(renderer, "_crossing", lambda scene_id, path, lane=0: [(0, 0), (1, 1), (2, 2)]
+                        if path == other.path else None)
+    assert [f.label for _, f, _ in renderer.hops()] == ["H⁺"]
 
 
 def test_crowds_are_left_out_unless_switched_on(job, monkeypatch):

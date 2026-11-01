@@ -23,7 +23,7 @@ from studio.media import StepFailed
 from studio.schemas import Locations, Timeline, timeline_problems
 
 LAYOUT = "h"  # the song and lesson videos; the hook cut is upright (media.HOOK_LAYOUT)
-LEFT_OUT = "left_out.json"  # per video, each arrow the sanity gate left out and why (Renderer.left_out)
+LEFT_OUT = "left_out.json"  # per video, each arrow left out and why (Renderer.left_out): the gate's, the arrows step's
 
 
 def videos(job: Path) -> list[tuple[str, str]]:
@@ -52,7 +52,8 @@ def run(job: Path, ask=None) -> str:
             raise StepFailed(f"the {video} timeline: " + "; ".join(problems))
         timelines.append(timeline)
 
-    # The arrows the renderer's sanity gate leaves out rather than draw wrong, recorded beside the videos.
+    # The arrows left out rather than drawn wrong, by the renderer's sanity gate or the arrows step (arrows.json, which
+    # the renderer reads: where the helper pointed each hop on its painting), recorded beside the videos.
     from studio.render.renderer import Renderer
     left_out = {video: Renderer(job, timeline, layout, locations).left_out
                 for (video, layout), timeline in zip(made, timelines)}

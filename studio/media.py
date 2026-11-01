@@ -12,6 +12,7 @@ Every path is relative to the job folder, jobs/<id>/. The models are in studio/s
     timing/narration_words.json         6
     timeline_song.json                  7     a Timeline for each video
     timeline_lesson.json                7
+    arrows.json                         7b    Arrows: each hop's arrow, pointed on its painting and looked at
     out/song_h.mp4, out/lesson_h.mp4    8     1920x1080, 30 fps, H.264 + AAC, -movflags +faststart
     out/song_h.jpg, out/lesson_h.jpg    8     a poster frame for each, beside its video: a poster's
                                               URL is its video's with .jpg for .mp4
@@ -62,7 +63,7 @@ import numpy as np
 from studio import knobs
 from studio.schemas import SAFE_PATH  # every path built here passes SAFE_PATH
 
-MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
+MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "arrows", "render", "upload")
 VIDEOS = ("song", "lesson")
 HOOK, HOOK_LAYOUT = "hook", "v"  # the hook cut: the song's pre-chorus and first chorus, upright, to share
 TIMED = ("song", "narration")  # the audio files, each with its Timing
@@ -71,6 +72,7 @@ ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
 
 LOCATIONS = "locations.json"
+ARROWS = "arrows.json"  # the arrows step's (studio/steps/arrows.py)
 # Lyria masters its songs to full scale, and an MP3 decodes a little past it: the pump's song went over 79 times, in
 # its choruses, and was heard as crackle once encoded again (the owner, Nov 1). The audio step keeps a song, and the
 # render its mix, with the peaks held under -1 dBFS by this lookahead limiter, which leaves everything below them as it

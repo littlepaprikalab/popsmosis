@@ -110,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
     plan.add_argument("--effort", choices=list(brain.EFFORTS), help=f"Claude's effort (default: {brain.DEFAULT_EFFORT})")
     plan.add_argument("--videos", action="store_true", help="then make its videos, as `make` does")
     local = commands.add_parser("make", help="a local job's videos, in `videos`' order with no API: art and locate "
-                                             "alongside audio and timing, then timeline and render")
+                                             "alongside audio and timing, then timeline, arrows and render")
     local.add_argument("job")
     step = commands.add_parser("step", help="re-run one step of an existing job")
     step.add_argument("name", choices=[*STEPS, *media.MEDIA_STEPS])
