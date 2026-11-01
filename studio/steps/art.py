@@ -533,8 +533,10 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 # spaces) and failed for a real scene, where every object has a name a student would not know: a boat came back
 # labelled "oarlock" and "thwart", a living room "Wall Vent" and "Wall Outlet" twice, a theatre "Fly System". So a
 # science diagram keeps the operator's line, and any other scene labels its parts and nothing else (labels_line()).
+# On Nov 1 the diagram's line lost to the list too, painted blind side by side on two overviews: its labels named the
+# parts in textbook words the narration never says ("Voltage-gated ion channel", "Calvin Cycle") 31% of the time and
+# pointed wrong 17%; with the list every label had the narration's word and 9% pointed wrong, with no extras or crowding.
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
-LABELS = f"Clearly label nonobvious structures. {NO_SLIDE}"
 NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
 EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
@@ -945,18 +947,16 @@ def loose_line(bundle: Bundle, scene: Scene) -> str:
 
 
 def labels_line(scene: Scene) -> str:
-    """What the picture labels. A science diagram, its nonobvious structures (LABELS), which there are the parts a
-    textbook figure labels; any other scene, its own parts by the lesson's names and nothing else, since everything
-    in a room or on a boat has a name a student would not know. The hook, an everyday sight, labels nothing
-    (NO_LABELS): its parts' names teach nothing (Nov 1: the pump's hook labelled "Body" and "Couch"), and the upright
-    hook video cropped them."""
+    """What the picture labels: its own parts by the lesson's names, the words the narration says, and nothing else,
+    since everything in a room or on a boat has a name a student would not know, and a diagram's parts have textbook
+    names the lesson does not use. A science diagram has no room or furniture to name. The hook, an everyday sight,
+    labels nothing (NO_LABELS): its parts' names teach nothing (Nov 1: the pump's hook labelled "Body" and "Couch"),
+    and the upright hook video cropped them."""
     if scene.id in EVERYDAY:
         return NO_LABELS
-    if SCIENCE_STYLE in scene.image_prompt.lower():
-        return LABELS
     names = ", ".join(s.name for s in scene.structures)
-    return (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, furniture "
-            f"or background objects. {NO_SLIDE}")
+    rest = "." if SCIENCE_STYLE in scene.image_prompt.lower() else ": no room, furniture or background objects."
+    return f"Label only these parts, each with exactly this name: {names}. Label nothing else{rest} {NO_SLIDE}"
 
 
 def axes_line(axes: Axes) -> str:

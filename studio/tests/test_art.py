@@ -714,8 +714,9 @@ def test_a_song_picture_drawn_to_scale_is_given_the_lines_sung_over_it():
     assert art._said_over(bundle, bundle.scenes[2]) == ["ATP synthase uses the returning protons to make ATP."]
 
 
-def test_a_science_diagram_labels_its_nonobvious_structures_and_any_other_scene_only_its_parts():
-    # Oct 31: "nonobvious" labelled a membrane's pump, channels, ATP and spaces, and a boat's oarlock and thwart.
+def test_every_scene_but_the_hook_labels_only_its_own_parts_by_the_lessons_names():
+    # Oct 31: "nonobvious" labelled a boat's oarlock and thwart. Nov 1: on a diagram it named the parts in textbook
+    # words the narration never says ("Calvin Cycle"); the list gave every label the narration's word.
     bundle = Bundle.model_validate(bundle_data())
     scene = bundle.scenes[1]
     names = ", ".join(s.name for s in scene.structures)
@@ -723,7 +724,8 @@ def test_a_science_diagram_labels_its_nonobvious_structures_and_any_other_scene_
                                                        "clean scientific style: the membrane across the middle."})
     everyday = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a rowing boat, clean "
                                                         "textbook style: the boat in the centre."})
-    assert art.labels_line(science) == art.LABELS == "Clearly label nonobvious structures. " + art.NO_SLIDE
+    assert art.labels_line(science) == (f"Label only these parts, each with exactly this name: {names}. "
+                                        f"Label nothing else. {art.NO_SLIDE}")
     line = art.labels_line(everyday)
     assert line == (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, "
                     f"furniture or background objects. {art.NO_SLIDE}")
