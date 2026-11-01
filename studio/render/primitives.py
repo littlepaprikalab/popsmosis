@@ -1149,6 +1149,14 @@ def draw_postit_line(canvas: skia.Canvas, start: tuple[float, float], end: tuple
                                                  StrokeCap=skia.Paint.kRound_Cap))
 
 
+def draw_postit_dot(canvas: skia.Canvas, at: tuple[float, float], alpha: float) -> None:
+    """The dot a post-it's line ends on, at the place its note is about."""
+    if alpha <= 0.01:
+        return
+    canvas.drawCircle(*at, 7.0, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawCircle(*at, 5.0, skia.Paint(AntiAlias=True, Color=with_alpha(NOTICE_ACCENT, alpha)))
+
+
 def ai_tag_rect(x0: float, bottom: float, font_size: float) -> Rect:
     """Where draw_ai_tag draws its pill."""
     h = font_size * 1.7

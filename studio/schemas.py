@@ -996,10 +996,12 @@ class Beat(Strict):
 
 class Flag(Strict):
     """A label the art check found wrong in a painted picture (art.flags()): the box round it, in art pixels, and
-    the sticky note the video puts beside it, for the student."""
+    the sticky note the video puts beside it, for the student. Or a note about one place in it (art.PinnedNote),
+    with no ring: the sticky note joined to the place."""
 
     box: Box
     note: str
+    ring: bool = True
 
 
 class Timeline(Strict):

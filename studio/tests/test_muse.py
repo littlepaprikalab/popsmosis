@@ -117,12 +117,13 @@ class FakeMuse:
 class FakeHelper:
     """Stands in for brain.ask's helper: checks each picture, and gives boxes for locate."""
 
-    def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=()):
+    def __init__(self, checks=None, boxes=None, writing=None, wrong=None, unconfirmed=(), pinned=None):
         self.checks = checks or {}  # scene -> a list of ArtCheck dicts, one per check
         self.boxes = boxes or {}  # structure -> a Spot dict
         self.writing = writing or {}  # scene -> the LabelFlag dicts the helper confirms, boxes and notes
         self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
         self.unconfirmed = set(unconfirmed)  # notes the brain, asked to confirm them, finds wrong
+        self.pinned = pinned or {}  # scene -> the PinnedNote dicts the brain gives for notes about one place
         self.asked: list[tuple[str, str]] = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -131,7 +132,8 @@ class FakeHelper:
         if schema is art.ConfirmedNotes:  # the brain's look at the notes the helper wrote
             assert role == "brain" and system == art.NOTES_PROMPT and "The lesson's facts:" in prompt
             notes = [line[2:] for line in prompt.split("The notes:\n")[1].splitlines()]
-            return {"keep": [n for n in notes if n not in self.unconfirmed]}
+            return {"keep": [n for n in notes if n not in self.unconfirmed],
+                    "pinned": self.pinned.get(label.split()[2], [])}
         assert role == "helper"
         if schema is art.ArtCheck:
             assert system == art.CHECK_PROMPT
@@ -956,6 +958,22 @@ def test_a_dropped_connection_is_asked_again(tmp_path, monkeypatch):
 
     monkeypatch.setattr(muse, "send", drops_once)
     assert muse.paint(tmp_path, "art hook", "a leaf") == picture() and len(tries) == 2
+
+
+def test_a_note_about_one_place_is_stuck_there_and_leaves_the_card(job, monkeypatch):
+    # The owner (Nov 1): a note on a card beside the picture left the learner to find the place; one about a place
+    # is a sticky note there, with no ring, and the card keeps only what has no one place.
+    placed = "The picture shows only plus signs outside; the inner face of the membrane is negative."
+    whole = "The picture shows far too many pumps for one patch of membrane."
+    FakeMuse().install(monkeypatch)
+    pin = {"text": placed, "note": "The inner face is negative", "left": 0.1, "top": 0.6, "right": 0.9, "bottom": 0.7}
+    helper = FakeHelper({"overview": [{"notes": [placed, whole]}]}, pinned={"overview": [pin]})
+    art.run(job, helper)
+    bundle = checks.load(job / "bundle.json")
+    assert art.notices(job, bundle) == {"overview": [whole]}
+    [flag] = art.flags(job, bundle)["overview"]
+    assert flag.note == "The inner face is negative" and flag.ring is False
+    assert (flag.box.y0, flag.box.y1) == pytest.approx((0.6 * media.ART_HEIGHT, 0.7 * media.ART_HEIGHT))
 
 
 def test_a_wrong_label_reaches_the_videos_flagged_on_its_picture_and_noted_beside_it(job, monkeypatch):

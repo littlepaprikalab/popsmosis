@@ -738,15 +738,16 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     best.refused = [why for tried in tries if tried["try"] != best.attempt and (why := refusal(tried))]
-    unconfirmed = []
+    unconfirmed, pinned = [], []
     if best.check.notes:
-        kept = confirmed_notes(job, bundle, scene, best.check.notes, ask)
+        kept, pinned = confirmed_notes(job, bundle, scene, best.check.notes, ask)
         unconfirmed = [n for n in best.check.notes if n not in kept]
         best.check = best.check.model_copy(update={"notes": kept})
     flagged = label_flags(job, scene, best.check.labels, ask) if best.check.labels else []
     # `labelled`: the picture names its own parts, so the video draws no labels over it (self_labelled()).
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
                                   "labelled": True, **({"flags": flagged} if flagged else {}),
+                                  **({"pinned": pinned} if pinned else {}),
                                   **({"notes_unconfirmed": unconfirmed} if unconfirmed else {}),
                                   **({"instead_of_svg": instead_of_svg} if instead_of_svg else {}),
                                   "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
@@ -762,17 +763,35 @@ picture, so a wrong note teaches the student something false twice. Check each n
 lesson's facts and what the course's textbooks teach. Leave out a note whose correction is false, one about \
 something the picture does not show, and one about style or looks; keep every other, including one you cannot \
 settle, since the video would rather disclose a doubt than hide a mistake. Return the notes you keep, word for \
-word."""
+word, in `keep`. Then, in `pinned`, for each kept note about one place in the picture, a sticky note the video \
+sticks there: `text`, the note word for word; `note`, what is true in under 8 words ("The inner face is \
+negative", "Spindle fibers run to each pole"); and a box round where it is, as fractions of the picture's width \
+and height from its top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down. \
+Leave out of `pinned` a note about the whole picture or no one place."""
+
+
+class PinnedNote(Strict):
+    """A kept note about one place in the picture: the sticky note the video sticks there, and where."""
+
+    text: str
+    note: str
+    left: float
+    top: float
+    right: float
+    bottom: float
 
 
 class ConfirmedNotes(Strict):
     keep: list[str]
+    pinned: list[PinnedNote] = Field(default_factory=list)
 
 
-def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], ask) -> list[str]:
-    """The notes the brain confirms against the picture and the facts. Round 20's kidney close-up was shown
-    beside a note that its glucose carriers belong on the capillary's side, which is false for the carriers
-    that take glucose out of the filtrate. When the call fails, the notes stand."""
+def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], ask) -> tuple[list[str], list[dict]]:
+    """The notes the brain confirms against the picture and the facts, and of those the ones about one place in
+    it, each with its sticky note and box (PinnedNote): the video sticks those on the picture, where a note on a card
+    beside it left the learner to find the place (the owner, Nov 1). Round 20's kidney close-up was shown beside a
+    note that its glucose carriers belong on the capillary's side, which is false for the carriers that take glucose
+    out of the filtrate. When the call fails, the notes stand, none pinned."""
     facts = "\n".join(f"- {f.text}" for f in bundle.facts)
     listed = "\n".join(f"- {n}" for n in notes)
     try:
@@ -782,9 +801,13 @@ def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], a
                                       label=f"art notes {scene.id}"))
     except Exception as e:  # the notes disclose a flawed picture; a check that fails leaves them as they were
         print(f"art: {scene.id}: the notes could not be confirmed: {type(e).__name__}: {e}", file=sys.stderr)
-        return notes
+        return notes, []
     kept = {" ".join(k.split()) for k in answer.keep}
-    return [n for n in notes if " ".join(n.split()) in kept]
+    kept_notes = [n for n in notes if " ".join(n.split()) in kept]
+    pinned = [pin.model_dump() for pin in answer.pinned
+              if " ".join(pin.text.split()) in kept and " ".join(pin.note.split())
+              and 0 <= pin.left < pin.right <= 1 and 0 <= pin.top < pin.bottom <= 1]
+    return kept_notes, pinned
 
 
 # A second look before a label is flagged on screen: on Oct 31 the check listed labels it called "correct" or
@@ -948,7 +971,8 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     by scene: the video discloses them beside the picture rather than pass off a flawed picture as right.
     None for a drawing (the brain's SVG), which is not checked this way. A note about a label the video flags on
     the picture (flags()) is left out: its sticky note says it there, and the card said it again (the owner, Nov 1).
-    One about a label that could not be flagged stays."""
+    One about a label that could not be flagged stays. So does any other, but one stuck on the picture where it
+    applies (PinnedNote): the card holds only what has no one place."""
     found = {}
     for scene in bundle.scenes:
         # An analogy is an everyday picture standing in for the topic: nothing in it can teach the topic wrong.
@@ -958,8 +982,9 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
             continue
         made = json.loads(_painting(job, scene).read_text(encoding="utf-8"))
         flagged = [str(f.get("text") or "").strip().lower() for f in made.get("flags") or [] if isinstance(f, dict)]
+        pinned = {" ".join(str(p.get("text") or "").split()) for p in made.get("pinned") or [] if isinstance(p, dict)}
         notes = [n.strip() for n in (made.get("check") or {}).get("notes") or []
-                 if n.strip() and not _about_flagged(n, flagged)]
+                 if n.strip() and not _about_flagged(n, flagged) and " ".join(n.split()) not in pinned]
         if notes:
             found[scene.id] = notes
     return found
@@ -988,13 +1013,15 @@ def self_labelled(job: Path, bundle: Bundle) -> list[str]:
 
 def flags(job: Path, bundle: Bundle) -> dict[str, list[Flag]]:
     """Each label the check found wrong in a painted picture, by scene, as the box round it in art pixels and its
-    sticky note (label_flags()): the video flags each one on the picture with its note beside it."""
+    sticky note (label_flags()): the video flags each one on the picture with its note beside it. Then each note
+    about one place in it (PinnedNote), with no ring: a sticky note joined to the place."""
     found = {}
     for scene in bundle.scenes:
         made = []
-        for flag in (_made(job, bundle, scene) or {}).get("flags") or []:
+        record = _made(job, bundle, scene) or {}
+        for flag in [*(record.get("flags") or []), *({**pin, "ring": False} for pin in record.get("pinned") or [])]:
             try:
-                made.append(Flag(note=flag["note"], box=Box(
+                made.append(Flag(note=flag["note"], ring=flag.get("ring", True), box=Box(
                     x0=flag["left"] * media.ART_WIDTH, y0=flag["top"] * media.ART_HEIGHT,
                     x1=flag["right"] * media.ART_WIDTH, y1=flag["bottom"] * media.ART_HEIGHT)))
             except (KeyError, TypeError, ValueError):  # a record written by hand, or an empty box

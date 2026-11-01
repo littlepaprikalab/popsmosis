@@ -300,8 +300,9 @@ export default function HowItsMadePage() {
             </p>
             <p>
               So when the picture check finds a mistake that could teach you something false, it writes a short note.
-              The video shows that note on a card next to the picture, for as long as the picture is on screen. Small
-              things about looks, like a cell drawn oval, are left out.
+              The video sticks it on the picture, right where the mistake is, for as long as the picture is on screen.
+              A note about the whole picture goes on a card beside it. Small things about looks, like a cell drawn
+              oval, are left out.
             </p>
             <p>
               A painted picture labels its own parts, and sometimes it gets a label wrong. When the check finds one,
@@ -311,21 +312,22 @@ export default function HowItsMadePage() {
             <p>
               The check can miss mistakes too. So every other AI picture has a small tag that says it&rsquo;s
               AI-made, even the exact drawings of graphs and charts. A picture that is only a comparison, like a
-              tug-of-war standing in for mitosis, gets the tag but never a card. It can&rsquo;t teach the topic wrong.
+              tug-of-war standing in for mitosis, gets the tag but never a note. It can&rsquo;t teach the topic wrong.
             </p>
           </div>
           <figure>
             <Frame frame={FRAMES.card} />
             <figcaption className="text-xs leading-relaxed mt-2" style={{ color: 'var(--text-muted)' }}>
-              A real frame from the lesson video of a test droplet on mitosis. The picture check found that the
-              metaphase cell has no spindle poles, so the card at the right says so while the picture is on screen.
+              A real frame from the lesson video of an earlier test droplet on mitosis, from before notes were stuck
+              on the picture: the check found that the metaphase cell has no spindle poles, and the card at the right
+              says so while the picture is on screen.
             </figcaption>
           </figure>
           <figure className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <div className="sm:w-64 sm:shrink-0"><Frame frame={FRAMES.tag} /></div>
             <figcaption className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
               The bottom left of another frame from the same video. The check found nothing wrong in this picture,
-              so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a card. Every AI
+              so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a note. Every AI
               picture gets one or the other.
             </figcaption>
           </figure>

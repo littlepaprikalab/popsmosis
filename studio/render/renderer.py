@@ -1249,9 +1249,15 @@ class Renderer:
             if shown <= 0.01:
                 continue
             note = _within(_postit_rect(ring, p.postit_size(flag.note), *spot), bounds)
-            p.draw_flag(canvas, label, shown)
-            if _gap(note, ring) > POSTIT_GAP + 1:
-                p.draw_postit_line(canvas, _nearest(note, ring), _nearest(ring, note), shown)
+            if flag.ring:
+                p.draw_flag(canvas, label, shown)
+                if _gap(note, ring) > POSTIT_GAP + 1:
+                    p.draw_postit_line(canvas, _nearest(note, ring), _nearest(ring, note), shown)
+            else:  # a note about a place: a line from the post-it to a dot at the place's middle
+                middle = ((label[0] + label[2]) / 2, (label[1] + label[3]) / 2)
+                if not (note[0] <= middle[0] <= note[2] and note[1] <= middle[1] <= note[3]):
+                    p.draw_postit_line(canvas, _nearest(note, (*middle, *middle)), middle, shown)
+                    p.draw_postit_dot(canvas, middle, shown)
             p.draw_postit(canvas, note, flag.note, shown)
         canvas.restore()
 
