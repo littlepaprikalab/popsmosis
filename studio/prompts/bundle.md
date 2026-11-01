@@ -68,6 +68,13 @@ cannot fix fails the droplet. So:
   turnstile" only explains ATP synthase. A derivative as a speedometer, a revolution as a
   pressure cooker. The lesson, the song, the narration and an analogy scene all use it. A
   part may have a picture of its own too, in a fact, if it fits inside the frame.
+- When the frame is drawn (the analogy scene), its layout is the real thing's: the same
+  boundary, inside and outside where they are, each part where its counterpart is (a
+  club's wall with the bouncer at its turnstile and a side door in it, for a membrane with
+  its pump and a channel), never one that turns in and out into up and down, or puts two
+  parts that sit side by side at opposite ends of the picture (a water tower's pump and a
+  house's tap, Nov 1). Map three or four parts, each with a real counterpart, and say in
+  the lesson what the analogy leaves out.
 - Say where each thing happens, part by part, since the pictures show it in a place: "the
   proximal tubule takes back glucose and secretes H⁺ into the filtrate", not "the tubule
   secretes". A step no fact places cannot be shown anywhere.
