@@ -433,7 +433,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             label = notation(flow.carries)
             if len(stops) >= 2:
                 particles.append(Particles(path=stops, color=marker_colour(label, palette), trail=True, label=label,
-                                           blocked=stops[-1] in blockers, moves=flow.moves))
+                                           blocked=stops[-1] in blockers, moves=flow.moves,
+                                           says=" ".join(flow.says.split())))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
         if scene not in opened and scene != hook:  # the first line of a scene shows the whole picture
             target, zoom = None, 1.0
@@ -583,12 +584,19 @@ def _convert(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]) ->
             for c in bundle.conversions if c.structure in scene]
 
 
+ANALOGY = "analogy"  # the analogy scene's id (studio/prompts/bundle.md), whose parts' meanings say what they stand for
+
+
 def _mean(beats: list[dict], bundle: Bundle, locations: Locations) -> None:
     """The graph parts' meanings each beat writes (Bundle.meanings), under the name the part's drawing placed
     (Value.label): from when the part is first named on a graph (its first reveal there) on, wherever its name is
     written, as long as it is: part of its label, as a textbook's caption is (the owner, Oct 31). A part not named
-    yet has none, so a graph the video shows before naming its parts does not open with every meaning at once."""
+    yet has none, so a graph the video shows before naming its parts does not open with every meaning at once. An
+    analogy part's (what it stands for) the same way, from its first naming on the analogy, on every later beat of
+    it (the owner, Nov 1)."""
     named = {s.scene: {v.text for v in s.values if v.label} for s in locations.scenes}
+    # The analogy's parts are named by the lines that sing or say them, wherever the picture puts them.
+    named |= {s.scene: {loc.name for loc in s.structures} for s in locations.scenes if s.scene == ANALOGY}
     meant = {m.structure: m.text for m in bundle.meanings}
     first: dict[str, float] = {}  # structure -> when it is first named on a graph
     for beat in beats:

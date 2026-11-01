@@ -178,7 +178,38 @@ def test_what_particles_carry_needs_particles_and_fits_on_the_dot():
 
     assert carrying(["Thylakoid", "Cytochrome b6f"], "H⁺") == ("H⁺", [])
     assert carrying([], "H⁺") == ("", [("v1-1", "carries", True)])
-    assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True)])
+    # Unmarked, it moves as an arrow (it has no symbol to write on a particle), which then wants its one-liner.
+    assert carrying(["Thylakoid", "Cytochrome b6f"], "plastoquinone") == ("", [("v1-1", "carries", True),
+                                                                              ("v1-1", "says", False)])
+
+
+def test_an_arrow_has_a_short_one_liner_beside_it():
+    def saying(carries, says, moves=""):
+        def change(data):
+            direction(data, "v1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries=carries, moves=moves,
+                                           says=says)
+        bundle, found, _ = review(change)
+        return next(d.says for d in bundle.direction if d.line_id == "v1-1"), [f for f in found if f[1] == "says"]
+
+    assert saying("H⁺", "") == ("", [])  # a marked ion crosses as particles: no arrow, nothing to say
+    assert saying("H⁺", "", moves="travels") == ("", [("v1-1", "says", False)])  # an arrow, bare
+    assert saying("glucose", "") == ("", [("v1-1", "says", False)])  # a word moves as an arrow
+    assert saying("glucose", "  Glucose rides in   with sodium ") == ("Glucose rides in with sodium", [])
+    assert saying("glucose", "x" * (checks.SAYS_MAX + 1)) == ("", [("v1-1", "says", True), ("v1-1", "says", False)])
+    assert checks.arrow("Ca²⁺", "") is False and checks.arrow("NAD⁺", "crosses") is False  # three letters at most
+    assert checks.arrow("NADPH", "crosses") is True and checks.arrow("", "") is True
+
+
+def test_a_picture_asking_for_two_moments_side_by_side_is_recorded():
+    def asking(prompt):
+        def change(data):
+            data["scenes"][-1]["image_prompt"] = prompt
+        _, found, _ = review(change)
+        return [f for f in found if f[1] == "side-by-side"]
+
+    assert asking("One sodium-potassium pump in a membrane, drawn twice side by side.") != []
+    assert asking("A before and after view of the cell.") != []
+    assert asking("One pump in a membrane, its pocket open toward the inside.") == []
 
 
 def test_what_builds_up_is_where_marked_particles_start_or_end():
@@ -243,6 +274,18 @@ def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
     assert meaning(("Thylakoid", "x" * 41)) == ([], left_out)  # too long for one line under its name
     assert meaning(("Thylakoid", "")) == ([], left_out)
     assert meaning(("Thylakoid", "one"), ("thylakoid", "two"))[1] == left_out  # one a part
+
+    def mapping(*pairs):  # on the analogy scene a meaning says what a part stands for
+        def change(data):
+            next(s for s in data["scenes"] if s["id"] == "hook")["id"] = "analogy"
+            for d in data["direction"]:
+                d["scene"] = "analogy" if d["scene"] == "hook" else d["scene"]
+            data["meanings"] = [{"structure": s, "text": text} for s, text in pairs]
+        bundle, found, _ = review(change)
+        return [(m.structure, m.text) for m in bundle.meanings], [f for f in found if f[1] == "meanings"]
+
+    assert mapping(("Thylakoid", "the stored-up protons")) == ([("Thylakoid", "the stored-up protons")], [])
+    assert mapping(("ATP synthase", "the turbine")) == ([], left_out)  # not a part of the analogy (nor a graph)
 
 
 def test_syllables_are_counted_as_sung():
@@ -496,7 +539,8 @@ def test_a_second_flow_on_a_line_is_held_to_the_same_rules_and_one_at_most_is_ke
     line = next(d for d in bundle.direction if d.line_id == "v1-1")
     assert [(f.particles, f.carries) for f in line.flows()] == [
         (["Thylakoid", "Cytochrome b6f"], "H⁺"), (["Cytochrome b6f", "Thylakoid"], "")]
-    assert sorted(found) == [("v1-1", "carries", True), ("v1-1", "particles", True)]
+    # The unmarked one moves as an arrow, which wants a one-liner (Direction.says).
+    assert sorted(found) == [("v1-1", "carries", True), ("v1-1", "particles", True), ("v1-1", "says", False)]
     _, found, _ = review(lambda d: direction(d, "v1-1").update(also=[{"particles": ["Thylakoid", "ATP synthase"],
                                                                        "carries": "O₂"}]))
     assert found == [("v1-1", "particles", True)]  # ATP synthase is not on the hook: fewer than two stops

@@ -203,6 +203,14 @@ people buy more") is the video writing that line under the part's name: SUPPORTE
 shows that (the arrow as "leads to"), in plain words a learner reads off the graph, UNSUPPORTED when it says
 what the part does not show, or the wrong way round.
 
+A motion that says a part of the analogy "stands for" something ("In the analogy, Electric pump stands for:
+the Na⁺/K⁺ pump") is the video writing that beside the part: SUPPORTED when, by the facts and the analogy the
+lesson draws, that part plays the role of that real thing; UNSUPPORTED when it maps it onto the wrong thing.
+
+A motion that says what the video writes "beside the arrow" ("Beside the arrow from Outside of the cell to
+Inside of the cell, carrying glucose: Glucose rides in with sodium") is the arrow's one-liner: SUPPORTED when
+the facts say it of what moves that way, UNSUPPORTED when it says more than they do or the wrong thing.
+
 A motion is never FILLER.
 
 ## Public text

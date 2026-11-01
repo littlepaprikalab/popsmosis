@@ -406,9 +406,10 @@ HALO = 2.5  # a white ring, as a label's dot has, so a particle reads on any col
 MARKER_R = 18.0  # a marked particle: room for "H⁺" inside it, in frame pixels; one size wherever it is drawn
 MARKER_FONT = 20.0
 MARKER_PAD = 8.0  # a longer marker ("glucose") is a pill this far wider than its word, each side
-# What moves carries at most a symbol ("H⁺", "e⁻", "ATP"), as a textbook draws an ion. A word ("glucose",
-# "sediment", "loot") never moves: round 17's videos raced word pills across the picture, too fast to read and
-# pulling the eye off everything else. A word is written, still, at the tail of its arrow (Renderer._routes).
+# What moves carries at most a symbol ("H⁺", "e⁻", "ATP", "Ca²⁺", "NAD⁺"), as a textbook draws an ion: up to
+# SYMBOL_MAX letters, its charge, numbers and sub- and superscripts not counted. A word ("glucose", "sediment",
+# "loot") never rides a particle: round 17's videos raced word pills across the picture, too fast to read. It goes
+# as an arrow, with its one-liner beside it (Renderer._travels, Particles.says).
 SYMBOL_MAX = 3
 
 
@@ -419,26 +420,23 @@ def symbol(label: str) -> bool:
 
 
 def carried(label: str) -> str:
-    """What a moving particle has written on it: its label when that is a short symbol, else nothing."""
-    return label if len(label) <= SYMBOL_MAX else ""
+    """What a moving particle has written on it: its label when that is a short symbol (at most SYMBOL_MAX letters,
+    as "Ca²⁺" and "NAD⁺" are), else nothing."""
+    return label if label.strip() and sum(ch.isalpha() for ch in label) <= SYMBOL_MAX else ""
+
+
+STREAM_SIZE = 0.8  # the particles streaming behind the lead, at this size of it
 
 
 def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[float, float], float]],
                    lead: tuple[float, float], trail: list[tuple[float, float]], alpha: float, label: str = "") -> None:
-    """What travels between structures: dots streaming along the path (each with its own fade,
-    0-1), and the lead particle with its trail, the newest position first, drawn as its kind is (draw_kind)."""
-    halo, fill = skia.Paint(AntiAlias=True), skia.Paint(AntiAlias=True)
+    """What travels between structures: the particles streaming along the path (each with its own fade, 0-1), a
+    little smaller than the lead, and the lead, each drawn as its kind is (draw_kind), so every one says what it is.
+    No trail and no bare dots: a dot with nothing on it looked cheap and left the learner asking what it was (the
+    owner, Nov 1). `trail` is not drawn; one under the lead is left out, as it would sit behind it."""
     for (x, y), fade in stream:
-        if alpha * fade <= 0.01:
-            continue
-        halo.setColor(with_alpha(0xFFFFFFFF, 0.8 * alpha * fade))
-        canvas.drawCircle(x, y, STREAM_R + HALO, halo)
-        fill.setColor(argb(color, alpha * fade))
-        canvas.drawCircle(x, y, STREAM_R, fill)
-    # The trail is solid dots that shrink with age: fading them would muddy them with the colour under them.
-    fill.setColor(argb(color, alpha))
-    for k, (x, y) in reversed(list(enumerate(trail, 1))):
-        canvas.drawCircle(x, y, 0.8 * PARTICLE_R * (1 - k / (len(trail) + 1)), fill)
+        if math.dist((x, y), lead) > 1.5 * MARKER_R:
+            draw_kind(canvas, (x, y), color, label, alpha * fade, size=STREAM_SIZE)
     draw_kind(canvas, lead, color, label, alpha)
 
 
@@ -679,6 +677,84 @@ def draw_handoff(canvas: skia.Canvas, tail: tuple[float, float], tip: tuple[floa
         canvas.drawPath(shape, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=extra,
                                           Style=skia.Paint.kStrokeAndFill_Style if extra else skia.Paint.kFill_Style,
                                           StrokeJoin=skia.Paint.kRound_Join))
+
+
+def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], color: str, alpha: float,
+                     grown: float = 1.0, pulse: float = 0.0) -> None:
+    """An arrow along a route (frame pixels), as a hand-off arrow is drawn (draw_handoff) but bending with the way it
+    goes: up a pipe, along a river, through the parts in turn. Drawn `grown` (0-1) of its length from its tail."""
+    if alpha <= 0.01 or grown <= 0.01 or len(points) < 2:
+        return
+    lengths = [math.dist(a, b) for a, b in zip(points, points[1:])]
+    total = sum(lengths)
+    if total < 1.0:
+        return
+    reach, line = total * grown, [points[0]]
+    for (a, b), d in zip(zip(points, points[1:]), lengths):
+        if reach <= d:
+            k = reach / d if d else 0.0
+            line.append((a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k))
+            break
+        line.append(b)
+        reach -= d
+    width = HANDOFF_WIDTH * (1 + HANDOFF_PULSE * pulse)
+    head = min(HANDOFF_HEAD * (1 + HANDOFF_PULSE * pulse), total * grown)
+    tip = line[-1]
+    back = next((q for q in reversed(line[:-1]) if math.dist(q, tip) >= head), line[0])
+    d = math.dist(back, tip) or 1.0
+    ux, uy = (tip[0] - back[0]) / d, (tip[1] - back[1]) / d
+    base = (tip[0] - ux * head, tip[1] - uy * head)
+    shaft = skia.Path()
+    shaft.moveTo(*line[0])
+    for q in line[1:-1]:
+        if math.dist(q, tip) > head:
+            shaft.lineTo(*q)
+    shaft.lineTo(base[0] + ux * 2, base[1] + uy * 2)
+    shape = skia.Path()
+    shape.moveTo(*tip)
+    shape.lineTo(base[0] - uy * head * 0.62, base[1] + ux * head * 0.62)
+    shape.lineTo(base[0] + uy * head * 0.62, base[1] - ux * head * 0.62)
+    shape.close()
+    for ink, extra in ((with_alpha(0xFFFFFFFF, 0.9 * alpha), 2 * HALO), (argb(color, alpha), 0.0)):
+        canvas.drawPath(shaft, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=width + extra,
+                                          Style=skia.Paint.kStroke_Style, StrokeCap=skia.Paint.kRound_Cap,
+                                          StrokeJoin=skia.Paint.kRound_Join))
+        canvas.drawPath(shape, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=extra,
+                                          Style=skia.Paint.kStrokeAndFill_Style if extra else skia.Paint.kFill_Style,
+                                          StrokeJoin=skia.Paint.kRound_Join))
+
+
+NOTE_FONT = 0.8  # a note's text, as a share of the labels' size
+NOTE_PAD = 0.9  # its room each side of the text, as a share of its font size
+
+
+def note_size(text: str, font_size: float) -> tuple[float, float]:
+    """How wide and tall a note pill with this text is (draw_note), in frame pixels."""
+    return text_width(font("Bold", font_size), text) + 2 * NOTE_PAD * font_size, 2.0 * font_size
+
+
+def draw_note(canvas: skia.Canvas, rect: Rect, text: str, font_size: float, color: str, alpha: float,
+              to: tuple[float, float] | None = None) -> None:
+    """A one-line note in a white pill with the colour's outline, as a label is drawn: an arrow's one-liner, or what
+    a part of an analogy stands for. `to`: what it is about (frame pixels), joined to the pill by a line ending in
+    a dot, when the pill does not touch it."""
+    if alpha <= 0.01:
+        return
+    x0, y0, x1, y1 = rect
+    ink = argb(darken(color), alpha)
+    if to is not None:
+        ex, ey = min(max(to[0], x0), x1), min(max(to[1], y0), y1)
+        if math.dist((ex, ey), to) > 0.5 * (y1 - y0):
+            canvas.drawLine(to[0], to[1], ex, ey, skia.Paint(AntiAlias=True, Color=ink, StrokeWidth=3.0,
+                                                             StrokeCap=skia.Paint.kRound_Cap))
+            canvas.drawCircle(*to, DOT_R + 2.5, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+            canvas.drawCircle(*to, DOT_R, skia.Paint(AntiAlias=True, Color=ink))
+    pill = rounded(rect, (y1 - y0) / 2)
+    shadow(canvas, pill, alpha)
+    canvas.drawRRect(pill, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, alpha)))
+    canvas.drawRRect(pill, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=3.0,
+                                      Color=argb(outline(color), alpha)))
+    draw_text(canvas, text, x0 + NOTE_PAD * font_size, (y0 + y1) / 2 + 0.36 * font_size, font("Bold", font_size), ink)
 
 
 BLOCK_R = 17.0  # the cross on a blocker, in frame pixels
@@ -965,6 +1041,8 @@ POSTIT_PAD = 14.0
 POSTIT_TEXT_W = 210.0  # the widest a line of its note runs, frame pixels
 POSTIT_TILT = -2.0  # degrees: stuck on by hand
 POSTIT_LINES = 4
+POSTIT_CURL = 18.0  # frame pixels: its top-right corner curls up this far down and in (the owner, Nov 1)
+POSTIT_UNDERSIDE = 0xFFEFCB55  # the curled corner's underside, a shade darker than the note
 
 
 def postit_size(note: str, font_size: float = POSTIT_FONT) -> tuple[float, float]:
@@ -988,10 +1066,40 @@ def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_s
         lines[-1] = lines[-1].rstrip(" .,;:") + "…"
     canvas.save()
     canvas.rotate(POSTIT_TILT, (x0 + x1) / 2, (y0 + y1) / 2)
-    body = rounded(rect, 3)
-    shadow(canvas, body, alpha * 0.9, blur=10, dy=5)
-    canvas.drawRRect(body, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_FILL, alpha)))
-    canvas.drawRect(skia.Rect.MakeLTRB(x0, y0, x1, y0 + 6), skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_GLUE, alpha)))
+    curl = min(POSTIT_CURL, (x1 - x0) / 3, (y1 - y0) / 3)
+    body = skia.Path()  # the note with its top-right corner lifted off
+    body.moveTo(x0 + 3, y0)
+    body.lineTo(x1 - curl, y0)
+    body.lineTo(x1, y0 + curl)
+    body.lineTo(x1, y1 - 3)
+    body.quadTo(x1, y1, x1 - 3, y1)
+    body.lineTo(x0 + 3, y1)
+    body.quadTo(x0, y1, x0, y1 - 3)
+    body.lineTo(x0, y0 + 3)
+    body.quadTo(x0, y0, x0 + 3, y0)
+    body.close()
+    canvas.save()
+    canvas.translate(0, 5)
+    canvas.drawPath(body, skia.Paint(AntiAlias=True, Color=with_alpha(0x55000000, alpha * 0.9),
+                                     MaskFilter=skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, 5)))
+    canvas.restore()
+    canvas.drawPath(body, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_FILL, alpha)))
+    glue = skia.Path()  # the strip it sticks by, up to the curl
+    glue.moveTo(x0 + 3, y0)
+    glue.lineTo(x1 - curl, y0)
+    glue.lineTo(x1 - curl + 6, y0 + 6)
+    glue.lineTo(x0, y0 + 6)
+    glue.lineTo(x0, y0 + 3)
+    glue.close()
+    canvas.drawPath(glue, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_GLUE, alpha)))
+    fold = skia.Path()  # the curled corner's underside, lifting off the note, with a soft shadow under it
+    fold.moveTo(x1 - curl, y0)
+    fold.quadTo(x1 - curl * 0.9, y0 + curl * 0.95, x1 - 2, y0 + curl)
+    fold.lineTo(x1, y0 + curl)
+    fold.close()
+    canvas.drawPath(fold, skia.Paint(AntiAlias=True, Color=with_alpha(0x40000000, alpha),
+                                     MaskFilter=skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, 2.5)))
+    canvas.drawPath(fold, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_UNDERSIDE, alpha)))
     line_h = font_size * 1.3
     for k, line in enumerate(lines):
         draw_text(canvas, line, x0 + POSTIT_PAD, y0 + 6 + POSTIT_PAD + (k + 0.78) * line_h, f, with_alpha(INK, alpha))

@@ -44,7 +44,8 @@ LABEL_REST = 0.0
 SPACE_SHARE = 0.2  # a structure whose box covers this share of its picture is a space: its pill sits inside it
 SPACE_REACH = 55.0  # art pixels: a path's stop in a space sits this far past its neighbour's edge
 ACROSS_SHARE = 0.5  # ...and, beside an upright wall, at least this share of the way on to the space's middle
-LANE_GAP = 46.0  # art pixels between two things travelling the same stops side by side
+LANE_GAP = 64.0  # art pixels between two things travelling the same stops side by side: room for two marked
+# particles (Na⁺ out, K⁺ in) to pass without touching
 SPACE_SPAN = 0.6  # or whose box spans this share of its width (a lumen is a thin strip across the picture)
 SPACE_FILL = 0.25  # and fills at least this share of its box: a curve across a chart has a big box but is no space
 LINE_RATIO = 12.0  # a structure this many times longer than it is wide is a line: its label hangs from one end
@@ -103,7 +104,15 @@ THROUGH_MAX = 200.0  # art pixels: a route running further than this inside a pa
 HANDOFF_STEP_S = 0.5  # between one hand-off's arrow and the next's, as they draw in and as the pulse runs along them
 HANDOFF_GROW_S = 0.35  # an arrow drawing itself in, from its tail
 HANDOFF_REST = 0.7  # how strong an arrow is while the pulse is on another
-STREAM_GAP = 90.0  # art pixels between the dots streaming along the path
+ROUTE_GROW_S = 1.0  # an arrow along a whole way drawing itself in, then each pulse along it
+# A note (an arrow's one-liner, what an analogy's part stands for): tried this far (art pixels) from what it is about,
+# on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
+# clear of the parts' label points and other notes (NOTE_CROWD each).
+NOTE_REACH = (30.0, 90.0, 160.0, 240.0)
+NOTE_SIDES = ((1, 0), (-1, 0), (0, -1), (0, 1), (1, -1), (-1, -1), (1, 1), (-1, 1))
+NOTE_FAR = 0.05
+NOTE_CROWD = 0.3
+STREAM_GAP = 160.0  # art pixels between the particles streaming along the path, each written with what it is
 ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its middle
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
 ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
@@ -834,6 +843,8 @@ class Renderer:
         self._scene_routes: dict[str, list[Point]] = {}  # points along each scene's arrows, in art pixels
         self._travelling: dict[tuple[str, str], bool] = {}  # (scene, what travels) -> drawn as hand-off arrows
         self._handoff_arrows: dict[tuple, list] = {}  # each such flow's arrows, in art pixels, with the part entered
+        self._note_spots: dict[tuple, Point] = {}  # where each note sits (an arrow's one-liner, a part's mapping), art
+        self._noted: dict[str, list[Rect]] = {}  # the notes placed on each scene, art pixels, for the next to keep clear
         self._arrowed_labels: dict[str, set[str]] = {}  # per scene, what travels as arrows (the legend's)
         self._scene_values: dict[str, list] = {}  # per scene, every value it writes in the video (_value_points)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
@@ -1354,6 +1365,7 @@ class Renderer:
             self._flags(canvas, beat.scene, cam, view, bounds, fade)
         if beat.conversions:
             self._conversions(canvas, beat, view, bounds, t, places, strength)
+        self._mappings(canvas, beat, cam, view, t, fade)
         if legend_rect:
             p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend],
                           self._arrowed(beat.scene))
@@ -1851,8 +1863,12 @@ class Renderer:
     def _path_points(self, scene_id: str, path: list[str], blocked: bool = False, lane: int = 0) -> list[Point]:
         """Where the particles travel, in art pixels: the path's stops, except that a flow between a part and a
         space leaves or enters the part at its edge on the space's side, where the arrow does (water is split at
-        Photosystem II's lumen face: an H⁺ set off from the middle of the complex looked to fall through it). A
-        blocked flow still runs into its blocker, where it piles up."""
+        Photosystem II's lumen face: an H⁺ set off from the middle of the complex looked to fall through it), and a
+        flow through one part from one side to the other goes straight through it (_crossing). A blocked flow still
+        runs into its blocker, where it piles up."""
+        crossing = None if blocked else self._crossing(scene_id, path, lane)
+        if crossing:
+            return crossing
         pairs = self._path_stops(scene_id, path, lane)
         points = [point for point, _ in pairs]
         if len(pairs) < 2:
@@ -1869,6 +1885,8 @@ class Renderer:
         """Each leg's bend, in art pixels: a hop from one part to the next (both stops parts, not spaces) curves
         up in a gentle arc, the hand-off a textbook draws; a flow into, out of or through a space runs straight.
         The particles ride the same curve as the arrow."""
+        if self._crossing(scene_id, path, lane):
+            return [None, None]  # straight through the part, holding in its middle
         pairs = self._path_stops(scene_id, path, lane)
         points, stops = [pt for pt, _ in pairs], [loc for _, loc in pairs]
         ends = self._path_points(scene_id, path, lane=lane)  # where the particles set off and arrive
@@ -1888,6 +1906,51 @@ class Renderer:
             mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
             bends.append((mid[0] + nx * ROUTE_BEND * length, mid[1] + ny * ROUTE_BEND * length))
         return bends
+
+    def _crossing(self, scene_id: str, path: list[str], lane: int = 0) -> list[Point] | None:
+        """A flow through one part from one side of it to the other (Na⁺ out through the pump, H⁺ through ATP
+        synthase): from just past the part's edge on the side it comes from, straight through the part's middle
+        (where the lead holds, as at any stop), to just past its far edge, across the way the two sides lie; a second
+        thing crossing the same part runs in a lane
+        beside it, the same side whichever way it goes. None for any other path. Before Nov 1 the particles ran to the
+        part's label point and on, bending in the part; a space the picture outlined patchily (the inside of a cell
+        that filled a fifth of its box) was taken for a part, and Na⁺ and K⁺ crossed each other in the pump."""
+        key = ("crossing", scene_id, tuple(path), lane)
+        if key in self._through:
+            return self._through[key]
+        located = self.locations.scene(scene_id)
+        stops = [loc for name in path if (loc := located.get(name)) is not None]
+        found = None
+        if len(stops) == 3 and len({s.name for s in stops}) == 3:
+            a, mid, b = (s.label_anchor for s in stops)
+            part = stops[1]
+            upright = abs(b.y - a.y) >= abs(b.x - a.x)  # the sides lie above and below it: it crosses up or down
+            if upright and min(a.y, b.y) < mid.y < max(a.y, b.y):
+                across = part.label_anchor.x + LANE_GAP * (1 if lane % 2 else -1) * ((lane + 1) // 2)
+                near, far = self._extent(scene_id, part, across, upright=True)
+                down = b.y > a.y
+                start, end = (near - SPACE_REACH, far + SPACE_REACH) if down else (far + SPACE_REACH, near - SPACE_REACH)
+                found = [(across, start), (across, (near + far) / 2), (across, end)]
+            elif not upright and min(a.x, b.x) < mid.x < max(a.x, b.x):
+                across = part.label_anchor.y + LANE_GAP * (1 if lane % 2 else -1) * ((lane + 1) // 2)
+                near, far = self._extent(scene_id, part, across, upright=False)
+                right = b.x > a.x
+                start, end = (near - SPACE_REACH, far + SPACE_REACH) if right else (far + SPACE_REACH, near - SPACE_REACH)
+                found = [(start, across), ((near + far) / 2, across), (end, across)]
+        self._through[key] = found
+        return found
+
+    def _extent(self, scene_id: str, part, at: float, upright: bool) -> tuple[float, float]:
+        """Where a part starts and ends along the line through it at `at` (a column when upright, else a row), in
+        art pixels, read off its outline; its box's edges when the line misses it."""
+        cells = self.scene(scene_id).cells(part.name)
+        index = int(at // routing.GRID)
+        line = cells[:, index] if upright and 0 <= index < cells.shape[1] else (
+            cells[index, :] if not upright and 0 <= index < cells.shape[0] else None)
+        hits = [] if line is None else [i for i, on in enumerate(line) if on]
+        if not hits:
+            return (part.box.y0, part.box.y1) if upright else (part.box.x0, part.box.x1)
+        return hits[0] * routing.GRID, (hits[-1] + 1) * routing.GRID
 
     def _routed(self, scene_id: str, first, second, a: Point, b: Point) -> list[Point] | None:
         """The leg from a in one part to b in the next through the two parts' outlines (routing.route), or None
@@ -2061,10 +2124,13 @@ class Renderer:
         """Whether a flow is drawn as an arrow at each hand-off rather than as particles: as the bundle says
         (Particles.moves), else when any flow on the scene carrying the same thing is a journey (_journey), so one
         thing moves one way on a scene. Never a blocked flow, which piles up at its blocker, nor one carrying a
-        symbol ("H⁺", "O₂", "ATP"): an ion or a small molecule is a particle, whatever the bundle says. A word ("air",
-        "magma") goes as the bundle says."""
+        symbol ("H⁺", "O₂", "ATP"): an ion or a small molecule is a particle, whatever the bundle says. A word too
+        long to write on a particle ("glucose", "magma"), or nothing at all, is always an arrow: a particle says what
+        it is (the owner, Nov 1). A short word ("air") goes as the bundle says."""
         if flow.blocked or p.symbol(flow.label):
             return False
+        if not p.carried(flow.label):  # a word ("glucose") or nothing: an arrow with its one-liner, never bare dots
+            return True
         if flow.moves:
             return flow.moves == "travels"
         # Unmarked dots too, all one way on a scene: judged a flow at a time, round 22's greenhouse would send its
@@ -2114,10 +2180,44 @@ class Renderer:
             self._handoff_arrows[key] = arrows
         return self._handoff_arrows[key]
 
+    def _route_line(self, scene_id: str, flow) -> list[Point]:
+        """A travelling flow's way as one line, art pixels: its legs (_legs) end to end, through the parts where they
+        join and curving from one to the next where they do not, so its arrow runs up the pipe and into the tank
+        rather than standing as a stub at each joint."""
+        key = ("route", scene_id, tuple(flow.path), flow.label)
+        if key not in self._through:
+            lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
+            line: list[Point] = []
+            for points, *_ in self._legs(scene_id, flow.path, lane):
+                for q in points:
+                    if not line or math.dist(line[-1], q) > 1.0:
+                        line.append(q)
+            self._through[key] = line
+        return self._through[key]
+
     def _draw_handoffs(self, canvas: skia.Canvas, scene_id: str, flow, elapsed: float, alpha: float,
                        on_frame) -> None:
-        """A travelling flow's arrows: drawn in one after another along its path as it sets off, then a pulse runs
-        along them in order, the way it goes, again and again."""
+        """A travelling flow's arrows. Off a graph, one arrow along its whole way (_route_line), drawing itself in
+        from its tail as it sets off, then pulsing, with its one-liner (Particles.says) beside it, joined to it. On a
+        graph, an arrow at each hand-off drawn in one after another, then a pulse running along them in order, with
+        its one-liner, or else its word ("price rises"), beside the first."""
+        if not self._graph(scene_id):
+            line = self._route_line(scene_id, flow)
+            if len(line) < 2:
+                return
+            grown = p.ease(elapsed / ROUTE_GROW_S)
+            cycle = ROUTE_GROW_S + FLOW_PAUSE_S
+            into = (elapsed - ROUTE_GROW_S) % cycle if elapsed >= ROUTE_GROW_S else -1.0
+            pulse = math.sin(math.pi * into / ROUTE_GROW_S) if 0 <= into < ROUTE_GROW_S else 0.0
+            strength = 1.0 if elapsed < ROUTE_GROW_S else HANDOFF_REST + (1 - HANDOFF_REST) * pulse
+            p.draw_route_arrow(canvas, [on_frame(q) for q in line], flow.color, alpha * strength, grown, pulse)
+            says = getattr(flow, "says", "")
+            if says:
+                middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
+                self._draw_note(canvas, scene_id, ("says", tuple(flow.path), flow.label, says), says, middle,
+                                line, flow.color, alpha * p.ease((elapsed - ROUTE_GROW_S / 2) / ROUTE_GROW_S),
+                                on_frame)
+            return
         arrows = self._handoffs(scene_id, flow)
         n = len(arrows)
         drawn_in = n * HANDOFF_STEP_S + HANDOFF_GROW_S
@@ -2132,9 +2232,10 @@ class Renderer:
             else:
                 strength = 1.0
             p.draw_handoff(canvas, on_frame(tail), on_frame(tip), flow.color, alpha * strength, grown, pulse)
-        if arrows and flow.label and self._graph(scene_id):  # its word beside it, still, as a textbook annotates a shift
+        says = getattr(flow, "says", "")
+        if arrows and (flow.label or says):  # its one-liner beside it, still, as a textbook annotates a shift
             tail, tip = on_frame(arrows[0][0]), on_frame(arrows[0][1])
-            word = self._arrow_word(scene_id, flow.label, tail, tip)
+            word = says or self._arrow_word(scene_id, flow.label, tail, tip)
             size = self.layout.label_font * ARROW_WORD_FONT
             w, h = p.text_width(p.font("Bold", size), word), size * 1.2
             length = math.hypot(tip[0] - tail[0], tip[1] - tail[1]) or 1.0
@@ -2148,6 +2249,74 @@ class Renderer:
                 rect = (mx - w / 2, top, mx + w / 2, top + h)
             first = p.ease(elapsed / HANDOFF_GROW_S)
             p.draw_name(canvas, word, rect, size, self.scene(scene_id).paper, flow.color, alpha * first, weight="Bold")
+
+    def _note_spot(self, scene_id: str, key: tuple, anchor: Point, size: tuple[float, float],
+                   keep_clear: list[Point]) -> Point:
+        """Where a note's middle sits, in art pixels, chosen once for the scene: near what it is about, where it
+        covers the least of the picture (ink_share), clear of every part's label point, of `keep_clear` (its arrow)
+        and of the notes placed before it; on the picture, never off its edge."""
+        if key not in self._note_spots:
+            art = self.scene(scene_id)
+            w, h = size
+            points = [(loc.label_anchor.x, loc.label_anchor.y) for loc in self.locations.scene(scene_id).structures]
+            placed = self._noted.setdefault(scene_id, [])
+            best = None
+            for reach in NOTE_REACH:
+                for ux, uy in NOTE_SIDES:
+                    cx, cy = anchor[0] + ux * (reach + w / 2), anchor[1] + uy * (reach + h / 2)
+                    box = (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+                    if box[0] < 0 or box[1] < 0 or box[2] > art.width or box[3] > art.height:
+                        continue
+                    cost = art.ink_share(box) + reach / NOTE_REACH[-1] * NOTE_FAR
+                    cost += sum(NOTE_CROWD for q in [*points, *keep_clear]
+                                if box[0] - h / 2 <= q[0] <= box[2] + h / 2 and box[1] - h / 2 <= q[1] <= box[3] + h / 2)
+                    cost += sum(NOTE_CROWD * 4 for r in placed
+                                if r[0] < box[2] and box[0] < r[2] and r[1] < box[3] and box[1] < r[3])
+                    if best is None or cost < best[0]:
+                        best = (cost, (cx, cy), box)
+            if best is None:
+                best = (0.0, anchor, (anchor[0] - w / 2, anchor[1] - h / 2, anchor[0] + w / 2, anchor[1] + h / 2))
+            placed.append(best[2])
+            self._note_spots[key] = best[1]
+        return self._note_spots[key]
+
+    def _draw_note(self, canvas: skia.Canvas, scene_id: str, key: tuple, text: str, anchor: Point,
+                   keep_clear: list[Point], color: str, alpha: float, on_frame) -> None:
+        """A note in a pill (p.draw_note) near what it is about (`anchor`, art pixels), joined to it by a line."""
+        if alpha <= 0.01:
+            return
+        (fx0, fy0), (fx1, _) = on_frame((0.0, 0.0)), on_frame((1000.0, 0.0))
+        scale = (fx1 - fx0) / 1000.0 or 1.0
+        size = self.layout.label_font * p.NOTE_FONT
+        w, h = p.note_size(text, size)
+        cx, cy = self._note_spot(scene_id, key, anchor, (w / scale, h / scale), keep_clear)
+        mx, my = on_frame((cx, cy))
+        p.draw_note(canvas, (mx - w / 2, my - h / 2, mx + w / 2, my + h / 2), text, size, color, alpha,
+                    to=on_frame(anchor))
+
+    def _mappings(self, canvas: skia.Canvas, beat, cam: Cam, view: Rect, t: float, fade: float) -> None:
+        """What each part of an analogy stands for (Beat.meanings on a scene that is no graph), each in a note
+        beside its part, joined to it: "= the Na⁺/K⁺ pump" by the electric pump. Spelling the mapping out is what
+        makes an analogy teach; left to themselves learners map the wrong features (the owner, Nov 1)."""
+        if self._graph(beat.scene) or not beat.meanings:
+            return
+        located = self.locations.scene(beat.scene)
+        scale, dx, dy = to_frame(cam, view, self.scene(beat.scene))
+
+        def on_frame(q: Point) -> Point:
+            return q[0] * scale + dx, q[1] * scale + dy
+
+        canvas.save()
+        canvas.clipRect(skia.Rect.MakeLTRB(*view))
+        for gloss in beat.meanings:
+            loc = located.get(gloss.structure)
+            if loc is None:
+                continue
+            on = p.ease((t - gloss.since) / LABEL_IN_S) * p.ease((gloss.until - t) / MEANING_OUT_S) * fade
+            colour = self.timeline.palette.get(gloss.structure, "#475569")
+            self._draw_note(canvas, beat.scene, ("maps", gloss.structure, gloss.text), f"= {gloss.text}",
+                            (loc.label_anchor.x, loc.label_anchor.y), [], colour, on, on_frame)
+        canvas.restore()
 
     def _graph(self, scene_id: str) -> bool:
         """Whether the scene is a graph (Timeline.axes)."""

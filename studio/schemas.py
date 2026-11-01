@@ -154,12 +154,17 @@ MOVES = ('How it moves: "crosses" when it passes through one wall, membrane or c
          'wall, H⁺ through ATP synthase, salt out of the tubule), drawn as particles; "travels" when it goes a long '
          'way along several parts (filtrate down the nephron, magma up through the volcano, sediment down a river), '
          'drawn as an arrow where it passes from each part into the next; "" with no particles')
+# What an arrow is about, written beside it, joined to it (the owner, Nov 1: an arrow with nothing beside it left the
+# learner asking what it meant). "" in a bundle written before, and the video writes none off a graph.
+SAYS = ('For an arrow (it travels, or what moves has no short symbol), one line beside it saying what it shows, at '
+        'most 40 characters: "The pump lifts water to the tank", "Shortage pushes the price up"; "" otherwise')
 
 
 class Flow(Strict):
     particles: list[str] = Field(description="Structure names they travel between, in order")
     carries: str = Field(description='What they are, as a textbook prints it ("O₂")')
     moves: Moves = Field(default_factory=str, description=MOVES)
+    says: str = Field(default_factory=str, description=SAYS)
 
 
 class Direction(Strict):
@@ -171,6 +176,7 @@ class Direction(Strict):
     carries: str = Field(description='What the particles are, as a textbook prints it ("H⁺", "e⁻", "O₂", "glucose"); '
                                      '"" for none')
     moves: Moves = Field(default_factory=str, description=MOVES)
+    says: str = Field(default_factory=str, description=SAYS)
     glow: str = Field(description='A structure that lights up on this line (light excites it, it fires), or ""')
     caption: str = Field(description='Usually ""')
     # A second thing moving on the line at the same time, when it names both: what one structure gives off together
@@ -180,7 +186,8 @@ class Direction(Strict):
 
     def flows(self) -> list[Flow]:
         """Everything moving on the line, the main flow first; a flow with no path is left out."""
-        main = [Flow(particles=self.particles, carries=self.carries, moves=self.moves)] if self.particles else []
+        main = [Flow(particles=self.particles, carries=self.carries, moves=self.moves, says=self.says)] \
+            if self.particles else []
         return main + [f for f in self.also if f.particles]
 
 
@@ -214,8 +221,11 @@ class Conversion(Strict):
 
 
 class Meaning(Strict):
-    structure: str = Field(description="A part of a graph (a curve, a line, a point, a gap), by its name")
-    text: str = Field(description='What it says, as the learner reads it off the graph: "lower price → people buy more"')
+    structure: str = Field(description="A part of a graph (a curve, a line, a point, a gap) or of the analogy scene, "
+                                       "by its name")
+    text: str = Field(description='For a graph part, what it says, as the learner reads it off the graph: "lower '
+                                  'price → people buy more"; for an analogy part, the real thing it stands for: '
+                                  '"the Na⁺/K⁺ pump"')
 
 
 def tag_of(value: str) -> str:
@@ -293,9 +303,11 @@ class Bundle(Strict):
                                           description="What turns into what, and where; [] for none")
     # What each part of a graph says, written under its name once the part is named ("lower price → people
     # buy more" under "Demand curve"): reading a curve's meaning off its slope is the hard part of a graph for a
-    # learner new to them (the owner, Oct 31). A bundle written before Oct 31 has none.
+    # learner new to them (the owner, Oct 31). On the analogy scene, what each part stands for, written beside it
+    # ("= the Na⁺/K⁺ pump" by the electric pump; the owner, Nov 1). A bundle written before Oct 31 has none.
     meanings: list[Meaning] = Field(default_factory=list,
-                                    description="What each part of a graph says, written under its name; [] for none")
+                                    description="What each part of a graph says, written under its name, and what "
+                                                "each part of the analogy stands for, written beside it; [] for none")
     # What both videos write above their diagram, held while the lines go by, so a learner who cannot keep up
     # with them reads the step being taught. A bundle written before Oct 29 has none.
     key_lines: list[KeyLine] = Field(default_factory=list,
@@ -483,7 +495,7 @@ class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style", "axes", "song-scene"]
+                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -868,6 +880,7 @@ class Particles(Strict):
     label: str = ""  # what they are, written on the lead particle ("H⁺"); "" for an unmarked dot
     blocked: bool = False  # the last stop stops them (Bundle.blocks): they pile up there, not go round again
     moves: Moves = ""  # as the bundle directs it (Direction.moves); "" in a timeline made before, or a bundle
+    says: str = ""  # its arrow's one-liner (Direction.says), written beside it; "" for none
 
     @field_validator("color")
     @classmethod
@@ -937,10 +950,11 @@ class Written(Strict):
 
 
 class Gloss(Strict):
-    """A graph part's meaning (Bundle.meanings) as the beats show it: written under the part's name from `since`, when
-    the part is first named, to `until`, the video's end, wherever the name is written."""
+    """A part's meaning (Bundle.meanings) as the beats show it, from `since`, when the part is first named, to
+    `until`, the video's end: a graph part's written under its name, wherever the name is written; an analogy
+    part's, what it stands for, in a note beside it on every beat of the analogy."""
 
-    structure: str  # with a name its drawing placed (Value.label) on the beat's scene
+    structure: str  # with a name its drawing placed (Value.label) on the beat's scene, or a part of the analogy
     text: str  # "lower price → people buy more"
     since: float
     until: float

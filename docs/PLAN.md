@@ -731,19 +731,27 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     darkened version of that colour, Inter Bold, a leader line and a 6 px dot at the
     mask's `label_anchor`. Pills stay inside the frame and avoid each other (a simple
     repulsion pass). Once introduced, a label stays on every shot of that diagram.
-  - **Particles:** for a line whose direction names `particles`, dots stream slowly along
+  - **Particles:** for a line whose direction names `particles`, particles stream slowly along
     a polyline between the structures' label anchors (always inside them), and one lead
-    particle with a trail eases from stop to stop, holding at each one beside the label's
-    dot, then starts over. Over the diagram, under the labels; a white ring, as the dots
+    particle eases from stop to stop, holding at each one beside the label's dot, then starts
+    over. Every particle, the stream's too, has what it carries written on it ("Na⁺", "Ca²⁺":
+    a symbol of at most 3 letters, its charge and numbers free); there are no bare dots and
+    no trail (the owner, Nov 1: unmarked dots looked cheap). A flow through one part from one
+    side to the other goes straight through the part's middle, a second thing crossing it in a
+    lane beside it (Na⁺ out, K⁺ in), rather than bending at the part's label point. Over the diagram, under the labels; a white ring, as the dots
     have, keeps them readable on any colour. Lines in a row that carry a flow (its path and
     what it carries) are one run for it, so it carries on across them, whatever joins it or
     leaves, and it waits for its stops to be revealed.
   - **Journeys as arrows:** particles are for a crossing, the short trip through one wall that
     a line teaches (O₂ across the alveolus's wall, H⁺ through ATP synthase, salt out of the
     tubule). A journey along several parts (filtrate down the nephron, magma up through the
-    volcano, sediment down a river) is drawn instead as an arrow where it passes from each part
-    into the next (`routing.handoff()`), drawn in one after another the way it goes, then a pulse
-    runs along them in order: in rounds 20 and 21 dots following a long route through painted
+    volcano, sediment down a river) is drawn instead as an arrow: off a graph one arrow along the
+    whole way, through the parts where they join, drawing itself in and then pulsing, with its
+    one-liner (`says`, "The pump lifts water to the tank") in a pill beside it, joined to it; on a
+    graph an arrow where it passes from each part into the next (`routing.handoff()`), drawn in one
+    after another the way it goes, then a pulse runs along them in order, with its one-liner or
+    its word ("price rises") beside the first. What has no short symbol (a word, "glucose", or
+    nothing) always moves as an arrow. Before Nov 1 every arrow was a stub at each joint: in rounds 20 and 21 dots following a long route through painted
     masks, which are only roughly the parts, cut across the nephron's bends and rose through the
     volcano's rock. The bundle says which (`moves`: "crosses" or "travels"); where it does not,
     a route that bends with its parts (1.5 times the straight line) or runs more than 200 px

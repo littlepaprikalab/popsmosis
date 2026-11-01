@@ -21,6 +21,8 @@ from studio.jobs import write
 from studio.schemas import BPM_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Problem, lesson_scenes_max
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
+SYMBOL_LETTERS = 3  # what a particle can carry written on it ("Na⁺", "Ca²⁺", "NAD⁺"): anything longer moves as an arrow
+SAYS_MAX = 40  # characters of an arrow's one-liner: one short line beside it ("The pump lifts water to the tank")
 ALSO_MAX = 1  # second flows on one line: two things moving at once is as much as a learner can follow
 SUPERSCRIPT = str.maketrans("0123456789+-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻")
 SUBSCRIPT = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
@@ -62,6 +64,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     _check_stages(data, problems)
+    _check_side_by_side(data, problems)
     _check_axes(data, problems)
     _check_spins(data, canon, problems)
     _check_blocks(data, canon, problems)
@@ -120,6 +123,24 @@ def _settle_song_scenes(data: dict) -> list[Problem]:
                                        "left out"))
     data["scenes"] = [s for s in data["scenes"] if not s["song_only"] or s["id"] in played]
     return problems
+
+
+# A picture asking for one thing drawn twice or for two moments side by side ("one pump, drawn twice side by side",
+# Nov 1) came back with both and with captions of its own ("State 1", "Conformational change"); the brief has each
+# stage a scene of its own, which the video fades between.
+SIDE_BY_SIDE = re.compile(r"\b(?:side[- ]by[- ]side|drawn twice|shown twice|two panels|split (?:into|in) two|"
+                          r"before and after|left panel|right panel)\b", re.I)
+
+
+def _check_side_by_side(data: dict, problems: list) -> None:
+    """A scene's picture shows one moment: one asking for a thing drawn twice or for two moments side by side is
+    recorded, for the prompt to fix (two stages, each a scene)."""
+    for scene in data["scenes"]:
+        found = SIDE_BY_SIDE.search(scene.get("image_prompt", ""))
+        if found:
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="side-by-side", repaired=False,
+                                    detail=f'the picture asks for "{found.group(0)}": draw each stage as a scene of '
+                                           "its own"))
 
 
 def _check_stages(data: dict, problems: list) -> None:
@@ -471,14 +492,16 @@ MEANING_MAX = 40  # characters of a graph part's meaning: one short line under i
 
 
 def _check_meanings(data: dict, canon: dict[str, str], problems: list) -> None:
-    """Each meaning names a part of a graph (a structure on a scene with axes), as its name, in one short line. One
-    part has one meaning; any other is left out, and the video writes only the part's name."""
+    """Each meaning names a part of a graph (a structure on a scene with axes) or of the analogy (what it stands
+    for), as its name, in one short line. One part has one meaning; any other is left out, and the video writes only
+    the part's name."""
     graphed = {canon.get(fold(s["name"])) for scene in data["scenes"]
-               if any(" ".join(scene["axes"][side].split()) for side in ("x", "y")) for s in scene["structures"]}
+               if any(" ".join(scene["axes"][side].split()) for side in ("x", "y")) or scene["id"] == "analogy"
+               for s in scene["structures"]}
     kept, seen = [], set()
     for meaning in data["meanings"]:
         name, text = canon.get(fold(meaning["structure"])), " ".join(meaning["text"].split())
-        why = ("names no structure" if not name else "is not a part of a graph" if name not in graphed else
+        why = ("names no structure" if not name else "is not a part of a graph or the analogy" if name not in graphed else
                "repeats a part's meaning" if name in seen else "is empty" if not text else
                f"is over {MEANING_MAX} characters" if len(text) > MEANING_MAX else "")
         if why:
@@ -730,5 +753,27 @@ def _check_direction(line_id: str, direction: dict, canon: dict[str, str], scene
         if marked != flow["carries"]:
             problems.append(Problem(line_id=line_id, rule="carries", repaired=True,
                                     detail=f"carries {flow['carries']!r} is over {MARKER_MAX} characters; unmarked"))
-        also.append({"particles": stops, "carries": marked, "moves": flow.get("moves", "")})
+        also.append({"particles": stops, "carries": marked, "moves": flow.get("moves", ""), "says": flow.get("says", "")})
     direction["also"] = also
+    for flow in [direction, *direction["also"]]:
+        _check_says(line_id, flow, problems)
+
+
+def arrow(carries: str, moves: str) -> bool:
+    """Whether a flow is drawn as an arrow (renderer: _travels): it travels, or what moves has no short symbol to
+    write on a particle (a word, "glucose", or nothing). A crossing ion ("Na⁺") is particles."""
+    return moves == "travels" or sum(ch.isalpha() for ch in notation(carries)) > SYMBOL_LETTERS or not carries.strip()
+
+
+def _check_says(line_id: str, flow: dict, problems: list[Problem]) -> None:
+    """An arrow's one-liner (Direction.says) is one short line; one too long is left out. An arrow with none is
+    recorded: the video draws it bare, and the learner is left asking what it shows (the owner, Nov 1)."""
+    says = " ".join(flow.get("says", "").split())
+    if len(says) > SAYS_MAX:
+        problems.append(Problem(line_id=line_id, rule="says", repaired=True,
+                                detail=f"the arrow's one-liner {says!r} is over {SAYS_MAX} characters; left out"))
+        says = ""
+    flow["says"] = says
+    if flow["particles"] and not says and arrow(flow["carries"], flow.get("moves", "")):
+        problems.append(Problem(line_id=line_id, rule="says", repaired=False,
+                                detail=f"an arrow ({' → '.join(flow['particles'])}) with no one-liner beside it"))

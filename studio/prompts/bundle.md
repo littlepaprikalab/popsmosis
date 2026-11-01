@@ -136,9 +136,9 @@ them too wherever they picture what it sings; its own pictures come after its ly
   the subject, its size and place ("Educational textbook illustration of one animal cell,
   clean scientific style, the cell large and round in the centre of the picture."), then
   says what this stage looks like. A structure keeps its name and colour from stage to
-  stage, and the video fades each stage into the next. Never draw several stages side by
-  side: they come back wrong. The stages are the overview, and the chorus plays over the
-  stage that draws what it names.
+  stage, and the video fades each stage into the next. Never draw a part twice, or several
+  stages side by side: they come back wrong, captioned "State 1" and "State 2". The stages
+  are the overview, and the chorus plays over the stage that draws what it names.
 - Things crossing between two side-by-side spaces, one way and the other (reabsorption and
   secretion; oxygen in, carbon dioxide out): a detail scene with the two spaces wide apart
   and the wall between them, each a structure, so one crossing moves left to right and the
@@ -217,6 +217,9 @@ Structures:
   videos. Distinct, saturated mid-tones, never pastels, near white, navy, slate, dark grey
   or near black. Only an analogy part shares a colour, with the
   structure it stands for.
+- One thing in two places with two jobs is two structures, each its own name and colour: a
+  water tower's pipe up to the tank and its pipe down to the house are "Pipe up to the tank"
+  and "Pipe down to the house", never one "Pipe", or an arrow up one runs along the other.
 - Structures in a scene never overlap: a group (the limbic system) and its parts (amygdala,
   hippocampus) are never both structures in one scene. When the core idea is about groups,
   the overview draws the groups and the detail scenes their parts.
@@ -566,10 +569,12 @@ no times: code adds them from the audio.
   chain of events): their scenes hold still, with [] here, and the camera and the spotlight
   move from part to part with the lines instead. The hook, the learner's world as it is,
   has none.
-- `carries`: what the particles are, written on the dot, at most 8 characters, the same
-  thing written the same way on every line: a molecule or ion as a textbook prints it
-  ("H⁺", "e⁻", "O₂", "Ca²⁺", "glucose"); anything else named in a plain word ("price",
-  "letter", "taxes"), so the fact-check sees what it is. It is what really travels that
+- `carries`: what the particles are, at most 8 characters, the same thing written the same
+  way on every line: a molecule or ion as a textbook prints it ("H⁺", "e⁻", "O₂", "Ca²⁺",
+  "glucose"); anything else named in a plain word ("price", "letter", "taxes"), so the
+  fact-check sees what it is. A symbol of at most 3 letters (charges and small numbers do
+  not count: "Na⁺", "Ca²⁺", "NAD⁺", "H₂O") is written on every particle; anything longer,
+  or "", moves as an arrow instead, with its `says` beside it. It is what really travels that
   path (protons through ATP synthase, electrons along the chain, the price up to
   equilibrium). "" with no particles, for a nerve signal or light, and on the analogy scene
   (its water stands for the protons, so "H₂O" would mislead). When you cannot say what would
@@ -580,13 +585,17 @@ no times: code adds them from the audio.
 - `moves`: "crosses" when it passes through one wall, membrane or carrier, the crossing
   being what the line teaches (O₂ across the alveolus's wall, H⁺ through ATP synthase);
   "travels" when it goes a long way along several parts, the path being what the line
-  teaches (filtrate down the nephron, sediment down a river), drawn as an arrow at each
-  hand-off. The same thing on one scene moves the same way on every line. "" with no
+  teaches (filtrate down the nephron, sediment down a river), drawn as an arrow along the
+  way. The same thing on one scene moves the same way on every line. "" with no
   particles.
+- `says`: for every arrow (it travels, or what moves has no short symbol), one line the
+  video writes beside it saying what it shows, at most 40 characters: "The pump lifts water
+  to the tank", "Glucose rides in with sodium", "Shortage pushes the price up". An arrow with
+  nothing beside it leaves the learner asking what it means. "" for particles.
 - `also`: at most one second flow, only when the line names both and they move at once:
   what one structure gives off together (H⁺ and O₂ from Photosystem II to the lumen), or
   two ways at once (the pump's Na⁺ out while its K⁺ comes in), with its own `particles`,
-  `carries` and `moves` under the same rules; [] on every other line.
+  `carries`, `moves` and `says` under the same rules; [] on every other line.
 - `glow`: a structure an outside cause switches on in this line (light excites photosystem
   II, a hormone reaches its receptor). Rare, a handful in a whole lesson, and never to point
   at what the line is about (that is `spotlight`); "" otherwise.
@@ -647,7 +656,12 @@ fact-check holds each to the facts. [] when there is none.
   price → people buy more"}, {"structure": "Supply curve", "text": "higher price → sellers
   offer more"}, {"structure": "Shortage", "text": "buyers want more than sellers have"}]`, one
   per part of a scene with `axes`, at most 40 characters, never the part's own name. The
-  video writes it under the name once the part is named, and keeps it there with the name. [] for a droplet with no graph.
+  video writes it under the name once the part is named, and keeps it there with the name.
+  On the analogy scene, one for each part that stands for something: the real thing, as
+  short as a label (`{"structure": "Electric pump", "text": "the Na⁺/K⁺ pump"}`, `{"structure":
+  "Power line", "text": "ATP"}`); the video writes "= the Na⁺/K⁺ pump" beside the part once
+  a line names it, so the learner maps each part, and only the parts the facts support. []
+  for a droplet with neither.
 
 ## On screen
 

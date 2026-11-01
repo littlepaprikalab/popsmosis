@@ -419,6 +419,27 @@ def test_a_graph_parts_meaning_is_checked_and_left_out_when_it_fails():
     assert [m.text for m in dropped_motions(report)] == [wrong]
 
 
+def test_an_arrows_one_liner_and_an_analogy_parts_mapping_are_checked_and_left_out_when_they_fail():
+    def saying(data):
+        for d in data["direction"]:
+            if d["line_id"] == "v1-1":
+                d.update(scene="overview", particles=["Thylakoid", "Cytochrome b6f"], carries="glucose",
+                         moves="travels", says="Glucose rides up to the complex")
+        next(s for s in data["scenes"] if s["id"] == "hook")["id"] = "analogy"
+        for d in data["direction"]:
+            d["scene"] = "analogy" if d["scene"] == "hook" else d["scene"]
+        data["meanings"] = [{"structure": "Thylakoid", "text": "the stored-up protons"}]
+
+    wrong = "Beside the arrow from Thylakoid to Cytochrome b6f, carrying glucose: Glucose rides up to the complex"
+    fake = FakeChecker(lambda text: ("UNSUPPORTED", "", "") if text == wrong else supported(text))
+    report, checked = check_bundle(bundle(saying), "", fake)
+    sent = {line["text"] for line in fake.payloads[0]["lines"] if line["id"].startswith("motion:")}
+    assert wrong in sent and "In the analogy, Thylakoid stands for: the stored-up protons" in sent
+    line = next(d for d in checked.direction if d.line_id == "v1-1")
+    assert report.status == "passed" and line.says == "" and line.particles  # the arrow stays, bare
+    assert [m.text for m in checked.meanings] == ["the stored-up protons"]
+
+
 def test_what_turns_is_checked_with_what_drives_it():
     def spinning(data):
         moving(data)

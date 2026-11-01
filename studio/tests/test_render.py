@@ -251,7 +251,7 @@ def flowing(beats: list[Beat]) -> Timeline:
     return Timeline(video="song", duration=beats[-1].t1, fps=30, audio=[], beats=beats, palette=PALETTE)
 
 
-def flow_beat(t0, t1, path=FLOW, labels=(), reveal=(), label="", color="#F2C230"):
+def flow_beat(t0, t1, path=FLOW, labels=(), reveal=(), label="H⁺", color="#F2C230"):
     particles = [Particles(path=list(path), color=color, trail=True, label=label)] if path else []
     return Beat(t0=t0, t1=t1, scene="overview", camera=TimelineCamera(target=None, zoom=1.0), reveal=list(reveal),
                 spotlight=None, labels=list(labels), particles=particles, caption=None, line_id=f"v{t0}",
@@ -277,9 +277,12 @@ def test_particles_stop_beside_the_label_dots():
 
 
 def test_the_stream_spreads_evenly_and_fades_at_the_ends():
+    gap = renderer_module.STREAM_GAP
     dots = renderer_module.stream_at([(0.0, 0.0), (900.0, 0.0)], 0.0)
-    assert [q[0] for q, _ in dots] == pytest.approx([90 * j for j in range(10)])
-    assert dots[0][1] == 0 and dots[5][1] == 1
+    xs = [q[0] for q, _ in dots]
+    steps = {round(b - a, 6) for a, b in zip(xs, xs[1:])}
+    assert xs[0] == 0 and len(steps) == 1 and 0.75 * gap <= steps.pop() <= 1.25 * gap  # evenly, about the gap apart
+    assert dots[0][1] == 0 and dots[2][1] == 1
     assert renderer_module.stream_at([(5.0, 5.0), (5.0, 5.0)], 1.0) == []
 
 
@@ -303,8 +306,14 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
     gold = p.rgb("#F2C230")
     at_b6f = flow.art_to_frame(held, *stops[1])
     frame = flow.frame(held).copy()
-    assert pixel(frame, *at_b6f) == pytest.approx(gold, abs=6)
-    assert pixel(still.frame(held), *at_b6f) != pytest.approx(gold, abs=40)
+
+    def golden(frame) -> int:  # the particle's gold disc round "H⁺", where it holds
+        x, y = round(at_b6f[0]), round(at_b6f[1])
+        box = frame[y - 20:y + 20, x - 20:x + 20, 2::-1].astype(int)
+        return int((np.abs(box - gold).max(2) < 8).sum())
+
+    assert golden(frame) > 200
+    assert golden(still.frame(held)) < 20
     assert (flow.frame(0.0) == still.frame(0.0)).all()  # they fade in: nothing yet at the start
     flow.frame(1.0)
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
@@ -313,7 +322,7 @@ def test_particles_travel_between_the_structures_and_fade_in(job):
 def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, monkeypatch):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
-    plain = Renderer(job, flowing([flow_beat(0, 8, color=cyan)]))
+    plain = Renderer(job, flowing([flow_beat(0, 8, label="", color=cyan)]))
     stops = marked._path_points("overview", FLOW)
     held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
     x, y = marked.art_to_frame(held, *stops[0])
@@ -323,21 +332,28 @@ def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, mon
         rows = frame[round(y) - 30:round(y) + 30, round(x) - 70:round(x) + 70, 2::-1]  # BGRA to RGB
         return int((np.abs(rows.astype(int) - p.rgb(cyan)).max(2) < 12).sum(1).max())
 
-    assert cyan_across(badge) > cyan_across(dot) + 6  # bigger than the plain dot
+    assert cyan_across(badge) > cyan_across(dot) + 6  # carrying nothing it is no badge: it moves as a thin arrow
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
-    # A word never rides a moving particle: glucose moves as its ring, and is named, still, in the legend.
-    word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
-    shapes, legends = [], []
+    # Every particle says what it is: the stream behind the lead is marked too, a little smaller, with no bare dots.
+    shapes, legends, arrows = [], [], []
     monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((label, size)))
+    marked.frame(held + 2.0)
+    assert shapes and {label for label, _ in shapes} == {"e⁻"} and {size for _, size in shapes} >= {1.0}
+
+    # A word never rides a particle: glucose moves as an arrow, and is named, still, in the legend.
+    shapes.clear()
+    word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
     monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries, arrows=(): legends.append((rect, entries)))
-    times = (held + 1.0, held + 2.0)  # the particle has moved on; the legend has not
+    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: arrows.append(points))
+    times = (held + 1.0, held + 2.0)
     for t in times:
         word.frame(t)
-    assert p.kind_of("glucose") == "sugar" and ("glucose", 1.0) in shapes  # the lead particle, at full size
+    assert shapes == [] and arrows and word._travels("overview", word.timeline.beats[0].particles[0])
     assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
     assert legends[0][0] == legends[1][0]  # in one place
+    assert p.carried("Ca²⁺") == "Ca²⁺" and p.carried("NAD⁺") == "NAD⁺" and p.carried("NADPH") == ""  # 3 letters
     assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water")] == [
         "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle
 
@@ -1428,12 +1444,13 @@ def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
     assert later[3] < y and later[0] < x < later[2]  # above its point, across it
 
 
-def test_what_travels_is_drawn_as_an_arrow_at_each_hand_off_and_a_crossing_as_particles(job, monkeypatch):
+def test_what_travels_is_drawn_as_an_arrow_along_its_way_and_a_crossing_as_particles(job, monkeypatch):
     # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
-    # drawn as an arrow where it passes from part to part. A crossing keeps its particles.
+    # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
+    # nothing). A crossing keeps its particles.
     arrows, dots = [], []
-    monkeypatch.setattr(p, "draw_handoff", lambda canvas, tail, tip, color, alpha, grown=1.0, pulse=0.0, size=1.0:
-                        arrows.append((tail, tip, grown, pulse)))
+    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, color, alpha, grown=1.0, pulse=0.0:
+                        arrows.append((points[0], points[-1], grown, pulse)))
     monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
 
     def moving(label, moves):
@@ -1444,18 +1461,20 @@ def test_what_travels_is_drawn_as_an_arrow_at_each_hand_off_and_a_crossing_as_pa
     travelling = moving("filtrate", "travels")
     flow = travelling.timeline.beats[0].particles[0]
     assert travelling._travels("overview", flow)
-    [(tail, tip, into)] = travelling._handoffs("overview", flow)  # one hand-off: from the thylakoid into b6f
+    line = travelling._route_line("overview", flow)  # from the thylakoid into b6f, along the way
     b6f = located(job, "overview", "Cytochrome b6f").box
-    assert b6f.y0 - 60 <= tip[1] <= b6f.y1 + 60 and tip != tail and into.name == "Cytochrome b6f"
+    assert len(line) >= 2 and b6f.x0 - 60 <= line[-1][0] <= b6f.x1 + 60 and b6f.y0 - 60 <= line[-1][1] <= b6f.y1 + 60
     start = travelling.plans[0].runs[0][0]  # when it sets off
-    travelling.frame(start + renderer_module.HANDOFF_GROW_S / 2)  # drawing itself in
+    travelling.frame(start + renderer_module.ROUTE_GROW_S / 2)  # drawing itself in
     travelling.frame(8.0)  # long since drawn in
     assert dots == [] and 0 < arrows[0][2] < 1 and arrows[-1][2] == 1.0
     assert "filtrate" in travelling._arrowed("overview")  # keyed with an arrow in the legend
 
     air = moving("air", "travels")  # a short word, not a symbol: it goes as the bundle says
     assert air._travels("overview", air.timeline.beats[0].particles[0])
-    for label, moves in (("salt", "crosses"), ("H⁺", "travels")):  # said to cross; an ion is always a particle
+    salt = moving("salt", "crosses")  # too long to write on a particle: an arrow, whatever the bundle says
+    assert salt._travels("overview", salt.timeline.beats[0].particles[0])
+    for label, moves in (("Na⁺", "crosses"), ("H⁺", "travels")):  # said to cross; an ion is always a particle
         arrows.clear(), dots.clear()
         crossing = moving(label, moves)
         crossing.frame(3.0)

@@ -755,3 +755,28 @@ def test_a_graph_parts_meaning_stays_with_its_name_from_when_it_is_first_named()
     assert got[3] == []
     assert got[4] == [("Demand curve", 4.0, 20.0), ("Gap", 13.0, 20.0)]
     assert got[5] == [("Demand curve", 4.0, 20.0)]
+
+
+def test_an_analogy_parts_mapping_shows_beside_it_from_when_it_is_first_named():
+    # What each part of the analogy stands for (Bundle.meanings) shows on the analogy from the part's first naming
+    # there on, every later beat of it; never on another scene (the owner, Nov 1).
+    from types import SimpleNamespace
+    from studio.schemas import Meaning, Reveal
+    from studio.steps.timeline import _mean
+
+    parts = [SimpleNamespace(name=n) for n in ("Electric pump", "Power line", "Water tower")]
+    locations = SimpleNamespace(scenes=[SimpleNamespace(scene="analogy", values=[], structures=parts),
+                                        SimpleNamespace(scene="overview", values=[], structures=[])])
+    bundle = SimpleNamespace(meanings=[Meaning(structure="Electric pump", text="the Na⁺/K⁺ pump"),
+                                       Meaning(structure="Power line", text="ATP")])
+
+    def beat(scene, t0, t1, *reveal):
+        return {"scene": scene, "t0": t0, "t1": t1, "reveal": [Reveal(name=n, t=at) for n, at in reveal]}
+
+    beats = [beat("analogy", 0.0, 3.0), beat("analogy", 3.0, 6.0, ("Electric pump", 4.0)),
+             beat("overview", 6.0, 9.0), beat("analogy", 9.0, 12.0, ("Power line", 10.0))]
+    _mean(beats, bundle, locations)
+    got = [[(m.structure, m.text, m.since) for m in b["meanings"]] for b in beats]
+    assert got[0] == [] and got[2] == []
+    assert got[1] == [("Electric pump", "the Na⁺/K⁺ pump", 4.0)]
+    assert got[3] == [("Electric pump", "the Na⁺/K⁺ pump", 4.0), ("Power line", "ATP", 10.0)]
