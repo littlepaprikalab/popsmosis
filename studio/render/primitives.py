@@ -697,8 +697,8 @@ def draw_handoff(canvas: skia.Canvas, tail: tuple[float, float], tip: tuple[floa
 ROUTE_DASH = (16.0, 11.0)  # a route arrow's dashes and the gaps between them, frame pixels
 ROUTE_WIDTH = 6.0  # its dashes
 ROUTE_CHEVRON = 18.0  # its single chevron at the end, from tip to each arm's end
-TRACK_WIDTH = 3.0  # a route's track, under the arrow gliding along it (draw_route_track)
-TRACK_DASH = (2.0, 9.0)  # its dots and the gaps between them
+TRACK_WIDTH = 5.0  # a route's track, under the arrow gliding along it (draw_route_track)
+TRACK_DASH = (7.0, 7.0)  # its dashes and the gaps between them
 
 
 def smooth_line(points: list[tuple[float, float]], steps: int = 6) -> list[tuple[float, float]]:
@@ -798,7 +798,7 @@ def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], col
                                          StrokeJoin=skia.Paint.kRound_Join))
 
 
-NOTE_FONT = 0.8  # a note's text, as a share of the labels' size
+NOTE_FONT = 0.95  # a note's text, as a share of the labels' size
 NOTE_PAD = 0.9  # its room each side of the text, as a share of its font size
 
 

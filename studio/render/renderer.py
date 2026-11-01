@@ -140,11 +140,13 @@ GLIDE_SHARE = 0.35  # the gliding arrow's length, as a share of its route...
 GLIDE_MAX = 170.0  # ...and at most this many frame pixels
 GLIDE_SPEED = 300.0  # frame pixels a second
 GLIDE_PAUSE_S = 0.5  # between one glide and the next
-TRACK_ALPHA = 0.6  # the track under it
+TRACK_ALPHA = 0.85  # the track under it: bold enough to see on a busy picture between glides (Nov 1)
 # A note (an arrow's one-liner): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
-# clear of the parts' label points and other notes (NOTE_CROWD each).
-NOTE_REACH = (30.0, 90.0, 160.0, 240.0)
+# clear of the parts' label points and other notes (NOTE_CROWD each). Beside its arrow or not at all: placed farther,
+# the gunpowder's note sat across the picture with a line through the Bastille, and read as pointing at nothing (Nov 1).
+NOTE_REACH = (30.0, 90.0)
+NOTE_SAID = 0.6  # a note is left out when this share of its words is in the line or the key line it first plays under
 NOTE_SIDES = ((1, 0), (-1, 0), (0, -1), (0, 1), (1, -1), (-1, -1), (1, 1), (-1, 1))
 NOTE_FAR = 0.05
 NOTE_CROWD = 0.3
@@ -610,6 +612,16 @@ def _inside(q: Point, box) -> bool:
     return box.x0 <= q[0] <= box.x1 and box.y0 <= q[1] <= box.y1
 
 
+def _repeats(note: str, said: str) -> bool:
+    """Whether most of a note's words (NOTE_SAID, cut to their first five letters, small words left out) are in what is
+    said or written with it: "Crowd seizes the Bastille's gunpowder" under "a Paris crowd stormed the Bastille for
+    gunpowder" says nothing new."""
+    def words(text: str) -> set[str]:
+        return {w[:5] for w in re.findall(r"[a-z]+", text.casefold().replace("'s", "")) if len(w) > 3}
+    mine = words(note)
+    return bool(mine) and len(mine & words(said)) >= NOTE_SAID * len(mine)
+
+
 def _in_space(at: float, loc, upright: bool) -> float:
     """A crossing's end kept inside the space it reaches, a tenth of the way in from its box's edges, as a space's
     stop is (_path_stops): ATP synthase's close-up of Nov 1 ran from the bottom of the picture to the top, and its H⁺
@@ -972,6 +984,16 @@ class Renderer:
                     self._wrong[key] = self._wrong_arrow(beat.scene, flow)
         self.left_out = [{"scene": scene, "path": list(path), "carries": label, "why": why}
                          for (scene, path, label, _), why in self._wrong.items() if why]
+        # The arrows whose one-liner only repeats what is said or written as it first plays: no note for them.
+        self._said: set[tuple] = set()
+        seen: set[tuple] = set()
+        for beat in timeline.beats:
+            for flow in beat.particles:
+                key = (beat.scene, tuple(flow.path), flow.label, flow.blocked)
+                if key not in seen:
+                    seen.add(key)
+                    if getattr(flow, "says", "") and _repeats(flow.says, f"{beat.line} {beat.key_line}"):
+                        self._said.add(key)
 
     def view(self, scene_id: str) -> Rect:
         """Where the scene's picture goes on the frame: above the key band and the lyric band, and left of the
@@ -2582,7 +2604,7 @@ class Renderer:
             if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
                 self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
             says = getattr(flow, "says", "")
-            if says:
+            if says and (scene_id, tuple(flow.path), flow.label, flow.blocked) not in self._said:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
                 self._draw_note(canvas, scene_id, ("says", tuple(flow.path), flow.label, says), says, middle,
                                 line, flow.color, alpha * p.ease((elapsed - ROUTE_GROW_S / 2) / ROUTE_GROW_S),
@@ -2621,10 +2643,10 @@ class Renderer:
             p.draw_name(canvas, word, rect, size, self.scene(scene_id).paper, flow.color, alpha * first, weight="Bold")
 
     def _note_spot(self, scene_id: str, key: tuple, anchor: Point, size: tuple[float, float],
-                   keep_clear: list[Point], shown: tuple[float, float, float, float] | None = None) -> Point:
+                   keep_clear: list[Point], shown: tuple[float, float, float, float] | None = None) -> Point | None:
         """Where a note's middle sits, in art pixels, chosen once for the scene: near what it is about, where it
         covers the least of the picture (ink_share), clear of every part's label point, of `keep_clear` (its arrow)
-        and of the notes placed before it; on the picture, never off its edge."""
+        and of the notes placed before it; on the picture, never off its edge. None when no spot beside it fits."""
         if key not in self._note_spots:
             art = self.scene(scene_id)
             w, h = size
@@ -2657,8 +2679,9 @@ class Renderer:
                     cost += sum(NOTE_CROWD * 2 for r in placed if crosses(r, near, anchor))
                     if best is None or cost < best[0]:
                         best = (cost, (cx, cy), box)
-            if best is None:
-                best = (0.0, anchor, (anchor[0] - w / 2, anchor[1] - h / 2, anchor[0] + w / 2, anchor[1] + h / 2))
+            if best is None:  # no room beside it: left out
+                self._note_spots[key] = None
+                return None
             placed.append(best[2])
             box = best[2]
             leaders.append(((min(max(anchor[0], box[0]), box[2]), min(max(anchor[1], box[1]), box[3])), anchor))
@@ -2677,8 +2700,10 @@ class Renderer:
         clip = canvas.getDeviceClipBounds()  # the view: what the frame shows of the picture, the bands left out
         shown = ((clip.left() - fx0) / scale, (clip.top() - fy0) / scale,
                  (clip.right() - fx0) / scale, (clip.bottom() - fy0) / scale)
-        cx, cy = self._note_spot(scene_id, key, anchor, (w / scale, h / scale), keep_clear, shown)
-        mx, my = on_frame((cx, cy))
+        spot = self._note_spot(scene_id, key, anchor, (w / scale, h / scale), keep_clear, shown)
+        if spot is None:
+            return
+        mx, my = on_frame(spot)
         p.draw_note(canvas, (mx - w / 2, my - h / 2, mx + w / 2, my + h / 2), text, size, color, alpha,
                     to=on_frame(anchor))
 
