@@ -141,6 +141,14 @@ GLIDE_MAX = 170.0  # ...and at most this many frame pixels
 GLIDE_SPEED = 300.0  # frame pixels a second
 GLIDE_PAUSE_S = 0.5  # between one glide and the next
 TRACK_ALPHA = 0.85  # the track under it: bold enough to see on a busy picture between glides (Nov 1)
+# A crossing (straight through one part, _crossing) is its particles crossing, not an arrow (the owner, Nov 1): the line
+# is sure now, and ions streaming through the pump look like what the textbook says. As many as the words count (three
+# Na+), else CROSS_MANY, one after another, each a little to one side of the line and wobbling, so they read as a flow.
+CROSS_S = 2.0  # seconds a particle takes to cross
+CROSS_MANY = 3  # in flight at once when the words give no count
+CROSS_SPREAD = 16.0  # frame pixels they keep either side of the line, at most
+CROSS_WOBBLE = 4.0  # frame pixels each wobbles about its place
+CROSS_FADE = 0.15  # the share of the way each fades in over as it leaves, and out over as it arrives
 # A note (an arrow's one-liner): tried this far (art pixels) from what it is about,
 # on each side, and kept where it covers the least of the picture, nearer winning a tie (NOTE_FAR at the farthest),
 # clear of the parts' label points and other notes (NOTE_CROWD each). Beside its arrow or not at all: placed farther,
@@ -2309,10 +2317,14 @@ class Renderer:
             if alpha <= 0.01 or self._wrong.get((beat.scene, tuple(flow.path), flow.label, flow.blocked)):
                 continue
             elapsed = t - flow_in
+            lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
+            if not flow.blocked and not self._graph(beat.scene) and self._crossing(beat.scene, flow.path, lane):
+                self._draw_crossing(canvas, flow, self._flow_line(beat.scene, flow), elapsed, alpha, on_frame, t,
+                                    count_in(beat.line, flow.label))
+                continue
             if self._as_arrow(beat.scene, flow):
                 self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t, count_in(beat.line, flow.label))
                 continue
-            lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             points = self._path_points(beat.scene, flow.path, flow.blocked, lane)
             bends = None if flow.blocked else self._bends(beat.scene, flow.path, lane)
             if len(points) < 2:
@@ -2520,6 +2532,26 @@ class Renderer:
             back = _width(flow.label) * (0.5 if count == 2 else 0.58)
             at = (at[0] + ux * back, at[1] + uy * back)
         self._draw_kinds(canvas, at, ahead, flow, alpha, count)
+
+    def _draw_crossing(self, canvas: skia.Canvas, flow, line: list[Point], elapsed: float, alpha: float, on_frame,
+                       t: float, count: int = 1) -> None:
+        """A crossing's particles streaming along its line (art pixels) from one side of the part to the other, again and
+        again: `count` of them a cycle (CROSS_MANY when the words give none), each off the line by its own share of
+        CROSS_SPREAD and wobbling about it, fading in as it leaves and out as it arrives."""
+        shown = [on_frame(q) for q in line]
+        total = routing.length(shown)
+        if len(shown) < 2 or total < 1.0:
+            return
+        (x0, y0), (x1, y1) = shown[0], shown[-1]
+        d = math.hypot(x1 - x0, y1 - y0) or 1.0
+        nx, ny = -(y1 - y0) / d, (x1 - x0) / d  # across the way it goes
+        many = count if count > 1 else CROSS_MANY
+        for k in range(many):
+            gone = (elapsed / CROSS_S + k / many) % 1.0
+            x, y = _along(shown, gone * total)
+            side = CROSS_SPREAD * ((k * 0.618 + 0.31) % 1.0 * 2 - 1) + CROSS_WOBBLE * math.sin(2.3 * t + 1.7 * k)
+            fade = p.clamp01(gone / CROSS_FADE) * p.clamp01((1 - gone) / CROSS_FADE)
+            p.draw_kind(canvas, (x + nx * side, y + ny * side), flow.color, flow.label, alpha * fade, size=TAIL_SIZE)
 
     def _draw_kinds(self, canvas: skia.Canvas, at: Point, ahead: Point, flow, alpha: float, count: int) -> None:
         """`count` particles of what the flow carries, packed together around `at` (cluster)."""
