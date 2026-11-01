@@ -32,6 +32,17 @@ instead of billing. Paint, music or a voice on the API (Muse Image, Gemini) only
 for it in this conversation, with its price said first. This is the owner's standing decision
 (Oct 31), after a redraw billed $0.76 of drawer calls.
 
+## Rules in the prompts earn their place
+
+The writer's brief is long, and the writer does not follow every rule in it (Nov 1: `held` was never set in two
+scorecard runs, panels were asked for in every run). The owner's standing decision (Nov 1):
+
+- A new prompt rule is tested before it stays: a subagent writer (free) on the topics it is for. If it does not
+  change what the writer does, take it back out rather than leave it to pile up.
+- Prefer code that makes the outcome sure over a rule that asks for it: a default, a guard that repairs, or the
+  fact-check dropping what is wrong (as `held` became a default, and an analogy scene is left out by a guard).
+- Trim what stops applying when the thing it was for goes away.
+
 ## The scorecard runs in the session, never on the API key
 
 Always run the scorecard ([docs/scorecard.md](docs/scorecard.md)) in the Claude Code session,
