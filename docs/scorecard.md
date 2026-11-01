@@ -237,27 +237,6 @@ time, scored 3.75 against 3.79: about that much is the judge. Read through:
   and "see" only after "now" or "let's", and "look" only when it points somewhere ("look at", "look inside").
 - Chorus lines with particles: 79 of 198 (70 of 204 in the evening), with the summing-up rule gone.
 
-## The baseline: `20261029-2019-ba83842`
-
-Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
-
-| Hook | Frame | Why chain | Key lines | Accuracy | Singability | Lesson |
-|---|---|---|---|---|---|---|
-| 4.17 | 3.92 | 4.33 | 3.00 | 4.08 | 3.08 | 3.75 |
-
-- **The rules hold outside science.** History, literature, economics, maths, statistics and
-  Spanish score about the same as biology.
-- **Key lines are the weakest, the same way in every topic.** The first key line is the lesson's
-  opening question rather than a step, one or two are analogy mappings ("Lamp = Sun, ball =
-  Moon"), and the last is often about the bridge rather than the core idea.
-- **Singability:** the choruses are strong everywhere, but the verses run long and read like
-  textbook captions (13 lyric-style check problems, mostly lines over 12 words).
-- **Checks:** 25 problems left for the prompt, about 2 a droplet.
-- **The learner test passed 12 of 12 on the first read.** It is at its ceiling, so it cannot show
-  an improvement; a harder transfer question would.
-- **The judge's error list is still noisy:** about a third of its 22 entries say nothing needs
-  correcting. Trust the accuracy score and its reason over the count.
-
 ### Again, after the principles brief
 
 Run again in the session after the writers' prompts were rebuilt on seven teaching principles and cut back (commit
@@ -295,3 +274,24 @@ frame the new droplets score 4.60 against the baseline's 3.57. The key lines wen
   reactions song singing "hydrogen" for hydrogen ions; the rocket coasting "because nothing pushes it", leaving out
   gravity. The fact-check, which this run leaves out, is where these would be caught.
 - **Still long:** the lessons run 512 to 697 words against the 300 to 500 asked, and the narrations 366 to 417 of 420.
+
+## The baseline: `20261029-2019-ba83842`
+
+Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
+
+| Hook | Frame | Why chain | Key lines | Accuracy | Singability | Lesson |
+|---|---|---|---|---|---|---|
+| 4.17 | 3.92 | 4.33 | 3.00 | 4.08 | 3.08 | 3.75 |
+
+- **The rules hold outside science.** History, literature, economics, maths, statistics and
+  Spanish score about the same as biology.
+- **Key lines are the weakest, the same way in every topic.** The first key line is the lesson's
+  opening question rather than a step, one or two are analogy mappings ("Lamp = Sun, ball =
+  Moon"), and the last is often about the bridge rather than the core idea.
+- **Singability:** the choruses are strong everywhere, but the verses run long and read like
+  textbook captions (13 lyric-style check problems, mostly lines over 12 words).
+- **Checks:** 25 problems left for the prompt, about 2 a droplet.
+- **The learner test passed 12 of 12 on the first read.** It is at its ceiling, so it cannot show
+  an improvement; a harder transfer question would.
+- **The judge's error list is still noisy:** about a third of its 22 entries say nothing needs
+  correcting. Trust the accuracy score and its reason over the count.
