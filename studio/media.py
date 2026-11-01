@@ -71,6 +71,11 @@ ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
 
 LOCATIONS = "locations.json"
+# Lyria masters its songs to full scale, and an MP3 decodes a little past it: the pump's song went over 79 times, in
+# its choruses, and was heard as crackle once encoded again (the owner, Nov 1). The audio step keeps a song, and the
+# render its mix, with the peaks held under -1 dBFS by this lookahead limiter, which leaves everything below them as it
+# was (no auto level), its delay compensated so the words stay where they are sung.
+PEAK_LIMIT = "alimiter=limit=0.891:level=false:latency=true"
 LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
 
 

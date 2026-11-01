@@ -29,6 +29,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from studio.media import PEAK_LIMIT
 from studio.render.layouts import LAYOUTS
 from studio.schemas import Timeline
 
@@ -262,7 +263,9 @@ def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[l
         chains.append(f"[{i + first_input}:a]aresample=48000,{trim},asetpts=PTS-STARTPTS{fade},"
                       f"adelay={delay}:all=1[a{i}]")
     mix = "".join(f"[a{i}]" for i in range(len(timeline.audio)))
-    chains.append(f"{mix}amix=inputs={len(timeline.audio)}:normalize=0:duration=longest,"
+    # The mix's peaks held under -1 dBFS before the AAC encode, as the audio step keeps a song (audio.PEAK_LIMIT): a
+    # song made before Nov 1 went past full scale in its choruses and crackled.
+    chains.append(f"{mix}amix=inputs={len(timeline.audio)}:normalize=0:duration=longest,{PEAK_LIMIT},"
                   f"apad,atrim=end={timeline.duration:.3f}[mix]")
     return inputs, ";".join(chains)
 

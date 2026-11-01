@@ -707,3 +707,21 @@ def test_a_gemini_narration_costs_its_tokens_at_the_prices_of_the_day():
     # No count of its own: the audio's length, at 25 tokens a second; neither: no price.
     assert audio.gemini_speech_cost(None, 100.0, datetime.date(2026, 12, 31)) == 0.0225
     assert audio.gemini_speech_cost({"total_output_tokens": "lots"}, None) is None
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+def test_a_song_sent_past_full_scale_is_kept_with_its_peaks_under_it(tmp_path):
+    # Lyria masters to full scale, and the pump's song went over 79 times, in its choruses: heard as crackle (Nov 1).
+    import subprocess
+
+    import numpy as np
+
+    loud = tmp_path / "loud.wav"  # a float WAV can hold what an MP3 decodes to: peaks at 1.3, about +2.3 dBFS
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "aevalsrc=1.3*sin(2*PI*440*t):s=44100:d=2",
+                    "-c:a", "pcm_f32le", str(loud)], check=True)
+    kept = AS_MP3(loud.read_bytes(), "audio/wav", "song")
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-f", "f32le", "-"], input=kept,
+                         capture_output=True, check=True).stdout
+    peak = float(np.abs(np.frombuffer(raw, np.float32)).max())
+    assert peak < 1.0  # held under full scale, where it would clip
+    assert peak > 0.8  # and not turned down as a whole: only the peaks are held

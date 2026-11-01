@@ -813,6 +813,7 @@ def test_a_clip_that_starts_partway_into_music_fades_in(job):
     first, second = mix.split(";")[:2]
     assert "atrim=start=0.500" in first and "afade=t=in:st=0:d=0.500" in first
     assert "afade" not in second  # a clip that starts partway on purpose is not faded
+    assert media.PEAK_LIMIT in mix.split(";")[-1]  # the mix's peaks held under full scale, which crackled (Nov 1)
 
 
 def probe(path):
