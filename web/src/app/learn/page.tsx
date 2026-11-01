@@ -325,7 +325,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                     {notesUrl && <TeacherNotesLink href={notesUrl} />}
                   </p>
                 )}
-                {/* Still rendering under the text (shown as soon as the lesson is posted): the bill keeps filling in under it. */}
+                {/* Still rendering after the text was shown (a second attempt, or an hour on): the bill keeps filling in under it. */}
                 {(answer.breakdown || q.progress) && (
                   <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={answer.video?.status === 'RENDERING' ? q.progress : null} />
                 )}
