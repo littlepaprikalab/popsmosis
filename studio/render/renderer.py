@@ -28,7 +28,7 @@ from studio.checks import CARRIED_WORDS
 from studio.render import axes, routing
 from studio.render import primitives as p
 from studio.render.layouts import LAYOUTS, Layout, Rect
-from studio.schemas import Locations, SceneLocations, Timeline
+from studio.schemas import Arrows, Locations, SceneLocations, Timeline
 
 GHOST_WASH = 0.85  # how pale an unrevealed structure is
 SPOT_WASH = 0.6  # how pale everything but the spotlit structure is
@@ -139,6 +139,7 @@ GLIDE_MAX = 170.0  # ...and at most this many frame pixels
 GLIDE_SPEED = 300.0  # frame pixels a second
 GLIDE_PAUSE_S = 0.5  # between one glide and the next
 TRACK_ALPHA = 0.85  # the track under it: bold enough to see on a busy picture between glides (Nov 1)
+ARROW_SEEN = 0.6  # a still to look at an arrow by shows its gliding arrow this share of the way along (arrow_time)
 # A crossing (straight through one part, _crossing) is its particles crossing, not an arrow (the owner, Nov 1): the line
 # is sure now, and ions streaming through the pump look like what the textbook says. As many as the words count (three
 # Na+), else CROSS_MANY, one after another, each a little to one side of the line and wobbling, so they read as a flow.
@@ -897,8 +898,14 @@ class BeatPlan:
 
 class Renderer:
     def __init__(self, job: Path, timeline: Timeline, layout: Layout | str = "h",
-                 locations: Locations | None = None):
+                 locations: Locations | None = None, arrows: Arrows | None = None):
         self.job = job
+        # Each arrow as the arrows step placed and looked at it (arrows.json), by its flow: its tail and head where
+        # the helper pointed them on a painting, and why it is left out, if it is. None read: code places them all.
+        if arrows is None and (job / media.ARROWS).exists():
+            arrows = jobs.read(job / media.ARROWS, Arrows)
+        self._placed = {(a.scene, tuple(a.path), a.carries, a.blocked): a for a in (arrows.arrows if arrows else [])}
+        self.only: tuple | None = None  # a flow's key: draw that flow's arrow alone (a still to look at it by)
         self.timeline = timeline
         self.layout = LAYOUTS[layout] if isinstance(layout, str) else layout
         if timeline.core_idea:
@@ -988,13 +995,15 @@ class Renderer:
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
         self._postits: dict[str, list[tuple[int, float]]] = {}  # per scene, each flag's post-it side and reach
-        # The sanity gate, once for every arrow off a graph (a graph's are drawn exactly): what fails is never drawn.
+        # The sanity gate, once for every arrow off a graph (a graph's are drawn exactly): what fails is never drawn,
+        # nor what the arrows step left out (one it found cannot be drawn on the picture, or saw drawn wrong).
         self._wrong: dict[tuple, str] = {}
         for beat in timeline.beats:
             for flow in beat.particles if not self._graph(beat.scene) else ():
                 key = (beat.scene, tuple(flow.path), flow.label, flow.blocked)
                 if key not in self._wrong:
-                    self._wrong[key] = self._wrong_arrow(beat.scene, flow)
+                    placed = self._placed.get(key)
+                    self._wrong[key] = (placed.left_out if placed else "") or self._wrong_arrow(beat.scene, flow)
         self.left_out = [{"scene": scene, "path": list(path), "carries": label, "why": why}
                          for (scene, path, label, _), why in self._wrong.items() if why]
         # How many of a thing go through a part at once, from the first line anywhere that counts them ("three sodium
@@ -1128,9 +1137,11 @@ class Renderer:
             if not carried:
                 focus = None
                 if self.portrait and beat.particles:
-                    stops = self._path_points(beat.scene, beat.particles[0].path)
+                    stops = self._pointed(beat.scene, beat.particles[0]) or self._path_points(beat.scene,
+                                                                                              beat.particles[0].path)
                     focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
-            keep = [point for flow in beat.particles for point in self._path_points(beat.scene, flow.path)] \
+            keep = [point for flow in beat.particles
+                    for point in self._pointed(beat.scene, flow) or self._path_points(beat.scene, flow.path)] \
                 if beat.camera.from_whole and beat.camera.target else []
             target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus, beat.camera.from_whole, keep)
             same = i > 0 and beats[i - 1].scene == beat.scene
@@ -2330,7 +2341,8 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))
         for flow, (flow_in, flow_out) in zip(beat.particles, plan.runs):
             alpha = p.ease((t - flow_in) / FLOW_IN_S) * p.ease((flow_out - t) / FLOW_IN_S)
-            if alpha <= 0.01 or self._wrong.get((beat.scene, tuple(flow.path), flow.label, flow.blocked)):
+            key = (beat.scene, tuple(flow.path), flow.label, flow.blocked)
+            if alpha <= 0.01 or self._wrong.get(key) or self.only not in (None, key):
                 continue
             elapsed = t - flow_in
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
@@ -2501,15 +2513,55 @@ class Renderer:
             return f"points away from {last.name}"
         return ""
 
+    def _pointed(self, scene_id: str, flow) -> list[Point] | None:
+        """A hop's arrow as the helper pointed it on the painting (arrows.json): straight from its tail to its head, art
+        pixels; None where code places it."""
+        placed = self._placed.get((scene_id, tuple(flow.path), flow.label, flow.blocked))
+        if placed is None or placed.start is None or placed.end is None:
+            return None
+        return [(placed.start.x, placed.start.y), (placed.end.x, placed.end.y)]
+
+    def hops(self) -> list[tuple[str, object, str]]:
+        """Each flow drawn as an arrow from place to place, once: off a graph, and not a crossing (_crossing), which
+        code draws as its particles crossing. Each with its scene and the line it first plays under."""
+        found: dict[tuple, tuple[str, object, str]] = {}
+        for beat in self.timeline.beats:
+            for flow in beat.particles if not self._graph(beat.scene) else ():
+                key = (beat.scene, tuple(flow.path), flow.label, flow.blocked)
+                lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
+                if key not in found and (flow.blocked or not self._crossing(beat.scene, flow.path, lane)):
+                    found[key] = (beat.scene, flow, beat.line)
+        return list(found.values())
+
+    def arrow_time(self, scene_id: str, flow) -> float:
+        """A moment that shows a hop's arrow (hops()): in the run of its first beat, as near that beat's middle as it
+        can be with its gliding arrow ARROW_SEEN of the way along, so a still of it shows which way it goes. A blocked
+        one's arrow stands still, whole once drawn in: the beat's middle, or as soon as it is whole."""
+        i, k = next((i, k) for i, beat in enumerate(self.timeline.beats) if beat.scene == scene_id
+                    for k, f in enumerate(beat.particles) if f == flow)
+        beat, (flow_in, flow_out) = self.timeline.beats[i], self.plans[i].runs[k]
+        middle, start = (beat.t0 + beat.t1) / 2, flow_in + ROUTE_GROW_S
+        if flow.blocked:
+            return min(max(middle, start), flow_out - 0.01)
+        shown = [self.art_to_frame(middle, *q) for q in self._flow_line(scene_id, flow)]
+        total = routing.length(shown)
+        period = (total + min(GLIDE_SHARE * total, GLIDE_MAX)) / GLIDE_SPEED + GLIDE_PAUSE_S
+        along = ARROW_SEEN * total / GLIDE_SPEED  # into a glide, as its head gets that far
+        t = start + max(round((middle - start - along) / period), 0) * period + along
+        return t if t < flow_out else (flow_in + flow_out) / 2
+
     def _flow_line(self, scene_id: str, flow) -> list[Point]:
-        """A flow's arrow off a graph, art pixels: straight through the part it crosses (_crossing); along its parts
-        when it is a journey (_route_line); else its stops' legs, as particles ran them before Nov 1 (_path_points,
-        _bends); up to its blocker when blocked."""
+        """A flow's arrow off a graph, art pixels: where the helper pointed it on the painting (_pointed); else
+        straight through the part it crosses (_crossing); along its parts when it is a journey (_route_line); else its
+        stops' legs, as particles ran them before Nov 1 (_path_points, _bends); up to its blocker when blocked."""
         key = ("flow", scene_id, tuple(flow.path), flow.label, flow.blocked)
         if key not in self._through:
             lane = self._lanes.get((scene_id, tuple(flow.path), flow.label), 0)
             crossing = None if flow.blocked else self._crossing(scene_id, flow.path, lane)
-            if crossing:
+            pointed = self._pointed(scene_id, flow)
+            if pointed:
+                line = pointed
+            elif crossing:
                 line = list(crossing)
             elif ROUTES and not flow.blocked and self._travels(scene_id, flow):
                 line = self._route_line(scene_id, flow)

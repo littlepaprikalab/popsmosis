@@ -1172,6 +1172,29 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
     return problems
 
 
+class PlacedArrow(Strict):
+    """One hop's arrow as the arrows step placed it and looked at it (studio/steps/arrows.py), by its flow: the scene,
+    the stops, what it carries and whether it is blocked, as the timeline's Particles have them."""
+
+    scene: str
+    path: list[str]
+    carries: str
+    blocked: bool = False
+    # Its tail and head where the helper pointed them on the painting, art pixels: drawn straight from one to the other.
+    # None where code places it (a drawing, or a hop the helper was not asked about) or it cannot be drawn.
+    start: Point | None = None
+    end: Point | None = None
+    placed: str = ""  # the helper's word on where it put the arrow, or on why the picture cannot show it
+    seen: str = ""  # its word on the arrow as drawn, after looking at a still of it
+    left_out: str = ""  # why the video leaves it out, or "": it cannot be drawn, or as drawn it does not show the move
+
+
+class Arrows(Strict):
+    """arrows.json: every hop's arrow off a graph, as the arrows step placed and looked at it."""
+
+    arrows: list[PlacedArrow]
+
+
 def timeline_problems(timeline: Timeline, locations: Locations) -> list[str]:
     """Names in the timeline that its scene's art does not have: every one must be located there."""
     problems = []

@@ -656,7 +656,7 @@ studio/
   media.py         the files steps 3-9 pass to each other, and how a media step is built
   prompts/         bundle, fact audit, fact-check, songwriter, helper and scorecard rubric prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
-  steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, render, upload
+  steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, arrows, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Regular/SemiBold/Bold/ExtraBold)
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/
