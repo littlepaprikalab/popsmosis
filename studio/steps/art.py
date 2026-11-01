@@ -417,6 +417,8 @@ def key(bundle: Bundle, scene: Scene) -> str:
     data = [bundle.topic, _dump(scene)]
     if (stage := Stage.of(bundle, scene)) and stage.number > 1:
         data.append(_dump(stage.first))
+    if (source := style_source(bundle, scene)) is not None:  # painted in its look: again whenever it is
+        data.append(["style", _dump(source)])
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
 
@@ -445,6 +447,22 @@ class Stage:
         if len(group) < 2:
             return None
         return cls(scene.stage_of, [s.id for s in group].index(scene.id) + 1, len(group), group[0])
+
+
+def style_source(bundle: Bundle, scene: Scene) -> Scene | None:
+    """The overview, when the scene is painted in its look: the owner saw the pump's pictures each in a style of its
+    own (Nov 1), the pump an orange cluster in one and a glossy lobed shape in the next, painted from separate prompts.
+    So a scene that shares a part with the overview is redrawn from the overview's picture (STYLE_FROM), as a process's
+    later stage is from its first. Not the hook (an everyday picture), the overview itself, or a later stage, which
+    follows its first stage, and that one the overview."""
+    if scene.id in EVERYDAY or scene.id == "overview":
+        return None
+    overview = next((s for s in bundle.scenes if s.id == "overview"), None)
+    stage = Stage.of(bundle, scene)
+    if overview is None or (stage is not None and stage.number > 1):
+        return None
+    shared = {s.name for s in scene.structures} & {s.name for s in overview.structures}
+    return overview if shared else None
 
 
 def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -> str:
@@ -600,13 +618,22 @@ def run_painted(job: Path, ask) -> str:
     drawn_ids = {scene.id for scene in to_draw}
     to_paint = [scene for scene in bundle.scenes if scene.id not in drawn_ids]
     stages = {scene.id: stage for scene in to_paint if (stage := Stage.of(bundle, scene))}
+    # The scenes painted in the overview's look (style_source()), when the overview is painted too, by a painter that
+    # can redraw: after the overview, from its picture.
+    overview = next((scene for scene in to_paint if scene.id == "overview"), None)
+    styled = ({scene.id for scene in to_paint if style_source(bundle, scene) is not None}
+              if overview is not None and by.redraws else set())
     again = {scene.id for scene in to_paint if not (resume and _painted(job, bundle, scene))}
+    if overview is not None and overview.id in again:
+        again |= styled
     # A later stage is redrawn from its first: painted again whenever that one is.
     again |= {sid for sid, stage in stages.items() if stage.first.id in again}
     todo = [scene for scene in to_paint if scene.id in again]
     kept = len(to_paint) - len(todo)
-    first = [scene for scene in todo if scene.id not in stages or stages[scene.id].number == 1]
-    later = [scene for scene in todo if scene not in first]
+    first = [scene for scene in todo if (scene.id not in stages or stages[scene.id].number == 1)
+             and scene.id not in styled]
+    middle = [scene for scene in todo if scene.id in styled]
+    later = [scene for scene in todo if scene not in first and scene not in middle]
 
     def make(scene: Scene):
         if scene.id not in drawn_ids:
@@ -634,6 +661,10 @@ def run_painted(job: Path, ask) -> str:
     to_draw = [scene for scene, _ in drawings]
     results = [m for _, m in instead] + painted_first
     first = painted_instead + first
+    if middle:  # in the overview's look, from its picture as now painted
+        results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(overview.id),
+                                                       styled=True), middle, WORKERS)
+        first += middle
     results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
                                later, WORKERS)
     todo = first + later
@@ -687,7 +718,7 @@ def refusal(tried: dict) -> str | None:
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None,
-          instead_of_svg: str = "") -> tuple[Painting, int]:
+          instead_of_svg: str = "", styled: bool = False) -> tuple[Painting, int]:
     """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
     how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
     (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
@@ -700,7 +731,8 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         old.unlink()
     best, problems, n, tries = None, [], 0, []
     for n in range(1, MAX_PAINTS + 1):
-        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None)
+        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None and not styled,
+                              styled=reference is not None and styled)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
             picture = by.make(job, label, prompt, reference)
@@ -751,6 +783,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                                   **({"instead_of_svg": instead_of_svg} if instead_of_svg else {}),
                                   "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
                                   and stage.number > 1 else "",
+                                  **({"styled_from": "overview"} if styled and reference is not None else {}),
                                   "try": best.attempt, "check": best.check.model_dump(), "tries": tries})
     _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
@@ -872,7 +905,8 @@ def fit(picture: bytes) -> np.ndarray:
     return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
 
 
-def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False) -> str:
+def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False,
+                 styled: bool = False) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
     image model reads names), a graph's axes, and last what to label (labels_line()): the picture labels its own
     parts. Short on purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE
@@ -884,6 +918,8 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
         parts.append(axes_line(scene.axes))
     if redrawn and (stage := Stage.of(bundle, scene)):
         parts.insert(0, REDRAW.format(process=stage.process))
+    elif styled:
+        parts.insert(0, STYLE_FROM)
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
@@ -945,6 +981,9 @@ DETAIL = "a close-up of one part of the topic."
 SONG = "a picture for the song video: the topic's own parts as the song's lines sing them."
 STAGE = ("stage {number} of {count} of {process}: the same subject as its other stages, at the same size and in "
          "the same place, showing what this stage shows.")
+# Before the prompt of a scene painted in the overview's look (style_source()), redrawn from the overview's picture.
+STYLE_FROM = ("Paint a new picture in the same style as this one: the same colours, line work and shading, with every "
+              "part it shares with the new picture drawn the same way. Do not copy its layout. The new picture:")
 # Before a later stage's own prompt, when it is redrawn from the first stage's picture (/v1/images/edits).
 REDRAW = ("Redraw this picture as a later stage of {process}: the same subject, at the same size and in the same "
           "place, in the same colours and style; change only what this stage shows.")
