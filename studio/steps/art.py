@@ -539,11 +539,11 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
 NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
-# A biology picture is asked for in Campbell Biology's look, the owner's choice (Nov 2): "the images are much better
+# A biology picture is asked for in the Campbell textbook look, the owner's choice (Nov 2): "the images are much better
 # looking". A style, not a figure of theirs. Added here at paint time, never in the bundle: when the brief had the
 # writer name the book, the fact-check struck it from every picture as a claim (eed1ff6). Biology is the course's, or,
 # in any other science course, a scene that draws the parts of a cell.
-CAMPBELL_STYLE = "clean Campbell Biology textbook style"
+CAMPBELL_STYLE = "clean biology Campbell style"  # the owner's words for it
 BIOLOGY_COURSE = re.compile(r"biolog|anatomy|physiolog|life science|genetic|microbio|ecolog|botany|zoology", re.I)
 CELL_PARTS = re.compile(r"\b(?:cell membrane|organelles?|proteins?|chloroplasts?|mitochondri\w*|enzymes?|DNA|RNA"
                         r"|ribosomes?|neurons?|chromosomes?|phospholipid\w*|bilayer|cytoplasm)\b", re.I)
