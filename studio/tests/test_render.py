@@ -414,12 +414,12 @@ def test_off_a_graph_a_flow_is_an_arrow_with_its_particle_jiggling_behind_its_ta
     assert dots == [] and places[0] != places[1]  # nothing travels; the particle jiggles in its spot
 
 
-def test_the_particle_at_an_arrows_tail_is_a_badge_with_what_it_carries_and_a_word_is_keyed(job, monkeypatch):
+def test_the_particle_at_an_arrows_tail_is_a_badge_with_what_it_carries_even_a_word(job, monkeypatch):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, label="", color=cyan)]))
     held = 3.0
-    shapes, legends, arrows = [], [], []
+    shapes, arrows = [], []
     with monkeypatch.context() as m:  # where the particle is on this frame
         m.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((at, label, size)))
         marked.frame(held)
@@ -435,31 +435,19 @@ def test_the_particle_at_an_arrows_tail_is_a_badge_with_what_it_carries_and_a_wo
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
-    # A word never rides a particle: glucose is drawn as a sugar ring at the arrow's tail, and named, still, in the
-    # legend.
+    # A word rides with its name on it too (the owner, Nov 2: a key in the corner was gone before anyone read it):
+    # glucose is a "glucose" pill at the arrow's tail, and no key is drawn.
     shapes.clear()
     monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((at, label, size)))
     word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
-    monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries, arrows=(): legends.append((rect, entries)))
     tracks = []
     monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
-    times = (held + 1.0, held + 2.0)
-    for t in times:
+    for t in (held + 1.0, held + 2.0):
         word.frame(t)
-    assert {label for _, label, _ in shapes} == {"glucose"} and p.kind_of("glucose") == "sugar" and tracks
+    assert {label for _, label, _ in shapes} == {"glucose"} and tracks
     assert word._travels("overview", word.timeline.beats[0].particles[0])
-    assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
-    assert legends[0][0] == legends[1][0]  # in one place
-    # With its one-liner beside the arrow, the key has nothing to add (Nov 1: "→ glucose" stayed on in a corner).
-    legends.clear()
-    said = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan).model_copy(update={"particles": [
-        f.model_copy(update={"says": "Glucose rides in with sodium"}) for f in flow_beat(0, 8, label="glucose",
-                                                                                         color=cyan).particles]})]))
-    said.frame(held + 1.0)
-    assert legends == []
-    assert p.carried("Ca²⁺") == "Ca²⁺" and p.carried("NAD⁺") == "NAD⁺" and p.carried("NADPH") == ""  # 3 letters
-    assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water")] == [
-        "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle
+    assert not hasattr(p, "draw_legend")
+    assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water", "glucose", "electrons")] == ["word"] * 7
 
 
 def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job, monkeypatch):
@@ -1724,7 +1712,7 @@ def test_a_meaning_the_frame_leaves_out_never_takes_its_name_with_it(job, monkey
     assert drawn == ["Thylakoid"]
 
 
-def test_a_graphs_arrow_has_its_word_beside_it_and_no_key(job, monkeypatch):
+def test_a_graphs_arrow_has_its_word_beside_it(job, monkeypatch):
     from studio.schemas import Axes
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     graph = timeline.model_copy(update={"axes": {"overview": Axes(x="Quantity", y="Price")}})
@@ -1734,10 +1722,6 @@ def test_a_graphs_arrow_has_its_word_beside_it_and_no_key(job, monkeypatch):
     assert renderer._arrow_word("overview", "quantity", (100, 10), (20, 12)) == "quantity falls"
     assert renderer._arrow_word("overview", "price", (10, 10), (100, 12)) == "price"  # across: says no way
     assert renderer._arrow_word("overview", "buyers", (10, 100), (12, 20)) == "buyers"  # no axis's quantity
-    beat = next(b for b in timeline.beats if b.scene == "overview" and b.particles)
-    with_word = beat.model_copy(update={"particles": [f.model_copy(update={"label": "price"}) for f in beat.particles]})
-    assert Renderer(job, timeline)._legend(with_word, with_word.t1)  # a diagram keeps its key
-    assert renderer._legend(with_word, with_word.t1) == []  # a graph has none
 
 
 def test_the_whole_scene_makes_room_for_the_names_its_drawing_placed(job, monkeypatch):
@@ -1815,7 +1799,6 @@ def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossi
     travelling.frame(start + renderer_module.ROUTE_GROW_S / 2)  # drawing itself in
     travelling.frame(8.0)  # long since drawn in
     assert dots == [] and 0 < arrows[0][2] < 1 and arrows[-1][2] == 1.0
-    assert "filtrate" in travelling._arrowed("overview")  # keyed with an arrow in the legend
 
     air = moving("air", "travels")  # a short word, not a symbol: it goes as the bundle says
     assert air._travels("overview", air.timeline.beats[0].particles[0])
@@ -2124,13 +2107,13 @@ def test_an_arrows_track_is_black_on_white_with_its_head_and_painted_labels_are_
     assert painted_label_boxes(picture) == []
 
 
-def test_an_everyday_thing_a_flow_carries_rides_as_its_emoji_and_science_keeps_its_symbols():
+def test_an_everyday_thing_a_flow_carries_rides_as_its_emoji_and_anything_else_as_its_name():
     # The owner, Nov 2: "money" rode its arrow as a plain dot.
     from studio.render import primitives as p
 
     assert p.kind_of("money") == p.kind_of("taxes") == p.kind_of("borrowed money") == "icon"
     assert p.icon_of("Taxes") == "money" and p.icon_of("bread") == "bread" and p.icon_of("votes") == "votes"
-    assert p.kind_of("H⁺") == "symbol" and p.kind_of("water") == "water" and p.kind_of("glucose") == "sugar"
+    assert p.kind_of("H⁺") == p.kind_of("water") == p.kind_of("glucose") == "word"
     assert all((p.ICON_DIR / f"{name}.png").is_file() for name in set(p.ICON_WORDS.values()))
     pixels = np.zeros((80, 80, 4), np.uint8)
     surface = skia.Surface(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)

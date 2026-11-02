@@ -754,7 +754,7 @@ def _in_space(at: float, loc, upright: bool) -> float:
 def _width(label: str) -> float:
     """How wide one particle at an arrow is drawn (frame pixels), with a little room between two side by side: a
     pill as wide as its word ("Na⁺" is wider than it is tall, and three packed by its height hid each other's N)."""
-    if p.kind_of(label) == "symbol":
+    if p.kind_of(label) == "word":
         return p.marker_width(label, TAIL_SIZE) + 2.0
     return 2 * (p.PARTICLE_R + p.HALO) * TAIL_SIZE + 2.0
 
@@ -1098,7 +1098,6 @@ class Renderer:
         self._note_spots: dict[tuple, Point] = {}  # where each note sits (an arrow's one-liner, a part's mapping), art
         self._noted: dict[str, list[Rect]] = {}  # the notes placed on each scene, art pixels, for the next to keep clear
         self._leaders: dict[str, list[tuple[Point, Point]]] = {}  # and the lines joining each to what it is about
-        self._arrowed_labels: dict[str, set[str]] = {}  # per scene, what travels as arrows (the legend's)
         self._scene_values: dict[str, list] = {}  # per scene, every value it writes in the video (_value_points)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
@@ -1651,24 +1650,18 @@ class Renderer:
         branded = not layout.title_h and beat.scene not in self._beside
         bounds = self._bounds(beat.scene, view, caption_alpha > 0)
         arrows = self._arrow_points(beat.scene, cam, view)
-        legend = self._legend(beat, t)
-        legend_rect = p.legend_rect(bounds[2], bounds[3], [label for _, label, _ in legend]) if legend else None
-        if legend_rect:  # labels and reaction pills keep clear of it as of an arrow
-            x0, y0, x1, y1 = legend_rect
-            arrows = arrows + [(x0 + i * (x1 - x0) / 8, y0 + j * (y1 - y0) / 4) for i in range(9) for j in range(5)]
         places = self._pill_places(beat.scene, cam, view)
         # A graph's axis names are on from its first frame; a stage fading in fades in its own, unless the stage
         # before has the same.
         same_axes = plan.fade_from is not None and (self.timeline.axes.get(plan.fade_from)
                                                     == self.timeline.axes.get(beat.scene))
         axis_rects = self._axis_names(canvas, beat.scene, cam, view, bounds, 1.0 if same_axes else fade)
-        # Values sit anywhere on the picture below the caption, but in its corners' tag, brand and legend: a tick under
+        # Values sit anywhere on the picture below the caption, but in its corners' tag and brand: a tick under
         # its axis is low in the picture, where the labels' bounds stop short of the margin and the tag.
         corners = [r for r in (
             p.ai_tag_rect(view[0] + layout.margin, view[3] - layout.margin, AI_TAG_FONT) if tagged else None,
             (view[2] - layout.margin - self.brand[0], view[3] - layout.margin - self.brand[1], view[2] - layout.margin,
-             view[3] - layout.margin) if branded else None,
-            legend_rect) if r]
+             view[3] - layout.margin) if branded else None) if r]
         self._values(canvas, beat, cam, view, (view[0], bounds[1], view[2], view[3]), corners, t, fade)
         # Labels keep clear of the arrows, of every reaction pill the scene shows, of the axis names and of every
         # value the scene writes, sampled as points.
@@ -1683,9 +1676,6 @@ class Renderer:
             self._flags(canvas, beat.scene, cam, view, bounds, fade)
         if beat.conversions:
             self._conversions(canvas, beat, view, t, places, strength)
-        if legend_rect:
-            p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend],
-                          self._arrowed(beat.scene))
         if beat.caption:
             p.draw_caption(canvas, beat.caption, (view[0] + view[2]) / 2, view[1] + layout.margin + 8, layout.caption_font,
                            caption_alpha)
@@ -1740,7 +1730,7 @@ class Renderer:
         camera moves: chosen again every frame, it flipped between two spots as clear as each other as the camera
         drifted (the owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts").
         Placed before the labels, which then keep clear of them, as of the arrows. Each rides its part on a spot clear
-        of every arrow and legend the scene shows, framed whole, and fades out as the camera takes it out of
+        of every arrow the scene shows, framed whole, and fades out as the camera takes it out of
         _pill_bounds (pill_fade), as a label does: kept inside, it stuck at the frame's edge while its part slid away
         (the light reactions' hook, Nov 2)."""
         spots = self._pill_spots(scene_id, view)
@@ -1769,7 +1759,7 @@ class Renderer:
 
     def _pill_spots(self, scene_id: str, view: Rect) -> dict[str, int]:
         """Each reaction pill's spot on the scene (_pill_candidates), chosen once with the picture framed whole: the
-        one crossing the fewest arrows and legends (every one the scene shows) and no other pill, the nearest of those
+        one crossing the fewest of the scene's arrows and no other pill, the nearest of those
         as clear, the first of those as near."""
         key = ("pill spots", scene_id)
         if key in self._through:
@@ -1785,11 +1775,6 @@ class Renderer:
         whole = clamp_cam(Cam(art.width / 2, art.height / 2, 1.0), view, art)
         bounds = self._pill_bounds(scene_id, view)
         arrows = self._arrow_points(scene_id, whole, view)
-        for beat in self.timeline.beats:  # every legend the scene shows, as an arrow's points
-            legend = self._legend(beat, beat.t1) if beat.scene == scene_id else []
-            if legend:
-                x0, y0, x1, y1 = p.legend_rect(bounds[2], bounds[3], [label for _, label, _ in legend])
-                arrows += [(x0 + i * (x1 - x0) / 8, y0 + j * (y1 - y0) / 4) for i in range(9) for j in range(5)]
         located = self.locations.scene(scene_id)
         spots: dict[str, int] = {}
         placed: list[Rect] = []
@@ -1903,7 +1888,7 @@ class Renderer:
                 alpha: float) -> None:
         """The numbers a drawn chart shows (Beat.values), each beside its point on its side, fading in from its
         `since`, an amount popping as it is said. Only inside `area` and clear of the `corners` (the AI tag, the
-        brand, the legend): one the camera leaves out (a close-up, the upright frame's sides) is not written rather
+        brand): one the camera leaves out (a close-up, the upright frame's sides) is not written rather
         than cut off, which would be misread, and one near the edge fades as it nears it, so a camera move never
         makes it blink."""
         if not beat.values:
@@ -2462,35 +2447,6 @@ class Renderer:
         """The scene's flows on these stops carrying this, as the beats have them."""
         return [f for b in self.timeline.beats if b.scene == scene_id for f in b.particles
                 if f.path == path and f.label == label]
-
-    def _arrowed(self, scene_id: str) -> set[str]:
-        """What travels on the scene as hand-off arrows, which the legend keys with an arrow; once per scene."""
-        if scene_id not in self._arrowed_labels:
-            self._arrowed_labels[scene_id] = {f.label for b in self.timeline.beats if b.scene == scene_id
-                                              for f in b.particles if f.label and self._as_arrow(scene_id, f)}
-        return self._arrowed_labels[scene_id]
-
-    def _legend(self, beat, t: float) -> list[tuple[str, str, float]]:
-        """The key to what the scene shows with no words of its own: (colour, kind, alpha) for each kind whose particles
-        cannot carry their name (a word, not a symbol printed on them: p.carried) and nothing beside them says it: an
-        arrow on this beat with no one-liner (Particles.says), and a space's crowd of unmarked dots. Only while they
-        show: a key listing what had moved before named, as the owner saw on Nov 1, a "glucose" no longer on screen.
-        Not on a graph, whose arrow has its word beside it (_draw_handoffs): a key in the corner saying "price" read
-        as a button, far from the arrow it named."""
-        kinds: dict[str, tuple[str, str, float]] = {}
-        graph = self._graph(beat.scene)
-
-        def add(label: str, color: str, alpha: float) -> None:
-            if label and not p.carried(label) and label not in kinds:
-                kinds[label] = (color, label, alpha)
-
-        for flow in beat.particles if not graph else ():
-            if not " ".join(flow.says.split()):
-                add(flow.label, flow.color, p.ease((t - beat.t0) / LABEL_IN_S))
-        for crowd in beat.crowds:
-            if max(crowd.start, crowd.end) > 0:  # an empty space shows no dots to name
-                add(crowd.label, crowd.color, 1.0)
-        return list(kinds.values())
 
     def _particles(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float) -> None:
         """Each path's particles, between its structures' label anchors (always inside them),
