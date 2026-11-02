@@ -72,6 +72,13 @@ if [ ! -f "$STAMPS/models" ]; then
   fi
 fi
 
+# An environment that runs only the teacher routine sets POPSMOSIS_TEACHER_ONLY=1. The teacher
+# runs the studio against the live API and needs nothing below, so its runs skip the node
+# packages and the test database's start and migrations (docs/agent-runbook.md, Option A).
+if [ "${POPSMOSIS_TEACHER_ONLY:-}" = 1 ]; then
+  exit 0
+fi
+
 # 4. Node: the API, the web app and their tests. `install` (not `ci`) keeps what the cached
 #    container already has. The Prisma client is generated again whenever the schema changes.
 NODE_FILES=(package.json package-lock.json api/package.json web/package.json)
