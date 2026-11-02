@@ -725,10 +725,10 @@ def test_every_scene_but_the_hook_labels_only_its_own_parts_by_the_lessons_names
     everyday = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a rowing boat, clean "
                                                         "textbook style: the boat in the centre."})
     # Each name after what it labels, by the part's look: the painter put "Privileges" off its step given names alone.
-    assert art.labels_line(science) == f"Label only: {names}. Label nothing else. {art.NO_SLIDE}"
+    assert art.labels_line(science) == f"Label only: {names}. {art.BOXED} Label nothing else. {art.NO_SLIDE}"
     line = art.labels_line(everyday)
-    assert line == (f"Label only: {names}. Label nothing else: no room, furniture or background objects. "
-                    f"{art.NO_SLIDE}")
+    assert line == (f"Label only: {names}. {art.BOXED} Label nothing else: no room, furniture or background "
+                    f"objects. {art.NO_SLIDE}")
     assert art.paint_prompt(bundle, everyday).endswith(line)
 
 

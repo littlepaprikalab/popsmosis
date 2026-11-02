@@ -537,6 +537,7 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 # parts in textbook words the narration never says ("Voltage-gated ion channel", "Calvin Cycle") 31% of the time and
 # pointed wrong 17%; with the list every label had the narration's word and 9% pointed wrong, with no extras or crowding.
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
+BOXED = "Write each label in black letters on its own small white box."
 NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
 # A biology picture is asked for in the Campbell textbook look, the owner's choice (Nov 2): "the images are much better
@@ -974,13 +975,15 @@ def labels_line(scene: Scene) -> str:
     Each name is quoted after what it labels, by the part's own look (its sam_phrase): the brown step "Privileges".
     Given the names alone, the painter guessed where an idea drawn as a thing goes, and put "Privileges" under the
     French Revolution's figures, not on their step; with each one placed, every label landed on its thing and was
-    spelled right, on the French Revolution and the light reactions alike (the owner's choice, Nov 2)."""
+    spelled right, on the French Revolution and the light reactions alike (the owner's choice, Nov 2). Each in black
+    on a small white box (BOXED): the video dims the parts not yet named, and the painter's coloured lettering looked
+    odd dimmed, where black on white still reads (the owner, Nov 2; tested on the same two pictures)."""
     if scene.id in EVERYDAY:
         return NO_LABELS
     labels = ", ".join(f'the {s.sam_phrase.strip()} "{s.name}"' if s.sam_phrase.strip() else f'"{s.name}"'
                        for s in scene.structures)
     rest = "." if SCIENCE_STYLE in scene.image_prompt.lower() else ": no room, furniture or background objects."
-    return f"Label only: {labels}. Label nothing else{rest} {NO_SLIDE}"
+    return f"Label only: {labels}. {BOXED} Label nothing else{rest} {NO_SLIDE}"
 
 
 def axes_line(axes: Axes) -> str:

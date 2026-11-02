@@ -406,8 +406,9 @@ the way a teacher asks for a standard textbook diagram of its subject ("Educatio
 diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
 Earth has seasons..."), each structure's colour by name, and a last line asking for the structures
 to be labelled by the lesson's names and nothing else, each name after what it labels (`art.labels_line`: 'Label
-only: the brown step "Privileges", the grey cannon "Wars", ... Label nothing else. No title, legend, key or caption,
-and no colour names in the labels.'); the hook labels nothing.
+only: the brown step "Privileges", the grey cannon "Wars", ... Write each label in black letters on its own small
+white box. Label nothing else. No title, legend, key or caption, and no colour names in the labels.'); the hook labels
+nothing.
 The picture labels its own parts and the video draws no labels over it, only over a drawing; a label
 the art check finds wrong is kept, ringed on the picture, with a sticky note beside it
 saying what is true. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a
