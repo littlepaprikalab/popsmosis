@@ -1,8 +1,9 @@
 """The song styles a droplet rotates through when the learner asks for none.
 
 Left to choose, the model kept landing on the same loud genres. Each is a vocals-first sound a high school
-listener plays for fun, from 100 to 112 bpm, with no artist named; the owner's K-pop electro-pop (Nov 2) drives at 130.
-None is slower since Nov 2: rap at 92 and 96 sounded laid back, and the owner wants songs that perk people up. Until round 17 most had rapped verses, for their
+listener plays for fun, with no artist named, from 100 to 130 bpm. None is slower since Nov 2: rap at 92 and 96
+sounded laid back, and the owner wants songs that perk people up; the K-pop (110) and the dance-pop (120) went faster
+the same day, to spread the rotation's tempos (the owner: "some song can have higher bpms"). Until round 17 most had rapped verses, for their
 clear diction; with a lesson's lines in them, the verses came back recited, like sentences read aloud, and the
 rotation went to sung verses. One rapped style is back (Oct 31): the owner's favourite song, Cash in the Carrier
 (docs/reference-songs.md), whose rapped verses carry the lesson well. Whether rapped lines come back recited is the
@@ -40,7 +41,7 @@ SONG_STYLES = (
     "upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female vocal, warm synths, finger "
     "snaps, 100 bpm",
     "K-pop with rapped verses traded between male group vocals, a catchy sung pre-chorus, a big catchy sung "
-    "chorus, punchy synth bass, crisp claps, 100 bpm",
+    "chorus, punchy synth bass, crisp claps, 110 bpm",
     "laid-back R&B with smooth rapped verses, warm electric piano, deep round bass, soft finger snaps, smooth sung "
     "chorus with stacked harmonies, 100 bpm",
     "indie-pop with rapped verses, warm male vocal, strummed acoustic guitar, handclaps, stacked harmonies on the "
@@ -48,7 +49,7 @@ SONG_STYLES = (
     "Latin pop with a light dembow groove, rapped verses, clear male vocal, plucked guitar, handclaps, catchy sung "
     "chorus, 100 bpm",
     "dance-pop with a four-on-the-floor beat, rapped verses, energetic female vocal, bright plucked synths, "
-    "handclaps, sing-along chorus, 112 bpm",
+    "handclaps, sing-along chorus, 120 bpm",
     CASH_IN_THE_CARRIER,
     "K-pop electro-pop with tight vocal comping; confident androgynous female lead, clipped catchy phrasing, rap-sung "
     "verses, soaring chorus, backing vocals on parenthetical echoes; stacked string synths, bright synth stabs, punchy "
