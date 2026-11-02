@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import type { Breakdown, BreakdownModel, BreakdownStep, Progress, Video } from '@/lib/api';
+import type { Breakdown, BreakdownModel, BreakdownStep, EndToEnd, Progress, Video } from '@/lib/api';
 import { MakerChip } from '@/components/MakerChip';
 
 /** The studio's step names, as the bill reads them. A step not here shows its own name. */
@@ -184,10 +184,45 @@ function StepName({ row, short = false }: { row: Row; short?: boolean }) {
   );
 }
 
+// --- from the request -----------------------------------------------------------------------
+
+/** A line under the bill's total: how long after the request a milestone came, by the clock. */
+interface Milestone {
+  label: string;
+  seconds: number;
+  end: boolean; // the droplet done: its videos READY, or its lesson posted when it has none
+}
+
+/**
+ * The time from the request, for the lines under the total: to the lesson, and end to end once the droplet is done.
+ * A droplet without videos is done with its lesson. While it is still being made, or its videos failed, only the
+ * lesson's time is known.
+ */
+function milestonesOf(endToEnd: EndToEnd | null | undefined, video: Video | null, making: boolean): Milestone[] {
+  if (!endToEnd) return [];
+  if (endToEnd.videos !== null) {
+    return [{ label: 'Request to lesson', seconds: endToEnd.lesson, end: false },
+      { label: 'End to end', seconds: endToEnd.videos, end: true }];
+  }
+  if (!video && !making) return [{ label: 'End to end', seconds: endToEnd.lesson, end: true }];
+  return [{ label: 'Request to lesson', seconds: endToEnd.lesson, end: false }];
+}
+
+/** What the time from the request runs to, and what it counts besides the studio's own: the waits. */
+function endToEndNote(end: Milestone | undefined, studio: number | null, videos: boolean): string {
+  if (!end) return 'Request to lesson: from the moment it was asked, by the clock, the wait for the studio to start included.';
+  const wait = studio === null ? null : end.seconds - studio;
+  return `End to end: from the moment it was asked to the moment ${videos ? 'its videos were ready' : 'its lesson was posted'}, by the clock`
+    + (wait !== null && wait >= 1
+      ? `: the studio’s ${duration(studio)}, and ${duration(wait)} waiting ${videos ? 'for the studio to start and between the lesson and its videos' : 'for the studio to start'}.`
+      : '.');
+}
+
 /**
  * How the droplet was made, as a bill of materials: each step's line, the models that ran it
  * with how many calls and what they cost, the tools it ran with their versions, who made each,
- * how long it took, and the totals. Folded until opened,
+ * how long it took, and the totals; under them, how long it took from the request, waits and all (`endToEnd`), since
+ * the bill's own time is the studio's steps alone, the diagrams and the audio side by side. Folded until opened,
  * and only built once opened: a page of cards would otherwise carry every bill's rows, twice.
  *
  * With `progress`, the droplet is still being made, and the bill is how far it has got: every
@@ -196,10 +231,11 @@ function StepName({ row, short = false }: { row: Row; short?: boolean }) {
  * is while the lesson waits for its videos; one that turns true later (the studio has started on a
  * waiting topic) opens it, unless the reader has opened or folded it themselves.
  */
-export function DropletBreakdown({ breakdown, video, progress, defaultOpen = false }: {
+export function DropletBreakdown({ breakdown, video, progress, endToEnd, defaultOpen = false }: {
   breakdown: Breakdown | null;
   video: Video | null;
   progress?: Progress | null;
+  endToEnd?: EndToEnd | null;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -219,7 +255,10 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
   const totalSince = progress && progress.running.length > 0 ? progress.since : undefined;
   const totalSeconds = progress?.seconds ?? bill?.seconds ?? null;
   const totalTime: ReactNode = totalSince !== undefined ? <Elapsed base={0} since={totalSince} /> : duration(totalSeconds);
+  const milestones = milestonesOf(endToEnd, video, making);
+  const end = milestones.find((m) => m.end);
   const notes = [
+    milestones.length > 0 && endToEndNote(end, bill?.seconds ?? null, !!video),
     making && rows.some((r) => r.status === 'running')
       && 'A step running now counts its time up, the total with it, and shows what it has spent so far.',
     bill && bill.seconds !== null && stepSeconds > bill.seconds + 1
@@ -263,13 +302,16 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
             ) : `${rows.length} steps to go`}
           </span>
         ) : (
-          <span data-testid="breakdown-total">{duration(bill?.seconds ?? null)} · {cost}</span>
+          <span data-testid="breakdown-total">
+            {end && <><span data-testid="breakdown-end-to-end" style={{ color: 'var(--text-secondary)' }}>{duration(end.seconds)} end to end</span> · </>}
+            {duration(bill?.seconds ?? null)}{end ? ' of work' : ''} · {cost}
+          </span>
         )}
         <span className="text-[10px] underline underline-offset-2 group-hover/summary:text-[var(--text-hover)] group-open:hidden">show</span>
         <span className="text-[10px] underline underline-offset-2 group-hover/summary:text-[var(--text-hover)] hidden group-open:inline">hide</span>
       </summary>
       {open && <div className="mt-2 rounded-md p-2" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-        <PhoneBill rows={rows} bill={bill} making={making} time={totalTime} />
+        <PhoneBill rows={rows} bill={bill} making={making} time={totalTime} milestones={milestones} />
         <table className="w-full border-collapse hidden sm:table" style={{ color: 'var(--text-secondary)' }}>
           <thead>
             <tr className="text-[9px] uppercase tracking-wider text-left" style={{ color: 'var(--text-muted)', borderBottom: '1px dashed var(--border)' }}>
@@ -319,6 +361,14 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
               <td className={num}>{totalTime}</td>
               <td className={`${num} !pr-0`}>{cost}</td>
             </tr>
+            {milestones.map((m) => (
+              <tr key={m.label} data-testid="breakdown-milestone" className={m.end ? 'font-bold' : undefined}
+                style={{ color: m.end ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                <td className={cell} colSpan={making ? 6 : 5}>{m.label}</td>
+                <td className={num}>{duration(m.seconds)}</td>
+                <td className={`${num} !pr-0`} />
+              </tr>
+            ))}
           </tfoot>
         </table>
         {notes.length > 0 && (
@@ -332,7 +382,9 @@ export function DropletBreakdown({ breakdown, video, progress, defaultOpen = fal
 }
 
 /** The same bill on a phone, where seven columns do not fit: each step on a line with its time, its models and tools under it. */
-function PhoneBill({ rows, bill, making, time }: { rows: Row[]; bill: Breakdown | null; making: boolean; time: ReactNode }) {
+function PhoneBill({ rows, bill, making, time, milestones }: {
+  rows: Row[]; bill: Breakdown | null; making: boolean; time: ReactNode; milestones: Milestone[];
+}) {
   return (
     <div className="sm:hidden" style={{ color: 'var(--text-secondary)' }}>
       <ol>
@@ -365,6 +417,13 @@ function PhoneBill({ rows, bill, making, time }: { rows: Row[]; bill: Breakdown 
         <span>{making ? 'So far' : 'Total'}</span>
         <span className="ml-auto text-right tabular-nums">{time} · {bill ? totalCost(bill) : '$0'}</span>
       </div>
+      {milestones.map((m) => (
+        <div key={m.label} className={`flex gap-2 pt-1 ${m.end ? 'font-bold' : ''}`} data-testid="breakdown-milestone-phone"
+          style={{ color: m.end ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+          <span>{m.label}</span>
+          <span className="ml-auto text-right tabular-nums">{duration(m.seconds)}</span>
+        </div>
+      ))}
     </div>
   );
 }

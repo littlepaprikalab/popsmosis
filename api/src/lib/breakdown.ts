@@ -187,6 +187,29 @@ export function madeWithOf(lessonModels: unknown, videoModels: unknown): MadeWit
   return groups.length ? [...groups.filter((g) => g.maker), ...groups.filter((g) => !g.maker)] : null;
 }
 
+/**
+ * How long a droplet took from its request, by the API's clock, in seconds: to its lesson posted, and to its videos
+ * READY. The bill's own time counts the studio's steps alone (the art and the audio side by side); this counts what
+ * the learner waited through as well: the queue before the studio started, the hand-off from the lesson to the
+ * videos, and the gap before a retry.
+ */
+export interface EndToEnd {
+  lesson: number;
+  videos: number | null; // null: the videos are not READY (still rendering, given up), or there are none
+}
+
+const since = (from: Date, to: Date) => Math.max(0, Math.round((to.getTime() - from.getTime()) / 100) / 10);
+
+/** How long the droplet took from `askedAt`, its question's createdAt. READY is final, so its videoUpdatedAt is when. */
+export function endToEndOf(
+  askedAt: Date, answer: { createdAt: Date; videoStatus: string | null; videoUpdatedAt: Date | null },
+): EndToEnd {
+  return {
+    lesson: since(askedAt, answer.createdAt),
+    videos: answer.videoStatus === 'READY' && answer.videoUpdatedAt ? since(askedAt, answer.videoUpdatedAt) : null,
+  };
+}
+
 /** The droplet's bill of materials for the page, or null when the studio sent none. */
 export function serializeBreakdown(lesson: unknown, videos: unknown): Breakdown | null {
   const parts = [readPart(lesson, 'lesson'), readPart(videos, 'videos')]

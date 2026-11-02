@@ -307,6 +307,8 @@ test.describe('videos on /learn', () => {
     await expect(meter.getByTestId('droplet-meter-text')).toHaveText(/^Minute [67] of about 25 · /);
     await expect(card.locator('.md', { hasText: 'pump protons' })).toHaveCount(0);
     await expect(card.getByTestId('videos-rendering')).toHaveCount(0);
+    // Under the time so far, how long the lesson took from the request; the end to end waits for the videos.
+    await expect(bill.locator('table').getByTestId('breakdown-milestone')).toHaveText([/^Request to lesson\s*\d/]);
     await expect(card.getByText('BREWING', { exact: true })).toBeVisible();
     await expect(card.getByPlaceholder(/Ask a follow-up/)).toHaveCount(0);
 
@@ -337,6 +339,7 @@ test.describe('videos on /learn', () => {
     const lessonBox = await card.locator('.md').boundingBox();
     expect(playersBox!.y).toBeLessThan(lessonBox!.y); // the videos come first
     await expect(bill.getByTestId('breakdown-total')).toBeVisible();
+    await expect(bill.getByTestId('breakdown-end-to-end')).toHaveText(/ end to end$/);
     await expect(bill.locator('table')).toBeHidden();
   });
 
@@ -432,14 +435,15 @@ test.describe('videos on /learn', () => {
     await expect(page.getByTestId('droplet-card').filter({ hasText: 'ATP synthesis' })).toHaveCount(1);
   });
 
-  test('a finished droplet carries its bill of materials: each step, its models and tools, their makers, time and cost', async ({ page, context }) => {
+  test('a finished droplet carries its bill of materials: each step, its models and tools, their makers, time and cost, and its time end to end', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
     const card = page.getByTestId('question-card').filter({ hasText: 'how do cells actually make ATP' }).first();
     const bill = card.getByTestId('breakdown');
     await bill.scrollIntoViewIfNeeded();
-    // Folded to its totals: the lesson's 4.6 min and the videos' 6.3, and what was spent.
-    await expect(bill.getByTestId('breakdown-total')).toHaveText('10.9 min · $0.80 + 3,214 cr');
+    // Folded to its totals: from the request to the videos READY (seeded 15.2 min apart), the studio's work (the
+    // lesson's 4.6 min and the videos' 6.3), and what was spent.
+    await expect(bill.getByTestId('breakdown-total')).toHaveText('15.2 min end to end · 10.9 min of work · $0.80 + 3,214 cr');
     await expect(bill.locator('table')).toBeHidden();
 
     await bill.locator('summary').click();
@@ -465,6 +469,12 @@ test.describe('videos on /learn', () => {
     await expect(line('ffmpeg 6.1.1-3ubuntu5')).toHaveCount(3); // the audio, the timing and the render each ran it
     await expect(table.getByTestId('maker')).toHaveCount(15); // 7 model lines and 8 tool lines
     await expect(bill.getByText('Versions: as installed on the studio’s machine that made the videos.')).toBeVisible();
+
+    // Under the total, the time from the request: to the lesson, and end to end, with what the studio's time leaves out.
+    await expect(table.locator('tfoot tr').first()).toHaveText(/Total\s*10\.9 min\s*\$0\.80 \+ 3,214 cr/);
+    await expect(table.getByTestId('breakdown-milestone')).toHaveText([/Request to lesson\s*7\.5 min/, /End to end\s*15\.2 min/]);
+    await expect(bill.getByText('End to end: from the moment it was asked to the moment its videos were ready, by the clock: '
+      + 'the studio’s 10.9 min, and 4.3 min waiting for the studio to start and between the lesson and its videos.')).toBeVisible();
 
     // The public tab shows the droplet, never its bill.
     await page.goto(`/droplets/${S.droplet}`);
