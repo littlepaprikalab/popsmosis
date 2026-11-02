@@ -248,9 +248,6 @@ Structures:
 - A group (the limbic system) and its own parts (amygdala, hippocampus) are never both
   structures in one scene. When the core idea is about groups,
   the overview draws the groups and the detail scenes their parts.
-- A thing whose parts are its own surfaces, faces or edges (a lens's two faces, a leaf's
-  upper and lower skin) is one structure, the whole, with those words among its aliases
-  ("front face"): a surface is a line, and drawn as a part of its own it becomes a slab.
 - A long structure the flow travels along, through parts where different things happen, is
   drawn as those parts in order, each a structure (the proximal tubule, the loop of Henle,
   the distal tubule, the collecting duct), and the lines name each part as the flow reaches
