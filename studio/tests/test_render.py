@@ -94,6 +94,24 @@ def test_a_structure_never_named_on_its_scene_is_drawn_as_it_is_not_as_a_ghost(j
     assert song._ghosts("overview", reveals, 6.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
 
 
+def test_one_spotlight_hands_over_to_the_next_without_a_gap(job, song):
+    # The owner, Nov 2: "the labels are flickering". The old spotlight went out as the line began, the new one came
+    # in only as its part was sung, and the wash over everything else, painted labels too, lifted and fell between.
+    import dataclasses
+    i = next(i for i, plan in enumerate(song.plans) if i and song.plans[i - 1].spot and plan.spot)
+    beat, before, kept = song.timeline.beats[i], song.plans[i - 1], song.plans
+    plans = list(song.plans)
+    plans[i - 1] = dataclasses.replace(before, prev_spot=before.spot)  # the old one fully on
+    plans[i] = dataclasses.replace(song.plans[i], prev_spot=before.spot, spot="Somewhere else",
+                                   spot_at=beat.t0 + 0.8)  # the new one's part sung 0.8 s into its line
+    song.plans = plans
+    try:
+        for t in np.linspace(beat.t0, beat.t0 + 0.8 + renderer_module.SPOT_S, 15):
+            assert sum(song._spots(i, t).values()) == pytest.approx(1.0, abs=0.01)
+    finally:
+        song.plans = kept
+
+
 def test_a_painting_that_is_no_diagram_is_shown_as_painted_before_its_parts_are_named(job, song):
     # A pile of orange pumpkins washed white until each is named looked wrong (Nov 2): no part of it starts pale.
     reveals = {"Thylakoid": 5.0}
@@ -316,6 +334,16 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
     assert painted[0].runs == [(0.0, 4.0)]
 
 
+def off_line(q, line) -> float:
+    """How far point q is from the polyline, frame pixels."""
+    far = math.inf
+    for (ax, ay), (bx, by) in zip(line, line[1:]):
+        dx, dy = bx - ax, by - ay
+        k = max(0.0, min(1.0, ((q[0] - ax) * dx + (q[1] - ay) * dy) / ((dx * dx + dy * dy) or 1.0)))
+        far = min(far, math.dist(q, (ax + k * dx, ay + k * dy)))
+    return far
+
+
 def tail_of(renderer, t, flow):
     """The flow's arrow on the frame at t, tail to head, as the renderer draws it off a graph (_flow_line)."""
     return [renderer.art_to_frame(t, *q) for q in renderer._flow_line("overview", flow)]
@@ -327,7 +355,11 @@ def test_off_a_graph_a_flow_is_an_arrow_with_its_particle_jiggling_behind_its_ta
     flow = Renderer(job, flowing([flow_beat(0, 8)]))  # no labels, so nothing is drawn over the particle
     still = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
     moving = flow.timeline.beats[0].particles[0]
-    held = 3.0
+    # Late in the pause between two glides, when the particle waits at the tail, faded back in.
+    total = renderer_module.routing.length(tail_of(flow, 3.0, moving))
+    piece = min(renderer_module.GLIDE_SHARE * total, renderer_module.GLIDE_MAX)
+    held = (flow.plans[0].runs[0][0] + renderer_module.ROUTE_GROW_S
+            + (total + piece) / renderer_module.glide_speed(total, piece) + 0.9 * renderer_module.GLIDE_PAUSE_S)
     line = tail_of(flow, held, moving)
     (tx, ty), (hx, hy) = line[0], line[-1]
     gold = p.rgb("#F2C230")
@@ -350,13 +382,13 @@ def test_off_a_graph_a_flow_is_an_arrow_with_its_particle_jiggling_behind_its_ta
     monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
     monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: kinds.append((at, label, size)))
     places = []
-    for t in (held, held + 0.3):
+    for t in (held - 0.2, held):  # both in the pause
         tracks.clear(), arrows.clear(), kinds.clear()
         flow.frame(t)
         [drawn] = tracks
         assert np.allclose(drawn, tail_of(flow, t, moving))  # its track along the flow's line, tail to head
         for piece in arrows:  # and the arrow gliding along it, a piece of the same line
-            assert all(min(math.dist(q, r) for r in renderer_module._cut(drawn, 0, 1e9)) < 2 for q in piece)
+            assert all(off_line(q, drawn) < 2 for q in piece)
         [(at, label, size)] = kinds
         assert label == "H⁺" and size == renderer_module.TAIL_SIZE
         reach = math.dist(at, line[0])  # behind the tail, give or take its jiggle
@@ -1851,6 +1883,17 @@ def test_the_arrow_glides_along_its_track_from_tail_to_head_and_stays_short():
     end = renderer_module._glide(line, (total + piece / 2) / renderer_module.GLIDE_SPEED)
     assert end[-1] == pytest.approx(line[-1])  # shrinking into the head as it arrives
     assert renderer_module._cut(line, 100, 500) == [(100.0, 0.0), (400.0, 0.0), (400.0, 100.0)]
+
+
+def test_a_glide_on_a_short_arrow_takes_its_time():
+    # The owner, Nov 2: oxygen into the chamber, 80 pixels, crossed in a third of a second, again and again.
+    short = [(0.0, 0.0), (0.0, 80.0)]
+    piece = min(renderer_module.GLIDE_SHARE * 80.0, renderer_module.GLIDE_MAX)
+    took = (80.0 + piece) / renderer_module.glide_speed(80.0, piece)
+    assert took == pytest.approx(renderer_module.GLIDE_MIN_S)
+    assert renderer_module._glide(short, took / 2)  # still on its way halfway through
+    assert renderer_module._glide(short, took + renderer_module.GLIDE_PAUSE_S / 2) == []  # then its pause
+    assert renderer_module.glide_speed(700.0, 170.0) == renderer_module.GLIDE_SPEED  # a long one keeps its pace
 
 
 def test_an_arrow_carries_as_many_as_the_moments_words_count_for_what_moves():

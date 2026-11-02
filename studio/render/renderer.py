@@ -69,6 +69,7 @@ SETTLE_ZOOM = 1.06
 # slowly. Lines in a row framing the same target are one shot, so the drift runs on across them.
 DRIFT = 0.05
 DRIFT_S = 8.0
+ART_SAMPLING = skia.SamplingOptions(skia.FilterMode.kLinear)  # how the picture is drawn into its view
 STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
 NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
 NOTICE_GAP = 16  # frame px above and below the card in an upright frame, where it sits across the top of the picture
@@ -135,7 +136,10 @@ CLUSTER = {1: [(0.0, 0.0)], 2: [(-0.5, 0.0), (0.5, 0.0)], 3: [(-0.5, 0.29), (0.5
 # tail to head, again and again, so the way the flow goes is seen and the arrow on screen stays short.
 GLIDE_SHARE = 0.35  # the gliding arrow's length, as a share of its route...
 GLIDE_MAX = 170.0  # ...and at most this many frame pixels
-GLIDE_SPEED = 300.0  # frame pixels a second
+GLIDE_SPEED = 200.0  # frame pixels a second...
+# ...or slower, so a glide takes this long at least: on a short arrow (oxygen tank to chamber) one at 300 crossed in
+# a third of a second, and again and again, too fast to follow (the owner, Nov 2, as crossings at 2 s were, Nov 1)
+GLIDE_MIN_S = 3.0
 GLIDE_PAUSE_S = 0.5  # between one glide and the next
 TRACK_ALPHA = 0.95  # the track under it, black on white: plain on any picture between glides (Nov 2)
 ARROW_SEEN = 0.6  # a still to look at an arrow by shows its gliding arrow this share of the way along (arrow_time)
@@ -819,16 +823,23 @@ def _cut(points: list[Point], a: float, b: float) -> list[Point]:
     return out
 
 
+def glide_speed(total: float, piece: float) -> float:
+    """Frame pixels a second a glide runs at, its arrow `piece` long on a route `total` long: GLIDE_SPEED, or
+    slower on a short route, so it takes GLIDE_MIN_S."""
+    return min(GLIDE_SPEED, (total + piece) / GLIDE_MIN_S)
+
+
 def _glide(line: list[Point], elapsed: float) -> list[Point]:
     """The gliding arrow on a route at `elapsed` seconds into its flow (frame pixels): a piece GLIDE_SHARE of the route
-    long (at most GLIDE_MAX) running from its tail to its head at GLIDE_SPEED, shrinking into the head as it arrives,
+    long (at most GLIDE_MAX) running from its tail to its head (glide_speed), shrinking into the head as it arrives,
     then GLIDE_PAUSE_S with none before the next; [] when none shows."""
     total = routing.length(line)
     if total < 2.0:
         return []
     piece = min(GLIDE_SHARE * total, GLIDE_MAX)
-    period = (total + piece) / GLIDE_SPEED + GLIDE_PAUSE_S
-    head = (elapsed % period) * GLIDE_SPEED
+    speed = glide_speed(total, piece)
+    period = (total + piece) / speed + GLIDE_PAUSE_S
+    head = (elapsed % period) * speed
     if head > total + piece:
         return []
     start, end = max(head - piece, 0.0), min(head, total)
@@ -1319,6 +1330,23 @@ class Renderer:
         self.frame(t)
         return self.surface.makeImageSnapshot()
 
+    def _spots(self, i: int, t: float) -> dict[str, float]:
+        """Each spotlight's level on beat i at t. The beat before's stays on until this one's starts coming in (as
+        its part is sung), then the two cross, from wherever the old one had got to: the wash over the rest of the
+        picture holds steady. It lifted between the two and came back on every line, and every painted label
+        flickered with it (the owner, Nov 2)."""
+        beat, plan = self.timeline.beats[i], self.plans[i]
+        spots: dict[str, float] = {}
+        if plan.spot:
+            spots[plan.spot] = 1.0 if plan.prev_spot == plan.spot else p.ease((t - plan.spot_at) / SPOT_S)
+        if plan.prev_spot and plan.prev_spot != plan.spot:
+            before = self.plans[i - 1]
+            came = (p.ease((t - before.spot_at) / SPOT_S)
+                    if before.spot == plan.prev_spot and before.prev_spot != before.spot else 1.0)
+            leaves = plan.spot_at if plan.spot else beat.t0
+            spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0.0), came * (1 - p.ease((t - leaves) / SPOT_S)))
+        return spots
+
     def _ghosts(self, scene_id: str, reveals: dict[str, float], t: float) -> dict[str, float]:
         """Each structure's ghost wash at t: full until its name is heard, fading out as it is revealed.
         A structure this video never names on the scene is drawn as it is, unlabelled: as a ghost it
@@ -1359,7 +1387,7 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
-        canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
+        canvas.drawImage(composed, 0, 0, ART_SAMPLING)
         canvas.restore()
         if again:
             self._background = (key, self.surface.makeImageSnapshot())
@@ -1541,11 +1569,7 @@ class Renderer:
         art = self.scene(beat.scene)
         view = self.view(beat.scene)
         cam = plan.cam(t, view, art)
-        spots: dict[str, float] = {}
-        if plan.spot:
-            spots[plan.spot] = 1.0 if plan.prev_spot == plan.spot else p.ease((t - plan.spot_at) / SPOT_S)
-        if plan.prev_spot and plan.prev_spot != plan.spot:
-            spots[plan.prev_spot] = max(spots.get(plan.prev_spot, 0), 1 - p.ease((t - beat.t0) / SPOT_S))
+        spots = self._spots(i, t)
         reveals = self.revealed.get(beat.scene, {})
         ghosts = self._ghosts(beat.scene, reveals, t)
         self._frame_tints = tints = self._crowd_tints(beat, t, ghosts, spots) if beat.crowds else ()
@@ -2590,8 +2614,9 @@ class Renderer:
             return min(max(middle, start), flow_out - 0.01)
         shown = [self.art_to_frame(middle, *q) for q in self._flow_line(scene_id, flow)]
         total = routing.length(shown)
-        period = (total + min(GLIDE_SHARE * total, GLIDE_MAX)) / GLIDE_SPEED + GLIDE_PAUSE_S
-        along = ARROW_SEEN * total / GLIDE_SPEED  # into a glide, as its head gets that far
+        speed = glide_speed(total, min(GLIDE_SHARE * total, GLIDE_MAX))
+        period = (total + min(GLIDE_SHARE * total, GLIDE_MAX)) / speed + GLIDE_PAUSE_S
+        along = ARROW_SEEN * total / speed  # into a glide, as its head gets that far
         t = start + max(round((middle - start - along) / period), 0) * period + along
         return t if t < flow_out else (flow_in + flow_out) / 2
 
@@ -2682,8 +2707,9 @@ class Renderer:
         tail, jiggling and fading in, through the pause before the next."""
         total = routing.length(shown)
         length = min(GLIDE_SHARE * total, GLIDE_MAX)
-        period = (total + length) / GLIDE_SPEED + GLIDE_PAUSE_S
-        head = (elapsed % period) * GLIDE_SPEED
+        speed = glide_speed(total, length)
+        period = (total + length) / speed + GLIDE_PAUSE_S
+        head = (elapsed % period) * speed
         if piece and head <= total + length:
             fade = 1.0 if head <= total else p.clamp01(1 - (head - total) / max(length, 1.0))
             tip, behind = piece[-1], _along(piece, max(routing.length(piece) - 20.0, 0.0))
@@ -2694,7 +2720,7 @@ class Renderer:
                 tip = (tip[0] - ahead[0] * back, tip[1] - ahead[1] * back)
             self._draw_kinds(canvas, tip, ahead, flow, alpha * fade, count)
             return
-        waited = (elapsed % period) - (total + length) / GLIDE_SPEED  # into the pause, or setting off
+        waited = (elapsed % period) - (total + length) / speed  # into the pause, or setting off
         fade = p.ease(waited / GLIDE_PAUSE_S) if head > total + length else 1.0
         self._draw_tail(canvas, flow, shown, alpha * fade, t, count=count)
 
