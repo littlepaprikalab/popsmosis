@@ -757,6 +757,7 @@ class Painting:
     refused: list[str] = field(default_factory=list)  # paint(): why each other picture of the scene was not kept
     flags: list[dict] = field(default_factory=list)  # its wrong labels, boxed (look())
     pinned: list[dict] = field(default_factory=list)  # its notes about one place, as sticky notes there
+    rejected: bool = False  # the writer's role saw it and wrote the scene's words again (rewrite())
 
     def problems(self) -> list[str]:
         """What the scene is painted again for: a structure missing or out of place, or anything the picture gets
@@ -765,8 +766,12 @@ class Painting:
         return list(self.check.misplaced) + list(self.check.wrong)
 
     def score(self) -> tuple[int, int]:
-        """Lower is better."""
-        return len(self.check.misplaced), len(self.check.labels) + len(self.check.wrong)
+        """Lower is better. A picture the writer's role rejected counts as one more part out of place and one more
+        thing wrong: on Nov 2 it rejected two airplane pictures the check had passed (the stall showed no air
+        breaking away over the top), their repaints each had one small fault, and the step kept the rejected
+        ones."""
+        rejected = int(self.rejected)
+        return len(self.check.misplaced) + rejected, len(self.check.labels) + len(self.check.wrong) + rejected
 
 
 def run_painted(job: Path, ask) -> str:
@@ -879,7 +884,9 @@ def refusal(tried: dict) -> str | None:
     if tried.get("redraw_failed"):
         return None
     found = (tried.get("misplaced") or []) + (tried.get("wrong") or [])
-    return str(found[0]) if found else None
+    if found:
+        return str(found[0])
+    return "the writer asked for it again" if tried.get("rewritten") else None
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None,
@@ -937,6 +944,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         if asked:
             words = scene.model_copy(update={"image_prompt": asked})
             tries[-1]["rewritten"] = asked
+            painting.rejected = True
         elif asked == "":
             tries[-1]["kept"] = True
             break

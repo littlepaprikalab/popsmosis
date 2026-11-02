@@ -400,6 +400,17 @@ def test_the_writer_looks_at_every_first_picture_and_only_its_rewrite_is_painted
     assert json.loads((job / "art" / "hook.json").read_text())["tries"][0]["rewritten"] == helper.rewrites["hook"]
 
 
+def test_a_picture_the_writer_rejected_is_not_kept_over_its_repaint_for_a_small_fault(job, monkeypatch):
+    # Nov 2: the writer rejected the airplane's stall picture, which the check had passed (no air broke away over the
+    # top), and its repaint came back with one small fault; the step kept the rejected one by the check alone.
+    fake = FakeMuse().install(monkeypatch)
+    helper = FakeHelper({"hook": [{}, {"wrong": ["the leaf is a little pale"]}]})
+    helper.rewrites = {"hook": "A leaf [[Thylakoid]] in the sun, its veins showing."}
+    assert "1 picture refused: hook: the writer asked for it again" in art.run(job, helper)
+    made = json.loads((job / "art" / "hook.json").read_text())
+    assert made["try"] == 2 and made["check"]["wrong"] == ["the leaf is a little pale"]
+
+
 def test_a_rewrite_that_fails_paints_again_from_the_same_words(job, monkeypatch):
     fake = FakeMuse().install(monkeypatch)
 
