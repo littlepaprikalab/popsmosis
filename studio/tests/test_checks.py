@@ -942,13 +942,35 @@ def test_a_part_named_for_an_ion_is_painted_in_the_ions_colour():
     parts = {s["name"]: (s["color_hex"], s["sam_phrase"]) for s in data["scenes"][0]["structures"]}
     assert parts == {"Sodium channel": (checks.MARKER_COLOURS["Na⁺"], "light purple tube"),
                      "Potassium channel": (checks.MARKER_COLOURS["K⁺"], "green tube"),
-                     "Sodium-potassium pump": ("#F57C1F", "orange blob"), "Phosphate": ("#8CC63F", "green ball")}
+                     "Sodium-potassium pump": ("#F57C1F", "orange blob"),
+                     "Phosphate": ("#E6B422", "yellow ball")}  # off the potassium channel's new green
     assert data["scenes"][0]["image_prompt"] == ("On the left a light purple sodium channel; in the centre the orange "
                                                  "sodium-potassium pump; on the right a green potassium channel.")
     assert problems[0].detail == ("a part named for an ion is painted in its colour: Sodium channel green as light "
-                                  "purple; Potassium channel purple as green") and problems[0].repaired
+                                  "purple; Potassium channel purple as green; Phosphate green as yellow, clear of the "
+                                  "ion's") and problems[0].repaired
     assert [checks._names_kinds(n, checks.IONS) for n in ("Na⁺ channel", "Proton pumps", "ATP synthase")] == [
         ["Na⁺"], ["H⁺"], []]
+
+
+def test_a_part_an_ions_colour_lands_on_moves_to_the_nearest_free_hue():
+    # Nov 2: the potassium channel took K⁺'s green beside the writer's green membrane, and the K⁺ ions met a green
+    # phosphate. Only those move; a part that already differs keeps the writer's colour.
+    def part(name, colour):
+        return {"name": name, "aliases": [], "sam_phrase": "ball", "color_hex": colour}
+
+    data = {"scenes": [
+        {"id": "overview", "image_prompt": "", "structures": [
+            part("Cell membrane", "#43A047"), part("Potassium channel", "#8B5CF6"), part("Outside", "#3B82F6")]},
+        {"id": "reset", "image_prompt": "", "structures": [part("Potassium ions", "#8EE06B"), part("Phosphate", "#8CC63F"),
+                                                           part("Inside", "#E6B422")]}], "direction": []}
+    problems = []
+    checks._colour_for_ions(data, problems)
+    hues = {s["name"]: checks._hue(s["color_hex"]) for scene in data["scenes"] for s in scene["structures"]}
+    assert hues["Potassium channel"] == hues["Potassium ions"] == "green"
+    assert hues["Cell membrane"] not in ("green", "blue") and hues["Phosphate"] not in ("green", "yellow")
+    assert hues["Outside"] == "blue" and hues["Inside"] == "yellow"  # not where an ion's colour landed
+    assert "Cell membrane green as" in problems[0].detail and "clear of the ion's" in problems[0].detail
 
 
 def test_the_pictures_words_give_each_part_the_colour_the_illustrator_is_told():

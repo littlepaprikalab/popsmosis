@@ -364,19 +364,64 @@ def _colour_for_ions(data: dict, problems: list) -> None:
     """A part named for one ion takes that ion's colour, the colour of its dots in every lesson (MARKER_COLOURS): the
     sodium channel the purple of Na⁺. On Nov 1 the pump's sodium channel was green, as the K⁺ dots were, and its
     potassium channel purple, as Na⁺, so the colours taught the swap. A part named for two (the sodium-potassium
-    pump) keeps its own. Repaired, and recorded. Every other part keeps the writer's colour: moved off the hue of an
-    ion on its scene, the light reactions' sunlight went grey, and their overview, fifteen parts, had no hue left."""
-    changed = []
+    pump) keeps its own. A part this lands on, the same hue on one of its scenes, moves to the free hue nearest its
+    own (Nov 2: the potassium channel's green met the writer's green membrane, and K⁺'s the green phosphate). Every
+    other part keeps the writer's colour: moved off the hue of any ion on its scene, the light reactions' sunlight
+    went grey, and their overview, fifteen parts, had no hue left. Repaired, and recorded."""
+    changed, ionic = [], {}
     for scene in data["scenes"]:
         for structure in scene["structures"]:
             ions = _names_kinds(structure["name"], IONS)
-            if len(ions) == 1 and (new := MARKER_COLOURS[ions[0]]) != structure["color_hex"]:
-                changed.append(f'{structure["name"]} {colour_word(structure["color_hex"])} as {colour_word(new)}')
-                structure["color_hex"] = new
+            if len(ions) == 1:
+                ionic[structure["name"]] = ions[0]
+                if (new := MARKER_COLOURS[ions[0]]) != structure["color_hex"]:
+                    changed.append(f'{structure["name"]} {colour_word(structure["color_hex"])} as {colour_word(new)}')
+                    structure["color_hex"] = new
+    scenes_of: dict[str, list[dict]] = {}
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            scenes_of.setdefault(structure["name"], []).append(scene)
+    moved: dict[str, str] = {}
+    for name, scenes in scenes_of.items():
+        if name in ionic:
+            continue
+        own = next(s["color_hex"] for s in scenes[0]["structures"] if s["name"] == name)
+        hit = {_hue(MARKER_COLOURS[ionic[s["name"]]]) for scene in scenes for s in scene["structures"]
+               if s["name"] in ionic}
+        if _hue(own) not in hit:
+            continue
+        taken = {_hue(moved.get(s["name"], s["color_hex"])) for scene in scenes for s in scene["structures"]
+                 if s["name"] != name}
+        free = sorted((c for c in FREE_COLOURS if _hue(c) not in taken), key=lambda c: _hue_gap(c, own))
+        if free:
+            moved[name] = free[0]
+            changed.append(f"{name} {colour_word(own)} as {colour_word(free[0])}, clear of the ion's")
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            structure["color_hex"] = moved.get(structure["name"], structure["color_hex"])
     if changed:
         problems.append(Problem(line_id="structures", rule="colours", repaired=True,
                                 detail="a part named for an ion is painted in its colour: "
                                        + "; ".join(dict.fromkeys(changed))))
+
+
+# What a part an ion's colour lands on is painted instead: the free one nearest its own hue (_colour_for_ions).
+FREE_COLOURS = ("#F57C1F", "#8B5CF6", "#E0559A", "#3B82F6", "#22A355", "#A0522D", "#DC3545", "#E6B422", "#1FA6A0",
+                "#4CC9F0", "#9AA5B1")
+
+
+def _hue(color_hex: str) -> str:
+    """A colour's hue as the illustrator is told it, the shade dropped: "light purple" and "purple" read alike."""
+    return colour_word(color_hex).split()[-1]
+
+
+def _hue_gap(a: str, b: str) -> float:
+    """How far apart two colours' hues are, in degrees round the wheel; a grey is far from every hue."""
+    (ha, sa, _), (hb, sb, _) = (colorsys.rgb_to_hsv(*(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))) for c in (a, b))
+    if sa < 0.15 or sb < 0.15:
+        return 360.0
+    gap = abs(ha - hb) * 360
+    return min(gap, 360 - gap)
 
 
 def _words(text: str) -> set[str]:
