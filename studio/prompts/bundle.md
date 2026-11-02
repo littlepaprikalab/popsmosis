@@ -176,6 +176,12 @@ sentences. The illustrator draws best the diagrams it already knows:
   cross-section, clean scientific style: the membrane across the middle, the stroma above,
   the lumen below, four protein complexes passing through it..." Never name a textbook, a
   publisher or an artist: the fact-check strikes it, a round spent for nothing.
+- Name the whole thing before its parts: the main object by the name textbooks give that
+  picture, and its outline in one sentence ("a convex lens seen edge-on: one clear shape,
+  thick in the middle and thin at its two edges, both faces curving outward"), then each
+  part on it or around it. Given only its parts, the illustrator paints each as a piece of
+  its own and the whole never appears. A cut-through view says what is cut and which way,
+  and asks for it "drawn flat, with no 3D shading".
 - The picture is a still stage; the video does the acting. Ask for where everything is,
   never for what it does or a moment in a process ("during the light reactions" brought
   lightning and symbols): nothing pumped, flowing, carried or turning into something, no
@@ -242,6 +248,9 @@ Structures:
 - A group (the limbic system) and its own parts (amygdala, hippocampus) are never both
   structures in one scene. When the core idea is about groups,
   the overview draws the groups and the detail scenes their parts.
+- A thing whose parts are its own surfaces, faces or edges (a lens's two faces, a leaf's
+  upper and lower skin) is one structure, the whole, with those words among its aliases
+  ("front face"): a surface is a line, and drawn as a part of its own it becomes a slab.
 - A long structure the flow travels along, through parts where different things happen, is
   drawn as those parts in order, each a structure (the proximal tubule, the loop of Henle,
   the distal tubule, the collecting duct), and the lines name each part as the flow reaches
