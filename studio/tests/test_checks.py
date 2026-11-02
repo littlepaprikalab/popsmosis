@@ -333,7 +333,10 @@ def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
 
     assert rapped("K-pop, a sung first verse, a rapped second verse, 100 bpm") == {"v2-1"}
     assert rapped("dance-pop, short sung verses and a rapped bridge, 112 bpm") == {"b-1"}
-    assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {
+    # Rapped verses: every verse, the chorus sung (Nov 2: four of the rotation's styles rap both verses).
+    assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("hip-hop pop, confident female rap verses, sung chorus") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("Pop, make it rap, 100 bpm") == {
         "v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"}  # rapped, no section named: every line, as before
     assert rapped("bright teen pop with melodic sung verses, 104 bpm") == set()
     # However the writer words it, the section it names, never every line.
@@ -529,8 +532,11 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
     assert len({style_for(f"job{i}") for i in range(40)}) > 4
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
-    # Most styles rap their second verse, the owner's wish since Nov 2; the checks read which lines may run longer.
-    assert sum(bool(checks.RAPPED_SECOND_VERSE.search(s)) for s in SONG_STYLES) >= len(SONG_STYLES) - 2
+    # Every style but one raps a verse, the owner's wish since Nov 2, some both; the checks read which lines may run
+    # longer, and never a chorus's.
+    both = [s for s in SONG_STYLES if checks.RAPPED_VERSES.search(s)]
+    second = [s for s in SONG_STYLES if checks.RAPPED_SECOND_VERSE.search(s)]
+    assert len(both) >= 3 and len(second) >= 3 and len(both) + len(second) >= len(SONG_STYLES) - 1
 
 
 def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once():

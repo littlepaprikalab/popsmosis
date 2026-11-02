@@ -523,12 +523,16 @@ RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\
                                  r"|\b(?:second verse|verse (?:2|two))\s+(?:is\s+|gets\s+)?rapped\b", re.I)
 RAPPED_BRIDGE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?bridge\b"
                            r"|\bbridge\s+(?:is\s+|gets\s+)?rapped\b", re.I)
+# A style that raps every verse (Nov 2: four of the rotation's), its chorus sung: "rapped verses", "rap verses",
+# "raps both verses", "the verses are rapped".
+RAPPED_VERSES = re.compile(r"\brap(?:ped|ping)?\s+verses\b|\braps?\s+(?:both|all|its|the)\s+verses\b"
+                           r"|\bverses\s+(?:are\s+)?rapped\b", re.I)
 
 
 def rapped_lines(data: dict) -> set[str]:
-    """The ids of the lines the style raps: its second verse or its bridge when it names one (none, for a rapped
-    bridge in a song with no bridge), every line when it raps otherwise ("rapped verses", "make it rap"), none when
-    it does not."""
+    """The ids of the lines the style raps: every verse when it raps its verses, its second verse or its bridge when
+    it names one (none, for a rapped bridge in a song with no bridge), every line when it raps otherwise ("make it
+    rap"), none when it does not. A chorus is always sung (the bundle brief)."""
     style = " ".join((data.get("music") or {}).get("positive_styles") or [])
     if not RAPPED.search(style):
         return set()
@@ -540,8 +544,10 @@ def rapped_lines(data: dict) -> set[str]:
         else:
             runs.append((line["section"], [line["id"]]))
     picked: set[str] = set()
-    named = RAPPED_SECOND_VERSE.search(style) or RAPPED_BRIDGE.search(style)
-    if RAPPED_SECOND_VERSE.search(style):
+    named = RAPPED_SECOND_VERSE.search(style) or RAPPED_BRIDGE.search(style) or RAPPED_VERSES.search(style)
+    if RAPPED_VERSES.search(style):
+        picked |= {i for section, ids in runs if section == "verse" for i in ids}
+    elif RAPPED_SECOND_VERSE.search(style):
         verses = [ids for section, ids in runs if section == "verse"]
         picked |= set(verses[1]) if len(verses) > 1 else set()
     if RAPPED_BRIDGE.search(style):
