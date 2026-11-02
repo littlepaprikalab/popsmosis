@@ -314,12 +314,14 @@ explanation left to the narration.
 
 - `music.positive_styles`: one entry, the sound briefed the way a producer would, in a few
   flowing clauses, never a list of tags: the genre and how the verses are delivered, the
-  production's texture, the tempo and feel of the beat, the voice (its timbre, and how it
-  moves into the chorus), what leads and what accents: "Bright pop with rapped verses and a catchy sung chorus;
+  production's texture, the tempo and feel of the beat, the voice (its timbre), what leads and what
+  accents: "Bright pop with rapped verses and a catchy sung chorus;
   sparkling high-end synth effects and crisp studio sheen; buoyant 104 bpm beat; shimmering
-  synths lead, claps accent the beat", with a voice of your own for this topic. Concrete sounds ("a
+  synths lead, claps accent the beat", with sounds of your own for this topic. Concrete sounds ("a
   warm Rhodes", "an 808 that slides", "stacked harmonies on the hook") beat adjectives ("upbeat",
-  "educational"). The verses are rapped, and the style says so, unless the learner asks for them sung,
+  "educational"). The voice stays close and natural, one clear lead singing or rapping as if to
+  a friend, in an easy range: never soaring, belted or shouted, and no group shouts. Instruments
+  make the music, never the sounds of the topic itself (whooshes, countdowns, sirens). The verses are rapped, and the style says so, unless the learner asks for them sung,
   or for one section rapped (a rapped second verse, a rapped bridge): sing the rest then. A
   rapped line follows every rule a sung one does (a lyric with its rhyme and beat, one idea,
   one term at most, never a sentence of the lesson recited); it only runs longer. The chorus
@@ -331,8 +333,8 @@ explanation left to the narration.
     artist they named instead of naming them, and leave out what would hide the words or
     does not belong in a classroom (screamed vocals, explicit lyrics).
   - **Otherwise, the rotation's style is a seed**: keep its genre, its tempo within a few
-    bpm and any section it raps, and choose your own voice, instruments, textures and mood
-    for this topic, so two droplets from one seed sound different.
+    bpm and any section it raps, and choose your own instruments, textures and groove, so two
+    droplets from one seed sound different.
   - **A grave topic sets its own style**, whatever the rotation says: a topic about mass
     death, persecution or cruelty (a genocide, slavery, a massacre, a war's atrocities),
     where a dance beat sounds like a celebration. Write a slow, respectful song: 80 to 90
