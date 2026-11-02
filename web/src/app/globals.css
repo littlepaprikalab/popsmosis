@@ -184,8 +184,8 @@ html {
   animation: livenessPulse 2s ease-in-out infinite;
 }
 
-/* The drop for the minute under way on a droplet being made (DropletMeter). For people who turn motion
-   off it stays still, half lit: between a drop that is full and one still to come. */
+/* The drop beside a droplet being made (DropletMeter). For people who turn motion off it stays still,
+   half lit. */
 @keyframes dropBlink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.2; }

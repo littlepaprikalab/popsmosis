@@ -549,10 +549,10 @@ up, what it has spent so far), failed and waiting for the retry, or still to com
 to come that a later one has gone past is left out; so is the post, which the lesson's bill
 never has. The time so far is on the bill's folded line ("Making it · 4 of 12 steps done ·
 6.2 min · $0.53 so far") and its last line, and counts up with a running step. Above the bill,
-the droplet meter (`DropletMeter.tsx`) shows the same time as 25 drops, one filling each minute
-and the one for the minute under way blinking, with what to expect under it: about 25 minutes,
-and the reader can leave and come back. Past 25 minutes the last drop blinks on and the card
-says this one is taking longer than most; before the studio starts, every drop is hollow.
+a blinking drop beside the same time by the minute (`DropletMeter.tsx`: "Minute 13 of about
+25") says what to expect: about 25 minutes, and the reader can leave and come back. Past 25
+minutes it says this one is taking longer than most; before the studio starts, the drop is
+hollow and still.
 
 The lesson text waits for the videos, so a learner meets the droplet through them rather than
 through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill

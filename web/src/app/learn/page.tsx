@@ -21,7 +21,7 @@ import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
-import { Drop, DropletMeter, METER_MINUTES } from '@/components/DropletMeter';
+import { Drop, DropletMeter, USUAL_MINUTES } from '@/components/DropletMeter';
 import { DropletReview } from '@/components/DropletReview';
 import { ExampleDroplet } from '@/components/ExampleDroplet';
 import { DropletPill, Marked, SongChip } from '@/components/Highlights';
@@ -351,7 +351,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
               <p className="text-xs" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
                 The teacher is preparing this droplet… this card refreshes itself.
               </p>
-              {/* A drop a minute, and the bill as a checklist of what is to come, open once the studio has started on it. */}
+              {/* The minutes so far, and the bill as a checklist of what is to come, open once the studio has started on it. */}
               {q.progress && <DropletMeter progress={q.progress} />}
               {q.progress && (
                 <DropletBreakdown breakdown={null} video={null} progress={q.progress}
@@ -562,7 +562,7 @@ function LearnContent() {
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
         changeQuestion('');
         showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass; `
-          + `a droplet takes about ${METER_MINUTES} minutes to make.`, 'success');
+          + `a droplet takes about ${USUAL_MINUTES} minutes to make.`, 'success');
       });
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error');
