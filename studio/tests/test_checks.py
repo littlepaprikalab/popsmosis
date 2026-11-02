@@ -66,6 +66,37 @@ def test_the_song_keeps_the_3_pictures_of_its_own_it_plays_longest():
     assert {d.line_id: d.scene for d in bundle.direction}["v1-1"] == "hook"  # the scene before the song's first
 
 
+def told_on_the_hook(d, *texts):
+    """Narration sentences after the path, each on the hook, as Muse Wonder's kidney script told its case (Nov 2)."""
+    for i, text in enumerate(texts, len(d["narration"]) + 1):
+        d["narration"].append({"id": f"n{i}", "text": text, "names": [], "fact_id": "f1"})
+        d["direction"].append({**direction(d, "n1"), "line_id": f"n{i}", "scene": "hook"})
+
+
+def test_a_case_told_on_the_hook_plays_over_the_picture_that_draws_it():
+    def change(d):
+        d["song_scenes"] = [song_picture("blocked")]  # the case, painted for the song alone
+        told_on_the_hook(d, "So what happens when ATP synthase is blocked?", "Then the protons pile up and no ATP "
+                         "is made.", d["core_idea"], "So light goes in, and ATP comes out.")
+
+    bundle, found, _ = review(change)
+    scenes = {d.line_id: d.scene for d in bundle.direction}
+    # Both sentences of the case, the second naming nothing; the synthase scene draws ATP synthase too, but the
+    # song's own picture of the case wins the tie, and is the lesson's now.
+    assert [scenes[n] for n in ("n3", "n4", "n5", "n6")] == ["blocked", "blocked", "hook", "hook"]
+    assert [(s.id, s.song_only) for s in bundle.scenes][-1] == ("blocked", False)
+    assert [f for f in found if f[1] == "case-on-hook"] == [("n3", "case-on-hook", True), ("n4", "case-on-hook", True)]
+
+
+def test_a_close_on_the_hook_about_the_hook_stays_there():
+    def change(d):
+        told_on_the_hook(d, "So it all starts in the thylakoid.", "And the thylakoid is where it ends.")
+
+    bundle, found, _ = review(change)
+    assert {d.line_id: d.scene for d in bundle.direction}["n3"] == "hook"
+    assert not [f for f in found if f[1] == "case-on-hook"]
+
+
 def test_a_narration_sentence_never_plays_over_the_songs_own_picture():
     def narrated(d):
         d["song_scenes"] = [song_picture("chorus")]

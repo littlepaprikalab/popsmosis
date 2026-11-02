@@ -42,7 +42,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _no_analogy_scene(data) + _settle_song_scenes(data) + _direct_choruses(data)
+    problems = _no_analogy_scene(data) + _case_off_the_hook(data) + _settle_song_scenes(data) + _direct_choruses(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -114,6 +114,50 @@ def _no_analogy_scene(data: dict) -> list[Problem]:
                      moves="", says="", glow="", also=[])
     if dropped:
         data["scenes"] = [s for s in data["scenes"] if s["id"] != ANALOGY]
+    return problems
+
+
+def _case_off_the_hook(data: dict) -> list[Problem]:
+    """The lesson comes back to the hook only to close. Sentences that come back to it to talk about parts it does not
+    draw, from the first such sentence to the one that says the core idea (or to the last sentence, the close, when
+    none does), play over the scene that draws the most of those parts, the song's own picture first on a tie, since
+    it was painted for what the lesson has not shown; _settle_song_scenes then makes it the lesson's too. Nov 2: Muse
+    Wonder's script put the diabetes case on the hook, so "So the proximal tubule cannot take back all that extra
+    glucose" played over a boy holding a water jug, while the bundle had painted the case, glucose piled up in the
+    tubule, for the song alone. Repaired, and recorded for the prompt."""
+    ids = [s["id"] for s in data["scenes"]]
+    if "hook" not in ids:
+        return []
+    canon = canonical_names(data["scenes"])
+    drawn = {s["id"]: {x["name"] for x in s["structures"]} for s in data["scenes"]}
+    directions = {d["line_id"]: d for d in data["direction"]}
+    lines = [n for n in data["narration"] if n["id"] in directions]
+    left = next((i for i, n in enumerate(lines) if directions[n["id"]]["scene"] != "hook"), len(lines))
+    core = fold(" ".join(data["core_idea"].split()))
+    spans: list[list[dict]] = [[]]  # in each later passage on the hook, the sentences from the first that is away
+    for i, n in enumerate(lines[left:], left):
+        if directions[n["id"]]["scene"] != "hook":
+            if spans[-1]:
+                spans.append([])
+            continue
+        if core and core in fold(" ".join(n["text"].split())) or i == len(lines) - 1:
+            break  # the close stays on the hook
+        if spans[-1] or set(said(n["text"], canon)) - drawn["hook"]:
+            spans[-1].append(n)
+    problems = []
+    for span in spans:
+        parts = {p for n in span for p in said(n["text"], canon)} - drawn["hook"]
+        scores = {s["id"]: (len(parts & drawn[s["id"]]), s["song_only"], ids.index(s["id"]))
+                  for s in data["scenes"] if s["id"] != "hook"}
+        if not parts or not scores or max(scores.values())[0] == 0:
+            continue
+        target = max(scores, key=scores.get)
+        for n in span:
+            directions[n["id"]].update(scene=target, camera={"target": "", "zoom": 1.0}, spotlight="", particles=[],
+                                       carries="", moves="", says="", glow="", also=[])
+            problems.append(Problem(line_id=n["id"], rule="case-on-hook", repaired=True,
+                                    detail=f'comes back to the hook for {", ".join(sorted(parts))}, which it does not '
+                                           f'draw; over "{target}" instead'))
     return problems
 
 
