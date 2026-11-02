@@ -543,9 +543,11 @@ def apply_fixes(bundle: Bundle, fixes: dict[tuple[str, str], str]) -> Bundle:
         if d["caption"].strip() and ("caption", d["caption"].strip()) in fixes:
             d["caption"] = fixes[("caption", d["caption"].strip())]
     for scene in data["scenes"]:
-        # Checked without its tags (Scene.described()): a corrected picture loses them, and its parts are given
-        # their colours and labels after its words instead (art.paint_prompt).
-        scene["image_prompt"] = fixes.get((SCENE, untagged(scene["image_prompt"])), scene["image_prompt"])
+        # Checked without its tags (Scene.described()): a corrected picture comes back with none, and has them put
+        # back after the words that name its parts (checks.tag_parts).
+        fixed = fixes.get((SCENE, untagged(scene["image_prompt"])))
+        if fixed is not None:
+            scene["image_prompt"] = checks.tag_parts(fixed, scene["structures"])
     data["music"]["positive_styles"] = [fixes.get((STYLE, s), s) for s in data["music"]["positive_styles"]]
     title = fixes.get((TITLE, title_text(bundle)))
     if title:

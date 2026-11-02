@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from studio import jobs, media
 from studio.schemas import Arrows, PlacedArrow, Timeline
@@ -118,6 +118,19 @@ def test_a_move_from_a_place_drawn_more_than_once_gets_an_arrow_from_each_copy(j
     assert "It is drawn 3 times, once for each copy" in look["prompt"]
 
 
+
+def test_copies_are_capped_and_none_is_a_dot_or_drawn_twice(job):
+    # An arrow at each of a row of thirty cells would hide the picture.
+    head = (470.0, 230.0)
+    many = [((100.0 + 40 * k, 100.0), head) for k in range(1, 10)]  # nine more copies, each its own
+    again = [((400.0, 250.0), head), ((402.0, 251.0), (471.0, 231.0)), ((300.0, 300.0), (303.0, 302.0))]
+    arrows.run(job, ask=FakeAsk(copies=again + many))
+    [arrow] = placed(job)
+    scale = 945 / 1792
+    assert len(arrow.copies) == arrows.COPIES_MAX
+    assert [c.start.x for c in arrow.copies] == [pytest.approx((100.0 + 40 * k) / scale) for k in range(1, 6)]
+
+
 def test_a_move_with_copies_draws_an_arrow_from_each_copy():
     from studio.render.renderer import Renderer
     from studio.schemas import Locations, Point, Way
@@ -144,15 +157,20 @@ def test_a_move_with_copies_draws_an_arrow_from_each_copy():
     assert changed > 200  # the second arrow is drawn: a few hundred pixels or more differ
 
 
-def test_a_painted_label_is_drawn_over_an_arrow_that_crosses_it():
-    # Nov 2: two of the GPS overview's four signals ran through its painted "Phone", which read "Ph|o|ne".
+@pytest.mark.parametrize("fading", [False, True])
+def test_a_painted_label_is_drawn_over_an_arrow_that_crosses_it(monkeypatch, fading):
+    # Nov 2: two of the GPS overview's four signals ran through its painted "Phone", which read "Ph|o|ne". While a
+    # stage fades in over the one before, the label is drawn again as the frame has it, the stage before under it.
+    from studio.render import renderer as rendering
     from studio.render.renderer import LABEL_PAD, Renderer
     from studio.schemas import Locations, Point
 
+    if fading:
+        monkeypatch.setattr(rendering, "STAGE_FADE_S", 1000.0)  # still fading in at the arrow's moment
     job = sample_media.write_job(Path(tempfile.mkdtemp()) / "sample", art=True)
     timeline = jobs.read(job / media.timeline_path("song"), Timeline).model_copy(update={"self_labelled": ["overview"]})
     locations = jobs.read(job / media.LOCATIONS, Locations)
-    beat = next(b for b in timeline.beats if b.particles and list(b.particles[0].path) == HOP)
+    i, beat = next((i, b) for i, b in enumerate(timeline.beats) if b.particles and list(b.particles[0].path) == HOP)
     flow = beat.particles[0]
     placed = PlacedArrow(scene="overview", path=HOP, carries=flow.label, start=Point(x=700, y=500),
                          end=Point(x=900, y=450))
@@ -161,8 +179,10 @@ def test_a_painted_label_is_drawn_over_an_arrow_that_crosses_it():
     for name, boxes, only in (("bare", [box], ("nothing",)), ("over", [box], arrows.key("overview", flow)),
                               ("under", [], arrows.key("overview", flow))):
         renderer = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[placed]))
-        renderer.scene("overview")._label_boxes = boxes  # as painted_label_boxes would find them
+        renderer.scene("overview")._text_boxes = boxes  # as text_boxes() would find them
         renderer.only = only
+        if fading:
+            renderer.plans[i].fade_from = "synthase"
         t = renderer.arrow_time("overview", flow)
         frames[name] = renderer.frame(t).astype(int)
     (fx0, fy0), (fx1, fy1) = (renderer.art_to_frame(t, box[0] + LABEL_PAD, box[1] + LABEL_PAD),
@@ -173,5 +193,26 @@ def test_a_painted_label_is_drawn_over_an_arrow_that_crosses_it():
         return int((abs(frames[a][where] - frames[b][where]).sum(axis=2) > 30).sum())
 
     assert changed("under", "bare", inside) > 20  # drawn under nothing, the arrow shows across the box
-    assert changed("over", "bare", inside) == 0  # the label is drawn again over it
+    assert changed("over", "bare", inside) == 0  # the label is drawn again over it, as the frame has it
     assert changed("over", "bare") > 100  # and the rest of the arrow is still drawn
+
+
+def test_only_a_painted_box_with_writing_in_it_is_drawn_over_the_arrows(tmp_path):
+    # Nov 2: on the airplane overview's white sky, the strips between its airflow lines passed for label boxes.
+    from studio.render.renderer import UNLABELLED, SceneArt
+    from studio.schemas import SceneLocations
+    from studio.steps.art import EVERYDAY
+
+    picture = Image.new("RGB", (800, 400), (40, 60, 90))
+    draw = ImageDraw.Draw(picture)
+    draw.rectangle((100, 100, 300, 150), fill="white")  # a label: black writing on a white box
+    draw.text((115, 110), "Phone signal", fill="black", font=ImageFont.load_default(size=26))
+    draw.rectangle((400, 100, 760, 128), fill="white")  # a white strip a dark line crosses
+    draw.line((400, 128, 760, 100), fill="black", width=3)
+    (tmp_path / "art").mkdir()
+    picture.save(tmp_path / "art" / "overview.png")
+    art = SceneArt(tmp_path, SceneLocations(scene="overview", art="art/overview.png", width=800, height=400, structures=[]))
+    assert len(art.label_boxes()) >= 2  # the strip passes for a box (here two: the line cuts it in two)
+    [(x0, _, x1, _)] = art.text_boxes()  # only the one with writing is drawn again
+    assert x0 < 120 and x1 > 290
+    assert UNLABELLED == EVERYDAY  # the pictures painted with no labels, as the art step has them

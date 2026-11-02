@@ -679,4 +679,7 @@ def test_a_picture_is_checked_without_its_part_tags_and_its_correction_still_goe
     report, checked = check_bundle(bundle(lambda d: d["scenes"][1].update(image_prompt=tagged)), "", fake)
     sent = [line["text"] for line in fake.payloads[0]["lines"] if line["id"] == "scene:overview"]
     assert sent == [plain]
-    assert report.status == "passed" and checked.scenes[1].image_prompt == fixed_words
+    # Its tags are put back after the words that name its parts (checks.tag_parts), so the painter still gets each
+    # part's colour and label in place.
+    assert report.status == "passed" and checked.scenes[1].image_prompt == "A thylakoid [[Thylakoid]] membrane in cross-section."
+    assert checked.scenes[1].described() == fixed_words

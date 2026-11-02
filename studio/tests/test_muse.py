@@ -3,8 +3,8 @@
 import base64
 import hashlib
 import json
-import shutil
 import re
+import shutil
 import threading
 import time
 
@@ -137,7 +137,8 @@ class FakeHelper:
                 return {"text": self.rewrites[scene]}
             # By default it keeps a picture the check found no part out of place or wrong in, and rewrites any other.
             clean = "\n- misplaced: " not in prompt and "\n- wrong: " not in prompt
-            return {"text": art.KEEP if clean else f"Rewritten {scene} [[Thylakoid]] after its picture went wrong."}
+            part = re.search(r"each to be tagged once:\n- (.+?) \(", prompt).group(1)  # its first part, tagged
+            return {"text": art.KEEP if clean else f"Rewritten {scene} [[{part}]] after its picture went wrong."}
         assert role == "helper"
         if schema is art.PictureCheck:
             assert system == art.CHECK_PROMPT and "The lesson's facts:\n- f1: " in prompt
@@ -345,13 +346,14 @@ def test_a_part_out_of_place_is_asked_for_again_and_a_wrong_label_kept(job, monk
     # picture and what the check found in it: not from the same words with the problem quoted after them.
     [(_, shown)] = [(label, prompt) for label, prompt in helper.asked if label == "art rewrite synthase"]
     assert "- misplaced: head in the lumen" in shown and synthase[0] in shown
-    assert "refused" not in synthase[0] and synthase[1].startswith("Rewritten synthase after its picture went wrong.")
+    assert "refused" not in synthase[0] and synthase[1].startswith(
+        'Rewritten synthase (blue, label "ATP synthase") after its picture went wrong.')
     assert "head in the lumen" not in synthase[1]
     made = json.loads((job / "art" / "synthase.json").read_text())
     assert made["try"] == 2
     # What each try was refused for is kept, not only the next prompt's quote of it, with the words it was rewritten to.
     assert made["tries"] == [{"try": 1, "labels": [], "misplaced": ["head in the lumen"], "wrong": [], "notes": [],
-                              "rewritten": "Rewritten synthase [[Thylakoid]] after its picture went wrong."},
+                              "rewritten": "Rewritten synthase [[ATP synthase]] after its picture went wrong."},
                              {"try": 2, "labels": [], "misplaced": [], "wrong": [], "notes": []}]
     assert sorted(p.name for p in (job / "art").glob("synthase.try*.png")) == ["synthase.try1.png"]
 
@@ -403,7 +405,7 @@ def test_the_writer_looks_at_every_first_picture_and_only_its_rewrite_is_painted
 def test_a_picture_the_writer_rejected_is_not_kept_over_its_repaint_for_a_small_fault(job, monkeypatch):
     # Nov 2: the writer rejected the airplane's stall picture, which the check had passed (no air broke away over the
     # top), and its repaint came back with one small fault; the step kept the rejected one by the check alone.
-    fake = FakeMuse().install(monkeypatch)
+    FakeMuse().install(monkeypatch)
     helper = FakeHelper({"hook": [{}, {"wrong": ["the leaf is a little pale"]}]})
     helper.rewrites = {"hook": "A leaf [[Thylakoid]] in the sun, its veins showing."}
     assert "1 picture refused: hook: the writer asked for it again" in art.run(job, helper)

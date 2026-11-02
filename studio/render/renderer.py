@@ -167,6 +167,10 @@ ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its 
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
 ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
 LABEL_PAD = 2.0  # art pixels around a painted label's box drawn again over the arrows with it
+# A painted label's box holds writing (SceneArt.text_boxes): a row across it crosses TEXT_STROKES dark strokes or more,
+# and TEXT_INK of it or more is dark.
+TEXT_STROKES, TEXT_INK = 5, 0.06
+UNLABELLED = ("hook",)  # pictures painted with no labels (art.EVERYDAY): what looks like a label's box there is not one
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
@@ -362,6 +366,7 @@ class SceneArt:
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
         self._half = pixels[::2, ::2, :3].copy()  # for finding its painted labels (label_boxes())
         self._label_boxes: list[Rect] | None = None
+        self._text_boxes: list[Rect] | None = None
         self.masks: dict[str, skia.Image] = {}
         self._mask_files: dict[str, Path] = {}
         self._crowd_points: dict[str, list[Point]] = {}
@@ -552,6 +557,23 @@ class SceneArt:
         if self._label_boxes is None:
             self._label_boxes = [tuple(v * 2.0 for v in box) for box in painted_label_boxes(self._half)]
         return self._label_boxes
+
+    def text_boxes(self) -> list[Rect]:
+        """The painted labels (label_boxes()) that hold writing, as TEXT_STROKES and TEXT_INK have it: these are drawn
+        again over the arrows (Renderer._painted_labels), where a white patch taken for a box would cut an arrow. On
+        the airplane overview's white sky the strips between its airflow lines passed for three boxes (Nov 2). Of the
+        212 boxes found in 41 pictures then, every label passed but those of a letter or two ("K⁺"), which an arrow
+        still crosses, and nothing else did but on the hooks, which label nothing (UNLABELLED)."""
+        if self._text_boxes is None:
+            kept = []
+            for box in self.label_boxes():
+                x0, y0, x1, y1 = (int(v / 2) for v in box)
+                dark = self._half[y0:y1, x0:x1].max(-1) < 120
+                strokes = max((int((np.diff(row.astype(np.int8)) == 1).sum()) for row in dark), default=0)
+                if strokes >= TEXT_STROKES and dark.mean() >= TEXT_INK:
+                    kept.append(box)
+            self._text_boxes = kept
+        return self._text_boxes
 
     def ink_share(self, box: tuple[float, float, float, float]) -> float:
         """How much of an art-pixel box has something drawn in it, as drawn_share() has it, but what lies off the art
@@ -1450,28 +1472,31 @@ class Renderer:
         elif keep:  # the copy kept was the frame before's, as it always was: never one from an earlier rest
             self._last_background, self._background = (key, (scale, dx, dy)), None
 
-    def _painted_labels(self, canvas: skia.Canvas, scene_id: str, cam: Cam, view: Rect, ghosts: dict[str, float],
-                        spots: dict[str, float], tints: tuple, alpha: float) -> None:
-        """The labels painted on the picture (SceneArt.label_boxes), drawn again over its arrows and particles, from
-        the picture as the background drew it: on top, as the video's own labels are (Nov 2: two of the GPS
-        overview's four signals ran through its painted "Phone")."""
-        art = self.scene(scene_id)
-        boxes = art.label_boxes()
+    def _painted_labels(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float,
+                        ghosts: dict[str, float], spots: dict[str, float], tints: tuple, fade: float) -> None:
+        """The labels painted on the picture (SceneArt.text_boxes), drawn again over its arrows and particles just as
+        the background drew them, the stage before under them while this one fades in: on top, as the video's own
+        labels are (Nov 2: two of the GPS overview's four signals ran through its painted "Phone")."""
+        if beat.scene in UNLABELLED:
+            return
+        art = self.scene(beat.scene)
+        boxes = art.text_boxes()
         if not boxes:
             return
-        _, composed = art.compose(ghosts, spots, tints)
         scale, dx, dy = to_frame(cam, view, art)
-        paint = skia.Paint(Alphaf=alpha)
-        canvas.save()
-        canvas.clipRect(skia.Rect.MakeLTRB(*view))
-        canvas.translate(dx, dy)
-        canvas.scale(scale, scale)
+        before = plan.fade_from if fade < 1.0 else None
         for x0, y0, x1, y1 in boxes:
             canvas.save()
-            canvas.clipRect(skia.Rect.MakeLTRB(x0 - LABEL_PAD, y0 - LABEL_PAD, x1 + LABEL_PAD, y1 + LABEL_PAD))
-            canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear), paint)
+            canvas.clipRect(skia.Rect.MakeLTRB((x0 - LABEL_PAD) * scale + dx, (y0 - LABEL_PAD) * scale + dy,
+                                               (x1 + LABEL_PAD) * scale + dx, (y1 + LABEL_PAD) * scale + dy))
+            if before is not None:
+                self._draw_background(canvas, before, cam, view, self._ghosts(before, self.revealed.get(before, {}), t),
+                                      {}, keep=False)
+                canvas.saveLayerAlpha(None, round(255 * fade))
+            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False, tints=tints)
+            if before is not None:
+                canvas.restore()
             canvas.restore()
-        canvas.restore()
 
     def _in_play(self, i: int) -> set[str] | None:
         """The parts beat i is about (LABELS_CALM); None when every label shows in full."""
@@ -1676,7 +1701,7 @@ class Renderer:
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
             if beat.scene in self.timeline.self_labelled:
-                self._painted_labels(canvas, beat.scene, cam, view, ghosts, spots, tints, fade)
+                self._painted_labels(canvas, beat, plan, cam, view, t, ghosts, spots, tints, fade)
 
         caption_alpha = 0.0
         if beat.caption:
@@ -2839,13 +2864,18 @@ class Renderer:
             line = self._flow_line(scene_id, flow)
             if len(line) < 2:
                 return
-            for way in [line, *self._copies(scene_id, flow)]:  # and from each other copy of a place drawn twice
+            copies = self._copies(scene_id, flow)
+            for way in [line, *copies]:  # and from each other copy of a place drawn twice
                 self._draw_way(canvas, flow, way, elapsed, alpha, on_frame, t, count, room)
             says = getattr(flow, "says", "")
             if says and (scene_id, tuple(flow.path), flow.label, flow.blocked) not in self._said:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
+                # Clear of its copies along their length, not only its own ends: the GPS overview's four signals
+                # fan out from the middle the note hangs from.
+                clear = line + [_along(way, d) for way in copies
+                                for d in range(0, int(routing.length(way)) + 1, int(ARROW_SAMPLE))]
                 self._draw_note(canvas, scene_id, ("says", tuple(flow.path), flow.label, says), says, middle,
-                                line, flow.color, alpha * p.ease((elapsed - ROUTE_GROW_S / 2) / ROUTE_GROW_S),
+                                clear, flow.color, alpha * p.ease((elapsed - ROUTE_GROW_S / 2) / ROUTE_GROW_S),
                                 on_frame)
             return
         arrows = self._handoffs(scene_id, flow)

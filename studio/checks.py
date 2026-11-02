@@ -20,7 +20,7 @@ from collections import Counter
 from pathlib import Path
 
 from studio.jobs import write
-from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, SONG_SCENES_MAX, PART_TAG, Bundle, CheckReport, Fact, Problem,
+from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, PART_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Fact, Problem,
                             lesson_scenes_max, with_study_tags)
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
@@ -198,7 +198,7 @@ def _check_part_tags(data: dict, problems: list) -> None:
         tagged: list[str] = []
         fixed: list[str] = []
 
-        def one(found: re.Match) -> str:
+        def one(found: re.Match, named: dict = named, tagged: list = tagged, fixed: list = fixed) -> str:
             raw = found.group(1).strip()
             name = named.get(raw.casefold())
             if name is None or name in tagged:
@@ -218,6 +218,30 @@ def _check_part_tags(data: dict, problems: list) -> None:
             problems.append(Problem(line_id=f"scene:{scene['id']}", rule="part-tags", repaired=False,
                                     detail=f"no tag for {', '.join(untagged)}: coloured and labelled after the "
                                            "picture's words instead, where the painter can put them on the wrong thing"))
+
+
+def tag_parts(text: str, structures: list[dict]) -> str:
+    """A picture's words with each part's tag (schemas.PART_TAG) right after the first words that name it, by its name
+    or an alias, a plural too, the longest first ("thylakoid lumen" before "thylakoid"), as the brief asks the writer to
+    place them; a part they never name, or one tagged already, is left as it is. For words written again without tags:
+    the fact-check judges a picture's words untagged, and its correction came back with none (factcheck.apply_fixes),
+    so the painter put those parts' colours and labels from the lists after the words, as before tags."""
+    have = {m.group(1).strip().casefold() for m in PART_TAG.finditer(text)}
+    words = sorted(((alias, s["name"]) for s in structures for alias in (s["name"], *s["aliases"]) if alias.strip()),
+                   key=lambda pair: -len(pair[0]))
+    taken: list[tuple[int, int]] = []  # what a longer name already holds
+    at: dict[str, int] = {}
+    for alias, name in words:
+        if name in at or name.casefold() in have:
+            continue
+        for found in re.finditer(rf"(?<![\w\[]){re.escape(alias)}(?:e?s)?\b(?!['’]s)", text, re.I):
+            if not any(a < found.end() and found.start() < b for a, b in taken):
+                taken.append((found.start(), found.end()))
+                at[name] = found.end()
+                break
+    for name, end in sorted(at.items(), key=lambda pair: -pair[1]):
+        text = f"{text[:end]} [[{name}]]{text[end:]}"
+    return text
 
 
 def _check_stages(data: dict, problems: list) -> None:

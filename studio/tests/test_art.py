@@ -6,6 +6,7 @@ import copy
 import hashlib
 import inspect
 import math
+import tempfile
 import textwrap
 import xml.etree.ElementTree as ET
 import shutil
@@ -14,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 import skia
+from PIL import Image
 
 from studio import checks, jobs, media, svg
 from studio.schemas import Axes, Bundle, Locations, Structure, locations_problems
@@ -866,3 +868,27 @@ def test_a_painting_is_not_made_again_for_a_tag_alone_but_is_for_new_words():
     bundle = Bundle.model_validate(bundle_data())
     scene = bundle.scenes[1]
     assert art.key(bundle, scene) != art.key(bundle, scene.model_copy(update={"image_prompt": TAGGED}))
+
+
+@pytest.mark.parametrize("said, kept", [
+    ("KEEP", ""), ("Keep.", ""), ("KEEP: the picture shows the wing whole, and right.", ""), ("**KEEP**", ""),
+    ("", None), ("   ", None),
+    ("Educational textbook illustration of a wing, with no parts named.", None),  # tags none of its parts: no description
+])
+def test_the_writers_answer_keeps_the_picture_or_gives_no_description(said, kept):
+    # An answer opening with KEEP, painted as a description, threw a good picture away for one painted from "KEEP: ...".
+    bundle = Bundle.model_validate(bundle_data())
+    scene = next(s for s in bundle.scenes if s.structures)
+    check = art.ArtCheck(misplaced=[], wrong=[])
+
+    def ask(role, prompt, schema=None, images=(), *, system=None, label=None):
+        assert role == "brain" and schema is None and system == art.REWRITE_PROMPT
+        return {"text": said}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        picture = Path(tmp) / "p.png"
+        Image.new("RGB", (64, 32)).save(picture)
+        assert art.rewrite(bundle, scene, picture, "the prompt", check, ask, "art rewrite overview") == kept
+        tagged = f"Educational textbook illustration of the {scene.structures[0].name} [[{scene.structures[0].name}]]."
+        assert art.rewrite(bundle, scene, picture, "the prompt", check, lambda *a, **k: {"text": tagged},
+                           "art rewrite overview") == tagged

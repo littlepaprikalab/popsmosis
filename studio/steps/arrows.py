@@ -23,6 +23,7 @@ With no arrows.json (a job made before the step), code places every arrow, as it
 
 from __future__ import annotations
 
+import math
 import tempfile
 from pathlib import Path
 
@@ -38,6 +39,11 @@ POINT_SIZE = (960, 540)  # the painting and its grid are fitted into this: about
 LOOK_SIZE = (960, 540)  # a still of one arrow
 GRID = 50  # pixels of the fitted picture between grid lines, numbered every second line
 WORKERS = 16  # calls at once: a call waits on the helper, never on another
+# A move at each copy of a place drawn more than once (PlacedArrow.copies) is drawn at most this many times more: four
+# satellites took three, and an arrow at each of a row of thirty cells would hide the picture. Nor is a copy shorter
+# than SHORT_WAY art pixels drawn, or one where the arrow or another copy already is.
+COPIES_MAX = 5
+SHORT_WAY = 12.0
 
 POINT_PROMPT = """You place arrows on a textbook illustration for a short science lesson video. Each arrow shows \
 something moving in the picture (an ion, a molecule, an electron, a fluid), and the video draws it as a straight arrow \
@@ -161,6 +167,18 @@ def point(job: Path, scene: str, hops: list[tuple], names: list[str], folder: Pa
     def art(q: Point) -> Point:
         return Point(x=min(max(q.x / scale, 0.0), picture.width), y=min(max(q.y / scale, 0.0), picture.height))
 
+    def ways(found: PointedArrow) -> list[Way]:
+        """Its copies in art pixels, each a real arrow and none drawn twice, at most COPIES_MAX (the note on it)."""
+        kept = [Way(start=art(found.start), end=art(found.end))]
+        for c in found.copies:
+            way = Way(start=art(c.start), end=art(c.end))
+            if len(kept) > COPIES_MAX or math.dist((way.start.x, way.start.y), (way.end.x, way.end.y)) < SHORT_WAY:
+                continue
+            if not any(math.dist((way.start.x, way.start.y), (k.start.x, k.start.y)) < SHORT_WAY
+                       and math.dist((way.end.x, way.end.y), (k.end.x, k.end.y)) < SHORT_WAY for k in kept):
+                kept.append(way)
+        return kept[1:]
+
     placed = {}
     for n, (flow, _) in enumerate(hops, 1):
         found = next((a for a in answer.arrows if a.id.strip().lower() == f"a{n}"), None)
@@ -168,8 +186,7 @@ def point(job: Path, scene: str, hops: list[tuple], names: list[str], folder: Pa
             continue
         placed[key(scene, flow)] = PlacedArrow(
             scene=scene, path=flow.path, carries=flow.label, blocked=flow.blocked, placed=found.why,
-            **({"start": art(found.start), "end": art(found.end),
-                "copies": [Way(start=art(c.start), end=art(c.end)) for c in found.copies]} if found.drawable else
+            **({"start": art(found.start), "end": art(found.end), "copies": ways(found)} if found.drawable else
                {"left_out": f"the picture cannot show it: {found.why}"}))
     return placed
 

@@ -729,8 +729,14 @@ KEEP = "KEEP"
 
 def rewrite(bundle: Bundle, scene: Scene, picture: Path, sent: str, check: ArtCheck, ask, label: str) -> str | None:
     """The writer's role's look at a picture of the scene and what the check found in it (REWRITE_PROMPT): the
-    scene's words written again for the next try, "" when it keeps the picture, None when the call fails. A rewrite is
-    for the next try only, never written into the bundle, whose words the fact-check passed."""
+    scene's words written again for the next try, "" when it keeps the picture, None when the call fails or its answer
+    is no description. A rewrite is for the next try only, never written into the bundle, whose words the fact-check
+    passed.
+
+    An answer that opens with KEEP keeps the picture, whatever follows it ("KEEP: it shows the wing"): painted as a
+    description, it would have thrown a good picture away for one painted from those words. An empty one, or one that
+    tags none of the scene's parts, is not a description of it: as when the call fails, the check's problems decide.
+    The nine rewrites of the Nov 2 runs each tagged three parts or more."""
     try:
         with tempfile.TemporaryDirectory(prefix="popsmosis-rewrite-") as tmp:
             answer = ask("brain", rewrite_prompt(bundle, scene, sent, check), None, [_shrunk(picture, Path(tmp))],
@@ -739,7 +745,13 @@ def rewrite(bundle: Bundle, scene: Scene, picture: Path, sent: str, check: ArtCh
         print(f"  {label}: no answer ({e})", file=sys.stderr)
         return None
     text = answer["text"].strip().strip("`").strip()
-    return "" if text.rstrip(".").upper() == KEEP else text
+    if re.match(rf"\W*{KEEP}\b", text, re.I):
+        return ""
+    if not text or (scene.structures and len(inline(scene.model_copy(update={"image_prompt": text}))[1])
+                    == len(scene.structures)):
+        print(f"  {label}: no description in its answer, so the check decides", file=sys.stderr)
+        return None
+    return text
 
 
 def _boxed(found) -> bool:
