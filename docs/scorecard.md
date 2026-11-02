@@ -334,3 +334,30 @@ Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current 
   an improvement; a harder transfer question would.
 - **The judge's error list is still noisy:** about a third of its 22 entries say nothing needs
   correcting. Trust the accuracy score and its reason over the count.
+
+## In-session run, Nov 2
+
+After the day's changes: one picture check, every style rapping its verses, the song style's close, natural voice
+and its instruments for variety (not the punchier rap wording, which came after this run's prompts were built), no
+avoid list, and the code repair that makes shouted or gang vocals backing vocals. Judged by Opus beside the same
+baseline droplets; the learner test and the narration edit skipped, as before.
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 1, evening | 12 of 12 | 4.43 | 3.79 | 9 / 12 |
+| Nov 2 | 12 of 12 | 4.51 | 3.68 | 9 / 14 |
+
+By criterion (new / baseline): hook 4.33 / 4.33, connect 4.83 / 3.75, why chain 4.67 / 4.00, key lines 4.67 / 2.83,
+accuracy 4.42 / 4.08, singability 4.00 / 3.08, lesson 4.67 / 3.67. Within the noise of one run nothing went down
+against Nov 1's evening; key lines went up (4.17 to 4.67). Read through:
+
+- **Every song raps its verses**, the chorus sung, with lines like "Fuel and liquid oxygen, you pack 'em both inside /
+  They flow to the chamber and they burn, no air supplied" (the rocket) and "Every verb's got a mood, and the mood
+  shows how / Indicative's the fact: vienes, you're coming now" (Spanish).
+- **Narration ran over the script's 300 to 420 words in four topics**, and no check says so: the catalyst 585, the
+  pump 520, the derivative 451, the p-value 439. Three writers noticed it themselves.
+- **Two choruses sing their title line three times in five lines**: "Broke king calls, Third Estate claims power"
+  (with "So he calls the Estates-General" between) and "Know the ending, feel the dread".
+- **The errors are song lines** the fact-check is there for: "Nothing turns to CO2" (a poisoned converter),
+  "Moon slides in front of the Sun", "The far side's dark", "Keeps the water out" (the pump), "Each step pumps
+  hydrogen in" (only one carrier pumps).
