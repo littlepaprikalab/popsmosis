@@ -819,6 +819,22 @@ def test_a_clip_that_starts_partway_into_music_fades_in(job):
     assert "atrim=start=0.500" in first and "afade=t=in:st=0:d=0.500" in first
     assert "afade" not in second  # a clip that starts partway on purpose is not faded
     assert media.PEAK_LIMIT in mix.split(";")[-1]  # the mix's peaks held under full scale, which crackled (Nov 1)
+    assert all(chain.startswith(f"[{i + 1}:a]{media.RESAMPLE},") for i, chain in enumerate(mix.split(";")[:2]))
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+def test_a_24khz_voice_reaches_48khz_with_no_mirror_of_its_top_end():
+    # ffmpeg's default resampler mirrored an 11.5 kHz tone to 12.5 kHz only 10 dB down: static on a narration's s
+    # and t sounds (Nov 2).
+    import numpy as np
+
+    tone = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=11500:sample_rate=24000:duration=1",
+                           "-af", media.RESAMPLE, "-f", "f32le", "-ac", "1", "-"], capture_output=True, check=True).stdout
+    x = np.frombuffer(tone, np.float32)[4800:28800]
+    spectrum = np.abs(np.fft.rfft(x * np.blackman(len(x))))
+    hz = np.fft.rfftfreq(len(x), 1 / 48000)
+    kept, mirror = spectrum[np.abs(hz - 11500) < 20].max(), spectrum[np.abs(hz - 12500) < 20].max()
+    assert 20 * np.log10(mirror / kept) < -60
 
 
 def probe(path):

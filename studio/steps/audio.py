@@ -69,9 +69,9 @@ GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
 SONG_PROVIDERS = ("elevenlabs", "gemini")
 MUSIC_MODEL = "music_v2_5"
 GEMINI_SONG_MODEL = "lyria-3.5"  # Lyria's full-length songs, sung from lyrics given in the prompt
-SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this rate
+SONG_BITRATE = "192k"  # a song Lyria sends as anything but an MP3 is encoded at this rate
 SPEECH_BITRATE = "128k"  # a Gemini narration, as ElevenLabs' mp3_44100_128
-PEAK_LIMIT = media.PEAK_LIMIT  # a song's peaks held under -1 dBFS (studio/media.py)
+MP3_TYPES = ("audio/mpeg", "audio/mp3")  # kept as sent, not encoded again
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "Xb7hH8MSUJpSbSDYk0k2"  # Alice: a clear, engaging British educator
@@ -417,21 +417,24 @@ def _mime(inline: dict) -> str:
 
 
 def as_mp3(audio: bytes, mime_type: str, kind: str = "song") -> bytes:
-    """Gemini's song or narration as a constant-bitrate MP3, whatever it sent (an MP3 of any kind, a WAV); a song
-    with its peaks held under -1 dBFS (PEAK_LIMIT).
+    """Gemini's song or narration as an MP3 with a length header: an MP3 as it was sent (Lyria's), anything else
+    (a WAV) encoded once.
 
     Every later step reads an audio file's length from its header (ffprobe), and a
     variable-bitrate MP3 without one reads as the wrong length; the upload calls it
-    audio/mpeg. So it is always encoded again, once, from a file to a file, so
-    ffmpeg can seek the input and write the output's length header.
+    audio/mpeg. An MP3 is copied, not encoded again: each lossy encode costs some of
+    the sound, and the video's AAC is one more (the owner, Nov 2). A copy from a file
+    to a file writes the length header all the same. The song's peaks are left as
+    sent: the render holds its mix under full scale (media.PEAK_LIMIT), and the MP3
+    is played only inside a video.
     """
     with tempfile.TemporaryDirectory(prefix=f"popsmosis-{kind}-") as tmp:
         source, out = Path(tmp) / "gemini", Path(tmp) / f"{kind}.mp3"
         source.write_bytes(audio)
         try:
-            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-vn",
-                            *(["-af", PEAK_LIMIT] if kind == "song" else []), "-codec:a", "libmp3lame",
-                            "-b:a", SONG_BITRATE if kind == "song" else SPEECH_BITRATE, str(out)],
+            kept = (["-codec:a", "copy"] if mime_type.split(";")[0].strip().lower() in MP3_TYPES else
+                    ["-codec:a", "libmp3lame", "-b:a", SONG_BITRATE if kind == "song" else SPEECH_BITRATE])
+            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-vn", *kept, str(out)],
                            capture_output=True, check=True, timeout=300)
             return out.read_bytes()
         except subprocess.CalledProcessError as e:

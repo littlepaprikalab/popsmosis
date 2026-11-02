@@ -29,7 +29,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from studio.media import PEAK_LIMIT
+from studio.media import PEAK_LIMIT, RESAMPLE
 from studio.render.layouts import LAYOUTS
 from studio.schemas import Timeline
 
@@ -260,11 +260,11 @@ def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[l
         if clip.fade_out > 0 and clip.end is not None:
             fade += f",afade=t=out:st={max(clip.end - clip.start - clip.fade_out, 0):.3f}:d={clip.fade_out:.3f}"
         delay = round(clip.at * 1000)
-        chains.append(f"[{i + first_input}:a]aresample=48000,{trim},asetpts=PTS-STARTPTS{fade},"
+        chains.append(f"[{i + first_input}:a]{RESAMPLE},{trim},asetpts=PTS-STARTPTS{fade},"
                       f"adelay={delay}:all=1[a{i}]")
     mix = "".join(f"[a{i}]" for i in range(len(timeline.audio)))
-    # The mix's peaks held under -1 dBFS before the AAC encode, as the audio step keeps a song (audio.PEAK_LIMIT): a
-    # song made before Nov 1 went past full scale in its choruses and crackled.
+    # The mix's peaks held under -1 dBFS before the AAC encode (media.PEAK_LIMIT): the audio step keeps a song as it was
+    # sent, past full scale in its choruses, which crackled once encoded without it (Nov 1).
     chains.append(f"{mix}amix=inputs={len(timeline.audio)}:normalize=0:duration=longest,{PEAK_LIMIT},"
                   f"apad,atrim=end={timeline.duration:.3f}[mix]")
     return inputs, ";".join(chains)

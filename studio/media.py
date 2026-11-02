@@ -74,10 +74,15 @@ VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
 LOCATIONS = "locations.json"
 ARROWS = "arrows.json"  # the arrows step's (studio/steps/arrows.py)
 # Lyria masters its songs to full scale, and an MP3 decodes a little past it: the pump's song went over 79 times, in
-# its choruses, and was heard as crackle once encoded again (the owner, Nov 1). The audio step keeps a song, and the
-# render its mix, with the peaks held under -1 dBFS by this lookahead limiter, which leaves everything below them as it
-# was (no auto level), its delay compensated so the words stay where they are sung.
+# its choruses, and was heard as crackle once encoded again (the owner, Nov 1). The audio step keeps a song as it was
+# sent, and every render holds its mix's peaks under -1 dBFS with this lookahead limiter before the AAC encode, which
+# leaves everything below them as it was (no auto level), its delay compensated so the words stay where they are sung.
 PEAK_LIMIT = "alimiter=limit=0.891:level=false:latency=true"
+# Every clip goes into the video's mix at 48 kHz. ffmpeg's default resampler lets a narration made at 24 kHz (Gemini's)
+# mirror its top end just above 12 kHz, only 10 dB down at 11.5 kHz: heard as static on its s and t sounds (the owner,
+# light reactions at 0:29, Nov 2). A longer Kaiser filter that stops just under the old rate's limit holds every
+# mirror 120 dB down or more, with ffmpeg's own resampler (no soxr needed).
+RESAMPLE = "aresample=48000:filter_size=256:cutoff=0.93:filter_type=kaiser:kaiser_beta=12"
 LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
 
 

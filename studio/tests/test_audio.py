@@ -484,7 +484,7 @@ def _sound(seconds, *args):
     # a variable-bitrate MP3 with no length header: its length cannot be read from it as it is
     (("-codec:a", "libmp3lame", "-q:a", "0", "-write_xing", "0", "-f", "mp3"), "audio/mpeg"),
 ])
-def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, monkeypatch, sent, mime_type):
+def test_lyrias_song_is_kept_as_an_mp3_of_its_true_length(job, monkeypatch, sent, mime_type):
     song = _sound(6, *sent)
     if "-write_xing" in sent:
         assert abs(DURATION_OF(song) - 6.0) > 0.15  # as sent, its length reads wrong (3% here)
@@ -494,7 +494,9 @@ def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, m
     monkeypatch.setattr(audio, "send", FakeGemini(song=song, mime_type=mime_type, speech=speech))
     sing(job, "gemini")
     audio.run(job)
-    assert _probe(job / "audio/song.mp3") == ("mp3", "192000")
+    # A WAV is encoded once, at a constant rate; an MP3 is copied as it was sent, with a length header.
+    assert _probe(job / "audio/song.mp3")[0] == "mp3"
+    assert mime_type == "audio/mpeg" or _probe(job / "audio/song.mp3") == ("mp3", "192000")
     assert _probe(job / "audio/narration.mp3") == ("mp3", "128000")  # Gemini's WAV narration, kept as ElevenLabs' are
     assert abs(DURATION(job / "audio/song.mp3") - 6.0) < 0.1  # the MP3's own padding, a few hundredths
     assert json.loads((job / audio.plan_path("song")).read_text())["mime_type"] == mime_type
@@ -711,18 +713,27 @@ def test_a_gemini_narration_costs_its_tokens_at_the_prices_of_the_day():
 
 
 @pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
-def test_a_song_sent_past_full_scale_is_kept_with_its_peaks_under_it(tmp_path):
-    # Lyria masters to full scale, and the pump's song went over 79 times, in its choruses: heard as crackle (Nov 1).
+def test_a_song_sent_as_an_mp3_is_kept_frame_for_frame(tmp_path):
+    # Each lossy encode costs some of the sound, and the video's AAC is one more: Lyria's MP3 is copied, not encoded
+    # again (Nov 2), with the length header a copy writes.
     import subprocess
 
     import numpy as np
 
-    loud = tmp_path / "loud.wav"  # a float WAV can hold what an MP3 decodes to: peaks at 1.3, about +2.3 dBFS
-    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "aevalsrc=1.3*sin(2*PI*440*t):s=44100:d=2",
-                    "-c:a", "pcm_f32le", str(loud)], check=True)
-    kept = AS_MP3(loud.read_bytes(), "audio/wav", "song")
-    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-f", "f32le", "-"], input=kept,
-                         capture_output=True, check=True).stdout
-    peak = float(np.abs(np.frombuffer(raw, np.float32)).max())
-    assert peak < 1.0  # held under full scale, where it would clip
-    assert peak > 0.8  # and not turned down as a whole: only the peaks are held
+    sent = tmp_path / "sent.mp3"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "aevalsrc=1.2*sin(2*PI*440*t)+0.05*random(0):s=44100:d=20",
+                    "-codec:a", "libmp3lame", "-q:a", "4", "-write_xing", "0", str(sent)], check=True)
+    kept = tmp_path / "kept.mp3"
+    kept.write_bytes(AS_MP3(sent.read_bytes(), "audio/mpeg", "song"))
+    assert DURATION(kept) == pytest.approx(20.0, abs=0.05)
+
+    def decoded(path):
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "f32le", "-"], capture_output=True,
+                             check=True).stdout
+        return np.frombuffer(raw, np.float32)
+
+    before, after = decoded(sent), decoded(kept)
+    skipped = len(before) - len(after)  # the copy's header tells the decoder to skip the encoder's delay
+    assert 0 <= skipped < 3000
+    assert np.array_equal(before[skipped:skipped + len(after)], after)  # the same frames: nothing encoded again
+    assert np.abs(after).max() > 1.0  # its peaks as sent: the render holds the mix under full scale
