@@ -294,10 +294,13 @@ def with_diction(styles: list[str]) -> list[str]:
 AVOID = ("long instrumental intro", "explicit lyrics")
 
 
-def with_avoid(avoid: list[str]) -> list[str]:
+def with_avoid(avoid: list[str], styles: list[str] | None = None) -> list[str]:
     """The song's avoid list with AVOID added where it lacks them, and nothing about diction, which the style asks
-    for once (with_diction): asked again and again, a singer sings like someone reading."""
-    kept = [a for a in avoid if "diction" not in a.lower()]
+    for once (with_diction): asked again and again, a singer sings like someone reading. Nothing about rap either when
+    the style raps a section: writers listed "rap" to avoid under styles that sang every verse (Nov 2), and most
+    styles now rap their second verse (studio/styles.py)."""
+    raps = any(checks.RAPPED.search(style) for style in styles or [])
+    kept = [a for a in avoid if "diction" not in a.lower() and not (raps and checks.RAPPED.search(a))]
     have = {" ".join(a.lower().split()) for a in kept}
     return [*kept, *(a for a in AVOID if a not in have)]
 
@@ -309,7 +312,7 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
         "positive_styles": with_diction(bundle.music.positive_styles),
-        "negative_styles": with_avoid(bundle.music.negative_styles),
+        "negative_styles": with_avoid(bundle.music.negative_styles, bundle.music.positive_styles),
         "context_adherence": "high",
     } for part in planned]
     return {"chunks": chunks}, _placed(planned)
@@ -352,7 +355,7 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
-    head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in with_avoid(music.negative_styles))}.")
+    head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in with_avoid(music.negative_styles, music.positive_styles))}.")
     head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)

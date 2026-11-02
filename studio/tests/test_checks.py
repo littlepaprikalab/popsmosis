@@ -529,6 +529,8 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
     assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
     assert len({style_for(f"job{i}") for i in range(40)}) > 4
     assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
+    # Most styles rap their second verse, the owner's wish since Nov 2; the checks read which lines may run longer.
+    assert sum(bool(checks.RAPPED_SECOND_VERSE.search(s)) for s in SONG_STYLES) >= len(SONG_STYLES) - 2
 
 
 def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once():
@@ -554,6 +556,10 @@ def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once()
 def test_every_song_avoids_a_long_intro_and_explicit_lyrics_and_its_avoid_list_never_asks_for_diction():
     from studio.steps import audio
 
+    # A style that raps a section keeps its rap: a writer's "rap" to avoid would tell the singer both (Nov 2).
+    assert audio.with_avoid(["rap", "Rapped verses", "screamed vocals"], ["teen pop, a rapped second verse"]) == [
+        "screamed vocals", "long instrumental intro", "explicit lyrics"]
+    assert audio.with_avoid(["rap"], ["indie-pop with melodic sung verses"])[0] == "rap"  # a sung style keeps it
     assert audio.with_avoid([]) == ["long instrumental intro", "explicit lyrics"]
     assert audio.with_avoid(["screamed vocals", "Mumbled diction", "Long  instrumental intro"]) == [
         "screamed vocals", "Long  instrumental intro", "explicit lyrics"]  # each once, as the writer put it
