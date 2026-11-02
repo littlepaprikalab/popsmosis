@@ -805,8 +805,10 @@ NOTES_PROMPT = """A checker looked at a picture painted for a lesson video and w
 watching, each saying the picture shows something false and what is true. The video shows the notes beside the \
 picture, so a wrong note teaches the student something false twice. Check each note against the picture, the \
 lesson's facts and what the course's textbooks teach. Leave out a note whose correction is false, one about \
-something the picture does not show, and one about style or looks; keep every other, including one you cannot \
-settle, since the video would rather disclose a doubt than hide a mistake. Return the notes you keep, word for \
+something the picture does not show, and one about style or looks. Leave out a note about a detail the lesson's \
+facts never mention, such as a building's roof or a costume, even if it is historically wrong: a note is for what \
+the lesson teaches. Keep every other, including one you cannot settle, since the video would rather disclose a \
+doubt than hide a mistake. Return the notes you keep, word for \
 word, in `keep`. Then, in `pinned`, for each kept note about one place in the picture, a sticky note the video \
 sticks there: `text`, the note word for word; `note`, what is true in under 8 words ("The inner face is \
 negative", "Spindle fibers run to each pole"); and a box round where it is, as fractions of the picture's width \
