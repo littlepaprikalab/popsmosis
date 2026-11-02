@@ -2055,6 +2055,10 @@ def test_an_arrows_track_is_black_on_white_with_its_head_and_painted_labels_are_
     picture[40:70, 60:200] = 255  # a white label box...
     picture[48:62, 70:190:6] = 0  # ...with dark letters in it
     assert painted_label_boxes(picture) == [(60.0, 40.0, 200.0, 70.0)]
+    picture[54:56, 200:290] = 255  # a white leader line from its side to a part: the box is still the box
+    picture[20:40, 120:122] = 255  # and one up from its top
+    assert painted_label_boxes(picture) == [(60.0, 40.0, 200.0, 70.0)]
+    picture[54:56, 200:290] = picture[20:40, 120:122] = (120, 180, 90)
     picture[48:62, 70:190:6] = 255  # a white patch with no writing is no label
     assert painted_label_boxes(picture) == []
 

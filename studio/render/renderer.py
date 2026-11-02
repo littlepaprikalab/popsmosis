@@ -271,8 +271,10 @@ def pulse(t: float, hz: float) -> float:
 
 def painted_label_boxes(pixels: np.ndarray) -> list[Rect]:
     """Each painted label's white box in a picture (an RGB or BGR array): a near-white patch, wider than tall, nearly
-    all white, grey or black, with dark letters in it, as (left, top, right, bottom) in its pixels. Found the labels of
-    two test pictures, 21 of 22 (Nov 2)."""
+    all white, grey or black, with dark letters in it, as (left, top, right, bottom) in its pixels. A white leader
+    line from a box to its part joins the patch; the box is its rows and columns at least half white (_core), as a
+    line is a pixel or two across: joined, it reached into the part's colour, and the rocket's chamber gave 2 of 6
+    (Nov 2)."""
     a = pixels.astype(np.int16)
     white = (a.min(-1) > 228) & (a.max(-1) - a.min(-1) < 24)
     dark = a.max(-1) < 120
@@ -284,24 +286,57 @@ def painted_label_boxes(pixels: np.ndarray) -> list[Rect]:
         if seen[y0, x0]:
             continue
         seen[y0, x0] = True
-        todo, count = [(y0, x0)], 0
-        top, bottom, left, right = y0, y0, x0, x0
+        todo, ys, xs = [(y0, x0)], [], []
         while todo:
             y, x = todo.pop()
-            count += 1
-            top, bottom, left, right = min(top, y), max(bottom, y), min(left, x), max(right, x)
+            ys.append(y), xs.append(x)
             for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
                 if 0 <= ny < h and 0 <= nx < w and white[ny, nx] and not seen[ny, nx]:
                     seen[ny, nx] = True
                     todo.append((ny, nx))
+        if len(ys) < 40:
+            continue
+        box = _core(np.array(ys), np.array(xs))
+        if box is None:
+            continue
+        top, left, bottom, right = box
         bh, bw = bottom - top + 1, right - left + 1
         if not (8 <= bh <= 90 and 20 <= bw <= 400 and bw > bh):
             continue
         area = bh * bw
-        letters = dark[top:bottom + 1, left:right + 1].sum() / area
-        if plain[top:bottom + 1, left:right + 1].mean() > 0.9 and count / area > 0.45 and 0.03 < letters < 0.45:
+        inside = (slice(top, bottom + 1), slice(left, right + 1))
+        letters = dark[inside].sum() / area
+        if plain[inside].mean() > 0.9 and white[inside].sum() / area > 0.45 and 0.03 < letters < 0.45:
             found.append((float(left), float(top), float(right + 1), float(bottom + 1)))
     return found
+
+
+CORE_ROW, CORE_COL = 10, 5  # white pixels a row and a column of a label's box hold at least; a leader line, 1 to 3
+
+
+def _core(ys: np.ndarray, xs: np.ndarray) -> tuple[int, int, int, int] | None:
+    """A white patch's box without its leader line: its longest run of rows holding CORE_ROW white pixels or more,
+    then within them its longest run of columns holding CORE_COL or more. (top, left, bottom, right), or None."""
+    def longest(counts: np.ndarray, least: int) -> tuple[int, int] | None:
+        best, start = None, None
+        for k, ok in enumerate(np.append(counts >= least, False)):
+            if ok and start is None:
+                start = k
+            elif not ok and start is not None:
+                if best is None or k - start > best[1] - best[0] + 1:
+                    best = (start, k - 1)
+                start = None
+        return best
+
+    y0, x0 = int(ys.min()), int(xs.min())
+    rows = longest(np.bincount(ys - y0), CORE_ROW)
+    if rows is None:
+        return None
+    keep = (ys - y0 >= rows[0]) & (ys - y0 <= rows[1])
+    cols = longest(np.bincount(xs[keep] - x0), CORE_COL)
+    if cols is None:
+        return None
+    return rows[0] + y0, cols[0] + x0, rows[1] + y0, cols[1] + x0
 
 
 class SceneArt:
