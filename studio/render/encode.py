@@ -30,7 +30,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
-from studio.media import PEAK_LIMIT, RESAMPLE
+from studio.media import AAC, PEAK_LIMIT, RESAMPLE
 from studio.render.layouts import LAYOUTS
 from studio.schemas import Timeline
 
@@ -162,7 +162,7 @@ def _join(job: Path, video: _Video) -> float:
     if timeline.audio:
         inputs, mix = audio_filter(job, timeline)
         _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(joined), *inputs, "-filter_complex", mix,
-              "-map", "0:v", "-map", "[mix]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+              "-map", "0:v", "-map", "[mix]", "-c:v", "copy", *AAC,
               "-t", f"{timeline.duration:.3f}", "-movflags", "+faststart", str(final)], timeout=time_limit(timeline))
     else:
         _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(joined), "-c", "copy", "-movflags", "+faststart",

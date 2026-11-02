@@ -83,6 +83,11 @@ PEAK_LIMIT = "alimiter=limit=0.891:level=false:latency=true"
 # light reactions at 0:29, Nov 2). A longer Kaiser filter that stops just under the old rate's limit holds every
 # mirror 120 dB down or more, with ffmpeg's own resampler (no soxr needed).
 RESAMPLE = "aresample=48000:filter_size=256:cutoff=0.93:filter_type=kaiser:kaiser_beta=12"
+# The video's audio, encoded by ffmpeg's own AAC encoder at its best: its default (fast coder, noise substitution on,
+# 192k) left the 8-16 kHz band's errors only 10 dB under the music, heard as crackle on a loud Lyria song (supply and
+# demand at 0:30); the two-loop coder with no noise substitution at 256k holds them 17 dB under, and the owner heard
+# it clean (Nov 2).
+AAC = ["-c:a", "aac", "-aac_coder", "twoloop", "-aac_pns", "0", "-b:a", "256k"]
 LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
 
 
