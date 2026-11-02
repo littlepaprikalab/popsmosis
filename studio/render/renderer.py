@@ -1640,15 +1640,12 @@ class Renderer:
         caption_alpha = 0.0
         if beat.caption:
             caption_alpha = p.ease((t - plan.caption_in) / CAPTION_FADE_S) * p.ease((plan.caption_out - t) / CAPTION_FADE_S)
-        top = layout.margin + (layout.caption_font * 1.75 + 24 if caption_alpha > 0 else 0)
         notes = self.timeline.notices.get(beat.scene, [])
         tagged = beat.scene in self.timeline.ai_pictures and not notes  # the notice card says it otherwise
         # The brand is in the picture's bottom right corner, unless the picture has moved over for a notice card
         # (it is then under the card) or there is a title band (it is in that).
         branded = not layout.title_h and beat.scene not in self._beside
-        strip = max(AI_TAG_FONT * 1.7 if tagged else 0.0, self.brand[1] if branded else 0.0)
-        bottom = layout.margin + (strip + 10 if strip else 0)  # labels keep clear of the tag and the brand
-        bounds = (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
+        bounds = self._bounds(beat.scene, view, caption_alpha > 0)
         arrows = self._arrow_points(beat.scene, cam, view)
         legend = self._legend(beat, t)
         legend_rect = p.legend_rect(bounds[2], bounds[3], [label for _, label, _ in legend]) if legend else None
@@ -1716,6 +1713,22 @@ class Renderer:
         corner = layout.title_h - BRAND_GAP if layout.title_h else key_top - layout.margin
         p.draw_brand(canvas, layout.width - layout.margin - self.brand[0], corner - self.brand[1], layout.brand_font)
 
+    def _bounds(self, scene_id: str, view: Rect, caption: bool) -> Rect:
+        """Where labels and pills keep inside on the scene's frames: the view less its margin, the caption's band
+        across the top while one shows, and the AI tag's and the brand's strip along the bottom."""
+        layout = self.layout
+        top = layout.margin + (layout.caption_font * 1.75 + 24 if caption else 0)
+        tagged = scene_id in self.timeline.ai_pictures and not self.timeline.notices.get(scene_id, [])
+        branded = not layout.title_h and scene_id not in self._beside
+        strip = max(AI_TAG_FONT * 1.7 if tagged else 0.0, self.brand[1] if branded else 0.0)
+        bottom = layout.margin + (strip + 10 if strip else 0)  # labels keep clear of the tag and the brand
+        return (view[0] + layout.margin, view[1] + top, view[2] - layout.margin, view[3] - bottom)
+
+    def _pill_bounds(self, scene_id: str, view: Rect) -> Rect:
+        """Where a reaction pill keeps inside, the same on every frame of its scene: clear of the caption's band if
+        the scene ever shows a caption, so a caption coming on does not push a pill down."""
+        return self._bounds(scene_id, view, any(b.caption for b in self.timeline.beats if b.scene == scene_id))
+
     def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
                      arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:
         """Where each reaction pill the scene shows at any time in the video goes, as its rect in frame pixels: under
@@ -1723,13 +1736,15 @@ class Renderer:
         other pill. The spot is chosen once for the scene, framed whole (_pill_spots), and the pill rides it as the
         camera moves: chosen again every frame, it flipped between two spots as clear as each other as the camera
         drifted (the owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts").
-        Placed before the labels, which then keep clear of them, as of the arrows. `arrows` is unused: the spots
-        keep clear of the scene's arrows as framed whole."""
+        Placed before the labels, which then keep clear of them, as of the arrows. `bounds` and `arrows` are unused:
+        the pills keep inside _pill_bounds, the same all scene, and their spots clear of every arrow and legend the
+        scene shows, framed whole."""
         spots = self._pill_spots(scene_id, view)
+        inside = self._pill_bounds(scene_id, view)
         places: dict[str, tuple[float, float, float, float]] = {}
         for conv in self._scene_pills[scene_id]:
             if conv.structure in spots:
-                places[conv.structure] = self._pill_rect(scene_id, conv, cam, view, bounds, spots[conv.structure])
+                places[conv.structure] = self._pill_rect(scene_id, conv, cam, view, inside, spots[conv.structure])
         return places
 
     def _pill_candidates(self, scene_id: str, conv, cam: Cam, view: Rect) -> list[tuple[float, float]]:
@@ -1753,7 +1768,8 @@ class Renderer:
 
     def _pill_spots(self, scene_id: str, view: Rect) -> dict[str, int]:
         """Each reaction pill's spot on the scene (_pill_candidates), chosen once with the picture framed whole: the
-        one crossing the fewest arrows and no other pill, the nearest of those as clear, the first of those as near."""
+        one crossing the fewest arrows and legends (every one the scene shows) and no other pill, the nearest of those
+        as clear, the first of those as near."""
         key = ("pill spots", scene_id)
         if key in self._through:
             return self._through[key]
@@ -1764,10 +1780,15 @@ class Renderer:
                     if conv.structure not in [c.structure for c in convs]:
                         convs.append(conv)
             self._scene_pills[scene_id] = convs
-        art, m = self.scene(scene_id), self.layout.margin
+        art = self.scene(scene_id)
         whole = clamp_cam(Cam(art.width / 2, art.height / 2, 1.0), view, art)
-        bounds = (view[0] + m, view[1] + m, view[2] - m, view[3] - m)
+        bounds = self._pill_bounds(scene_id, view)
         arrows = self._arrow_points(scene_id, whole, view)
+        for beat in self.timeline.beats:  # every legend the scene shows, as an arrow's points
+            legend = self._legend(beat, beat.t1) if beat.scene == scene_id else []
+            if legend:
+                x0, y0, x1, y1 = p.legend_rect(bounds[2], bounds[3], [label for _, label, _ in legend])
+                arrows += [(x0 + i * (x1 - x0) / 8, y0 + j * (y1 - y0) / 4) for i in range(9) for j in range(5)]
         located = self.locations.scene(scene_id)
         spots: dict[str, int] = {}
         placed: list[Rect] = []
@@ -2489,9 +2510,12 @@ class Renderer:
             lane = self._lanes.get((beat.scene, tuple(flow.path), flow.label), 0)
             if not flow.blocked and not self._graph(beat.scene) and self._crossing(beat.scene, flow.path, lane):
                 said = count_in(beat.line, flow.label)
-                self._draw_crossing(canvas, flow, self._flow_line(beat.scene, flow), elapsed, alpha, on_frame, t,
+                line = self._flow_line(beat.scene, flow)
+                room = routing.length(line) * _fit(self.view(beat.scene), self.scene(beat.scene))  # framed whole
+                self._draw_crossing(canvas, flow, line, elapsed, alpha, on_frame, t,
                                     said if said > 1 else next((n for name in flow.path
-                                                                if (n := self._counts.get((flow.label, name)))), 1))
+                                                                if (n := self._counts.get((flow.label, name)))), 1),
+                                    room)
                 continue
             if self._as_arrow(beat.scene, flow):
                 self._draw_handoffs(canvas, beat.scene, flow, elapsed, alpha, on_frame, t, count_in(beat.line, flow.label))
@@ -2747,12 +2771,13 @@ class Renderer:
         self._draw_kinds(canvas, at, ahead, flow, alpha, count)
 
     def _draw_crossing(self, canvas: skia.Canvas, flow, line: list[Point], elapsed: float, alpha: float, on_frame,
-                       t: float, count: int = 1) -> None:
+                       t: float, count: int = 1, room: float = 0.0) -> None:
         """A crossing's particles streaming along its line (art pixels) from one side of the part to the other, again and
-        again: `count` of them a cycle (CROSS_MANY when the words give none, and no more than the way has room for),
-        evenly spaced at one pace, off the line by its own share of CROSS_SPREAD and swinging left and right of it on the way (CROSS_WIGGLE), fading in as
-        it leaves and out as it arrives. Each particle's pace and swing are its own and fixed, so a frame depends only on
-        its time."""
+        again: `count` of them a cycle (CROSS_MANY when the words give none, and no more than `room`, the way's length
+        with the picture framed whole, has room for: the length on screen grows as the camera moves in, and the count
+        changed mid-crossing), evenly spaced at one pace, off the line by its own share of CROSS_SPREAD and swinging
+        left and right of it on the way (CROSS_WIGGLE), fading in as it leaves and out as it arrives. A frame depends
+        only on its time."""
         shown = [on_frame(q) for q in line]
         total = routing.length(shown)
         if len(shown) < 2 or total < 1.0:
@@ -2760,7 +2785,7 @@ class Renderer:
         (x0, y0), (x1, y1) = shown[0], shown[-1]
         d = math.hypot(x1 - x0, y1 - y0) or 1.0
         nx, ny = -(y1 - y0) / d, (x1 - x0) / d  # across the way it goes
-        many = count if count > 1 else max(1, min(CROSS_MANY, int(total / (CROSS_ROOM * _width(flow.label)))))
+        many = count if count > 1 else max(1, min(CROSS_MANY, int((room or total) / (CROSS_ROOM * _width(flow.label)))))
         for k in range(many):
             start, place = _jitter(k + 17), _jitter(k + 41)
             gone = (elapsed / CROSS_S + k / many) % 1.0

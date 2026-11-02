@@ -1586,6 +1586,39 @@ def test_a_reaction_pill_keeps_its_spot_as_the_camera_drifts(job):
     assert len(offsets) == 1  # the same side of its part all the way
 
 
+def test_a_pill_keeps_its_place_when_a_caption_comes_on(job):
+    # A caption coming on moved the top of the frame's keep-in area down, and a pill near the top with it.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    pill = Converting(structure="Cytochrome b6f", text="A → B", since=timeline.beats[on[0]].t0)
+    beats = list(timeline.beats)
+    beats[on[0]] = beats[on[0]].model_copy(update={"conversions": [pill]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    art, view = renderer.scene("overview"), renderer.view("overview")
+    cam = renderer_module.Cam(art.width / 2, art.height / 2, 1.4)
+    without, with_caption = renderer._bounds("overview", view, False), renderer._bounds("overview", view, True)
+    assert with_caption[1] > without[1]
+    assert (renderer._pill_places("overview", cam, view, without, [])
+            == renderer._pill_places("overview", cam, view, with_caption, []))
+
+
+def test_a_crossings_particle_count_holds_as_the_camera_moves_in(job, monkeypatch):
+    # The count fits the way's length framed whole: on screen the way grows as the camera moves in, and a count
+    # read off it changed mid-crossing, every particle jumping to a new place.
+    import types
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    drawn = []
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: drawn.append(at))
+    flow = types.SimpleNamespace(label="gas", color="#A3E635")
+    counts = set()
+    for scale in (1.0, 1.6, 2.4, 3.2):
+        drawn.clear()
+        renderer._draw_crossing(None, flow, [(0.0, 0.0), (0.0, 100.0)], 1.0, 1.0,
+                                lambda q, s=scale: (q[0] * s, q[1] * s), 1.0, 1, room=100.0)
+        counts.add(len(drawn))
+    assert counts == {1}  # 100 pixels framed whole: room for one
+
+
 def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, monkeypatch):
     # Round 21's lungs put the alveolus's and the capillary's points at the top of the picture, above and below the
     # membrane's, and the gases ran up and down the capillary instead of across the membrane.
