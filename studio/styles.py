@@ -9,14 +9,23 @@ lyrics' to answer (the bundle brief), not the style's (the owner). Since Nov 1 t
 section, as their songs do, the rest sung (the owner: "it doesn't mean the whole song is rap"). Since Nov 2 every
 style but indie-pop raps at least one verse, the chorus always sung: the owner liked the derivative's Latin pop song
 with its rapped second verse ("it just sounds good"). Four rap both verses, as their genres do, since rap "perks
-people up vs putting them to sleep" (the owner); four rap the second, after a sung first verse, the slot a pop song
-gives its one rap verse (a second verse, not a bridge, as not every song has a bridge). The style a droplet gets
-follows from its job's name, so a retry keeps it and neighbouring droplets differ.
+people up vs putting them to sleep" (the owner); three rap the second, after a sung first verse, the slot a pop song
+gives its one rap verse (a second verse, not a bridge, as not every song has a bridge).
+
+Neighbouring droplets never share a style (the owner, Nov 2): three of five videos in one batch had drawn the same
+teen pop from their names. A job takes the style none of the jobs made just before it took (style_for_job), and
+keeps it in the job, so a retry keeps it too. Electropop and upbeat pop were dropped the same day: one sounded like
+teen pop, the other, once it rapped its verses, like Cash in the Carrier. The scorecard still seeds each topic by its
+id (style_for), so its runs stay comparable.
 """
 
 from __future__ import annotations
 
+import fcntl
+import json
+import time
 import zlib
+from pathlib import Path
 
 CASH_IN_THE_CARRIER = ("Hip-hop pop, upbeat 100 bpm groove, confident female rap verses with a catchy sung chorus, "
                        "punchy 808s and bright synth hook, tight quantized drum programming with crisp kick-snare "
@@ -32,9 +41,6 @@ SONG_STYLES = (
     "chorus, punchy synth bass, crisp claps, 100 bpm",
     "laid-back R&B with a smooth sung first verse and a rapped second verse, warm electric piano, deep round "
     "bass, soft finger snaps, smooth chorus with stacked harmonies, 92 bpm",
-    "upbeat pop with bouncy rapped verses, catchy sung hook, female vocal, bouncy bass, claps, 98 bpm",
-    "electropop with a sung first verse and a rapped second verse, pulsing synth bass, clear female vocal, "
-    "shimmering arpeggios, euphoric sung chorus, tight claps, 108 bpm",
     "indie-pop with melodic sung verses, warm male vocal, strummed acoustic guitar, handclaps, gang vocals on "
     "the chorus, bright and breezy, 110 bpm",
     "Latin pop with a light dembow groove, rapped verses, clear male vocal, plucked guitar, handclaps, catchy sung "
@@ -53,6 +59,37 @@ REFERENCE_STYLES = {"cash-in-the-carrier": CASH_IN_THE_CARRIER, "split-the-water
 
 def style_for(job_name: str) -> str:
     return SONG_STYLES[zlib.crc32(job_name.encode("utf-8")) % len(SONG_STYLES)]
+
+
+CHOSEN = "style.json"  # the rotation's style a job took, and when
+
+
+def style_for_job(job: Path) -> str:
+    """The rotation's style for this job: the one it took before, else the first, from where its name points in the
+    rotation (style_for), that none of the len(SONG_STYLES) - 1 jobs beside it to choose most recently took, so no
+    style repeats within that many jobs. Kept in the job (CHOSEN); chosen under a lock, as a batch starts at once."""
+    kept = job / CHOSEN
+    try:
+        return json.loads(kept.read_text(encoding="utf-8"))["style"]
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    job.parent.mkdir(parents=True, exist_ok=True)
+    with open(job.parent / ".styles.lock", "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        taken = []
+        for other in job.parent.iterdir():
+            try:
+                record = json.loads((other / CHOSEN).read_text(encoding="utf-8"))
+                taken.append((float(record["at"]), record["style"]))
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        recent = {style for _, style in sorted(taken, reverse=True)[:len(SONG_STYLES) - 1]}
+        start = SONG_STYLES.index(style_for(job.name))
+        order = SONG_STYLES[start:] + SONG_STYLES[:start]
+        style = next(s for s in order if s not in recent)
+        job.mkdir(parents=True, exist_ok=True)
+        kept.write_text(json.dumps({"style": style, "at": time.time()}), encoding="utf-8")
+    return style
 
 
 def named(style: str) -> str:

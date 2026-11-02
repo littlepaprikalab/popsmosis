@@ -25,7 +25,7 @@ from studio import brain, checks, media
 from studio.steps import audit, learner, narration, script as script_step
 from studio.jobs import read, write
 from studio.schemas import Bundle, LessonBundle, Request, bundle_of
-from studio.styles import style_for
+from studio.styles import style_for_job
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "bundle.md").read_text(encoding="utf-8")
 SONG_SECTION = ("\n## The song\n", "\n## The narration\n")  # cut from the brief for the lesson video alone
@@ -104,7 +104,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
     for stale in ("audit.json", "factcheck.json", "songwriter.json", "bundle.draft.json", "bundle.invalid.json",
                   "learner.json", narration.RECORD, script_step.RECORD):
         (job / stale).unlink(missing_ok=True)
-    prompt = user_prompt(request, style_for(job.name), sung)
+    prompt = user_prompt(request, style_for_job(job), sung)
     script = script_step.write_script(prompt, brief, ask, request.images, job)
     unquoted = []
     if script:  # held to the guide before the audit is shown them as its words

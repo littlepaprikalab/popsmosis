@@ -193,3 +193,16 @@ def test_a_reference_style_is_asked_for_by_name_and_never_rotated():
         assert "diction" in style  # said once, by the style itself
     assert styles.CASH_IN_THE_CARRIER in styles.SONG_STYLES  # the owner's favourite, in the rotation too
     assert styles.named("pop-punk, fast") == "pop-punk, fast"  # anything else, as the learner said it
+
+
+
+def test_jobs_made_one_after_another_never_share_a_style_and_a_retry_keeps_its_own(tmp_path):
+    # The owner, Nov 2: three of five videos in one batch drew the same teen pop from their names.
+    from studio.styles import CHOSEN, SONG_STYLES, style_for_job
+
+    n = len(SONG_STYLES)
+    picked = [style_for_job(tmp_path / f"job{i}") for i in range(n)]
+    assert sorted(picked) == sorted(SONG_STYLES)  # a whole run of the rotation, no style twice
+    assert style_for_job(tmp_path / "job3") == picked[3]  # a retry keeps its style
+    assert (tmp_path / "job3" / CHOSEN).is_file()
+    assert style_for_job(tmp_path / "late") == picked[0]  # then the one taken longest ago comes round again
