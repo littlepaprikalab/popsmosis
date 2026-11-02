@@ -67,11 +67,13 @@ def prep() -> None:
 
 
 def _script(d: Path, name: str) -> script_step.Script:
-    return script_step.Script.model_validate(json.loads((d / name).read_text(encoding="utf-8")))
+    """The script as the bundle step keeps it: its facts numbered f1, f2, ... unless they are (script.numbered())."""
+    return script_step.numbered(script_step.Script.model_validate(json.loads((d / name).read_text(encoding="utf-8"))))
 
 
 def script_check(t: str) -> None:
-    problem = script_step._problem(_script(folder(t), "script.answer.json"))
+    topic = read(folder(t) / "request.json", Request).topic
+    problem = script_step._problem(_script(folder(t), "script.answer.json"), topic)
     print("NOT VALID: " + problem if problem else "OK")
 
 

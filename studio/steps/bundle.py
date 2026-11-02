@@ -107,7 +107,7 @@ def run(job: Path, ask=brain.ask, note: str = "") -> Bundle:
                   "learner.json", narration.RECORD, script_step.RECORD):
         (job / stale).unlink(missing_ok=True)
     prompt = user_prompt(request, style_for_job(job), sung)
-    script = script_step.write_script(prompt, brief, ask, request.images, job)
+    script = script_step.write_script(prompt, brief, ask, request.images, job, request.topic)
     unquoted = []
     if script:  # held to the guide before the audit is shown them as its words
         facts, unquoted = checks.held_to_guide(script.facts, request.study_guide)
