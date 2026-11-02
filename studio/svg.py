@@ -57,6 +57,7 @@ VALUES_MAX = 16  # a scene's values: more is a table, not a chart
 VIEWBOX = (0.0, 0.0, float(ART_WIDTH), float(ART_HEIGHT))
 MAX_BYTES = 400_000  # the prompt asks for under 40 KB; far past that it is runaway output
 MIN_AREA = 1500  # visible pixels a structure needs before a label can point at it (about 40 x 40)
+POINT_R = 26.0  # a graph's point is drawn at least this big, so it shows MIN_AREA (pi * 26^2 is about 2100)
 
 SHAPES = {"path", "rect", "circle", "ellipse", "line", "polyline", "polygon"}
 FILTERS = {"feGaussianBlur", "feOffset", "feFlood", "feComposite", "feMerge", "feMergeNode", "feBlend",
@@ -235,7 +236,7 @@ def to_text(root: ET.Element) -> str:
 
 # --- the house look ---------------------------------------------------------------------
 
-LOOK = "4"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
+LOOK = "5"  # the look below, kept with each scene's locations: change it whenever what it draws changes (a
 # test pins the look's code and numbers to it, studio/tests/test_art.py)
 PAGE = "#FAF8F3"  # the warm paper behind every drawing
 ROLE = "data-role"  # what a graph's context is: "axes" on the group of its axes, "point" on a point's circle
@@ -359,6 +360,11 @@ def _style_graph(root: ET.Element, parent: dict, colours: dict[str, str]) -> Non
     groups = [g for g in root.iter() if g.get(MARK) in colours and _drawn(g, parent)]
     for group in groups:
         _style_structure(group, readable(colours[group.get(MARK)]), parent)
+    # A point too small to point a label at is drawn bigger, where it is: on Nov 2 every graph's points were refused
+    # once at the r="12" the brief then asked for, about 450 px.
+    for el in root.iter(f"{{{NS}}}circle"):
+        if el.get(ROLE) == "point" and _number(el.get("r")) < POINT_R:
+            el.set("r", f"{POINT_R:g}")
 
 
 def _style_axes(axes: ET.Element, parent: dict) -> None:

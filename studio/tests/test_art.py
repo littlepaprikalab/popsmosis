@@ -595,7 +595,7 @@ LOOK_CODE = ("style", "_style_graph", "_style_axes", "_style_structure", "readab
              "_deepest")
 LOOK_NUMBERS = ("PAGE", "LINE_WIDTH", "BAND", "AXIS_WIDTH", "AXIS_SHARE", "POINT_WIDTH", "ARROW", "CONTRAST_MIN",
                 "REPAINTED", "AXIS_INK", "ROLE", "NAMED", "EDGE_SHADE")
-LOOK_PINNED = ("4", "10c235ccbe46")  # 4: a textbook page: paper, dark axes, readable colours, no glow or grid
+LOOK_PINNED = ("5", "c47c52e1c84f")  # 4: a textbook page: paper, dark axes, readable colours, no glow or grid; 5: points big enough to label
 
 
 def _as_code(function) -> str:

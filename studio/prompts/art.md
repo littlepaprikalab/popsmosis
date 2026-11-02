@@ -88,7 +88,7 @@ request mentions them. The video shows those in their own scenes.
   or words.
 - Each line (a curve, a secant, a tangent) is a plain stroke in its structure's colour,
   with `fill="none"`: no gradient, outline, highlight, shadow or glow.
-- A point marked on a line is `<circle data-role="point" r="12">`, in the group of the
+- A point marked on a line is `<circle data-role="point" r="26">`, in the group of the
   structure it belongs to.
 - The geometry is exact: work each coordinate out from the function, so a point said to
   be on a curve is on it and a tangent has the curve's slope at its point. A tangent
