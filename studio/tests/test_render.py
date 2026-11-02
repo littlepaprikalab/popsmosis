@@ -1592,6 +1592,16 @@ def test_a_pill_keeps_inside_one_area_all_scene_clear_of_a_caption_it_ever_shows
     assert renderer._pill_bounds("overview", view) == renderer._bounds("overview", view, True)
 
 
+def test_a_pill_rides_its_part_out_of_the_frame_fading_and_never_sticks_to_the_edge():
+    # The light reactions' hook, Nov 2: kept inside the frame, a pill stood still at its edge while the camera slid
+    # its part away. It rides its part, fading out as it leaves the keep-in area, as a label does.
+    bounds = (40.0, 40.0, 1880.0, 1040.0)
+    assert renderer_module.pill_fade((100.0, 100.0, 300.0, 140.0), bounds) == 1.0  # inside: in full
+    leaving = renderer_module.pill_fade((30.0, 100.0, 230.0, 140.0), bounds)
+    assert 0.0 < leaving < 1.0  # crossing the edge: fading
+    assert renderer_module.pill_fade((-200.0, 100.0, 0.0, 140.0), bounds) == 0.0  # out: gone
+
+
 def test_a_crossings_particle_count_holds_as_the_camera_moves_in(job, monkeypatch):
     # The count fits the way's length framed whole: on screen the way grows as the camera moves in, and a count
     # read off it changed mid-crossing, every particle jumping to a new place.

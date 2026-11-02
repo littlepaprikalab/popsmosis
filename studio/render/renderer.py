@@ -956,6 +956,12 @@ def stream_at(points: list[Point], t: float, bends=None) -> list[tuple[Point, fl
     return dots
 
 
+def pill_fade(rect: Rect, bounds: Rect) -> float:
+    """1 while a reaction pill is wholly inside bounds, down to 0 as it leaves them by EDGE_FADE."""
+    inside = min(rect[0] - bounds[0], bounds[2] - rect[2], rect[1] - bounds[1], bounds[3] - rect[3])
+    return p.clamp01(1 + inside / EDGE_FADE)
+
+
 def edge_fade(x: float, y: float, view: Rect) -> float:
     """1 while a label's dot is wholly inside the view, down to 0 at its edge: a label the camera moves
     away from fades out rather than clinging to the edge, and a label on screen has its dot on screen."""
@@ -1676,7 +1682,7 @@ class Renderer:
         if beat.scene in self.timeline.flags:
             self._flags(canvas, beat.scene, cam, view, bounds, fade)
         if beat.conversions:
-            self._conversions(canvas, beat, view, bounds, t, places, strength)
+            self._conversions(canvas, beat, view, t, places, strength)
         if legend_rect:
             p.draw_legend(canvas, legend_rect, [(color, label, alpha * fade) for color, label, alpha in legend],
                           self._arrowed(beat.scene))
@@ -1733,14 +1739,15 @@ class Renderer:
         other pill. The spot is chosen once for the scene, framed whole (_pill_spots), and the pill rides it as the
         camera moves: chosen again every frame, it flipped between two spots as clear as each other as the camera
         drifted (the owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts").
-        Placed before the labels, which then keep clear of them, as of the arrows. Each keeps inside _pill_bounds, the
-        same all scene, on a spot clear of every arrow and legend the scene shows, framed whole."""
+        Placed before the labels, which then keep clear of them, as of the arrows. Each rides its part on a spot clear
+        of every arrow and legend the scene shows, framed whole, and fades out as the camera takes it out of
+        _pill_bounds (pill_fade), as a label does: kept inside, it stuck at the frame's edge while its part slid away
+        (the light reactions' hook, Nov 2)."""
         spots = self._pill_spots(scene_id, view)
-        inside = self._pill_bounds(scene_id, view)
         places: dict[str, tuple[float, float, float, float]] = {}
         for conv in self._scene_pills[scene_id]:
             if conv.structure in spots:
-                places[conv.structure] = self._pill_rect(scene_id, conv, cam, view, inside, spots[conv.structure])
+                places[conv.structure] = self._pill_rect(scene_id, conv, cam, view, spots[conv.structure])
         return places
 
     def _pill_candidates(self, scene_id: str, conv, cam: Cam, view: Rect) -> list[tuple[float, float]]:
@@ -1754,13 +1761,11 @@ class Renderer:
         rows = [below + gap + h / 2, above - gap - h / 2, below + gap + 1.5 * h + 8, above - gap - 1.5 * h - 8]
         return [(xo, yo) for xo in (x, x - 0.6 * w, x + 0.6 * w) for yo in rows]
 
-    def _pill_rect(self, scene_id: str, conv, cam: Cam, view: Rect, bounds: Rect, spot: int) -> Rect:
-        """The pill's rect at candidate `spot`, kept inside bounds."""
+    def _pill_rect(self, scene_id: str, conv, cam: Cam, view: Rect, spot: int) -> Rect:
+        """The pill's rect at candidate `spot`, riding its part wherever the camera takes it."""
         w, h = p.conversion_size(conv.text, self.layout.label_font * 1.25)
         x, y = self._pill_candidates(scene_id, conv, cam, view)[spot]
-        cx = min(max(x, bounds[0] + w / 2), bounds[2] - w / 2)
-        cy = min(max(y, bounds[1] + h / 2), bounds[3] - h / 2)
-        return (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2)
+        return (x - w / 2, y - h / 2, x + w / 2, y + h / 2)
 
     def _pill_spots(self, scene_id: str, view: Rect) -> dict[str, int]:
         """Each reaction pill's spot on the scene (_pill_candidates), chosen once with the picture framed whole: the
@@ -1794,9 +1799,10 @@ class Renderer:
             x, below = self._pill_candidates(scene_id, conv, whole, view)[0]
             best = None
             for k in range(len(self._pill_candidates(scene_id, conv, whole, view))):
-                rect = self._pill_rect(scene_id, conv, whole, view, bounds, k)
-                hit = 50 * sum(1 for r in placed if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
-                               and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
+                rect = self._pill_rect(scene_id, conv, whole, view, k)
+                hit = 100 * (pill_fade(rect, bounds) < 1.0)  # in full, framed whole
+                hit += 50 * sum(1 for r in placed if rect[0] < r[2] + 8 and r[0] < rect[2] + 8
+                                and rect[1] < r[3] + 8 and r[1] < rect[3] + 8)
                 hit += sum(1 for ax, ay in arrows if rect[0] - 8 < ax < rect[2] + 8 and rect[1] - 8 < ay < rect[3] + 8)
                 score = hit + 0.01 * math.dist(((rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2), (x, below))
                 if best is None or score < best[0] - 1e-6:
@@ -1931,7 +1937,7 @@ class Renderer:
             points += [(x, y) for x in (x0, (x0 + x1) / 2, x1) for y in (y0, (y0 + y1) / 2, y1)]
         return points
 
-    def _conversions(self, canvas: skia.Canvas, beat, view: Rect, bounds: Rect, t: float,
+    def _conversions(self, canvas: skia.Canvas, beat, view: Rect, t: float,
                      places: dict[str, tuple[float, float, float, float]],
                      strength: dict[str, float] | None = None) -> None:
         """What each structure the beat is about turns into what, in the pill placed for it, resting with its
@@ -1940,11 +1946,11 @@ class Renderer:
         for conv in beat.conversions:
             if conv.structure not in places:
                 continue
-            x0, y0, x1, y1 = places[conv.structure]
-            cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-            p.draw_conversion(canvas, (cx, cy), conv.text, self.timeline.palette[conv.structure],
-                              p.ease((t - conv.since) / LABEL_IN_S) * edge_fade(cx, cy, view)
-                              * (strength or {}).get(conv.structure, 1.0), bounds, font)
+            rect = places[conv.structure]
+            p.draw_conversion(canvas, ((rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2), conv.text,
+                              self.timeline.palette[conv.structure],
+                              p.ease((t - conv.since) / LABEL_IN_S) * pill_fade(rect, self._pill_bounds(beat.scene, view))
+                              * (strength or {}).get(conv.structure, 1.0), view, font)
 
     def _card(self, scene_id: str, view: Rect) -> tuple[skia.Image, float, float]:
         """The scene's notice card as an image and where it goes: drawn once, as wrapping its notes and blurring
