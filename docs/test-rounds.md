@@ -1427,6 +1427,11 @@ topics, and $0.12 for repainting the pump's close-ups in the overview's look (be
 2. **Crackle in the songs.** Lyria's songs are mastered loud: the pump's goes past full scale 79 times, in its
    choruses. The audio step then re-encodes Lyria's MP3 to MP3, and the render to AAC, with no headroom. Proposed:
    keep Lyria's MP3 as it comes, and lower it a dB or two before the render (not done, for the owner's word).
+   Done on Nov 2: Lyria's MP3 is kept as sent; each song goes into the mix turned down so its loudest sample sits
+   at 0.85 (`encode.HEADROOM`), under a limiter at -1 dBFS (`media.PEAK_LIMIT`); and the video's audio is encoded
+   with ffmpeg's two-loop AAC coder at 320k (`media.AAC`), whose errors stay further under the music. Later that
+   day a crackle heard in a new rocket song moved between plays of the same raw Lyria file (24-25 s, then 11-14 s,
+   then gone): it came from the playback, not the file. Before taking a crackle for a fault, play the spot again.
 3. **The last key line stays for a minute or more** when a lesson ends on a case (the stroke, the weed killer,
    England, the tomb): the band holds the last step of the why chain over the whole case
    ([still](test-rounds-nov1/irony-key-line-held-over-tomb.jpg)).
