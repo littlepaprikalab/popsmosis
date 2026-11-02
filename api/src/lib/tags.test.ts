@@ -33,6 +33,7 @@ describe('cleanTags', () => {
     expect(cleanTags(['#555-123-4567', '#5551234567', '#apbio', '#2026', '#unit7'])).toEqual(['apbio', '2026', 'unit7']);
   });
   it('takes only a list', () => {
+    expect(cleanTags(['#FYP', '#ForYouPage', '#viral', '#apbio', '#trending'])).toEqual(['apbio']); // as the studio drops them
     expect(cleanTags('apbio')).toEqual([]);
     expect(cleanTags(undefined)).toEqual([]);
   });

@@ -106,7 +106,7 @@ def test_a_fresh_run_makes_art_and_audio_at_once_then_the_rest_in_order(setup):
     posted()
     assert videos.videos("q1", api=api, ask=FakeBrain()) == ("DONE", "upload", "upload made")
     ran = setup.ran
-    assert set(ran[:2]) == {"art", "audio"} and ran[-3:] == ["timeline", "render", "upload"]
+    assert set(ran[:2]) == {"art", "audio"} and ran[-4:] == ["timeline", "arrows", "render", "upload"]
     assert ran.index("locate") > ran.index("art") and ran.index("timing") > ran.index("audio")
     claims = [c for c in api.calls if c[0] == "claim_videos"]
     assert len(claims) == 1 + len(media.MEDIA_STEPS)  # the claim, then a heartbeat before every step
@@ -134,7 +134,8 @@ def test_each_step_tells_the_page_when_it_starts_and_ends_with_the_bill_so_far(s
     # A start and an end for each step, but none after the upload: its READY carried the last bill.
     assert len(seen) == 2 * len(media.MEDIA_STEPS) - 1
     last_bill = api.video_reports[-1][1]["breakdown"]
-    assert [s["step"] for s in last_bill["steps"]] == ["art", "locate", "audio", "timing", "timeline", "render"]
+    assert [s["step"] for s in last_bill["steps"]] == ["art", "locate", "audio", "timing", "timeline", "arrows",
+                                                         "render"]
     assert all(progress["failed"] == [] for _, progress in api.video_reports)
 
 
@@ -166,7 +167,7 @@ def test_a_failed_step_lets_the_other_branch_finish_and_the_retry_resumes_there(
     setup.ran.clear()
     setup.barrier = threading.Barrier(1)  # only one branch has anything left to do
     assert videos.videos("q1", api=api)[0] == "DONE"
-    assert setup.ran == ["locate", "timeline", "render", "upload"]
+    assert setup.ran == ["locate", "timeline", "arrows", "render", "upload"]
 
 
 def test_a_step_that_runs_again_makes_everything_after_it_run_again(setup):
@@ -177,7 +178,7 @@ def test_a_step_that_runs_again_makes_everything_after_it_run_again(setup):
     setup.ran.clear()
     setup.barrier = threading.Barrier(1)
     videos.videos("q1", api=api)
-    assert setup.ran == ["audio", "timing", "timeline", "render", "upload"]
+    assert setup.ran == ["audio", "timing", "timeline", "arrows", "render", "upload"]
     setup.ran.clear()
     assert videos.videos("q1", api=api) == ("DONE", "upload", "the videos were already made")
     assert setup.ran == []
@@ -715,12 +716,12 @@ def test_make_runs_a_local_jobs_videos_in_videos_order_with_no_api_and_no_upload
     job.mkdir()  # from `plan`: no posted lesson, no claim
     assert videos.local(job) == (videos.DONE, "render", "render made")
     assert sorted(setup.ran[:2]) == ["art", "audio"]  # side by side (the stand-ins wait for each other)
-    assert setup.ran[2:] == ["locate", "timing", "timeline", "render"] or \
-        setup.ran[2:] == ["timing", "locate", "timeline", "render"]
+    assert setup.ran[2:] == ["locate", "timing", "timeline", "arrows", "render"] or \
+        setup.ran[2:] == ["timing", "locate", "timeline", "arrows", "render"]
     assert "upload" not in setup.ran
     run = operator_run.read_jsonl(job / "runs.jsonl")[-1]  # kept, so `show` has each step's time
     assert run["result"] == videos.DONE and {s["step"] for s in run["steps"]} == {
-        "art", "locate", "audio", "timing", "timeline", "render"}
+        "art", "locate", "audio", "timing", "timeline", "arrows", "render"}
 
     setup.ran.clear()
     assert videos.local(job) == (videos.DONE, "render", "the videos were already made")
@@ -734,4 +735,4 @@ def test_make_resumes_at_the_step_that_failed(setup):
     assert videos.local(job) == (videos.FAILED, "locate", "locate broke")
     setup.ran.clear()
     assert videos.local(job)[0] == videos.DONE
-    assert setup.ran == ["locate", "timeline", "render"]
+    assert setup.ran == ["locate", "timeline", "arrows", "render"]

@@ -143,9 +143,9 @@ class Brain:
             wait("factcheck", self.scale)
             return {"checks": [{"id": line["id"], "verdict": "SUPPORTED", "source": "f1", "problem": "",
                                 "corrected": ""} for line in json.loads(prompt)["lines"]]}
-        if schema is art.ArtCheck:
+        if schema is art.PictureCheck:
             wait("art check", self.scale)
-            return {"labels": [], "misplaced": [], "wrong": []}
+            return {"labels": [], "misplaced": [], "wrong": [], "notes": []}
         raise AssertionError(f"the bench has no stand-in for {label!r}")
 
 

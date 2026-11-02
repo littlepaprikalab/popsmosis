@@ -3,7 +3,7 @@ import random
 
 from studio import checks
 from studio.jobs import read, write
-from studio.schemas import Bundle, CheckReport, LessonBundle, Problem, Request, bundle_of
+from studio.schemas import BPM_TAG, Bundle, CheckReport, LessonBundle, Problem, Request, bundle_of
 from studio.steps import bundle as bundle_step
 from studio.tests.sample import bundle_data, lesson_bundle_data
 
@@ -21,6 +21,14 @@ def line(data, line_id):
 
 def direction(data, line_id):
     return next(d for d in data["direction"] if d["line_id"] == line_id)
+
+
+LATER_CHORUSES = ("c2-1", "c3-1")  # directed as c1-1 by the review (_direct_choruses), whatever a test set on c1-1
+
+
+def own(found):
+    """What a test found, leaving out the later choruses, which the review directs as the first."""
+    return [f for f in found if f[0] not in LATER_CHORUSES]
 
 
 def test_the_sample_bundle_is_clean():
@@ -54,7 +62,7 @@ def test_the_song_keeps_the_3_pictures_of_its_own_it_plays_longest():
 
     bundle, found, _ = review(change)
     assert [s.id for s in bundle.scenes if s.song_only] == ["song-1", "song-2", "song-3"]
-    assert found == [("scene:song-0", "song-scene", True)]
+    assert own(found) == [("scene:song-0", "song-scene", True)]
     assert {d.line_id: d.scene for d in bundle.direction}["v1-1"] == "hook"  # the scene before the song's first
 
 
@@ -67,7 +75,7 @@ def test_a_narration_sentence_never_plays_over_the_songs_own_picture():
     # With room in the lesson, the picture is the lesson's too, and the sentence keeps it.
     bundle, found, _ = review(narrated)
     assert [(s.id, s.song_only) for s in bundle.scenes][-1] == ("chorus", False)
-    assert found == [("scene:chorus", "song-scene", True)]
+    assert own(found) == [("scene:chorus", "song-scene", True)]
     assert {d.line_id: d.scene for d in bundle.direction}["n2"] == "chorus"
 
     # With the lesson's 7 scenes drawn, the sentence plays over the scene the narration was on.
@@ -89,7 +97,7 @@ def test_a_spotlight_waits_until_its_structure_is_named_on_that_scene():
         direction(d, "n2").update(spotlight="Thylakoid")  # named, but not on this scene
 
     bundle, found, _ = review(change)
-    assert found == [("v1-2", "spotlight", True), ("n2", "spotlight", True)]
+    assert own(found) == [("v1-2", "spotlight", True), ("n2", "spotlight", True)]
     spotlights = {d.line_id: d.spotlight for d in bundle.direction}
     assert spotlights["v1-1"] == "Thylakoid" and spotlights["c1-1"] == "Thylakoid"
     assert spotlights["v1-2"] == "" and spotlights["n2"] == ""
@@ -261,6 +269,9 @@ def test_a_conversion_names_a_structure_and_prints_what_goes_in_and_out():
     assert converting(("Thylakoid", [], ["O₂"])) == ([], left_out)  # nothing goes in
     assert converting(("Thylakoid", ["glucose6phosphate"], ["O₂"])) == ([], left_out)  # too long to print
     assert converting(("Thylakoid", ["H₂O"], ["O₂"]), ("thylakoid", ["CO₂"], ["O₂"]))[1] == left_out  # one a structure
+    assert converting(("Thylakoid", ["H₂O"], ["thylakoid"])) == ([], left_out)  # never the structure itself
+    assert converting(("ATP synthase", ["ADP", "Pᵢ"], ["ATP"])) == (  # a word of its name is not the structure
+        [("ATP synthase", ["ADP", "Pᵢ"], ["ATP"])], [])
 
 
 def test_a_meaning_names_a_part_of_a_graph_in_one_short_line():
@@ -322,9 +333,25 @@ def test_a_style_that_raps_one_section_lets_only_its_lines_run_longer():
 
     assert rapped("K-pop, a sung first verse, a rapped second verse, 100 bpm") == {"v2-1"}
     assert rapped("dance-pop, short sung verses and a rapped bridge, 112 bpm") == {"b-1"}
-    assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {
+    # Rapped verses: every verse, the chorus sung (Nov 2: four of the rotation's styles rap both verses).
+    assert rapped("Pop with clear rapped verses, rising into a sung chorus") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("hip-hop pop, confident female rap verses, sung chorus") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("K-pop electro-pop, rap-sung verses, soaring chorus") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("Upbeat pop with hip-hop verses, rapped in a confident, punchy flow") == {"v1-1", "v1-2", "v2-1"}
+    assert rapped("Pop, make it rap, 100 bpm") == {
         "v1-1", "v1-2", "c1-1", "v2-1", "c2-1", "b-1", "c3-1"}  # rapped, no section named: every line, as before
     assert rapped("bright teen pop with melodic sung verses, 104 bpm") == set()
+    # However the writer words it, the section it names, never every line.
+    assert rapped("K-pop that raps the second verse, 100 bpm") == rapped("K-pop, verse two rapped") == {"v2-1"}
+    assert rapped("pop, the bridge is rapped") == rapped("pop rapping on the bridge") == {"b-1"}
+
+    def bridgeless(data):
+        data["lyrics"] = [line for line in data["lyrics"] if line["section"] != "bridge"]
+        return data
+    # A rotation style that raps the bridge, for a topic with no bridge: nothing is rapped, not everything.
+    assert checks.rapped_lines(bridgeless(dict(bundle_data(), music={
+        "positive_styles": ["dance-pop, short sung verses and a rapped bridge, 112 bpm"], "negative_styles": [],
+        "sections": []}))) == set()
 
     def long_lines(style):
         def change(data):
@@ -375,7 +402,7 @@ def test_what_blocks_is_where_particles_end_and_a_glow_waits_for_its_name():
     assert [b.structure for b in bundle.blocks] == ["Cytochrome b6f"]  # particles end there; none end at the other
     glows = {d.line_id: d.glow for d in bundle.direction if d.line_id in ("v1-2", "c1-1")}
     assert glows == {"v1-2": "Thylakoid", "c1-1": ""}
-    assert sorted(found) == [("blocks", "blocks", True), ("c1-1", "glow", True)]
+    assert sorted(own(found)) == [("blocks", "blocks", True), ("c1-1", "glow", True)]
 
 
 def test_an_old_bundle_gets_names_from_its_text(tmp_path):
@@ -398,10 +425,12 @@ def test_the_bundle_step_saves_the_repaired_bundle_and_the_checks(tmp_path):
     bundle_step.run(tmp_path, ask=lambda *args, **kwargs: data)
     assert read(tmp_path / "bundle.json", Bundle).direction[2].spotlight == ""
     problems = read(tmp_path / "checks.json", CheckReport).problems
-    # The bundle step also records what only a better bundle fixes: the sample song is short, and still in places.
-    assert (problems[0].line_id, problems[0].rule, problems[0].repaired) == ("c1-1", "spotlight", True)
-    assert ("music", "lyric-style", False) in [(p.line_id, p.rule, p.repaired) for p in problems]
-    assert all(not p.repaired for p in problems[1:])
+    # What the review repaired is kept when the words set once (the study tags) are read again; the later choruses are
+    # directed as the first, so its spotlight waits on them too. The bundle step also records what only a better
+    # bundle fixes: the sample song is short, and still in places.
+    found = [(p.line_id, p.rule, p.repaired) for p in problems]
+    assert [f for f in found if f[2] and f[0] not in LATER_CHORUSES] == [("c1-1", "spotlight", True)]
+    assert ("music", "lyric-style", False) in found
 
 
 def test_curly_quotes_and_dashes_match_plain_ones():
@@ -471,6 +500,7 @@ def test_the_styles_name_one_tempo_the_song_can_be_timed_by():
     # at the end of the description
     assert styles(["trap", "200 bpm"]) == (["trap", "160 bpm"], repaired)  # held to the range
     assert styles(["pop", "98 bpm", "half-time 140 bpm"]) == (["pop", "98 bpm", "half-time 98 bpm"], repaired)
+    assert styles(["pop at 98 beats per minute"]) == (["pop at 98 beats per minute"], [])  # named, in words
 
 
 def test_the_song_style_is_one_description_that_keeps_the_learners_tempo():
@@ -498,12 +528,29 @@ def test_a_process_needs_two_stages_or_more():
     assert staging("synthase") == (["", "", ""], [("scene:synthase", "stages", True)])  # an ordinary scene
 
 
+def test_no_song_is_shouted_and_its_sung_parts_are_catchy():
+    # The owner, Nov 2: "please don't have shouted vocals", and "catchy" instead of "melodic".
+    data = bundle_data()
+    data["music"]["positive_styles"] = ["Bright teen pop with a melodic sung first verse; a warm alto that rises into "
+                                        "stacked harmonies and shouted gang vocals on the chorus, light gang vocals "
+                                        "doubling the title line, group shouts on the echoes, 104 bpm"]
+    bundle, report = checks.review(Bundle.model_validate(data))
+    [style] = bundle.music.positive_styles
+    assert style == ("Bright teen pop with a catchy sung first verse; a warm alto that rises into stacked harmonies and "
+                     "backing vocals on the chorus, light backing vocals doubling the title line, backing vocals on "
+                     "the echoes, 104 bpm")
+    assert any(p.rule == "song-style" and p.repaired for p in report.problems)
+
+
 def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours_differ():
     from studio.styles import SONG_STYLES, style_for
 
     assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
     assert len({style_for(f"job{i}") for i in range(40)}) > 4
-    assert all(" bpm" in s and 92 <= int(s.rsplit(" bpm", 1)[0].split()[-1]) <= 112 for s in SONG_STYLES)
+    assert all((found := BPM_TAG.search(s)) and 100 <= int(found[1]) <= 130 for s in SONG_STYLES)
+    # Every style raps both verses, the owner's wish since Nov 2; the checks read that every verse line may run
+    # longer, and never a chorus's.
+    assert all(checks.RAPPED_VERSES.search(s) for s in SONG_STYLES)
 
 
 def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once():
@@ -514,7 +561,7 @@ def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once()
     bundle = Bundle.model_validate(data)
     plan, _ = audio.composition_plan(bundle)
     assert all(c["positive_styles"] == [*bundle.music.positive_styles, audio.DICTION] for c in plan["chunks"])
-    assert all(c["negative_styles"] == bundle.music.negative_styles for c in plan["chunks"])
+    assert all(c["negative_styles"] == [*bundle.music.negative_styles, *audio.AVOID] for c in plan["chunks"])
     prompt, _ = audio.song_prompt(bundle)
     style = bundle.music.positive_styles[0].rstrip(".")
     assert "never rapped" not in prompt and prompt.startswith(f"Style: {style}, {audio.DICTION}.\n")
@@ -524,6 +571,18 @@ def test_every_section_is_asked_for_the_songs_own_style_and_clear_diction_once()
     plan, _ = audio.composition_plan(Bundle.model_validate(data))
     assert all(c["positive_styles"] == ["Pop with crisp diction on the verses; 100 bpm"] for c in plan["chunks"])
     assert audio.song_prompt(Bundle.model_validate(data))[0].count("diction") == 1
+
+
+def test_every_song_avoids_a_long_intro_and_explicit_lyrics_and_its_avoid_list_never_asks_for_diction():
+    from studio.steps import audio
+
+    # A style that raps a section keeps its rap: a writer's "rap" to avoid would tell the singer both (Nov 2).
+    assert audio.with_avoid(["rap", "Rapped verses", "screamed vocals"], ["teen pop, a rapped second verse"]) == [
+        "screamed vocals", "long instrumental intro", "explicit lyrics"]
+    assert audio.with_avoid(["rap"], ["indie-pop with melodic sung verses"])[0] == "rap"  # a sung style keeps it
+    assert audio.with_avoid([]) == ["long instrumental intro", "explicit lyrics"]
+    assert audio.with_avoid(["screamed vocals", "Mumbled diction", "Long  instrumental intro"]) == [
+        "screamed vocals", "Long  instrumental intro", "explicit lyrics"]  # each once, as the writer put it
 
 
 def test_lines_that_hold_still_are_not_a_problem():
@@ -552,6 +611,46 @@ def test_key_lines_keep_the_chains_order_and_ones_the_song_cannot_show_stay_in_t
     details = [p.detail for p in report.problems if p.rule == "key-line"]
     assert len(details) == 6 and any("out of the song video" in d and "Said only" in d for d in details)
     assert not any("Not sung" in d for d in details)  # "" is no problem: a step the song never sings
+
+
+def test_every_chorus_is_directed_as_the_first_where_it_sings_the_same_words():
+    def change(data):
+        direction(data, "c1-1").update(particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+        direction(data, "c2-1").update(spotlight="Thylakoid", caption="Proton pump")
+        next(line for line in data["lyrics"] if line["id"] == "c3-1")["text"] = "Protons flow and the gradient goes"
+        direction(data, "c3-1").update(spotlight="Thylakoid")  # a line of its own keeps its own
+
+    bundle, found, _ = review(change)
+    directed = {d.line_id: d for d in bundle.direction}
+    assert (directed["c2-1"].particles, directed["c2-1"].carries, directed["c2-1"].spotlight) == (
+        ["Thylakoid", "Cytochrome b6f"], "H⁺", "")
+    assert directed["c2-1"].caption == "Proton pump"  # but its caption
+    assert (directed["c3-1"].spotlight, directed["c3-1"].particles) == ("Thylakoid", [])
+    assert [f for f in found if f[1] == "motion"] == [("c2-1", "motion", True)]
+
+
+def test_the_questions_key_line_goes_where_each_video_asks_it():
+    # Nov 1: the writer put the question on the narration's first sentence, a fact two before the narrator asks it.
+    def asked(question_on="n1", step_on="n3"):
+        data = bundle_data()
+        data["narration"] = [{"id": "n1", "text": "The light reactions happen in the thylakoid membrane.",
+                              "names": ["thylakoid"], "fact_id": "f1"},
+                             {"id": "n2", "text": "So how does a leaf make ATP from light?", "names": [],
+                              "fact_id": "filler"},
+                             {"id": "n3", "text": "Only cytochrome b6f pumps protons.", "names": ["cytochrome b6f"],
+                              "fact_id": "f2"}]
+        scenes = {"n1": "hook", "n2": "hook", "n3": "overview"}
+        data["direction"] = [d for d in data["direction"] if not d["line_id"].startswith("n")] + [
+            {**direction(bundle_data(), "n1"), "line_id": n, "scene": s} for n, s in scenes.items()]
+        data["key_lines"] = [{"from_line": "v1-2", "text": "How does a leaf make ATP?", "from_narration": question_on},
+                             {"from_line": "v2-1", "text": "Only b6f pumps H⁺", "from_narration": step_on}]
+        bundle, report = checks.review(Bundle.model_validate(data))
+        return ([(k.from_line, k.from_narration) for k in bundle.key_lines],
+                [p.line_id for p in report.problems if p.rule == "key-line"])
+
+    assert asked() == ([("v1-1", "n2"), ("v2-1", "n3")], ["v1-1", "n2"])  # the song's first line, the hook's question
+    assert asked(question_on="n2") == ([("v1-1", "n2"), ("v2-1", "n3")], ["v1-1"])
+    assert asked(step_on="n2") == ([("v1-1", "n1"), ("v2-1", "n2")], ["v1-1"])  # never onto another's sentence
 
 
 def test_key_lines_are_recorded_when_too_few_or_too_long():
@@ -641,6 +740,87 @@ def test_too_few_choruses_long_verses_and_rhymes_filled_with_tags_are_recorded()
     assert any("3 lines end on a claim-free tag" in f for f in tags)
 
 
+TITLE = "Pull the sea, then let it go"
+CHORUS_LINES = [TITLE, "High tide, low tide", "To and fro, to and fro", TITLE]
+
+
+def sung(data, sections):
+    """The sample with these lyrics, (id, section, text) each, all over the overview."""
+    data["lyrics"] = [{"id": i, "section": s, "text": t, "names": [], "fact_id": "f1"} for i, s, t in sections]
+    spoken = [d for d in data["direction"] if d["line_id"].startswith("n")]
+    data["direction"] = [{**spoken[0], "line_id": i, "scene": "overview"} for i, *_ in sections] + spoken
+    return data
+
+
+def chorus(k, lines=CHORUS_LINES):
+    return [(f"c{k}-{n}", "chorus", text) for n, text in enumerate(lines, 1)]
+
+
+def test_a_song_with_no_bridge_sings_its_chorus_three_times_though_the_last_two_run_together():
+    # Nov 1: with no bridge, the second chorus runs straight into the last, which opens on its summary couplet; read
+    # as one run, every bridgeless song was "sung 2 times" (dramatic irony, the subjunctive, classical conditioning).
+    lyrics = [("v1-1", "verse", "x"), *chorus(1), ("v2-1", "verse", "y"), *chorus(2),
+              ("s-1", "chorus", "The Moon pulls, the sea obeys"), ("s-2", "chorus", "Twice a day, in every bay"),
+              *chorus(3), ("o-1", "outro", TITLE)]
+    data = sung(dict(bundle_data(), why_chain=["a", "b", "c"]), lyrics)
+    assert checks.chorus_spans([s for _, s, _ in lyrics]) == [[1, 2, 3, 4], [6, 7, 8, 9], [12, 13, 14, 15]]
+    assert not any("chorus is sung" in p.detail for p in checks.song_shape_problems(Bundle.model_validate(data)))
+    data = sung(data, [line for line in lyrics if not line[0].startswith("c3")])
+    found = [p.detail for p in checks.song_shape_problems(Bundle.model_validate(data))]
+    assert "the chorus is sung 2 times, not 3" in found  # the couplet alone is no chorus
+
+
+def test_every_later_chorus_is_sung_word_for_word_as_the_first():
+    slipped = [TITLE, "High tide and low tide", "To and fro, to and fro", TITLE]
+    lyrics = [("v1-1", "verse", "x"), *chorus(1), ("v2-1", "verse", "y"), *chorus(2, slipped),
+              ("s-1", "chorus", "sum one"), ("s-2", "chorus", "sum two"), *chorus(3, slipped)]
+    bundle, problems = checks.repair_once(Bundle.model_validate(sung(bundle_data(), lyrics)))
+    texts = {line.id: line.text for line in bundle.lyrics}
+    assert texts["c2-2"] == texts["c3-2"] == "High tide, low tide" and texts["s-1"] == "sum one"
+    assert [(p.line_id, p.rule, p.repaired) for p in problems] == [("c2-2", "chorus", True), ("c3-2", "chorus", True)]
+    # One that does not open and end as the first may not line up with it: left as written.
+    shifted = [*chorus(1), ("v2-1", "verse", "y"), *chorus(2, ["High tide, low tide", "x", "y", TITLE])]
+    bundle, problems = checks.repair_once(Bundle.model_validate(sung(bundle_data(), shifted)))
+    assert [line.text for line in bundle.lyrics[-4:]] == ["High tide, low tide", "x", "y", TITLE] and problems == []
+
+
+def test_a_head_count_is_said_as_a_common_answer():
+    # The facts call a mistake common; they never count who makes it, so the fact-check rewrote each head count.
+    data = bundle_data()
+    data["narration"][1]["text"] = "Does the heavy one land first? Most people say yes."
+    data["lesson_markdown"] += "\nMany students think that every carrier pumps protons. And most people say no.\n"
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))
+    said = bundle.narration[1].text.removeprefix("Does the heavy one land first? ")
+    assert said in [form.format("yes") + "." for form in checks.COMMON_ANSWER]
+    assert any(f"\n{form}every carrier pumps protons. And most people say no.\n" in bundle.lesson_markdown
+               for form in checks.COMMON_GUESS)
+    assert [(p.line_id, p.rule) for p in problems] == [("n2", "head-count"), ("lesson_markdown", "head-count")]
+    # Not one form for every droplet (Nov 1: "A common answer is yes" in all twelve), but the same for the same text.
+    picked = {checks._counted(f"Is it {thing}? Most people say yes.").split("? ")[1]
+              for thing in ("heavy", "red", "fast", "big", "warm", "wet")}
+    assert len(picked) > 1 and checks._counted("Most people say no.") == checks._counted("Most people say no.")
+
+
+def test_a_source_quote_the_study_guide_does_not_hold_is_left_out():
+    data = bundle_data()
+    data["facts"][0]["source_quote"] = "The light  reactions happen in the THYLAKOID"  # spacing and case aside
+    data["facts"][1]["source_quote"] = "only b6f pumps"
+    guide = "Notes: the light reactions happen in the thylakoid membrane."
+    bundle, problems = checks.repair_once(Bundle.model_validate(data), guide)
+    assert [f.source_quote for f in bundle.facts] == ["The light  reactions happen in the THYLAKOID", "", ""]
+    assert [(p.line_id, p.rule) for p in problems] == [("f2", "source-quote")]
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))  # no guide: no quote stands
+    assert [f.source_quote for f in bundle.facts] == ["", "", ""] and len(problems) == 2
+
+
+def test_the_study_tags_follow_the_writers_own_and_the_rest_is_left_as_it_was():
+    data = bundle_data()
+    bundle, problems = checks.repair_once(Bundle.model_validate(data))
+    assert bundle.tags.song == ["photosynthesis", "lightreactions", "apbio", "studysong", "pop", "studytok"]
+    assert bundle.tags.lesson == ["photosynthesis", "lightreactions", "apbio", "explained", "examprep", "studytok"]
+    assert problems == [] and checks.repair_once(bundle) == (bundle, [])  # said once: the same bundle again
+
+
 def test_an_axis_name_is_trimmed_and_left_off_when_long_or_a_structures_name():
     data = bundle_data()
     data["scenes"][1]["axes"] = {"x": "  Quantity ", "y": "Number of protons pumped per second"}
@@ -718,3 +898,133 @@ def test_no_picture_draws_the_analogy_and_its_lines_play_over_the_real_thing():
         assert ("scenes", "analogy", True) in found
         assert ("analogy" in [s.id for s in bundle.scenes]) == (not extra)  # kept, unshown, when 3 would not be left
         assert not any(d.scene == "analogy" for d in bundle.direction)
+
+
+def test_a_scene_with_more_structures_than_a_learner_can_follow_is_recorded():
+    # Nov 1: the light reactions' overview drew 15 parts; it stayed pale for 30 s and SAM never found 7 of 43.
+    def drawing(count, audience="high school"):
+        def change(data):
+            data["audience"] = audience
+            data["scenes"][1]["structures"] += [{"name": f"Part {k}", "aliases": [], "sam_phrase": f"the part {k}",
+                                                 "color_hex": "#3366CC"} for k in range(count - 2)]
+        return [p for p in review(change)[1] if p[1] == "crowded"]
+
+    assert drawing(8) == [] and drawing(9) == [("scene:overview", "crowded", False)]
+    assert drawing(4, "about age 10") == [] and drawing(5, "about age 10") == [("scene:overview", "crowded", False)]
+    assert [checks.younger(a) for a in ("about age 10", "6th grade", "middle school", "10-year-olds")] == [True] * 4
+    assert [checks.younger(a) for a in ("high school", "college", "9th grade", "adults")] == [False] * 4
+
+
+def test_sam_is_asked_for_each_colour_in_the_word_the_picture_is_painted_in():
+    # Nov 1: the picture names no colour of its own, so the painting has the Colours line's ("NADPH yellow"), and SAM
+    # asked for the writer's "lime ball" would look for a colour it was never asked for.
+    def phrased(*phrases):
+        def change(data):
+            for structure, phrase in zip(data["scenes"][1]["structures"], phrases):
+                structure["sam_phrase"] = phrase
+        bundle, found, _ = review(change)
+        return [s.sam_phrase for s in bundle.scenes[1].structures], found
+
+    assert phrased("pale lime blob", "coral wedge") == (["green blob", "orange wedge"],
+                                                        [("structures", "colours", True)])
+    assert phrased("green blob", "man in orange") == (["green blob", "man in orange"], [])  # as it is painted
+    assert phrased("the thylakoid", "red light") == (["the thylakoid", "orange light"],  # only the colour word
+                                                     [("structures", "colours", True)])
+
+
+def test_two_parts_in_one_colour_word_are_recorded():
+    # Nov 1: water (#00ACC1) and carbon dioxide (#00897B) were both "teal" to the illustrator, and were painted alike;
+    # Louis XVI and Charles I, both a "king in blue", were sung as one king.
+    def coloured(overview):
+        def change(data):
+            for structure, colour in zip(data["scenes"][1]["structures"], overview):
+                structure["color_hex"] = colour
+        return [(p.line_id, p.detail) for p in review(change)[2].problems if p.rule == "colours"]
+
+    assert coloured(["#2E8B57", "#E07A2F"]) == []
+    assert coloured(["#2E8B57", "#43A047"]) == [
+        ("scene:overview", 'Thylakoid and Cytochrome b6f are both "green" to the illustrator')]
+
+    def alike(data):
+        data["scenes"][1]["structures"][1].update(sam_phrase="king in blue", color_hex="#2F6FDB")
+        data["scenes"][2]["structures"][0].update(sam_phrase="king in blue", color_hex="#3366CC")
+    assert [(p.line_id, p.detail) for p in review(alike)[2].problems] == [
+        ("structures", 'Cytochrome b6f and ATP synthase are drawn alike, each a "king in blue", so they read as one')]
+
+
+def test_a_part_named_for_an_ion_is_painted_in_the_ions_colour():
+    # Nov 1: the pump's sodium channel was green, as the K⁺ dots were, and its potassium channel purple, as Na⁺: the
+    # colours taught the swap. A part named for two ions keeps its own; so does every other part.
+    def part(name, colour, phrase):
+        return {"name": name, "aliases": [], "sam_phrase": phrase, "color_hex": colour}
+
+    data = {"scenes": [{"id": "overview", "structures": [
+        part("Sodium channel", "#22A355", "green tube"), part("Potassium channel", "#8B5CF6", "purple tube"),
+        part("Sodium-potassium pump", "#F57C1F", "orange blob"), part("Phosphate", "#8CC63F", "green ball")],
+        "image_prompt": "On the left a green sodium channel; in the centre the orange sodium-potassium pump; on the "
+                        "right a purple potassium channel."}], "direction": []}
+    problems = []
+    checks._check_colours(data, problems)
+    parts = {s["name"]: (s["color_hex"], s["sam_phrase"]) for s in data["scenes"][0]["structures"]}
+    assert parts == {"Sodium channel": (checks.MARKER_COLOURS["Na⁺"], "light purple tube"),
+                     "Potassium channel": (checks.MARKER_COLOURS["K⁺"], "green tube"),
+                     "Sodium-potassium pump": ("#F57C1F", "orange blob"),
+                     "Phosphate": ("#E6B422", "yellow ball")}  # off the potassium channel's new green
+    assert data["scenes"][0]["image_prompt"] == ("On the left a light purple sodium channel; in the centre the orange "
+                                                 "sodium-potassium pump; on the right a green potassium channel.")
+    assert problems[0].detail == ("a part named for an ion is painted in its colour: Sodium channel green as light "
+                                  "purple; Potassium channel purple as green; Phosphate green as yellow, clear of the "
+                                  "ion's") and problems[0].repaired
+    assert [checks._names_kinds(n, checks.IONS) for n in ("Na⁺ channel", "Proton pumps", "ATP synthase")] == [
+        ["Na⁺"], ["H⁺"], []]
+
+
+def test_a_part_an_ions_colour_lands_on_moves_to_the_nearest_free_hue():
+    # Nov 2: the potassium channel took K⁺'s green beside the writer's green membrane, and the K⁺ ions met a green
+    # phosphate. Only those move; a part that already differs keeps the writer's colour.
+    def part(name, colour):
+        return {"name": name, "aliases": [], "sam_phrase": "ball", "color_hex": colour}
+
+    data = {"scenes": [
+        {"id": "overview", "image_prompt": "", "structures": [
+            part("Cell membrane", "#43A047"), part("Potassium channel", "#8B5CF6"), part("Outside", "#3B82F6")]},
+        {"id": "reset", "image_prompt": "", "structures": [part("Potassium ions", "#8EE06B"), part("Phosphate", "#8CC63F"),
+                                                           part("Inside", "#E6B422")]}], "direction": []}
+    problems = []
+    checks._colour_for_ions(data, problems)
+    hues = {s["name"]: checks._hue(s["color_hex"]) for scene in data["scenes"] for s in scene["structures"]}
+    assert hues["Potassium channel"] == hues["Potassium ions"] == "green"
+    assert hues["Cell membrane"] not in ("green", "blue") and hues["Phosphate"] not in ("green", "yellow")
+    assert hues["Outside"] == "blue" and hues["Inside"] == "yellow"  # not where an ion's colour landed
+    assert "Cell membrane green as" in problems[0].detail and "clear of the ion's" in problems[0].detail
+
+
+def test_the_pictures_words_give_each_part_the_colour_the_illustrator_is_told():
+    # Nov 1: in 61 of 62 scenes the writer named colours in the picture's words, a quarter of them not the part's own
+    # ("a white potassium iodide" for a green one), so the painter had two colours for one part.
+    data = {"scenes": [{"id": "overview", "structures": [
+        {"name": "Thylakoid", "aliases": [], "sam_phrase": "green disc", "color_hex": "#2E8B57"},
+        {"name": "Thylakoid lumen", "aliases": ["lumen"], "sam_phrase": "pink space", "color_hex": "#E0559A"}],
+        "image_prompt": "A gold Thylakoid stack; inside it a blue thylakoid lumen, the lumen tinted blue, and a "
+                        "green thylakoid beside it."}]}
+    problems = []
+    checks._recolour_image_prompts(data, problems)
+    assert data["scenes"][0]["image_prompt"] == ("A green Thylakoid stack; inside it a pink thylakoid lumen, the "
+                                                 "lumen tinted blue, and a green thylakoid beside it.")
+    assert problems[0].detail == ("the picture's words give each part the colour the illustrator is told: "
+                                  '"gold Thylakoid" as "green Thylakoid"; "blue thylakoid lumen" as "pink thylakoid '
+                                  'lumen"') and problems[0].repaired
+    checks._recolour_image_prompts(data, problems := [])
+    assert problems == []  # as it is told
+
+
+def test_an_alias_that_is_a_word_of_the_topic_is_recorded():
+    # Nov 1: Sunlight's alias "light" revealed it on every "light reactions".
+    def aliased(name, *aliases):
+        def change(data):
+            data["scenes"][1]["structures"][1].update(name=name, aliases=list(aliases))
+        return [(p.line_id, p.rule, p.repaired) for p in review(change)[2].problems if p.rule == "alias"]
+
+    assert aliased("Sunlight", "light", "sun") == [("structures", "alias", False)]
+    assert aliased("Light-harvesting complex", "light") == []  # a word of its own name: the topic's word means it
+    assert aliased("Sunlight", "sun") == []

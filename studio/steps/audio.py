@@ -69,8 +69,9 @@ GEMINI_API = "https://generativelanguage.googleapis.com/v1beta"
 SONG_PROVIDERS = ("elevenlabs", "gemini")
 MUSIC_MODEL = "music_v2_5"
 GEMINI_SONG_MODEL = "lyria-3.5"  # Lyria's full-length songs, sung from lyrics given in the prompt
-SONG_BITRATE = "192k"  # Lyria's song is kept as a constant-bitrate MP3 at this rate
+SONG_BITRATE = "192k"  # a song Lyria sends as anything but an MP3 is encoded at this rate
 SPEECH_BITRATE = "128k"  # a Gemini narration, as ElevenLabs' mp3_44100_128
+MP3_TYPES = ("audio/mpeg", "audio/mp3")  # kept as sent, not encoded again
 TTS_MODEL = "eleven_multilingual_v2"
 TTS_MAX_CHARS = 10000  # that model's limit per request; 3 minutes of narration is about 3,000
 DEFAULT_VOICE = "Xb7hH8MSUJpSbSDYk0k2"  # Alice: a clear, engaging British educator
@@ -269,16 +270,16 @@ def _make_song(job: Path, bundle: Bundle, provider: str) -> str:
 
 
 # Eleven Music: one chunk per section, each exactly as long as asked, and each asked for the song's own style and
-# avoid list as the bundle writes them, with only the diction clause added (with_diction): how the verses and the
-# chorus are sung is the style's to say ("rapped verses, rising into a big sing-along chorus"). Until Oct 29 code
-# added "clear rapped verse" to the verses and "sung melodic vocal, not rapped" to the rest, after a song told one
-# style for every section rapped throughout.
+# avoid list as the bundle writes them, with only the diction clause and the studio's own things to avoid added
+# (with_diction, with_avoid): how the verses and the chorus are sung is the style's to say ("rapped verses, rising
+# into a big sing-along chorus"). Until Oct 29 code added "clear rapped verse" to the verses and "sung melodic vocal,
+# not rapped" to the rest, after a song told one style for every section rapped throughout.
 
 # Every song asks once for clear diction, the owner's rule since Oct 31: on Lyria, which is given no timings, songs
 # came back with lines step 6 could not hear (30 of 47 in one supply-and-demand song, which was sung again). Once,
 # and only where the style does not ask already: until round 17 every instruction asked for diction and none for
-# music, and the songs came back recited.
-DICTION = "clear diction, every word easy to hear"
+# music, and the songs came back recited. Two words: "every word easy to hear" said it twice (the owner, Nov 2).
+DICTION = "clear diction"
 
 
 def with_diction(styles: list[str]) -> list[str]:
@@ -288,6 +289,22 @@ def with_diction(styles: list[str]) -> list[str]:
     return [*styles, DICTION]
 
 
+# What every song avoids, asked by the studio itself as it asks for diction: the writer listed both in every bundle
+# (Nov 1). Songs opened on long instrumental intros (fc8bae6), and no song is explicit, whoever it is for.
+AVOID = ("long instrumental intro", "explicit lyrics")
+
+
+def with_avoid(avoid: list[str], styles: list[str] | None = None) -> list[str]:
+    """The song's avoid list with AVOID added where it lacks them, and nothing about diction, which the style asks
+    for once (with_diction): asked again and again, a singer sings like someone reading. Nothing about rap either when
+    the style raps a section: writers listed "rap" to avoid under styles that sang every verse (Nov 2), and every
+    style in the rotation raps its verses (studio/styles.py)."""
+    raps = any(checks.RAPPED.search(style) for style in styles or [])
+    kept = [a for a in avoid if "diction" not in a.lower() and not (raps and checks.RAPPED.search(a))]
+    have = {" ".join(a.lower().split()) for a in kept}
+    return [*kept, *(a for a in AVOID if a not in have)]
+
+
 def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
     """The music request's plan, one chunk per section, and where each section is planned to fall."""
     planned = planned_sections(bundle)
@@ -295,7 +312,7 @@ def composition_plan(bundle: Bundle) -> tuple[dict, list[dict]]:
         "text": f"[{part['section'].title()}]\n" + "\n".join(part["lines"]),
         "duration_ms": part["duration_ms"],
         "positive_styles": with_diction(bundle.music.positive_styles),
-        "negative_styles": list(bundle.music.negative_styles),
+        "negative_styles": with_avoid(bundle.music.negative_styles, bundle.music.positive_styles),
         "context_adherence": "high",
     } for part in planned]
     return {"chunks": chunks}, _placed(planned)
@@ -327,9 +344,27 @@ def gemini_song_model() -> str:
     return knobs.env("GEMINI_SONG_MODEL").strip() or GEMINI_SONG_MODEL
 
 
+def delivery(styles: list[str]) -> str:
+    """The sections the style raps, named for the singer, rapped "spoken on the beat, not sung", the rest sung; ""
+    when it raps none. Three songs whose styles said "rapped verses" came back sung all through (the owner, Nov 2):
+    the prompt said "Sing the lines in order", and the styles "rapping and singing close to the mic". This line
+    brought the rap back; cut to "Rap every verse.", the next three were sung again (the owner: no more rapping in
+    the verses, "or at least what I consider rapping"). Nothing else is said of how the lines go: "backing vocals and
+    echoes of the hook are welcome" asked for the group vocals the owner did not want."""
+    style = " ".join(styles)
+    if not checks.RAPPED.search(style):
+        return ""
+    parts = (["every verse"] if checks.RAPPED_VERSES.search(style)
+             else [part for part, said in (("the second verse", checks.RAPPED_SECOND_VERSE), ("the bridge", checks.RAPPED_BRIDGE))
+                   if said.search(style)]) or ["the verses"]
+    rest = "the chorus" if parts in (["every verse"], ["the verses"]) else "the rest"
+    return f"Rap {' and '.join(parts)}, spoken on the beat, not sung; sing {rest}."
+
+
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
-    """Lyria's prompt: the style, what to avoid and the lyrics, section by section (its instructions apart from
-    its lyrics, as Google advises), and where each section is planned to fall. No length and no timings: the
+    """Lyria's prompt: the style and the lyrics, section by section (its instructions apart from its lyrics, as
+    Google advises), and where each section is planned to fall. Nothing to avoid since Nov 2 (the owner); the
+    composition plan, ElevenLabs', still has its list. No length and no timings: the
     singer takes the time the lines need, and step 6 finds them. Until round 17 it also asked for a length, a
     timed structure, every word exactly as written with no ad-libs or repeats, and clear upfront vocals; every
     instruction asked for diction and none for music, and the songs came back recited."""
@@ -338,9 +373,8 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
-    if music.negative_styles:
-        head.append(f"Avoid: {', '.join(style.rstrip(' .') for style in music.negative_styles)}.")
-    head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")
+    if rapped := delivery(music.positive_styles):
+        head.append(rapped)
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)
 
@@ -404,19 +438,24 @@ def _mime(inline: dict) -> str:
 
 
 def as_mp3(audio: bytes, mime_type: str, kind: str = "song") -> bytes:
-    """Gemini's song or narration as a constant-bitrate MP3, whatever it sent (an MP3 of any kind, a WAV).
+    """Gemini's song or narration as an MP3 with a length header: an MP3 as it was sent (Lyria's), anything else
+    (a WAV) encoded once.
 
     Every later step reads an audio file's length from its header (ffprobe), and a
     variable-bitrate MP3 without one reads as the wrong length; the upload calls it
-    audio/mpeg. So it is always encoded again, once, from a file to a file, so
-    ffmpeg can seek the input and write the output's length header.
+    audio/mpeg. An MP3 is copied, not encoded again: each lossy encode costs some of
+    the sound, and the video's AAC is one more (the owner, Nov 2). A copy from a file
+    to a file writes the length header all the same. The song's peaks are left as
+    sent: the render holds its mix under full scale (media.PEAK_LIMIT), and the MP3
+    is played only inside a video.
     """
     with tempfile.TemporaryDirectory(prefix=f"popsmosis-{kind}-") as tmp:
         source, out = Path(tmp) / "gemini", Path(tmp) / f"{kind}.mp3"
         source.write_bytes(audio)
         try:
-            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-vn", "-codec:a", "libmp3lame",
-                            "-b:a", SONG_BITRATE if kind == "song" else SPEECH_BITRATE, str(out)],
+            kept = (["-codec:a", "copy"] if mime_type.split(";")[0].strip().lower() in MP3_TYPES else
+                    ["-codec:a", "libmp3lame", "-b:a", SONG_BITRATE if kind == "song" else SPEECH_BITRATE])
+            subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", str(source), "-vn", *kept, str(out)],
                            capture_output=True, check=True, timeout=300)
             return out.read_bytes()
         except subprocess.CalledProcessError as e:

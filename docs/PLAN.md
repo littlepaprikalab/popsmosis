@@ -277,12 +277,12 @@ already written.
    `spins`: what turns while particles drive it (`[{"structure": "ATP synthase"}]`), and
    `blocks`: what stops the particles reaching it (`[{"structure": "Herbicide"}]`). Each
    direction line may also name a `glow`: a part an outside cause switches on.
-8. `tags`: `song[]` and `lesson[]`, 6–10 hashtags for each video, the way a TikTok is
+8. `tags`: `song[]` and `lesson[]`, 5–7 hashtags for each video, the way a TikTok is
    tagged, so the Droplets tab can be searched by them: the topic and its key terms first,
-   then the video's own (the song's genre, "#studysong"; "#explained"). Last, so they are
-   written knowing the whole plan. Code cleans them to one lowercase word each and never
-   fails a bundle over one; the fact-check (step 2) passes or drops each one (README,
-   "Tags").
+   then the song's genre. Last, so they are written knowing the whole plan. Code cleans them
+   to one lowercase word each, adds the tags every video carries ("#studysong",
+   "#explained") and never fails a bundle over one; the fact-check (step 2) passes or drops
+   each one (README, "Tags").
 
 Code checks then hold each line's `names` and its direction together
 (`studio/checks.py`): a line names only structures its scene draws, and a spotlight
@@ -406,8 +406,10 @@ The prompt is short: the scene's `image_prompt`, which asks for it
 the way a teacher asks for a standard textbook diagram of its subject ("Educational
 diagram, as an Earth science textbook draws it, of the Sun and Earth oriented to show why
 Earth has seasons..."), each structure's colour by name, and a last line asking for the structures
-to be labelled (`art.LABELS`: "Clearly label nonobvious structures. No title, legend, key or caption, and no colour
-names in the labels.").
+to be labelled by the lesson's names and nothing else, each name after what it labels (`art.labels_line`: 'Label
+only: the brown step "Privileges", the grey cannon "Wars", ... Write each label in black letters on its own small
+white box. Label nothing else. No title, legend, key or caption, and no colour names in the labels.'); the hook labels
+nothing.
 The picture labels its own parts and the video draws no labels over it, only over a drawing; a label
 the art check finds wrong is kept, ringed on the picture, with a sticky note beside it
 saying what is true. (Until Oct 31 every prompt ended in a style line, `art.STYLE`: a
@@ -603,6 +605,15 @@ plainer words and the colour check came next ([test-rounds.md](test-rounds.md)).
   sung word. The report's `unsung` and the summary line name them; drift leaves them out.
   A Lyria song's sections are not pinned, so none is checked. Whether "[Intro]" makes
   Eleven Music play an instrumental lead-in is still to be tested, and costs a song.
+- **Lines the aligner cannot hear:** MMS hears no letters in a chorus Lyria sings as a stack of
+  voices (Nov 1: the five songs' verses read back nearly word for word, their choruses as blank),
+  so the aligner crammed a chorus's lines into a second or two after the last line it heard, and
+  the singer sang on for 6 to 15 s over no line, the hook cut ending with them. Lines it did not
+  hear that are crammed (under 0.28 s a word) before 2 s or more of singing with no line are now
+  spread over that singing, from the line before them to the gap's end (never across a pause of
+  2 s in the singing), each word by its share of the letters. The lines it heard stay, and so
+  does singing with no line after lines placed at a pace that sings (Lyria is asked for echoes of
+  the hook). The report's `spread` and the summary line name them.
 
 Output is a `Timing` per audio file: each line by id, with its start, end,
 `[{word, start, end}]`, and `sung` (false only for a line the song never sings).
@@ -657,7 +668,7 @@ studio/
   media.py         the files steps 3-9 pass to each other, and how a media step is built
   prompts/         bundle, fact audit, fact-check, songwriter, helper and scorecard rubric prompts
   schemas.py       pydantic models: bundle, factcheck, locations, timeline
-  steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, render, upload
+  steps/           bundle, audit, factcheck, art, locate, audio, timing, timeline, arrows, render, upload
   render/          renderer.py, primitives.py, layouts.py, fonts/ (Inter Regular/SemiBold/Bold/ExtraBold)
   ass_fallback.py  the ffmpeg karaoke fallback
   tests/
@@ -763,11 +774,12 @@ An original renderer, with a video style similar to the Fire or Don't videos. It
     particle, and so is a blocked flow; a short word ("air", "sap") is no symbol and goes as the bundle says. How far
     a route runs inside a part is measured a cell at a time along it. The legend keys a journey with an arrow; what moves takes
     the colour of the structure it names, when the pictures draw one (magma red, sediment tan).
-  - **The system running:** a line that sums up (the whole scene, nothing spotlit, as the
-    bundle prompt asks of summing-up and chorus lines) runs every flow its scene has shown so
-    far beside its own, up to 4: on the light reactions, electrons down the chain, protons
-    pumped into the lumen and protons back through a turning ATP synthase, all at once. Each
-    was taught, and passed the fact-check, on an earlier line, so nothing new is claimed. A
+  - **The system running:** a line that sums up (a chorus or outro line, or the narration
+    from the sentence that says the core idea on; on the whole scene, nothing spotlit) runs
+    every flow its scene has shown so far beside its own, up to 2 (RUN_MAX): on the light
+    reactions, electrons down the chain beside protons back through a turning ATP synthase.
+    Until Nov 1 any line on the whole scene did, and the pump's lesson ran sodium out through
+    the pump under "does the pump push the sodium back out?". Each was taught, and passed the fact-check, on an earlier line, so nothing new is claimed. A
     flow along part of a longer one carrying the same thing gives way to the longer. Not on the
     hook, nor on a scene once a flow on it is blocked; spaces fill only as the line's own flows
     say (`studio/steps/timeline.py`). Upright, such a line keeps looking where the line before

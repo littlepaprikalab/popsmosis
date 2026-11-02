@@ -79,17 +79,6 @@ def darken(hex_color: str, contrast: float = 5.0) -> str:
     return f"#{round(r * f):02X}{round(g * f):02X}{round(b * f):02X}"
 
 
-OUTLINE_CONTRAST = 1.8  # a pill's outline against its white fill: a near-white colour (frost, snow, ice) needs darkening
-
-
-def outline(hex_color: str) -> str:
-    """The colour as it is when it shows on white, else darkened until it does."""
-    r, g, b = rgb(hex_color)
-    if 1.05 / (_luminance(r, g, b) + 0.05) >= OUTLINE_CONTRAST:
-        return hex_color
-    return darken(hex_color, OUTLINE_CONTRAST)
-
-
 # --- text ---------------------------------------------------------------------------------
 
 
@@ -449,100 +438,60 @@ def draw_particles(canvas: skia.Canvas, color: str, stream: list[tuple[tuple[flo
     draw_kind(canvas, lead, color, label, alpha)
 
 
-# Kinds a reader tells apart at a glance: a short symbol ("H⁺", "H₂O", "ATP") printed on its disc; a longer word drawn
-# as textbooks draw it, a sugar as its ring (a hexagon), water as a drop; anything else a dot in its colour. The legend in the corner
-# names each kind moving on the scene, so nothing that moves carries a word.
-SUGARS = {"glucose", "sugar", "sugars", "sucrose", "fructose", "galactose", "lactose", "maltose"}
-WATER = {"water"}
+# Everyday things a flow carries, drawn as their emoji: "money" riding an arrow read as a plain dot (the owner, Nov 2).
+# Rendered once from Noto Color Emoji (icons/NOTICE). Anything else rides as a pill with its name (kind_of).
+ICON_DIR = Path(__file__).resolve().parent / "icons"
+ICON_WORDS = {
+    **dict.fromkeys(("money", "cash", "taxes", "tax", "loans", "loan", "wages", "payments", "payment", "funds",
+                     "revenue", "profit", "profits", "income", "debt", "spending"), "money"),
+    **dict.fromkeys(("coins", "coin", "gold", "silver"), "coins"),
+    **dict.fromkeys(("bread", "food", "grain", "wheat", "flour"), "bread"),
+    **dict.fromkeys(("goods", "products", "exports", "imports", "supplies", "cargo"), "goods"),
+    **dict.fromkeys(("votes", "vote", "ballots"), "votes"),
+    **dict.fromkeys(("letters", "letter", "messages", "message", "mail"), "letters"),
+    "news": "news",
+    **dict.fromkeys(("people", "workers", "voters", "migrants", "settlers", "citizens", "buyers", "sellers",
+                     "customers", "consumers"), "people"),
+    **dict.fromkeys(("soldiers", "troops", "army"), "soldiers"),
+    "oil": "oil",
+}
+_ICONS: dict[str, skia.Image] = {}
+
+
+def icon_of(label: str) -> str | None:
+    """The icon a flow carrying `label` is drawn as ("borrowed money": money), or None."""
+    words = label.strip().lower().split()
+    return (ICON_WORDS.get(" ".join(words)) or ICON_WORDS.get(words[-1])) if words else None
+
+
+def _icon(name: str) -> skia.Image:
+    if name not in _ICONS:
+        _ICONS[name] = skia.Image.MakeFromEncoded(skia.Data.MakeWithCopy((ICON_DIR / f"{name}.png").read_bytes()))
+    return _ICONS[name]
 
 
 def kind_of(label: str) -> str:
-    """How a particle carrying `label` is drawn: "sugar", "water", "symbol" or "dot"."""
-    if carried(label):  # short enough to print on the particle itself: "H⁺", "H₂O", "ATP"
-        return "symbol"
-    plain = label.strip().lower()
-    return "sugar" if plain in SUGARS else "water" if plain in WATER else "dot"
-
-
-def _kind_path(kind: str, x: float, y: float, r: float) -> skia.Path:
-    path = skia.Path()
-    if kind == "sugar":  # pointy-topped, a little wider than a dot so it reads as the same size
-        corners = [(x + 1.15 * r * math.cos(math.radians(30 + 60 * k)), y + 1.15 * r * math.sin(math.radians(30 + 60 * k)))
-                   for k in range(6)]
-        path.moveTo(*corners[0])
-        for corner in corners[1:]:
-            path.lineTo(*corner)
-        path.close()
-    elif kind == "water":  # a drop: a point on top, round below
-        path.moveTo(x, y - 1.3 * r)
-        path.cubicTo(x + 1.05 * r, y - 0.15 * r, x + 1.05 * r, y + r, x, y + r)
-        path.cubicTo(x - 1.05 * r, y + r, x - 1.05 * r, y - 0.15 * r, x, y - 1.3 * r)
-        path.close()
-    else:
-        path.addCircle(x, y, r)
-    return path
+    """How a particle carrying `label` is drawn: "icon", its emoji, for an everyday thing (icon_of), else "word", a
+    pill with its name on it, "H⁺" or "electrons". Every particle says what it is: a dot named in a key in the corner
+    was gone before anyone could read the key (the owner, Nov 2)."""
+    return "icon" if icon_of(label) else "word"
 
 
 def draw_kind(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,
               size: float = 1.0) -> None:
-    """One particle of the kind `label` names (kind_of), at `size` of a lead particle: a symbol's disc, a sugar's
-    hexagon, water's drop or a dot, in its colour with a white halo and a darker ring, so it reads on any colour."""
+    """One particle of the kind `label` names (kind_of), at `size` of a lead particle: its emoji on a white disc, so
+    it reads on any picture, or a pill in its colour with its name."""
     if alpha <= 0.01:
         return
-    kind = kind_of(label)
-    if kind == "symbol":
+    if kind_of(label) == "word":
         draw_marker(canvas, at, color, label, alpha, size)
         return
     r = PARTICLE_R * size
-    canvas.drawPath(_kind_path(kind, at[0], at[1], r),
-                    skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2 * HALO * size,
-                               Color=with_alpha(0xFFFFFFFF, alpha)))
-    canvas.drawPath(_kind_path(kind, at[0], at[1], r), skia.Paint(AntiAlias=True, Color=argb(color, alpha)))
-    canvas.drawPath(_kind_path(kind, at[0], at[1], r - 1.25 * size),
-                    skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=2.5 * size,
-                               Color=argb(darken(color, 3.0), alpha)))
-
-
-LEGEND_FONT = 22.0
-LEGEND_ICON = 0.7  # its particles, at this share of their size on the picture
-LEGEND_ROW = 38.0
-LEGEND_PAD = 14.0
-LEGEND_GAP = 12.0  # between a row's particle and its name
-LEGEND_BG = 0xD91B2536  # a dark panel, a little see-through, that reads over any picture
-
-
-def legend_rect(right: float, bottom: float, labels: list[str]) -> Rect:
-    """Where the legend for these kinds sits, its bottom-right corner at (right, bottom)."""
-    f = font("Bold", LEGEND_FONT)
-    icon = 2 * max(MARKER_R, PARTICLE_R) * LEGEND_ICON + max((text_width(font("ExtraBold", MARKER_FONT * LEGEND_ICON), l)
-                                                            for l in labels if kind_of(l) == "symbol"), default=0) * 0.4
-    width = 2 * LEGEND_PAD + icon + LEGEND_GAP + max(text_width(f, label) for label in labels)
-    height = 2 * LEGEND_PAD + LEGEND_ROW * len(labels) - (LEGEND_ROW - 2 * MARKER_R * LEGEND_ICON)
-    return (right - width, bottom - height, right, bottom)
-
-
-def draw_legend(canvas: skia.Canvas, rect: Rect, entries: list[tuple[str, str, float]],
-                arrows: set[str] = frozenset()) -> None:
-    """The key to what moves on the scene: a row for each (colour, kind, alpha), its particle and its name, still in
-    one corner, so the particles themselves carry no words; a short arrow for a kind in `arrows`, which travels as
-    hand-off arrows (draw_handoff)."""
-    shown = max((alpha for _, _, alpha in entries), default=0.0)
-    if shown <= 0.01:
-        return
-    x0, y0, x1, y1 = rect
-    canvas.drawRRect(rounded(rect, 12), skia.Paint(AntiAlias=True, Color=with_alpha(LEGEND_BG, shown)))
-    f = font("Bold", LEGEND_FONT)
-    icon_r = max(MARKER_R, PARTICLE_R) * LEGEND_ICON
-    icon_w = (x1 - x0) - 2 * LEGEND_PAD - LEGEND_GAP - max(text_width(f, label) for _, label, _ in entries)
-    for k, (color, label, alpha) in enumerate(entries):
-        cy = y0 + LEGEND_PAD + icon_r + k * LEGEND_ROW
-        if label in arrows:
-            mid, half = x0 + LEGEND_PAD + icon_w / 2, icon_r * 1.6
-            draw_handoff(canvas, (mid - half, cy), (mid + half, cy), color, alpha, size=LEGEND_ICON)
-        else:
-            draw_kind(canvas, (x0 + LEGEND_PAD + icon_w / 2, cy), color, label, alpha, LEGEND_ICON)
-        draw_text(canvas, label, x0 + LEGEND_PAD + icon_w + LEGEND_GAP, cy + cap_height(f) / 2, f,
-                  with_alpha(0xFFFFFFFF, alpha))
+    canvas.drawCircle(at[0], at[1], 2.0 * r, skia.Paint(AntiAlias=True, Color=with_alpha(0xFFFFFFFF, 0.92 * alpha)))
+    side = 3.2 * r  # a picture of a thing reads only bigger than a dot
+    canvas.drawImageRect(_icon(icon_of(label)), skia.Rect.MakeXYWH(at[0] - side / 2, at[1] - side / 2, side, side),
+                         skia.SamplingOptions(skia.FilterMode.kLinear, skia.MipmapMode.kLinear),
+                         skia.Paint(Alphaf=alpha))
 
 
 def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label: str, alpha: float,
@@ -560,6 +509,12 @@ def draw_marker(canvas: skia.Canvas, at: tuple[float, float], color: str, label:
 
 
 MARKER_MARGIN = 12  # pixels round a marker's sprite for its shadow, which falls a little below it
+
+
+def marker_width(label: str, size: float = 1.0) -> float:
+    """How wide a marker for `label` is drawn, its halo included: a disc for "H⁺", wider for "Na⁺" or "ATP"."""
+    half = max(MARKER_R * size, text_width(font("ExtraBold", MARKER_FONT * size), label) / 2 + MARKER_PAD * size)
+    return 2 * (half + HALO)
 _SPRITES: dict[tuple[str, str, float], skia.Image] = {}
 
 
@@ -691,6 +646,13 @@ def draw_handoff(canvas: skia.Canvas, tail: tuple[float, float], tip: tuple[floa
 ROUTE_DASH = (16.0, 11.0)  # a route arrow's dashes and the gaps between them, frame pixels
 ROUTE_WIDTH = 6.0  # its dashes
 ROUTE_CHEVRON = 18.0  # its single chevron at the end, from tip to each arm's end
+# A route's track, under the arrow gliding along it (draw_route_track): a solid near-black line on a white edge,
+# with its head always on. The faint dotted track in the flow's colour was all a learner saw between glides, and
+# read as no arrow at all (the owner, Nov 2: "black on a white background to make it visible"). The gliding piece
+# keeps the flow's colour and its rider, so two flows on one picture still tell apart.
+TRACK_WIDTH = 4.0
+TRACK_EDGE = 3.0  # its white edge, each side
+TRACK_HEAD = 16.0  # its chevron, from tip to each arm's end
 
 
 def smooth_line(points: list[tuple[float, float]], steps: int = 6) -> list[tuple[float, float]]:
@@ -709,8 +671,46 @@ def smooth_line(points: list[tuple[float, float]], steps: int = 6) -> list[tuple
     return out
 
 
+def draw_route_track(canvas: skia.Canvas, points: list[tuple[float, float]], color: str, alpha: float,
+                     grown: float = 1.0) -> None:
+    """A route's track (frame pixels): a solid near-black line on a white edge, its chevron at its head once it has
+    drawn itself in, drawn `grown` (0-1) of its length from its tail. `color` is the flow's, kept by the arrow
+    gliding along it (draw_route_arrow)."""
+    if alpha <= 0.01 or grown <= 0.01 or len(points) < 2:
+        return
+    line = smooth_line(points)
+    total = sum(math.dist(a, b) for a, b in zip(line, line[1:]))
+    if total < 1.0:
+        return
+    reach, drawn = total * grown, [line[0]]
+    for a, b in zip(line, line[1:]):
+        d = math.dist(a, b)
+        if reach <= d:
+            k = reach / d if d else 0.0
+            drawn.append((a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k))
+            break
+        drawn.append(b)
+        reach -= d
+    path = skia.Path()
+    path.moveTo(*drawn[0])
+    for q in drawn[1:]:
+        path.lineTo(*q)
+    if grown >= 0.999:  # the head, once the whole way is drawn
+        tip = drawn[-1]
+        back = next((q for q in reversed(drawn[:-1]) if math.dist(q, tip) >= TRACK_HEAD), drawn[0])
+        d = math.dist(back, tip) or 1.0
+        ux, uy = (tip[0] - back[0]) / d, (tip[1] - back[1]) / d
+        size = min(TRACK_HEAD, total)
+        path.moveTo(tip[0] - ux * size - uy * size * 0.7, tip[1] - uy * size + ux * size * 0.7)
+        path.lineTo(*tip)
+        path.lineTo(tip[0] - ux * size + uy * size * 0.7, tip[1] - uy * size - ux * size * 0.7)
+    for ink, width in ((with_alpha(0xFFFFFFFF, alpha), TRACK_WIDTH + 2 * TRACK_EDGE), (with_alpha(INK, alpha), TRACK_WIDTH)):
+        canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=width, Color=ink,
+                                         StrokeCap=skia.Paint.kRound_Cap, StrokeJoin=skia.Paint.kRound_Join))
+
+
 def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], color: str, alpha: float,
-                     grown: float = 1.0, phase: float = 0.0) -> None:
+                     grown: float = 1.0, phase: float = 0.0, dashed: bool = True, head: bool = True) -> None:
     """An arrow along a route (frame pixels), as a textbook draws a flow: a dashed line, its corners rounded, ending
     in a single open chevron, in the flow's colour over a white halo (the owner, Nov 1, over a thick solid arrow).
     Drawn `grown` (0-1) of its length from its tail; `phase` (frame pixels) moves the dashes along it, so it reads
@@ -740,7 +740,10 @@ def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], col
     on, off = ROUTE_DASH
     canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=ROUTE_WIDTH, Color=ink,
                                      StrokeCap=skia.Paint.kRound_Cap,
-                                     PathEffect=skia.DashPathEffect.Make([on, off], -(phase % (on + off)))))
+                                     PathEffect=skia.DashPathEffect.Make([on, off], -(phase % (on + off)))
+                                     if dashed else None))
+    if not head:  # something rides its tip instead (a particle at the head of a gliding arrow)
+        return
     tip = drawn[-1]
     size = min(ROUTE_CHEVRON, total * grown)
     back = next((q for q in reversed(drawn[:-1]) if math.dist(q, tip) >= size), drawn[0])
@@ -756,7 +759,7 @@ def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], col
                                          StrokeJoin=skia.Paint.kRound_Join))
 
 
-NOTE_FONT = 0.8  # a note's text, as a share of the labels' size
+NOTE_FONT = 0.95  # a note's text, as a share of the labels' size
 NOTE_PAD = 0.9  # its room each side of the text, as a share of its font size
 
 
@@ -1124,6 +1127,9 @@ POSTIT_GLUE = 0xFFF5D25A  # the strip along its top, a shade darker, where it st
 POSTIT_FONT = 21.0
 POSTIT_PAD = 14.0
 POSTIT_TEXT_W = 210.0  # the widest a line of its note runs, frame pixels
+# A red "!" badge before a note's first line: a correction of the picture, not a label (the owner, Nov 2).
+POSTIT_ISSUE = 0xFFD93025
+POSTIT_BADGE = 0.95  # its diameter, in the note's font size
 POSTIT_TILT = -2.0  # degrees: stuck on by hand
 POSTIT_LINES = 4
 POSTIT_CURL = 18.0  # frame pixels: its top-right corner curls up this far down and in (the owner, Nov 1)
@@ -1135,7 +1141,8 @@ def postit_size(note: str, font_size: float = POSTIT_FONT) -> tuple[float, float
     f = font("SemiBold", font_size)
     lines = wrap(note, f, POSTIT_TEXT_W)[:POSTIT_LINES] or [""]
     width = max(text_width(f, line) for line in lines)
-    return max(width, 3 * font_size) + 2 * POSTIT_PAD, len(lines) * font_size * 1.3 + 2 * POSTIT_PAD + 6
+    badge = font_size * (POSTIT_BADGE + 0.4)  # the "!" badge and its gap, before every line
+    return max(width, 3 * font_size) + badge + 2 * POSTIT_PAD, len(lines) * font_size * 1.3 + 2 * POSTIT_PAD + 6
 
 
 def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_size: float = POSTIT_FONT) -> None:
@@ -1186,8 +1193,14 @@ def draw_postit(canvas: skia.Canvas, rect: Rect, note: str, alpha: float, font_s
                                      MaskFilter=skia.MaskFilter.MakeBlur(skia.kNormal_BlurStyle, 2.5)))
     canvas.drawPath(fold, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_UNDERSIDE, alpha)))
     line_h = font_size * 1.3
+    radius = font_size * POSTIT_BADGE / 2
+    cx, cy = x0 + POSTIT_PAD + radius, y0 + 6 + POSTIT_PAD + 0.5 * line_h
+    canvas.drawCircle(cx, cy, radius, skia.Paint(AntiAlias=True, Color=with_alpha(POSTIT_ISSUE, alpha)))
+    mark = font("Bold", font_size * 0.8)
+    draw_text(canvas, "!", cx - text_width(mark, "!") / 2, cy + font_size * 0.28, mark, with_alpha(0xFFFFFFFF, alpha))
+    left = x0 + POSTIT_PAD + font_size * (POSTIT_BADGE + 0.4)
     for k, line in enumerate(lines):
-        draw_text(canvas, line, x0 + POSTIT_PAD, y0 + 6 + POSTIT_PAD + (k + 0.78) * line_h, f, with_alpha(INK, alpha))
+        draw_text(canvas, line, left, y0 + 6 + POSTIT_PAD + (k + 0.78) * line_h, f, with_alpha(INK, alpha))
     canvas.restore()
 
 

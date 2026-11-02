@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from studio import jobs, knobs, media
+from studio import checks, jobs, knobs, media, styles
 from studio.steps import audio
 from studio.tests import sample_media
 
@@ -128,8 +128,8 @@ def test_the_song_is_one_chunk_per_section_timed_by_its_lines(job, monkeypatch):
     # as long as its lines take to sing: 7 and 10 syllables at 4 a second, and a second's rest each; the
     # one-line sections are held to the 3 s a chunk must last
     assert [c["duration_ms"] for c in chunks] == [6250, 3000, 3000, 3000, 3000, 3000]
-    assert all(c["positive_styles"] == ["upbeat pop", "112 bpm", audio.DICTION] and c["negative_styles"] == ["mumbled vocals"]
-               for c in chunks)
+    assert all(c["positive_styles"] == ["upbeat pop", "112 bpm", audio.DICTION]
+               and c["negative_styles"] == ["mumbled vocals", *audio.AVOID] for c in chunks)
     plan = json.loads((job / audio.plan_path("song")).read_text())
     assert plan["song_id"] == "song123"
     assert [(s["line_ids"], s["start_ms"]) for s in plan["sections"][:2]] == [(["v1-1", "v1-2"], 0), (["c1-1"], 6250)]
@@ -289,6 +289,18 @@ def test_speech_too_long_for_one_call_fails_before_spending_anything(job, monkey
 # --- the song from Lyria on the Gemini API (set to gemini on /admin/studio) -------------------------
 
 
+def test_the_prompt_says_which_sections_are_rapped():
+    # The owner, Nov 2: three songs whose styles said "rapped verses" came back sung all through, the prompt's line
+    # saying "Sing the lines in order".
+    assert audio.delivery(["upbeat pop, 112 bpm"]) == ""  # singing the lyrics in order goes without saying
+    assert audio.delivery(["Latin pop, easygoing rapped verses, a catchy sung chorus, 100 bpm"]) == (
+        "Rap every verse, spoken on the beat, not sung; sing the chorus.")  # cut to "Rap every verse.", it was sung
+    assert audio.delivery(["teen pop, a sung first verse and a rapped second verse"]).startswith("Rap the second verse,")
+    assert audio.delivery(["dance-pop, short sung verses and a rapped bridge"]).startswith("Rap the bridge,")
+    assert all(checks.RAPPED_VERSES.search(style) and "Rap every verse" in audio.delivery([style])
+               for style in styles.SONG_STYLES)
+
+
 def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monkeypatch):
     fake = FakeGemini()
     monkeypatch.setattr(audio, "send", fake)
@@ -300,9 +312,10 @@ def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monk
     assert headers["x-goog-api-key"] == "gemini-key" and "xi-api-key" not in headers
     assert body["generationConfig"] == {"responseModalities": ["AUDIO", "TEXT"]}
     prompt = body["contents"][0]["parts"][0]["text"]
-    # the style, what to avoid and the lyrics: no length and no timings, so the singer takes the time it needs
-    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\nAvoid: mumbled vocals.\nSing the lines in order, section "
-                             "by section. Backing vocals and echoes of the hook are welcome.\n\nLyrics:\n")
+    # the style and the lyrics: nothing to avoid (the owner, Nov 2), no length and no timings, so the singer takes
+    # the time it needs
+    assert prompt.startswith(f"Style: upbeat pop, 112 bpm, {audio.DICTION}.\n\nLyrics:\n")  # a sung style: no more
+    assert "Avoid" not in prompt
     assert "Length" not in prompt and "Structure" not in prompt and "0:0" not in prompt
     assert prompt.endswith("Lyrics:\n[Verse]\nLight lands on the thylakoid\nEach electron hand-off pumps a proton"
                            "\n\n[Chorus]\nProtons flow and ATP grows\n\n[Verse]\nOnly b6f pumps them in"
@@ -490,7 +503,7 @@ def _sound(seconds, *args):
     # a variable-bitrate MP3 with no length header: its length cannot be read from it as it is
     (("-codec:a", "libmp3lame", "-q:a", "0", "-write_xing", "0", "-f", "mp3"), "audio/mpeg"),
 ])
-def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, monkeypatch, sent, mime_type):
+def test_lyrias_song_is_kept_as_an_mp3_of_its_true_length(job, monkeypatch, sent, mime_type):
     song = _sound(6, *sent)
     if "-write_xing" in sent:
         assert abs(DURATION_OF(song) - 6.0) > 0.15  # as sent, its length reads wrong (3% here)
@@ -500,7 +513,9 @@ def test_lyrias_song_is_kept_as_a_constant_bitrate_mp3_of_its_true_length(job, m
     monkeypatch.setattr(audio, "send", FakeGemini(song=song, mime_type=mime_type, speech=speech))
     sing(job, "gemini")
     audio.run(job)
-    assert _probe(job / "audio/song.mp3") == ("mp3", "192000")
+    # A WAV is encoded once, at a constant rate; an MP3 is copied as it was sent, with a length header.
+    assert _probe(job / "audio/song.mp3")[0] == "mp3"
+    assert mime_type == "audio/mpeg" or _probe(job / "audio/song.mp3") == ("mp3", "192000")
     assert _probe(job / "audio/narration.mp3") == ("mp3", "128000")  # Gemini's WAV narration, kept as ElevenLabs' are
     assert abs(DURATION(job / "audio/song.mp3") - 6.0) < 0.1  # the MP3's own padding, a few hundredths
     assert json.loads((job / audio.plan_path("song")).read_text())["mime_type"] == mime_type
@@ -714,3 +729,30 @@ def test_a_gemini_narration_costs_its_tokens_at_the_prices_of_the_day():
     # No count of its own: the audio's length, at 25 tokens a second; neither: no price.
     assert audio.gemini_speech_cost(None, 100.0, datetime.date(2026, 12, 31)) == 0.0225
     assert audio.gemini_speech_cost({"total_output_tokens": "lots"}, None) is None
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+def test_a_song_sent_as_an_mp3_is_kept_frame_for_frame(tmp_path):
+    # Each lossy encode costs some of the sound, and the video's AAC is one more: Lyria's MP3 is copied, not encoded
+    # again (Nov 2), with the length header a copy writes.
+    import subprocess
+
+    import numpy as np
+
+    sent = tmp_path / "sent.mp3"
+    subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "aevalsrc=1.2*sin(2*PI*440*t)+0.05*random(0):s=44100:d=20",
+                    "-codec:a", "libmp3lame", "-q:a", "4", "-write_xing", "0", str(sent)], check=True)
+    kept = tmp_path / "kept.mp3"
+    kept.write_bytes(AS_MP3(sent.read_bytes(), "audio/mpeg", "song"))
+    assert DURATION(kept) == pytest.approx(20.0, abs=0.05)
+
+    def decoded(path):
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-f", "f32le", "-"], capture_output=True,
+                             check=True).stdout
+        return np.frombuffer(raw, np.float32)
+
+    before, after = decoded(sent), decoded(kept)
+    skipped = len(before) - len(after)  # the copy's header tells the decoder to skip the encoder's delay
+    assert 0 <= skipped < 3000
+    assert np.array_equal(before[skipped:skipped + len(after)], after)  # the same frames: nothing encoded again
+    assert np.abs(after).max() > 1.0  # its peaks as sent: the render holds the mix under full scale

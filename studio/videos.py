@@ -8,7 +8,7 @@ lesson's alone whatever it says later.
 The media steps (studio/media.py) run once the lesson is posted, in this order:
 
     art -> locate          at the same time as          audio -> timing
-                then timeline -> render -> upload
+                then timeline -> arrows -> render -> upload
 
 Each branch starts at its first step that is not done. A step that runs makes every
 later one stale, so once either branch has run a step, the timeline, render and
@@ -65,8 +65,8 @@ from studio.run import (BRAIN_FILE, DONE, FAILED, STOPPED, Stop, api_outcome, de
 from studio.schemas import Bundle, FactCheckReport, Request
 
 BRANCHES = (("art", "locate"), ("audio", "timing"))
-TAIL = ("timeline", "render", "upload")
-LOCAL_TAIL = ("timeline", "render")  # a local job has no posted lesson to upload the videos to
+TAIL = ("timeline", "arrows", "render", "upload")
+LOCAL_TAIL = ("timeline", "arrows", "render")  # a local job has no posted lesson to upload the videos to
 STARTED, RUNNING, RECOVER, NONE = "STARTED", "RUNNING", "RECOVER", "NONE"
 UNAVAILABLE = "the videos cannot be made here"  # the code of a run that stopped on unavailable()
 CLAIM = "videos.json"  # {answerId, attempt}: the attempt this machine holds

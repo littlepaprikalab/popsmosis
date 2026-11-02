@@ -78,6 +78,15 @@ def test_a_bundle_that_will_not_fit_its_script_keeps_its_own_facts_and_narration
             assert out.facts == b.facts and not kept["facts"] and kept["narration"]
 
 
+def test_each_sentence_plays_over_the_scene_its_passage_names_where_the_bundle_draws_it(tmp_path):
+    moved = script_data(narration=[{"scene": "synthase", "lines": ["One."]}, {"scene": "elsewhere", "lines": ["Two."]}])
+    out = script.follow(Bundle.model_validate(bundle_data()), script.Script.model_validate(moved), tmp_path)
+    scenes = {d.line_id: d.scene for d in out.direction}
+    assert (scenes["n1"], scenes["n2"]) == ("synthase", "synthase")  # n2 kept its own: no scene "elsewhere"
+    kept = json.loads((tmp_path / script.RECORD).read_text())["kept"]
+    assert kept["scenes_as_written"] == 0  # what the writer did, before the scenes were set
+
+
 def test_without_a_script_the_bundle_is_written_as_before(tmp_path):
     write(tmp_path / "request.json", Request(topic="the light reactions"))
     for answer in (brain.BrainError("no answer"), script_data(narration=[{"scene": "elsewhere", "lines": ["Hi."]}])):

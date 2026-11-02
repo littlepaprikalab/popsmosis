@@ -12,13 +12,16 @@ Writes checks.json beside the bundle.
 
 from __future__ import annotations
 
+import colorsys
 import json
 import re
+import zlib
 from collections import Counter
 from pathlib import Path
 
 from studio.jobs import write
-from studio.schemas import BPM_TAG, SONG_SCENES_MAX, Bundle, CheckReport, Problem, lesson_scenes_max
+from studio.schemas import (BPM_TAG, LESSON_MAX_CHARS, SONG_SCENES_MAX, Bundle, CheckReport, Fact, Problem,
+                            lesson_scenes_max, with_study_tags)
 
 MARKER_MAX = 8  # characters a particle's marker holds ("glucose", "NADPH"); a longer one is dropped
 SYMBOL_LETTERS = 3  # what a particle can carry written on it ("Na⁺", "Ca²⁺", "NAD⁺"): anything longer moves as an arrow
@@ -39,7 +42,7 @@ def run(job: Path) -> CheckReport:
 def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     """Check every line's names and direction; return the repaired bundle and what was found."""
     data = bundle.model_dump()
-    problems = _no_analogy_scene(data) + _settle_song_scenes(data)
+    problems = _no_analogy_scene(data) + _settle_song_scenes(data) + _direct_choruses(data)
     canon = canonical_names(data["scenes"])
     drawn = {scene["id"]: {s["name"] for s in scene["structures"]} for scene in data["scenes"]}
     directions = {d["line_id"]: d for d in data["direction"]}
@@ -64,6 +67,9 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
             _check_direction(line["id"], direction, canon, scene, drawn[scene], heard & drawn[scene], problems)
     _check_builds_up(data, canon, problems)
     _check_stages(data, problems)
+    _check_crowded(data, problems)
+    _check_colours(data, problems)
+    _check_aliases(data, problems)
     _check_side_by_side(data, problems)
     _check_axes(data, problems)
     _check_spins(data, canon, problems)
@@ -73,6 +79,7 @@ def review(bundle: Bundle) -> tuple[Bundle, CheckReport]:
     _check_lyric_style(data, problems)
     _check_key_lines(data, problems)
     problems += _check_tempo(bundle, data["music"])
+    problems += _check_voice(data["music"])
     return Bundle.model_validate(data), CheckReport(problems=problems)
 
 
@@ -192,6 +199,255 @@ def _check_stages(data: dict, problems: list) -> None:
             scene["stage_of"] = ""
 
 
+# A scene's structures, past which it is only recorded: each is one more part to name, find and follow. The light
+# reactions' overview drew 15 on Nov 1: it stayed pale for 30 s or more until each was named, SAM never found 7 of the
+# droplet's 43 parts, and code's colour words ran out (three "yellow", two "teal"). The brief asks a younger audience
+# for two or three; one over passes, as the Moon's phases need the Sun, Earth, the Moon and its orbit.
+STRUCTURES_MAX, YOUNGER_STRUCTURES_MAX = 8, 4
+YOUNGER = re.compile(r"\bages?\s+(\d{1,2})\b|\b(\d{1,2})[\s-]+years?[\s-]+olds?\b|\b(\d{1,2})(?:st|nd|rd|th)[\s-]+grade"
+                     r"|\bgrade\s+(\d{1,2})\b|\b(?:elementary|primary|middle school|kids?|child(?:ren)?)\b", re.I)
+
+
+def younger(audience: str) -> bool:
+    """Whether the droplet is for a younger audience than high school, as the brief has it written: "about age 10",
+    "6th grade", "middle school"; not "high school", "college" or "9th grade"."""
+    found = YOUNGER.search(audience)
+    if not found:
+        return False
+    age, years, grade, grade_after = found.groups()
+    if age or years:
+        return int(age or years) <= 13
+    if grade or grade_after:
+        return int(grade or grade_after) <= 8
+    return True
+
+
+def _check_crowded(data: dict, problems: list) -> None:
+    """A scene with more structures than a learner can follow is recorded, for the prompt: which parts to leave out
+    is the writer's to say."""
+    most = YOUNGER_STRUCTURES_MAX if younger(data["audience"]) else STRUCTURES_MAX
+    for scene in data["scenes"]:
+        if len(scene["structures"]) > most:
+            problems.append(Problem(line_id=f"scene:{scene['id']}", rule="crowded", repaired=False,
+                                    detail=f"draws {len(scene['structures'])} structures, over {most}"))
+
+
+# Hue bands in degrees, for colour_word. Purples run past 290 (#9C27B0 is 291) and pinks to 345 (#F06292 is
+# 340): with the bands at 290 and 335, round 17 asked for a purple Roman Empire as "light pink" and its pink
+# civil wars as "red", and the label "Civil wars" went on the Empire. Cyan is its own since Nov 1: the light
+# reactions' water (#00ACC1) was "teal" like the carbon dioxide beside it (#00897B), and the picture drew two alike
+# teal balls.
+HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (182, "teal"), (197, "cyan"), (250, "blue"),
+        (310, "purple"), (345, "pink"), (360, "red"))
+# A mid-tone orange this dark is brown, as everyone names it: ATP synthase's #A0703C, the Bastille's #A86B32 and a
+# friar's robe were "orange" to the illustrator while the writer called them brown (Nov 1).
+BROWN_VALUE = 0.72
+
+
+def colour_word(color_hex: str) -> str:
+    """A colour as everyday words, which image and segmentation models know: "#90BE6D" -> "light green". The
+    illustrator's only word for a structure's colour (art.paint_prompt), and SAM's (_recolour_sam_phrases)."""
+    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
+    if saturation < 0.15:
+        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
+    name = next(word for limit, word in HUES if hue * 360 < limit)
+    if (name == "orange" and value < BROWN_VALUE) or (name == "red" and value < 0.55):
+        return "brown"
+    if value < 0.4:
+        return f"dark {name}"
+    if saturation < 0.5 and value > 0.6:
+        return "pink" if name == "red" else f"light {name}"  # light red is what everyone calls pink (#FFC0CB)
+    return name
+
+
+# A colour as a sam_phrase names it ("orange lobe", "man in red", "golden yellow flashlight", "pale green fluid"): an
+# everyday colour word, maybe with a shade before it or a second hue after it.
+_HUE_WORDS = "red|orange|brown|yellow|green|blue|purple|pink|grey|gray"
+_COLOUR_WORDS = (_HUE_WORDS + "|gold|golden|amber|lime|olive|teal|cyan|turquoise|aqua|navy|indigo|violet|lavender"
+                 "|magenta|coral|salmon|crimson|scarlet|maroon|silver|white|black|tan|beige")
+COLOUR_NAME = re.compile(rf"\b(?:(?:light|dark|pale|bright|deep|soft|vivid)[\s-]+)?(?:{_COLOUR_WORDS})"
+                         rf"(?:[\s-]+(?:{_HUE_WORDS}))?\b", re.I)
+
+
+def _listed(names: list[str]) -> str:
+    return ", ".join(names[:-1]) + " and " + names[-1] if len(names) > 1 else "".join(names)
+
+
+def _recolour_sam_phrases(data: dict, problems: list) -> None:
+    """Each sam_phrase names its structure's colour in the word the illustrator is told (colour_word), the writer's
+    noun kept: since Nov 1 the picture's description names no colour, so the painting has the colour code names, and
+    SAM asked for the writer's "lime ball" looked for a colour the picture was never asked for ("NADPH yellow"). A
+    phrase with no colour word is left as it is. Repaired, and recorded."""
+    changed = []
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            phrase, word = structure["sam_phrase"], colour_word(structure["color_hex"])
+            found = COLOUR_NAME.search(phrase)
+            if found and re.sub(r"[\s-]+", " ", found.group(0).lower()) != word:
+                structure["sam_phrase"] = phrase[:found.start()] + word + phrase[found.end():]
+                changed.append(f'"{phrase}" as "{structure["sam_phrase"]}"')
+    if changed:
+        problems.append(Problem(line_id="structures", rule="colours", repaired=True,
+                                detail="SAM asks for each colour as the illustrator is told it: "
+                                       + "; ".join(dict.fromkeys(changed))))
+
+
+def _recolour_image_prompts(data: dict, problems: list) -> None:
+    """A colour the picture's words give a part, right before its name ("a white potassium iodide"), is the one the
+    Colours line gives it (art.paint_prompt): the writer was asked to name no colour there and named one in 61 of 62
+    scenes (Nov 1), a quarter of them not the part's own. The longest name wins ("thylakoid lumen" over "thylakoid").
+    Repaired, and recorded."""
+    changed = []
+    for scene in data["scenes"]:
+        colours = {fold(name): s["color_hex"] for s in scene["structures"] for name in (s["name"], *s["aliases"])}
+        if not colours:
+            continue
+        names = "|".join(re.escape(n) for n in sorted(colours, key=len, reverse=True))
+        pattern = re.compile(rf"({COLOUR_NAME.pattern})(\s+)({names})\b", re.I)
+
+        def own(found: re.Match) -> str:
+            word = colour_word(colours[fold(found.group(3))])
+            if re.sub(r"[\s-]+", " ", found.group(1).lower()) != word:
+                changed.append(f'"{found.group(0)}" as "{word} {found.group(3)}"')
+            return word + found.group(2) + found.group(3)
+
+        scene["image_prompt"] = pattern.sub(own, scene["image_prompt"])
+    if changed:
+        problems.append(Problem(line_id="scenes", rule="colours", repaired=True,
+                                detail="the picture's words give each part the colour the illustrator is told: "
+                                       + "; ".join(dict.fromkeys(changed))))
+
+
+def _check_colours(data: dict, problems: list) -> None:
+    """Code finds each structure by its colour and names it to the illustrator (colour_word), the picture's only word
+    for it: two structures of one scene in one colour word are painted alike. Two structures anywhere drawn alike, in
+    one colour word as one thing ("king in blue"), read as one (Nov 1: Louis XVI and Charles I, and the bridge sang
+    "Same broke king"); one colour for two different things (an orange tower and an orange chest) does not. The
+    sam_phrases are made to name their colours so first. The rest is recorded, for the prompt: which part should
+    change is the writer's to say."""
+    _colour_for_ions(data, problems)
+    _recolour_sam_phrases(data, problems)
+    _recolour_image_prompts(data, problems)
+    looks: dict[tuple[str, str], list[str]] = {}
+    for scene in data["scenes"]:
+        by_word: dict[str, list[str]] = {}
+        for structure in scene["structures"]:
+            word = colour_word(structure["color_hex"])
+            by_word.setdefault(word, []).append(structure["name"])
+            alike = looks.setdefault((word, " ".join(fold(structure["sam_phrase"]).split())), [])
+            if structure["name"] not in alike:
+                alike.append(structure["name"])
+        for word, names in by_word.items():
+            if len(names) > 1:
+                problems.append(Problem(line_id=f"scene:{scene['id']}", rule="colours", repaired=False,
+                                        detail=f'{_listed(names)} are {"both" if len(names) == 2 else "all"} '
+                                               f'"{word}" to the illustrator'))
+    for (_, phrase), names in looks.items():
+        if len(names) > 1:
+            problems.append(Problem(line_id="structures", rule="colours", repaired=False,
+                                    detail=f'{_listed(names)} are drawn alike, each a "{phrase}", so they read as one'))
+
+
+def _names_kinds(name: str, kinds) -> list[str]:
+    """The kinds a structure's name is named for, by symbol or by word: "Sodium channel" and "Na⁺ channel", Na⁺."""
+    return [kind for kind in kinds if any(re.search(rf"(?<!\w){re.escape(word)}s?(?!\w)", fold(name))
+                                          for word in (kind.casefold(), *CARRIED_WORDS.get(kind, ())))]
+
+
+def is_kind(name: str, kind: str) -> bool:
+    """A structure that is the carried thing itself ("Oxygen", "Water molecules", "ATP"), not one named for it."""
+    said = " ".join(re.sub(r"\b(ions?|molecules?|particles?)\b", " ", fold(name)).split())
+    return said.removesuffix("s") in {kind.casefold(), *CARRIED_WORDS.get(kind, ())} or said == kind.casefold()
+
+
+def _colour_for_ions(data: dict, problems: list) -> None:
+    """A part named for one ion takes that ion's colour, the colour of its dots in every lesson (MARKER_COLOURS): the
+    sodium channel the purple of Na⁺. On Nov 1 the pump's sodium channel was green, as the K⁺ dots were, and its
+    potassium channel purple, as Na⁺, so the colours taught the swap. A part named for two (the sodium-potassium
+    pump) keeps its own. A part this lands on, the same hue on one of its scenes, moves to the free hue nearest its
+    own (Nov 2: the potassium channel's green met the writer's green membrane, and K⁺'s the green phosphate). Every
+    other part keeps the writer's colour: moved off the hue of any ion on its scene, the light reactions' sunlight
+    went grey, and their overview, fifteen parts, had no hue left. Repaired, and recorded."""
+    changed, ionic = [], {}
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            ions = _names_kinds(structure["name"], IONS)
+            if len(ions) == 1:
+                ionic[structure["name"]] = ions[0]
+                if (new := MARKER_COLOURS[ions[0]]) != structure["color_hex"]:
+                    changed.append(f'{structure["name"]} {colour_word(structure["color_hex"])} as {colour_word(new)}')
+                    structure["color_hex"] = new
+    scenes_of: dict[str, list[dict]] = {}
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            scenes_of.setdefault(structure["name"], []).append(scene)
+    moved: dict[str, str] = {}
+    for name, scenes in scenes_of.items():
+        if name in ionic:
+            continue
+        own = next(s["color_hex"] for s in scenes[0]["structures"] if s["name"] == name)
+        hit = {_hue(MARKER_COLOURS[ionic[s["name"]]]) for scene in scenes for s in scene["structures"]
+               if s["name"] in ionic}
+        if _hue(own) not in hit:
+            continue
+        taken = {_hue(moved.get(s["name"], s["color_hex"])) for scene in scenes for s in scene["structures"]
+                 if s["name"] != name}
+        free = sorted((c for c in FREE_COLOURS if _hue(c) not in taken), key=lambda c: _hue_gap(c, own))
+        if free:
+            moved[name] = free[0]
+            changed.append(f"{name} {colour_word(own)} as {colour_word(free[0])}, clear of the ion's")
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            structure["color_hex"] = moved.get(structure["name"], structure["color_hex"])
+    if changed:
+        problems.append(Problem(line_id="structures", rule="colours", repaired=True,
+                                detail="a part named for an ion is painted in its colour: "
+                                       + "; ".join(dict.fromkeys(changed))))
+
+
+# What a part an ion's colour lands on is painted instead: the free one nearest its own hue (_colour_for_ions).
+FREE_COLOURS = ("#F57C1F", "#8B5CF6", "#E0559A", "#3B82F6", "#22A355", "#A0522D", "#DC3545", "#E6B422", "#1FA6A0",
+                "#4CC9F0", "#9AA5B1")
+
+
+def _hue(color_hex: str) -> str:
+    """A colour's hue as the illustrator is told it, the shade dropped: "light purple" and "purple" read alike."""
+    return colour_word(color_hex).split()[-1]
+
+
+def _hue_gap(a: str, b: str) -> float:
+    """How far apart two colours' hues are, in degrees round the wheel; a grey is far from every hue."""
+    (ha, sa, _), (hb, sb, _) = (colorsys.rgb_to_hsv(*(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5))) for c in (a, b))
+    if sa < 0.15 or sb < 0.15:
+        return 360.0
+    gap = abs(ha - hb) * 360
+    return min(gap, 360 - gap)
+
+
+def _words(text: str) -> set[str]:
+    return set(re.findall(r"[^\W_]+", fold(text)))
+
+
+def _check_aliases(data: dict, problems: list) -> None:
+    """An alias that is a word of the topic reveals its structure every time the topic is said: the light reactions'
+    Sunlight, with the alias "light", was revealed by every "light reactions" (Nov 1). Not a word of the structure's own
+    name ("pump" for the sodium-potassium pump), which means it. Recorded, not repaired: without the alias, a part the
+    lines call by that word alone would never be revealed."""
+    topic, seen = fold(data["topic"]), set()
+    for scene in data["scenes"]:
+        for structure in scene["structures"]:
+            for alias in structure["aliases"]:
+                word = " ".join(fold(alias).split())
+                if not word or (structure["name"], word) in seen or _words(word) <= _words(structure["name"]):
+                    continue
+                if re.search(rf"(?<!\w){re.escape(word)}(?!\w)", topic):
+                    seen.add((structure["name"], word))
+                    problems.append(Problem(line_id="structures", rule="alias", repaired=False,
+                                            detail=f'"{alias}", an alias of {structure["name"]}, is a word of the '
+                                                   f'topic: every line that says "{data["topic"]}" reveals it'))
+
+
 AXIS_MAX = 28  # characters an axis name holds ("Number of molecules"); a longer one would run across the graph
 
 
@@ -262,14 +518,23 @@ def syllables(line: str) -> int:
 LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
 LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
-# A style that raps one section says which (studio/styles.py, Nov 1): only that section's lines run longer.
-RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped)? second verse\b|\bsecond verse rapped\b", re.I)
-RAPPED_BRIDGE = re.compile(r"\brap(?:ped)? bridge\b|\bbridge rapped\b", re.I)
+# A style that raps one section says which (a learner's own; every style the studio picks raps both verses, Nov 2):
+# only that section's lines run longer. However the
+# writer puts it: "a rapped second verse", "raps the second verse", "the bridge is rapped".
+RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?(?:second verse|verse (?:2|two))\b"
+                                 r"|\b(?:second verse|verse (?:2|two))\s+(?:is\s+|gets\s+)?rapped\b", re.I)
+RAPPED_BRIDGE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?bridge\b"
+                           r"|\bbridge\s+(?:is\s+|gets\s+)?rapped\b", re.I)
+# A style that raps every verse (Nov 2: all of the rotation's, studio/styles.py), its chorus sung: "rapped verses",
+# "rap verses", "rap-sung verses", "raps both verses", "the verses are rapped", "hip-hop verses, rapped in a ... flow".
+RAPPED_VERSES = re.compile(r"\brap(?:ped|ping|-sung)?\s+verses\b|\braps?\s+(?:both|all|its|the)\s+verses\b"
+                           r"|\bverses,?\s+(?:are\s+)?rapped\b", re.I)
 
 
 def rapped_lines(data: dict) -> set[str]:
-    """The ids of the lines the style raps: its second verse or its bridge when it names one, every line when it
-    raps otherwise ("rapped verses", "make it rap"), none when it does not."""
+    """The ids of the lines the style raps: every verse when it raps its verses, its second verse or its bridge when
+    it names one (none, for a rapped bridge in a song with no bridge), every line when it raps otherwise ("make it
+    rap"), none when it does not. A chorus is always sung (the bundle brief)."""
     style = " ".join((data.get("music") or {}).get("positive_styles") or [])
     if not RAPPED.search(style):
         return set()
@@ -281,12 +546,15 @@ def rapped_lines(data: dict) -> set[str]:
         else:
             runs.append((line["section"], [line["id"]]))
     picked: set[str] = set()
-    if RAPPED_SECOND_VERSE.search(style):
+    named = RAPPED_SECOND_VERSE.search(style) or RAPPED_BRIDGE.search(style) or RAPPED_VERSES.search(style)
+    if RAPPED_VERSES.search(style):
+        picked |= {i for section, ids in runs if section == "verse" for i in ids}
+    elif RAPPED_SECOND_VERSE.search(style):
         verses = [ids for section, ids in runs if section == "verse"]
         picked |= set(verses[1]) if len(verses) > 1 else set()
     if RAPPED_BRIDGE.search(style):
         picked |= {i for section, ids in runs if section == "bridge" for i in ids}
-    return picked if picked else {line["id"] for line in lyrics}
+    return picked if named else {line["id"] for line in lyrics}
 # A line that narrates the picture or the song instead of being sung ("Zoom inside to the chloroplast"). "Next up"
 # and "here comes" announce a section ("next up, the bridge"); before anything else they are sung: the link to the
 # next topic the second pre-chorus sings ("Next up, the power rule", "Next up: estar plus an -ando"), or a part
@@ -357,6 +625,27 @@ def _stems(text: str) -> set[str]:
     return {w[:5] for w in re.findall(r"[a-z0-9]+", fold(text).replace("'", "")) if w not in PLAIN and len(w) > 2}
 
 
+def chorus_spans(sections: list[str]) -> list[list[int]]:
+    """The positions of each chorus's lines, chorus 1 first, from the lyrics' sections in order. A run of chorus lines
+    can hold two: in a song with no bridge (a topic that is not a system that fails) the second chorus runs straight
+    into the last, which opens on its summary couplet. So a later run holds as many choruses as chorus 1's length
+    fits in it, the last aligned with the run's end, after its couplet."""
+    runs, start = [], None
+    for i, section in enumerate([*sections, ""]):
+        if section == "chorus" and start is None:
+            start = i
+        elif section != "chorus" and start is not None:
+            runs.append(list(range(start, i)))
+            start = None
+    if not runs:
+        return []
+    size, spans = len(runs[0]), [runs[0]]
+    for run in runs[1:]:
+        count = max(1, len(run) // size)
+        spans += [run[k * size:(k + 1) * size] for k in range(count - 1)] + [run[-size:]]
+    return spans
+
+
 def song_shape_problems(bundle: Bundle) -> list[Problem]:
     """The song against the rules a check can count, for any subject: the chorus three times; a title line that
     names real things from the droplet's own idea, not pronouns; a chorus that says the idea; verses no longer
@@ -372,7 +661,7 @@ def song_shape_problems(bundle: Bundle) -> list[Problem]:
             runs[-1][1].append(line)
         else:
             runs.append((line.section, [line]))
-    choruses = [lines for section, lines in runs if section == "chorus"]
+    choruses = [[bundle.lyrics[i] for i in span] for span in chorus_spans([line.section for line in bundle.lyrics])]
     if len(choruses) < CHORUSES:
         problems.append(Problem(line_id="music", rule="lyric-style", repaired=False,
                                 detail=f"the chorus is sung {len(choruses)} times, not {CHORUSES}"))
@@ -423,6 +712,95 @@ def style_problems(bundle: Bundle, asked: str) -> list[Problem]:
                                 detail=f"the song is at {bundle.music.bpm} bpm, not the {found.group(1)} bpm the "
                                        f"learner asked for"))
     return problems
+
+
+def repair_once(bundle: Bundle, study_guide: str = "") -> tuple[Bundle, list[Problem]]:
+    """What the writer is no longer asked to get right, set once by the bundle step before its last code checks: every
+    chorus sung as the first, a head count said as a common answer, only quotes the study guide holds, and the tags
+    every video carries (schemas.with_study_tags). Not part of review(), which runs again after the fact-check: these
+    change words, and a word changed after the check would go out unchecked. The same bundle when nothing changes."""
+    data = bundle.model_dump()
+    problems = _same_choruses(data)
+    for line in data["narration"]:
+        if (text := _counted(line["text"])) != line["text"]:
+            problems.append(Problem(line_id=line["id"], rule="head-count", repaired=True,
+                                    detail=f'"{line["text"]}" counts who makes the mistake; "{text}" instead'))
+            line["text"] = text
+    lesson = _counted(data["lesson_markdown"])
+    if lesson != data["lesson_markdown"] and len(lesson) <= LESSON_MAX_CHARS:
+        problems.append(Problem(line_id="lesson_markdown", rule="head-count", repaired=True,
+                                detail="a sentence counted who makes the mistake; said as a common answer instead"))
+        data["lesson_markdown"] = lesson
+    facts, unquoted = held_to_guide(bundle.facts, study_guide)
+    data["facts"] = [fact.model_dump() for fact in facts]
+    data["tags"] = with_study_tags(bundle.tags, bundle.audience, bundle.sung).model_dump()
+    settled = Bundle.model_validate(data)
+    return (bundle if settled == bundle else settled), problems + unquoted
+
+
+def _same_choruses(data: dict) -> list[Problem]:
+    """Every later chorus sung word for word as the first, so a learner can sing it back after two hearings: a line
+    that differs takes the first chorus's words, names and fact, keeping its own id and direction. Only a chorus as
+    long as the first, opening and ending as it does, is held to it: any other may not line up with it."""
+    lyrics = data["lyrics"]
+    spans = chorus_spans([line["section"] for line in lyrics])
+    first = [lyrics[i] for i in spans[0]] if spans else []
+    problems = []
+    for span in spans[1:]:
+        later = [lyrics[i] for i in span]
+        if len(later) != len(first) or not (_same(later[0]["text"], first[0]["text"])
+                                            and _same(later[-1]["text"], first[-1]["text"])):
+            continue
+        for want, line in zip(first, later):
+            if line["text"] != want["text"]:
+                problems.append(Problem(line_id=line["id"], rule="chorus", repaired=True,
+                                        detail=f'sang "{line["text"]}" where the first chorus sings "{want["text"]}"; '
+                                               "sung as the first"))
+                line.update(text=want["text"], names=list(want["names"]), fact_id=want["fact_id"])
+    return problems
+
+
+def _same(a: str, b: str) -> bool:
+    return " ".join(fold(a).split()) == " ".join(fold(b).split())
+
+
+# A head count no fact supports: the facts call a mistake common, they never count who makes it. "Most people say
+# yes." went from the script prompt's own example into four droplets on Oct 31, "Many people say yes." into the
+# derivative's on Nov 1, and the fact-check rewrote each. At the start of a sentence, said as a common answer, or a
+# common guess, instead; any other head count is still the fact-check's.
+HEAD_COUNT = re.compile(r"(^|[.!?:]\s+|\n\s*(?:[-*>]\s+|\d+\.\s+)?)(?:most|many|lots of|a lot of)\s+"
+                        r"(?:people|students|learners)\s+(?:would\s+)?(?:(?:say|answer|guess)\s+(yes|no)\b"
+                        r"|(?:think|believe)\s+that\s+)", re.I)
+
+
+# What a head count is said as, one picked by the sentence so the same text always reads the same: one form stamped on
+# every droplet read as a template (Nov 1, "A common answer is yes" in all twelve).
+COMMON_ANSWER = ("A common answer is {}", "The usual guess is {}", "It's tempting to say {}")
+COMMON_GUESS = ("A common guess is that ", "It's tempting to think that ", "It's easy to believe that ")
+
+
+def _counted(text: str) -> str:
+    def said(m: re.Match) -> str:
+        pick = zlib.crc32(text[max(0, m.start() - 80):m.end() + 80].encode())  # the question before it, too
+        if m[2]:
+            return m[1] + COMMON_ANSWER[pick % len(COMMON_ANSWER)].format(m[2].lower())
+        return m[1] + COMMON_GUESS[pick % len(COMMON_GUESS)]
+    return HEAD_COUNT.sub(said, text)
+
+
+def held_to_guide(facts: list[Fact], study_guide: str) -> tuple[list[Fact], list[Problem]]:
+    """Each fact's source_quote only when it is copied from the study guide (3+ words, factcheck.quotes_guide): the
+    audit is told it is the guide's words, so one the guide does not hold, or any with no guide, is left out."""
+    from studio.steps.factcheck import quotes_guide  # the fact-check imports this module
+
+    kept, problems = [], []
+    for fact in facts:
+        if fact.source_quote.strip() and not quotes_guide(fact.source_quote, study_guide):
+            problems.append(Problem(line_id=fact.id, rule="source-quote", repaired=True,
+                                    detail=f'"{fact.source_quote}" is not copied from the study guide; left out'))
+            fact = fact.model_copy(update={"source_quote": ""})
+        kept.append(fact)
+    return kept, problems
 
 
 ESSENCE_WORDS_MAX = 20
@@ -480,9 +858,39 @@ def key_line_problems(bundle: Bundle) -> list[Problem]:
     return problems
 
 
+def _place_question(data: dict, problems: list) -> None:
+    """The first key line, the question (it ends in "?"), where each video asks it: on the song's first line, and on
+    the narration's last question before it leaves the hook. The writer put it on the narration's first sentence, a
+    fact two sentences before the narrator asks (the pump's and the derivative's, Nov 1). Not onto a line another
+    key line has."""
+    if not data["key_lines"] or not data["key_lines"][0]["text"].strip().endswith("?"):
+        return
+    question, others = data["key_lines"][0], data["key_lines"][1:]
+    first = data["lyrics"][0]["id"] if data["lyrics"] else ""
+    if first and first != question["from_line"] and first not in {k["from_line"] for k in others}:
+        problems.append(Problem(line_id=first, rule="key-line", repaired=True,
+                                detail="the question's key line is on the song's first line"))
+        question["from_line"] = first
+    scenes = {d["line_id"]: d["scene"] for d in data["direction"]}
+    ids = [s["id"] for s in data["scenes"]]
+    hook = "hook" if "hook" in ids else (ids[0] if ids else "")  # as the timeline has it (timeline.hook_scene)
+    opening = data["narration"][:1]  # the lesson opens on the hook, whatever its first line's direction says
+    for n in data["narration"][1:]:
+        if scenes.get(n["id"]) != hook:
+            break
+        opening.append(n)
+    asked = [n["id"] for n in opening if n["text"].rstrip(" \"'”’").endswith("?")]
+    if asked and asked[-1] != question.get("from_narration") \
+            and asked[-1] not in {k.get("from_narration", "") for k in others}:
+        problems.append(Problem(line_id=asked[-1], rule="key-line", repaired=True,
+                                detail=f'the question\'s key line is on {asked[-1]}, where the narrator asks it'))
+        question["from_narration"] = asked[-1]
+
+
 def _check_key_lines(data: dict, problems: list) -> None:
     """Key lines, one to a lyric line: one on a line the song does not have, or a second on the same line, is left
     out of the song video (and dropped, with no narration sentence either), since the screen could not show it."""
+    _place_question(data, problems)
     if not data["lyrics"]:  # the lesson video alone: they are placed on the narration
         _check_narrated_key_lines(data, problems)
         return
@@ -539,9 +947,34 @@ def _check_narrated_key_lines(data: dict, problems: list) -> None:
     data["key_lines"] = sorted(kept, key=lambda k: order[k["from_narration"]])
 
 
+def _direct_choruses(data: dict) -> list[Problem]:
+    """Every chorus directed as the first, so the refrain reads as one: a later chorus's line that sings a line of
+    the first word for word (matched from the end, as the last chorus may open with lines of its own) takes its
+    direction, all but its caption. The brief asked for it, and the five choruses of Nov 1 did; this makes it sure.
+    Before the lines are checked, so each is held to what is named by its own place in the song."""
+    lyrics, problems = data["lyrics"], []
+    directions = {d["line_id"]: d for d in data["direction"]}
+    spans = chorus_spans([line["section"] for line in lyrics])
+    for span in spans[1:]:
+        for i, j in zip(reversed(spans[0]), reversed(span)):
+            first, later = directions.get(lyrics[i]["id"]), directions.get(lyrics[j]["id"])
+            sung = {" ".join(fold(lyrics[k]["text"]).split()) for k in (i, j)}
+            if not first or not later or len(sung) > 1:
+                continue
+            copied = {**json.loads(json.dumps(first)), "line_id": later["line_id"], "caption": later["caption"]}
+            if copied != later:
+                later.clear()
+                later.update(copied)
+                problems.append(Problem(line_id=later["line_id"], rule="motion", repaired=True,
+                                        detail=f"directed as {first['line_id']}, the first chorus's same line"))
+    return problems
+
+
 def motion_problems(bundle: Bundle) -> list[Problem]:
     """The song's direction against the planning rule a check can count: every chorus directed alike (compared from
-    its end, since the last one opens with a summary couplet). Recorded, not repaired; the bundle step adds them.
+    its end, since the last one opens with a summary couplet). The review directs a line the first chorus sings word
+    for word as the first does (_direct_choruses), so what is left is a line of its own. Recorded, not repaired; the
+    bundle step adds them.
 
     How many lines in a row hold still is not counted. The bundle prompt moves only what travels, and the spotlight
     and the camera carry a scene where nothing does, so a run of still lines is no mistake. Counted until Oct 31, a run of five flagged a chorus summing up the Moon's phases over the overview,
@@ -549,13 +982,7 @@ def motion_problems(bundle: Bundle) -> list[Problem]:
     scene that never moved was never flagged, so the count pushed toward dots for their own sake."""
     directions = {d.line_id: d for d in bundle.direction}
     problems = []
-    choruses, current = [], []
-    for i, line in enumerate(bundle.lyrics):
-        if line.section == "chorus":
-            current.append(line.id)
-        if current and (i + 1 == len(bundle.lyrics) or bundle.lyrics[i + 1].section != "chorus"):
-            choruses.append(current)
-            current = []
+    choruses = [[bundle.lyrics[i].id for i in span] for span in chorus_spans([line.section for line in bundle.lyrics])]
     for later in choruses[1:]:
         for first_id, later_id in zip(reversed(choruses[0]), reversed(later)):
             a, b = directions.get(first_id), directions.get(later_id)
@@ -592,12 +1019,16 @@ def _check_meanings(data: dict, canon: dict[str, str], problems: list) -> None:
 
 def _check_conversions(data: dict, canon: dict[str, str], problems: list) -> None:
     """Each conversion names a structure, as its name, with something going in and something coming out, each as a
-    textbook prints it. One structure shows one conversion; any other is left out."""
+    textbook prints it, none of them the structure itself: "rock → magma" beside Magma is a cycle's form turning into
+    another, not a reaction there. One structure shows one conversion; any other is left out."""
     kept, seen = [], set()
     for conv in data["conversions"]:
         name = canon.get(fold(conv["structure"]))
         sides = [[notation(x) for x in conv[side] if notation(x)] for side in ("inputs", "outputs")]
-        why = ("names no structure" if not name else "repeats a structure's conversion" if name in seen else
+        itself = name and any(canon.get(fold(x)) == name for side in ("inputs", "outputs")
+                              for x in [*conv[side], *map(notation, conv[side])])
+        why = ("names no structure" if not name else "names the structure itself" if itself else
+               "repeats a structure's conversion" if name in seen else
                "has nothing going in or coming out" if not all(sides) else
                f"has more than {CONVERT_MAX} on one side" if any(len(side) > CONVERT_MAX for side in sides) else
                "has a name too long to print" if any(len(x) > MARKER_MAX for side in sides for x in side) else "")
@@ -645,6 +1076,27 @@ def _check_builds_up(data: dict, canon: dict[str, str], problems: list) -> None:
     data["builds_up"] = kept
 
 
+# No song is shouted (the owner, Nov 2): the writer kept adding shouted gang vocals to its choruses. Each becomes
+# backing vocals. And how a sung part goes is "catchy", never "melodic" (the owner, Nov 2).
+VOICE_SWAPS = ((re.compile(r"\b(?:shouted\s+)?gang\s+vocals?\b|\bgroup\s+shouts?\b|\bshouts\b", re.I), "backing vocals"),
+               (re.compile(r"\bshouted\s+", re.I), ""),
+               (re.compile(r"\bmelodic\b", re.I), "catchy"))
+
+
+def _check_voice(music: dict) -> list[Problem]:
+    """The styles without shouting, and "catchy" for "melodic" (VOICE_SWAPS)."""
+    styles = []
+    for style in music["positive_styles"]:
+        for pattern, instead in VOICE_SWAPS:
+            style = pattern.sub(instead, style)
+        styles.append(style)
+    if styles == music["positive_styles"]:
+        return []
+    music["positive_styles"] = styles
+    return [Problem(line_id="music", rule="song-style", repaired=True,
+                    detail="the style asks for no shouted vocals, and catchy rather than melodic singing")]
+
+
 def _check_tempo(bundle: Bundle, music: dict) -> list[Problem]:
     """The styles name one tempo, the one the song's sections are timed by (Music.bpm), so the
     music generator is never asked for one pace and given section lengths for another. A bundle with no song has none."""
@@ -667,6 +1119,15 @@ def flows_of(direction: dict) -> list[dict]:
     """Everything moving on a line, as data: the main flow first (Direction.flows)."""
     main = [{"particles": direction["particles"], "carries": direction["carries"]}] if direction["particles"] else []
     return main + [f for f in direction.get("also", []) if f["particles"]]
+
+
+# Each common kind of particle in its own colour, the same in every lesson (timeline.marker_colour), and the words a
+# line calls it by: the renderer finds a count by them ("three sodium"), and _colour_for_ions a part named for an ion.
+MARKER_COLOURS = {"H⁺": "#F2C230", "e⁻": "#4CC9F0", "O₂": "#E8EEF5", "H₂O": "#7FD1FF", "CO₂": "#B8C2CC",
+                  "ATP": "#FF6B6B", "Na⁺": "#B79CFF", "K⁺": "#8EE06B", "Ca²⁺": "#F4E1C1", "Cl⁻": "#5EF2C4"}
+IONS = {"Na⁺": ("sodium",), "K⁺": ("potassium",), "H⁺": ("hydrogen", "proton"), "Ca²⁺": ("calcium",),
+        "Cl⁻": ("chloride",)}
+CARRIED_WORDS = {**IONS, "e⁻": ("electron",), "O₂": ("oxygen",), "CO₂": ("carbon dioxide",), "H₂O": ("water",)}
 
 
 def notation(carries: str) -> str:

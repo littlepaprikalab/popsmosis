@@ -49,7 +49,6 @@ from typing import Sequence
 from pydantic import BaseModel, ValidationError
 
 ROLES = ("brain", "helper", "judge", "drawer")
-PROVIDERS = ("claude", "meta")
 
 CLAUDE = {
     # Opus 5.5 defaults to effort medium and its thinking cannot be turned off;

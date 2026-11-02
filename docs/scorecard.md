@@ -237,6 +237,83 @@ time, scored 3.75 against 3.79: about that much is the judge. Read through:
   and "see" only after "now" or "let's", and "look" only when it points somewhere ("look at", "look inside").
 - Chorus lines with particles: 79 of 198 (70 of 204 in the evening), with the summing-up rule gone.
 
+### Again, after the principles brief
+
+Run again in the session after the writers' prompts were rebuilt on seven teaching principles and cut back (commit
+a6063f3): no "same trick in another topic" or "what comes next in the course" fact, one pre-chorus, a bridge only for
+a system that can fail, a case only where the idea applies to something new, the everyday comparison optional and said
+once, motion only where a line names it, and examples no longer drawn from these 12 topics. The learner test and the
+narration edit were skipped, as in every in-session run. Judged by Opus beside the same baseline droplets:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 1, after the trim | 12 of 12 | 4.52 | 3.75 | 3 / 12 |
+| Nov 1, principles brief | 12 of 12 | 4.33 | 3.64 | 3 / 14 |
+
+By criterion, against the trim: frame 2.75 (4.75), key lines 4.75 (4.00), hook 4.58 (4.58), why chain 4.67 (4.67),
+accuracy 4.75 (4.75), singability 4.00 (4.08), lesson 4.83 (4.83). The whole drop is the frame: the rubric rewards one
+comparison carried through the song, the lesson and the narration, which this brief no longer asks for. Without the
+frame the new droplets score 4.60 against the baseline's 3.57. The key lines went up most. Read through:
+
+- **No second topic.** The French Revolution's core idea is "France's king went broke, and the Third Estate turned a
+  fight over who pays into a fight over who rules"; no England, Charles I or pressure cooker. Its misconception is a
+  real one ("did the royal court's luxury at Versailles empty the treasury?"), sung as "Not the court, its slice is
+  small / War debt eats up half of it all". Romeo and Juliet's title is the play itself, "We see the end, but Romeo
+  can't", where it was "Don't open that door, Romeo".
+- **The comparison is used in 4 of 12, once each:** the pump's water tower, the light reactions' solar charger, the
+  p-value's trial, Romeo and Juliet's surprise party. The judge marks the others down for having none (the French
+  Revolution 1, the subjunctive and the Moon 2).
+- **Bridges only where a system can fail:** the pump's stroke, the light reactions' weedkiller, the catalyst's boiled
+  potato, the rocket's engine quitting, supply and demand's price cap. The other seven songs run 37 to 40 lines. The
+  derivative dropped its corner of |x|; the subjunctive moved its rotation's rapped bridge to its second verse.
+- **A false alarm:** on every song without a bridge the last two choruses run together, and song_shape_problems counts
+  them as one ("the chorus is sung 2 times, not 3").
+- **A new tic:** the French narration says "Back on the line" four times, about a timeline it never sets up, from the
+  script prompt's "back to the overview between close-ups".
+- **Three errors:** Juliet waking moments too late called situational irony as if a twist could only be that; the light
+  reactions song singing "hydrogen" for hydrogen ions; the rocket coasting "because nothing pushes it", leaving out
+  gravity. The fact-check, which this run leaves out, is where these would be caught.
+- **Still long:** the lessons run 512 to 697 words against the 300 to 500 asked, and the narrations 366 to 417 of 420.
+
+#### Judged again, the frame criterion as "connect"
+
+The rubric's frame criterion now grades connecting to what the learner knows (principle 2): building on an earlier
+idea or an everyday experience, a comparison where it helps, matched and said once, and none needed for a story in time
+(commit with this note). The same 12 pairs judged again by Opus, blind:
+
+| Judging | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Rubric with frame | 12 of 12 | 4.33 | 3.64 | 3 / 14 |
+| Rubric with connect | 12 of 12 | 4.64 | 3.58 | 2 / 14 |
+
+Connect 4.75 against the baseline's 3.67; the French Revolution 4 ("a story in time, and most steps are tied to things a
+learner can picture"), the derivative 5 ("It builds on the slope the learner already knows"). The other criteria moved by
+a tenth or two between the two judgings, the judge's own noise: hook 4.58, why chain 4.67, key lines 4.83, accuracy 4.83,
+singability 3.92, lesson 4.92. Runs before Nov 1's evening compare with these on six criteria, not seven.
+
+### Again, after the couplet rule (Nov 2)
+
+Run again in the session after the day's prompt and check changes: verses rhyme in couplets, every section (the one
+change to the song rules; tested first on 3 topics, singing preferred 6 of 6, teaching 3 to 3); the lesson "under 700
+words"; the script prompt without its "A common answer is yes" and "Back in the nephron" examples; the checks in
+`bundle.run`'s order (`held_to_guide`, `repair_once` and a second review, as CLAUDE.md now says). Judged by Opus beside
+the same baseline droplets, with the connect criterion:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 1, principles brief (connect) | 12 of 12 | 4.64 | 3.58 | 2 / 14 |
+| Nov 2, couplet rule | 12 of 12 | 4.58 | 3.52 | 4 / 13 |
+
+By criterion (Nov 1 in brackets): hook 4.58 (4.58), connect 4.75 (4.75), why chain 4.67 (4.67), key lines 4.67 (4.83),
+accuracy 4.67 (4.83), singability 4.00 (3.92), lesson 4.75 (4.92): the same within the judge's noise. Every song scored
+4 for singing, and its verses now rhyme in couplets ("Outside the cell, the sodium's packed / Inside, potassium's
+stacked", "Priests and nobles skip the big tax / So the weight lands on our backs"); a few still reach for a tag ("The
+king pulls back his troops for real", "Not called since sixteen-fourteen at all"). The four errors: the derivative's
+distance curve "at its highest" when the car stops, the light reactions' weed that "goes hungry" (the pipeline's
+fact-check, which the scorecard skips, corrected the same slip in that night's video), a p-value lesson that calls 60
+heads "far out" right after "most runs between 40 and 60", and the subjunctive's "no change of subject, no que clause"
+stated as a rule without exceptions.
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
@@ -257,3 +334,30 @@ Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current 
   an improvement; a harder transfer question would.
 - **The judge's error list is still noisy:** about a third of its 22 entries say nothing needs
   correcting. Trust the accuracy score and its reason over the count.
+
+## In-session run, Nov 2
+
+After the day's changes: one picture check, every style rapping its verses, the song style's close, natural voice
+and its instruments for variety (not the punchier rap wording, which came after this run's prompts were built), no
+avoid list, and the code repair that makes shouted or gang vocals backing vocals. Judged by Opus beside the same
+baseline droplets; the learner test and the narration edit skipped, as before.
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 1, evening | 12 of 12 | 4.43 | 3.79 | 9 / 12 |
+| Nov 2 | 12 of 12 | 4.51 | 3.68 | 9 / 14 |
+
+By criterion (new / baseline): hook 4.33 / 4.33, connect 4.83 / 3.75, why chain 4.67 / 4.00, key lines 4.67 / 2.83,
+accuracy 4.42 / 4.08, singability 4.00 / 3.08, lesson 4.67 / 3.67. Within the noise of one run nothing went down
+against Nov 1's evening; key lines went up (4.17 to 4.67). Read through:
+
+- **Every song raps its verses**, the chorus sung, with lines like "Fuel and liquid oxygen, you pack 'em both inside /
+  They flow to the chamber and they burn, no air supplied" (the rocket) and "Every verb's got a mood, and the mood
+  shows how / Indicative's the fact: vienes, you're coming now" (Spanish).
+- **Narration ran over the script's 300 to 420 words in four topics**, and no check says so: the catalyst 585, the
+  pump 520, the derivative 451, the p-value 439. Three writers noticed it themselves.
+- **Two choruses sing their title line three times in five lines**: "Broke king calls, Third Estate claims power"
+  (with "So he calls the Estates-General" between) and "Know the ending, feel the dread".
+- **The errors are song lines** the fact-check is there for: "Nothing turns to CO2" (a poisoned converter),
+  "Moon slides in front of the Sun", "The far side's dark", "Keeps the water out" (the pump), "Each step pumps
+  hydrogen in" (only one carrier pumps).

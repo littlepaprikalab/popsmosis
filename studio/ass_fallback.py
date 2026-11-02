@@ -56,7 +56,8 @@ def make(job: Path) -> Path:
         command = ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", "art.txt", "-i", str(song.resolve()),
                    "-vf", video_filter, "-map", "0:v", "-map", "1:a", "-t", f"{timing.duration:.3f}",
                    "-c:v", "libx264", "-preset", "veryfast", "-tune", "stillimage", "-crf", "23",
-                   "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(partial.resolve())]
+                   "-af", media.PEAK_LIMIT,  # the song as sent goes past full scale, as the render's mix would
+                   *media.AAC, "-movflags", "+faststart", str(partial.resolve())]
         done = subprocess.run(command, cwd=work, capture_output=True, text=True)
         if done.returncode:
             raise media.StepFailed(f"ffmpeg could not make the fallback video: {done.stderr.strip()[-500:]}")

@@ -6,7 +6,8 @@ and locations.json, so there is nothing to do. With painted art, a scene the art
 
 With painted art, Gemini 3.1 Flash Image's or Muse Image's, SAM 3.1 finds each structure (studio/muse.py):
 
-1. SAM is given the structure's sam_phrase. Every match at least MIN_CONFIDENCE sure
+1. SAM is given the structure's sam_phrase, which names its colour in the word the picture
+   was painted from (checks._recolour_sam_phrases). Every match at least MIN_CONFIDENCE sure
    makes up its mask (a structure the picture shows twice keeps both).
 2. If none is that sure, SAM is asked again in plainer words (phrases()): the
    structure's colour and the phrase's last word ("blue complex"), then its colour and
@@ -53,6 +54,7 @@ from pathlib import Path
 import numpy as np
 
 from studio import brain, checks, ledger, media, muse, repair, svg
+from studio.checks import colour_word
 from studio.jobs import write
 from studio.schemas import (
     Box,
@@ -65,7 +67,6 @@ from studio.schemas import (
     locations_problems,
 )
 from studio.steps import art
-from studio.steps.art import colour_word
 
 MIN_CONFIDENCE = 0.5
 WORKERS = 4  # scenes located at once
@@ -184,9 +185,7 @@ def find_and_repair(job: Path, bundle, scene: Scene, ask):
     located, how, wrong = find_all(job, scene, ask)
 
     def check(job: Path, bundle, scene: Scene) -> art.ArtCheck:
-        return art.ArtCheck(**ask("helper", art.check_prompt(bundle, scene), art.ArtCheck,
-                                  [job / media.art_path(scene.id)], system=art.CHECK_PROMPT,
-                                  label=f"repair check {scene.id}"))
+        return art.look(job, bundle, scene, ask, f"repair check {scene.id}")[0]
 
     return located, how, wrong, repair.repair(job, bundle, scene, located, ask, check)
 

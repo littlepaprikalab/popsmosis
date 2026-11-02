@@ -136,7 +136,7 @@ def test_a_run_makes_and_scores_each_topic_and_saves_the_tables(tmp_path):
     saved = json.loads((tmp_path / "scorecard.json").read_text())
     assert saved["about"]["commit"] == ABOUT["commit"] and len(saved["topics"]) == 2
     table = (tmp_path / "scorecard.md").read_text()
-    assert "| Topic | Level | Checks | Learner | Hook | Frame |" in table
+    assert "| Topic | Level | Checks | Learner | Hook | Connect |" in table  # the rubric's frame, renamed Nov 1
     assert "| one | AP |" in table and "pass 2/3" in table and "- **Hook 4.** hook reason" in table
 
 

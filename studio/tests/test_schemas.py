@@ -4,7 +4,7 @@ import pytest
 from pydantic import BaseModel, Field, ValidationError
 
 from studio.brain import SCHEMA_KEYWORDS, strict_schema
-from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle, bundle_of, tag_of
+from studio.schemas import Bundle, FactAudit, FactCheck, LessonBundle, Tags, bundle_of, tag_of, with_study_tags
 from studio.tests.sample import bundle_data, lesson_bundle_data
 
 
@@ -69,6 +69,23 @@ def test_a_tag_reads_the_same_cleaned_twice():
     for raw in ["A¨", "#A´b", "J̌ǰ", "ΐΪ́", "ﬁzz", "#Straße", "İstanbul", "ΟΔΟΣ_Σ"]:
         assert tag_of(tag_of(raw)) == tag_of(raw)
     assert tag_of("A¨") == "\u00e4"
+
+
+def test_a_tag_that_helps_no_one_find_the_video_is_dropped():
+    data = bundle_data()
+    data["tags"]["song"] = ["#fyp", "#ForYou", "#For You Page", "#viral", "#osmosis"]
+    assert Bundle.model_validate(data).tags.song == ["osmosis"]
+
+
+def test_the_study_tags_come_after_the_writers_own_with_room_kept_for_them():
+    tags = Tags(song=[f"t{n}" for n in range(10)], lesson=["osmosis", "explained"])
+    assert with_study_tags(tags, "high school") == Tags(song=[*[f"t{n}" for n in range(8)], "studysong", "studytok"],
+                                                        lesson=["osmosis", "explained", "examprep", "studytok"])
+    # A younger audience has no exam ahead; the lesson video alone has no song to tag.
+    for younger in ("about age 10", "6th grade", "middle school", "kids"):
+        assert with_study_tags(Tags(lesson=["osmosis"]), younger, sung=False) == Tags(
+            lesson=["osmosis", "explained", "studytok"])
+    assert "examprep" in with_study_tags(Tags(), "9th grade").lesson
 
 
 def test_a_bundle_written_before_tags_has_none():

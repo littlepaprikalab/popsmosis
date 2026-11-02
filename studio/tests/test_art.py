@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 import skia
 
-from studio import jobs, media, svg
+from studio import checks, jobs, media, svg
 from studio.schemas import Axes, Bundle, Locations, Structure, locations_problems
 from studio.steps import art, locate
 from studio.tests import sample_media
@@ -595,7 +595,7 @@ LOOK_CODE = ("style", "_style_graph", "_style_axes", "_style_structure", "readab
              "_deepest")
 LOOK_NUMBERS = ("PAGE", "LINE_WIDTH", "BAND", "AXIS_WIDTH", "AXIS_SHARE", "POINT_WIDTH", "ARROW", "CONTRAST_MIN",
                 "REPAINTED", "AXIS_INK", "ROLE", "NAMED", "EDGE_SHADE")
-LOOK_PINNED = ("4", "10c235ccbe46")  # 4: a textbook page: paper, dark axes, readable colours, no glow or grid
+LOOK_PINNED = ("5", "c47c52e1c84f")  # 4: a textbook page: paper, dark axes, readable colours, no glow or grid; 5: points big enough to label
 
 
 def _as_code(function) -> str:
@@ -714,17 +714,83 @@ def test_a_song_picture_drawn_to_scale_is_given_the_lines_sung_over_it():
     assert art._said_over(bundle, bundle.scenes[2]) == ["ATP synthase uses the returning protons to make ATP."]
 
 
-def test_a_science_diagram_labels_its_nonobvious_structures_and_any_other_scene_only_its_parts():
-    # Oct 31: "nonobvious" labelled a membrane's pump, channels, ATP and spaces, and a boat's oarlock and thwart.
+def test_every_scene_but_the_hook_labels_only_its_own_parts_by_the_lessons_names():
+    # Oct 31: "nonobvious" labelled a boat's oarlock and thwart. Nov 1: on a diagram it named the parts in textbook
+    # words the narration never says ("Calvin Cycle"); the list gave every label the narration's word.
     bundle = Bundle.model_validate(bundle_data())
-    scene = bundle.scenes[0]
-    names = ", ".join(s.name for s in scene.structures)
+    scene = bundle.scenes[1]
+    names = ", ".join(f'the {s.sam_phrase} "{s.name}"' for s in scene.structures)
     science = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a thylakoid membrane, "
                                                        "clean scientific style: the membrane across the middle."})
     everyday = scene.model_copy(update={"image_prompt": "Educational textbook illustration of a rowing boat, clean "
                                                         "textbook style: the boat in the centre."})
-    assert art.labels_line(science) == art.LABELS == "Clearly label nonobvious structures. " + art.NO_SLIDE
+    # Each name after what it labels, by the part's look: the painter put "Privileges" off its step given names alone.
+    assert art.labels_line(science) == f"Label only: {names}. {art.BOXED} Label nothing else. {art.NO_SLIDE}"
     line = art.labels_line(everyday)
-    assert line == (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, "
-                    f"furniture or background objects. {art.NO_SLIDE}")
+    assert line == (f"Label only: {names}. {art.BOXED} Label nothing else: no room, furniture or background "
+                    f"objects. {art.NO_SLIDE}")
     assert art.paint_prompt(bundle, everyday).endswith(line)
+
+
+def test_the_hook_labels_nothing_whatever_its_style():
+    # Nov 1: the pump's hook, a teenager on a couch, came back labelled "Body" and "Couch".
+    bundle = Bundle.model_validate(bundle_data())
+    hook = bundle.scenes[0]
+    for prompt in ("A teenager on a couch, clean textbook style.", "A leaf in the sun, clean scientific style."):
+        scene = hook.model_copy(update={"image_prompt": prompt})
+        assert art.labels_line(scene) == art.NO_LABELS
+        assert art.paint_prompt(bundle, scene).endswith("Colours: Thylakoid green. " + art.NO_LABELS)
+
+
+def test_the_picture_draws_none_of_the_particles_the_video_moves_over_it():
+    # Nov 1: the pump's painter added its own Na⁺ and K⁺ balls, brown and blue, beside the video's purple and green.
+    data = bundle_data()
+    data["scenes"][1]["structures"].append({"name": "Oxygen", "aliases": [], "sam_phrase": "white ball",
+                                            "color_hex": "#E8EEF5"})
+    moves = {"n1": ("H⁺", "O₂", "sugar"), "n2": ("H⁺",)}
+    for d in data["direction"]:
+        if d["line_id"] in moves:
+            first, *also = moves[d["line_id"]]
+            d.update(particles=["Thylakoid", "Cytochrome b6f"], carries=first,
+                     also=[{"particles": ["Cytochrome b6f", "Thylakoid"], "carries": c} for c in also])
+    bundle = Bundle.model_validate(data)
+    line = "Draw no H⁺ particles anywhere: the video adds its own, moving."
+    assert art.loose_line(bundle, bundle.scenes[1]) == line  # Oxygen is a part of it; sugar no common kind
+    assert line in art.paint_prompt(bundle, bundle.scenes[1])
+    assert art.loose_line(bundle, bundle.scenes[0]) == ""  # nothing moves on the hook
+    assert [checks.is_kind(n, k) for n, k in (("Water molecules", "H₂O"), ("Carbon dioxide", "CO₂"),
+                                              ("ATP synthase", "ATP"), ("Electron transport chain", "e⁻"))] == [
+        True, True, False, False]
+
+
+def test_the_picture_is_told_each_colour_in_one_everyday_word():
+    # Nov 1: the writer's "brown ATP synthase" and "cyan water" were "orange" and "teal" in the Colours line.
+    bundle = Bundle.model_validate(bundle_data())
+    scene = bundle.scenes[1].model_copy(update={"structures": [
+        Structure(name="ATP synthase", aliases=[], sam_phrase="brown mushroom", color_hex="#A0703C"),
+        Structure(name="Water", aliases=[], sam_phrase="cyan ball", color_hex="#00ACC1"),
+        Structure(name="Carbon dioxide", aliases=[], sam_phrase="teal ball", color_hex="#00897B")]})
+    assert "Colours: ATP synthase brown, Water cyan, Carbon dioxide teal." in art.paint_prompt(bundle, scene)
+
+
+def test_a_biology_picture_is_asked_for_in_campbell_biologys_style():
+    # The owner (Nov 2): Campbell-style pictures look much better. Added at paint time, never in the bundle, where the
+    # fact-check struck the book's name as a claim.
+    bundle = Bundle.model_validate(bundle_data())
+    science = "Educational textbook illustration of a thylakoid membrane, clean scientific style: the membrane across."
+    everyday = "Educational textbook illustration of a rowing boat, clean textbook style: the boat in the centre."
+    biology = bundle.model_copy(update={"course": "AP Biology"})
+    assert art.campbell_styled(biology, science).startswith(
+        f"Educational textbook illustration of a thylakoid membrane, {art.CAMPBELL_STYLE}:")
+    assert art.campbell_styled(biology, everyday) == everyday  # a hook or any everyday sight keeps its own style
+    physics = bundle.model_copy(update={"course": "Physics"})
+    assert art.campbell_styled(physics, "Educational textbook illustration of a circuit, clean scientific style.") == (
+        "Educational textbook illustration of a circuit, clean scientific style.")
+    # Any other science course, when the picture draws a cell's parts.
+    sixth = bundle.model_copy(update={"course": "6th grade science"})
+    assert art.CAMPBELL_STYLE in art.campbell_styled(
+        sixth, "Educational textbook illustration of a plant cell's chloroplasts, clean scientific style.")
+    scene = bundle.scenes[1].model_copy(update={"image_prompt": science})
+    assert art.CAMPBELL_STYLE in art.paint_prompt(biology, scene)
+    assert art.labels_line(scene).startswith("Label only:") and art.labels_line(scene).endswith(
+        f"Label nothing else. {art.NO_SLIDE}")  # still read as a science scene

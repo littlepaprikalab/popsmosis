@@ -59,8 +59,11 @@ How to run it, for each topic in `studio/scorecards/topics.json`:
   `script.as_prompt(script)` after it for the bundle), and the schemas from
   `brain.strict_schema(Script)` and `brain.strict_schema(Bundle)`. It validates each answer
   against `Script` / `Bundle` and fixes only what fails validation, never for quality.
-- **The checks:** run the bundle step's code checks on its answer, as `bundle.run` does
-  (`script.follow`, `checks.review`, then the problem functions it adds). Free.
+- **The checks:** run the bundle step's code checks on its answer, in `bundle.run`'s order:
+  `checks.held_to_guide` on the script's facts before the bundle prompt is built, then
+  `script.follow`, `checks.review`, `checks.repair_once` (with the topic's study guide),
+  `checks.review` again when that changed anything (keeping the first report's problems), and
+  the problem functions it adds. Free.
 - **The judge:** one Opus subagent (the session's model, the owner's choice on Oct 31; it was Sonnet before,
   and runs are compared only on one judge) grades the droplet as `scorecard.droplet_text` prints it,
   against `studio/prompts/rubric.md`, blind beside the latest real run's droplet for the same

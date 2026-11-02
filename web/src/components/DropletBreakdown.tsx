@@ -16,6 +16,7 @@ const STEP_LABELS: Record<string, string> = {
   audio: 'Make the audio', // the song and the voice, or the voice alone (STUDIO_VIDEOS=lesson): its models say which
   timing: 'Time the words',
   timeline: 'Plan the videos',
+  arrows: 'Place the arrows',
   render: 'Render',
   upload: 'Upload',
 };
@@ -81,11 +82,12 @@ const ORDER = Object.keys(STEP_LABELS);
 // The steps the page expects before any has run. The post is left out: it makes the answer the
 // lesson's bill is sent with, so a bill never has it.
 const LESSON_STEPS = ['request', 'bundle', 'audit', 'factcheck'];
-const VIDEO_STEPS = ['art', 'locate', 'audio', 'timing', 'timeline', 'render', 'upload'];
+const VIDEO_STEPS = ['art', 'locate', 'audio', 'timing', 'timeline', 'arrows', 'render', 'upload'];
 // What comes right after each step: the art and the audio are made side by side, and meet at the timeline.
 const NEXT: Record<string, string[]> = {
   request: ['bundle'], bundle: ['audit'], audit: ['factcheck'], factcheck: ['post', 'art', 'audio'], post: ['art', 'audio'],
-  art: ['locate'], locate: ['timeline'], audio: ['timing'], timing: ['timeline'], timeline: ['render'], render: ['upload'],
+  art: ['locate'], locate: ['timeline'], audio: ['timing'], timing: ['timeline'], timeline: ['arrows'],
+  arrows: ['render'], render: ['upload'],
 };
 
 type Status = 'done' | 'running' | 'failed' | 'waiting';

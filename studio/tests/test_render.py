@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+import skia
 import pytest
 
 skia = pytest.importorskip("skia", reason="skia-python is not installed (or its libEGL is missing)")
@@ -20,6 +21,7 @@ from studio.render.encode import EncodeError, audio_filter, encode, encode_all, 
 from studio.render.layouts import LAYOUTS
 from studio.render.renderer import Renderer, RenderError, SceneArt
 from studio.schemas import (
+    Arrows,
     AudioClip,
     Beat,
     Box,
@@ -28,6 +30,7 @@ from studio.schemas import (
     Crowd,
     Locations,
     Particles,
+    PlacedArrow,
     Point,
     Reveal,
     Route,
@@ -92,6 +95,34 @@ def test_a_structure_never_named_on_its_scene_is_drawn_as_it_is_not_as_a_ghost(j
     assert song._ghosts("overview", reveals, 6.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
 
 
+def test_one_spotlight_hands_over_to_the_next_without_a_gap(job, song):
+    # The owner, Nov 2: "the labels are flickering". The old spotlight went out as the line began, the new one came
+    # in only as its part was sung, and the wash over everything else, painted labels too, lifted and fell between.
+    import dataclasses
+    i = next(i for i, plan in enumerate(song.plans) if i and song.plans[i - 1].spot and plan.spot)
+    beat, before, kept = song.timeline.beats[i], song.plans[i - 1], song.plans
+    plans = list(song.plans)
+    plans[i - 1] = dataclasses.replace(before, prev_spot=before.spot)  # the old one fully on
+    plans[i] = dataclasses.replace(song.plans[i], prev_spot=before.spot, spot="Somewhere else",
+                                   spot_at=beat.t0 + 0.8)  # the new one's part sung 0.8 s into its line
+    song.plans = plans
+    try:
+        for t in np.linspace(beat.t0, beat.t0 + 0.8 + renderer_module.SPOT_S, 15):
+            assert sum(song._spots(i, t).values()) == pytest.approx(1.0, abs=0.01)
+    finally:
+        song.plans = kept
+
+
+def test_a_painting_that_is_no_diagram_is_shown_as_painted_before_its_parts_are_named(job, song):
+    # A pile of orange pumpkins washed white until each is named looked wrong (Nov 2): no part of it starts pale.
+    reveals = {"Thylakoid": 5.0}
+    song.timeline.unwashed = ["overview"]
+    try:
+        assert song._ghosts("overview", reveals, 4.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
+    finally:
+        song.timeline.unwashed = []
+
+
 def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
     _, plain = art.compose({}, {})
@@ -102,6 +133,21 @@ def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     assert (lit_px[int(b6f.y), int(b6f.x)] == plain_px[int(b6f.y), int(b6f.x)]).all()
     assert lit_px[int(thylakoid.y), int(thylakoid.x)][:3].min() > plain_px[int(thylakoid.y), int(thylakoid.x)][:3].min() + 80
     assert art.compose({}, {"Cytochrome b6f": 1.0})[1] is lit  # composed once, then reused
+
+
+def test_two_spotlights_crossing_wash_the_rest_as_one_does(job):
+    # The owner, Nov 2: the labels flickered. Two half washes, one over the other, washed the rest less than one
+    # whole one, so it lifted on every line as one spotlight handed over to the next.
+    art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
+    gone = art._surface(alpha_only=True)  # a spotlight on a part off this picture: it washes all of it
+    gone.getCanvas().clear(skia.ColorWHITE)
+    art.masks = {**art.masks, "Elsewhere": art.masks["Thylakoid"]}
+    art._spots["Elsewhere"] = gone.makeImageSnapshot()
+    _, one = art.compose({}, {"Cytochrome b6f": 1.0})
+    _, crossing = art.compose({}, {"Cytochrome b6f": 0.5, "Elsewhere": 0.5})
+    at = located(job, "overview", "Thylakoid").label_anchor  # washed by both, lit by neither
+    one_px, crossing_px = (image.toarray()[int(at.y), int(at.x)][:3].astype(int) for image in (one, crossing))
+    assert np.abs(one_px - crossing_px).max() <= 2
 
 
 def test_on_dark_art_the_ghost_and_the_spotlight_fade_toward_its_background(tmp_path):
@@ -304,75 +350,108 @@ def test_particles_keep_going_across_lines_and_wait_for_their_stops(job):
     assert painted[0].runs == [(0.0, 4.0)]
 
 
-def test_particles_travel_between_the_structures_and_fade_in(job):
+def off_line(q, line) -> float:
+    """How far point q is from the polyline, frame pixels."""
+    far = math.inf
+    for (ax, ay), (bx, by) in zip(line, line[1:]):
+        dx, dy = bx - ax, by - ay
+        k = max(0.0, min(1.0, ((q[0] - ax) * dx + (q[1] - ay) * dy) / ((dx * dx + dy * dy) or 1.0)))
+        far = min(far, math.dist(q, (ax + k * dx, ay + k * dy)))
+    return far
+
+
+def tail_of(renderer, t, flow):
+    """The flow's arrow on the frame at t, tail to head, as the renderer draws it off a graph (_flow_line)."""
+    return [renderer.art_to_frame(t, *q) for q in renderer._flow_line("overview", flow)]
+
+
+def test_off_a_graph_a_flow_is_an_arrow_with_its_particle_jiggling_behind_its_tail_and_fades_in(job, monkeypatch):
+    # Particles running from stop to stop across a painted picture went sideways and through the membrane (the owner,
+    # Nov 1): a flow is now an arrow along its way, and one particle of what it carries jiggles in place at its tail.
     flow = Renderer(job, flowing([flow_beat(0, 8)]))  # no labels, so nothing is drawn over the particle
     still = Renderer(job, flowing([flow_beat(0, 8, path=[])]))
-    stops = flow._path_points("overview", FLOW)  # a stop in a space sits beside its neighbour on the path
-    leg = max(math.dist(*stops) / renderer_module.FLOW_SPEED, renderer_module.FLOW_MIN_LEG_S)
-    held = renderer_module.FLOW_PAUSE_S + leg + 0.2  # the lead particle is holding at cytochrome b6f
+    moving = flow.timeline.beats[0].particles[0]
+    # Late in the pause between two glides, when the particle waits at the tail, faded back in.
+    total = renderer_module.routing.length(tail_of(flow, 3.0, moving))
+    piece = min(renderer_module.GLIDE_SHARE * total, renderer_module.GLIDE_MAX)
+    held = (flow.plans[0].runs[0][0] + renderer_module.ROUTE_GROW_S
+            + (total + piece) / renderer_module.glide_speed(total, piece) + 0.9 * renderer_module.GLIDE_PAUSE_S)
+    line = tail_of(flow, held, moving)
+    (tx, ty), (hx, hy) = line[0], line[-1]
     gold = p.rgb("#F2C230")
-    at_b6f = flow.art_to_frame(held, *stops[1])
     frame = flow.frame(held).copy()
 
-    def golden(frame) -> int:  # the particle's gold disc round "H⁺", where it holds
-        x, y = round(at_b6f[0]), round(at_b6f[1])
-        box = frame[y - 20:y + 20, x - 20:x + 20, 2::-1].astype(int)
+    def golden(frame) -> int:  # the particle's gold disc round "H⁺", just behind the tail, away from the arrow
+        box = frame[round(ty) + 4:round(ty) + 60, round(tx) - 40:round(tx) + 40, 2::-1].astype(int)
         return int((np.abs(box - gold).max(2) < 8).sum())
 
+    assert hy < ty  # the sample's flow runs up, from the thylakoid into b6f
     assert golden(frame) > 200
     assert golden(still.frame(held)) < 20
     assert (flow.frame(0.0) == still.frame(0.0)).all()  # they fade in: nothing yet at the start
     flow.frame(1.0)
     assert (flow.frame(held) == frame).all()  # a frame still depends only on its time
 
+    tracks, arrows, dots, kinds = [], [], [], []
+    monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
+    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: arrows.append(points))
+    monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: kinds.append((at, label, size)))
+    places = []
+    for t in (held - 0.2, held):  # both in the pause
+        tracks.clear(), arrows.clear(), kinds.clear()
+        flow.frame(t)
+        [drawn] = tracks
+        assert np.allclose(drawn, tail_of(flow, t, moving))  # its track along the flow's line, tail to head
+        for piece in arrows:  # and the arrow gliding along it, a piece of the same line
+            assert all(off_line(q, drawn) < 2 for q in piece)
+        [(at, label, size)] = kinds
+        assert label == "H⁺" and size == renderer_module.TAIL_SIZE
+        reach = math.dist(at, line[0])  # behind the tail, give or take its jiggle
+        assert abs(reach - (p.MARKER_R + 4)) <= renderer_module.TAIL_JIGGLE_PX * math.sqrt(2) + 1
+        assert (at[0] - tx) * (hx - tx) + (at[1] - ty) * (hy - ty) < 0  # on the far side from the arrow's body
+        places.append(at)
+    assert dots == [] and places[0] != places[1]  # nothing travels; the particle jiggles in its spot
 
-def test_a_marked_particle_is_a_bigger_badge_with_what_it_carries_on_it(job, monkeypatch):
+
+def test_the_particle_at_an_arrows_tail_is_a_badge_with_what_it_carries_even_a_word(job, monkeypatch):
     cyan = "#4CC9F0"
     marked = Renderer(job, flowing([flow_beat(0, 8, label="e⁻", color=cyan)]))
     plain = Renderer(job, flowing([flow_beat(0, 8, label="", color=cyan)]))
-    stops = marked._path_points("overview", FLOW)
-    held = renderer_module.FLOW_PAUSE_S + 0.1  # holding at the thylakoid
-    x, y = marked.art_to_frame(held, *stops[0])
+    held = 3.0
+    shapes, arrows = [], []
+    with monkeypatch.context() as m:  # where the particle is on this frame
+        m.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((at, label, size)))
+        marked.frame(held)
+    [((x, y), label, size)] = shapes
+    assert label == "e⁻" and size == renderer_module.TAIL_SIZE
     badge, dot = marked.frame(held).copy(), plain.frame(held).copy()
 
-    def cyan_across(frame):  # how wide the cyan runs across the particle at its widest, near where it holds
+    def cyan_across(frame):  # how wide the cyan runs across, at its widest, round where the particle sits
         rows = frame[round(y) - 30:round(y) + 30, round(x) - 70:round(x) + 70, 2::-1]  # BGRA to RGB
         return int((np.abs(rows.astype(int) - p.rgb(cyan)).max(2) < 12).sum(1).max())
 
-    assert cyan_across(badge) > cyan_across(dot) + 6  # carrying nothing it is no badge: it moves as a thin arrow
+    assert cyan_across(badge) > cyan_across(dot) + 6  # carrying nothing there is no particle: the thin arrow alone
     ink = badge[round(y) - 6:round(y) + 6, round(x) - 8:round(x) + 8, :3].reshape(-1, 3)
     assert (ink.max(1) < 60).any()  # the dark "e⁻" on it, cyan being light
 
-    # Every particle says what it is: the stream behind the lead is marked too, a little smaller, with no bare dots.
-    shapes, legends, arrows = [], [], []
-    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((label, size)))
-    marked.frame(held + 2.0)
-    assert shapes and {label for label, _ in shapes} == {"e⁻"} and {size for _, size in shapes} >= {1.0}
-
-    # A word never rides a particle: glucose moves as an arrow, and is named, still, in the legend.
+    # A word rides with its name on it too (the owner, Nov 2: a key in the corner was gone before anyone read it):
+    # glucose is a "glucose" pill at the arrow's tail, and no key is drawn.
     shapes.clear()
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: shapes.append((at, label, size)))
     word = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan)]))
-    monkeypatch.setattr(p, "draw_legend", lambda canvas, rect, entries, arrows=(): legends.append((rect, entries)))
-    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: arrows.append(points))
-    times = (held + 1.0, held + 2.0)
-    for t in times:
+    tracks = []
+    monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
+    for t in (held + 1.0, held + 2.0):
         word.frame(t)
-    assert shapes == [] and arrows and word._travels("overview", word.timeline.beats[0].particles[0])
-    assert [[label for _, label, _ in entries] for _, entries in legends] == [["glucose"], ["glucose"]]
-    assert legends[0][0] == legends[1][0]  # in one place
-    # With its one-liner beside the arrow, the key has nothing to add (Nov 1: "→ glucose" stayed on in a corner).
-    legends.clear()
-    said = Renderer(job, flowing([flow_beat(0, 8, label="glucose", color=cyan).model_copy(update={"particles": [
-        f.model_copy(update={"says": "Glucose rides in with sodium"}) for f in flow_beat(0, 8, label="glucose",
-                                                                                         color=cyan).particles]})]))
-    said.frame(held + 1.0)
-    assert legends == []
-    assert p.carried("Ca²⁺") == "Ca²⁺" and p.carried("NAD⁺") == "NAD⁺" and p.carried("NADPH") == ""  # 3 letters
-    assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water")] == [
-        "symbol", "symbol", "symbol", "dot", "water"]  # a short symbol is printed on its particle
+    assert {label for _, label, _ in shapes} == {"glucose"} and tracks
+    assert word._travels("overview", word.timeline.beats[0].particles[0])
+    assert not hasattr(p, "draw_legend")
+    assert [p.kind_of(label) for label in ("H⁺", "H₂O", "ATP", "urea", "water", "glucose", "electrons")] == ["word"] * 7
 
 
-def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
+def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "CROWDS", True)  # switched off since Nov 1; the code is kept
     gold = "#F2C230"
 
     def crowded(level):
@@ -402,7 +481,8 @@ def test_a_space_filling_up_shows_more_dots_inside_it_as_it_fills(job):
 
 
 
-def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job):
+def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "CROWDS", True)  # switched off since Nov 1; the code is kept
     # The wash over a filling space was nearly half of a frame's time on the pump's song (Nov 1): it changes slowly,
     # so it is part of the picture the renderer keeps, in steps of TINT_STEP.
     gold = "#F2C230"
@@ -418,7 +498,8 @@ def test_a_crowds_tint_is_drawn_into_the_kept_picture_not_over_every_frame(job):
     assert frame_tints == (("Thylakoid", gold, round(renderer_module.CROWD_TINT, 4)),) and frame_tints in kept
     assert tints(0.0) == ((), [])  # nothing filling: the picture as painted
 
-def test_a_few_dots_where_particles_are_scarce_sit_apart_from_the_crowd_and_only_in_a_space(job):
+def test_a_few_dots_where_particles_are_scarce_sit_apart_from_the_crowd_and_only_in_a_space(job, monkeypatch):
+    monkeypatch.setattr(renderer_module, "CROWDS", True)  # switched off since Nov 1; the code is kept
     # Round 22's pump showed no K⁺ outside the cell at all: a gradient is more on one side, not none on the other.
     gold, blue = "#F2C230", "#7FD1FF"
 
@@ -479,17 +560,29 @@ def test_a_part_that_is_not_round_gets_an_arrow_round_it_while_it_turns(job):
     assert drawn(turning(0.0)) == 0  # stopped: no arrow
 
 
-def test_blocked_particles_pile_up_at_their_last_stop_under_a_cross(job):
+def test_a_blocked_flows_arrow_ends_in_a_cross_with_its_particle_waiting_before_it(job, monkeypatch):
     blocked = flowing([flow_beat(0, 20, label="e⁻", color="#4CC9F0").model_copy(update={"particles": [
         Particles(path=FLOW, color="#4CC9F0", trail=True, label="e⁻", blocked=True)]})])
     free = Renderer(job, flowing([flow_beat(0, 20, label="e⁻", color="#4CC9F0")]))
     stuck = Renderer(job, blocked)
     red = lambda frame: int((np.abs(frame[..., 2::-1].astype(int) - p.rgb("#E5484D")).max(-1) < 25).sum())
+    drawn_in = renderer_module.ROUTE_GROW_S
+    assert red(stuck.frame(drawn_in / 2).copy()) < 30  # no cross while the arrow is still on its way to the blocker
+    assert red(stuck.frame(drawn_in + 6).copy()) > 400 and red(free.frame(drawn_in + 6).copy()) < 30
+    flow = stuck.timeline.beats[0].particles[0]
+    crosses, kinds = [], []
+    monkeypatch.setattr(p, "draw_block", lambda canvas, at, alpha: crosses.append((at, alpha)))
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: kinds.append((at, alpha)))
+    t = drawn_in + 6
+    stuck.frame(t)
+    line = tail_of(stuck, t, flow)
+    [(cross, strength)] = crosses
+    assert np.allclose(cross, line[-1]) and strength == pytest.approx(1.0)  # the cross, at the arrow's head
+    [(at, _)] = kinds
+    back = p.BLOCK_R + p.MARKER_R + 6
+    assert abs(math.dist(at, line[-1]) - back) <= renderer_module.TAIL_JIGGLE_PX * math.sqrt(2) + 1  # just before it
+    # Particles piling up at a stop, as on a graph: the queue sits behind it, and stays.
     stops = renderer_module.stop_points([(a.x, a.y) for a in (located(job, "overview", n).label_anchor for n in FLOW)])
-    arrived = renderer_module.trip_s(stops)
-    assert red(stuck.frame(arrived - 0.2).copy()) < 30  # no cross before the first one gets there
-    assert red(stuck.frame(arrived + 6).copy()) > 400 and red(free.frame(arrived + 6).copy()) < 30
-    # The dots queue up behind the last stop, and stay: the queue is the same a little later.
     late = renderer_module.pile_at(stops, 60.0)
     assert len(late) == renderer_module.PILE_MAX or len(late) > 3
     assert renderer_module.pile_at(stops, 60.0) == renderer_module.pile_at(stops, 61.0)
@@ -647,10 +740,14 @@ def test_a_part_pops_as_its_name_is_first_heard_and_not_when_a_later_scene_carri
     assert (frames[4.2] == plain.frame(4.2)).all()
 
 
-def test_a_part_bumps_as_a_particle_reaches_it_and_pulses_on_the_beat_while_particles_pass_through_it(job, monkeypatch):
+def test_a_part_bumps_as_an_arrow_reaches_it_and_pulses_on_the_beat_while_a_flow_passes_through_it(job, monkeypatch):
     into = Renderer(job, flowing([flow_beat(0, 12, labels=FLOW)]))
-    trip, [(at, name)], through = into._arrivals("overview", into.timeline.beats[0].particles[0])
+    flow = into.timeline.beats[0].particles[0]
+    _, [(_, name)], through = into._arrivals("overview", flow)
     assert name == "Cytochrome b6f" and through == []  # the thylakoid is a space: never bumped, nor pulsed
+    [(_, _, entered)] = into._handoffs("overview", flow)
+    assert entered.name == "Cytochrome b6f"
+    at = into.plans[0].runs[0][0] + renderer_module.HANDOFF_GROW_S  # as its arrow draws in
     bump = at + renderer_module.BUMP_S / 2
     bumped = {t: into.frame(t).copy() for t in (bump, at + renderer_module.BUMP_S + 0.05)}
     across = ["Thylakoid", "Cytochrome b6f", "Thylakoid"]
@@ -767,6 +864,23 @@ def test_a_clip_that_starts_partway_into_music_fades_in(job):
     first, second = mix.split(";")[:2]
     assert "atrim=start=0.500" in first and "afade=t=in:st=0:d=0.500" in first
     assert "afade" not in second  # a clip that starts partway on purpose is not faded
+    assert media.PEAK_LIMIT in mix.split(";")[-1]  # the mix's peaks held under full scale, which crackled (Nov 1)
+    assert all(chain.startswith(f"[{i + 1}:a]{media.RESAMPLE},") for i, chain in enumerate(mix.split(";")[:2]))
+
+
+@pytest.mark.skipif(not shutil.which("ffmpeg"), reason="needs ffmpeg")
+def test_a_24khz_voice_reaches_48khz_with_no_mirror_of_its_top_end():
+    # ffmpeg's default resampler mirrored an 11.5 kHz tone to 12.5 kHz only 10 dB down: static on a narration's s
+    # and t sounds (Nov 2).
+    import numpy as np
+
+    tone = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=11500:sample_rate=24000:duration=1",
+                           "-af", media.RESAMPLE, "-f", "f32le", "-ac", "1", "-"], capture_output=True, check=True).stdout
+    x = np.frombuffer(tone, np.float32)[4800:28800]
+    spectrum = np.abs(np.fft.rfft(x * np.blackman(len(x))))
+    hz = np.fft.rfftfreq(len(x), 1 / 48000)
+    kept, mirror = spectrum[np.abs(hz - 11500) < 20].max(), spectrum[np.abs(hz - 12500) < 20].max()
+    assert 20 * np.log10(mirror / kept) < -60
 
 
 def probe(path):
@@ -1106,7 +1220,7 @@ def test_a_song_with_key_lines_shows_them_in_a_band_right_above_the_lyrics(job):
     assert amber_and_white(rows)[0] > 50
 
 
-def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_edge(job):
+def test_two_things_on_the_same_stops_go_side_by_side_and_leave_a_part_at_its_edge(job):
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
     path = ["Cytochrome b6f", "Thylakoid"]
@@ -1119,7 +1233,8 @@ def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_e
     assert renderer._lanes[("overview", tuple(reversed(path)), "H₂O")] == 1  # the same stops, the other way: beside
     first = renderer._path_points("overview", path)
     beside = renderer._path_points("overview", path, lane=1)
-    assert all(math.dist(a, b) == pytest.approx(renderer_module.LANE_GAP) for a, b in zip(first, beside))
+    # LANE_GAP apart, give or take a little where the lane, set off across the whole way, meets the part's edge
+    assert all(math.dist(a, b) == pytest.approx(renderer_module.LANE_GAP, rel=0.01) for a, b in zip(first, beside))
     b6f = located(job, "overview", "Cytochrome b6f")
     assert renderer._is_space("overview", located(job, "overview", "Thylakoid"))
     x, y = first[0]  # leaving a part for a space: from its edge, where the arrow starts, not from inside it
@@ -1128,6 +1243,103 @@ def test_two_things_on_the_same_stops_run_side_by_side_and_leave_a_part_at_its_e
     assert on_edge == pytest.approx(0, abs=1e-6) and box.x0 <= x <= box.x1 and box.y0 <= y <= box.y1
     x, y = renderer._path_points("overview", list(reversed(path)))[-1]  # and arriving from a space, at its edge too
     assert min(abs(x - box.x0), abs(x - box.x1), abs(y - box.y0), abs(y - box.y1)) == pytest.approx(0, abs=1e-6)
+
+
+def test_a_crossing_goes_the_way_its_spaces_lie_beside_the_part_not_by_their_far_label_points(job, monkeypatch):
+    # Nov 1: the inside of the cell had its label point at the picture's left edge and the outside its point near the
+    # middle, further apart across than up and down, so the sodium crossing the pump was sent sideways through it.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    located = renderer.locations.scene("overview")
+    inside, part = located.get("Thylakoid"), located.get("Cytochrome b6f")
+    inside = inside.model_copy(update={"box": Box(x0=0, y0=640, x1=1792, y1=1000), "centroid": Point(x=896, y=820),
+                                       "label_anchor": Point(x=40, y=900)})
+    outside = inside.model_copy(update={"name": "Stroma", "box": Box(x0=0, y0=20, x1=1792, y1=300),
+                                        "centroid": Point(x=896, y=160), "label_anchor": Point(x=1066, y=214)})
+    monkeypatch.setattr(located, "structures", [inside, part, outside])
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name in ("Thylakoid", "Stroma"))
+    path = ["Thylakoid", "Cytochrome b6f", "Stroma"]
+    a, b = inside.label_anchor, outside.label_anchor
+    assert abs(b.x - a.x) > abs(b.y - a.y)  # by their label points, the sides lie left and right of the part
+    straight = renderer._crossing("overview", path)
+    assert straight and len({x for x, _ in straight}) == 1  # up through it, at one x
+    (_, y0), _, (_, y1) = straight
+    assert y0 > part.box.y1 and y1 < part.box.y0  # from below the part to above it
+    flow = Particles(path=path, color="#B79CFF", label="Na⁺", trail=True)
+    assert renderer._flow_line("overview", flow) == straight  # and its arrow goes straight through, that way
+
+
+def test_a_hop_from_part_to_part_ends_at_the_face_nearest_the_part_it_comes_from(job, monkeypatch):
+    # Nov 1: ATP ran to the pump's label point, out in its lobes above the membrane, and so crossed the membrane.
+    from studio.render import routing
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    located = renderer.locations.scene("overview")
+    b6f = located.get("Cytochrome b6f").model_copy(update={"label_anchor": Point(x=900, y=330)})  # at its top
+    atp = b6f.model_copy(update={"name": "ATP", "box": Box(x0=500, y0=800, x1=600, y1=880),
+                                 "centroid": Point(x=550, y=840), "label_anchor": Point(x=550, y=840)})
+    monkeypatch.setattr(located, "structures", [atp, b6f])
+    art = renderer.scene("overview")
+    grid = np.zeros_like(art.cells("Cytochrome b6f"))
+    grid[800 // routing.GRID:880 // routing.GRID, 500 // routing.GRID:600 // routing.GRID] = True
+    monkeypatch.setattr(art, "_cells", {"ATP": grid, "Cytochrome b6f": art.cells("Cytochrome b6f")})
+    flow = Particles(path=["ATP", "Cytochrome b6f"], color="#FF6B6B", label="ATP", trail=True)
+    stops = renderer._path_stops("overview", flow.path)
+    end = stops[-1][0]
+    ys, xs = np.nonzero(art.cells("Cytochrome b6f"))
+    cells = [((x + 0.5) * routing.GRID, (y + 0.5) * routing.GRID) for x, y in zip(xs, ys)]
+    near = min(cells, key=lambda q: math.dist(q, (550, 840)))
+    assert math.dist(end, near) == pytest.approx(renderer_module.FACE_DEPTH, abs=0.5)  # just in from that face
+    assert end[1] > (b6f.box.y0 + b6f.box.y1) / 2 and math.dist(end, (900, 330)) > 150  # far from its label point
+    assert renderer._flow_line("overview", flow)[-1] == pytest.approx(end)  # and the arrow ends there
+
+
+def test_a_space_the_lesson_fills_is_a_space_however_patchy_its_outline_and_an_arrow_into_it_runs_straight(
+        job, monkeypatch):
+    # Nov 1: the pump's cytoplasm came back as red speckle on the pink, 3% of its box. Taken for a part, K⁺ ran
+    # sideways to the speckle's label point; routed through the speckle, it then hooked out to a speck and back.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    thylakoid = located(job, "overview", "Thylakoid")
+    monkeypatch.setitem(renderer.scene("overview")._shapes, "Thylakoid", (0.03, None))
+    monkeypatch.setattr(renderer, "_crowded", set())
+    assert not renderer._is_space("overview", thylakoid)
+    monkeypatch.setattr(renderer, "_crowded", {"Thylakoid"})  # what H⁺ builds up in
+    assert renderer._is_space("overview", thylakoid)
+    path = ["Cytochrome b6f", "Thylakoid"]
+    assert renderer._bends("overview", path) == [None]
+    flow = Particles(path=path, color="#F2C230", label="H⁺", trail=True)
+    assert renderer._flow_line("overview", flow) == renderer._path_points("overview", path)  # one straight leg
+
+
+def test_a_crossing_through_a_part_as_tall_as_the_picture_ends_inside_the_spaces_beside_it(job, monkeypatch):
+    # Nov 1: ATP synthase's close-up ran from the bottom of the picture to the top, and its H⁺ arrow ended past the
+    # picture's top edge, "just past" the synthase.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    located_ = renderer.locations.scene("overview")
+    inside, part = located_.get("Thylakoid"), located_.get("Cytochrome b6f")
+    inside = inside.model_copy(update={"box": Box(x0=0, y0=640, x1=1792, y1=1000), "centroid": Point(x=896, y=820),
+                                       "label_anchor": Point(x=900, y=900)})
+    outside = inside.model_copy(update={"name": "Stroma", "box": Box(x0=0, y0=20, x1=1792, y1=300),
+                                        "centroid": Point(x=896, y=160), "label_anchor": Point(x=900, y=150)})
+    monkeypatch.setattr(located_, "structures", [inside, part, outside])
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name in ("Thylakoid", "Stroma"))
+    monkeypatch.setattr(renderer, "_extent", lambda *a, **k: (5.0, 1015.0))  # the part, top to bottom
+    (_, y0), _, (_, y1) = renderer._crossing("overview", ["Thylakoid", "Cytochrome b6f", "Stroma"])
+    assert inside.box.y0 < y0 < inside.box.y1 and outside.box.y0 < y1 < outside.box.y1
+
+
+def test_a_hop_into_a_space_whose_point_lies_in_the_parts_box_still_has_length(job, monkeypatch):
+    # Nov 1: the pump's box held the whole strip the picture's outside of the cell was found as; leaving the box
+    # toward the outside's point landed on it, and the Na⁺ arrow had no length.
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    located_ = renderer.locations.scene("overview")
+    part = located_.get("Cytochrome b6f")
+    strip = located_.get("Thylakoid").model_copy(update={
+        "name": "Stroma", "box": Box(x0=0, y0=part.box.y0 + 20, x1=1792, y1=part.box.y0 + 120),
+        "centroid": Point(x=896, y=part.box.y0 + 70), "label_anchor": Point(x=896, y=part.box.y0 + 70)})
+    monkeypatch.setattr(located_, "structures", [part, strip])
+    monkeypatch.setattr(renderer, "_is_space", lambda scene_id, loc: loc.name == "Stroma")
+    points = renderer._path_points("overview", ["Cytochrome b6f", "Stroma"])
+    assert math.dist(points[0], points[-1]) > 10
+
 
 
 # --- a graph's axis names -------------------------------------------------------------------
@@ -1334,6 +1546,67 @@ def test_a_reaction_pill_rests_with_its_structures_label(job, monkeypatch):
     assert drawn[0] == pytest.approx(1.0, abs=0.02) and drawn[1] == pytest.approx(renderer_module.LABEL_REST, abs=0.02)
 
 
+def test_a_reaction_pill_keeps_its_spot_as_the_camera_drifts(job):
+    # The owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts". Chosen again
+    # every frame, a pill flipped between two spots as clear as each other: 143 jumps in ten seconds of the rocket.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    pill = Converting(structure="Cytochrome b6f", text="A → B", since=timeline.beats[on[0]].t0)
+    beats = list(timeline.beats)
+    beats[on[0]] = beats[on[0]].model_copy(update={"conversions": [pill]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    art, view = renderer.scene("overview"), renderer.view("overview")
+    b6f = renderer.locations.scene("overview").get("Cytochrome b6f").centroid
+    offsets = set()
+    for k in range(40):  # the camera drifting in and across, a hair each frame
+        cam = renderer_module.Cam(art.width / 2 + 3 * k, art.height / 2, 1.0 + k * 0.006)
+        rect = renderer._pill_places("overview", cam, view)["Cytochrome b6f"]
+        scale, dx, dy = renderer_module.to_frame(cam, view, art)
+        centre = ((rect[0] + rect[2]) / 2 - (b6f.x * scale + dx), (rect[1] + rect[3]) / 2 - (b6f.y * scale + dy))
+        offsets.add(("left" if centre[0] < -30 else "right" if centre[0] > 30 else "middle",
+                     "below" if centre[1] > 0 else "above"))
+    assert len(offsets) == 1  # the same side of its part all the way, riding its edge as it grows
+
+
+def test_a_pill_keeps_inside_one_area_all_scene_clear_of_a_caption_it_ever_shows(job):
+    # A caption coming on moved the top of the frame's keep-in area down, and a pill near the top with it.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
+    beats = list(timeline.beats)
+    beats[on[-1]] = beats[on[-1]].model_copy(update={"caption": "A caption, late in the scene"})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    view = renderer.view("overview")
+    assert renderer._bounds("overview", view, True)[1] > renderer._bounds("overview", view, False)[1]
+    assert renderer._pill_bounds("overview", view) == renderer._bounds("overview", view, True)
+
+
+def test_a_pill_rides_its_part_out_of_the_frame_fading_and_never_sticks_to_the_edge():
+    # The light reactions' hook, Nov 2: kept inside the frame, a pill stood still at its edge while the camera slid
+    # its part away. It rides its part, fading out as it leaves the keep-in area, as a label does.
+    bounds = (40.0, 40.0, 1880.0, 1040.0)
+    assert renderer_module.pill_fade((100.0, 100.0, 300.0, 140.0), bounds) == 1.0  # inside: in full
+    leaving = renderer_module.pill_fade((30.0, 100.0, 230.0, 140.0), bounds)
+    assert 0.0 < leaving < 1.0  # crossing the edge: fading
+    assert renderer_module.pill_fade((-200.0, 100.0, 0.0, 140.0), bounds) == 0.0  # out: gone
+
+
+def test_a_crossings_particle_count_holds_as_the_camera_moves_in(job, monkeypatch):
+    # The count fits the way's length framed whole: on screen the way grows as the camera moves in, and a count
+    # read off it changed mid-crossing, every particle jumping to a new place.
+    import types
+    renderer = Renderer(job, jobs.read(job / media.timeline_path("song"), Timeline))
+    drawn = []
+    monkeypatch.setattr(p, "draw_kind", lambda canvas, at, color, label, alpha, size=1.0: drawn.append(at))
+    flow = types.SimpleNamespace(label="gas", color="#A3E635")
+    counts = set()
+    for scale in (1.0, 1.6, 2.4, 3.2):
+        drawn.clear()
+        renderer._draw_crossing(None, flow, [(0.0, 0.0), (0.0, 100.0)], 1.0, 1.0,
+                                lambda q, s=scale: (q[0] * s, q[1] * s), 1.0, 1, room=100.0)
+        counts.add(len(drawn))
+    assert counts == {1}  # 100 pixels framed whole: room for one
+
+
 def test_a_flow_across_an_upright_wall_crosses_level_from_inside_the_space(job, monkeypatch):
     # Round 21's lungs put the alveolus's and the capillary's points at the top of the picture, above and below the
     # membrane's, and the gases ran up and down the capillary instead of across the membrane.
@@ -1439,7 +1712,7 @@ def test_a_meaning_the_frame_leaves_out_never_takes_its_name_with_it(job, monkey
     assert drawn == ["Thylakoid"]
 
 
-def test_a_graphs_arrow_has_its_word_beside_it_and_no_key(job, monkeypatch):
+def test_a_graphs_arrow_has_its_word_beside_it(job, monkeypatch):
     from studio.schemas import Axes
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     graph = timeline.model_copy(update={"axes": {"overview": Axes(x="Quantity", y="Price")}})
@@ -1449,10 +1722,6 @@ def test_a_graphs_arrow_has_its_word_beside_it_and_no_key(job, monkeypatch):
     assert renderer._arrow_word("overview", "quantity", (100, 10), (20, 12)) == "quantity falls"
     assert renderer._arrow_word("overview", "price", (10, 10), (100, 12)) == "price"  # across: says no way
     assert renderer._arrow_word("overview", "buyers", (10, 100), (12, 20)) == "buyers"  # no axis's quantity
-    beat = next(b for b in timeline.beats if b.scene == "overview" and b.particles)
-    with_word = beat.model_copy(update={"particles": [f.model_copy(update={"label": "price"}) for f in beat.particles]})
-    assert Renderer(job, timeline)._legend(with_word, with_word.t1)  # a diagram keeps its key
-    assert renderer._legend(with_word, with_word.t1) == []  # a graph has none
 
 
 def test_the_whole_scene_makes_room_for_the_names_its_drawing_placed(job, monkeypatch):
@@ -1506,41 +1775,41 @@ def test_a_drawn_value_is_written_beside_its_point_once_said(job, monkeypatch):
     assert later[3] < y and later[0] < x < later[2]  # above its point, across it
 
 
-def test_what_travels_is_drawn_as_an_arrow_along_its_way_and_a_crossing_as_particles(job, monkeypatch):
+def test_off_a_graph_every_flow_is_an_arrow_a_journey_along_its_way_and_a_crossing_straight_through(job, monkeypatch):
     # Round 21's filtrate cut across the nephron's bends and its magma rose through the volcano's rock: a journey is
-    # drawn as an arrow along its way, off a graph one arrow through the parts (Nov 1: stubs at each joint read as
-    # nothing). A crossing keeps its particles.
-    arrows, dots = [], []
-    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, color, alpha, grown=1.0, phase=0.0:
-                        arrows.append((points[0], points[-1], grown, phase)))
+    # drawn as one arrow along its way, off a graph (Nov 1: stubs at each joint read as nothing). Since Nov 1 every
+    # other flow off a graph is an arrow too, an ion's straight through what it crosses.
+    arrows, dots = [], []  # each flow's track, which draws itself in, and the arrow gliding along it
+    monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, color, alpha, grown=1.0:
+                        arrows.append((points[0], points[-1], grown, 0.0)))
     monkeypatch.setattr(p, "draw_particles", lambda *a, **k: dots.append(a))
 
-    def moving(label, moves):
-        beat = flow_beat(0, 12, labels=FLOW, label=label)
+    def moving(label, moves, path=FLOW):
+        beat = flow_beat(0, 12, path=path, labels=FLOW, label=label)
         flow = beat.particles[0].model_copy(update={"moves": moves})
         return Renderer(job, flowing([beat.model_copy(update={"particles": [flow]})]))
 
     travelling = moving("filtrate", "travels")
     flow = travelling.timeline.beats[0].particles[0]
     assert travelling._travels("overview", flow)
-    line = travelling._route_line("overview", flow)  # from the thylakoid into b6f, along the way
+    line = travelling._flow_line("overview", flow)  # from the thylakoid into b6f
     b6f = located(job, "overview", "Cytochrome b6f").box
     assert len(line) >= 2 and b6f.x0 - 60 <= line[-1][0] <= b6f.x1 + 60 and b6f.y0 - 60 <= line[-1][1] <= b6f.y1 + 60
     start = travelling.plans[0].runs[0][0]  # when it sets off
     travelling.frame(start + renderer_module.ROUTE_GROW_S / 2)  # drawing itself in
     travelling.frame(8.0)  # long since drawn in
     assert dots == [] and 0 < arrows[0][2] < 1 and arrows[-1][2] == 1.0
-    assert "filtrate" in travelling._arrowed("overview")  # keyed with an arrow in the legend
 
     air = moving("air", "travels")  # a short word, not a symbol: it goes as the bundle says
     assert air._travels("overview", air.timeline.beats[0].particles[0])
     salt = moving("salt", "crosses")  # too long to write on a particle: an arrow, whatever the bundle says
     assert salt._travels("overview", salt.timeline.beats[0].particles[0])
-    for label, moves in (("Na⁺", "crosses"), ("H⁺", "travels")):  # said to cross; an ion is always a particle
+    for label, moves in (("Na⁺", "crosses"), ("H⁺", "travels")):  # an ion is never a journey, but it is an arrow
         arrows.clear(), dots.clear()
-        crossing = moving(label, moves)
-        crossing.frame(3.0)
-        assert arrows == [] and dots and not crossing._travels("overview", crossing.timeline.beats[0].particles[0])
+        ion = moving(label, moves)
+        flow = ion.timeline.beats[0].particles[0]
+        ion.frame(3.0)
+        assert arrows and dots == [] and not ion._travels("overview", flow) and ion._as_arrow("overview", flow)
 
 
 def test_with_no_word_from_the_bundle_a_route_that_bends_or_runs_along_a_part_travels(job, monkeypatch):
@@ -1633,6 +1902,20 @@ def test_a_post_it_sits_off_its_labels_ring_on_its_side_and_stays_in_bounds():
     assert left[0] < 0 and _within(left, (40, 40, 1880, 1000)) == (40, left[1], 240, left[3])
 
 
+def test_a_note_about_a_place_points_just_inside_it_and_a_far_one_is_left_off():
+    # The owner, Nov 2: sticky notes drew long lines across the French Revolution's picture, to the middle of a whole
+    # fortress, from notes 180 pixels out or pushed off by the frame's edge.
+    from studio.render.renderer import POSTIT_MAX_LINE, POSTIT_REACH, _anchor, _line_length
+
+    fortress, note = (1200.0, 200.0, 1600.0, 600.0), (900.0, 350.0, 1100.0, 430.0)  # the note on its left
+    x, y = _anchor(fortress, note)
+    assert 1200 < x <= 1300 and 350 <= y <= 450  # inside the fortress, on the note's side, not its middle (1400)
+    assert _line_length(note, fortress, ringed=False) == pytest.approx(x - 1100)  # 200 pixels: too far to show
+    assert _line_length(note, fortress, ringed=False) > POSTIT_MAX_LINE
+    assert max(POSTIT_REACH) < POSTIT_MAX_LINE  # a note placed off its ring is always near enough
+    assert _line_length((1110.0, 350.0, 1190.0, 430.0), fortress, ringed=True) == 0.0  # touching its ring: no line
+
+
 def test_a_crossings_bends_cover_every_leg_the_arrows_and_labels_count(job, monkeypatch):
     # A crossing's particles have two legs, but the arrows and the labels' keep-clear points count a leg for each
     # pair of its stops, a space in the middle twice: one bend short, the render failed (Nov 1).
@@ -1641,3 +1924,199 @@ def test_a_crossings_bends_cover_every_leg_the_arrows_and_labels_count(job, monk
     stops = renderer._path_stops("overview", FLOW + FLOW[:1])
     assert len(renderer._bends("overview", FLOW + FLOW[:1])) >= max(2, len(stops) - 1)
     renderer._legs("overview", FLOW + FLOW[:1])  # no leg without its bend
+
+
+def test_the_arrow_glides_along_its_track_from_tail_to_head_and_stays_short():
+    # The owner, Nov 1: the arrows should move, and be shorter. A piece of the route glides along it, again and again.
+    line = [(0.0, 0.0), (400.0, 0.0), (400.0, 300.0)]  # 700 frame pixels
+    total = 700.0
+    piece = min(renderer_module.GLIDE_SHARE * total, renderer_module.GLIDE_MAX)
+    period = (total + piece) / renderer_module.GLIDE_SPEED + renderer_module.GLIDE_PAUSE_S
+    heads = []
+    for t in (0.2, 0.8, 1.6, 2.4):
+        shown = renderer_module._glide(line, t)
+        assert shown and renderer_module.routing.length(shown) <= piece + 1e-6  # never longer than its piece
+        heads.append(shown[-1])
+    assert heads[0] != heads[1] != heads[2]  # it moves on
+    assert renderer_module._glide(line, period - renderer_module.GLIDE_PAUSE_S / 2) == []  # a pause between glides
+    assert np.allclose(renderer_module._glide(line, 0.2), renderer_module._glide(line, period + 0.2))  # and again
+    end = renderer_module._glide(line, (total + piece / 2) / renderer_module.GLIDE_SPEED)
+    assert end[-1] == pytest.approx(line[-1])  # shrinking into the head as it arrives
+    assert renderer_module._cut(line, 100, 500) == [(100.0, 0.0), (400.0, 0.0), (400.0, 100.0)]
+
+
+def test_a_glide_on_a_short_arrow_takes_its_time():
+    # The owner, Nov 2: oxygen into the chamber, 80 pixels, crossed in a third of a second, again and again.
+    short = [(0.0, 0.0), (0.0, 80.0)]
+    piece = min(renderer_module.GLIDE_SHARE * 80.0, renderer_module.GLIDE_MAX)
+    took = (80.0 + piece) / renderer_module.glide_speed(80.0, piece)
+    assert took == pytest.approx(renderer_module.GLIDE_MIN_S)
+    assert renderer_module._glide(short, took / 2)  # still on its way halfway through
+    assert renderer_module._glide(short, took + renderer_module.GLIDE_PAUSE_S / 2) == []  # then its pause
+    assert renderer_module.glide_speed(700.0, 170.0) == renderer_module.GLIDE_SPEED  # a long one keeps its pace
+
+
+def test_an_arrow_carries_as_many_as_the_moments_words_count_for_what_moves():
+    # The owner, Nov 1: where the lesson gives a count, that many ride the arrow. Read off the line, by the name or
+    # symbol right after the number; a line that names nothing, or counts more than COUNT_MAX, keeps one.
+    from studio.render.renderer import count_in
+    assert count_in("From inside, three sodium bind", "Na⁺") == 3
+    assert count_in("Next, two potassium ions from outside the cell slip into the pocket.", "K⁺") == 2
+    trade = "The pump flips its shape to trade one ATP for three sodium out and two potassium in"
+    assert (count_in(trade, "Na⁺"), count_in(trade, "K⁺"), count_in(trade, "ATP")) == (3, 2, 1)
+    assert count_in("3 Na⁺ bind inside", "Na⁺") == 3
+    assert count_in("Three go out and two come in", "Na⁺") == 1
+    assert count_in("Sodium out, potassium in", "K⁺") == 1
+    assert count_in("ten sodium", "Na⁺") == 1
+
+
+def test_a_crossing_keeps_the_count_the_lesson_gave_it_where_its_own_line_gives_none(job):
+    # The owner, Nov 1: the ratio comes from the counts. Three sodium out for two potassium in, said once, holds for
+    # every crossing of the pump in the video; a part never counted for it (the sodium channel) crosses CROSS_MANY.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = list(timeline.beats)
+    flow = Particles(path=["Cytochrome b6f", "Thylakoid"], color="#F2C230", label="H⁺", trail=True)
+    first, then = [i for i, b in enumerate(beats) if b.scene == "overview"][:2]
+    beats[first] = beats[first].model_copy(update={"line": "Four protons cross here", "particles": [flow]})
+    beats[then] = beats[then].model_copy(update={"line": "Ten protons cross here", "particles": [flow]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert renderer._counts == {("H⁺", "Cytochrome b6f"): 4}  # the first count, for the part; ten is past COUNT_MAX
+
+
+def test_an_arrow_that_would_mislead_is_left_out_and_said_why(job, monkeypatch):
+    # Nov 1: K⁺ ran sideways into the cell, two arrows had no length, and H⁺ ended above the picture. The gate leaves
+    # such an arrow out (Renderer.left_out) instead of drawing it wrong; a blocked one may be short, ending at its cross.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    i = next(i for i, b in enumerate(timeline.beats) if b.scene == "overview")
+    flow = Particles(path=["Cytochrome b6f", "Thylakoid"], color="#F2C230", label="H⁺", trail=True)
+    beats = list(timeline.beats)
+    beats[i] = beats[i].model_copy(update={"particles": [flow]})
+    renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    real = renderer._flow_line("overview", flow)
+    assert renderer._wrong_arrow("overview", flow) == "" and renderer.left_out == []  # the real arrow passes
+    (x0, y0), (x1, y1) = real[0], real[-1]
+    for line, why in (([(x0, y0), (x0 + 5, y0 + 5)], "too short to read"),
+                      ([(x0, y0), (x0, -40.0)], "leaves the picture"),
+                      ([(x1, y1), (x0, y0)], "points away from Thylakoid")):
+        monkeypatch.setattr(renderer, "_flow_line", lambda scene_id, f, line=line: line)
+        assert renderer._wrong_arrow("overview", flow) == why
+    monkeypatch.setattr(renderer, "_flow_line", lambda scene_id, f: [(x0, y0), (x0 + 5, y0 + 5)])
+    assert renderer._wrong_arrow("overview", flow.model_copy(update={"blocked": True})) == ""
+    # Built with a wrong line, the renderer lists the arrow and never draws it.
+    monkeypatch.setattr(Renderer, "_flow_line", lambda self, scene_id, f: [(x1, y1), (x0, y0)])
+    wrong = Renderer(job, timeline.model_copy(update={"beats": beats}))
+    assert wrong.left_out == [{"scene": "overview", "path": ["Cytochrome b6f", "Thylakoid"], "carries": "H⁺",
+                               "why": "points away from Thylakoid"}]
+
+
+def pointed(tail, head, **fields):
+    """arrows.json with the sample flow's hop (the thylakoid up into b6f) as the arrows step placed it."""
+    return Arrows(arrows=[PlacedArrow(scene="overview", path=FLOW, carries="H⁺", start=Point(x=tail[0], y=tail[1]),
+                                      end=Point(x=head[0], y=head[1]), **fields)])
+
+
+def test_a_pointed_hop_is_drawn_straight_from_its_tail_to_its_head_and_the_gate_still_checks_it(job, tmp_path):
+    # Nov 1: a hop placed from SAM's outlines ran sideways, as a stub, or in an odd spot; the arrows step has the helper
+    # point it on the painting (studio/steps/arrows.py), and the renderer draws it from there.
+    timeline = flowing([flow_beat(0, 8)])
+    flow = timeline.beats[0].particles[0]
+    guessed = Renderer(job, timeline)._flow_line("overview", flow)  # no arrows.json: code places it, as before
+    assert guessed == Renderer(job, timeline, arrows=Arrows(arrows=[]))._flow_line("overview", flow)
+    renderer = Renderer(job, timeline, arrows=pointed((820, 700), (880, 520)))
+    assert renderer._flow_line("overview", flow) == [(820, 700), (880, 520)] != guessed
+    assert renderer.left_out == []
+    # The camera keeps it in view; arrows.json in the job folder is read when none is given.
+    copy = sample_media.write_job(tmp_path / "pointed", art=True)
+    jobs.write(copy / media.ARROWS, pointed((820, 700), (880, 520)))
+    assert Renderer(copy, timeline)._flow_line("overview", flow) == [(820, 700), (880, 520)]
+    # The gate checks a pointed arrow as any other: one leaving the picture is left out.
+    assert Renderer(job, timeline, arrows=pointed((820, 700), (880, -40))).left_out == [
+        {"scene": "overview", "path": FLOW, "carries": "H⁺", "why": "leaves the picture"}]
+
+
+def test_a_hop_the_arrows_step_left_out_is_never_drawn_and_says_why(job, monkeypatch):
+    timeline = flowing([flow_beat(0, 8)])
+    for why in ("the picture cannot show it: no cell is drawn", "as drawn it does not show it: it runs sideways"):
+        renderer = Renderer(job, timeline, arrows=pointed((820, 700), (880, 520), left_out=why))
+        assert renderer.left_out == [{"scene": "overview", "path": FLOW, "carries": "H⁺", "why": why}]
+        tracks = []
+        monkeypatch.setattr(p, "draw_route_track", lambda canvas, points, *a, **k: tracks.append(points))
+        renderer.frame(4.0)
+        assert tracks == []
+
+
+def test_a_still_of_one_arrow_shows_it_alone_part_way_along_its_glide(job, monkeypatch):
+    other = flow_beat(0, 8, path=["Cytochrome b6f", "Thylakoid"], label="O₂").particles[0]
+    beat = flow_beat(0, 8)
+    timeline = flowing([beat.model_copy(update={"particles": [*beat.particles, other]})])
+    flow = beat.particles[0]
+    renderer = Renderer(job, timeline, arrows=pointed((820, 700), (880, 520)))
+    assert [(scene, f.label, line) for scene, f, line in renderer.hops()] == [
+        ("overview", "H⁺", "protons flow"), ("overview", "O₂", "protons flow")]
+    t = renderer.arrow_time("overview", flow)
+    flow_in, flow_out = renderer.plans[0].runs[0]
+    assert flow_in + renderer_module.ROUTE_GROW_S < t < flow_out
+    pieces = []
+    monkeypatch.setattr(p, "draw_route_arrow", lambda canvas, points, *a, **k: pieces.append(points))
+    renderer.only = ("overview", tuple(FLOW), "H⁺", False)
+    renderer.frame(t)
+    [piece] = pieces  # its gliding arrow alone, its head ARROW_SEEN of the way along
+    line = [renderer.art_to_frame(t, *q) for q in renderer._flow_line("overview", flow)]
+    assert math.dist(piece[-1], line[0]) / math.dist(line[0], line[-1]) == pytest.approx(renderer_module.ARROW_SEEN,
+                                                                                      abs=0.05)
+    # A crossing is drawn as its particles crossing, never pointed, and is no hop.
+    monkeypatch.setattr(renderer, "_crossing", lambda scene_id, path, lane=0: [(0, 0), (1, 1), (2, 2)]
+                        if path == other.path else None)
+    assert [f.label for _, f, _ in renderer.hops()] == ["H⁺"]
+
+
+def test_crowds_are_left_out_unless_switched_on(job, monkeypatch):
+    # Nov 1, the owner: fewer kinds of motion; a crowd's dots are placed through a space's outline, a guess.
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    beats = [b.model_copy(update={"crowds": [Crowd(region="Thylakoid", label="H⁺", color="#F2C230", start=0.5,
+                                                   end=1.0)]}) for b in timeline.beats]
+    crowded = timeline.model_copy(update={"beats": beats})
+    assert all(not b.crowds for b in Renderer(job, crowded).timeline.beats)
+    monkeypatch.setattr(renderer_module, "CROWDS", True)
+    assert all(b.crowds for b in Renderer(job, crowded).timeline.beats)
+
+
+def test_an_arrows_track_is_black_on_white_with_its_head_and_painted_labels_are_found():
+    # The owner, Nov 2: the faint dotted track in the flow's colour read as no arrow; black on a white edge, with
+    # its head always on, reads on any picture. And a caption keeps off the labels painted on the picture.
+    from studio.render import primitives as p
+    from studio.render.renderer import painted_label_boxes
+
+    pixels = np.full((200, 400, 4), 255, np.uint8)
+    pixels[..., :3] = (120, 180, 90)  # a green picture
+    surface = skia.Surface(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
+    p.draw_route_track(surface.getCanvas(), [(40.0, 100.0), (360.0, 100.0)], "#FFD166", 1.0)
+    assert pixels[100, 200, :3].max() < 60  # near-black along the line
+    assert pixels[100 - 5, 200, :3].min() > 240  # its white edge
+    assert pixels[94, 352, :3].max() < 60 and pixels[106, 352, :3].max() < 60  # both arms of its head
+
+    picture = np.full((120, 300, 3), (120, 180, 90), np.uint8)
+    picture[40:70, 60:200] = 255  # a white label box...
+    picture[48:62, 70:190:6] = 0  # ...with dark letters in it
+    assert painted_label_boxes(picture) == [(60.0, 40.0, 200.0, 70.0)]
+    picture[54:56, 200:290] = 255  # a white leader line from its side to a part: the box is still the box
+    picture[20:40, 120:122] = 255  # and one up from its top
+    assert painted_label_boxes(picture) == [(60.0, 40.0, 200.0, 70.0)]
+    picture[54:56, 200:290] = picture[20:40, 120:122] = (120, 180, 90)
+    picture[48:62, 70:190:6] = 255  # a white patch with no writing is no label
+    assert painted_label_boxes(picture) == []
+
+
+def test_an_everyday_thing_a_flow_carries_rides_as_its_emoji_and_anything_else_as_its_name():
+    # The owner, Nov 2: "money" rode its arrow as a plain dot.
+    from studio.render import primitives as p
+
+    assert p.kind_of("money") == p.kind_of("taxes") == p.kind_of("borrowed money") == "icon"
+    assert p.icon_of("Taxes") == "money" and p.icon_of("bread") == "bread" and p.icon_of("votes") == "votes"
+    assert p.kind_of("H⁺") == p.kind_of("water") == p.kind_of("glucose") == "word"
+    assert all((p.ICON_DIR / f"{name}.png").is_file() for name in set(p.ICON_WORDS.values()))
+    pixels = np.zeros((80, 80, 4), np.uint8)
+    surface = skia.Surface(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
+    p.draw_kind(surface.getCanvas(), (40.0, 40.0), "#FFD166", "money", 1.0)
+    shown = pixels[30:50, 30:50, :3].reshape(-1, 3)
+    assert (shown.max(1) - shown.min(1) > 60).any()  # the bag's own colours, not a flat disc

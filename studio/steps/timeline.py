@@ -39,7 +39,8 @@ No model calls, so it is free to run again:
   A blocked path (Bundle.blocks) is left out: its arrows would show a flow that does not happen.
 - The camera opens each scene on the whole picture, and zooms to the line's target from the scene's second
   line, so the learner sees where a close-up sits before it is shown. A zoom counts from the whole scene's
-  framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.6 to 2.0 a close-up. The
+  framing (TimelineCamera.from_whole), as the brief writes it: 1.0 the whole scene, 1.4 to 1.6 a close-up (1.6
+  to 2.0 until Nov 1, which cropped the labels a painted picture writes beside its parts). The
   whole scene frames what is drawn, often already closer than the whole art, so a close-up counted from the art
   came out barely closer (1.8 on the sample's overview, whose whole scene is at 1.44: 1.25 times).
 - The song's camera follows the words on a long hold (_follow). A shot of the whole picture only drifts, and the
@@ -58,9 +59,13 @@ No model calls, so it is free to run again:
 - Particles whose last stop is a blocker (Bundle.blocks) are marked blocked: the renderer
   piles them up there. A line's glow, like its spotlight, needs its structure located on
   the scene and named by then.
-- A beat that sums up (the whole scene, nothing spotlit) runs every flow its scene has shown so far, beside its
-  own, up to RUN_MAX: the system running, as a textbook's summary figure draws it. Each was taught, and
-  fact-checked, on an earlier line, so nothing new is claimed; the spaces fill only from the beat's own.
+- A beat that sums up runs every flow its scene has shown so far, beside its own, up to RUN_MAX: the system
+  running, as a textbook's summary figure draws it. Each was taught, and fact-checked, on an earlier line, so
+  nothing new is claimed; the spaces fill only from the beat's own. A line sums up by where it is (_sums_up): a
+  chorus or the outro in the song, and in the lesson the sentence that says the core idea and those after it; on
+  the whole scene with nothing spotlit, as the brief directs such lines. Any line on the whole scene did until
+  Nov 1, and the brief gives that to a question or an aside too: the pump's lesson ran sodium out through the pump
+  under "does the pump push the sodium back out?" and "A common mistake is to say yes".
 - At most one caption per song section (one every LESSON_CAPTION_SPACING_S in the
   lesson), held for at least CAPTION_HOLD_S.
 - A graph's axis names (Scene.axes) go to the renderer, which writes them at its axes' ends.
@@ -87,7 +92,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from studio import checks, media
-from studio.checks import notation
+from studio.checks import MARKER_COLOURS, notation
 from studio.jobs import read, write
 from studio.media import StepFailed
 from studio.schemas import (
@@ -119,10 +124,7 @@ GAP_S = 1.5  # a silence at least this long between lines gets a beat of its own
 LINGER_S = 0.4  # how long a line stays in the lyric band after its last word, before a gap
 CAPTION_HOLD_S = 4.0
 LESSON_CAPTION_SPACING_S = 20.0  # the narration has no sections, so captions are spaced instead
-PARTICLE_COLOR = "#F2C230"  # an unmarked particle's, and a proton's
-# Each common kind of particle in its own colour, the same in every lesson; any other by its name.
-MARKER_COLOURS = {"H⁺": PARTICLE_COLOR, "e⁻": "#4CC9F0", "O₂": "#E8EEF5", "H₂O": "#7FD1FF", "CO₂": "#B8C2CC",
-                  "ATP": "#FF6B6B", "Na⁺": "#B79CFF", "K⁺": "#8EE06B", "Ca²⁺": "#F4E1C1", "Cl⁻": "#5EF2C4"}
+PARTICLE_COLOR = MARKER_COLOURS["H⁺"]  # an unmarked particle's, and a proton's
 OTHER_MARKERS = ("#FF9F68", "#F784C5", "#9AD1FF", "#C3F26B", "#FFD166", "#C9A7FF")
 MAX_ZOOM = 3.0
 FILL_S = 6.0  # seconds of particles arriving that fill a space from empty
@@ -173,6 +175,8 @@ def run(job: Path, ask=None) -> str:
             timeline.ai_pictures = [scene.id for scene in bundle.scenes if scene.id in shown]
             # A painted picture labels its own parts, and its wrong labels are flagged on it.
             timeline.self_labelled = [scene for scene in self_labelled if scene in shown]
+            timeline.unwashed = [scene.id for scene in bundle.scenes if scene.id in timeline.self_labelled
+                                 and not art.is_diagram(scene)]
             timeline.flags = {scene: boxes for scene, boxes in flags.items() if scene in shown}
         except ValidationError as e:
             raise StepFailed(f"the {video} timeline does not validate: {e}") from e
@@ -292,6 +296,34 @@ def _same(heard: str, name: str, last: bool) -> bool:
     return heard == name or (last and heard in (name + "s", name + "es"))
 
 
+# Two kinds of particle on one video at least this far apart in colour (RGB, 0-441): glucose went the purple of Na⁺
+# on the pump (Nov 2: "should the sugar pill be a different color?").
+APART = 90.0
+
+
+def particle_colours(bundle) -> dict[str, str]:
+    """Each kind of particle the bundle moves or piles up, and its colour on every video of it (marker_colour): one
+    a picked colour takes the first of OTHER_MARKERS, from where its name points, at least APART from every colour
+    already taken, the common kinds' and the drawn ones' first, then the others' in the order of their names."""
+    labels = {notation(flow.carries) for d in bundle.direction for flow in d.flows()}
+    labels |= {notation(b.carries) for b in bundle.builds_up}
+    palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    drawn = {name.casefold(): colour for name, colour in palette.items()}
+    colours = {label: MARKER_COLOURS.get(label) or drawn.get(label.casefold()) for label in labels if label}
+    taken = [c for c in colours.values() if c]
+    for label in sorted(label for label, c in colours.items() if not c):
+        start = zlib.crc32(label.encode()) % len(OTHER_MARKERS)
+        order = OTHER_MARKERS[start:] + OTHER_MARKERS[:start]
+        colours[label] = next((c for c in order if all(_rgb_apart(c, t) >= APART for t in taken)), order[0])
+        taken.append(colours[label])
+    return colours
+
+
+def _rgb_apart(a: str, b: str) -> float:
+    (r1, g1, b1), (r2, g2, b2) = (tuple(int(c.lstrip("#")[k:k + 2], 16) for k in (0, 2, 4)) for c in (a, b))
+    return ((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2) ** 0.5
+
+
 def marker_colour(label: str, palette: dict[str, str] | None = None) -> str:
     """The colour of particles carrying `label`: its own for a common kind; the colour of the structure it names
     when it is one the pictures draw (magma red, sediment tan: round 20's magma rose in a pale blue no magma is);
@@ -370,6 +402,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     sections = _section_runs(bundle) if video == "song" else {}
     directions = {d.line_id: d for d in bundle.direction}
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    colours = particle_colours(bundle)
     located = {s.scene: {loc.name for loc in s.structures} for s in locations.scenes}
     names = {scene.id: Names.for_scene(bundle, scene.id, located.get(scene.id, set())) for scene in bundle.scenes}
     hook = hook_scene(bundle)
@@ -436,7 +469,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
             label = notation(flow.carries)
             if len(stops) >= 2:
-                particles.append(Particles(path=stops, color=marker_colour(label, palette), trail=True, label=label,
+                particles.append(Particles(path=stops, color=colours.get(label) or marker_colour(label, palette),
+                                           trail=True, label=label,
                                            blocked=stops[-1] in blockers, moves=flow.moves,
                                            says=" ".join(flow.says.split())))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
@@ -467,7 +501,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     _convert(beats, bundle, located)
     _write_values(beats, locations)
     _mean(beats, bundle, locations)
-    _run_all(beats, hook)
+    _run_all(beats, hook, _sums_up(bundle, video))
     _turn(beats, bundle, located)
     _route(beats)
     _key_lines(beats, bundle, video)
@@ -527,7 +561,7 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
     sentence in the lesson), held through the gaps after it, and in the song only to the end of its section. None
     from each chorus (the core idea sung) or the narration's sentence that says the core idea until a key line starts
     later: the core idea is written at the top of every frame, and a step held over the line that sings something
-    else misled (the owner, Nov 1)."""
+    else misled (the owner, Nov 1). In the lesson, none from the first cut after the last step's key line either."""
     lines = bundle.lyrics if video == "song" else bundle.narration
     order = {line.id: i for i, line in enumerate(lines)}
     starts = sorted((order[at], " ".join(k.text.split())) for k in bundle.key_lines
@@ -543,7 +577,12 @@ def _key_lines(beats: list[dict], bundle: Bundle, video: str) -> None:
         sections = [i for i, line in enumerate(bundle.lyrics)
                     if i and line.section != bundle.lyrics[i - 1].section and i not in core_from]
     else:
-        core_from, sections = [_says_core_idea(bundle)], []
+        core_from = [_says_core_idea(bundle)]
+        # The case comes after the steps and has no key line (the script's prompt, the brief): the last step's, held
+        # on over it, sat over the stroke, the weed killer, England and the tomb for half a minute or more (Nov 1).
+        last = max((at for at, _ in starts if at < core_from[0]), default=-1)
+        sections = [order[b["line_id"]] for i, b in enumerate(beats)
+                    if i and order.get(b["line_id"], -1) > last and b["scene"] != beats[i - 1]["scene"]][:1]
     # Stable, in this order on one line: a section's start gives way to a key line there, which gives way to the
     # core idea's (a chorus, or the narration's sentence that says it).
     starts = [(at, "") for at in sections] + starts + [(at, "") for at in core_from]
@@ -563,6 +602,7 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
     level = dict.fromkeys(builds, CROWD_START)
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    colours = particle_colours(bundle)
     thin: list[tuple[str, str]] = []
     for label, region in builds:
         for f in (f for beat in beats for f in beat["particles"] if f.label == label and len(f.path) > 1):
@@ -579,9 +619,10 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             start = level[build]
             level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
             if region in located.get(beat["scene"], set()):
-                crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
+                crowds.append(Crowd(region=region, label=label, color=colours.get(label) or marker_colour(label, palette),
                                     start=round(start, 4), end=round(end, 4)))
-        crowds += [Crowd(region=region, label=label, color=marker_colour(label, palette), start=THIN_SHARE,
+        crowds += [Crowd(region=region, label=label, color=colours.get(label) or marker_colour(label, palette),
+                         start=THIN_SHARE,
                          end=THIN_SHARE, thin=True)
                    for label, region in thin if region in located.get(beat["scene"], set())]
         beat["crowds"] = crowds
@@ -667,20 +708,33 @@ def _within(short: Particles, long: Particles) -> bool:
     return short.label == long.label and any(long.path[k:k + n] == short.path for k in range(len(long.path) - n + 1))
 
 
-def _run_all(beats: list[dict], hook: str) -> None:
-    """On a beat that sums up (the whole scene in view, nothing spotlit), every flow its scene has shown so far
-    moves at once beside the beat's own. A flow along part of a longer one carrying the same thing gives way to the
-    longer, so the whole pathway runs rather than two dots on one leg; at most RUN_MAX move. Not on the hook, nor on
-    a scene once a flow on it has been blocked: after the block, the stillness is the point. Runs after the spaces
-    are filled, so a space fills or empties only as the beat's own flows say."""
+def _sums_up(bundle: Bundle, video: str) -> set[str]:
+    """The lines that sum up, where the whole pathway may run (_run_all): the song's choruses and outro, and the
+    narration from the sentence that says the core idea to its end. Never the misconception's question or its
+    answer, which come inside the steps."""
+    if video == "song":
+        return {line.id for line in bundle.lyrics if line.section in ("chorus", "outro")}
+    return {n.id for n in bundle.narration[_says_core_idea(bundle):]} if bundle.narration else set()
+
+
+def _run_all(beats: list[dict], hook: str, summing: set[str]) -> None:
+    """On a beat that sums up (its line in `summing`, the whole scene in view, nothing spotlit), every flow its scene
+    has shown so far moves at once beside the beat's own. A flow along part of a longer one carrying the same thing
+    gives way to the longer, so the whole pathway runs rather than two dots on one leg; at most RUN_MAX move. An
+    instrumental gap goes on as the line before it. Not on the hook, nor on a scene once a flow on it has been
+    blocked: after the block, the stillness is the point. Runs after the spaces are filled, so a space fills or
+    empties only as the beat's own flows say."""
     taught: dict[str, list[Particles]] = {}  # per scene, each unblocked flow in the order it was first shown
     stopped: set[str] = set()  # scenes where a flow has been blocked
+    sums = False
     for beat in beats:
         scene, own = beat["scene"], beat["particles"]
         shown = taught.setdefault(scene, [])
         if any(f.blocked for f in own):
             stopped.add(scene)
-        if scene != hook and scene not in stopped and beat["spotlight"] is None and beat["camera"].target is None:
+        sums = beat["line_id"] in summing if beat["line_id"] else sums
+        if sums and scene != hook and scene not in stopped and beat["spotlight"] is None \
+                and beat["camera"].target is None:
             running = list(own)
             for flow in shown:
                 if any(_within(flow, g) for g in running):

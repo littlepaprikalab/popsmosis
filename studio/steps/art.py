@@ -66,9 +66,11 @@ The helper looks at each picture for a label that is wrong, for a structure miss
 place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of place is asked for
 again with what was wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not
 repainted (round 8: a second picture painted for those was no better 9 times in 11). A wrong label
-is kept: the helper looks at it again, and if it agrees, boxes it and writes a sticky note saying what
-is true (label_flags()); the video rings the label and sticks the note beside it (flags()). After the last try the
-scene keeps the picture with the fewest structures out of place, then the fewest other problems.
+is kept: the same look boxes it and writes a sticky note saying what is true, and the video rings the label
+and sticks the note beside it (flags()). So does a mistake that contradicts one of the lesson's facts, named
+by its id. One look does it all (look()): since Nov 2 there is no second look at the labels and no review of
+the notes. After the last try the scene keeps the picture with the fewest structures out of place, then the
+fewest other problems.
 
 Writes, per scene, art/<scene>.png (fitted to the art's size on its own background colour), then
 art/<scene>.json, last: the key (as above), the model, the prompt, that it labels its own parts,
@@ -80,13 +82,13 @@ pictures. Resuming and redrawing work as for the SVG art.
 
 from __future__ import annotations
 
-import colorsys
 import hashlib
 import json
 import math
 import re
 import shutil
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -94,10 +96,12 @@ from typing import Callable
 import numpy as np
 
 import skia
+from PIL import Image
 
 from pydantic import Field
 
 from studio import brain, checks, gemini, jobs, knobs, ledger, media, muse, repair, svg
+from studio.checks import colour_word
 from studio.jobs import read, write
 from studio.schemas import (Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, locations_problems,
                              stage_groups)
@@ -417,6 +421,8 @@ def key(bundle: Bundle, scene: Scene) -> str:
     data = [bundle.topic, _dump(scene)]
     if (stage := Stage.of(bundle, scene)) and stage.number > 1:
         data.append(_dump(stage.first))
+    if (source := style_source(bundle, scene)) is not None:  # painted in its look: again whenever it is
+        data.append(["style", _dump(source)])
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()[:16]
 
 
@@ -445,6 +451,22 @@ class Stage:
         if len(group) < 2:
             return None
         return cls(scene.stage_of, [s.id for s in group].index(scene.id) + 1, len(group), group[0])
+
+
+def style_source(bundle: Bundle, scene: Scene) -> Scene | None:
+    """The overview, when the scene is painted in its look: the owner saw the pump's pictures each in a style of its
+    own (Nov 1), the pump an orange cluster in one and a glossy lobed shape in the next, painted from separate prompts.
+    So a scene that shares a part with the overview is redrawn from the overview's picture (STYLE_FROM), as a process's
+    later stage is from its first. Not the hook (an everyday picture), the overview itself, or a later stage, which
+    follows its first stage, and that one the overview."""
+    if scene.id in EVERYDAY or scene.id == "overview":
+        return None
+    overview = next((s for s in bundle.scenes if s.id == "overview"), None)
+    stage = Stage.of(bundle, scene)
+    if overview is None or (stage is not None and stage.number > 1):
+        return None
+    shared = {s.name for s in scene.structures} & {s.name for s in overview.structures}
+    return overview if shared else None
 
 
 def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -> str:
@@ -515,21 +537,35 @@ def _said_over(bundle: Bundle, scene: Scene) -> list[str]:
 # spaces) and failed for a real scene, where every object has a name a student would not know: a boat came back
 # labelled "oarlock" and "thwart", a living room "Wall Vent" and "Wall Outlet" twice, a theatre "Fly System". So a
 # science diagram keeps the operator's line, and any other scene labels its parts and nothing else (labels_line()).
+# On Nov 1 the diagram's line lost to the list too, painted blind side by side on two overviews: its labels named the
+# parts in textbook words the narration never says ("Voltage-gated ion channel", "Calvin Cycle") 31% of the time and
+# pointed wrong 17%; with the list every label had the narration's word and 9% pointed wrong, with no extras or crowding.
 NO_SLIDE = "No title, legend, key or caption, and no colour names in the labels."
-LABELS = f"Clearly label nonobvious structures. {NO_SLIDE}"
+BOXED = "Write each label in black letters on its own small white box."
+NO_LABELS = "No labels, title, legend, key, caption or any other writing."
 SCIENCE_STYLE = "clean scientific style"  # how the brief has a science scene's image_prompt open (prompts/bundle.md)
+# A biology picture is asked for in the Campbell textbook look, the owner's choice (Nov 2): "the images are much better
+# looking". A style, not a figure of theirs. Added here at paint time, never in the bundle: when the brief had the
+# writer name the book, the fact-check struck it from every picture as a claim (eed1ff6). Biology is the course's, or,
+# in any other science course, a scene that draws the parts of a cell.
+CAMPBELL_STYLE = "clean biology Campbell style"  # the owner's words for it
+BIOLOGY_COURSE = re.compile(r"biolog|anatomy|physiolog|life science|genetic|microbio|ecolog|botany|zoology", re.I)
+CELL_PARTS = re.compile(r"\b(?:cell membrane|organelles?|proteins?|chloroplasts?|mitochondri\w*|enzymes?|DNA|RNA"
+                        r"|ribosomes?|neurons?|chromosomes?|phospholipid\w*|bilayer|cytoplasm)\b", re.I)
 EVERYDAY = ("hook",)  # the everyday picture; no picture draws the analogy since Nov 1 (checks._no_analogy_scene)
 WORKERS = 4  # scenes painted at once: each one waits on the painter's API, not on this machine
 
 CHECK_PROMPT = """You check one illustration for a short educational video before it is used. The picture \
 labels its own parts; the video adds no labels to it.
 
-List in `labels` each label in the picture that is wrong, quoting it as written, then what is wrong in a few \
-words: on or pointing at the wrong part, naming something the scene does not show, or misspelled or garbled \
-("'Photosystem I' points at the cytochrome complex"). The picture is kept with its labels, and the video flags \
-each label listed here on the picture as a mistake, so list only those that are wrong: never one that is right, \
-roughly right or acceptable, a part with no label, or a label whose line merely ends a little off its part. \
-Leave it empty when every label is right or the picture has none.
+In `labels`, give each label in the picture that is wrong: on or pointing at the wrong part, naming \
+something the scene does not show, or misspelled or garbled. The video flags each one you give on the picture as a \
+mistake, so give only those that are wrong: never one that is right, roughly right or acceptable, a part with no \
+label, or a label whose line merely ends a little off its part. For each: `text`, the writing as it reads there; \
+`note`, the sticky note for the student, under 8 words, saying what is true ("Should read: thylakoid space", "This \
+is cytochrome b6f"); and a tight box round the writing as fractions of the picture's width and height from its \
+top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down. Leave it empty when \
+every label is right or the picture has none.
 
 List in `misplaced` each structure below that is missing from the picture, in the wrong place, or facing \
 the wrong way for what the scene should show (an organelle outside what holds it, a protein's head on the \
@@ -544,12 +580,15 @@ moving between the structures, so a flow or arrow the picture leaves out is not 
 wrong way is. List only problems, never what you checked and found right. Leave it empty when the picture \
 is right. Do not list matters of taste or style.
 
-Then, in `notes`, write for the student watching the video one short, plain sentence for each problem \
-above that would teach them something false about the topic: a part in the wrong place, facing the wrong \
-way, of the wrong shape or in the wrong number. Say what the picture shows and what is true ("The chromosomes' \
-bends point the wrong way: each is pulled toward its pole by its middle, so the bend leads."). Under 25 words \
-each. A wrong label is never a note: it is in `labels`, and the video flags it on the picture with a note of its \
-own. Leave out problems of look, size or framing, which mislead no one. Leave it empty when nothing would."""
+Then, in `notes`, give one for each problem above where the picture contradicts one of the lesson's \
+facts, so that it would teach the student something false that the lesson teaches: a part in the wrong place, facing \
+the wrong way, of the wrong shape or in the wrong number. Never one about a detail the facts do not mention, such as \
+a building's roof or a costume, even if it is wrong. For each: `fact`, the id of the fact it contradicts; `text`, one \
+short, plain sentence for the student saying what the picture shows and what is true, under 25 words ("The \
+chromosomes' bends point the wrong way: each is pulled toward its pole by its middle, so the bend leads."); `note`, \
+the sticky note the video puts there, under 8 words ("The inner face is negative"); and a box round where it is, as \
+for a label, or 0 for all four when it is about the whole picture or no one place. A wrong label is never a \
+note. Leave it empty when nothing in the picture contradicts the facts."""
 
 
 class ArtCheck(Strict):
@@ -566,6 +605,76 @@ class ArtCheck(Strict):
     notes: list[str] = Field(default_factory=list)
 
 
+class LabelFlag(Strict):
+    """A wrong label in a picture: the writing, the sticky note the video puts beside it, and the box round it, as
+    fractions of the art's width and height."""
+
+    text: str
+    note: str
+    left: float
+    top: float
+    right: float
+    bottom: float
+
+
+class CheckedNote(Strict):
+    """A mistake in a picture that contradicts one of the lesson's facts: the fact's id, a sentence for the student,
+    the sticky note the video puts there, and the box round where it is (all 0: the whole picture)."""
+
+    fact: str
+    text: str
+    note: str
+    left: float
+    top: float
+    right: float
+    bottom: float
+
+
+class PictureCheck(Strict):
+    """The helper's one look at a picture (CHECK_PROMPT): kept as an ArtCheck, with its boxes (look())."""
+
+    labels: list[LabelFlag]
+    misplaced: list[str]
+    wrong: list[str]
+    notes: list[CheckedNote]
+
+
+# The picture as the check sees it: shrunk to this width, which costs about 40% of the tokens of the art's 1792 and
+# still read every wrong label of twelve test pictures, misspellings and wrong pointers alike (Nov 2).
+CHECK_WIDTH = 1024
+
+
+def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | None = None
+         ) -> tuple[ArtCheck, list[dict], list[dict]]:
+    """The helper's one look at a picture of the scene (the kept art, or `path`): its check, the wrong labels it boxed
+    (flags()), and its notes about one place, as sticky notes there. A note that names no fact of the lesson is
+    dropped: a correction must rest on what the lesson teaches, which the fact-check passed, not on the checker's own
+    knowledge (round 20's kidney note was false). One look replaces the check, the second look at its labels and the
+    brain's review of its notes, the owner's choice on Nov 2: too many layers."""
+    with tempfile.TemporaryDirectory(prefix="popsmosis-check-") as tmp:
+        small = Path(tmp) / "picture.png"
+        with Image.open(path or job / media.art_path(scene.id)) as picture:
+            if picture.width > CHECK_WIDTH:
+                picture = picture.resize((CHECK_WIDTH, round(picture.height * CHECK_WIDTH / picture.width)),
+                                         Image.LANCZOS)
+            picture.save(small)
+        answer = PictureCheck(**ask("helper", check_prompt(bundle, scene), PictureCheck, [small], system=CHECK_PROMPT,
+                                    label=label))
+    facts = {f.id for f in bundle.facts}
+    notes = [n for n in answer.notes if n.fact.strip() in facts and n.text.strip()]
+    flags = [f.model_dump() for f in answer.labels if _boxed(f) and f.note.strip()]
+    pinned = [{"text": n.text, "note": n.note, "left": n.left, "top": n.top, "right": n.right, "bottom": n.bottom}
+              for n in notes if _boxed(n) and n.note.strip()]
+    check = ArtCheck(labels=[f"'{f.text}': {f.note}" if f.note.strip() else f.text for f in answer.labels],
+                     misplaced=answer.misplaced,
+                     wrong=answer.wrong, notes=[n.text for n in notes])
+    return check, flags, pinned
+
+
+def _boxed(found) -> bool:
+    return 0 <= found.left < found.right <= 1 and 0 <= found.top < found.bottom <= 1
+
+
 @dataclass
 class Painting:
     """One picture of a scene, checked."""
@@ -575,6 +684,8 @@ class Painting:
     attempt: int
     check: ArtCheck
     refused: list[str] = field(default_factory=list)  # paint(): why each other picture of the scene was not kept
+    flags: list[dict] = field(default_factory=list)  # its wrong labels, boxed (look())
+    pinned: list[dict] = field(default_factory=list)  # its notes about one place, as sticky notes there
 
     def problems(self) -> list[str]:
         """What the scene is painted again for: a structure missing or out of place. A wrong label is not: the
@@ -600,13 +711,22 @@ def run_painted(job: Path, ask) -> str:
     drawn_ids = {scene.id for scene in to_draw}
     to_paint = [scene for scene in bundle.scenes if scene.id not in drawn_ids]
     stages = {scene.id: stage for scene in to_paint if (stage := Stage.of(bundle, scene))}
+    # The scenes painted in the overview's look (style_source()), when the overview is painted too, by a painter that
+    # can redraw: after the overview, from its picture.
+    overview = next((scene for scene in to_paint if scene.id == "overview"), None)
+    styled = ({scene.id for scene in to_paint if style_source(bundle, scene) is not None}
+              if overview is not None and by.redraws else set())
     again = {scene.id for scene in to_paint if not (resume and _painted(job, bundle, scene))}
+    if overview is not None and overview.id in again:
+        again |= styled
     # A later stage is redrawn from its first: painted again whenever that one is.
     again |= {sid for sid, stage in stages.items() if stage.first.id in again}
     todo = [scene for scene in to_paint if scene.id in again]
     kept = len(to_paint) - len(todo)
-    first = [scene for scene in todo if scene.id not in stages or stages[scene.id].number == 1]
-    later = [scene for scene in todo if scene not in first]
+    first = [scene for scene in todo if (scene.id not in stages or stages[scene.id].number == 1)
+             and scene.id not in styled]
+    middle = [scene for scene in todo if scene.id in styled]
+    later = [scene for scene in todo if scene not in first and scene not in middle]
 
     def make(scene: Scene):
         if scene.id not in drawn_ids:
@@ -634,6 +754,10 @@ def run_painted(job: Path, ask) -> str:
     to_draw = [scene for scene, _ in drawings]
     results = [m for _, m in instead] + painted_first
     first = painted_instead + first
+    if middle:  # in the overview's look, from its picture as now painted
+        results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(overview.id),
+                                                       styled=True), middle, WORKERS)
+        first += middle
     results += ledger.parallel(lambda scene: paint(job, bundle, scene, ask, job / media.art_path(stages[scene.id].first.id)),
                                later, WORKERS)
     todo = first + later
@@ -687,7 +811,7 @@ def refusal(tried: dict) -> str | None:
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None,
-          instead_of_svg: str = "") -> tuple[Painting, int]:
+          instead_of_svg: str = "", styled: bool = False) -> tuple[Painting, int]:
     """The scene's picture: the best of up to MAX_PAINTS from the job's painter, saved as its art. Returns it and
     how many pictures were asked for. A process's later stage is redrawn from its first stage's picture
     (`reference`), so the stages share their framing, by a painter that can redraw (Muse Image); if it will
@@ -700,7 +824,8 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         old.unlink()
     best, problems, n, tries = None, [], 0, []
     for n in range(1, MAX_PAINTS + 1):
-        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None)
+        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None and not styled,
+                              styled=reference is not None and styled)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
             picture = by.make(job, label, prompt, reference)
@@ -723,9 +848,8 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         path = job / "art" / f"{media.file_name(scene.id)}.try{n}.png"
         path.write_bytes(svg.png(fit(picture)))
         named = f"{scene.id}" + (f" try {n}" if n > 1 else "")
-        check = ArtCheck(**ask("helper", check_prompt(bundle, scene), ArtCheck, [path], system=CHECK_PROMPT,
-                               label=f"art check {named}"))
-        painting = Painting(path, prompt, n, check)
+        check, flagged, pinned = look(job, bundle, scene, ask, f"art check {named}", path)
+        painting = Painting(path, prompt, n, check, flags=flagged, pinned=pinned)
         tries.append({"try": n, **check.model_dump()})
         if best is None or painting.score() < best.score():
             best = painting
@@ -737,122 +861,18 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                                + (f" (and {len(problems) - 1} more problems)" if len(problems) > 1 else ""))
     best.path.replace(job / media.art_path(scene.id))
     best.refused = [why for tried in tries if tried["try"] != best.attempt and (why := refusal(tried))]
-    unconfirmed, pinned = [], []
-    if best.check.notes:
-        kept, pinned = confirmed_notes(job, bundle, scene, best.check.notes, ask)
-        unconfirmed = [n for n in best.check.notes if n not in kept]
-        best.check = best.check.model_copy(update={"notes": kept})
-    flagged = label_flags(job, scene, best.check.labels, ask) if best.check.labels else []
+    flagged, pinned = best.flags, best.pinned
     # `labelled`: the picture names its own parts, so the video draws no labels over it (self_labelled()).
     write(_painting(job, scene), {"key": key(bundle, scene), "model": by.model, "prompt": best.prompt,
                                   "labelled": True, **({"flags": flagged} if flagged else {}),
                                   **({"pinned": pinned} if pinned else {}),
-                                  **({"notes_unconfirmed": unconfirmed} if unconfirmed else {}),
                                   **({"instead_of_svg": instead_of_svg} if instead_of_svg else {}),
                                   "redrawn_from": stage.first.id if (stage := Stage.of(bundle, scene)) and reference
                                   and stage.number > 1 else "",
+                                  **({"styled_from": "overview"} if styled and reference is not None else {}),
                                   "try": best.attempt, "check": best.check.model_dump(), "tries": tries})
     _kept(job, scene).unlink(missing_ok=True)  # the art is painted now, whatever drew it before
     return best, n
-
-
-NOTES_PROMPT = """A checker looked at a picture painted for a lesson video and wrote notes for the student \
-watching, each saying the picture shows something false and what is true. The video shows the notes beside the \
-picture, so a wrong note teaches the student something false twice. Check each note against the picture, the \
-lesson's facts and what the course's textbooks teach. Leave out a note whose correction is false, one about \
-something the picture does not show, and one about style or looks; keep every other, including one you cannot \
-settle, since the video would rather disclose a doubt than hide a mistake. Return the notes you keep, word for \
-word, in `keep`. Then, in `pinned`, for each kept note about one place in the picture, a sticky note the video \
-sticks there: `text`, the note word for word; `note`, what is true in under 8 words ("The inner face is \
-negative", "Spindle fibers run to each pole"); and a box round where it is, as fractions of the picture's width \
-and height from its top-left corner: `left` and `right` from 0 to 1 across, `top` and `bottom` from 0 to 1 down. \
-Leave out of `pinned` a note about the whole picture or no one place."""
-
-
-class PinnedNote(Strict):
-    """A kept note about one place in the picture: the sticky note the video sticks there, and where."""
-
-    text: str
-    note: str
-    left: float
-    top: float
-    right: float
-    bottom: float
-
-
-class ConfirmedNotes(Strict):
-    keep: list[str]
-    pinned: list[PinnedNote] = Field(default_factory=list)
-
-
-def confirmed_notes(job: Path, bundle: Bundle, scene: Scene, notes: list[str], ask) -> tuple[list[str], list[dict]]:
-    """The notes the brain confirms against the picture and the facts, and of those the ones about one place in
-    it, each with its sticky note and box (PinnedNote): the video sticks those on the picture, where a note on a card
-    beside it left the learner to find the place (the owner, Nov 1). Round 20's kidney close-up was shown beside a
-    note that its glucose carriers belong on the capillary's side, which is false for the carriers that take glucose
-    out of the filtrate. When the call fails, the notes stand, none pinned."""
-    facts = "\n".join(f"- {f.text}" for f in bundle.facts)
-    listed = "\n".join(f"- {n}" for n in notes)
-    try:
-        answer = ConfirmedNotes(**ask("brain", f"The picture was asked for as: {scene.image_prompt}\n\nThe lesson's "
-                                               f"facts:\n{facts}\n\nThe notes:\n{listed}", ConfirmedNotes,
-                                      [job / media.art_path(scene.id)], system=NOTES_PROMPT,
-                                      label=f"art notes {scene.id}"))
-    except Exception as e:  # the notes disclose a flawed picture; a check that fails leaves them as they were
-        print(f"art: {scene.id}: the notes could not be confirmed: {type(e).__name__}: {e}", file=sys.stderr)
-        return notes, []
-    kept = {" ".join(k.split()) for k in answer.keep}
-    kept_notes = [n for n in notes if " ".join(n.split()) in kept]
-    pinned = [pin.model_dump() for pin in answer.pinned
-              if " ".join(pin.text.split()) in kept and " ".join(pin.note.split())
-              and 0 <= pin.left < pin.right <= 1 and 0 <= pin.top < pin.bottom <= 1]
-    return kept_notes, pinned
-
-
-# A second look before a label is flagged on screen: on Oct 31 the check listed labels it called "correct" or
-# "acceptable" among the wrong ones, 4 of 5 on two pictures; boxing each one, the helper leaves those out.
-FLAGS_PROMPT = """A check listed the labels below as wrong in an illustration, and the video will flag each one \
-you give on the picture as a mistake, with a sticky note beside it. Look at each in the picture. Give it only if \
-it is wrong: on or pointing at the wrong part, naming something the picture does not show, or misspelled or \
-garbled. Leave out one that is right, roughly right or acceptable, whatever the check said, and one you cannot \
-find. For each you give: `text`, the line of writing as it reads there; `note`, the sticky note for the student, \
-under 8 words, saying what is true ("Should read: thylakoid space", "This is cytochrome b6f"); and a tight box \
-round the writing as fractions of the picture's width and height, from its top-left corner: `left` and `right` \
-from 0 to 1 across, `top` and `bottom` from 0 to 1 down."""
-
-
-class LabelFlag(Strict):
-    """A wrong label in a picture: the writing, the sticky note the video puts beside it, and the box round it, as
-    fractions of the art's width and height."""
-
-    text: str
-    note: str
-    left: float
-    top: float
-    right: float
-    bottom: float
-
-
-class LabelFlags(Strict):
-    """The helper's answer: the wrong labels it confirms, each with its note and where it is."""
-
-    flags: list[LabelFlag]
-
-
-def label_flags(job: Path, scene: Scene, labels: list[str], ask) -> list[dict]:
-    """Where each label the check found wrong is in the scene's kept picture, as the helper boxes it (fractions of
-    the art), with the sticky note the video puts beside it, for the video to flag it there (flags()); the helper
-    leaves out one it finds right on a second look (FLAGS_PROMPT). When the call fails none is flagged: the notes
-    beside the picture still say what is wrong."""
-    listed = "\n".join(f"- {label}" for label in labels)
-    try:
-        found = LabelFlags(**ask("helper", f"A check found these labels wrong:\n{listed}", LabelFlags,
-                                 [job / media.art_path(scene.id)], system=FLAGS_PROMPT, label=f"art flags {scene.id}"))
-    except Exception as e:  # a flag points the student at a mistake the notes already disclose
-        print(f"art: {scene.id}: the wrong labels could not be found: {type(e).__name__}: {e}", file=sys.stderr)
-        return []
-    return [f.model_dump() for f in found.flags
-            if 0 <= f.left < f.right <= 1 and 0 <= f.top < f.bottom <= 1 and f.note.strip()]
 
 
 def fit(picture: bytes) -> np.ndarray:
@@ -872,18 +892,25 @@ def fit(picture: bytes) -> np.ndarray:
     return surface.makeImageSnapshot().toarray(colorType=skia.kRGBA_8888_ColorType)[:, :, :3].copy()
 
 
-def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False) -> str:
+def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn: bool = False,
+                 styled: bool = False) -> str:
     """The scene as a teacher would ask for it, each structure's colour by name (never a hex code: the
     image model reads names), a graph's axes, and last what to label (labels_line()): the picture labels its own
-    parts. Short on purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE
-    says why). A later stage `redrawn` from
-    its first stage's picture says so first."""
+    parts. The Colours line gives every structure's colour, and a colour the image_prompt gives one right before its
+    name is made to agree with it (checks._recolour_image_prompts): the writer's own ("a brown ATP synthase")
+    disagreed with it ("ATP synthase orange"). Short on
+    purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE says why). A later
+    stage `redrawn` from its first stage's picture says so first."""
     colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
-    parts = [scene.image_prompt.strip().rstrip(".") + ".", f"Colours: {colours}."]
+    parts = [campbell_styled(bundle, scene.image_prompt).strip().rstrip(".") + ".", f"Colours: {colours}."]
+    if loose := loose_line(bundle, scene):
+        parts.append(loose)
     if scene.axes:
         parts.append(axes_line(scene.axes))
     if redrawn and (stage := Stage.of(bundle, scene)):
         parts.insert(0, REDRAW.format(process=stage.process))
+    elif styled:
+        parts.insert(0, STYLE_FROM)
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
@@ -891,15 +918,53 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     return " ".join(parts)
 
 
+def is_diagram(scene: Scene) -> bool:
+    """Whether the scene is a science diagram or a graph, as the brief has its picture asked for: the parts of one
+    fill in as they are named; an everyday sight, a history or a story is shown as painted."""
+    return SCIENCE_STYLE in scene.image_prompt.lower() or bool(scene.axes.x or scene.axes.y)
+
+
+def campbell_styled(bundle: Bundle, image_prompt: str) -> str:
+    """A science scene's prompt in Campbell Biology's style (CAMPBELL_STYLE) when the course is biology or the scene
+    draws a cell's parts; any other prompt as written."""
+    if SCIENCE_STYLE not in image_prompt.lower():
+        return image_prompt
+    if not (BIOLOGY_COURSE.search(bundle.course or "") or CELL_PARTS.search(image_prompt)):
+        return image_prompt
+    return re.sub(re.escape(SCIENCE_STYLE), CAMPBELL_STYLE, image_prompt, count=1, flags=re.I)
+
+
+def loose_line(bundle: Bundle, scene: Scene) -> str:
+    """The ions and small molecules the video moves on this scene (MARKER_COLOURS), which the picture draws none of:
+    on Nov 1 the pump's painter added its own Na⁺ and K⁺ balls, brown and blue, beside the video's purple and green
+    ones. Not one that is a part of the scene ("Oxygen", "Water", "ATP"): that part is drawn."""
+    kinds = dict.fromkeys(kind for d in bundle.direction if d.scene == scene.id for f in d.flows()
+                          if (kind := checks.notation(f.carries)) in checks.MARKER_COLOURS)
+    loose = [k for k in kinds if not any(checks.is_kind(s.name, k) for s in scene.structures)]
+    if not loose:
+        return ""
+    return f"Draw no {' or '.join(loose)} particles anywhere: the video adds its own, moving."
+
+
 def labels_line(scene: Scene) -> str:
-    """What the picture labels. A science diagram, its nonobvious structures (LABELS), which there are the parts a
-    textbook figure labels; any other scene, its own parts by the lesson's names and nothing else, since everything
-    in a room or on a boat has a name a student would not know."""
-    if SCIENCE_STYLE in scene.image_prompt.lower():
-        return LABELS
-    names = ", ".join(s.name for s in scene.structures)
-    return (f"Label only these parts, each with exactly this name: {names}. Label nothing else: no room, furniture "
-            f"or background objects. {NO_SLIDE}")
+    """What the picture labels: its own parts by the lesson's names, the words the narration says, and nothing else,
+    since everything in a room or on a boat has a name a student would not know, and a diagram's parts have textbook
+    names the lesson does not use. A science diagram has no room or furniture to name. The hook, an everyday sight,
+    labels nothing (NO_LABELS): its parts' names teach nothing (Nov 1: the pump's hook labelled "Body" and "Couch"),
+    and the upright hook video cropped them.
+
+    Each name is quoted after what it labels, by the part's own look (its sam_phrase): the brown step "Privileges".
+    Given the names alone, the painter guessed where an idea drawn as a thing goes, and put "Privileges" under the
+    French Revolution's figures, not on their step; with each one placed, every label landed on its thing and was
+    spelled right, on the French Revolution and the light reactions alike (the owner's choice, Nov 2). Each in black
+    on a small white box (BOXED): the video dims the parts not yet named, and the painter's coloured lettering looked
+    odd dimmed, where black on white still reads (the owner, Nov 2; tested on the same two pictures)."""
+    if scene.id in EVERYDAY:
+        return NO_LABELS
+    labels = ", ".join(f'the {s.sam_phrase.strip()} "{s.name}"' if s.sam_phrase.strip() else f'"{s.name}"'
+                       for s in scene.structures)
+    rest = "." if SCIENCE_STYLE in scene.image_prompt.lower() else ": no room, furniture or background objects."
+    return f"Label only: {labels}. {BOXED} Label nothing else{rest} {NO_SLIDE}"
 
 
 def axes_line(axes: Axes) -> str:
@@ -907,29 +972,6 @@ def axes_line(axes: Axes) -> str:
     named = [f'the {which} one labelled "{name}"' for which, name in (("horizontal", axes.x), ("vertical", axes.y))
              if name]
     return "Its axes are two plain, thin lines" + (", " + " and ".join(named) if named else "") + "."
-
-
-# Hue bands in degrees, for colour_word. Purples run past 290 (#9C27B0 is 291) and pinks to 345 (#F06292 is
-# 340): with the bands at 290 and 335, round 17 asked for a purple Roman Empire as "light pink" and its pink
-# civil wars as "red", and the label "Civil wars" went on the Empire.
-HUES = ((10, "red"), (40, "orange"), (70, "yellow"), (160, "green"), (190, "teal"), (250, "blue"),
-        (310, "purple"), (345, "pink"), (360, "red"))
-
-
-def colour_word(color_hex: str) -> str:
-    """A colour as everyday words, which image and segmentation models know: "#90BE6D" -> "light green"."""
-    r, g, b = (int(color_hex[i:i + 2], 16) / 255 for i in (1, 3, 5))
-    hue, saturation, value = colorsys.rgb_to_hsv(r, g, b)
-    if saturation < 0.15:
-        return "white" if value > 0.85 else "black" if value < 0.2 else "grey"
-    name = next(word for limit, word in HUES if hue * 360 < limit)
-    if name in ("orange", "red") and value < 0.55:
-        return "brown"
-    if value < 0.4:
-        return f"dark {name}"
-    if saturation < 0.5 and value > 0.6:
-        return "pink" if name == "red" else f"light {name}"  # light red is what everyone calls pink (#FFC0CB)
-    return name
 
 
 # What each kind of scene is for, by the ids the bundle prompt gives them (studio/prompts/bundle.md), so the
@@ -945,6 +987,9 @@ DETAIL = "a close-up of one part of the topic."
 SONG = "a picture for the song video: the topic's own parts as the song's lines sing them."
 STAGE = ("stage {number} of {count} of {process}: the same subject as its other stages, at the same size and in "
          "the same place, showing what this stage shows.")
+# Before the prompt of a scene painted in the overview's look (style_source()), redrawn from the overview's picture.
+STYLE_FROM = ("Paint a new picture in the same style as this one: the same colours, line work and shading, with every "
+              "part it shares with the new picture drawn the same way. Do not copy its layout. The new picture:")
 # Before a later stage's own prompt, when it is redrawn from the first stage's picture (/v1/images/edits).
 REDRAW = ("Redraw this picture as a later stage of {process}: the same subject, at the same size and in the same "
           "place, in the same colours and style; change only what this stage shows.")
@@ -959,7 +1004,8 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             + f"\nThe scene is {kind}"
             + f"\nWhat the scene should show: {scene.image_prompt}"
             + (f"\n{axes_line(scene.axes)} They are asked for, and are no part to find." if scene.axes else "")
-            + "\nIt must show each of these:\n" + "\n".join(lines))
+            + "\nIt must show each of these:\n" + "\n".join(lines)
+            + "\n\nThe lesson's facts:\n" + "\n".join(f"- {f.id}: {f.text}" for f in bundle.facts))
 
 
 def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
@@ -968,7 +1014,7 @@ def notices(job: Path, bundle: Bundle) -> dict[str, list[str]]:
     None for a drawing (the brain's SVG), which is not checked this way. A note about a label the video flags on
     the picture (flags()) is left out: its sticky note says it there, and the card said it again (the owner, Nov 1).
     One about a label that could not be flagged stays. So does any other, but one stuck on the picture where it
-    applies (PinnedNote): the card holds only what has no one place."""
+    applies (look()'s pinned notes): the card holds only what has no one place."""
     found = {}
     for scene in bundle.scenes:
         if not _painted(job, bundle, scene):
@@ -1006,8 +1052,8 @@ def self_labelled(job: Path, bundle: Bundle) -> list[str]:
 
 def flags(job: Path, bundle: Bundle) -> dict[str, list[Flag]]:
     """Each label the check found wrong in a painted picture, by scene, as the box round it in art pixels and its
-    sticky note (label_flags()): the video flags each one on the picture with its note beside it. Then each note
-    about one place in it (PinnedNote), with no ring: a sticky note joined to the place."""
+    sticky note (look()): the video flags each one on the picture with its note beside it. Then each note about one
+    place in it, with no ring: a sticky note joined to the place."""
     found = {}
     for scene in bundle.scenes:
         made = []

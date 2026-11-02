@@ -25,7 +25,8 @@ Verdict = Literal["SUPPORTED", "UNSUPPORTED", "FILLER"]
 LESSON_MAX_CHARS = 5000  # what POST /api/questions/:id/answer accepts
 BPM_RANGE = (80, 160)  # the tempos the song may take
 DEFAULT_BPM = 112  # a song whose styles name no tempo: every song before the styles chose one
-BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*bpm\b", re.IGNORECASE)
+# However the style names it ("104 bpm", "104 beats per minute"): one it missed would get a second tempo added.
+BPM_TAG = re.compile(r"\b(\d{2,3}(?:\.\d+)?)\s*(?:bpm|beats per minute)\b", re.IGNORECASE)
 TAGS_PER_VIDEO = 10  # hashtags a video keeps; the API holds them to the same rules (api/src/lib/tags.ts)
 TAG_MAX_CHARS = 40  # a longer one is dropped, since cutting it short would make a word nobody searches for
 SONG_SCENES_MAX = 3  # the song's own pictures (Scene.song_only) it keeps (studio/checks.py), beside the lesson's
@@ -249,17 +250,40 @@ def tag_of(value: str) -> str:
     return unicodedata.normalize("NFKC", kept)
 
 
+# Tags that help no one find the video: they name no subject, only a hope of being shown.
+NO_TAGS = {"fyp", "fypシ", "foryou", "foryoupage", "viral", "trending"}
+
+
 def clean_tags(values: list[str]) -> list[str]:
-    """Each tag as tag_of() writes it, the first of each kept, at most TAGS_PER_VIDEO.
+    """Each tag as tag_of() writes it, the first of each kept, at most TAGS_PER_VIDEO; none of NO_TAGS.
 
     Never a reason to fail a bundle: a tag that does not fit is dropped, not sent back.
     """
     tags: list[str] = []
     for value in values:
         tag = tag_of(value)
-        if tag and len(tag) <= TAG_MAX_CHARS and tag not in tags:
+        if tag and len(tag) <= TAG_MAX_CHARS and tag not in tags and tag not in NO_TAGS:
             tags.append(tag)
     return tags[:TAGS_PER_VIDEO]
+
+
+# What each video is tagged with besides its subject, after the writer's own tags: asked to write them, the writer
+# spent 3 or 4 of its 10 on these same ones in every bundle (Nov 1). "#examprep" is not for a younger audience
+# ("about age 10", "6th grade"), who has no exam ahead.
+SONG_TAGS = ("studysong", "studytok")
+LESSON_TAGS = ("explained", "examprep", "studytok")
+YOUNGER = re.compile(r"\bages?\s+(?:[1-9]|1[0-3])\b|\b[1-8](?:st|nd|rd|th)\s+grade\b|\bgrade\s+[1-8]\b"
+                     r"|\b(?:middle|elementary|primary)\s+school\b|\b(?:kids?|child|children)\b", re.I)
+
+
+def with_study_tags(tags: Tags, audience: str, sung: bool = True) -> Tags:
+    """The tags with SONG_TAGS and LESSON_TAGS after the writer's own, room kept for them; a video with no song has
+    no song tags."""
+    def joined(own: list[str], more: tuple[str, ...]) -> list[str]:
+        more = [t for t in more if t not in own and not (t == "examprep" and YOUNGER.search(audience))]
+        return clean_tags([*own[:TAGS_PER_VIDEO - len(more)], *more])
+
+    return Tags(song=joined(tags.song, SONG_TAGS) if sung else tags.song, lesson=joined(tags.lesson, LESSON_TAGS))
 
 
 class Tags(Strict):
@@ -500,7 +524,8 @@ class Problem(Strict):
     line_id: str  # or "scene:<id>" for a whole scene, "structures" for the structure list, "music" for the styles
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
-                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy"]
+                  "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy",
+                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -1009,7 +1034,7 @@ class Beat(Strict):
 
 class Flag(Strict):
     """A label the art check found wrong in a painted picture (art.flags()): the box round it, in art pixels, and
-    the sticky note the video puts beside it, for the student. Or a note about one place in it (art.PinnedNote),
+    the sticky note the video puts beside it, for the student. Or a note about one place in it (art.look()),
     with no ring: the sticky note joined to the place."""
 
     box: Box
@@ -1045,6 +1070,10 @@ class Timeline(Strict):
     # The scenes whose painted picture labels its own parts (art.self_labelled()): the renderer draws no labels or
     # axis names over them, only over a drawing (the brain's SVG).
     self_labelled: list[str] = []
+    # The painted scenes that are no science diagram (an everyday sight, a history, a story): shown as painted from
+    # their first frame, no part washed pale until it is named, which turned a pile of orange pumpkins white (the
+    # owner, Nov 2). A diagram, drawn or painted, still fills in part by part.
+    unwashed: list[str] = []
     # Each label the art check found wrong in a painted picture, by scene: flagged on the picture, a ring round it and
     # a sticky note beside it saying what is true.
     flags: dict[str, list[Flag]] = {}
@@ -1145,6 +1174,29 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
         elif clip.at >= timeline.duration:
             problems.append(f"audio clip {clip.path} starts after the video ends")
     return problems
+
+
+class PlacedArrow(Strict):
+    """One hop's arrow as the arrows step placed it and looked at it (studio/steps/arrows.py), by its flow: the scene,
+    the stops, what it carries and whether it is blocked, as the timeline's Particles have them."""
+
+    scene: str
+    path: list[str]
+    carries: str
+    blocked: bool = False
+    # Its tail and head where the helper pointed them on the painting, art pixels: drawn straight from one to the other.
+    # None where code places it (a drawing, or a hop the helper was not asked about) or it cannot be drawn.
+    start: Point | None = None
+    end: Point | None = None
+    placed: str = ""  # the helper's word on where it put the arrow, or on why the picture cannot show it
+    seen: str = ""  # its word on the arrow as drawn, after looking at a still of it
+    left_out: str = ""  # why the video leaves it out, or "": it cannot be drawn, or as drawn it does not show the move
+
+
+class Arrows(Strict):
+    """arrows.json: every hop's arrow off a graph, as the arrows step placed and looked at it."""
+
+    arrows: list[PlacedArrow]
 
 
 def timeline_problems(timeline: Timeline, locations: Locations) -> list[str]:

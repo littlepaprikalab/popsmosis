@@ -18,6 +18,7 @@ videos took 15% less time at once than one after another.
 
 from __future__ import annotations
 
+import functools
 import itertools
 import os
 import shutil
@@ -29,6 +30,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from studio.media import AAC, PEAK_LIMIT, RESAMPLE
 from studio.render.layouts import LAYOUTS
 from studio.schemas import Timeline
 
@@ -160,7 +162,7 @@ def _join(job: Path, video: _Video) -> float:
     if timeline.audio:
         inputs, mix = audio_filter(job, timeline)
         _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(joined), *inputs, "-filter_complex", mix,
-              "-map", "0:v", "-map", "[mix]", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+              "-map", "0:v", "-map", "[mix]", "-c:v", "copy", *AAC,
               "-t", f"{timeline.duration:.3f}", "-movflags", "+faststart", str(final)], timeout=time_limit(timeline))
     else:
         _run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(joined), "-c", "copy", "-movflags", "+faststart",
@@ -247,6 +249,21 @@ def ranges(frames: int, parts: int) -> list[tuple[int, int]]:
     return [(a, b) for a, b in itertools.pairwise(cuts) if b > a]
 
 
+# A clip's loudest sample once turned down for the mix (full scale 1.0): under PEAK_LIMIT's 0.891, so the limiter only
+# catches what resampling adds. Lyria masters its songs past full scale (supply and demand's to 1.35), and the limiter
+# pulling up to 3.6 dB off them at once crackled: the owner heard it in the video and not in Lyria's song, nor in the
+# song turned down first (Nov 2).
+HEADROOM = 0.85
+
+
+@functools.lru_cache(maxsize=32)
+def clip_gain(path: str) -> float:
+    """What a clip's audio is turned down by so its loudest sample sits at HEADROOM; 1 when it is there already."""
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-f", "f32le", "-"], capture_output=True).stdout
+    peak = max((abs(v) for v in memoryview(raw).cast("f")), default=0.0) if raw else 0.0
+    return min(1.0, HEADROOM / peak) if peak > 0 else 1.0
+
+
 def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[list[str], str]:
     """ffmpeg inputs and a filter that mixes the clips into one track the video's length.
 
@@ -259,10 +276,15 @@ def audio_filter(job: Path, timeline: Timeline, first_input: int = 1) -> tuple[l
         if clip.fade_out > 0 and clip.end is not None:
             fade += f",afade=t=out:st={max(clip.end - clip.start - clip.fade_out, 0):.3f}:d={clip.fade_out:.3f}"
         delay = round(clip.at * 1000)
-        chains.append(f"[{i + first_input}:a]aresample=48000,{trim},asetpts=PTS-STARTPTS{fade},"
+        gain = clip_gain(str(job / clip.path))
+        quieter = f"volume={gain:.4f}," if gain < 1.0 else ""
+        chains.append(f"[{i + first_input}:a]{RESAMPLE},{quieter}{trim},asetpts=PTS-STARTPTS{fade},"
                       f"adelay={delay}:all=1[a{i}]")
     mix = "".join(f"[a{i}]" for i in range(len(timeline.audio)))
-    chains.append(f"{mix}amix=inputs={len(timeline.audio)}:normalize=0:duration=longest,"
+    # The mix's peaks held under -1 dBFS before the AAC encode (media.PEAK_LIMIT): the audio step keeps a song as it was
+    # sent, past full scale in its choruses, which crackled once encoded without it (Nov 1). Each clip is turned down to
+    # HEADROOM first, so the limiter seldom works: working hard, it crackled too (Nov 2).
+    chains.append(f"{mix}amix=inputs={len(timeline.audio)}:normalize=0:duration=longest,{PEAK_LIMIT},"
                   f"apad,atrim=end={timeline.duration:.3f}[mix]")
     return inputs, ";".join(chains)
 

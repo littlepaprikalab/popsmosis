@@ -2,7 +2,7 @@ import pytest
 
 from studio import brain, knobs
 from studio.jobs import read, write
-from studio.styles import style_for
+from studio.styles import style_for_job
 from studio.schemas import Bundle, CheckReport, LessonBundle, Request
 from studio.steps import bundle as bundle_step, script as script_step
 from studio.tests.sample import bundle_data, lesson_bundle_data
@@ -29,7 +29,7 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
     assert "Teach the why, not the parts list" in seen["system"]
     assert seen["prompt"].startswith("Topic: the light reactions\n\nCourse: AP Bio\n\nThe song style for this droplet, "
                                      "from the studio's rotation: ")
-    assert style_for(tmp_path.name) in seen["prompt"]
+    assert style_for_job(tmp_path) in seen["prompt"]  # the style the job took and kept, whatever its neighbours took
     assert read(tmp_path / "bundle.json", Bundle) == bundle
     assert not (tmp_path / "factcheck.json").exists()
 
@@ -44,8 +44,11 @@ def test_the_prompt_holds_for_topics_outside_science():
     # The narration is the script's now, and ends on what goes in and comes out only for a process; the chorus,
     # which sums up the same way, keeps the warning.
     assert "for a process, what goes in and what comes out" in " ".join(script_step.narration_rules().split())
-    assert "for any other idea, its cause and its result. Only something really taken in" in prompt
-    assert "the bridge takes the other case the facts give" in prompt and "another case the same idea explains" in prompt
+    assert 'for any other idea, its cause and its result, never "in" and "out"' in prompt
+    assert "never the verses' story again" in prompt and "Any other topic has no bridge" in prompt
+    # Nov 1, the owner: no other case for a chain of events. Asked for "the same causes in another revolution", the
+    # French Revolution's lesson and bridge turned to England, a segue that taught nothing.
+    assert "another revolution" not in prompt and "other case" not in prompt
 
 
 def test_the_facts_say_the_misconception_is_a_common_one():
@@ -190,3 +193,16 @@ def test_a_reference_style_is_asked_for_by_name_and_never_rotated():
         assert "diction" in style  # said once, by the style itself
     assert styles.CASH_IN_THE_CARRIER in styles.SONG_STYLES  # the owner's favourite, in the rotation too
     assert styles.named("pop-punk, fast") == "pop-punk, fast"  # anything else, as the learner said it
+
+
+
+def test_jobs_made_one_after_another_never_share_a_style_and_a_retry_keeps_its_own(tmp_path):
+    # The owner, Nov 2: three of five videos in one batch drew the same teen pop from their names.
+    from studio.styles import CHOSEN, SONG_STYLES, style_for_job
+
+    n = len(SONG_STYLES)
+    picked = [style_for_job(tmp_path / f"job{i}") for i in range(n)]
+    assert sorted(picked) == sorted(SONG_STYLES)  # a whole run of the rotation, no style twice
+    assert style_for_job(tmp_path / "job3") == picked[3]  # a retry keeps its style
+    assert (tmp_path / "job3" / CHOSEN).is_file()
+    assert style_for_job(tmp_path / "late") == picked[0]  # then the one taken longest ago comes round again

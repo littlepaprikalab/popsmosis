@@ -192,8 +192,8 @@ def test_a_line_that_sums_up_runs_every_flow_its_scene_has_shown_so_far(monkeypa
     def flow(*path, label="H⁺", blocked=False):
         return Particles(path=list(path), color="#F2C230", trail=True, label=label, blocked=blocked)
 
-    def beat(scene, *flows, spotlight=None, target=None):
-        return {"scene": scene, "particles": list(flows), "spotlight": spotlight,
+    def beat(scene, *flows, spotlight=None, target=None, line_id="c1-1"):
+        return {"scene": scene, "particles": list(flows), "spotlight": spotlight, "line_id": line_id,
                 "camera": TimelineCamera(target=target, zoom=1.6 if target else 1.0)}
 
     hand_off, chain = flow("PSII", "b6f", label="e⁻"), flow("PSII", "b6f", "PSI", label="e⁻")
@@ -205,25 +205,45 @@ def test_a_line_that_sums_up_runs_every_flow_its_scene_has_shown_so_far(monkeypa
              beat("membrane", back),  # sums up: what the scene has shown runs beside its own
              beat("membrane", back, spotlight="ATP synthase", target="ATP synthase"),  # about one part: its own only
              beat("membrane"),  # sums up with nothing of its own
+             beat("membrane", line_id=None),  # an instrumental gap after it: it goes on
+             beat("membrane", line_id="v2-1"),  # the whole scene, but a verse's question: it holds still
+             beat("membrane", line_id=None),  # and so does the gap after that
              beat("hook")]  # the hook never does
-    _run_all(beats, "hook")
+    _run_all(beats, "hook", {"c1-1"})
     moving = [[(f.path[0], f.path[-1], f.label) for f in b["particles"]] for b in beats]
     # The hand-off runs within the whole chain, which takes its place, rather than as a second dot on its leg; at
     # most RUN_MAX (2) move, the beat's own first.
     assert moving[4] == [("Lumen", "Stroma", "H⁺"), ("PSII", "PSI", "e⁻")]
     assert moving[5] == [("Lumen", "Stroma", "H⁺")]
-    assert moving[6] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
-    assert moving[7] == []
+    assert moving[6] == moving[7] == [("Stroma", "Lumen", "H⁺"), ("PSII", "PSI", "e⁻")]
+    assert moving[8] == moving[9] == moving[10] == []
     assert [len(b["particles"]) for b in beats[:4]] == [1, 1, 1, 1]  # lines that teach a step move only that step
 
     # At most RUN_MAX at once, the beat's own first; and once a flow is blocked on a scene, it stays still.
     monkeypatch.setattr(step, "RUN_MAX", 2)
     beats = [beat("membrane", pump, spotlight="b6f"), beat("membrane", chain, spotlight="PSI"), beat("membrane", back),
              beat("membrane", flow("PSII", "Herbicide", label="e⁻", blocked=True)), beat("membrane")]
-    _run_all(beats, "hook")
+    _run_all(beats, "hook", {"c1-1"})
     moving = [[(f.path[0], f.path[-1]) for f in b["particles"]] for b in beats]
     assert moving[2] == [("Lumen", "Stroma"), ("Stroma", "Lumen")]
     assert moving[3] == [("PSII", "Herbicide")] and moving[4] == []
+
+
+def test_only_a_line_that_sums_up_runs_the_pathway_not_a_question_on_the_whole_scene(job):
+    # Nov 1: every line on the whole scene with nothing spotlit ran the pathway, and the brief gives that to a
+    # question or an aside too: the pump's lesson ran sodium out through the pump under "does the pump push the
+    # sodium back out?" and "A common mistake is to say yes", the picture backing the mistake.
+    data = sample_media.bundle().model_dump()
+    direct(data, "v1-2", particles=["Thylakoid", "Cytochrome b6f"], carries="H⁺")
+    write_bundle(job, data)
+    song = lines(make(job)["song"])
+    assert song["v2-1"].particles == []  # a verse on the whole scene, nothing of its own: it holds still
+    assert [f.path for f in song["c2-1"].particles] == [["Thylakoid", "Cytochrome b6f"]]  # the chorus runs it
+    bundle = Bundle.model_validate(data)
+    assert step._sums_up(bundle, "song") == {"c1-1", "c2-1", "c3-1"}
+    assert step._sums_up(bundle, "lesson") == {"n2"}  # no sentence says the core idea: the last one
+    data["narration"][0]["text"] = "So remember: " + data["core_idea"]
+    assert step._sums_up(Bundle.model_validate(data), "lesson") == {"n1", "n2"}  # from the one that says it on
 
 
 def test_the_particles_are_marked_with_what_they_carry_each_kind_in_its_colour(job):
@@ -554,6 +574,27 @@ def test_a_step_is_held_only_to_the_end_of_its_section(job):
     assert shown["v1-1"] == "How does a leaf make fuel from light?" and shown["v1-2"] == ""  # a new section: none
     assert shown["v2-1"] == "Light pumps H⁺ into the lumen"  # a key line where a section starts wins
 
+
+def test_the_lesson_clears_the_last_steps_key_line_where_it_cuts_to_the_case(job):
+    # Nov 1: the case has no key line, and the last step's held on over it (the stroke, the weed killer, England, the
+    # tomb) for half a minute or more.
+    data = bundle_data()
+    keyed(data)
+    texts = ["What pumps protons?", "Only b6f pumps them.", "That builds a gradient.", "Now, what if b6f is jammed?",
+             data["core_idea"]]
+    data["narration"] = [{"id": f"n{i}", "text": t, "names": [], "fact_id": "f1"} for i, t in enumerate(texts, 1)]
+    scenes = {"n1": "hook", "n2": "overview", "n3": "overview", "n4": "synthase", "n5": "overview"}
+    data["direction"] = [d for d in data["direction"] if not d["line_id"].startswith("n")] + [
+        {"line_id": n, "scene": s, "camera": {"target": "", "zoom": 1.0}, "spotlight": "", "particles": [],
+         "carries": "", "glow": "", "caption": ""} for n, s in scenes.items()]
+    write_bundle(job, data)
+    lesson = {b.line_id: b.key_line for b in make(job)["lesson"].beats if b.line_id}
+    step_line = "Light pumps H⁺ into the lumen"
+    # Held across the cut from the hook while steps are still to come, and on its own scene; gone on the case.
+    assert lesson == {"n1": "How does a leaf make fuel from light?", "n2": step_line, "n3": step_line, "n4": "",
+                      "n5": ""}
+
+
 def test_a_song_from_a_bundle_without_key_lines_has_none(job):
     for timeline in make(job).values():
         assert all(b.key_line == "" for b in timeline.beats)  # not even the core idea: no band at all
@@ -765,3 +806,19 @@ def test_a_graph_parts_meaning_stays_with_its_name_from_when_it_is_first_named()
     assert got[3] == []
     assert got[4] == [("Demand curve", 4.0, 20.0), ("Gap", 13.0, 20.0)]
     assert got[5] == [("Demand curve", 4.0, 20.0)]
+
+
+def test_two_kinds_of_particle_on_one_video_are_never_drawn_alike():
+    # The owner, Nov 2: "should the sugar pill be a different color?" Glucose, picked a colour by its name, took
+    # #C9A7FF, beside the pump's Na⁺ purple. A picked colour keeps APART from every colour already taken.
+    from studio.schemas import Bundle
+    from studio.steps.timeline import APART, MARKER_COLOURS, OTHER_MARKERS, particle_colours, _rgb_apart
+    from studio.tests.sample import bundle_data
+    data = bundle_data()
+    first = data["direction"][0]
+    first["particles"], first["carries"] = ["Cytochrome b6f", "Thylakoid"], "Na+"
+    first["also"] = [{"particles": ["Thylakoid", "Cytochrome b6f"], "carries": "glucose", "moves": "", "says": ""}]
+    colours = particle_colours(Bundle.model_validate(data))
+    assert colours["Na⁺"] == MARKER_COLOURS["Na⁺"]  # a common kind keeps its own
+    assert colours["glucose"] in OTHER_MARKERS and _rgb_apart(colours["glucose"], colours["Na⁺"]) >= APART
+    assert all(_rgb_apart(colours["glucose"], c) >= APART for label, c in colours.items() if label != "glucose")

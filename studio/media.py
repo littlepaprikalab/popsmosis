@@ -12,6 +12,7 @@ Every path is relative to the job folder, jobs/<id>/. The models are in studio/s
     timing/narration_words.json         6
     timeline_song.json                  7     a Timeline for each video
     timeline_lesson.json                7
+    arrows.json                         7b    Arrows: each hop's arrow, pointed on its painting and looked at
     out/song_h.mp4, out/lesson_h.mp4    8     1920x1080, 30 fps, H.264 + AAC, -movflags +faststart
     out/song_h.jpg, out/lesson_h.jpg    8     a poster frame for each, beside its video: a poster's
                                               URL is its video's with .jpg for .mp4
@@ -62,7 +63,7 @@ import numpy as np
 from studio import knobs
 from studio.schemas import SAFE_PATH  # every path built here passes SAFE_PATH
 
-MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "render", "upload")
+MEDIA_STEPS = ("art", "locate", "audio", "timing", "timeline", "arrows", "render", "upload")
 VIDEOS = ("song", "lesson")
 HOOK, HOOK_LAYOUT = "hook", "v"  # the hook cut: the song's pre-chorus and first chorus, upright, to share
 TIMED = ("song", "narration")  # the audio files, each with its Timing
@@ -74,6 +75,22 @@ ART_WIDTH, ART_HEIGHT = 1792, 1024
 VIDEO_WIDTH, VIDEO_HEIGHT, FPS = 1920, 1080, 30
 
 LOCATIONS = "locations.json"
+ARROWS = "arrows.json"  # the arrows step's (studio/steps/arrows.py)
+# Lyria masters its songs to full scale, and an MP3 decodes a little past it: the pump's song went over 79 times, in
+# its choruses, and was heard as crackle once encoded again (the owner, Nov 1). The audio step keeps a song as it was
+# sent, and every render holds its mix's peaks under -1 dBFS with this lookahead limiter before the AAC encode, which
+# leaves everything below them as it was (no auto level), its delay compensated so the words stay where they are sung.
+PEAK_LIMIT = "alimiter=limit=0.891:level=false:latency=true"
+# Every clip goes into the video's mix at 48 kHz. ffmpeg's default resampler lets a narration made at 24 kHz (Gemini's)
+# mirror its top end just above 12 kHz, only 10 dB down at 11.5 kHz: heard as static on its s and t sounds (the owner,
+# light reactions at 0:29, Nov 2). A longer Kaiser filter that stops just under the old rate's limit holds every
+# mirror 120 dB down or more, with ffmpeg's own resampler (no soxr needed).
+RESAMPLE = "aresample=48000:filter_size=256:cutoff=0.93:filter_type=kaiser:kaiser_beta=12"
+# The video's audio, encoded by ffmpeg's own AAC encoder at its best: its default (fast coder, noise substitution on,
+# 192k) left the 8-16 kHz band's errors only 10 dB under the music, heard as crackle on a loud Lyria song (supply and
+# demand at 0:30); the two-loop coder with no noise substitution at 256k holds them 17 dB under, and the owner heard
+# it clean (Nov 2).
+AAC = ["-c:a", "aac", "-aac_coder", "twoloop", "-aac_pns", "0", "-b:a", "256k"]
 LESSON_ONLY = "lesson"  # STUDIO_VIDEOS's value for the lesson video alone
 
 

@@ -13,6 +13,8 @@ import { containsPersonalInfo } from './validation.js';
 export const TAGS_PER_VIDEO = 10;
 export const TAG_MAX_LENGTH = 40; // characters; a longer one is dropped, not cut short
 const TAG_QUERY_MAX_INPUT = 200; // a search longer than this is not a tag, so it is not normalised
+// Tags that find nothing a student searches for, dropped as the studio drops them (studio/schemas.py, NO_TAGS).
+const NO_TAGS = new Set(['fyp', 'fypシ', 'foryou', 'foryoupage', 'viral', 'trending']);
 
 /**
  * "#AP Bio" -> "apbio": lowercase letters (with their accents), digits and underscores,
@@ -26,9 +28,9 @@ export function tagOf(value: string): string {
 }
 
 /**
- * Each tag as tagOf() writes it, the first of each kept, at most TAGS_PER_VIDEO. Anything
- * that is not a string is skipped, and so is a tag that reads as a phone number: tags are
- * public. (Cleaning already leaves no "@" for an email address.)
+ * Each tag as tagOf() writes it, the first of each kept, at most TAGS_PER_VIDEO, none of
+ * NO_TAGS. Anything that is not a string is skipped, and so is a tag that reads as a phone
+ * number: tags are public. (Cleaning already leaves no "@" for an email address.)
  */
 export function cleanTags(values: unknown): string[] {
   if (!Array.isArray(values)) return [];
@@ -36,7 +38,9 @@ export function cleanTags(values: unknown): string[] {
   for (const value of values) {
     if (typeof value !== 'string' || value.length > TAG_QUERY_MAX_INPUT) continue;
     const tag = tagOf(value);
-    if (tag && [...tag].length <= TAG_MAX_LENGTH && !tags.includes(tag) && !containsPersonalInfo(tag)) tags.push(tag);
+    if (tag && [...tag].length <= TAG_MAX_LENGTH && !tags.includes(tag) && !NO_TAGS.has(tag) && !containsPersonalInfo(tag)) {
+      tags.push(tag);
+    }
     if (tags.length === TAGS_PER_VIDEO) break;
   }
   return tags;

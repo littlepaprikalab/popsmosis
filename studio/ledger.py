@@ -61,6 +61,7 @@ TOOLS = {
     "art": ("skia-python",),  # draws the SVG art (studio/svg.py), or fits Muse Image's picture to the art
     "audio": ("ffmpeg",),  # ffprobe reads each file's length; ffmpeg re-encodes a Lyria song
     "timing": ("demucs", "torchaudio", "torch", "ffmpeg"),  # Demucs, the MMS aligner, ffmpeg decoding the song
+    "arrows": ("skia-python",),  # draws a still of each arrow to look at (studio/steps/arrows.py)
     "render": ("skia-python", "ffmpeg"),  # draws the frames, encodes the videos (studio/render/)
 }
 SONG_TOOLS = {"timing"}  # steps whose tools work on the song alone: none run for the lesson video alone
