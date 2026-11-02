@@ -291,6 +291,29 @@ learner can picture"), the derivative 5 ("It builds on the slope the learner alr
 a tenth or two between the two judgings, the judge's own noise: hook 4.58, why chain 4.67, key lines 4.83, accuracy 4.83,
 singability 3.92, lesson 4.92. Runs before Nov 1's evening compare with these on six criteria, not seven.
 
+### Again, after the couplet rule (Nov 2)
+
+Run again in the session after the day's prompt and check changes: verses rhyme in couplets, every section (the one
+change to the song rules; tested first on 3 topics, singing preferred 6 of 6, teaching 3 to 3); the lesson "under 700
+words"; the script prompt without its "A common answer is yes" and "Back in the nephron" examples; the checks in
+`bundle.run`'s order (`held_to_guide`, `repair_once` and a second review, as CLAUDE.md now says). Judged by Opus beside
+the same baseline droplets, with the connect criterion:
+
+| Run | Preferred the new droplet | New, mean | Baseline, mean | Errors listed, new / baseline |
+|---|---|---|---|---|
+| Nov 1, principles brief (connect) | 12 of 12 | 4.64 | 3.58 | 2 / 14 |
+| Nov 2, couplet rule | 12 of 12 | 4.58 | 3.52 | 4 / 13 |
+
+By criterion (Nov 1 in brackets): hook 4.58 (4.58), connect 4.75 (4.75), why chain 4.67 (4.67), key lines 4.67 (4.83),
+accuracy 4.67 (4.83), singability 4.00 (3.92), lesson 4.75 (4.92): the same within the judge's noise. Every song scored
+4 for singing, and its verses now rhyme in couplets ("Outside the cell, the sodium's packed / Inside, potassium's
+stacked", "Priests and nobles skip the big tax / So the weight lands on our backs"); a few still reach for a tag ("The
+king pulls back his troops for real", "Not called since sixteen-fourteen at all"). The four errors: the derivative's
+distance curve "at its highest" when the car stops, the light reactions' weed that "goes hungry" (the pipeline's
+fact-check, which the scorecard skips, corrected the same slip in that night's video), a p-value lesson that calls 60
+heads "far out" right after "most runs between 40 and 60", and the subjunctive's "no change of subject, no que clause"
+stated as a rule without exceptions.
+
 ## The baseline: `20261029-2019-ba83842`
 
 Commit `ba83842`, Claude Opus 5.5 at high effort, $19.82, judged by the current rubric.
