@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { seed, signIn, agent, apiUrl, sessionToken } from './helpers';
 
 const S = seed();
@@ -6,17 +6,122 @@ const S = seed();
 const INKMORY = (process.env.NEXT_PUBLIC_INKMORY_URL || '').replace(/\/+$/, '');
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** The seeded droplet as the Learn page's example, so the test knows which one it is (the web server picks the newest). */
+async function onlySeededDroplet(page: Page, request: APIRequestContext) {
+  const droplet = await (await request.get(apiUrl(`/api/droplets/${S.droplet}`))).json();
+  await page.route('**/learn/example', (route) => route.fulfill({ json: { droplet } }));
+}
+
 test.describe('signed out', () => {
-  test('shows the sign-in card and no topics', async ({ page }) => {
+  test('shows the Learn page: a topic can be typed, and Submit asks for a sign-in that keeps it, sending nothing', async ({ page }) => {
+    const sent: string[] = [];
+    page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/api/questions')) sent.push(r.url()); });
     await page.goto('/learn');
-    await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
-    await expect(page.getByText('WHAT DO YOU WANT TO LEARN?', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('WHAT DO YOU WANT TO LEARN?', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
+    await expect(page.getByTestId('sign-in-to-send')).toBeVisible();
+    await expect(page.getByTestId('topics-after-sign-in')).toBeVisible();
+    await expect(page.getByTestId('sign-in-prompt')).toHaveCount(0);
+
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    await box.fill('Photosynthesis, the light reactions');
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    const prompt = page.getByTestId('sign-in-prompt');
+    await expect(prompt).toContainText('Sign in to send your topic');
+    const signInLink = prompt.getByRole('link', { name: 'Sign in with Google' });
+    await expect(signInLink).toHaveAttribute('href', '/auth/callback?returnTo=%2Flearn');
+    await expect(signInLink).toBeFocused();
+    await expect(page.getByTestId('sign-in-to-send')).toHaveCount(0);
     // What signing in agrees to, linked, before anyone signs in.
-    const consent = page.getByTestId('consent');
+    const consent = prompt.getByTestId('consent');
     await expect(consent).toContainText('13 or older');
     await expect(consent.getByRole('link', { name: 'Terms of Use' })).toHaveAttribute('href', '/terms');
     await expect(consent.getByRole('link', { name: 'Privacy Policy' })).toHaveAttribute('href', '/privacy');
+    await expect(box).toHaveValue('Photosynthesis, the light reactions');
+
+    // Not now puts the box back as it was, the topic still in it; so does a reload.
+    await prompt.getByRole('button', { name: 'Not now' }).click();
+    await expect(prompt).toHaveCount(0);
+    await expect(box).toBeFocused();
+    await page.reload();
+    await expect(box).toHaveValue('Photosynthesis, the light reactions');
+    // Ctrl+Enter asks the same as Submit.
+    await box.press('Control+Enter');
+    await expect(page.getByTestId('sign-in-prompt')).toBeVisible();
+    expect(sent).toEqual([]);
+  });
+
+  test('the topic typed signed out is in the box after signing in, and waits for Submit', async ({ page, context }) => {
+    const sent: string[] = [];
+    page.on('request', (r) => { if (r.method() === 'POST' && r.url().includes('/api/questions')) sent.push(r.url()); });
+    await page.goto('/learn');
+    await page.getByPlaceholder('A topic, e.g. ATP synthesis').fill('How do vaccines train the immune system?');
+    await page.getByRole('button', { name: 'SUBMIT' }).click();
+    await page.getByTestId('sign-in-prompt').getByRole('link', { name: 'Sign in with Google' }).click();
+    await expect(page.getByRole('button', { name: 'Sign in with Google' })).toBeVisible();
+    expect(await page.evaluate(() => sessionStorage.getItem('auth_return_to'))).toBe('/learn');
+
+    // Google and back, as the sign-in page would end it: signed in, on to /learn.
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    await expect(page.getByText('@Ben')).toBeVisible();
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    await expect(box).toHaveValue('How do vaccines train the immune system?');
+    await expect(page.getByText('Your topic is still in the box: press Submit to send it.')).toBeVisible();
+    await expect(box).toBeFocused();
+    await expect(page.getByTestId('sign-in-prompt')).toHaveCount(0);
+    expect(sent).toEqual([]);
+  });
+
+  test('shows an example droplet: its videos and lesson, no follow-ups, and nothing of who asked or how', async ({ page, request }) => {
+    await onlySeededDroplet(page, request);
+    await page.goto('/learn');
+    const example = page.getByTestId('example-droplet');
+    await expect(example).toBeVisible();
+    await expect(example).toContainText('example');
+    await expect(example).toContainText('ATP synthesis');
+    await expect(example.getByTestId('droplet-players').locator('video')).toHaveCount(2);
+    await expect(example).toContainText('tiny rotary motor');
+    await expect(example.getByRole('link', { name: 'On the public Droplets tab' })).toHaveAttribute('href', `/droplets/${S.droplet}`);
+    // Not the learner's: no reply box, no follow-ups, nothing to delete.
+    await expect(example.getByTestId('example-no-follow-ups')).toBeVisible();
+    await expect(example.getByRole('textbox')).toHaveCount(0);
+    await expect(example.getByRole('button', { name: 'delete' })).toHaveCount(0);
+    await expect(example).not.toContainText('Why does the protons');
+    // Ben asked for it: neither his name nor his words are on the card.
+    await expect(example).not.toContainText('Ben');
+    await expect(example).not.toContainText('how do cells actually make ATP?');
+  });
+
+  test('the example is the web server\'s one copy for everyone: no API read from the page, nothing that differs by viewer', async ({ page, request }) => {
+    const res = await request.get('/learn/example');
+    expect(res.status()).toBe(200);
+    expect(res.headers()['cache-control']).toBe('public, max-age=60');
+    const { droplet } = await res.json();
+    const allowed = ['id', 'title', 'course', 'topic', 'excerpt', 'content', 'video', 'tags', 'createdAt'];
+    expect(Object.keys(droplet).filter((k) => !allowed.includes(k))).toEqual([]);
+    expect(droplet.content.length).toBeGreaterThan(0);
+    expect(droplet.video.songVideoUrl).toBeTruthy(); // the song is the hook
+
+    const apiReads: string[] = [];
+    page.on('request', (r) => { if (r.url().includes('/api/droplets')) apiReads.push(r.url()); });
+    await page.goto('/learn');
+    await expect(page.getByTestId('example-droplet')).toBeVisible();
+    await expect(page.getByTestId('example-droplet').getByRole('link', { name: 'On the public Droplets tab' }))
+      .toHaveAttribute('href', /^\/droplets\/[^/]+$/);
+    expect(apiReads).toEqual([]);
+  });
+
+  test('logging out empties the topic box, and its kept copy, for whoever uses the computer next', async ({ page, context }) => {
+    await signIn(context, S.users.ben);
+    await page.goto('/learn');
+    const box = page.getByPlaceholder('A topic, e.g. ATP synthesis');
+    await box.fill('Something Ben typed and did not send');
+    await page.getByRole('button', { name: 'LOGOUT' }).click();
+    await expect(page.getByTestId('topics-after-sign-in')).toBeVisible();
+    await expect(box).toHaveValue('');
+    expect(await page.evaluate(() => sessionStorage.getItem('popsmosis:topic-draft'))).toBeNull();
+    await expect(page.getByTestId('load-more')).toHaveCount(0);
   });
 
   test('/ redirects to /learn', async ({ page }) => {
@@ -47,6 +152,16 @@ test.describe('signed out', () => {
 });
 
 test.describe('signed in', () => {
+  test('a learner with no topics yet sees the example droplet under the empty list', async ({ page, context, request }) => {
+    await signIn(context, S.users.ben);
+    await onlySeededDroplet(page, request);
+    await page.route('**/api/questions?*', (route) => route.fulfill({ json: { data: [], nextCursor: null } }));
+    await page.goto('/learn');
+    await expect(page.getByText('You have not asked for a topic yet.')).toBeVisible();
+    await expect(page.getByTestId('example-droplet')).toContainText('ATP synthesis');
+    await expect(page.getByTestId('sign-in-to-send')).toHaveCount(0);
+  });
+
   test('sees only their own topics, with the sparks look', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.goto('/learn');
@@ -384,10 +499,13 @@ test.describe('signed in', () => {
     await page.goto('/learn');
     await expect(page.getByText('@Ben')).toBeVisible();
     await page.getByRole('button', { name: 'LOGOUT' }).click();
-    await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
+    await expect(page.getByTestId('topics-after-sign-in')).toBeVisible();
+    await expect(page.getByTestId('question-card')).toHaveCount(0);
     expect((await context.cookies()).some((c) => c.name === 'popsmosis_session')).toBe(false);
     await page.reload();
-    await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'SIGN IN', exact: true })).toBeVisible();
+    await expect(page.getByTestId('topics-after-sign-in')).toBeVisible();
   });
 });
 
@@ -640,13 +758,13 @@ test.describe('studio settings', () => {
 test.describe('API unavailable', () => {
   const renderErrorPage = { status: 502, contentType: 'text/html; charset=utf-8', body: '<!DOCTYPE html><html><body>502</body></html>' };
 
-  test('a signed-in user sees the outage, not the sign-in card', async ({ page, context }) => {
+  test('a signed-in user sees the outage, not the signed-out page', async ({ page, context }) => {
     await signIn(context, S.users.ben);
     await page.route('**/api/auth/me', (route) => route.fulfill(renderErrorPage));
 
     await page.goto('/learn');
     await expect(page.getByTestId('server-unavailable')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('link', { name: 'Sign in with Google' })).toHaveCount(0);
+    await expect(page.getByTestId('topics-after-sign-in')).toHaveCount(0);
 
     // Once the API is back, the retry button gets the page to its real state.
     await page.unroute('**/api/auth/me');
