@@ -4,7 +4,8 @@ Used for the Nov 1 round (docs/test-rounds.md, "In-session round, Nov 1: five to
 steps run as they always do; only `ask` differs: each Claude call is written to a folder and waits there until a
 subagent in the Claude Code session saves an answer. No call reaches the Anthropic API.
 
-    tools/insession/start.sh <topic-id> ...        # a scorecard topic's job, jobs/<topic-id>/, start to finish
+    tools/insession/start.sh <job-id> ...          # jobs/<job-id>/, start to finish: a scorecard topic's id, or any
+                                                   # topic whose jobs/<job-id>/request.json is written first
     python tools/insession/answer.py groups        # the calls waiting, by topic and kind, for one subagent each
     python tools/insession/answer.py claim <call>  # handed to a subagent
     python tools/insession/answer.py wait          # block until calls have come in and been still for a while
