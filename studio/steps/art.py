@@ -63,9 +63,13 @@ biology style for every subject, was right once in 6; on Oct 31 the pictures cam
 again without the style line every prompt ended in (a flat dark slate blue background, no text).
 The picture labels its own parts, and the video draws no labels over it, only over a drawing.
 The helper looks at each picture for a label that is wrong, for a structure missing or out of
-place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of place is asked for
-again with what was wrong, up to MAX_PAINTS pictures in all; anything else wrong is recorded, not
-repainted (round 8: a second picture painted for those was no better 9 times in 11). A wrong label
+place, and for anything else wrong, told what kind of scene it is. A picture with a structure missing or out of
+place, or anything else wrong, can be asked for again, up to MAX_PAINTS pictures in all. The writer's role looks at
+every first picture with what the check found (rewrite()), and keeps it or writes the scene's words again for the
+next try; only a rewrite is painted again. When that call fails, a picture the check found a problem in is asked
+for again from the same words with what was wrong after them. Round 8 found a second picture from the same words no
+better 9 times in 11 for the lesser faults; on Nov 2 a rewrite fixed each of three pictures that had gone wrong. A
+wrong label
 is kept: the same look boxes it and writes a sticky note saying what is true, and the video rings the label
 and sticks the note beside it (flags()). So does a mistake that contradicts one of the lesson's facts, named
 by its id. One look does it all (look()): since Nov 2 there is no second look at the labels and no review of
@@ -103,8 +107,8 @@ from pydantic import Field
 from studio import brain, checks, gemini, jobs, knobs, ledger, media, muse, repair, svg
 from studio.checks import colour_word
 from studio.jobs import read, write
-from studio.schemas import (Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, locations_problems,
-                             stage_groups)
+from studio.schemas import (PART_TAG, Axes, Box, Bundle, Flag, Location, Locations, Scene, SceneLocations, Strict, Structure,
+                             locations_problems, stage_groups)
 
 PROMPT = (Path(__file__).resolve().parent.parent / "prompts" / "art.md").read_text(encoding="utf-8")
 MAX_TRIES = 3  # SVG drawings a scene may take
@@ -473,7 +477,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     parts = [f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else ""),
              f"Audience: {bundle.audience}",
              f"Core idea: {bundle.core_idea}",
-             f"Scene: {scene.id}\nWhat it shows: {scene.image_prompt}"]
+             f"Scene: {scene.id}\nWhat it shows: {scene.described()}"]
     lines = []
     for s in scene.structures:
         also = f" (also called {', '.join(s.aliases)})" if s.aliases else ""
@@ -498,7 +502,7 @@ def user_prompt(bundle: Bundle, scene: Scene, previous: Drawing | None = None) -
     others = [o for o in bundle.scenes if o.id != scene.id]
     if others:
         parts.append("The video's other scenes, drawn separately; draw shared structures the same way:\n" + "\n".join(
-            f"- {o.id}: {o.image_prompt} Structures: "
+            f"- {o.id}: {o.described()} Structures: "
             + ", ".join(f"{s.name} {s.color_hex}" for s in o.structures) for o in others))
     if previous is not None:
         parts.append("Your last drawing of this scene, below, was refused:\n"
@@ -652,12 +656,7 @@ def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | 
     knowledge (round 20's kidney note was false). One look replaces the check, the second look at its labels and the
     brain's review of its notes, the owner's choice on Nov 2: too many layers."""
     with tempfile.TemporaryDirectory(prefix="popsmosis-check-") as tmp:
-        small = Path(tmp) / "picture.png"
-        with Image.open(path or job / media.art_path(scene.id)) as picture:
-            if picture.width > CHECK_WIDTH:
-                picture = picture.resize((CHECK_WIDTH, round(picture.height * CHECK_WIDTH / picture.width)),
-                                         Image.LANCZOS)
-            picture.save(small)
+        small = _shrunk(path or job / media.art_path(scene.id), Path(tmp))
         answer = PictureCheck(**ask("helper", check_prompt(bundle, scene), PictureCheck, [small], system=CHECK_PROMPT,
                                     label=label))
     facts = {f.id for f in bundle.facts}
@@ -669,6 +668,90 @@ def look(job: Path, bundle: Bundle, scene: Scene, ask, label: str, path: Path | 
                      misplaced=answer.misplaced,
                      wrong=answer.wrong, notes=[n.text for n in notes])
     return check, flags, pinned
+
+
+def _shrunk(path: Path, folder: Path) -> Path:
+    """The picture at CHECK_WIDTH, saved in `folder`, as a model is shown it."""
+    small = folder / "picture.png"
+    with Image.open(path) as picture:
+        if picture.width > CHECK_WIDTH:
+            picture = picture.resize((CHECK_WIDTH, round(picture.height * CHECK_WIDTH / picture.width)), Image.LANCZOS)
+        picture.save(small)
+    return small
+
+
+# The writer's role sees a picture that went wrong and writes the scene's words again for the next try (rewrite()).
+# The owner's idea (Nov 2): the same words with "refused: ..." after them got the same picture back, and no one who
+# could fix the words saw what the painter made of them. Tried on three pictures of the Nov 2 run, each repainted
+# once from its rewrite: the airplane wing (three slabs, the check saw only its nose) came back one slim wing with its
+# surfaces as strips along its edges; the antibodies (stuck on by their stems) came back gripping the antigen with
+# their arms; the phone's filled signal bars came back hollow.
+REWRITE_PROMPT = """You write the description an image model paints one picture of a short science lesson from. It \
+painted the picture shown, from the full prompt given below, and a checker looked at the picture. Look at the picture \
+yourself, and compare it with what the lesson needs the picture to show.
+
+If the picture already shows everything the lesson needs it to show, and shows it right, answer KEEP and nothing \
+else: a second painting can come out worse.
+
+Otherwise write the scene's description again, so that the next painting comes out right. Write it as one paragraph \
+of plain sentences, opening as the old one opens ("Educational textbook illustration of ..."). Keep everything the \
+picture must show and every part, and change whatever made the painter go wrong.
+
+The painter is an image model: it paints what the words say, not what the lesson means. Code adds to your \
+description: right after each part's tag it puts that part's colour and label, and at the end, lines about the \
+labels' style. So tag each part right after the words that describe it, with its name in double brackets exactly as \
+given ("the Moon [[Moon]] on the right"), each part once, and write no colours and no text, labels or numbers \
+yourself.
+
+Answer with KEEP, or with the new description only."""
+
+
+def rewrite_prompt(bundle: Bundle, scene: Scene, sent: str, check: ArtCheck) -> str:
+    """What the writer's role is shown of a picture that went wrong: the scene's words, its parts, the whole prompt
+    the painter got, the check's findings and the lesson's facts (the picture itself comes as an image)."""
+    found = [f"- {kind}: {item}" for kind, items in (("misplaced", check.misplaced), ("wrong", check.wrong),
+                                                     ("label", check.labels)) for item in items]
+    return "\n\n".join([
+        f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else ""),
+        f"The scene: {scene.id}",
+        f"The description you wrote before:\n{scene.described()}",
+        "Its parts, each to be tagged once:\n" + "\n".join(f"- {s.name} ({colour_word(s.color_hex)})"
+                                                           for s in scene.structures),
+        f"The full prompt the painter was given:\n{sent}",
+        "What the checker found wrong in the picture:\n" + ("\n".join(found) or "- nothing"),
+        "The lesson's facts:\n" + "\n".join(f"- {f.id}: {f.text}" for f in bundle.facts),
+        "The picture it painted is the image above.",
+    ])
+
+
+KEEP = "KEEP"
+
+
+def rewrite(bundle: Bundle, scene: Scene, picture: Path, sent: str, check: ArtCheck, ask, label: str) -> str | None:
+    """The writer's role's look at a picture of the scene and what the check found in it (REWRITE_PROMPT): the
+    scene's words written again for the next try, "" when it keeps the picture, None when the call fails or its answer
+    is no description. A rewrite is for the next try only, never written into the bundle, whose words the fact-check
+    passed.
+
+    An answer that opens with KEEP keeps the picture, whatever follows it ("KEEP: it shows the wing"): painted as a
+    description, it would have thrown a good picture away for one painted from those words. An empty one, or one that
+    tags none of the scene's parts, is not a description of it: as when the call fails, the check's problems decide.
+    The nine rewrites of the Nov 2 runs each tagged three parts or more."""
+    try:
+        with tempfile.TemporaryDirectory(prefix="popsmosis-rewrite-") as tmp:
+            answer = ask("brain", rewrite_prompt(bundle, scene, sent, check), None, [_shrunk(picture, Path(tmp))],
+                         system=REWRITE_PROMPT, label=label)
+    except brain.BrainError as e:
+        print(f"  {label}: no answer ({e})", file=sys.stderr)
+        return None
+    text = answer["text"].strip().strip("`").strip()
+    if re.match(rf"\W*{KEEP}\b", text, re.I):
+        return ""
+    if not text or (scene.structures and len(inline(scene.model_copy(update={"image_prompt": text}))[1])
+                    == len(scene.structures)):
+        print(f"  {label}: no description in its answer, so the check decides", file=sys.stderr)
+        return None
+    return text
 
 
 def _boxed(found) -> bool:
@@ -686,15 +769,21 @@ class Painting:
     refused: list[str] = field(default_factory=list)  # paint(): why each other picture of the scene was not kept
     flags: list[dict] = field(default_factory=list)  # its wrong labels, boxed (look())
     pinned: list[dict] = field(default_factory=list)  # its notes about one place, as sticky notes there
+    rejected: bool = False  # the writer's role saw it and wrote the scene's words again (rewrite())
 
     def problems(self) -> list[str]:
-        """What the scene is painted again for: a structure missing or out of place. A wrong label is not: the
-        picture is kept with it, and the video flags it."""
-        return list(self.check.misplaced)
+        """What the scene is painted again for: a structure missing or out of place, or anything the picture gets
+        wrong (the owner, Nov 2: the airplane wing's slabs and the filled signal bars were "wrong" and kept). A wrong
+        label is not: the picture is kept with it, and the video flags it."""
+        return list(self.check.misplaced) + list(self.check.wrong)
 
     def score(self) -> tuple[int, int]:
-        """Lower is better."""
-        return len(self.check.misplaced), len(self.check.labels) + len(self.check.wrong)
+        """Lower is better. A picture the writer's role rejected counts as one more part out of place and one more
+        thing wrong: on Nov 2 it rejected two airplane pictures the check had passed (the stall showed no air
+        breaking away over the top), their repaints each had one small fault, and the step kept the rejected
+        ones."""
+        rejected = int(self.rejected)
+        return len(self.check.misplaced) + rejected, len(self.check.labels) + len(self.check.wrong) + rejected
 
 
 def run_painted(job: Path, ask) -> str:
@@ -807,7 +896,9 @@ def refusal(tried: dict) -> str | None:
     if tried.get("redraw_failed"):
         return None
     found = (tried.get("misplaced") or []) + (tried.get("wrong") or [])
-    return str(found[0]) if found else None
+    if found:
+        return str(found[0])
+    return "the writer asked for it again" if tried.get("rewritten") else None
 
 
 def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None = None,
@@ -823,8 +914,10 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
     for old in (job / "art").glob(f"{media.file_name(scene.id)}.try*.png"):
         old.unlink()
     best, problems, n, tries = None, [], 0, []
+    words = scene  # what the next try is painted from: the scene's own words, then a rewrite of them (rewrite())
     for n in range(1, MAX_PAINTS + 1):
-        prompt = paint_prompt(bundle, scene, problems, redrawn=reference is not None and not styled,
+        told = problems if words is scene else []  # a rewrite says what to change itself
+        prompt = paint_prompt(bundle, words, told, redrawn=reference is not None and not styled,
                               styled=reference is not None and styled)
         label = f"art {scene.id}" + (f" try {n}" if n > 1 else "")
         try:
@@ -838,7 +931,7 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
                 raise
             tries.append({"try": n, "redraw_failed": str(e)})
             reference = None  # painted afresh from here on
-            prompt = paint_prompt(bundle, scene, problems)
+            prompt = paint_prompt(bundle, words, told)
             try:
                 picture = by.make(job, label, prompt, None)
             except by.declined as declined:
@@ -854,7 +947,20 @@ def paint(job: Path, bundle: Bundle, scene: Scene, ask, reference: Path | None =
         if best is None or painting.score() < best.score():
             best = painting
         problems = painting.problems()
-        if not problems:
+        if n == MAX_PAINTS:
+            break
+        # The writer's role looks at every first picture, and the scene is painted again only when it asks for
+        # changes (the owner, Nov 2): the check missed the airplane wing's slabs, and a second painting of a good
+        # picture can come out worse. When it cannot answer, the check's problems decide, as before.
+        asked = rewrite(bundle, scene, path, prompt, check, ask, f"art rewrite {named}")
+        if asked:
+            words = scene.model_copy(update={"image_prompt": asked})
+            tries[-1]["rewritten"] = asked
+            painting.rejected = True
+        elif asked == "":
+            tries[-1]["kept"] = True
+            break
+        elif not problems:
             break
     if best is None:
         raise media.StepFailed(f"scene {scene.id}: no usable picture in {MAX_PAINTS} tries: {problems[0]}"
@@ -900,9 +1006,16 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     name is made to agree with it (checks._recolour_image_prompts): the writer's own ("a brown ATP synthase")
     disagreed with it ("ATP synthase orange"). Short on
     purpose: every extra line was a chance to miss. Nothing about the look (the note on NO_SLIDE says why). A later
-    stage `redrawn` from its first stage's picture says so first."""
-    colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in scene.structures)
-    parts = [campbell_styled(bundle, scene.image_prompt).strip().rstrip(".") + ".", f"Colours: {colours}."]
+    stage `redrawn` from its first stage's picture says so first.
+
+    A part the image_prompt tags (schemas.PART_TAG) has its colour and label right after the words that describe it
+    (inline()), and is left out of the Colours line and the labels line; a scene with no tags is asked for as
+    before."""
+    words, left = inline(scene)
+    colours = ", ".join(f"{s.name} {colour_word(s.color_hex)}" for s in left)
+    parts = [campbell_styled(bundle, words).strip().rstrip(".") + "."]
+    if left or not scene.structures:
+        parts.append(f"Colours: {colours}.")
     if loose := loose_line(bundle, scene):
         parts.append(loose)
     if scene.axes:
@@ -914,8 +1027,31 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     if problems:
         parts.append("The last picture of this scene was refused: " + "; ".join(problems)
                      + ". Make it again with these fixed.")
-    parts.append(labels_line(scene))
+    parts.append(labels_line(scene, left))
     return " ".join(parts)
+
+
+def inline(scene: Scene) -> tuple[str, list[Structure]]:
+    """The image_prompt with each tag ("the downwash [[Downwash]]") as its part's colour and label in place ("the
+    downwash (orange, label "Downwash")"), the label left out on the hook, which labels nothing (labels_line()); and
+    the parts it tags none of, which the Colours and labels lines give as before. A tag names a part by its name or an
+    alias, in any case; one that names none, or a part tagged before, is dropped (checks._check_part_tags repairs both in
+    the bundle). The owner's design (Nov 2): given as lists after the picture's words, each colour and label has to
+    be matched back to its part, and the airplane wing's three came back as three slabs."""
+    named = {name.casefold(): s for s in scene.structures for name in (s.name, *s.aliases)}
+    labelled = scene.id not in EVERYDAY
+    done: list[str] = []
+
+    def place(found: re.Match) -> str:
+        part = named.get(found.group(1).strip().casefold())
+        if part is None or part.name in done:
+            return ""
+        done.append(part.name)
+        colour = colour_word(part.color_hex)
+        return f' ({colour}, label "{part.name}")' if labelled else f" ({colour})"
+
+    words = PART_TAG.sub(place, scene.image_prompt).strip()
+    return words, [s for s in scene.structures if s.name not in done]
 
 
 def is_diagram(scene: Scene) -> bool:
@@ -946,7 +1082,7 @@ def loose_line(bundle: Bundle, scene: Scene) -> str:
     return f"Draw no {' or '.join(loose)} particles anywhere: the video adds its own, moving."
 
 
-def labels_line(scene: Scene) -> str:
+def labels_line(scene: Scene, left: list[Structure] | None = None) -> str:
     """What the picture labels: its own parts by the lesson's names, the words the narration says, and nothing else,
     since everything in a room or on a boat has a name a student would not know, and a diagram's parts have textbook
     names the lesson does not use. A science diagram has no room or furniture to name. The hook, an everyday sight,
@@ -958,12 +1094,18 @@ def labels_line(scene: Scene) -> str:
     French Revolution's figures, not on their step; with each one placed, every label landed on its thing and was
     spelled right, on the French Revolution and the light reactions alike (the owner's choice, Nov 2). Each in black
     on a small white box (BOXED): the video dims the parts not yet named, and the painter's coloured lettering looked
-    odd dimmed, where black on white still reads (the owner, Nov 2; tested on the same two pictures)."""
+    odd dimmed, where black on white still reads (the owner, Nov 2; tested on the same two pictures).
+
+    `left` are the parts the image_prompt does not tag (inline(), worked out when not given): the others are labelled
+    in place, so the line lists only these, after "Also label"; none of them, and it lists nothing."""
     if scene.id in EVERYDAY:
         return NO_LABELS
+    listed = inline(scene)[1] if left is None else left
     labels = ", ".join(f'the {s.sam_phrase.strip()} "{s.name}"' if s.sam_phrase.strip() else f'"{s.name}"'
-                       for s in scene.structures)
+                       for s in listed)
     rest = "." if SCIENCE_STYLE in scene.image_prompt.lower() else ": no room, furniture or background objects."
+    if len(listed) < len(scene.structures):
+        return (f"Also label: {labels}. " if listed else "") + f"{BOXED} Label nothing else{rest} {NO_SLIDE}"
     return f"Label only: {labels}. {BOXED} Label nothing else{rest} {NO_SLIDE}"
 
 
@@ -1002,7 +1144,7 @@ def check_prompt(bundle: Bundle, scene: Scene) -> str:
             else SONG if scene.song_only else SCENE_KINDS.get(scene.id, DETAIL))
     return (f"Topic: {bundle.topic}" + (f" ({bundle.course})" if bundle.course else "")
             + f"\nThe scene is {kind}"
-            + f"\nWhat the scene should show: {scene.image_prompt}"
+            + f"\nWhat the scene should show: {scene.described()}"
             + (f"\n{axes_line(scene.axes)} They are asked for, and are no part to find." if scene.axes else "")
             + "\nIt must show each of these:\n" + "\n".join(lines)
             + "\n\nThe lesson's facts:\n" + "\n".join(f"- {f.id}: {f.text}" for f in bundle.facts))

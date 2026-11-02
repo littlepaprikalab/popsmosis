@@ -1,12 +1,14 @@
 """The arrows step: each hop pointed on its painting by the helper, every arrow looked at as drawn (a fake ask)."""
 
 import os
+import tempfile
+from pathlib import Path
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 from studio import jobs, media
-from studio.schemas import Arrows, Timeline
+from studio.schemas import Arrows, PlacedArrow, Timeline
 from studio.steps import arrows
 from studio.tests import sample_media
 
@@ -26,8 +28,8 @@ class FakeAsk:
     """The helper: points every hop at `start` -> `end` (pixels of the picture it is shown), or says it cannot be
     drawn; says each arrow it looks at shows the move, or not."""
 
-    def __init__(self, drawable=True, shows=True, start=(400.0, 250.0), end=(470.0, 230.0)):
-        self.drawable, self.shows, self.start, self.end = drawable, shows, start, end
+    def __init__(self, drawable=True, shows=True, start=(400.0, 250.0), end=(470.0, 230.0), copies=()):
+        self.drawable, self.shows, self.start, self.end, self.copies = drawable, shows, start, end, copies
         self.calls = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -35,8 +37,9 @@ class FakeAsk:
                            "sizes": [Image.open(p).size for p in images]})
         if schema is arrows.Pointing:
             (x0, y0), (x1, y1) = self.start, self.end
+            copies = [{"start": {"x": a, "y": b}, "end": {"x": c, "y": d}} for (a, b), (c, d) in self.copies]
             return {"arrows": [{"id": "a1", "drawable": self.drawable, "start": {"x": x0, "y": y0},
-                                "end": {"x": x1, "y": y1}, "why": "from the space up into the part"}]}
+                                "end": {"x": x1, "y": y1}, "copies": copies, "why": "from the space up into the part"}]}
         assert schema is arrows.Look
         return {"shows": self.shows, "why": "it runs from the thylakoid into b6f" if self.shows else "it runs sideways"}
 
@@ -99,3 +102,117 @@ def test_the_grid_is_numbered_along_its_edges_every_second_line():
     grid = arrows.gridded(picture)
     assert grid.size == picture.size and grid.getpixel((50, 125)) != (255, 255, 255)  # a line every GRID pixels
     assert grid.getpixel((75, 125)) == (255, 255, 255)
+
+
+def test_a_move_from_a_place_drawn_more_than_once_gets_an_arrow_from_each_copy(job):
+    # Nov 2: the GPS overview drew its four satellites as one part, and the video showed one signal reaching the phone
+    # where the lesson needs four.
+    ask = FakeAsk(copies=[((300.0, 100.0), (470.0, 230.0)), ((600.0, 100.0), (470.0, 230.0))])
+    arrows.run(job, ask=ask)
+    point, look = ask.calls
+    assert "place one arrow for each copy" in point["system"]
+    [arrow] = placed(job)
+    scale = 945 / 1792
+    assert [(c.start.x, c.end.y) for c in arrow.copies] == [(pytest.approx(300 / scale), pytest.approx(230 / scale)),
+                                                            (pytest.approx(600 / scale), pytest.approx(230 / scale))]
+    assert "It is drawn 3 times, once for each copy" in look["prompt"]
+
+
+
+def test_copies_are_capped_and_none_is_a_dot_or_drawn_twice(job):
+    # An arrow at each of a row of thirty cells would hide the picture.
+    head = (470.0, 230.0)
+    many = [((100.0 + 40 * k, 100.0), head) for k in range(1, 10)]  # nine more copies, each its own
+    again = [((400.0, 250.0), head), ((402.0, 251.0), (471.0, 231.0)), ((300.0, 300.0), (303.0, 302.0))]
+    arrows.run(job, ask=FakeAsk(copies=again + many))
+    [arrow] = placed(job)
+    scale = 945 / 1792
+    assert len(arrow.copies) == arrows.COPIES_MAX
+    assert [c.start.x for c in arrow.copies] == [pytest.approx((100.0 + 40 * k) / scale) for k in range(1, 6)]
+
+
+def test_a_move_with_copies_draws_an_arrow_from_each_copy():
+    from studio.render.renderer import Renderer
+    from studio.schemas import Locations, Point, Way
+
+    job = sample_media.write_job(Path(tempfile.mkdtemp()) / "sample", art=True)
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    one = PlacedArrow(scene="overview", path=HOP, carries="", start=Point(x=700, y=500), end=Point(x=900, y=450))
+    many = one.model_copy(update={"copies": [Way(start=Point(x=300, y=200), end=Point(x=900, y=450))]})
+    beat = next(b for b in timeline.beats if b.particles and list(b.particles[0].path) == HOP)
+    flow = beat.particles[0]
+    alone = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[one.model_copy(update={
+        "carries": flow.label})]))
+    both = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[many.model_copy(update={
+        "carries": flow.label})]))
+    assert alone._copies("overview", flow) == []
+    assert both._copies("overview", flow) == [[(300.0, 200.0), (900.0, 450.0)]]
+    key = arrows.key("overview", flow)
+    frames = []
+    for renderer in (alone, both):
+        renderer.only = key
+        frames.append(renderer.frame(renderer.arrow_time("overview", flow)).astype(int))
+    changed = (abs(frames[1] - frames[0]).sum(axis=2) > 30).sum()
+    assert changed > 200  # the second arrow is drawn: a few hundred pixels or more differ
+
+
+@pytest.mark.parametrize("fading", [False, True])
+def test_a_painted_label_is_drawn_over_an_arrow_that_crosses_it(monkeypatch, fading):
+    # Nov 2: two of the GPS overview's four signals ran through its painted "Phone", which read "Ph|o|ne". While a
+    # stage fades in over the one before, the label is drawn again as the frame has it, the stage before under it.
+    from studio.render import renderer as rendering
+    from studio.render.renderer import LABEL_PAD, Renderer
+    from studio.schemas import Locations, Point
+
+    if fading:
+        monkeypatch.setattr(rendering, "STAGE_FADE_S", 1000.0)  # still fading in at the arrow's moment
+    job = sample_media.write_job(Path(tempfile.mkdtemp()) / "sample", art=True)
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline).model_copy(update={"self_labelled": ["overview"]})
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    i, beat = next((i, b) for i, b in enumerate(timeline.beats) if b.particles and list(b.particles[0].path) == HOP)
+    flow = beat.particles[0]
+    placed = PlacedArrow(scene="overview", path=HOP, carries=flow.label, start=Point(x=700, y=500),
+                         end=Point(x=900, y=450))
+    box = (760.0, 450.0, 840.0, 500.0)  # a label's box the arrow runs through (y 485 to 465 across it)
+    frames = {}
+    for name, boxes, only in (("bare", [box], ("nothing",)), ("over", [box], arrows.key("overview", flow)),
+                              ("under", [], arrows.key("overview", flow))):
+        renderer = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[placed]))
+        renderer.scene("overview")._text_boxes = boxes  # as text_boxes() would find them
+        renderer.only = only
+        if fading:
+            renderer.plans[i].fade_from = "synthase"
+        t = renderer.arrow_time("overview", flow)
+        frames[name] = renderer.frame(t).astype(int)
+    (fx0, fy0), (fx1, fy1) = (renderer.art_to_frame(t, box[0] + LABEL_PAD, box[1] + LABEL_PAD),
+                              renderer.art_to_frame(t, box[2] - LABEL_PAD, box[3] - LABEL_PAD))
+    inside = (slice(round(fy0) + 1, round(fy1) - 1), slice(round(fx0) + 1, round(fx1) - 1))
+
+    def changed(a, b, where=(slice(None), slice(None))) -> int:
+        return int((abs(frames[a][where] - frames[b][where]).sum(axis=2) > 30).sum())
+
+    assert changed("under", "bare", inside) > 20  # drawn under nothing, the arrow shows across the box
+    assert changed("over", "bare", inside) == 0  # the label is drawn again over it, as the frame has it
+    assert changed("over", "bare") > 100  # and the rest of the arrow is still drawn
+
+
+def test_only_a_painted_box_with_writing_in_it_is_drawn_over_the_arrows(tmp_path):
+    # Nov 2: on the airplane overview's white sky, the strips between its airflow lines passed for label boxes.
+    from studio.render.renderer import UNLABELLED, SceneArt
+    from studio.schemas import SceneLocations
+    from studio.steps.art import EVERYDAY
+
+    picture = Image.new("RGB", (800, 400), (40, 60, 90))
+    draw = ImageDraw.Draw(picture)
+    draw.rectangle((100, 100, 300, 150), fill="white")  # a label: black writing on a white box
+    draw.text((115, 110), "Phone signal", fill="black", font=ImageFont.load_default(size=26))
+    draw.rectangle((400, 100, 760, 128), fill="white")  # a white strip a dark line crosses
+    draw.line((400, 128, 760, 100), fill="black", width=3)
+    (tmp_path / "art").mkdir()
+    picture.save(tmp_path / "art" / "overview.png")
+    art = SceneArt(tmp_path, SceneLocations(scene="overview", art="art/overview.png", width=800, height=400, structures=[]))
+    assert len(art.label_boxes()) >= 2  # the strip passes for a box (here two: the line cuts it in two)
+    [(x0, _, x1, _)] = art.text_boxes()  # only the one with writing is drawn again
+    assert x0 < 120 and x1 > 290
+    assert UNLABELLED == EVERYDAY  # the pictures painted with no labels, as the art step has them

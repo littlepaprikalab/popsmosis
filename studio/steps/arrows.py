@@ -23,20 +23,27 @@ With no arrows.json (a job made before the step), code places every arrow, as it
 
 from __future__ import annotations
 
+import math
 import tempfile
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
+from pydantic import Field
 
 from studio import brain, ledger, media
 from studio.jobs import read, write
 from studio.media import StepFailed
-from studio.schemas import Arrows, Locations, PlacedArrow, Point, Strict, Timeline, timeline_problems
+from studio.schemas import Arrows, Locations, PlacedArrow, Point, Strict, Timeline, Way, timeline_problems
 
 POINT_SIZE = (960, 540)  # the painting and its grid are fitted into this: about w x h / 750 image tokens each
 LOOK_SIZE = (960, 540)  # a still of one arrow
 GRID = 50  # pixels of the fitted picture between grid lines, numbered every second line
 WORKERS = 16  # calls at once: a call waits on the helper, never on another
+# A move at each copy of a place drawn more than once (PlacedArrow.copies) is drawn at most this many times more: four
+# satellites took three, and an arrow at each of a row of thirty cells would hide the picture. Nor is a copy shorter
+# than SHORT_WAY art pixels drawn, or one where the arrow or another copy already is.
+COPIES_MAX = 5
+SHORT_WAY = 12.0
 
 POINT_PROMPT = """You place arrows on a textbook illustration for a short science lesson video. Each arrow shows \
 something moving in the picture (an ion, a molecule, an electron, a fluid), and the video draws it as a straight arrow \
@@ -58,12 +65,16 @@ side it leaves or enters by.
 not across the picture.
 - Something crossing a membrane goes across the membrane, never along it.
 
+When the place an arrow comes from, or the place it goes, is drawn more than once in the picture (four \
+satellites, a row of cells) and the move happens at each of them, place one arrow for each copy: the first as start \
+and end, and each other in copies, from or to its own copy. Otherwise copies is empty.
+
 If the picture does not show where an arrow should go (a place is missing, or one straight arrow cannot show the move \
 truthfully, as for a path that turns through several parts), say it cannot be drawn rather than guess: drawable \
 false, its points 0.
 
-For each arrow give its id, drawable, its start and end, and why: one short sentence on where it starts and ends, in \
-the picture's terms."""
+For each arrow give its id, drawable, its start and end, its copies, and why: one short sentence on where it starts \
+and ends, in the picture's terms."""
 
 LOOK_PROMPT = """You check one arrow in a still from a short science lesson video, before the video is made. The arrow \
 shows something moving in the picture, and a learner who sees it should read the move the lesson means: what moves, \
@@ -77,6 +88,13 @@ the lesson names them; the picture may label them in other words. Judge only thi
 Answer shows, and why: one short sentence on where the arrow starts and ends in the picture."""
 
 
+class Copy(Strict):
+    """One more arrow for the same move, from or to another copy of a place, in the fitted picture's pixels."""
+
+    start: Point
+    end: Point
+
+
 class PointedArrow(Strict):
     """Where the helper puts one arrow, in the fitted picture's pixels."""
 
@@ -84,6 +102,7 @@ class PointedArrow(Strict):
     drawable: bool
     start: Point
     end: Point
+    copies: list[Copy] = Field(default_factory=list)
     why: str
 
 
@@ -148,6 +167,18 @@ def point(job: Path, scene: str, hops: list[tuple], names: list[str], folder: Pa
     def art(q: Point) -> Point:
         return Point(x=min(max(q.x / scale, 0.0), picture.width), y=min(max(q.y / scale, 0.0), picture.height))
 
+    def ways(found: PointedArrow) -> list[Way]:
+        """Its copies in art pixels, each a real arrow and none drawn twice, at most COPIES_MAX (the note on it)."""
+        kept = [Way(start=art(found.start), end=art(found.end))]
+        for c in found.copies:
+            way = Way(start=art(c.start), end=art(c.end))
+            if len(kept) > COPIES_MAX or math.dist((way.start.x, way.start.y), (way.end.x, way.end.y)) < SHORT_WAY:
+                continue
+            if not any(math.dist((way.start.x, way.start.y), (k.start.x, k.start.y)) < SHORT_WAY
+                       and math.dist((way.end.x, way.end.y), (k.end.x, k.end.y)) < SHORT_WAY for k in kept):
+                kept.append(way)
+        return kept[1:]
+
     placed = {}
     for n, (flow, _) in enumerate(hops, 1):
         found = next((a for a in answer.arrows if a.id.strip().lower() == f"a{n}"), None)
@@ -155,13 +186,13 @@ def point(job: Path, scene: str, hops: list[tuple], names: list[str], folder: Pa
             continue
         placed[key(scene, flow)] = PlacedArrow(
             scene=scene, path=flow.path, carries=flow.label, blocked=flow.blocked, placed=found.why,
-            **({"start": art(found.start), "end": art(found.end)} if found.drawable else
+            **({"start": art(found.start), "end": art(found.end), "copies": ways(found)} if found.drawable else
                {"left_out": f"the picture cannot show it: {found.why}"}))
     return placed
 
 
-def look(still: Path, scene: str, flow, line: str, ask) -> Look:
-    """One helper call on a still of the flow's arrow alone: does it show the move?"""
+def look(still: Path, scene: str, flow, line: str, ask, copies: int = 0) -> Look:
+    """One helper call on a still of the flow's arrow alone (with its copies: Way): does it show the move?"""
     if flow.blocked:
         drawn = "a dashed line in its colour ending in a cross where it is stopped"
     else:
@@ -171,7 +202,9 @@ def look(still: Path, scene: str, flow, line: str, ask) -> Look:
     else:
         rider = f", and a particle marked “{flow.label}” " + ("waiting before the cross" if flow.blocked
                                                              else "at the front of that stretch")
-    return Look(**ask("helper", f"The line said or sung while it shows: “{line}”\n\nThe arrow: {drawn}{rider}.\n\n"
+    many = (f" It is drawn {copies + 1} times, once for each copy of a place the picture draws more than once."
+            if copies else "")
+    return Look(**ask("helper", f"The line said or sung while it shows: “{line}”\n\nThe arrow: {drawn}{rider}.{many}\n\n"
                                 f"Does it show this: {move(flow)}?",
                       Look, [still], system=LOOK_PROMPT, label=f"arrows look {scene} {flow.label} {' > '.join(flow.path)}"))
 
@@ -225,8 +258,8 @@ def run(job: Path, ask=brain.ask) -> str:
                 Image.fromarray(pixels[..., [2, 1, 0]]).resize(LOOK_SIZE, Image.LANCZOS).save(path)
                 stills.append((path, k))
             del renderer
-        looks = ledger.parallel(lambda item: look(item[0], found[item[1]][0], found[item[1]][1], found[item[1]][2], ask),
-                                stills, WORKERS)
+        looks = ledger.parallel(lambda item: look(item[0], found[item[1]][0], found[item[1]][1], found[item[1]][2], ask,
+                                                  len(placed[item[1]].copies)), stills, WORKERS)
     for (_, k), seen_as in zip(stills, looks):
         placed[k] = placed[k].model_copy(update={
             "seen": seen_as.why, **({} if seen_as.shows else {"left_out": f"as drawn it does not show it: {seen_as.why}"})})

@@ -176,6 +176,12 @@ sentences. The illustrator draws best the diagrams it already knows:
   cross-section, clean scientific style: the membrane across the middle, the stroma above,
   the lumen below, four protein complexes passing through it..." Never name a textbook, a
   publisher or an artist: the fact-check strikes it, a round spent for nothing.
+- Name the whole thing before its parts: the main object by the name textbooks give that
+  picture, and its outline in one sentence ("a convex lens seen edge-on: one clear shape,
+  thick in the middle and thin at its two edges, both faces curving outward"), then each
+  part on it or around it. Given only its parts, the illustrator paints each as a piece of
+  its own and the whole never appears. A cut-through view says what is cut and which way,
+  and asks for it "drawn flat, with no 3D shading".
 - The picture is a still stage; the video does the acting. Ask for where everything is,
   never for what it does or a moment in a process ("during the light reactions" brought
   lightning and symbols): nothing pumped, flowing, carried or turning into something, no
@@ -206,11 +212,16 @@ sentences. The illustrator draws best the diagrams it already knows:
 - Name the real things, never their shapes ("Earth's northern hemisphere", not "a blue
   dome"). Place things with plain words (left, right, above, below, inside, through, tilted
   toward), each said once, never a relation such as "at right angles to".
-- Name no structure's colour: code tells the illustrator each one's from its `color_hex`. To
-  tell apart two parts of one real thing, ask for a soft tint over it ("the globe's northern
-  half softly tinted, the continents showing through"), never solid paint.
+- Tag each structure right after the words that describe it: its `name` in double
+  brackets, exactly as written ("the Moon [[Moon]] on the right, its near side facing the
+  Sun"). Code puts that part's colour and label there for the illustrator, on the thing you
+  just described; a part with no tag gets them in a list after your words, and the
+  illustrator puts them on the wrong thing. Tag each structure once, where the picture shows
+  it, and name no colour yourself: the tag gives the one from `color_hex`. To tell apart two
+  parts of one real thing, ask for a soft tint over it ("the globe's northern half
+  [[Northern hemisphere]] softly tinted, the continents showing through"), never solid paint.
 - Leave out what the lesson does not need, and never ask for text, labels, letters or
-  numbers: the art step asks for the labels itself.
+  numbers: the tags ask for the labels.
 
 Structures:
 
@@ -237,6 +248,9 @@ Structures:
 - A group (the limbic system) and its own parts (amygdala, hippocampus) are never both
   structures in one scene. When the core idea is about groups,
   the overview draws the groups and the detail scenes their parts.
+- A thing whose parts are its own surfaces, faces or edges (a lens's two faces, a leaf's
+  upper and lower skin) is one structure, the whole, with those words among its aliases
+  ("front face"): a surface is a line, and drawn as a part of its own it becomes a slab.
 - A long structure the flow travels along, through parts where different things happen, is
   drawn as those parts in order, each a structure (the proximal tubule, the loop of Henle,
   the distal tubule, the collecting duct), and the lines name each part as the flow reaches
@@ -247,10 +261,12 @@ Structures:
   lacks. The video writes them from the scene's first frame. An axis is never a structure: a
   common word like "price" would reveal it on every line.
 - `to_scale`: true for a scene the learner reads amounts off (a chart, a stacked bar, a
-  number line, a shape with given sides or angles): code draws it exactly from your
-  numbers, so its `image_prompt` gives each size as a number or a share of another ("the
-  interest block a third as tall as the savings block"). A graph (a scene with `axes`) is drawn so
-  whatever this says. False for every other scene.
+  number line, a shape with given sides or angles), and for a figure that is only true when
+  its parts meet or line up exactly (rays bending through a lens to meet at one focus, two
+  lines crossing at the one point that solves both): a painter guesses where lines go, and
+  code draws it exactly from your words, so its `image_prompt` gives each size and place as a
+  number or a share of another ("the interest block a third as tall as the savings block").
+  A graph (a scene with `axes`) is drawn so whatever this says. False for every other scene.
 
 ## The lesson
 

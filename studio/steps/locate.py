@@ -246,7 +246,7 @@ def wrong_labels(job: Path, scene: Scene, located: dict[str, tuple[np.ndarray, s
         with tempfile.TemporaryDirectory(prefix="popsmosis-labels-") as tmp:
             preview = Path(tmp) / f"{scene.id}.png"
             surface.makeImageSnapshot().save(str(preview), skia.kPNG)
-            check = LabelCheck(**ask("helper", f"The picture was asked for as: {scene.image_prompt}\n"
+            check = LabelCheck(**ask("helper", f"The picture was asked for as: {scene.described()}\n"
                                                f"The names pinned on it: {names}.", LabelCheck, [preview],
                                      system=LABELS_PROMPT, label=f"label check {scene.id}"))
     except Exception as e:  # the check guards the labels; a check that fails never fails the step
@@ -400,7 +400,7 @@ class Colours:
 def helper_box(scene: Scene, structure: Structure, picture: Path, ask) -> Box | None:
     """The helper's box around the structure, in art pixels; None when it does not see it."""
     also = f" (also called {', '.join(structure.aliases)})" if structure.aliases else ""
-    spot = Spot(**ask("helper", f"The picture shows: {scene.image_prompt}\nFind: {structure.name}{also}, "
+    spot = Spot(**ask("helper", f"The picture shows: {scene.described()}\nFind: {structure.name}{also}, "
                                 f"{structure.sam_phrase}, coloured {structure.color_hex}.",
                       Spot, [picture], system=BOX_PROMPT, label=f"locate box {scene.id} {structure.name}"))
     left, right = sorted(min(1.0, max(0.0, v)) for v in (spot.left, spot.right))

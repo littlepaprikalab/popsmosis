@@ -75,6 +75,19 @@ def _no_axes() -> Axes:
     return Axes(x="", y="")
 
 
+# A structure's part tag in a scene's image_prompt: its name in double brackets, right after the words that describe it
+# ("the downwash [[Downwash]], a band sloping down"). The painter gets each tag as the part's colour and label in
+# place (art.paint_prompt): given as two lists after the picture's words, they fell on the wrong things (Nov 2: the
+# airplane wing's "red arch", "yellow strip" and "grey tip" came back as three slabs). Every other reader gets the
+# words without the tags (untagged()).
+PART_TAG = re.compile(r"\s*\[\[([^\[\]]*)\]\]")
+
+
+def untagged(text: str) -> str:
+    """An image_prompt's words without its tags."""
+    return PART_TAG.sub("", text).strip()
+
+
 class Scene(Strict):
     id: str
     image_prompt: str
@@ -90,10 +103,13 @@ class Scene(Strict):
                                                              '"" for both on any other scene')
     # A painter guesses sizes: round 22's compound-interest bar chart came back with its bars at heights the lesson's
     # numbers never gave. A scene to scale (and every graph) is drawn by Claude as SVG, its sizes worked out from
-    # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30.
+    # the numbers (studio/steps/art.py, drawn()). False in a bundle written before Oct 30. So is a figure whose parts must
+    # meet exactly (Nov 2: the GPS lesson's distance spheres, painted, did not cross at the phone; never marked in six
+    # runs while this asked only for amounts).
     to_scale: bool = Field(default_factory=bool, description="True for a chart, graph or figure whose sizes must be right "
                                                              "(bars of given heights, a stacked bar, a number line, a shape "
-                                                             "with given sides or angles); false for any other scene")
+                                                             "with given sides or angles), or whose parts must meet or line "
+                                                             "up exactly (rays meeting at a focus); false for any other scene")
     # One of the song's own pictures (Bundle.song_scenes), which the lesson never plays; the song may still play any
     # lesson scene that fits. Not the brain's to write: it writes them in a list of their own, after the lyrics.
     # False in a bundle written before Oct 31.
@@ -102,6 +118,10 @@ class Scene(Strict):
     def exact(self) -> bool:
         """Drawn to scale: marked so, or a graph."""
         return self.to_scale or bool(self.axes)
+
+    def described(self) -> str:
+        """What the picture shows, in the image_prompt's words without its tags: for every reader but the painter."""
+        return untagged(self.image_prompt)
 
 
 def stage_groups(scenes: list[Scene]) -> dict[str, list[Scene]]:
@@ -525,7 +545,7 @@ class Problem(Strict):
     rule: Literal["empty-scene", "shared-name", "unknown-name", "not-in-scene", "name-not-said", "unlisted-name",
                   "spotlight", "camera", "particles", "carries", "builds_up", "spins", "blocks", "conversions", "meanings", "lyric-style", "motion", "essence", "key-line", "glow", "stages",
                   "tempo", "song-style", "axes", "song-scene", "says", "side-by-side", "analogy",
-                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias"]
+                  "chorus", "head-count", "source-quote", "crowded", "colours", "alias", "part-tags"]
     detail: str
     repaired: bool  # False: only a better bundle (the prompt) can fix it
 
@@ -1176,6 +1196,13 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
     return problems
 
 
+class Way(Strict):
+    """One straight arrow, tail to head, art pixels."""
+
+    start: Point
+    end: Point
+
+
 class PlacedArrow(Strict):
     """One hop's arrow as the arrows step placed it and looked at it (studio/steps/arrows.py), by its flow: the scene,
     the stops, what it carries and whether it is blocked, as the timeline's Particles have them."""
@@ -1188,6 +1215,10 @@ class PlacedArrow(Strict):
     # None where code places it (a drawing, or a hop the helper was not asked about) or it cannot be drawn.
     start: Point | None = None
     end: Point | None = None
+    # The same arrow from (or to) each other copy of a place drawn more than once, art pixels: on Nov 2 the GPS
+    # overview drew four satellites as one part, and the video showed one signal reaching the phone where the lesson
+    # needs four. Drawn as the arrow is, at the same moments. [] in arrows.json written before.
+    copies: list[Way] = Field(default_factory=list)
     placed: str = ""  # the helper's word on where it put the arrow, or on why the picture cannot show it
     seen: str = ""  # its word on the arrow as drawn, after looking at a still of it
     left_out: str = ""  # why the video leaves it out, or "": it cannot be drawn, or as drawn it does not show the move

@@ -3,8 +3,8 @@
 import base64
 import hashlib
 import json
-import shutil
 import re
+import shutil
 import threading
 import time
 
@@ -125,10 +125,20 @@ class FakeHelper:
         self.wrong = wrong or {}  # scene -> the names whose pinned label the helper sees on the wrong thing
         self.asked: list[tuple[str, str]] = []
         self.sizes: list[tuple[int, int]] = []  # each picture the check was shown, as sent
+        self.rewrites: dict[str, str] = {}  # scene -> what the writer's role answers on seeing its first picture
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
         assert len(images) == 1 and images[0].exists()
         self.asked.append((label, prompt))
+        if system == art.REWRITE_PROMPT:  # the writer's role, after a picture went wrong: its words again
+            assert role == "brain" and schema is None and label.startswith("art rewrite ")
+            scene = label.split()[2]
+            if scene in self.rewrites:
+                return {"text": self.rewrites[scene]}
+            # By default it keeps a picture the check found no part out of place or wrong in, and rewrites any other.
+            clean = "\n- misplaced: " not in prompt and "\n- wrong: " not in prompt
+            part = re.search(r"each to be tagged once:\n- (.+?) \(", prompt).group(1)  # its first part, tagged
+            return {"text": art.KEEP if clean else f"Rewritten {scene} [[{part}]] after its picture went wrong."}
         assert role == "helper"
         if schema is art.PictureCheck:
             assert system == art.CHECK_PROMPT and "The lesson's facts:\n- f1: " in prompt
@@ -151,8 +161,8 @@ class FakeHelper:
         return self.boxes.get(name, {"seen": False, "left": 0, "top": 0, "right": 1, "bottom": 1})
 
     def labels(self):
-        """What the helper was asked, but the label check every located scene gets."""
-        return [label for label, _ in self.asked if not label.startswith("label check ")]
+        """What the helper was asked, but the label check every located scene gets and the writer's rewrites."""
+        return [label for label, _ in self.asked if not label.startswith(("label check ", "art rewrite "))]
 
     def label_checks(self):
         return [label for label, _ in self.asked if label.startswith("label check ")]
@@ -332,11 +342,18 @@ def test_a_part_out_of_place_is_asked_for_again_and_a_wrong_label_kept(job, monk
     hook = [prompt for label, prompt in fake.painted if label.split()[1] == "hook"]
     synthase = [prompt for label, prompt in fake.painted if label.split()[1] == "synthase"]
     assert len(hook) == 1 and len(synthase) == 2  # a wrong label is no reason to paint again
-    assert "refused" not in synthase[0] and "head in the lumen" in synthase[1]
+    # The second try is painted from the scene's words as the writer's role wrote them again, having seen the first
+    # picture and what the check found in it: not from the same words with the problem quoted after them.
+    [(_, shown)] = [(label, prompt) for label, prompt in helper.asked if label == "art rewrite synthase"]
+    assert "- misplaced: head in the lumen" in shown and synthase[0] in shown
+    assert "refused" not in synthase[0] and synthase[1].startswith(
+        'Rewritten synthase (blue, label "ATP synthase") after its picture went wrong.')
+    assert "head in the lumen" not in synthase[1]
     made = json.loads((job / "art" / "synthase.json").read_text())
     assert made["try"] == 2
-    # What each try was refused for is kept, not only the next prompt's quote of it.
-    assert made["tries"] == [{"try": 1, "labels": [], "misplaced": ["head in the lumen"], "wrong": [], "notes": []},
+    # What each try was refused for is kept, not only the next prompt's quote of it, with the words it was rewritten to.
+    assert made["tries"] == [{"try": 1, "labels": [], "misplaced": ["head in the lumen"], "wrong": [], "notes": [],
+                              "rewritten": "Rewritten synthase [[ATP synthase]] after its picture went wrong."},
                              {"try": 2, "labels": [], "misplaced": [], "wrong": [], "notes": []}]
     assert sorted(p.name for p in (job / "art").glob("synthase.try*.png")) == ["synthase.try1.png"]
 
@@ -355,14 +372,61 @@ def test_after_the_last_try_the_scene_keeps_its_best_picture(job, monkeypatch):
     assert len(fake.painted) == 5  # two pictures a scene at most
 
 
-def test_a_picture_with_only_lesser_faults_is_kept_and_they_are_recorded(job, monkeypatch):
-    # Round 8: a second picture painted for a shape or a detail was no better 9 times in 11.
+def test_a_picture_with_anything_wrong_is_painted_again_from_rewritten_words(job, monkeypatch):
+    # Round 8: a second picture painted for a shape or a detail, from the same words, was no better 9 times in 11. Nov
+    # 2: painted again from words rewritten by the writer's role, which saw the picture, the airplane wing's slabs and
+    # the filled signal bars (each only "wrong") came out right; the owner had wrong pictures painted again too.
+    fake = FakeMuse().install(monkeypatch)
+    helper = FakeHelper({"overview": [{"wrong": ["Calvin cycle arrows broken"]}, {}]})
+    assert art.run(job, helper) == ("painted 3 scenes with Muse Image in 4 tries; "
+                                    "1 picture refused: overview: Calvin cycle arrows broken")
+    assert len(fake.painted) == 4
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert made["try"] == 2 and made["check"]["wrong"] == []
+    assert made["prompt"].startswith("Rewritten overview (green, label \"Thylakoid\") after its picture went wrong.")
+
+
+def test_the_writer_looks_at_every_first_picture_and_only_its_rewrite_is_painted_again(job, monkeypatch):
+    # The owner (Nov 2): the check missed the airplane wing's slabs, and a second painting of a good picture can come
+    # out worse, so the writer's role sees each first picture and the scene is painted again only when it asks.
     fake = FakeMuse().install(monkeypatch)
     helper = FakeHelper({"overview": [{"wrong": ["Calvin cycle arrows broken"]}]})
-    assert art.run(job, helper) == ("painted 3 scenes with Muse Image in 3 tries; "
-                                    "the helper still saw: overview: Calvin cycle arrows broken")
-    assert len(fake.painted) == 3
-    assert json.loads((job / "art" / "overview.json").read_text())["check"]["wrong"] == ["Calvin cycle arrows broken"]
+    helper.rewrites = {"hook": "A leaf [[Thylakoid]] in the sun, drawn larger.", "overview": art.KEEP}
+    art.run(job, helper)
+    assert sorted(label for label, _ in helper.asked if label.startswith("art rewrite ")) == [
+        "art rewrite hook", "art rewrite overview", "art rewrite synthase"]
+    painted = [label.split()[1] for label, _ in fake.painted]
+    assert sorted(painted) == ["hook", "hook", "overview", "synthase"]  # the hook's picture was clean, and redone
+    made = json.loads((job / "art" / "overview.json").read_text())
+    assert made["try"] == 1 and made["tries"][0]["kept"] and made["check"]["wrong"] == ["Calvin cycle arrows broken"]
+    assert json.loads((job / "art" / "hook.json").read_text())["tries"][0]["rewritten"] == helper.rewrites["hook"]
+
+
+def test_a_picture_the_writer_rejected_is_not_kept_over_its_repaint_for_a_small_fault(job, monkeypatch):
+    # Nov 2: the writer rejected the airplane's stall picture, which the check had passed (no air broke away over the
+    # top), and its repaint came back with one small fault; the step kept the rejected one by the check alone.
+    FakeMuse().install(monkeypatch)
+    helper = FakeHelper({"hook": [{}, {"wrong": ["the leaf is a little pale"]}]})
+    helper.rewrites = {"hook": "A leaf [[Thylakoid]] in the sun, its veins showing."}
+    assert "1 picture refused: hook: the writer asked for it again" in art.run(job, helper)
+    made = json.loads((job / "art" / "hook.json").read_text())
+    assert made["try"] == 2 and made["check"]["wrong"] == ["the leaf is a little pale"]
+
+
+def test_a_rewrite_that_fails_paints_again_from_the_same_words(job, monkeypatch):
+    fake = FakeMuse().install(monkeypatch)
+
+    class NoWriter(FakeHelper):
+        def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
+            if system == art.REWRITE_PROMPT:
+                raise brain.BrainError("the brain is down")
+            return super().__call__(role, prompt, schema, images, system=system, label=label)
+
+    art.run(job, NoWriter({"synthase": [{"misplaced": ["head in the lumen"]}, {}]}))
+    synthase = [prompt for label, prompt in fake.painted if label.split()[1] == "synthase"]
+    assert len(synthase) == 2 and "refused: head in the lumen" in synthase[1]
+    assert len(fake.painted) == 4  # the clean hook and overview are not painted again
+    assert "rewritten" not in json.loads((job / "art" / "synthase.json").read_text())["tries"][0]
 
 
 def test_every_scene_is_asked_to_label_its_structures_and_for_no_look():

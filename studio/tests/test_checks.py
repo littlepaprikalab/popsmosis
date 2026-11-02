@@ -1028,3 +1028,30 @@ def test_an_alias_that_is_a_word_of_the_topic_is_recorded():
     assert aliased("Sunlight", "light", "sun") == [("structures", "alias", False)]
     assert aliased("Light-harvesting complex", "light") == []  # a word of its own name: the topic's word means it
     assert aliased("Sunlight", "sun") == []
+
+
+def test_a_part_tag_is_given_its_parts_name_and_one_naming_nothing_or_a_part_again_is_dropped():
+    data = bundle_data()
+    data["scenes"][1]["image_prompt"] = ("A membrane [[thylakoid]] across, a ribosome [[Ribosome]], and the membrane "
+                                         "again [[Thylakoid]].")
+    fixed, report = checks.review(Bundle.model_validate(data))
+    assert fixed.scenes[1].image_prompt == "A membrane [[Thylakoid]] across, a ribosome, and the membrane again."
+    tags = [p for p in report.problems if p.rule == "part-tags" and p.line_id == "scene:overview"]
+    assert [(p.repaired, p.detail) for p in tags] == [
+        (True, ("[[thylakoid]] as [[Thylakoid]]; [[Ribosome]] dropped: no part of the scene; [[Thylakoid]] dropped: "
+                "tagged before")),
+        (False, ("no tag for Cytochrome b6f: coloured and labelled after the picture's words instead, where the painter "
+                 "can put them on the wrong thing"))]
+
+
+def test_a_pictures_words_get_each_part_tagged_after_the_first_words_naming_it():
+    parts = [{"name": "Thylakoid", "aliases": []}, {"name": "Thylakoid lumen", "aliases": ["lumen"]},
+             {"name": "GPS satellite", "aliases": []}, {"name": "Moon", "aliases": []},
+             {"name": "Stroma", "aliases": []}, {"name": "Phone", "aliases": []}]
+    words = ("Four GPS satellites above a phone [[Phone]], the Moon's light on a thylakoid, its thylakoid lumen inside "
+             "and the Moon behind.")
+    assert checks.tag_parts(words, parts) == (
+        "Four GPS satellites [[GPS satellite]] above a phone [[Phone]], the Moon's light on a thylakoid [[Thylakoid]], "
+        "its thylakoid lumen [[Thylakoid lumen]] inside and the Moon [[Moon]] behind.")
+    # The longest name first, a plural too, never after a possessive, a part tagged already left as it is, and one
+    # the words never name (the stroma) left untagged.

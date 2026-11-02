@@ -166,6 +166,11 @@ STREAM_GAP = 160.0  # art pixels between the particles streaming along the path,
 ROUTE_BEND = 0.25  # a hop's curve bows out by this share of its length, at its middle
 CURVE_STEPS = 24  # straight pieces a curved arrow is drawn with
 ARROW_SAMPLE = 14.0  # art pixels between the points along an arrow that labels keep clear of
+LABEL_PAD = 2.0  # art pixels around a painted label's box drawn again over the arrows with it
+# A painted label's box holds writing (SceneArt.text_boxes): a row across it crosses TEXT_STROKES dark strokes or more,
+# and TEXT_INK of it or more is dark.
+TEXT_STROKES, TEXT_INK = 5, 0.06
+UNLABELLED = ("hook",)  # pictures painted with no labels (art.EVERYDAY): what looks like a label's box there is not one
 TRAIL = 7  # the lead particle's trail: this many earlier positions...
 TRAIL_DT = 0.04  # ...this many seconds apart
 TRAIL_GAP = 24.0  # frame pixels: a trail dot closer than this to the one before it is left out, so the dots
@@ -361,6 +366,7 @@ class SceneArt:
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
         self._half = pixels[::2, ::2, :3].copy()  # for finding its painted labels (label_boxes())
         self._label_boxes: list[Rect] | None = None
+        self._text_boxes: list[Rect] | None = None
         self.masks: dict[str, skia.Image] = {}
         self._mask_files: dict[str, Path] = {}
         self._crowd_points: dict[str, list[Point]] = {}
@@ -551,6 +557,23 @@ class SceneArt:
         if self._label_boxes is None:
             self._label_boxes = [tuple(v * 2.0 for v in box) for box in painted_label_boxes(self._half)]
         return self._label_boxes
+
+    def text_boxes(self) -> list[Rect]:
+        """The painted labels (label_boxes()) that hold writing, as TEXT_STROKES and TEXT_INK have it: these are drawn
+        again over the arrows (Renderer._painted_labels), where a white patch taken for a box would cut an arrow. On
+        the airplane overview's white sky the strips between its airflow lines passed for three boxes (Nov 2). Of the
+        212 boxes found in 41 pictures then, every label passed but those of a letter or two ("K⁺"), which an arrow
+        still crosses, and nothing else did but on the hooks, which label nothing (UNLABELLED)."""
+        if self._text_boxes is None:
+            kept = []
+            for box in self.label_boxes():
+                x0, y0, x1, y1 = (int(v / 2) for v in box)
+                dark = self._half[y0:y1, x0:x1].max(-1) < 120
+                strokes = max((int((np.diff(row.astype(np.int8)) == 1).sum()) for row in dark), default=0)
+                if strokes >= TEXT_STROKES and dark.mean() >= TEXT_INK:
+                    kept.append(box)
+            self._text_boxes = kept
+        return self._text_boxes
 
     def ink_share(self, box: tuple[float, float, float, float]) -> float:
         """How much of an art-pixel box has something drawn in it, as drawn_share() has it, but what lies off the art
@@ -1259,7 +1282,8 @@ class Renderer:
                                                                                               beat.particles[0].path)
                     focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
             keep = [point for flow in beat.particles
-                    for point in self._pointed(beat.scene, flow) or self._path_points(beat.scene, flow.path)] \
+                    for point in (self._pointed(beat.scene, flow) or self._path_points(beat.scene, flow.path))
+                    + [q for way in self._copies(beat.scene, flow) for q in way]] \
                 if beat.camera.from_whole and beat.camera.target else []
             target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus, beat.camera.from_whole, keep)
             same = i > 0 and beats[i - 1].scene == beat.scene
@@ -1447,6 +1471,32 @@ class Renderer:
             self._background = (key, self.surface.makeImageSnapshot())
         elif keep:  # the copy kept was the frame before's, as it always was: never one from an earlier rest
             self._last_background, self._background = (key, (scale, dx, dy)), None
+
+    def _painted_labels(self, canvas: skia.Canvas, beat, plan: BeatPlan, cam: Cam, view: Rect, t: float,
+                        ghosts: dict[str, float], spots: dict[str, float], tints: tuple, fade: float) -> None:
+        """The labels painted on the picture (SceneArt.text_boxes), drawn again over its arrows and particles just as
+        the background drew them, the stage before under them while this one fades in: on top, as the video's own
+        labels are (Nov 2: two of the GPS overview's four signals ran through its painted "Phone")."""
+        if beat.scene in UNLABELLED:
+            return
+        art = self.scene(beat.scene)
+        boxes = art.text_boxes()
+        if not boxes:
+            return
+        scale, dx, dy = to_frame(cam, view, art)
+        before = plan.fade_from if fade < 1.0 else None
+        for x0, y0, x1, y1 in boxes:
+            canvas.save()
+            canvas.clipRect(skia.Rect.MakeLTRB((x0 - LABEL_PAD) * scale + dx, (y0 - LABEL_PAD) * scale + dy,
+                                               (x1 + LABEL_PAD) * scale + dx, (y1 + LABEL_PAD) * scale + dy))
+            if before is not None:
+                self._draw_background(canvas, before, cam, view, self._ghosts(before, self.revealed.get(before, {}), t),
+                                      {}, keep=False)
+                canvas.saveLayerAlpha(None, round(255 * fade))
+            self._draw_background(canvas, beat.scene, cam, view, ghosts, spots, keep=False, tints=tints)
+            if before is not None:
+                canvas.restore()
+            canvas.restore()
 
     def _in_play(self, i: int) -> set[str] | None:
         """The parts beat i is about (LABELS_CALM); None when every label shows in full."""
@@ -1650,6 +1700,8 @@ class Renderer:
             self._glow(canvas, beat, cam, view, t, ghosts)
         if beat.particles:
             self._particles(canvas, beat, plan, cam, view, t)
+            if beat.scene in self.timeline.self_labelled:
+                self._painted_labels(canvas, beat, plan, cam, view, t, ghosts, spots, tints, fade)
 
         caption_alpha = 0.0
         if beat.caption:
@@ -2658,6 +2710,14 @@ class Renderer:
             return None
         return [(placed.start.x, placed.start.y), (placed.end.x, placed.end.y)]
 
+    def _copies(self, scene_id: str, flow) -> list[list[Point]]:
+        """The flow's arrow again from (or to) each other copy of a place the painting draws more than once
+        (PlacedArrow.copies), art pixels: four satellites, four signals reaching the phone."""
+        placed = self._placed.get((scene_id, tuple(flow.path), flow.label, flow.blocked))
+        if placed is None or placed.start is None:
+            return []
+        return [[(c.start.x, c.start.y), (c.end.x, c.end.y)] for c in placed.copies]
+
     def hops(self) -> list[tuple[str, object, str]]:
         """Each flow drawn as an arrow from place to place, once: off a graph, and not a crossing (_crossing), which
         code draws as its particles crossing. Each with its scene and the line it first plays under."""
@@ -2804,26 +2864,18 @@ class Renderer:
             line = self._flow_line(scene_id, flow)
             if len(line) < 2:
                 return
-            grown = p.ease(elapsed / ROUTE_GROW_S)
-            shown = [on_frame(q) for q in line]
-            if flow.blocked:  # the whole way to the cross, still
-                p.draw_route_arrow(canvas, shown, flow.color, alpha, grown, phase=0.0)
-            else:
-                p.draw_route_track(canvas, shown, flow.color, alpha * TRACK_ALPHA, grown)
-                gliding = elapsed - ROUTE_GROW_S  # it glides once its track has drawn itself in
-                piece = _glide(shown, gliding, room) if gliding >= 0 else []
-                rider = bool(flow.label) and gliding >= 0  # its particle rides the gliding arrow's head
-                if piece:
-                    p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
-                if rider:
-                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count, room)
-            if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
-                self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
+            copies = self._copies(scene_id, flow)
+            for way in [line, *copies]:  # and from each other copy of a place drawn twice
+                self._draw_way(canvas, flow, way, elapsed, alpha, on_frame, t, count, room)
             says = getattr(flow, "says", "")
             if says and (scene_id, tuple(flow.path), flow.label, flow.blocked) not in self._said:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
+                # Clear of its copies along their length, not only its own ends: the GPS overview's four signals
+                # fan out from the middle the note hangs from.
+                clear = line + [_along(way, d) for way in copies
+                                for d in range(0, int(routing.length(way)) + 1, int(ARROW_SAMPLE))]
                 self._draw_note(canvas, scene_id, ("says", tuple(flow.path), flow.label, says), says, middle,
-                                line, flow.color, alpha * p.ease((elapsed - ROUTE_GROW_S / 2) / ROUTE_GROW_S),
+                                clear, flow.color, alpha * p.ease((elapsed - ROUTE_GROW_S / 2) / ROUTE_GROW_S),
                                 on_frame)
             return
         arrows = self._handoffs(scene_id, flow)
@@ -2857,6 +2909,27 @@ class Renderer:
                 rect = (mx - w / 2, top, mx + w / 2, top + h)
             first = p.ease(elapsed / HANDOFF_GROW_S)
             p.draw_name(canvas, word, rect, size, self.scene(scene_id).paper, flow.color, alpha * first, weight="Bold")
+
+    def _draw_way(self, canvas: skia.Canvas, flow, line: list[Point], elapsed: float, alpha: float, on_frame,
+                  t: float, count: int, room: float | None) -> None:
+        """One of a travelling flow's arrows off a graph, along `line` (art pixels): drawing itself in from its tail as
+        it sets off, then gliding along its dotted track with what it carries riding its head; a blocked one whole to
+        its cross, with what it carries waiting there."""
+        grown = p.ease(elapsed / ROUTE_GROW_S)
+        shown = [on_frame(q) for q in line]
+        if flow.blocked:  # the whole way to the cross, still
+            p.draw_route_arrow(canvas, shown, flow.color, alpha, grown, phase=0.0)
+        else:
+            p.draw_route_track(canvas, shown, flow.color, alpha * TRACK_ALPHA, grown)
+            gliding = elapsed - ROUTE_GROW_S  # it glides once its track has drawn itself in
+            piece = _glide(shown, gliding, room) if gliding >= 0 else []
+            rider = bool(flow.label) and gliding >= 0  # its particle rides the gliding arrow's head
+            if piece:
+                p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
+            if rider:
+                self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count, room)
+        if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
+            self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
 
     def _note_spot(self, scene_id: str, key: tuple, anchor: Point, size: tuple[float, float],
                    keep_clear: list[Point], shown: tuple[float, float, float, float] | None = None) -> Point | None:
