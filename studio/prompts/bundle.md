@@ -320,8 +320,10 @@ explanation left to the narration.
   synths lead, claps accent the beat", with sounds of your own for this topic. Concrete sounds ("a
   warm Rhodes", "an 808 that slides", "stacked harmonies on the hook") beat adjectives ("upbeat",
   "educational"). The voice stays close and natural, one clear lead: never soaring, belted or
-  shouted, and no group shouts. Its rapped verses have a confident, punchy, rhythmic flow,
-  every syllable landing on the beat; its chorus is sung in an easy range. Instruments
+  shouted, and no group shouts. Its rapped verses are confident and rhythmic, every syllable
+  on the beat, in a flow of their own that suits the genre and the song (a quick double-time run,
+  a laid-back flow just behind the beat, a bouncing triplet flow, a clipped staccato one); its
+  chorus is sung in an easy range. Instruments
   make the music, never the sounds of the topic itself (whooshes, countdowns, sirens). The verses are rapped, and the style says so, unless the learner asks for them sung,
   or for one section rapped (a rapped second verse, a rapped bridge): sing the rest then. A
   rapped line follows every rule a sung one does (a lyric with its rhyme and beat, one idea,
