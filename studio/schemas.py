@@ -1193,6 +1193,13 @@ def timeline_shape_problems(timeline: Timeline) -> list[str]:
     return problems
 
 
+class Way(Strict):
+    """One straight arrow, tail to head, art pixels."""
+
+    start: Point
+    end: Point
+
+
 class PlacedArrow(Strict):
     """One hop's arrow as the arrows step placed it and looked at it (studio/steps/arrows.py), by its flow: the scene,
     the stops, what it carries and whether it is blocked, as the timeline's Particles have them."""
@@ -1205,6 +1212,10 @@ class PlacedArrow(Strict):
     # None where code places it (a drawing, or a hop the helper was not asked about) or it cannot be drawn.
     start: Point | None = None
     end: Point | None = None
+    # The same arrow from (or to) each other copy of a place drawn more than once, art pixels: on Nov 2 the GPS
+    # overview drew four satellites as one part, and the video showed one signal reaching the phone where the lesson
+    # needs four. Drawn as the arrow is, at the same moments. [] in arrows.json written before.
+    copies: list[Way] = Field(default_factory=list)
     placed: str = ""  # the helper's word on where it put the arrow, or on why the picture cannot show it
     seen: str = ""  # its word on the arrow as drawn, after looking at a still of it
     left_out: str = ""  # why the video leaves it out, or "": it cannot be drawn, or as drawn it does not show the move

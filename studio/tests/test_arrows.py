@@ -1,12 +1,14 @@
 """The arrows step: each hop pointed on its painting by the helper, every arrow looked at as drawn (a fake ask)."""
 
 import os
+import tempfile
+from pathlib import Path
 
 import pytest
 from PIL import Image
 
 from studio import jobs, media
-from studio.schemas import Arrows, Timeline
+from studio.schemas import Arrows, PlacedArrow, Timeline
 from studio.steps import arrows
 from studio.tests import sample_media
 
@@ -26,8 +28,8 @@ class FakeAsk:
     """The helper: points every hop at `start` -> `end` (pixels of the picture it is shown), or says it cannot be
     drawn; says each arrow it looks at shows the move, or not."""
 
-    def __init__(self, drawable=True, shows=True, start=(400.0, 250.0), end=(470.0, 230.0)):
-        self.drawable, self.shows, self.start, self.end = drawable, shows, start, end
+    def __init__(self, drawable=True, shows=True, start=(400.0, 250.0), end=(470.0, 230.0), copies=()):
+        self.drawable, self.shows, self.start, self.end, self.copies = drawable, shows, start, end, copies
         self.calls = []
 
     def __call__(self, role, prompt, schema=None, images=(), *, system=None, label=None):
@@ -35,8 +37,9 @@ class FakeAsk:
                            "sizes": [Image.open(p).size for p in images]})
         if schema is arrows.Pointing:
             (x0, y0), (x1, y1) = self.start, self.end
+            copies = [{"start": {"x": a, "y": b}, "end": {"x": c, "y": d}} for (a, b), (c, d) in self.copies]
             return {"arrows": [{"id": "a1", "drawable": self.drawable, "start": {"x": x0, "y": y0},
-                                "end": {"x": x1, "y": y1}, "why": "from the space up into the part"}]}
+                                "end": {"x": x1, "y": y1}, "copies": copies, "why": "from the space up into the part"}]}
         assert schema is arrows.Look
         return {"shows": self.shows, "why": "it runs from the thylakoid into b6f" if self.shows else "it runs sideways"}
 
@@ -99,3 +102,43 @@ def test_the_grid_is_numbered_along_its_edges_every_second_line():
     grid = arrows.gridded(picture)
     assert grid.size == picture.size and grid.getpixel((50, 125)) != (255, 255, 255)  # a line every GRID pixels
     assert grid.getpixel((75, 125)) == (255, 255, 255)
+
+
+def test_a_move_from_a_place_drawn_more_than_once_gets_an_arrow_from_each_copy(job):
+    # Nov 2: the GPS overview drew its four satellites as one part, and the video showed one signal reaching the phone
+    # where the lesson needs four.
+    ask = FakeAsk(copies=[((300.0, 100.0), (470.0, 230.0)), ((600.0, 100.0), (470.0, 230.0))])
+    arrows.run(job, ask=ask)
+    point, look = ask.calls
+    assert "place one arrow for each copy" in point["system"]
+    [arrow] = placed(job)
+    scale = 945 / 1792
+    assert [(c.start.x, c.end.y) for c in arrow.copies] == [(pytest.approx(300 / scale), pytest.approx(230 / scale)),
+                                                            (pytest.approx(600 / scale), pytest.approx(230 / scale))]
+    assert "It is drawn 3 times, once for each copy" in look["prompt"]
+
+
+def test_a_move_with_copies_draws_an_arrow_from_each_copy():
+    from studio.render.renderer import Renderer
+    from studio.schemas import Locations, Point, Way
+
+    job = sample_media.write_job(Path(tempfile.mkdtemp()) / "sample", art=True)
+    timeline = jobs.read(job / media.timeline_path("song"), Timeline)
+    locations = jobs.read(job / media.LOCATIONS, Locations)
+    one = PlacedArrow(scene="overview", path=HOP, carries="", start=Point(x=700, y=500), end=Point(x=900, y=450))
+    many = one.model_copy(update={"copies": [Way(start=Point(x=300, y=200), end=Point(x=900, y=450))]})
+    beat = next(b for b in timeline.beats if b.particles and list(b.particles[0].path) == HOP)
+    flow = beat.particles[0]
+    alone = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[one.model_copy(update={
+        "carries": flow.label})]))
+    both = Renderer(job, timeline, locations=locations, arrows=Arrows(arrows=[many.model_copy(update={
+        "carries": flow.label})]))
+    assert alone._copies("overview", flow) == []
+    assert both._copies("overview", flow) == [[(300.0, 200.0), (900.0, 450.0)]]
+    key = arrows.key("overview", flow)
+    frames = []
+    for renderer in (alone, both):
+        renderer.only = key
+        frames.append(renderer.frame(renderer.arrow_time("overview", flow)).astype(int))
+    changed = (abs(frames[1] - frames[0]).sum(axis=2) > 30).sum()
+    assert changed > 200  # the second arrow is drawn: a few hundred pixels or more differ

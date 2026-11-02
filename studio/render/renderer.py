@@ -1259,7 +1259,8 @@ class Renderer:
                                                                                               beat.particles[0].path)
                     focus = (sum(x for x, _ in stops) / len(stops), sum(y for _, y in stops) / len(stops)) if stops else None
             keep = [point for flow in beat.particles
-                    for point in self._pointed(beat.scene, flow) or self._path_points(beat.scene, flow.path)] \
+                    for point in (self._pointed(beat.scene, flow) or self._path_points(beat.scene, flow.path))
+                    + [q for way in self._copies(beat.scene, flow) for q in way]] \
                 if beat.camera.from_whole and beat.camera.target else []
             target = self._aim(beat.scene, beat.camera.target, beat.camera.zoom, focus, beat.camera.from_whole, keep)
             same = i > 0 and beats[i - 1].scene == beat.scene
@@ -2658,6 +2659,14 @@ class Renderer:
             return None
         return [(placed.start.x, placed.start.y), (placed.end.x, placed.end.y)]
 
+    def _copies(self, scene_id: str, flow) -> list[list[Point]]:
+        """The flow's arrow again from (or to) each other copy of a place the painting draws more than once
+        (PlacedArrow.copies), art pixels: four satellites, four signals reaching the phone."""
+        placed = self._placed.get((scene_id, tuple(flow.path), flow.label, flow.blocked))
+        if placed is None or placed.start is None:
+            return []
+        return [[(c.start.x, c.start.y), (c.end.x, c.end.y)] for c in placed.copies]
+
     def hops(self) -> list[tuple[str, object, str]]:
         """Each flow drawn as an arrow from place to place, once: off a graph, and not a crossing (_crossing), which
         code draws as its particles crossing. Each with its scene and the line it first plays under."""
@@ -2804,21 +2813,8 @@ class Renderer:
             line = self._flow_line(scene_id, flow)
             if len(line) < 2:
                 return
-            grown = p.ease(elapsed / ROUTE_GROW_S)
-            shown = [on_frame(q) for q in line]
-            if flow.blocked:  # the whole way to the cross, still
-                p.draw_route_arrow(canvas, shown, flow.color, alpha, grown, phase=0.0)
-            else:
-                p.draw_route_track(canvas, shown, flow.color, alpha * TRACK_ALPHA, grown)
-                gliding = elapsed - ROUTE_GROW_S  # it glides once its track has drawn itself in
-                piece = _glide(shown, gliding, room) if gliding >= 0 else []
-                rider = bool(flow.label) and gliding >= 0  # its particle rides the gliding arrow's head
-                if piece:
-                    p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
-                if rider:
-                    self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count, room)
-            if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
-                self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
+            for way in [line, *self._copies(scene_id, flow)]:  # and from each other copy of a place drawn twice
+                self._draw_way(canvas, flow, way, elapsed, alpha, on_frame, t, count, room)
             says = getattr(flow, "says", "")
             if says and (scene_id, tuple(flow.path), flow.label, flow.blocked) not in self._said:
                 middle = _along(line, routing.length(line) / 2) if len(line) > 1 else line[0]
@@ -2857,6 +2853,27 @@ class Renderer:
                 rect = (mx - w / 2, top, mx + w / 2, top + h)
             first = p.ease(elapsed / HANDOFF_GROW_S)
             p.draw_name(canvas, word, rect, size, self.scene(scene_id).paper, flow.color, alpha * first, weight="Bold")
+
+    def _draw_way(self, canvas: skia.Canvas, flow, line: list[Point], elapsed: float, alpha: float, on_frame,
+                  t: float, count: int, room: float | None) -> None:
+        """One of a travelling flow's arrows off a graph, along `line` (art pixels): drawing itself in from its tail as
+        it sets off, then gliding along its dotted track with what it carries riding its head; a blocked one whole to
+        its cross, with what it carries waiting there."""
+        grown = p.ease(elapsed / ROUTE_GROW_S)
+        shown = [on_frame(q) for q in line]
+        if flow.blocked:  # the whole way to the cross, still
+            p.draw_route_arrow(canvas, shown, flow.color, alpha, grown, phase=0.0)
+        else:
+            p.draw_route_track(canvas, shown, flow.color, alpha * TRACK_ALPHA, grown)
+            gliding = elapsed - ROUTE_GROW_S  # it glides once its track has drawn itself in
+            piece = _glide(shown, gliding, room) if gliding >= 0 else []
+            rider = bool(flow.label) and gliding >= 0  # its particle rides the gliding arrow's head
+            if piece:
+                p.draw_route_arrow(canvas, piece, flow.color, alpha, 1.0, dashed=False, head=not rider)
+            if rider:
+                self._draw_rider(canvas, flow, shown, piece, alpha, t, gliding, count, room)
+        if flow.blocked or not (flow.label and elapsed >= ROUTE_GROW_S):
+            self._draw_tail(canvas, flow, shown, alpha, t, grown, count)
 
     def _note_spot(self, scene_id: str, key: tuple, anchor: Point, size: tuple[float, float],
                    keep_clear: list[Point], shown: tuple[float, float, float, float] | None = None) -> Point | None:
