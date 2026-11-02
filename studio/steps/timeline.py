@@ -296,6 +296,34 @@ def _same(heard: str, name: str, last: bool) -> bool:
     return heard == name or (last and heard in (name + "s", name + "es"))
 
 
+# Two kinds of particle on one video at least this far apart in colour (RGB, 0-441): glucose went the purple of Na⁺
+# on the pump (Nov 2: "should the sugar pill be a different color?").
+APART = 90.0
+
+
+def particle_colours(bundle) -> dict[str, str]:
+    """Each kind of particle the bundle moves or piles up, and its colour on every video of it (marker_colour): one
+    a picked colour takes the first of OTHER_MARKERS, from where its name points, at least APART from every colour
+    already taken, the common kinds' and the drawn ones' first, then the others' in the order of their names."""
+    labels = {notation(flow.carries) for d in bundle.direction for flow in d.flows()}
+    labels |= {notation(b.carries) for b in bundle.builds_up}
+    palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    drawn = {name.casefold(): colour for name, colour in palette.items()}
+    colours = {label: MARKER_COLOURS.get(label) or drawn.get(label.casefold()) for label in labels if label}
+    taken = [c for c in colours.values() if c]
+    for label in sorted(label for label, c in colours.items() if not c):
+        start = zlib.crc32(label.encode()) % len(OTHER_MARKERS)
+        order = OTHER_MARKERS[start:] + OTHER_MARKERS[:start]
+        colours[label] = next((c for c in order if all(_rgb_apart(c, t) >= APART for t in taken)), order[0])
+        taken.append(colours[label])
+    return colours
+
+
+def _rgb_apart(a: str, b: str) -> float:
+    (r1, g1, b1), (r2, g2, b2) = (tuple(int(c.lstrip("#")[k:k + 2], 16) for k in (0, 2, 4)) for c in (a, b))
+    return ((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2) ** 0.5
+
+
 def marker_colour(label: str, palette: dict[str, str] | None = None) -> str:
     """The colour of particles carrying `label`: its own for a common kind; the colour of the structure it names
     when it is one the pictures draw (magma red, sediment tan: round 20's magma rose in a pale blue no magma is);
@@ -374,6 +402,7 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
     sections = _section_runs(bundle) if video == "song" else {}
     directions = {d.line_id: d for d in bundle.direction}
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    colours = particle_colours(bundle)
     located = {s.scene: {loc.name for loc in s.structures} for s in locations.scenes}
     names = {scene.id: Names.for_scene(bundle, scene.id, located.get(scene.id, set())) for scene in bundle.scenes}
     hook = hook_scene(bundle)
@@ -440,7 +469,8 @@ def build(video: str, bundle: Bundle, timed: dict[str, Timing], locations: Locat
             stops = [s for j, s in enumerate(stops) if j == 0 or s != stops[j - 1]]
             label = notation(flow.carries)
             if len(stops) >= 2:
-                particles.append(Particles(path=stops, color=marker_colour(label, palette), trail=True, label=label,
+                particles.append(Particles(path=stops, color=colours.get(label) or marker_colour(label, palette),
+                                           trail=True, label=label,
                                            blocked=stops[-1] in blockers, moves=flow.moves,
                                            says=" ".join(flow.says.split())))
         glow = _shown(direction.glow, scene_names, labels) if direction else None
@@ -572,6 +602,7 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
     builds = [(notation(b.carries), b.region) for b in bundle.builds_up]
     level = dict.fromkeys(builds, CROWD_START)
     palette = {s.name: s.color_hex for scene in bundle.scenes for s in scene.structures}
+    colours = particle_colours(bundle)
     thin: list[tuple[str, str]] = []
     for label, region in builds:
         for f in (f for beat in beats for f in beat["particles"] if f.label == label and len(f.path) > 1):
@@ -588,9 +619,10 @@ def _fill_crowds(beats: list[dict], bundle: Bundle, located: dict[str, set[str]]
             start = level[build]
             level[build] = end = min(max(start + rate * (beat["t1"] - beat["t0"]), CROWD_MIN), 1.0)
             if region in located.get(beat["scene"], set()):
-                crowds.append(Crowd(region=region, label=label, color=marker_colour(label, palette),
+                crowds.append(Crowd(region=region, label=label, color=colours.get(label) or marker_colour(label, palette),
                                     start=round(start, 4), end=round(end, 4)))
-        crowds += [Crowd(region=region, label=label, color=marker_colour(label, palette), start=THIN_SHARE,
+        crowds += [Crowd(region=region, label=label, color=colours.get(label) or marker_colour(label, palette),
+                         start=THIN_SHARE,
                          end=THIN_SHARE, thin=True)
                    for label, region in thin if region in located.get(beat["scene"], set())]
         beat["crowds"] = crowds

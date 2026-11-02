@@ -806,3 +806,19 @@ def test_a_graph_parts_meaning_stays_with_its_name_from_when_it_is_first_named()
     assert got[3] == []
     assert got[4] == [("Demand curve", 4.0, 20.0), ("Gap", 13.0, 20.0)]
     assert got[5] == [("Demand curve", 4.0, 20.0)]
+
+
+def test_two_kinds_of_particle_on_one_video_are_never_drawn_alike():
+    # The owner, Nov 2: "should the sugar pill be a different color?" Glucose, picked a colour by its name, took
+    # #C9A7FF, beside the pump's Na⁺ purple. A picked colour keeps APART from every colour already taken.
+    from studio.schemas import Bundle
+    from studio.steps.timeline import APART, MARKER_COLOURS, OTHER_MARKERS, particle_colours, _rgb_apart
+    from studio.tests.sample import bundle_data
+    data = bundle_data()
+    first = data["direction"][0]
+    first["particles"], first["carries"] = ["Cytochrome b6f", "Thylakoid"], "Na+"
+    first["also"] = [{"particles": ["Thylakoid", "Cytochrome b6f"], "carries": "glucose", "moves": "", "says": ""}]
+    colours = particle_colours(Bundle.model_validate(data))
+    assert colours["Na⁺"] == MARKER_COLOURS["Na⁺"]  # a common kind keeps its own
+    assert colours["glucose"] in OTHER_MARKERS and _rgb_apart(colours["glucose"], colours["Na⁺"]) >= APART
+    assert all(_rgb_apart(colours["glucose"], c) >= APART for label, c in colours.items() if label != "glucose")
