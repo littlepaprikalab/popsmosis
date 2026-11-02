@@ -106,21 +106,22 @@ const VIDEO_STEP: Step = {
   text: 'Code puts it all together, frame by frame: the pictures, labels, captions, and the notes about mistakes.',
 };
 
-// Two frames of the lesson video of a test droplet on mitosis, made on Oct 30 for this page (Claude Opus 5.5 writing,
-// Muse Image painting, Claude Sonnet 5.5 checking the pictures, Gemini reading the narration): the overview at 94 s,
-// with the card for what the art check found wrong in it, and the hook at 8 s, where it found nothing, with the tag.
+// Frames of the lesson videos of two test droplets on mitosis, made for this page with the models listed below (Nov
+// 2's Claude calls answered in a Claude Code session). The note: Nov 2's video at 152 s, on a cell dividing wrong,
+// where the check found the picture's "Spindle fibers" label pointing at a chromosome, ringed with its sticky note.
+// The tag: Oct 30's video, the hook at 8 s, where the check found nothing.
 const FRAMES = {
-  card: {
-    src: '/how-its-made/mitosis-metaphase-frame.webp', width: 1600, height: 900,
-    alt: 'A frame from a lesson video on mitosis. The camera is close on the metaphase cell, labeled Metaphase plate, '
-      + 'as the narrator says: Next comes metaphase: the fibers line every chromosome up across the middle of the '
-      + 'cell, on the metaphase plate. At the right, a white card headed AI-generated picture says: A check found these '
-      + 'mistakes: The metaphase cell shows no spindle poles; in truth spindle fibers run from a pole at each end to '
-      + 'the chromosomes.',
+  note: {
+    src: '/how-its-made/mitosis-sticky-note-frame.webp', width: 1600, height: 900,
+    alt: 'A frame from a lesson video on mitosis: a cell dividing, with its chromosomes pulled toward both ends and '
+      + 'its parts labeled in the picture itself. The label Spindle fibers points at a chromosome, so the video draws '
+      + 'a ring around it and sticks a yellow note beside it, marked with a red exclamation point, that says: Spindle '
+      + 'fibers are the green threads. The narrator says: Neither matches the parent cell, and such cells often die '
+      + 'or work badly.',
   },
   tag: {
     src: '/how-its-made/mitosis-hook-frame.webp', width: 960, height: 640,
-    alt: 'The bottom left of a frame from the same video: a scraped knee, labeled Scraped knee, with a small '
+    alt: 'The bottom left of a frame from an earlier video: a scraped knee, labeled Scraped knee, with a small '
       + 'AI-generated picture tag in the corner.',
   },
 };
@@ -168,7 +169,7 @@ const HARD: Hard[] = [
     title: 'The checker is AI too',
     happened: 'On a picture of mitosis, the check caught chromosomes bent the wrong way. But it missed that there '
       + 'were eight on each side instead of four.',
-    changed: 'That’s why every AI picture is marked as AI-made, whether a mistake was found or not. The card only says '
+    changed: 'That’s why every AI picture is marked as AI-made, whether a mistake was found or not. A note only says '
       + 'what a check found. It never says a picture is right.',
   },
 ];
@@ -306,8 +307,7 @@ export default function HowItsMadePage() {
             </p>
             <p>
               A painted picture labels its own parts, and sometimes it gets a label wrong. When the check finds one,
-              and a second look agrees, the video circles that label and puts a note beside it saying what&rsquo;s
-              true.
+              the video circles that label and puts a note beside it saying what&rsquo;s true.
             </p>
             <p>
               The check can miss mistakes too. So every other AI picture has a small tag that says it&rsquo;s
@@ -316,19 +316,19 @@ export default function HowItsMadePage() {
             </p>
           </div>
           <figure>
-            <Frame frame={FRAMES.card} />
+            <Frame frame={FRAMES.note} />
             <figcaption className="text-xs leading-relaxed mt-2" style={{ color: 'var(--text-muted)' }}>
-              A real frame from the lesson video of an earlier test droplet on mitosis, from before notes were stuck
-              on the picture: the check found that the metaphase cell has no spindle poles, and the card at the right
-              says so while the picture is on screen.
+              A real frame from the lesson video of a test droplet on mitosis. The picture&rsquo;s own &ldquo;Spindle
+              fibers&rdquo; label points at a chromosome, so the video circles it and sticks a note beside it saying
+              what&rsquo;s true, for as long as the picture is on screen.
             </figcaption>
           </figure>
           <figure className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
             <div className="sm:w-64 sm:shrink-0"><Frame frame={FRAMES.tag} /></div>
             <figcaption className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-              The bottom left of another frame from the same video. The check found nothing wrong in this picture,
-              so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a note. Every AI
-              picture gets one or the other.
+              The bottom left of a frame from an earlier test video on mitosis. The check found nothing wrong in
+              this picture, so it gets the small &ldquo;AI-generated picture&rdquo; tag in its corner instead of a
+              note. Every AI picture gets one or the other.
             </figcaption>
           </figure>
         </div>
@@ -454,7 +454,7 @@ function RailItem({ as: Tag = 'li', marker, line = true, children }: {
 
 /** One step: its number in a ring of its kind's colour, its name and kind, what it does, and what follows from it
  *  when that matters: a step the droplet must pass stops it when it fails, and the picture check's mistakes it
- *  cannot fix are said in the video (linking to the card). */
+ *  cannot fix are said in the video (linking to how). */
 function RailStep({ n, step, as, line }: { n: number; step: Step; as?: 'li' | 'div'; line?: boolean }) {
   const { color } = KINDS[step.kind];
   return (
