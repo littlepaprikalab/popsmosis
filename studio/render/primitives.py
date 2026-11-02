@@ -79,17 +79,6 @@ def darken(hex_color: str, contrast: float = 5.0) -> str:
     return f"#{round(r * f):02X}{round(g * f):02X}{round(b * f):02X}"
 
 
-OUTLINE_CONTRAST = 1.8  # a pill's outline against its white fill: a near-white colour (frost, snow, ice) needs darkening
-
-
-def outline(hex_color: str) -> str:
-    """The colour as it is when it shows on white, else darkened until it does."""
-    r, g, b = rgb(hex_color)
-    if 1.05 / (_luminance(r, g, b) + 0.05) >= OUTLINE_CONTRAST:
-        return hex_color
-    return darken(hex_color, OUTLINE_CONTRAST)
-
-
 # --- text ---------------------------------------------------------------------------------
 
 

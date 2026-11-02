@@ -1568,38 +1568,28 @@ def test_a_reaction_pill_keeps_its_spot_as_the_camera_drifts(job):
     beats[on[0]] = beats[on[0]].model_copy(update={"conversions": [pill]})
     renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
     art, view = renderer.scene("overview"), renderer.view("overview")
-    bounds = (view[0] - 2000, view[1] - 2000, view[2] + 2000, view[3] + 2000)  # nothing kept in: the spot alone
     b6f = renderer.locations.scene("overview").get("Cytochrome b6f").centroid
-    first = renderer_module.Cam(art.width / 2, art.height / 2, 1.0)
-    scale, dx, dy = renderer_module.to_frame(first, view, art)
-    loc = renderer.locations.scene("overview").get("Cytochrome b6f")
-    blocker = [((loc.box.x0 + loc.box.x1) / 2 * scale + dx + u, loc.box.y1 * scale + dy + 20 + v)
-               for u in range(-30, 31, 10) for v in range(0, 40, 10)]  # something where the pill first sat, as framed
     offsets = set()
     for k in range(40):  # the camera drifting in and across, a hair each frame
         cam = renderer_module.Cam(art.width / 2 + 3 * k, art.height / 2, 1.0 + k * 0.006)
-        rect = renderer._pill_places("overview", cam, view, bounds, blocker)["Cytochrome b6f"]
+        rect = renderer._pill_places("overview", cam, view)["Cytochrome b6f"]
         scale, dx, dy = renderer_module.to_frame(cam, view, art)
         centre = ((rect[0] + rect[2]) / 2 - (b6f.x * scale + dx), (rect[1] + rect[3]) / 2 - (b6f.y * scale + dy))
         offsets.add(("left" if centre[0] < -30 else "right" if centre[0] > 30 else "middle",
                      "below" if centre[1] > 0 else "above"))
-    assert len(offsets) == 1  # the same side of its part all the way
+    assert len(offsets) == 1  # the same side of its part all the way, riding its edge as it grows
 
 
-def test_a_pill_keeps_its_place_when_a_caption_comes_on(job):
+def test_a_pill_keeps_inside_one_area_all_scene_clear_of_a_caption_it_ever_shows(job):
     # A caption coming on moved the top of the frame's keep-in area down, and a pill near the top with it.
     timeline = jobs.read(job / media.timeline_path("song"), Timeline)
     on = [i for i, b in enumerate(timeline.beats) if b.scene == "overview"]
-    pill = Converting(structure="Cytochrome b6f", text="A → B", since=timeline.beats[on[0]].t0)
     beats = list(timeline.beats)
-    beats[on[0]] = beats[on[0]].model_copy(update={"conversions": [pill]})
+    beats[on[-1]] = beats[on[-1]].model_copy(update={"caption": "A caption, late in the scene"})
     renderer = Renderer(job, timeline.model_copy(update={"beats": beats}))
-    art, view = renderer.scene("overview"), renderer.view("overview")
-    cam = renderer_module.Cam(art.width / 2, art.height / 2, 1.4)
-    without, with_caption = renderer._bounds("overview", view, False), renderer._bounds("overview", view, True)
-    assert with_caption[1] > without[1]
-    assert (renderer._pill_places("overview", cam, view, without, [])
-            == renderer._pill_places("overview", cam, view, with_caption, []))
+    view = renderer.view("overview")
+    assert renderer._bounds("overview", view, True)[1] > renderer._bounds("overview", view, False)[1]
+    assert renderer._pill_bounds("overview", view) == renderer._bounds("overview", view, True)
 
 
 def test_a_crossings_particle_count_holds_as_the_camera_moves_in(job, monkeypatch):

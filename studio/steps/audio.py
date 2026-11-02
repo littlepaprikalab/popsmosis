@@ -297,8 +297,8 @@ AVOID = ("long instrumental intro", "explicit lyrics")
 def with_avoid(avoid: list[str], styles: list[str] | None = None) -> list[str]:
     """The song's avoid list with AVOID added where it lacks them, and nothing about diction, which the style asks
     for once (with_diction): asked again and again, a singer sings like someone reading. Nothing about rap either when
-    the style raps a section: writers listed "rap" to avoid under styles that sang every verse (Nov 2), and most
-    styles now rap their second verse (studio/styles.py)."""
+    the style raps a section: writers listed "rap" to avoid under styles that sang every verse (Nov 2), and every
+    style in the rotation raps its verses (studio/styles.py)."""
     raps = any(checks.RAPPED.search(style) for style in styles or [])
     kept = [a for a in avoid if "diction" not in a.lower() and not (raps and checks.RAPPED.search(a))]
     have = {" ".join(a.lower().split()) for a in kept}

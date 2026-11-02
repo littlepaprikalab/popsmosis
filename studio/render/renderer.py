@@ -69,7 +69,6 @@ SETTLE_ZOOM = 1.06
 # slowly. Lines in a row framing the same target are one shot, so the drift runs on across them.
 DRIFT = 0.05
 DRIFT_S = 8.0
-ART_SAMPLING = skia.SamplingOptions(skia.FilterMode.kLinear)  # how the picture is drawn into its view
 STAGE_FADE_S = 0.8  # one stage of a process fading into the next (Timeline.stages), in place of a cut
 NOTICE_W = 440  # frame px at the right kept for a picture's notice card (Timeline.notices); the picture moves over
 NOTICE_GAP = 16  # frame px above and below the card in an upright frame, where it sits across the top of the picture
@@ -116,7 +115,6 @@ HANDOFF_STEP_S = 0.5  # between one hand-off's arrow and the next's, as they dra
 HANDOFF_GROW_S = 0.35  # an arrow drawing itself in, from its tail
 HANDOFF_REST = 0.7  # how strong an arrow is while the pulse is on another
 ROUTE_GROW_S = 1.0  # an arrow along a whole way drawing itself in
-ROUTE_DASH_SPEED = 40.0  # frame pixels a second its dashes move along it, the way the flow goes
 # Off a graph every flow is an arrow, never particles travelling along it (the owner, Nov 1: dots running across a
 # painted picture went sideways and through the membrane): one particle of what it carries sits at the arrow's tail,
 # jiggling in place (at its head, before the cross, when the flow is blocked), and the spaces' crowds jiggle in theirs.
@@ -1427,7 +1425,7 @@ class Renderer:
         canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
         canvas.translate(dx, dy)
         canvas.scale(scale, scale)
-        canvas.drawImage(composed, 0, 0, ART_SAMPLING)
+        canvas.drawImage(composed, 0, 0, skia.SamplingOptions(skia.FilterMode.kLinear))
         canvas.restore()
         if again:
             self._background = (key, self.surface.makeImageSnapshot())
@@ -1652,7 +1650,7 @@ class Renderer:
         if legend_rect:  # labels and reaction pills keep clear of it as of an arrow
             x0, y0, x1, y1 = legend_rect
             arrows = arrows + [(x0 + i * (x1 - x0) / 8, y0 + j * (y1 - y0) / 4) for i in range(9) for j in range(5)]
-        places = self._pill_places(beat.scene, cam, view, bounds, arrows)
+        places = self._pill_places(beat.scene, cam, view)
         # A graph's axis names are on from its first frame; a stage fading in fades in its own, unless the stage
         # before has the same.
         same_axes = plan.fade_from is not None and (self.timeline.axes.get(plan.fade_from)
@@ -1729,16 +1727,14 @@ class Renderer:
         the scene ever shows a caption, so a caption coming on does not push a pill down."""
         return self._bounds(scene_id, view, any(b.caption for b in self.timeline.beats if b.scene == scene_id))
 
-    def _pill_places(self, scene_id: str, cam: Cam, view: Rect, bounds: Rect,
-                     arrows: list[Point]) -> dict[str, tuple[float, float, float, float]]:
+    def _pill_places(self, scene_id: str, cam: Cam, view: Rect) -> dict[str, tuple[float, float, float, float]]:
         """Where each reaction pill the scene shows at any time in the video goes, as its rect in frame pixels: under
         its structure, or over it, or the same rows shifted to either side, whichever crosses the fewest arrows and no
         other pill. The spot is chosen once for the scene, framed whole (_pill_spots), and the pill rides it as the
         camera moves: chosen again every frame, it flipped between two spots as clear as each other as the camera
         drifted (the owner, Nov 2: "the position of these pills should stay fixed even when the camera drifts").
-        Placed before the labels, which then keep clear of them, as of the arrows. `bounds` and `arrows` are unused:
-        the pills keep inside _pill_bounds, the same all scene, and their spots clear of every arrow and legend the
-        scene shows, framed whole."""
+        Placed before the labels, which then keep clear of them, as of the arrows. Each keeps inside _pill_bounds, the
+        same all scene, on a spot clear of every arrow and legend the scene shows, framed whole."""
         spots = self._pill_spots(scene_id, view)
         inside = self._pill_bounds(scene_id, view)
         places: dict[str, tuple[float, float, float, float]] = {}

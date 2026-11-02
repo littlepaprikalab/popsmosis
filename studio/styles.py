@@ -1,25 +1,13 @@
 """The song styles a droplet rotates through when the learner asks for none.
 
-Left to choose, the model kept landing on the same loud genres. Each is a vocals-first sound a high school
-listener plays for fun, with no artist named, from 100 to 130 bpm. None is slower since Nov 2: rap at 92 and 96
-sounded laid back, and the owner wants songs that perk people up; the K-pop (110) and the dance-pop (120) went faster
-the same day, to spread the rotation's tempos (the owner: "some song can have higher bpms"). Until round 17 most had rapped verses, for their
-clear diction; with a lesson's lines in them, the verses came back recited, like sentences read aloud, and the
-rotation went to sung verses. One rapped style is back (Oct 31): the owner's favourite song, Cash in the Carrier
-(docs/reference-songs.md), whose rapped verses carry the lesson well. Whether rapped lines come back recited is the
-lyrics' to answer (the bundle brief), not the style's (the owner). Since Nov 1 three genres that do so rap one
-section, as their songs do, the rest sung (the owner: "it doesn't mean the whole song is rap"). Since Nov 2 every
-style raps both its verses, the chorus always sung: the owner liked the derivative's Latin pop song with its rapped
-second verse ("it just sounds good"), then asked for two rapped verses in every song, as they "sound so much better
-and perk me up" (the owner). The first style is the owner's own, from the Oct 27 brief's examples; it took teen
-pop's place, which sounded the same once it rapped both verses.
+Left to choose, the model kept landing on the same loud genres. Each style is a vocals-first sound a high school
+listener plays for fun, naming no artist, from 100 to 130 bpm, and raps both its verses, the chorus sung: the owner's
+choice (Nov 2), as rap "perks people up" and slower rap sounded laid back. Three are the owner's own: Cash in the
+Carrier, their favourite song's (docs/reference-songs.md), an upbeat pop with hip-hop verses, and a K-pop electro-pop.
 
-Neighbouring droplets never share a style (the owner, Nov 2): three of five videos in one batch had drawn the same
-teen pop from their names. A job takes the style none of the jobs made just before it took (style_for_job), and
-keeps it in the job, so a retry keeps it too. Electropop and a bouncy upbeat pop were dropped the same day: one
-sounded like teen pop, the other, once it rapped its verses, like Cash in the Carrier. The owner's style is near
-Cash in the Carrier too (both 100 bpm, a woman rapping), with warm synths and snaps for its 808s and bright hook. The scorecard still seeds each topic by its
-id (style_for), so its runs stay comparable.
+Neighbouring droplets never share a style: a job takes the first style, from where its name points in the rotation,
+that none of the jobs made just before it took (style_for_job), and keeps it, so a retry keeps it too. The scorecard
+still seeds each topic by its id (style_for), so its runs stay comparable.
 """
 
 from __future__ import annotations
