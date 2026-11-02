@@ -252,11 +252,19 @@ test.describe('videos on /learn', () => {
     const card = page.getByTestId('question-card').filter({ hasText: text }).first();
     const bill = card.getByTestId('breakdown');
     const step = (label: string) => bill.locator('table').getByTestId('breakdown-step').filter({ hasText: label });
+    const meter = card.getByTestId('droplet-meter');
+    // The meter's minutes and its drops, read in one go: a minute can turn over between two reads.
+    const drops = () => meter.evaluate((el) => {
+      const states = [...el.querySelectorAll('svg')].map((d) => d.getAttribute('data-state'));
+      return { minutes: Number(el.getAttribute('data-minutes')), full: states.filter((x) => x === 'full').length, now: states.indexOf('now'), all: states.length };
+    });
 
-    // Nobody has picked it up: the whole droplet to make, folded to one line.
+    // Nobody has picked it up: the whole droplet to make, folded to one line, and 25 drops, none of them lit.
     await expect(card.getByTestId('waiting')).toBeVisible();
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText('11 steps to go');
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText('12 steps to go');
     await expect(bill.locator('table')).toBeHidden();
+    await expect(meter.locator('[data-state="empty"]')).toHaveCount(25);
+    await expect(meter.getByTestId('droplet-meter-text')).toHaveText(/^A droplet takes about 25 minutes to make once the teacher starts on it/);
 
     // The studio claims it and starts the lesson: the bill opens by itself and fills in on the card's poll.
     const bot = agent(request, S.POPSMOSIS_API_KEY);
@@ -264,13 +272,18 @@ test.describe('videos on /learn', () => {
     const lessonBill = studioBill([['request', 0.4, 0], ['bundle', 196, 0.53], ['audit', 40, 0.06]]);
     expect((await bot.progress(questionId, { running: [{ step: 'factcheck', seconds: 20 }], breakdown: lessonBill, videos: true })).status()).toBe(204);
     // With the time so far: the bill's 236.4 seconds, and the time since the report.
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText(/^Making it · 3 of 11 steps done · [34]\.\d min · \$0\.59 so far$/, { timeout: 25_000 });
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText(/^Making it · 3 of 12 steps done · [34]\.\d min · \$0\.59 so far$/, { timeout: 25_000 });
     await expect(step('Read the request')).toHaveAttribute('data-status', 'done');
     await expect(step('Write the lesson')).toHaveAttribute('data-status', 'done');
     await expect(step('Write the lesson')).toContainText('$0.53');
     await expect(step('Audit the facts')).toHaveAttribute('data-status', 'done');
     await expect(step('Fact-check')).toHaveAttribute('data-status', 'running');
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'waiting');
+    // A drop for each minute gone, the next one blinking: three or four, as the bill's time says.
+    let lit = await drops();
+    expect([3, 4]).toContain(lit.minutes);
+    expect(lit).toEqual({ minutes: lit.minutes, full: lit.minutes, now: lit.minutes, all: 25 });
+    await expect(meter.getByTestId('droplet-meter-text')).toHaveText(/^Minute [45] of about 25\. You can leave this page/);
     // The time so far counts up while the fact-check runs, and the bill's last line has it too.
     const elapsed = bill.getByTestId('breakdown-elapsed');
     const before = (await elapsed.textContent())!;
@@ -295,7 +308,10 @@ test.describe('videos on /learn', () => {
     await expect(step('Draw the diagrams')).toHaveAttribute('data-status', 'running');
     await expect(step('Make the audio')).toHaveAttribute('data-status', 'running');
     // The lesson's whole 316.4 seconds and the art's and audio's 40 so far, and the time since the videos' report.
-    await expect(bill.getByTestId('breakdown-progress')).toHaveText(/^Making it · 4 of 11 steps done · [56]\.\d min · \$0\.77 so far$/);
+    await expect(bill.getByTestId('breakdown-progress')).toHaveText(/^Making it · 4 of 12 steps done · [56]\.\d min · \$0\.77 so far$/);
+    lit = await drops();
+    expect([5, 6]).toContain(lit.minutes);
+    expect(lit).toEqual({ minutes: lit.minutes, full: lit.minutes, now: lit.minutes, all: 25 });
     await expect(card.locator('.md', { hasText: 'pump protons' })).toHaveCount(0);
     await expect(card.getByTestId('videos-rendering')).toHaveCount(0);
     await expect(card.getByText('BREWING', { exact: true })).toBeVisible();
@@ -303,7 +319,8 @@ test.describe('videos on /learn', () => {
 
     // Folded, the card says how far the videos have got, not what the lesson says.
     await card.getByRole('button', { name: 'Collapse card' }).click();
-    await expect(card.getByTestId('making-preview')).toHaveText(/Making the videos: 4 of 11 steps done/);
+    await expect(card.getByTestId('making-preview')).toHaveText(/Making the videos: 4 of 12 steps done/);
+    await expect(card.getByTestId('making-preview').locator('[data-state="now"]')).toHaveCount(1); // a blinking drop
     await expect(card.getByTestId('answer-preview')).toHaveCount(0);
     await card.getByRole('button', { name: 'Expand card' }).click();
 
@@ -320,6 +337,7 @@ test.describe('videos on /learn', () => {
     await expect(card.getByTestId('droplet-players')).toBeVisible({ timeout: 25_000 });
     await expect(card.locator('.md strong', { hasText: 'pump protons' })).toBeVisible();
     await expect(card.getByTestId('awaiting-videos')).toHaveCount(0);
+    await expect(meter).toHaveCount(0);
     await expect(card.getByText('READY', { exact: true })).toBeVisible();
     await expect(card.getByPlaceholder(/Ask a follow-up/)).toBeVisible();
     const playersBox = await card.getByTestId('droplet-players').boundingBox();
@@ -327,6 +345,27 @@ test.describe('videos on /learn', () => {
     expect(playersBox!.y).toBeLessThan(lessonBox!.y); // the videos come first
     await expect(bill.getByTestId('breakdown-total')).toBeVisible();
     await expect(bill.locator('table')).toBeHidden();
+  });
+
+  test('a droplet past its 25 minutes keeps its drops lit, the last one blinking, and says it is taking longer', async ({ page, context, request }) => {
+    const text = `E2E ${Date.now()}: the Krebs cycle, slowly`;
+    const asked = await request.post(apiUrl('/api/questions'), {
+      headers: { cookie: `popsmosis_session=${sessionToken(S.users.ada)}`, 'x-requested-with': 'XMLHttpRequest' },
+      data: { content: text },
+    });
+    expect(asked.status()).toBe(201);
+    const questionId = (await asked.json()).id;
+    const bot = agent(request, S.POPSMOSIS_API_KEY);
+    expect((await bot.claim(questionId)).status()).toBe(200);
+    // A fact-check 25 and a half minutes in.
+    expect((await bot.progress(questionId, { running: [{ step: 'factcheck', seconds: 1530 }], videos: true })).status()).toBe(204);
+
+    await signIn(context, S.users.ada);
+    await page.goto('/learn');
+    const meter = page.getByTestId('question-card').filter({ hasText: text }).first().getByTestId('droplet-meter');
+    await expect(meter.locator('[data-state="full"]')).toHaveCount(24);
+    await expect(meter.locator('svg').last()).toHaveAttribute('data-state', 'now');
+    await expect(meter.getByTestId('droplet-meter-text')).toHaveText(/^Minute 2\d: this one is taking longer than most\./);
   });
 
   test('a lesson waits for its videos, then shows with the players, without a reload; an admin approves it, and can hide it from the tab', async ({ page, context, request }) => {

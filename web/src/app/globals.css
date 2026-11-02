@@ -184,6 +184,21 @@ html {
   animation: livenessPulse 2s ease-in-out infinite;
 }
 
+/* The drop for the minute under way on a droplet being made (DropletMeter). For people who turn motion
+   off it stays still, half lit: between a drop that is full and one still to come. */
+@keyframes dropBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.animate-drop-blink {
+  animation: dropBlink 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-drop-blink { animation: none; opacity: 0.5; }
+}
+
 /* Flex truncation safety — flex children default to min-width:auto which
    prevents truncate/line-clamp from working. This global rule ensures any
    truncated element inside a flex container can actually shrink. */

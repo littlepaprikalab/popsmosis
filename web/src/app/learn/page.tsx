@@ -21,6 +21,7 @@ import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
+import { Drop, DropletMeter, METER_MINUTES } from '@/components/DropletMeter';
 import { DropletReview } from '@/components/DropletReview';
 import { ExampleDroplet } from '@/components/ExampleDroplet';
 import { DropletPill, Marked, SongChip } from '@/components/Highlights';
@@ -243,7 +244,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
       )}
       preview={made ? (
         <p className="text-[10px] flex items-center gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="making-preview">
-          <span className="inline-block w-1.5 h-1.5 shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+          <Drop state="now" className="w-2 h-3 shrink-0" />
           Making the videos: {made.done} of {made.total} steps done — tap to follow along
         </p>
       ) : answer ? (
@@ -272,10 +273,10 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   <span className="badge-agent text-[9px] uppercase px-1.5 py-0.5 rounded-full font-semibold">agent</span>
                   {answer.model && <span className="text-[10px] ml-auto truncate" style={{ color: 'var(--text-muted)' }}>{answer.model}</span>}
                 </div>
-                <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="awaiting-videos">
-                  <span className="inline-block w-1.5 h-1.5 mt-[5px] shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+                <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }} data-testid="awaiting-videos">
                   The lesson is written and checked. The teacher is making its videos; the lesson shows here with them.
                 </p>
+                <DropletMeter progress={q.progress} />
                 <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} defaultOpen />
                 {isAdmin && <DropletReview answerId={answer.id} />}
               </div>
@@ -347,11 +348,11 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
             </p>
           ) : (
             <>
-              <p className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
-                <span className="inline-block w-1.5 h-1.5 mt-[5px] shrink-0 rounded-full animate-live-pulse" style={{ background: 'var(--accent-cyan)' }} />
+              <p className="text-xs" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
                 The teacher is preparing this droplet… this card refreshes itself.
               </p>
-              {/* The bill as a checklist of what is to come, open once the studio has started on it. */}
+              {/* A drop a minute, and the bill as a checklist of what is to come, open once the studio has started on it. */}
+              {q.progress && <DropletMeter progress={q.progress} />}
               {q.progress && (
                 <DropletBreakdown breakdown={null} video={null} progress={q.progress}
                   defaultOpen={q.progress.running.length > 0 || !!q.progress.breakdown?.steps.length} />
@@ -560,7 +561,8 @@ function LearnContent() {
         setQuestions((prev) => [q, ...prev]);
         if (!latestSeenRef.current || q.createdAt > latestSeenRef.current) latestSeenRef.current = q.createdAt;
         changeQuestion('');
-        showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass.`, 'success');
+        showToast(`Topic sent${picked ? ` to ${brainLabel(picked)}` : ''}. The teacher picks it up on its next pass; `
+          + `a droplet takes about ${METER_MINUTES} minutes to make.`, 'success');
       });
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Failed to send topic', 'error');

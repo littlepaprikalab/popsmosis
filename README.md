@@ -547,8 +547,12 @@ that. The card on `/learn` shows it as the bill of materials
 open, one line per step: done (its time and cost), running (a pulsing dot, its time counting
 up, what it has spent so far), failed and waiting for the retry, or still to come. A step still
 to come that a later one has gone past is left out; so is the post, which the lesson's bill
-never has. The time so far is on the bill's folded line ("Making it · 4 of 11 steps done ·
-6.2 min · $0.53 so far") and its last line, and counts up with a running step.
+never has. The time so far is on the bill's folded line ("Making it · 4 of 12 steps done ·
+6.2 min · $0.53 so far") and its last line, and counts up with a running step. Above the bill,
+the droplet meter (`DropletMeter.tsx`) shows the same time as 25 drops, one filling each minute
+and the one for the minute under way blinking, with what to expect under it: about 25 minutes,
+and the reader can leave and come back. Past 25 minutes the last drop blinks on and the card
+says this one is taking longer than most; before the studio starts, every drop is hollow.
 
 The lesson text waits for the videos, so a learner meets the droplet through them rather than
 through a text the videos then repeat: while `awaitingVideos` is true the card shows the bill
