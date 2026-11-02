@@ -2,7 +2,7 @@ import pytest
 
 from studio import brain, knobs
 from studio.jobs import read, write
-from studio.styles import style_for
+from studio.styles import style_for_job
 from studio.schemas import Bundle, CheckReport, LessonBundle, Request
 from studio.steps import bundle as bundle_step, script as script_step
 from studio.tests.sample import bundle_data, lesson_bundle_data
@@ -29,7 +29,7 @@ def test_run_writes_the_bundle_and_drops_a_stale_fact_check(tmp_path):
     assert "Teach the why, not the parts list" in seen["system"]
     assert seen["prompt"].startswith("Topic: the light reactions\n\nCourse: AP Bio\n\nThe song style for this droplet, "
                                      "from the studio's rotation: ")
-    assert style_for(tmp_path.name) in seen["prompt"]
+    assert style_for_job(tmp_path) in seen["prompt"]  # the style the job took and kept, whatever its neighbours took
     assert read(tmp_path / "bundle.json", Bundle) == bundle
     assert not (tmp_path / "factcheck.json").exists()
 

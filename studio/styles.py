@@ -7,10 +7,10 @@ rotation went to sung verses. One rapped style is back (Oct 31): the owner's fav
 (docs/reference-songs.md), whose rapped verses carry the lesson well. Whether rapped lines come back recited is the
 lyrics' to answer (the bundle brief), not the style's (the owner). Since Nov 1 three genres that do so rap one
 section, as their songs do, the rest sung (the owner: "it doesn't mean the whole song is rap"). Since Nov 2 every
-style but indie-pop raps at least one verse, the chorus always sung: the owner liked the derivative's Latin pop song
-with its rapped second verse ("it just sounds good"). Four rap both verses, as their genres do, since rap "perks
-people up vs putting them to sleep" (the owner); three rap the second, after a sung first verse, the slot a pop song
-gives its one rap verse (a second verse, not a bridge, as not every song has a bridge).
+style raps both its verses, the chorus always sung: the owner liked the derivative's Latin pop song with its rapped
+second verse ("it just sounds good"), then asked for two rapped verses in every song, as they "sound so much better
+and perk me up" (the owner). The first style is the owner's own, from the Oct 27 brief's examples; it took teen
+pop's place, which sounded the same once it rapped both verses.
 
 Neighbouring droplets never share a style (the owner, Nov 2): three of five videos in one batch had drawn the same
 teen pop from their names. A job takes the style none of the jobs made just before it took (style_for_job), and
@@ -35,18 +35,18 @@ SPLIT_THE_WATER = ("bright pop with hip-hop verses, rapped verses, big sing-alon
                    "shimmering synths, claps, 104 bpm, clear diction")
 
 SONG_STYLES = (
-    "bright teen pop with a melodic sung first verse and a rapped second verse, female lead vocal, stacked "
-    "harmonies on a big sing-along chorus, finger snaps, glossy synths, punchy drums, 104 bpm",
+    "upbeat pop with hip-hop verses, rapped verses, catchy sung chorus, clear female vocal, warm synths, finger "
+    "snaps, 100 bpm",
     "K-pop with rapped verses traded between male group vocals, a melodic sung pre-chorus, a big catchy sung "
     "chorus, punchy synth bass, crisp claps, 100 bpm",
-    "laid-back R&B with a smooth sung first verse and a rapped second verse, warm electric piano, deep round "
-    "bass, soft finger snaps, smooth chorus with stacked harmonies, 92 bpm",
-    "indie-pop with melodic sung verses, warm male vocal, strummed acoustic guitar, handclaps, gang vocals on "
-    "the chorus, bright and breezy, 110 bpm",
+    "laid-back R&B with smooth rapped verses, warm electric piano, deep round bass, soft finger snaps, smooth sung "
+    "chorus with stacked harmonies, 92 bpm",
+    "indie-pop with rapped verses, warm male vocal, strummed acoustic guitar, handclaps, gang vocals on the sung "
+    "chorus, bright and breezy, 110 bpm",
     "Latin pop with a light dembow groove, rapped verses, clear male vocal, plucked guitar, handclaps, catchy sung "
     "chorus, 96 bpm",
-    "dance-pop with a four-on-the-floor beat, a short sung first verse and a rapped second verse, energetic "
-    "female vocal, bright plucked synths, handclaps, sing-along chorus, 112 bpm",
+    "dance-pop with a four-on-the-floor beat, rapped verses, energetic female vocal, bright plucked synths, "
+    "handclaps, sing-along chorus, 112 bpm",
     CASH_IN_THE_CARRIER,
 )
 

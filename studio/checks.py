@@ -517,13 +517,14 @@ def syllables(line: str) -> int:
 LYRIC_SYLLABLES_MAX, LYRIC_SYLLABLES_RAPPED = 10, 14
 LYRIC_SLACK = 1
 RAPPED = re.compile(r"\brap(?:ped|ping|s)?\b", re.I)
-# A style that raps one section says which (studio/styles.py, Nov 1): only that section's lines run longer. However the
+# A style that raps one section says which (a learner's own; every style the studio picks raps both verses, Nov 2):
+# only that section's lines run longer. However the
 # writer puts it: "a rapped second verse", "raps the second verse", "the bridge is rapped".
 RAPPED_SECOND_VERSE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?(?:second verse|verse (?:2|two))\b"
                                  r"|\b(?:second verse|verse (?:2|two))\s+(?:is\s+|gets\s+)?rapped\b", re.I)
 RAPPED_BRIDGE = re.compile(r"\brap(?:ped|ping|s)?\s+(?:on\s+)?(?:the\s+|a\s+)?bridge\b"
                            r"|\bbridge\s+(?:is\s+|gets\s+)?rapped\b", re.I)
-# A style that raps every verse (Nov 2: four of the rotation's), its chorus sung: "rapped verses", "rap verses",
+# A style that raps every verse (Nov 2: all of the rotation's, studio/styles.py), its chorus sung: "rapped verses", "rap verses",
 # "raps both verses", "the verses are rapped".
 RAPPED_VERSES = re.compile(r"\brap(?:ped|ping)?\s+verses\b|\braps?\s+(?:both|all|its|the)\s+verses\b"
                            r"|\bverses\s+(?:are\s+)?rapped\b", re.I)
