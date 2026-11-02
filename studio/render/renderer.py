@@ -573,9 +573,14 @@ def fills(view: Rect, picture: Rect) -> bool:
 
 
 # A post-it sits this far (frame pixels) from the ring of the label it is about, or, where every spot that near
-# covers the picture, further out, with a line back to the ring: beside it, below, above, then at a corner.
+# covers the picture, further out, with a line back to the ring: beside it, below, above, then at a corner. Never
+# further: notes that sat 180 pixels out, or were pushed further by the frame's edge, drew long lines across the
+# picture (the owner, Nov 2). A note whose line would still run past POSTIT_MAX_LINE, or whose every spot covers
+# the picture (POSTIT_MAX_COVER), is not shown.
 POSTIT_GAP = 14.0
-POSTIT_REACH = (POSTIT_GAP, 90.0, 180.0)
+POSTIT_REACH = (POSTIT_GAP, 90.0)
+POSTIT_MAX_LINE = 130.0
+POSTIT_MAX_COVER = 0.35
 POSTIT_SIDES = ((1, 0), (-1, 0), (0, 1), (0, -1), (-1, 1), (1, 1), (-1, -1), (1, -1))  # (across, down) from the ring
 POSTIT_FRAMINGS = 31  # framings a post-it's spot is judged over: the whole scene and up to 10 beats, 3 times each
 
@@ -614,6 +619,21 @@ def _nearest(a: Rect, b: Rect) -> Point:
     """The point of rect a nearest rect b."""
     bx, by = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
     return min(max(bx, a[0]), a[2]), min(max(by, a[1]), a[3])
+
+
+def _anchor(place: Rect, note: Rect) -> Point:
+    """Where a note about a place points: the point of the place's middle half nearest the note, inside the thing
+    on the side the note is on, not its middle, which for a whole fortress ran the line across the picture."""
+    cx, cy, w, h = (place[0] + place[2]) / 2, (place[1] + place[3]) / 2, place[2] - place[0], place[3] - place[1]
+    return _nearest((cx - w / 4, cy - h / 4, cx + w / 4, cy + h / 4), note)
+
+
+def _line_length(note: Rect, ring: Rect, ringed: bool) -> float:
+    """How long the line from a post-it to what it is about is: none when it touches its ring or covers the place."""
+    if ringed:
+        return _gap(note, ring) if _gap(note, ring) > POSTIT_GAP + 1 else 0.0
+    q = _anchor(ring, note)
+    return _gap(note, (*q, *q))
 
 
 def _inside(q: Point, box) -> bool:
@@ -982,7 +1002,7 @@ class Renderer:
         self._scene_values: dict[str, list] = {}  # per scene, every value it writes in the video (_value_points)
         self._scene_pills: dict[str, list] = {}  # each scene's reaction pills over the whole video, first shown first
         self._axis_spots: dict[str, tuple[int, int]] = {}  # where each graph's two axis names sit beside their ends
-        self._postits: dict[str, list[tuple[int, float]]] = {}  # per scene, each flag's post-it side and reach
+        self._postits: dict[str, list[tuple[int, float] | None]] = {}  # per scene: post-it side and reach, or None
         # The sanity gate, once for every arrow off a graph (a graph's are drawn exactly): what fails is never drawn,
         # nor what the arrows step left out (one it found cannot be drawn on the picture, or saw drawn wrong).
         self._wrong: dict[tuple, str] = {}
@@ -1403,6 +1423,8 @@ class Renderer:
         canvas.save()
         canvas.clipRect(skia.Rect.MakeLTRB(*view))  # beside a notice card, the picture stops at its view
         for flag, spot in zip(self.timeline.flags[scene_id], self._postits[scene_id]):
+            if spot is None:  # no spot near enough: left off rather than drawn far away (POSTIT_MAX_LINE)
+                continue
             box = flag.box
             label = (box.x0 * scale + dx, box.y0 * scale + dy, box.x1 * scale + dx, box.y1 * scale + dy)
             ring = p.flag_ring(label)
@@ -1414,29 +1436,32 @@ class Renderer:
                 p.draw_flag(canvas, label, shown)
                 if _gap(note, ring) > POSTIT_GAP + 1:
                     p.draw_postit_line(canvas, _nearest(note, ring), _nearest(ring, note), shown)
-            else:  # a note about a place: a line from the post-it to a dot at the place's middle
-                middle = ((label[0] + label[2]) / 2, (label[1] + label[3]) / 2)
-                if not (note[0] <= middle[0] <= note[2] and note[1] <= middle[1] <= note[3]):
-                    p.draw_postit_line(canvas, _nearest(note, (*middle, *middle)), middle, shown)
-                    p.draw_postit_dot(canvas, middle, shown)
+            else:  # a note about a place: a line from the post-it to a dot just inside the place (_anchor())
+                point = _anchor(label, note)
+                if not (note[0] <= point[0] <= note[2] and note[1] <= point[1] <= note[3]):
+                    p.draw_postit_line(canvas, _nearest(note, (*point, *point)), point, shown)
+                    p.draw_postit_dot(canvas, point, shown)
             p.draw_postit(canvas, note, flag.note, shown)
         canvas.restore()
 
-    def _place_postits(self, scene_id: str, view: Rect, bounds: Rect) -> list[tuple[int, float]]:
+    def _place_postits(self, scene_id: str, view: Rect, bounds: Rect) -> list[tuple[int, float] | None]:
         """Which side of its label's ring each flag's post-it sits on, and how far out (POSTIT_SIDES, POSTIT_REACH):
         of those, the one that covers the least of the picture (its parts and its own labels, ink_share()), no other
         post-it and no other flagged label, the nearest of those alike, over every framing the video shows the scene
         in (the whole scene, and the camera at the start, middle and end of each of its beats): the picture moves and
-        grows under a post-it that keeps its size. Chosen once, so a post-it never jumps."""
+        grows under a post-it that keeps its size. Chosen once, so a post-it never jumps. None for a note with no
+        spot near enough (its line past POSTIT_MAX_LINE over the whole scene) or none that leaves the picture seen
+        (POSTIT_MAX_COVER): it is left off."""
         art = self.scene(scene_id)
         cams = [self._whole(scene_id, view)] + [
             plan.cam(t, view, art) for beat, plan in zip(self.timeline.beats, self.plans) if beat.scene == scene_id
             for t in (beat.t0, (beat.t0 + beat.t1) / 2, max(beat.t0, beat.t1 - 1e-3))][:POSTIT_FRAMINGS - 1]
         flags = self.timeline.flags[scene_id]
-        chosen: list[tuple[int, float]] = []
+        chosen: list[tuple[int, float] | None] = []
         for i, flag in enumerate(flags):
             size = p.postit_size(flag.note)
             best = None
+            whole = cams[0]
             for k, gap in enumerate(POSTIT_REACH):
                 for side in range(len(POSTIT_SIDES)):
                     cost = 0.0
@@ -1446,14 +1471,20 @@ class Renderer:
                                               f.box.y1 * scale + dy)) for f in flags]
                         rect = _within(_postit_rect(rings[i], size, side, gap), bounds)
                         placed = [_within(_postit_rect(rings[j], p.postit_size(flags[j].note), *chosen[j]), bounds)
-                                  for j in range(len(chosen))]
+                                  for j in range(len(chosen)) if chosen[j] is not None]
                         cost += art.ink_share(((rect[0] - dx) / scale, (rect[1] - dy) / scale, (rect[2] - dx) / scale,
                                                (rect[3] - dy) / scale))
                         cost += sum(_overlap(rect, other) for other in placed + rings)
+                    scale, dx, dy = to_frame(whole, view, art)
+                    ring = p.flag_ring((flag.box.x0 * scale + dx, flag.box.y0 * scale + dy, flag.box.x1 * scale + dx,
+                                        flag.box.y1 * scale + dy))
+                    reach = _line_length(_within(_postit_rect(ring, size, side, gap), bounds), ring, flag.ring)
+                    if reach > POSTIT_MAX_LINE:
+                        continue
                     score = (round(cost / len(cams), 2), k, side)
                     if best is None or score < best[0]:
                         best = (score, (side, gap))
-            chosen.append(best[1])
+            chosen.append(best[1] if best is not None and best[0][0] <= POSTIT_MAX_COVER else None)
         return chosen
 
     def _draw_beat(self, canvas: skia.Canvas, t: float) -> None:

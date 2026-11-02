@@ -1800,6 +1800,20 @@ def test_a_post_it_sits_off_its_labels_ring_on_its_side_and_stays_in_bounds():
     assert left[0] < 0 and _within(left, (40, 40, 1880, 1000)) == (40, left[1], 240, left[3])
 
 
+def test_a_note_about_a_place_points_just_inside_it_and_a_far_one_is_left_off():
+    # The owner, Nov 2: sticky notes drew long lines across the French Revolution's picture, to the middle of a whole
+    # fortress, from notes 180 pixels out or pushed off by the frame's edge.
+    from studio.render.renderer import POSTIT_MAX_LINE, POSTIT_REACH, _anchor, _line_length
+
+    fortress, note = (1200.0, 200.0, 1600.0, 600.0), (900.0, 350.0, 1100.0, 430.0)  # the note on its left
+    x, y = _anchor(fortress, note)
+    assert 1200 < x <= 1300 and 350 <= y <= 450  # inside the fortress, on the note's side, not its middle (1400)
+    assert _line_length(note, fortress, ringed=False) == pytest.approx(x - 1100)  # 200 pixels: too far to show
+    assert _line_length(note, fortress, ringed=False) > POSTIT_MAX_LINE
+    assert max(POSTIT_REACH) < POSTIT_MAX_LINE  # a note placed off its ring is always near enough
+    assert _line_length((1110.0, 350.0, 1190.0, 430.0), fortress, ringed=True) == 0.0  # touching its ring: no line
+
+
 def test_a_crossings_bends_cover_every_leg_the_arrows_and_labels_count(job, monkeypatch):
     # A crossing's particles have two legs, but the arrows and the labels' keep-clear points count a leg for each
     # pair of its stops, a space in the middle twice: one bend short, the render failed (Nov 1).
