@@ -546,7 +546,7 @@ def test_the_style_rotation_gives_a_job_the_same_style_every_time_and_neighbours
 
     assert style_for("cmvabc") == style_for("cmvabc") and style_for("cmvabc") in SONG_STYLES
     assert len({style_for(f"job{i}") for i in range(40)}) > 4
-    assert all((found := BPM_TAG.search(s)) and 92 <= int(found[1]) <= 130 for s in SONG_STYLES)
+    assert all((found := BPM_TAG.search(s)) and 100 <= int(found[1]) <= 130 for s in SONG_STYLES)
     # Every style raps both verses, the owner's wish since Nov 2; the checks read that every verse line may run
     # longer, and never a chorus's.
     assert all(checks.RAPPED_VERSES.search(s) for s in SONG_STYLES)

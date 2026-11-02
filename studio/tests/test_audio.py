@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from studio import jobs, knobs, media
+from studio import checks, jobs, knobs, media, styles
 from studio.steps import audio
 from studio.tests import sample_media
 
@@ -280,6 +280,19 @@ def test_speech_too_long_for_one_call_fails_before_spending_anything(job, monkey
 
 
 # --- the song from Lyria on the Gemini API (set to gemini on /admin/studio) -------------------------
+
+
+def test_the_prompt_says_which_sections_are_rapped():
+    # The owner, Nov 2: three songs whose styles said "rapped verses" came back sung all through, the prompt's line
+    # saying "Sing the lines in order".
+    assert audio.delivery(["upbeat pop, 112 bpm"]) == "Sing the lines in order, section by section."
+    assert audio.delivery(["Latin pop, easygoing rapped verses, a catchy sung chorus, 100 bpm"]) == (
+        "Perform the lines in order, section by section: rap every verse, spoken on the beat, not sung; sing the "
+        "chorus.")
+    assert "rap the second verse," in audio.delivery(["teen pop, a sung first verse and a rapped second verse"])
+    assert "rap the bridge," in audio.delivery(["dance-pop, short sung verses and a rapped bridge"])
+    assert all(checks.RAPPED_VERSES.search(style) and "rap every verse" in audio.delivery([style])
+               for style in styles.SONG_STYLES)
 
 
 def test_gemini_sings_the_song_from_one_prompt_and_reads_the_narration(job, monkeypatch):

@@ -344,6 +344,20 @@ def gemini_song_model() -> str:
     return knobs.env("GEMINI_SONG_MODEL").strip() or GEMINI_SONG_MODEL
 
 
+def delivery(styles: list[str]) -> str:
+    """How the lines are performed, for the prompt's fixed line: in order, and the sections the style raps rapped,
+    spoken on the beat, by name. Three songs whose styles said "rapped verses" came back sung all through (the owner,
+    Nov 2): the line said "Sing the lines in order", and the styles said "rapping and singing close to the mic"."""
+    style = " ".join(styles)
+    if not checks.RAPPED.search(style):
+        return "Sing the lines in order, section by section."
+    parts = (["every verse"] if checks.RAPPED_VERSES.search(style)
+             else [part for part, said in (("the second verse", checks.RAPPED_SECOND_VERSE), ("the bridge", checks.RAPPED_BRIDGE))
+                   if said.search(style)]) or ["the verses"]
+    rest = "the chorus" if parts in (["every verse"], ["the verses"]) else "the rest"
+    return f"Perform the lines in order, section by section: rap {' and '.join(parts)}, spoken on the beat, not sung; sing {rest}."
+
+
 def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     """Lyria's prompt: the style and the lyrics, section by section (its instructions apart from its lyrics, as
     Google advises), and where each section is planned to fall. Nothing to avoid since Nov 2 (the owner); the
@@ -356,7 +370,7 @@ def song_prompt(bundle: Bundle) -> tuple[str, list[dict]]:
     head = []
     if music.positive_styles:  # a free-form style may end on its own full stop
         head.append(f"Style: {', '.join(style.rstrip(' .') for style in with_diction(music.positive_styles))}.")
-    head.append("Sing the lines in order, section by section. Backing vocals and echoes of the hook are welcome.")
+    head.append(f"{delivery(music.positive_styles)} Backing vocals and echoes of the hook are welcome.")
     lyrics = [f"[{p['section'].title()}]\n" + "\n".join(p["lines"]) for p in planned]
     return "\n".join(head) + "\n\nLyrics:\n" + "\n\n".join(lyrics), _placed(planned)
 
