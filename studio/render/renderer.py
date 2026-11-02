@@ -137,7 +137,7 @@ GLIDE_SHARE = 0.35  # the gliding arrow's length, as a share of its route...
 GLIDE_MAX = 170.0  # ...and at most this many frame pixels
 GLIDE_SPEED = 300.0  # frame pixels a second
 GLIDE_PAUSE_S = 0.5  # between one glide and the next
-TRACK_ALPHA = 0.85  # the track under it: bold enough to see on a busy picture between glides (Nov 1)
+TRACK_ALPHA = 0.95  # the track under it, black on white: plain on any picture between glides (Nov 2)
 ARROW_SEEN = 0.6  # a still to look at an arrow by shows its gliding arrow this share of the way along (arrow_time)
 # A crossing (straight through one part, _crossing) is its particles crossing, not an arrow (the owner, Nov 1): the line
 # is sure now, and ions streaming through the pump look like what the textbook says. As many as the words count (three
@@ -265,6 +265,41 @@ def pulse(t: float, hz: float) -> float:
     return ((1 - phase) / (1 - PULSE_ATTACK)) ** 2
 
 
+def painted_label_boxes(pixels: np.ndarray) -> list[Rect]:
+    """Each painted label's white box in a picture (an RGB or BGR array): a near-white patch, wider than tall, nearly
+    all white, grey or black, with dark letters in it, as (left, top, right, bottom) in its pixels. Found the labels of
+    two test pictures, 21 of 22 (Nov 2)."""
+    a = pixels.astype(np.int16)
+    white = (a.min(-1) > 228) & (a.max(-1) - a.min(-1) < 24)
+    dark = a.max(-1) < 120
+    plain = (a.max(-1) - a.min(-1)) < 30
+    h, w = white.shape
+    seen = np.zeros_like(white)
+    found = []
+    for y0, x0 in zip(*np.nonzero(white)):
+        if seen[y0, x0]:
+            continue
+        seen[y0, x0] = True
+        todo, count = [(y0, x0)], 0
+        top, bottom, left, right = y0, y0, x0, x0
+        while todo:
+            y, x = todo.pop()
+            count += 1
+            top, bottom, left, right = min(top, y), max(bottom, y), min(left, x), max(right, x)
+            for ny, nx in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= ny < h and 0 <= nx < w and white[ny, nx] and not seen[ny, nx]:
+                    seen[ny, nx] = True
+                    todo.append((ny, nx))
+        bh, bw = bottom - top + 1, right - left + 1
+        if not (8 <= bh <= 90 and 20 <= bw <= 400 and bw > bh):
+            continue
+        area = bh * bw
+        letters = dark[top:bottom + 1, left:right + 1].sum() / area
+        if plain[top:bottom + 1, left:right + 1].mean() > 0.9 and count / area > 0.45 and 0.03 < letters < 0.45:
+            found.append((float(left), float(top), float(right + 1), float(bottom + 1)))
+    return found
+
+
 class SceneArt:
     """One scene's art and masks, and the washes made from them, composed on demand."""
 
@@ -285,6 +320,8 @@ class SceneArt:
         b, g, r = media.paper(pixels)  # the art's background, which the washes fade toward
         self.paper = skia.Color(r, g, b)
         self.art = skia.Image.fromarray(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kOpaque_AlphaType)
+        self._half = pixels[::2, ::2, :3].copy()  # for finding its painted labels (label_boxes())
+        self._label_boxes: list[Rect] | None = None
         self.masks: dict[str, skia.Image] = {}
         self._mask_files: dict[str, Path] = {}
         self._crowd_points: dict[str, list[Point]] = {}
@@ -467,6 +504,14 @@ class SceneArt:
             self._axes = across, up
             self._drawn = (far > DRAWN_INK) | covered
         return self._axes
+
+    def label_boxes(self) -> list[Rect]:
+        """The labels painted on the picture, each black on its small white box (art.BOXED), as art-pixel rects:
+        found by code, once, so an arrow's caption keeps off them (Nov 2: "Third Estate pays the heaviest taxes" lay
+        across the painted "Privileges"). None on a picture whose labels have no boxes."""
+        if self._label_boxes is None:
+            self._label_boxes = [tuple(v * 2.0 for v in box) for box in painted_label_boxes(self._half)]
+        return self._label_boxes
 
     def ink_share(self, box: tuple[float, float, float, float]) -> float:
         """How much of an art-pixel box has something drawn in it, as drawn_share() has it, but what lies off the art
@@ -2719,12 +2764,14 @@ class Renderer:
     def _note_spot(self, scene_id: str, key: tuple, anchor: Point, size: tuple[float, float],
                    keep_clear: list[Point], shown: tuple[float, float, float, float] | None = None) -> Point | None:
         """Where a note's middle sits, in art pixels, chosen once for the scene: near what it is about, where it
-        covers the least of the picture (ink_share), clear of every part's label point, of `keep_clear` (its arrow)
-        and of the notes placed before it; on the picture, never off its edge. None when no spot beside it fits."""
+        covers the least of the picture (ink_share), clear of every part's label point, of `keep_clear` (its arrow),
+        of the notes placed before it and of the labels painted on the picture (SceneArt.label_boxes); on the
+        picture, never off its edge. None when no spot beside it fits."""
         if key not in self._note_spots:
             art = self.scene(scene_id)
             w, h = size
             points = [(loc.label_anchor.x, loc.label_anchor.y) for loc in self.locations.scene(scene_id).structures]
+            painted = art.label_boxes() if scene_id in self.timeline.self_labelled else []
             placed = self._noted.setdefault(scene_id, [])
             leaders = self._leaders.setdefault(scene_id, [])
 
@@ -2744,7 +2791,7 @@ class Renderer:
                     cost = art.ink_share(box) + reach / NOTE_REACH[-1] * NOTE_FAR
                     cost += sum(NOTE_CROWD for q in [*points, *keep_clear]
                                 if box[0] - h / 2 <= q[0] <= box[2] + h / 2 and box[1] - h / 2 <= q[1] <= box[3] + h / 2)
-                    cost += sum(NOTE_CROWD * 4 for r in placed
+                    cost += sum(NOTE_CROWD * 4 for r in [*placed, *painted]
                                 if r[0] < box[2] and box[0] < r[2] and r[1] < box[3] and box[1] < r[3])
                     # Nor across another note's line, nor its own line across another note (Nov 1: the house's
                     # line ran through the channels' note).

@@ -1966,3 +1966,25 @@ def test_crowds_are_left_out_unless_switched_on(job, monkeypatch):
     assert all(not b.crowds for b in Renderer(job, crowded).timeline.beats)
     monkeypatch.setattr(renderer_module, "CROWDS", True)
     assert all(b.crowds for b in Renderer(job, crowded).timeline.beats)
+
+
+def test_an_arrows_track_is_black_on_white_with_its_head_and_painted_labels_are_found():
+    # The owner, Nov 2: the faint dotted track in the flow's colour read as no arrow; black on a white edge, with
+    # its head always on, reads on any picture. And a caption keeps off the labels painted on the picture.
+    from studio.render import primitives as p
+    from studio.render.renderer import painted_label_boxes
+
+    pixels = np.full((200, 400, 4), 255, np.uint8)
+    pixels[..., :3] = (120, 180, 90)  # a green picture
+    surface = skia.Surface(pixels, colorType=skia.kBGRA_8888_ColorType, alphaType=skia.kPremul_AlphaType)
+    p.draw_route_track(surface.getCanvas(), [(40.0, 100.0), (360.0, 100.0)], "#FFD166", 1.0)
+    assert pixels[100, 200, :3].max() < 60  # near-black along the line
+    assert pixels[100 - 5, 200, :3].min() > 240  # its white edge
+    assert pixels[94, 352, :3].max() < 60 and pixels[106, 352, :3].max() < 60  # both arms of its head
+
+    picture = np.full((120, 300, 3), (120, 180, 90), np.uint8)
+    picture[40:70, 60:200] = 255  # a white label box...
+    picture[48:62, 70:190:6] = 0  # ...with dark letters in it
+    assert painted_label_boxes(picture) == [(60.0, 40.0, 200.0, 70.0)]
+    picture[48:62, 70:190:6] = 255  # a white patch with no writing is no label
+    assert painted_label_boxes(picture) == []

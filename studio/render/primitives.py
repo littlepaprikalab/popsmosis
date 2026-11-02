@@ -697,8 +697,13 @@ def draw_handoff(canvas: skia.Canvas, tail: tuple[float, float], tip: tuple[floa
 ROUTE_DASH = (16.0, 11.0)  # a route arrow's dashes and the gaps between them, frame pixels
 ROUTE_WIDTH = 6.0  # its dashes
 ROUTE_CHEVRON = 18.0  # its single chevron at the end, from tip to each arm's end
-TRACK_WIDTH = 5.0  # a route's track, under the arrow gliding along it (draw_route_track)
-TRACK_DASH = (7.0, 7.0)  # its dashes and the gaps between them
+# A route's track, under the arrow gliding along it (draw_route_track): a solid near-black line on a white edge,
+# with its head always on. The faint dotted track in the flow's colour was all a learner saw between glides, and
+# read as no arrow at all (the owner, Nov 2: "black on a white background to make it visible"). The gliding piece
+# keeps the flow's colour and its rider, so two flows on one picture still tell apart.
+TRACK_WIDTH = 4.0
+TRACK_EDGE = 3.0  # its white edge, each side
+TRACK_HEAD = 16.0  # its chevron, from tip to each arm's end
 
 
 def smooth_line(points: list[tuple[float, float]], steps: int = 6) -> list[tuple[float, float]]:
@@ -719,8 +724,9 @@ def smooth_line(points: list[tuple[float, float]], steps: int = 6) -> list[tuple
 
 def draw_route_track(canvas: skia.Canvas, points: list[tuple[float, float]], color: str, alpha: float,
                      grown: float = 1.0) -> None:
-    """A route's track (frame pixels): a thin dotted line in the flow's colour over a white halo, with no head, drawn
-    `grown` (0-1) of its length from its tail. The arrow gliding along it (draw_route_arrow) says which way."""
+    """A route's track (frame pixels): a solid near-black line on a white edge, its chevron at its head once it has
+    drawn itself in, drawn `grown` (0-1) of its length from its tail. `color` is the flow's, kept by the arrow
+    gliding along it (draw_route_arrow)."""
     if alpha <= 0.01 or grown <= 0.01 or len(points) < 2:
         return
     line = smooth_line(points)
@@ -740,12 +746,18 @@ def draw_route_track(canvas: skia.Canvas, points: list[tuple[float, float]], col
     path.moveTo(*drawn[0])
     for q in drawn[1:]:
         path.lineTo(*q)
-    canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=TRACK_WIDTH + 2 * HALO,
-                                     Color=with_alpha(0xFFFFFFFF, 0.7 * alpha), StrokeCap=skia.Paint.kRound_Cap,
-                                     StrokeJoin=skia.Paint.kRound_Join))
-    canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=TRACK_WIDTH,
-                                     Color=argb(color, alpha), StrokeCap=skia.Paint.kRound_Cap,
-                                     PathEffect=skia.DashPathEffect.Make(list(TRACK_DASH), 0.0)))
+    if grown >= 0.999:  # the head, once the whole way is drawn
+        tip = drawn[-1]
+        back = next((q for q in reversed(drawn[:-1]) if math.dist(q, tip) >= TRACK_HEAD), drawn[0])
+        d = math.dist(back, tip) or 1.0
+        ux, uy = (tip[0] - back[0]) / d, (tip[1] - back[1]) / d
+        size = min(TRACK_HEAD, total)
+        path.moveTo(tip[0] - ux * size - uy * size * 0.7, tip[1] - uy * size + ux * size * 0.7)
+        path.lineTo(*tip)
+        path.lineTo(tip[0] - ux * size + uy * size * 0.7, tip[1] - uy * size - ux * size * 0.7)
+    for ink, width in ((with_alpha(0xFFFFFFFF, alpha), TRACK_WIDTH + 2 * TRACK_EDGE), (with_alpha(INK, alpha), TRACK_WIDTH)):
+        canvas.drawPath(path, skia.Paint(AntiAlias=True, Style=skia.Paint.kStroke_Style, StrokeWidth=width, Color=ink,
+                                         StrokeCap=skia.Paint.kRound_Cap, StrokeJoin=skia.Paint.kRound_Join))
 
 
 def draw_route_arrow(canvas: skia.Canvas, points: list[tuple[float, float]], color: str, alpha: float,
