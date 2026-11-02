@@ -50,11 +50,16 @@ function useMinutes(p: Progress): number {
   return minutes;
 }
 
+/** A number in the line beside the drop, in bold: the minute under way in the drop's aqua, the usual time in the text colour. */
+function Num({ now = false, children }: { now?: boolean; children: React.ReactNode }) {
+  return <span className="font-bold tabular-nums" style={{ color: now ? 'var(--accent-brand)' : 'var(--text-primary)' }}>{children}</span>;
+}
+
 /**
  * Where a droplet being made has got, by the minute, beside a blinking drop, and what to expect: about how long it
- * takes, and that the reader can leave and come back. The minute is a shade brighter than the rest, so it is what
- * the eye finds. Past the usual time it says this one is taking longer. Before the studio starts the drop is hollow
- * and still.
+ * takes, and that the reader can leave and come back. The minute is a shade brighter than the rest and its numbers
+ * bold, so they are what the eye finds. Past the usual time it says this one is taking longer. Before the studio
+ * starts the drop is hollow and still.
  */
 export function DropletMeter({ progress }: { progress: Progress }) {
   const minutes = useMinutes(progress);
@@ -64,10 +69,10 @@ export function DropletMeter({ progress }: { progress: Progress }) {
       data-testid="droplet-meter" data-minutes={started ? minutes : undefined}>
       <Drop state={started ? 'now' : 'empty'} className="w-2 h-3 mt-0.5 shrink-0" />
       <span data-testid="droplet-meter-text">
-        {!started ? `A droplet takes about ${USUAL_MINUTES} minutes to make.` : (
+        {!started ? <>A droplet takes about <Num>{USUAL_MINUTES}</Num> minutes to make.</> : (
           <>
             <span style={{ color: 'var(--text-secondary)' }}>
-              {minutes >= USUAL_MINUTES ? `Minute ${minutes + 1}` : `Minute ${minutes + 1} of about ${USUAL_MINUTES}`}
+              Minute <Num now>{minutes + 1}</Num>{minutes < USUAL_MINUTES && <> of about <Num>{USUAL_MINUTES}</Num></>}
             </span>
             {minutes >= USUAL_MINUTES ? ' · this one is taking longer than most; you can leave and come back.' : ' · you can leave and come back.'}
           </>
