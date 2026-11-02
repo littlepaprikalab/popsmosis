@@ -175,6 +175,8 @@ def run(job: Path, ask=None) -> str:
             timeline.ai_pictures = [scene.id for scene in bundle.scenes if scene.id in shown]
             # A painted picture labels its own parts, and its wrong labels are flagged on it.
             timeline.self_labelled = [scene for scene in self_labelled if scene in shown]
+            timeline.unwashed = [scene.id for scene in bundle.scenes if scene.id in timeline.self_labelled
+                                 and not art.is_diagram(scene)]
             timeline.flags = {scene: boxes for scene, boxes in flags.items() if scene in shown}
         except ValidationError as e:
             raise StepFailed(f"the {video} timeline does not validate: {e}") from e

@@ -94,6 +94,16 @@ def test_a_structure_never_named_on_its_scene_is_drawn_as_it_is_not_as_a_ghost(j
     assert song._ghosts("overview", reveals, 6.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
 
 
+def test_a_painting_that_is_no_diagram_is_shown_as_painted_before_its_parts_are_named(job, song):
+    # A pile of orange pumpkins washed white until each is named looked wrong (Nov 2): no part of it starts pale.
+    reveals = {"Thylakoid": 5.0}
+    song.timeline.unwashed = ["overview"]
+    try:
+        assert song._ghosts("overview", reveals, 4.0) == {"Thylakoid": 0.0, "Cytochrome b6f": 0.0}
+    finally:
+        song.timeline.unwashed = []
+
+
 def test_a_spotlight_washes_the_others_and_leaves_its_structure_alone(job):
     art = SceneArt(job, jobs.read(job / media.LOCATIONS, Locations).scene("overview"))
     _, plain = art.compose({}, {})

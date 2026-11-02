@@ -1070,6 +1070,10 @@ class Timeline(Strict):
     # The scenes whose painted picture labels its own parts (art.self_labelled()): the renderer draws no labels or
     # axis names over them, only over a drawing (the brain's SVG).
     self_labelled: list[str] = []
+    # The painted scenes that are no science diagram (an everyday sight, a history, a story): shown as painted from
+    # their first frame, no part washed pale until it is named, which turned a pile of orange pumpkins white (the
+    # owner, Nov 2). A diagram, drawn or painted, still fills in part by part.
+    unwashed: list[str] = []
     # Each label the art check found wrong in a painted picture, by scene: flagged on the picture, a ring round it and
     # a sticky note beside it saying what is true.
     flags: dict[str, list[Flag]] = {}

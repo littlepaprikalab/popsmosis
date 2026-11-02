@@ -918,6 +918,12 @@ def paint_prompt(bundle: Bundle, scene: Scene, problems: list[str] = (), redrawn
     return " ".join(parts)
 
 
+def is_diagram(scene: Scene) -> bool:
+    """Whether the scene is a science diagram or a graph, as the brief has its picture asked for: the parts of one
+    fill in as they are named; an everyday sight, a history or a story is shown as painted."""
+    return SCIENCE_STYLE in scene.image_prompt.lower() or bool(scene.axes.x or scene.axes.y)
+
+
 def campbell_styled(bundle: Bundle, image_prompt: str) -> str:
     """A science scene's prompt in Campbell Biology's style (CAMPBELL_STYLE) when the course is biology or the scene
     draws a cell's parts; any other prompt as written."""

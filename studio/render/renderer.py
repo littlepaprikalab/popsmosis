@@ -1325,6 +1325,8 @@ class Renderer:
         would wash out its part of the picture the whole time the scene is on screen (the first live
         runs left a whole Earth pale through a song)."""
         art = self.scene(scene_id)
+        if scene_id in self.timeline.unwashed:  # a painting that is no diagram: shown as painted (Timeline.unwashed)
+            return dict.fromkeys(art.masks, 0.0)
         levels = {}
         for name in art.masks:
             r = reveals.get(name)
