@@ -21,7 +21,7 @@ import { CollapsibleCard, CollapseButton } from '@/components/CollapsibleCard';
 import { ServerUnavailable } from '@/components/ServerUnavailable';
 import { LessonVideos } from '@/components/DropletPlayers';
 import { DropletBreakdown, progressCount } from '@/components/DropletBreakdown';
-import { Drop, DropletMeter, USUAL_MINUTES } from '@/components/DropletMeter';
+import { Drop, DropletMeter, hasStarted, USUAL_MINUTES } from '@/components/DropletMeter';
 import { DropletReview } from '@/components/DropletReview';
 import { ExampleDroplet } from '@/components/ExampleDroplet';
 import { DropletPill, Marked, SongChip } from '@/components/Highlights';
@@ -274,7 +274,7 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
                   {answer.model && <span className="text-[10px] ml-auto truncate" style={{ color: 'var(--text-muted)' }}>{answer.model}</span>}
                 </div>
                 <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }} data-testid="awaiting-videos">
-                  The lesson is written and checked. The teacher is making its videos; the lesson shows here with them.
+                  The lesson is written and checked; the teacher is making its videos.
                 </p>
                 <DropletMeter progress={q.progress} />
                 <DropletBreakdown breakdown={answer.breakdown} video={answer.video} progress={q.progress} defaultOpen />
@@ -349,7 +349,8 @@ const QuestionCard = memo(function QuestionCard({ q, index, isAdmin, onAnswerCha
           ) : (
             <>
               <p className="text-xs" style={{ color: 'var(--text-muted)' }} data-testid="waiting">
-                The teacher is preparing this droplet… this card refreshes itself.
+                {q.progress && !hasStarted(q.progress) ? 'Waiting for the teacher to start on it' : 'The teacher is preparing this droplet'}
+                … this card refreshes itself.
               </p>
               {/* The minutes so far, and the bill as a checklist of what is to come, open once the studio has started on it. */}
               {q.progress && <DropletMeter progress={q.progress} />}

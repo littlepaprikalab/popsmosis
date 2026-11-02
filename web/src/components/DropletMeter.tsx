@@ -24,7 +24,7 @@ export function Drop({ state, className = '' }: { state: 'now' | 'empty'; classN
 }
 
 /** Whether the studio has started on the droplet: a step running or done, or one that failed. */
-function hasStarted(p: Progress): boolean {
+export function hasStarted(p: Progress): boolean {
   return p.running.length > 0 || p.failed.length > 0 || !!p.breakdown?.steps.length;
 }
 
@@ -52,8 +52,9 @@ function useMinutes(p: Progress): number {
 
 /**
  * Where a droplet being made has got, by the minute, beside a blinking drop, and what to expect: about how long it
- * takes, and that the reader can leave and come back. Past the usual time it says this one is taking longer. Before
- * the studio starts the drop is hollow and still.
+ * takes, and that the reader can leave and come back. The minute is a shade brighter than the rest, so it is what
+ * the eye finds. Past the usual time it says this one is taking longer. Before the studio starts the drop is hollow
+ * and still.
  */
 export function DropletMeter({ progress }: { progress: Progress }) {
   const minutes = useMinutes(progress);
@@ -63,11 +64,14 @@ export function DropletMeter({ progress }: { progress: Progress }) {
       data-testid="droplet-meter" data-minutes={started ? minutes : undefined}>
       <Drop state={started ? 'now' : 'empty'} className="w-2 h-3 mt-0.5 shrink-0" />
       <span data-testid="droplet-meter-text">
-        {!started
-          ? `A droplet takes about ${USUAL_MINUTES} minutes to make once the teacher starts on it.`
-          : minutes >= USUAL_MINUTES
-            ? `Minute ${minutes + 1}: this one is taking longer than most. You can leave this page; the droplet waits here for you.`
-            : `Minute ${minutes + 1} of about ${USUAL_MINUTES}. You can leave this page; the droplet waits here for you.`}
+        {!started ? `A droplet takes about ${USUAL_MINUTES} minutes to make.` : (
+          <>
+            <span style={{ color: 'var(--text-secondary)' }}>
+              {minutes >= USUAL_MINUTES ? `Minute ${minutes + 1}` : `Minute ${minutes + 1} of about ${USUAL_MINUTES}`}
+            </span>
+            {minutes >= USUAL_MINUTES ? ' · this one is taking longer than most; you can leave and come back.' : ' · you can leave and come back.'}
+          </>
+        )}
       </span>
     </p>
   );
